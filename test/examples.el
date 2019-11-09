@@ -100,7 +100,7 @@
          (om-elem-to-trimmed-string)) => "[2019-01-15 Tue]"
     (->> (om-elem-build-timestamp 'inactive '(2019 1 15 12 30))
          (om-elem-to-trimmed-string)) => "[2019-01-15 Tue 12:30]"
-    (->> (om-elem-build-timestamp 'inactive '(2019 1 15) '(2020 1 1))
+    (->> (om-elem-build-timestamp 'inactive '(2019 1 15) :end '(2020 1 1))
          (om-elem-to-trimmed-string)) => "[2019-01-15 Tue]--[2020-01-01 Wed]")
 
   (defexamples om-elem-build-verbatim
@@ -175,7 +175,7 @@
   (defexamples om-elem-build-clock
     (->> (om-elem-build-clock '(2019 1 1 0 0))
          (om-elem-to-trimmed-string)) => "CLOCK: [2019-01-01 Tue 00:00]"
-    (->> (om-elem-build-clock '(2019 1 1 0 0) '(2019 1 1 1 0))
+    (->> (om-elem-build-clock '(2019 1 1 0 0) :end '(2019 1 1 1 0))
          (om-elem-to-trimmed-string)) => "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00] =>  1:00")
 
   (defexamples om-elem-build-comment
@@ -277,17 +277,17 @@
   (defexamples om-elem-build-headline
     (->> (om-elem-build-headline)
          (om-elem-to-trimmed-string)) => "*"
-    (->> (om-elem-build-headline :title "dummy")
+    (->> (om-elem-build-headline :title '("dummy"))
          (om-elem-to-trimmed-string)) => "* dummy"
-    (->> (om-elem-build-headline :title "dummy" :level 3)
+    (->> (om-elem-build-headline :title '("dummy") :level 3)
          (om-elem-to-trimmed-string)) => "*** dummy"
-    (->> (om-elem-build-headline :title "dummy" :todo-keyword "DONE")
+    (->> (om-elem-build-headline :title '("dummy") :todo-keyword "DONE")
          (om-elem-to-trimmed-string)) => "* DONE dummy"
-    (->> (om-elem-build-headline :title "dummy" :priority ?A)
+    (->> (om-elem-build-headline :title '("dummy") :priority ?A)
          (om-elem-to-trimmed-string)) => "* [#A] dummy"
-    (->> (om-elem-build-headline :title "dummy" :footnote-section-p t)
+    (->> (om-elem-build-headline :title '("dummy") :footnote-section-p t)
          (om-elem-to-trimmed-string)) => "* Footnotes"
-    (->> (om-elem-build-headline :title "dummy" :commentedp t)
+    (->> (om-elem-build-headline :title '("dummy") :commentedp t)
          (om-elem-to-trimmed-string)) => "* COMMENT dummy")
 
   (defexamples om-elem-build-item
@@ -301,7 +301,7 @@
          (om-elem-build-item :checkbox 'on)
          (om-elem-to-trimmed-string)) => "- [X] item contents"
     (->> (om-elem-build-paragraph "item contents")
-         (om-elem-build-item :tag "tmsu")
+         (om-elem-build-item :tag '("tmsu"))
          (om-elem-to-trimmed-string)) => "- tmsu :: item contents"
     (->> (om-elem-build-paragraph "item contents")
          (om-elem-build-item :counter 10)
@@ -1087,7 +1087,7 @@ and here is even more *text4* and *text5*
     nil
     (:content "* dummy")
     (->> (om-elem-parse-this-headline)
-         (om-elem-headline-set-title "portishead")
+         (om-elem-headline-set-title '("portishead"))
          (om-elem-to-trimmed-string))
     => "* portishead"
     ;; TODO add an example with a secondary string
@@ -1130,7 +1130,7 @@ and here is even more *text4* and *text5*
     nil
     (:content "- one")
     (->> (om-elem-parse-this-item)
-         (om-elem-item-set-tag "tmsu")
+         (om-elem-item-set-tag '("tmsu"))
          (om-elem-to-trimmed-string))
     => "- tmsu :: one"
     (:content "- tmsu :: one")

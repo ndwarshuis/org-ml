@@ -138,9 +138,9 @@
 
 (ert-deftest om-elem-filter-query/property ()
   (let ((contents
-         (list (om-elem-build-item :checkbox 'off :tag "one")
-               (om-elem-build-item :checkbox 'on :tag "two")
-               (om-elem-build-item :checkbox 'on :tag "three"))))
+         (list (om-elem-build-item :checkbox 'off :tag '("one"))
+               (om-elem-build-item :checkbox 'on :tag '("two"))
+               (om-elem-build-item :checkbox 'on :tag '("three")))))
     (should (equal (->> (om-elem-filter-query '(:checkbox off) contents)
                         (--map (om-elem-to-trimmed-string it)))
                    '("- [ ] one ::")))
@@ -154,8 +154,8 @@
   (let ((contents
          (list
           (om-elem-build-section (om-elem-build-paragraph "paragraph"))
-          (om-elem-build-headline :title "headline1" :todo-keyword "TODO")
-          (om-elem-build-headline :title "headline2" :todo-keyword "DONE"))))
+          (om-elem-build-headline :title '("headline1") :todo-keyword "TODO")
+          (om-elem-build-headline :title '("headline2") :todo-keyword "DONE"))))
     (should (equal (->> (om-elem-filter-query
                          '(:or section headline) contents)
                         (--map (om-elem-to-trimmed-string it)))
@@ -191,7 +191,7 @@
     ,path (nth ,index (om-test-parse-all-headlines))))
 
 (ert-deftest om-elem-find/error ()
-  (let ((dummy (om-elem-build-headline "dummy")))
+  (let ((dummy (om-elem-build-headline :title '("dummy"))))
     ;; TODO test invalid types
     ;; (should-error (om-elem-find dummy 'invalid))
     (should-error (om-elem-find '(:many) dummy))
