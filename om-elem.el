@@ -649,67 +649,21 @@ Optionally provide PARAMETERS."
                                               warning
                                               post-blank)
   "Build a timestamp..."
-  ;; no verification, all done in the mk-whatever functions
-  (cl-flet*
-      ((mk-type
-        (type)
-        (->> (cl-case type
-               (active (if end 'active-range 'active))
-               (inactive (if end 'inactive-range 'inactive))
-               (t (error "Invalid timestamp type: %s" type)))
-             (list :type)))
-       (mk-time
-        (time suffix)
-        (let* ((props
-                (->> '(year month day hour minute)
-                     (--map (intern (format ":%s-%s" it suffix))))))
-          (if (not time) (om-elem--init-properties props)
-            (->>
-             (pcase time
-               (`(,(pred integerp)
-                  ,(pred integerp)
-                  ,(pred integerp))
-                (append time '(nil nil)))
-               (`(,(pred integerp)
-                  ,(pred integerp)
-                  ,(pred integerp)
-                  ,(pred integerp)
-                  ,(pred integerp))
-                time)
-               (_ (error "Invalid time given: %s" time)))
-             (-interleave props)))))
-       (mk-start (time) (mk-time time 'start))
-       (mk-end (time) (mk-time time 'end))
-       (mk-decorator
-        (decorator dtype valid-types)
-        (when decorator
-          (let ((type (nth 1 decorator))
-                (value (nth 2 decorator))
-                (unit (nth 3 decorator))
-                (props (->>
-                        '(type value unit)
-                        (--map (intern (format ":%s-%s" dtype it))))))
-            (unless (memq type '(all first))
-              (error "Invalid %s type: %s" dtype type))
-            (unless (integerp value)
-              (error "Invalid %s value: %s" dtype value))
-            (unless (memq unit '(year month week day hour))
-              (error "Invalid %s unit: %s" dtype value))
-            (-interleave props (list type value unit)))))
-       (mk-warning
-        (warning)
-        (mk-decorator warning 'warning '(all first)))
-       (mk-repeater
-        (repeater)
-        (mk-decorator repeater 'repeater '(catch-up restart cumulative))))
-    (let ((props (append (mk-type type)
-                         (mk-start start)
-                         (mk-end end)
-                         (mk-warning warning)
-                         (mk-repeater repeater)
-                         ;; placeholder
-                         (list :raw-value nil))))
-      (om-elem--build-object props 'timestamp post-blank))))
+  ;; no verification, all done in set functions
+  (let ((props (-> '(:type :raw-value :repeater-type :repeater-unit
+                           :repeater-value :warning-type :warning-unit
+                           :warning-value :year-start
+                           :month-start :day-start :hour-start
+                           :minute-start :year-end :month-end :day-end
+                           :hour-end :minute-end)
+                   (om-elem--init-properties))))
+    (-->
+     (om-elem--build-object props 'timestamp post-blank)
+     (om-elem--timestamp-set-time start it)
+     (om-elem--timestamp-set-time-end end it)
+     (om-elem--timestamp-set-type type it)
+     (if warning (om-elem--timestamp-set-warning warning it) it)
+     (if repeater (om-elem--timestamp-set-repeater repeater it) it))))
 
 (om-elem--defun om-elem-build-diary-sexp-timestamp (string &key post-blank)
   "Build a diary-sexp timestamp element from STRING.
@@ -2479,22 +2433,129 @@ VALUE can take four forms which determine the format of the value:
   (om-elem--verify statistics-cookie om-elem-is-statistics-cookie-p)
   (om-elem-statistics--cookie-set-value value statistics-cookie))
 
-;; timestamp
+;; timestamp (internal)
 
-;; TODO split this into an ending timestamp
+(defun om-elem--timestamp-is-ranged (timestamp)
+  (-let (((&plist :year-start y :year-end Y
+                  :month-start m :month-end M
+                  :day-start d :day-end D
+                  :hour-start h :hour-end H
+                  :minute-start n :minute-end N)
+          (om-elem-properties timestamp)))
+    (not (and (eq y Y) (eq m M) (eq d D) (eq h H) (eq n N)))))
+
+(defun om-elem--timestamp-set-type (type timestamp)
+  (let* ((range? (om-elem--timestamp-is-ranged timestamp))
+         (type* (cl-case type
+                  (active (if range? 'active-range 'active))
+                  (inactive (if range? 'inactive-range 'inactive))
+                  (t (error "Invalid timestamp type: %s" type)))))
+    (om-elem-set-property :type type* timestamp)))
+
+(defun om-elem--timestamp-format-time (time suffix)
+  (let ((props (->> '(year month day hour minute)
+                    (--map (intern (format ":%s-%s" it suffix))))))
+    (if (not time) (om-elem--init-properties props)
+      (->>
+       (pcase time
+         (`(,(pred integerp)
+            ,(pred integerp)
+            ,(pred integerp))
+          (append time '(nil nil)))
+         ((or `(,(pred integerp)
+                ,(pred integerp)
+                ,(pred integerp)
+                ,(pred integerp)
+                ,(pred integerp))
+              `(,(pred integerp)
+                ,(pred integerp)
+                ,(pred integerp)
+                ,(pred null)
+                ,(pred null)))
+          time)
+         (_ (error "Invalid time given: %s" time)))
+       (-interleave props)))))
+
+(defun om-elem--timestamp-set-time (time timestamp)
+  "Set the start TIME of TIMESTAMP."
+  (-> (om-elem--timestamp-format-time time 'start)
+      (om-elem-set-properties timestamp)))
+
+(defun om-elem--timestamp-set-time-end (time timestamp)
+  "Set the end TIME of TIMESTAMP."
+  (if time
+      (-> (om-elem--timestamp-format-time time 'end)
+          (om-elem-set-properties timestamp))
+    (-let* (((&plist :year-start y :month-start m :day-start d
+                     :hour-start H :minute-start M)
+             (om-elem-properties timestamp)))
+      (-> `(,y ,m ,d ,H ,M)
+          (om-elem--timestamp-format-time 'end)
+          (om-elem-set-properties timestamp)))))
+
+(defun om-elem--timestamp-format-decorator (dec dtype valid-types)
+  (let ((props (->> '(type value unit)
+                    (--map (intern (format ":%s-%s" dtype it))))))
+    (if (not dec) (om-elem--init-properties props)
+      (-let (((type value unit) dec))
+        (unless (memq type '(all first))
+          (error "Invalid %s type: %s" dtype type))
+        (unless (integerp value)
+          (error "Invalid %s value: %s" dtype value))
+        (unless (memq unit '(year month week day hour))
+          (error "Invalid %s unit: %s" dtype value))
+        (-interleave props (list type value unit))))))
+
+(defun om-elem--timestamp-set-warning (warning timestamp)
+  (let ((types '(all first)))
+    (-> (om-elem--timestamp-format-decorator warning 'warning types)
+        (om-elem-set-properties timestamp))))
+
+(defun om-elem--timestamp-set-repeater (repeater timestamp)
+  (let ((types '(catch-up restart cumulative)))
+    (-> (om-elem--timestamp-format-decorator repeater 'repeater types)
+        (om-elem-set-properties timestamp))))
+
+;; timestamp (external)
+
 (defun om-elem-timestamp-set-time (time timestamp)
   "Set start time of TIMESTAMP element to TIME.
 TIME is a list like '(year month day)' or '(year month day hour min)'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  ;; TODO need to verify `TIME'
-  (-let [(y m d H M) (if (om-elem--has-hour-min time) time
-                        `(,@time nil nil))]
-    (om-elem-set-properties (list :year-start y
-                                  :month-start m
-                                  :day-start d
-                                  :hour-start H
-                                  :minute-start M)
-                            timestamp)))
+  (om-elem--timestamp-set-time time timestamp))
+
+(defun om-elem-timestamp-set-time-end (time timestamp)
+  "Set end time of TIMESTAMP element to TIME.
+TIME is a list like '(year month day)' or '(year month day hour min)'.
+This will also change the type to (un)ranged as appropriate."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  ;; TODO this could be refactored
+  (let ((cur-type (--> (om-elem-property :type timestamp)
+                       (cl-case it
+                         (inactive-range 'inactive)
+                         (active-range 'active)
+                         (t it)))))
+    (->> (om-elem--timestamp-set-time-end time timestamp)
+         ;; this will flip the range of the type if needed
+         (om-elem--timestamp-set-type cur-type))))
+
+(defun om-elem-timestamp-set-type (type timestamp)
+  "Set type of TIMESTAMP element to TYPE.
+TYPE can be either 'active' or 'inactive'."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (om-elem--timestamp-set-type type timestamp))
+  ;; (let* ((cur-type (om-elem-property :type timestamp))
+  ;;        (is-ranged? (->> (symbol-name cur-type)
+  ;;                         (s-ends-with? "-range")))
+  ;;        (new-type
+  ;;         (cl-case type
+  ;;           (active (if is-ranged? 'active-range 'active))
+  ;;           (inactive (if is-ranged? 'inactive-range 'inactive))
+  ;;           ;; TODO, I honestly have no idea what a diary timestamp
+  ;;           ;; is and if this makes any sense...
+  ;;           ;; (diary diary)
+  ;;           (t (error "Invalid timestamp type: %s" type)))))
+  ;;   (om-elem-set-property :type new-type timestamp)))
 
 ;; TOOD add a switch for precision
 (defun om-elem-timestamp-set-time-unixtime (unixtime timestamp)
@@ -2505,31 +2566,6 @@ This assumes one wants HH:MM precision."
       (-slice 1 6)
       (om-elem-timestamp-set-time timestamp)))
 
-(defun om-elem-timestamp-set-time-end (time timestamp)
-  "Set end time of TIMESTAMP element to TIME.
-TIME is a list like '(year month day)' or '(year month day hour min)'.
-This will also change the type to (un)ranged as appropriate."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (-let* (((y m d H M) (cond ((null time) (-repeat 5 nil))
-                             ((om-elem--has-hour-min time) time)
-                             (t `(,@time nil nil))))
-          (type (--> (om-elem-property :type timestamp)
-                     (symbol-name it)
-                     (cond
-                      ((and (not time) (s-ends-with? "range" it))
-                       (s-chop-suffix "-range" it))
-                      ((and time (not (s-ends-with? "range" it)))
-                       (s-append "-range" it))
-                      (t it))
-                     (intern it))))
-    (om-elem-set-properties (list :type type
-                                  :year-end y
-                                  :month-end m
-                                  :day-end d
-                                  :hour-end H
-                                  :minute-end M)
-                            timestamp)))
-
 (defun om-elem-timestamp-set-time-end-unixtime (unixtime timestamp)
   "Set end time of TIMESTAMP element to UNIXTIME (an integer).
 This assumes one wants HH:MM precision."
@@ -2537,23 +2573,6 @@ This assumes one wants HH:MM precision."
   (-> (decode-time unixtime)
       (-slice 1 6)
       (om-elem-timestamp-set-time-end timestamp)))
-
-(defun om-elem-timestamp-set-type (type timestamp)
-  "Set type of TIMESTAMP element to TYPE.
-TYPE can be either 'active' or 'inactive'."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (let* ((cur-type (om-elem-property :type timestamp))
-         (is-ranged? (->> (symbol-name cur-type)
-                          (s-ends-with? "-range")))
-         (new-type
-          (cl-case type
-            (active (if is-ranged? 'active-range 'active))
-            (inactive (if is-ranged? 'inactive-range 'inactive))
-            ;; TODO, I honestly have no idea what a diary timestamp
-            ;; is and if this makes any sense...
-            ;; (diary diary)
-            (t (error "Invalid timestamp type: %s" type)))))
-    (om-elem-set-property :type new-type timestamp)))
 
 (defun om-elem--pad-list (list length fill)
   (let ((diff (- (length list) length)))

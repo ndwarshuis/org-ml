@@ -66,7 +66,10 @@
 
 (ert-deftest om-elem--timestamp/valid-props ()
   (om-elem--compare-object-props
-   (om-elem-build-timestamp 'inactive '(2019 1 1)) "[2019-01-01 Tue]"))
+   (om-elem-build-timestamp 'inactive '(2019 1 1))
+   ;; TODO the timestamp parser does not add properties for warnings
+   ;; or repeaters if they are not given, this appears to be a bug
+   "[2019-01-01 Tue +1d -1d]"))
 
 (ert-deftest om-elem--verbatim/valid-props ()
   (om-elem--compare-object-props
