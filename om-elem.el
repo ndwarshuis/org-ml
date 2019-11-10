@@ -950,8 +950,8 @@ Optionally provide ELEMS as contents."
                                              post-blank
                                              &rest elems)
   "Build a headline."
-  (om-elem--verify
-   elems (lambda (e) (--all? (om-elem-is-any-type-p '(section headline) it) e)))
+  (unless (--all? (om-elem-is-any-type-p '(section headline) it) elems)
+    (error "Only sections and headlines allowed inside headlines"))
   (let ((props (-> (list :title :pre-blank :level :todo-keyword :tags
                          :priority :footnote-section-p :commentedp
                          :archivedp :todo-type :raw-value)
