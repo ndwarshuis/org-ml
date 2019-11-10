@@ -1019,14 +1019,15 @@ Optionally provide ELEMS as contents."
   (om-elem--build-container-element `(:type ,type) 'special-block
                                     post-blank elems))
 
-(om-elem--defun om-elem-build-table (&key tblfm post-blank &rest elems)
-  "Build a section grater element with ELEMS as contents."
+(om-elem--defun om-elem-build-table (&key tblfm post-blank &rest
+                                          table-rows)
+  "Build a section grater element containing TABLE-ROWS."
   ;; TODO this only deals with org tables for now
-  (om-elem--verify
-   tblfm (lambda (f) (-all? #'stringp f))
-   elems (lambda (e) (--all? (om-elem-is-type-p 'table-row it) e)))
+  (unless (--all? (om-elem-is-type-p 'table-row it) table-rows)
+    (error "Only table-rows are allowed inside tables"))
+  (om-elem--verify tblfm (lambda (f) (-all? #'stringp f)))
   (-> `(:tblfm ,tblfm :type org :value nil)
-      (om-elem--build-container-element 'table post-blank elems)))
+      (om-elem--build-container-element 'table post-blank table-rows)))
 
 ;; shortcut builders
 
