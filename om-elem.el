@@ -985,13 +985,13 @@ Optionally provide ELEMS as contents."
      (om-elem--item-set-tag tag)
      (om-elem--item-set-counter counter))))
 
-(om-elem--defun om-elem-build-plain-list (&key post-blank &rest elems)
-   ;; TODO only allow item elems
+(om-elem--defun om-elem-build-plain-list (&key post-blank &rest items)
   "Build a plain-list greater element with ELEMS as contents."
-  (om-elem--verify elems (lambda (e) (--all? (om-elem-is-type-p 'item it) e)))
+  (unless (--all? (om-elem-is-type-p 'item it) items)
+    (error "Only items are allowed inside plain-lists"))
   (->
    '(:structure nil :type nil)
-   (om-elem--build-container-element 'plain-list post-blank elems)))
+   (om-elem--build-container-element 'plain-list post-blank items)))
 
 (om-elem--defun om-elem-build-property-drawer (&key post-blank &rest elems)
   "Build a property-drawer greater element with ELEMS as contents."
