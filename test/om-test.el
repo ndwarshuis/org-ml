@@ -6,6 +6,269 @@
 
 (require 'dash)
 
+(defun should-have-equal-properties (e1 e2)
+  (unless (eq (om-elem-type e1) (om-elem-type e2))
+    (error "Type mismatch: %s\n\n%s" e1 e2))
+  (cl-flet ((plist-get-keys (plist) (-slice plist 0 nil 2)))
+    (let ((p1 (plist-get-keys (nth 1 e1)))
+          (p2 (plist-get-keys (nth 1 e2))))
+      ;; (print e1)
+      ;; (print e2)
+      ;; (print p1)
+      ;; (print p2)
+      (should-not (or (-difference p1 p2) (-difference p2 p1))))))
+
+;; objects
+
+(defun om-elem--compare-object-props (elem string)
+  (should-have-equal-properties
+   elem
+   (->> (om-elem-from-string (concat " " string))
+        (om-elem-get-nested-content '(0 1)))))
+
+(ert-deftest om-elem--code/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-code "value") "~code~"))
+
+(ert-deftest om-elem--entity/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-entity "name") "\\pi"))
+
+(ert-deftest om-elem--export-snippet/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-export-snippet "backend" "value") "@@im:padme@@"))
+
+(ert-deftest om-elem--inline-babel-call/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-inline-babel-call "name") "call_name()"))
+
+(ert-deftest om-elem--inline-src-block/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-inline-src-block "lang" "value") "src_lang{value}"))
+
+;; TODO add latex fragment
+
+(ert-deftest om-elem--line-break/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-line-break) "\\\\\n"))
+
+(ert-deftest om-elem--macro/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-macro "value") "{{{value}}}"))
+
+;; TODO add statistics cookie
+
+(ert-deftest om-elem--target/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-target "value") "<<value>>"))
+
+(ert-deftest om-elem--timestamp/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-timestamp 'inactive '(2019 1 1)) "[2019-01-01 Tue]"))
+
+(ert-deftest om-elem--verbatim/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-verbatim "value") "=value="))
+
+;; recursive objects
+
+(ert-deftest om-elem--bold/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-bold) "*bold*"))
+
+(ert-deftest om-elem--footnote-reference/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-footnote-reference) "[fn:1]"))
+
+(ert-deftest om-elem--italic/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-italic) "/italic/"))
+
+(ert-deftest om-elem--link/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-link "path") "[[path]]"))
+
+(ert-deftest om-elem--radio-target/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-radio-target) "<<<target>>>"))
+
+(ert-deftest om-elem--strike-through/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-strike-through) "+bad+"))
+
+(ert-deftest om-elem--superscript/valid-props ()
+  (should-have-equal-properties
+   (om-elem-build-superscript)
+   (->> (om-elem-from-string "thisis^super")
+        (om-elem-get-nested-content '(0 1)))))
+
+(ert-deftest om-elem--subscript/valid-props ()
+  (should-have-equal-properties
+   (om-elem-build-subscript)
+   (->> (om-elem-from-string "thisis_subpar")
+        (om-elem-get-nested-content '(0 1)))))
+
+(ert-deftest om-elem--table-cell/valid-props ()
+  (should-have-equal-properties
+   (om-elem-build-table-cell "cell")
+   (->> (om-elem-from-string "| cell |")
+        (om-elem-get-nested-content '(0 0 0)))))
+
+(ert-deftest om-elem--underline/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-underline) "_bad_"))
+
+;; elements
+
+(defun om-elem--compare-element-props (elem string)
+  (should-have-equal-properties
+   elem
+   (->> (om-elem-from-string string)
+        (om-elem-get-nested-content '(0)))))
+
+(ert-deftest om-elem--babel-call/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-babel-call "call") "#+CALL: name()"))
+
+(ert-deftest om-elem--clock/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-clock '(2019 1 1)) "CLOCK: [2019-01-01 Tue]"))
+
+(ert-deftest om-elem--comment/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-comment "useless") "# useless"))
+
+(ert-deftest om-elem--comment-block/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-comment-block "useless")
+   "#+BEGIN_COMMENT\nuseless\n#+END_COMMENT"))
+
+(ert-deftest om-elem--diary-sexp/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-diary-sexp "value") "%%(value)"))
+
+(ert-deftest om-elem--example-block/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-example-block "useless")
+   "#+BEGIN_EXAMPLE\nuseless\n#+END_EXAMPLE"))
+
+(ert-deftest om-elem--export-block/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-export-block "type" "value")
+   "#+BEGIN_EXPORT type\nuseless\n#+END_EXPORT"))
+
+(ert-deftest om-elem--fixed-width/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-fixed-width "value") ": value"))
+
+(ert-deftest om-elem--horizontal-rule/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-horizontal-rule) "-----"))
+
+(ert-deftest om-elem--keyword/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-keyword "key" "val") "#+KEY: val"))
+
+(ert-deftest om-elem--latex-environment/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-latex-environment "gloves" "text")
+   "\\begin{env}\nvalue\n\\end{env}"))
+
+(ert-deftest om-elem--node-property/valid-props ()
+  (should-have-equal-properties
+   (om-elem-build-node-property "key" "value")
+   (->> (om-elem-from-string "* dummy\n:PROPERTIES:\n:key: val\n:END:")
+        (om-elem-get-nested-content '(0 0 0)))))
+
+(ert-deftest om-elem--planning/valid-props ()
+  (should-have-equal-properties
+   (om-elem-build-planning :closed '(2019 1 1))
+   (->> (om-elem-from-string "* dummy\nCLOSED: [2019-01-01 Tue]")
+        (om-elem-get-nested-content '(0 0)))))
+
+(ert-deftest om-elem--src-block/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-src-block "value")
+   "#+BEGIN_SRC\nuseless\n#+END_SRC"))
+
+;; containers
+
+(ert-deftest om-elem--paragraph/valid-props ()
+  (should-have-equal-properties
+   (om-elem-build-paragraph)
+   (->> (om-elem-from-string "text")
+        (om-elem-get-nested-content '(0)))))
+
+(ert-deftest om-elem--table-row/valid-props ()
+  (should-have-equal-properties
+   (om-elem-build-table-row)
+   (->> (om-elem-from-string "| row |")
+        (om-elem-get-nested-content '(0 0)))))
+
+(ert-deftest om-elem--verse-block/valid-props ()
+  (should-have-equal-properties
+   (om-elem-build-verse-block)
+   (->> (om-elem-from-string "#+BEGIN_VERSE\nthing\n#+END_VERSE")
+        (om-elem-get-nested-content '(0)))))
+
+(ert-deftest om-elem--center-block/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-center-block)
+   "#+BEGIN_CENTER\nuseless\n#+END_CENTER"))
+
+(ert-deftest om-elem--drawer/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-drawer "name")
+   ":LOGBOOK:\nuseless\n:END:"))
+
+(ert-deftest om-elem--dynamic-block/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-dynamic-block "name" "args")
+   "#+BEGIN: name args\nuseless\n#+END:"))
+
+(ert-deftest om-elem--footnote-definition/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-footnote-definition "label") "[fn:label]\n"))
+
+(ert-deftest om-elem--headline/valid-props ()
+  (should-have-equal-properties
+   (om-elem-build-headline)
+   (om-elem-from-string "* head")))
+
+(ert-deftest om-elem--item/valid-props ()
+  (should-have-equal-properties
+   (om-elem-build-item)
+   (->> (om-elem-from-string "- head")
+        (om-elem-get-nested-content '(0 0)))))
+
+(ert-deftest om-elem--plain-list/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-plain-list) "- item"))
+
+(ert-deftest om-elem--property-drawer/valid-props ()
+  (should-have-equal-properties
+   (om-elem-build-property-drawer)
+   (->> (om-elem-from-string "* dummy\n:PROPERTIES:\n:END:")
+        (om-elem-get-nested-content '(0 0)))))
+
+(ert-deftest om-elem--quote-block/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-quote-block)
+   "#+BEGIN_QUOTE\n#+END_QUOTE"))
+
+(ert-deftest om-elem--section/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-section) "* dummy\nstuff"))
+
+(ert-deftest om-elem--special-block/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-special-block "type")
+   "#+BEGIN_type:\n#+END_type:"))
+
+(ert-deftest om-elem--table/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-table) "| table |"))
+
 (defun should-equal (string elem)
   (should (equal string (->> (om-elem-to-string elem) (s-trim)))))
 
