@@ -572,17 +572,16 @@ nested element to return."
 (om-elem--defun om-elem-build-entity (name &key use-brackets-p post-blank)
   "Build a entity object from NAME."
   (om-elem--verify name stringp use-brackets-p booleanp)
-  (let ((placeholders '(:html :ascii :latex :latex-math-p :latin1 :utf-8)))
-    (-> `(:name ,name :use-brackets-p ,use-brackets-p)
-        (append (om-elem--init-properties placeholders))
-        (om-elem--build-object 'entity post-blank))))
+  (-> '(:html :ascii :latex :latex-math-p :latin1 :utf-8)
+      (om-elem--init-properties)
+      (append `(:name ,name :use-brackets-p ,use-brackets-p))
+      (om-elem--build-object 'entity post-blank)))
 
 (om-elem--defun om-elem-build-export-snippet (back-end value &key post-blank)
   "Build an export-block element with BACK-END and TYPE."
   (om-elem--verify back-end stringp value stringp)
-  (om-elem--build-object `(:value ,value :back-end ,back-end)
-                         'export-snippet
-                         post-blank))
+  (-> `(:value ,value :back-end ,back-end)
+      (om-elem--build-object 'export-snippet post-blank)))
 
 (om-elem--defun om-elem-build-inline-babel-call (call &key post-blank
                                                 arguments
@@ -626,29 +625,30 @@ Optionally provide PARAMETERS."
   (om-elem--verify key stringp
                    args string-or-null-p)
   (om-elem--build-object
-   (list :value (->> (if args (format "%s(%s)" key (s-join "," args)) key)
+   (list :value (->> (if args
+                         (format "%s(%s)" key (s-join "," args))
+                       key)
                      (format "{{{%s}}}"))
-         ;; placeholders
-         :args nil
-         :key nil)
+         :args args
+         :key key)
    'macro post-blank))
 
 ;; TODO this function needs to be refactored
 (om-elem--defun om-elem-build-statistics-cookie (&optional num dem &key post-blank)
   "Build a statistics cookie object with NUM and DEM."
-  (let ((value
+  (let ((props
          (->> (cond
                ((and num dem) (format "%s/%s" num dem))
                (num (format "%s%%" num dem))
                (t "%"))
-              (format "[%s]"))))
-    (om-elem--build-object (list :value value)
-                           'statistics-cookie post-blank)))
+              (format "[%s]")
+              (list :value))))
+    (om-elem--build-object props 'statistics-cookie post-blank)))
 
 (om-elem--defun om-elem-build-target (value &key post-blank)
   "Build a target object with VALUE."
   (om-elem--verify value stringp)
-  (om-elem--build-object (list :value value) 'target post-blank))
+  (om-elem--build-object `(:value ,value) 'target post-blank))
 
 (om-elem--defun om-elem-build-timestamp (type start &key end
                                               repeater
@@ -708,37 +708,25 @@ Optionally provide PARAMETERS."
        (mk-repeater
         (repeater)
         (mk-decorator repeater 'repeater '(catch-up restart cumulative))))
-    (om-elem--build-object (append (mk-type type)
-                                   (mk-start start)
-                                   (mk-end end)
-                                   (mk-warning warning)
-                                   (mk-repeater repeater)
-                                   ;; placeholder
-                                   (list :raw-value nil))
-                           'timestamp post-blank)))
+    (let ((props (append (mk-type type)
+                         (mk-start start)
+                         (mk-end end)
+                         (mk-warning warning)
+                         (mk-repeater repeater)
+                         ;; placeholder
+                         (list :raw-value nil))))
+      (om-elem--build-object props 'timestamp post-blank))))
 
 (om-elem--defun om-elem-build-diary-sexp-timestamp (string &key post-blank)
   "Build a diary-sexp timestamp element from STRING.
 STRING is a lisp form as a string."
   (om-elem--verify string stringp)
-  (-> (list :type 'diary
-            :raw-value (format "<%%%%%s>" string)
-            :repeater-type nil
-            :repeater-unit nil
-            :repeater-value nil
-            :warning-type nil
-            :warning-unit nil
-            :warning-value nil
-            :year-start nil
-            :month-start nil
-            :day-start nil
-            :hour-start nil
-            :minute-start nil
-            :year-end nil
-            :month-end nil
-            :day-end nil
-            :hour-end nil
-            :minute-end nil)
+  (-> (list :repeater-type :repeater-unit :repeater-value
+            :warning-type :warning-unit :warning-value :year-start
+            :month-start :day-start :hour-start :minute-start
+            :year-end :month-end :day-end :hour-end :minute-end)
+      (om-elem--init-properties)
+      (append `(:type diary :raw-value (format "<%%%%%s>" string)))
       (om-elem--build-object 'timestamp post-blank)))
         
 (om-elem--defun om-elem-build-verbatim (value &key post-blank)
@@ -757,8 +745,8 @@ STRING is a lisp form as a string."
                                                        &rest objs)
   "Build a footnote reference object to TARGET."
   (om-elem--verify label string-or-null-p)
-  (om-elem--build-recursive-object
-   `(:label ,label :type nil) 'footnote-reference post-blank objs))
+  (-> `(:label ,label :type nil)
+      (om-elem--build-recursive-object 'footnote-reference post-blank objs)))
 
 (om-elem--defun om-elem-build-italic (&key post-blank &rest objs)
   "Build an italic object from STRING."
@@ -771,18 +759,15 @@ STRING is a lisp form as a string."
                    ;; TODO there are a finite set of types
                    type string-or-null-p
                    format (lambda (f) (or (null f) (memq f '(plain angle bracket)))))
-  (-> (list :path path
-            :type type
-            :format format
-            ;; placeholders
-            :raw-link nil
-            :application nil
-            :search-option nil)
+  (-> '(:raw-link :application :search-option)
+      (om-elem--init-properties)
+      (append (list :path path :type type :format format))
       (om-elem--build-recursive-object 'link post-blank objs)))
 
 (om-elem--defun om-elem-build-radio-target (&key post-blank &rest objs)
   "Build a radio target object from STRING."
-  (om-elem--build-recursive-object '(:value nil) 'radio-target post-blank objs))
+  (om-elem--build-recursive-object '(:value nil) 'radio-target
+                                   post-blank objs))
 
 (om-elem--defun om-elem-build-strike-through (&key post-blank &rest objs)
   "Build a strike-through object from STRING."
@@ -793,16 +778,16 @@ STRING is a lisp form as a string."
                                                 &rest objs)
   "Build a superscript object from STRING."
   (om-elem--verify use-brackets-p booleanp)
-  (om-elem--build-recursive-object `(:use-brackets-p ,use-brackets-p)
-                                   'superscript post-blank objs))
+  (-> `(:use-brackets-p ,use-brackets-p)
+      (om-elem--build-recursive-object 'superscript post-blank objs)))
 
 (om-elem--defun om-elem-build-subscript (&key use-brackets-p
                                               post-blank
                                               &rest objs)
   "Build a subscript object from STRING."
   (om-elem--verify use-brackets-p booleanp)
-  (om-elem--build-recursive-object `(:use-brackets-p ,use-brackets-p)
-                                   'subscript post-blank objs))
+  (-> `(:use-brackets-p ,use-brackets-p)
+      (om-elem--build-recursive-object 'subscript post-blank objs)))
 
 (om-elem--defun om-elem-build-table-cell (&key post-blank &rest objs)
   "Build a table cell object containing TEXT."
@@ -878,22 +863,19 @@ VALUE is the part inside the '%%(value)' part of the sexp."
   (om-elem--verify value stringp
                    switches string-or-null-p
                    preserve-indent booleanp)
-  (-> (list :value (org-element-normalize-string value)
-            :switches switches
-            :preserve-indent preserve-indent
-            ;; placeholders
-            :number-lines nil
-            :retain-labels nil
-            :use-labels nil
-            :label-fmt nil)
+  (-> '(:number-lines :retain-labels :use-labels :label-fmt)
+      (om-elem--init-properties)
+      (append (list :value (org-element-normalize-string value)
+                    :switches switches
+                    :preserve-indent preserve-indent))
       (om-elem--build-element 'example-block post-blank)))
 
 (om-elem--defun om-elem-build-export-block (type value &key post-blank)
   "Build an export-block element with TYPE and VALUE."
   (om-elem--verify type stringp
                    value stringp)
-  (om-elem--build-element `(:value ,value :type ,type) 'export-block
-                         post-blank))
+  (-> `(:value ,value :type ,type)
+      (om-elem--build-element 'export-block post-blank)))
 
 (om-elem--defun om-elem-build-fixed-width (value &key post-blank)
   "Build a fixed-width element from STRING."
@@ -907,18 +889,22 @@ VALUE is the part inside the '%%(value)' part of the sexp."
 (om-elem--defun om-elem-build-keyword (key value &key post-blank)
   "Build keyword element with keyword KEY and value VAL."
   (om-elem--verify key stringp value stringp)
-  (om-elem--build-element `(:key ,key :value ,value) 'keyword post-blank))
+  (-> `(:key ,key :value ,value)
+      (om-elem--build-element 'keyword post-blank)))
 
 (om-elem--defun om-elem-build-latex-environment (env text &key post-blank)
   "Build a latex-environment element with environment ENV and TEXT."
   (om-elem--verify env stringp text stringp)
-  (let ((value (format "\\begin{%1$s}\n%2$s\n\\end{%1$s}" env text)))
-    (om-elem--build-element `(:value ,value) 'latex-environment post-blank)))
+  (let ((props (->> text
+                    (format "\\begin{%1$s}\n%2$s\n\\end{%1$s}" env)
+                    (list :value))))
+    (om-elem--build-element props 'latex-environment post-blank)))
 
 (om-elem--defun om-elem-build-node-property (key value &key post-blank)
   "Build a node property object with KEY and VAL."
   (om-elem--verify key stringp value stringp)
-  (om-elem--build-element `(:key ,key :value ,value) 'node-property post-blank))
+  (-> `(:key ,key :value ,value)
+      (om-elem--build-element 'node-property post-blank)))
 
 (om-elem--defun om-elem-build-planning (&key closed scheduled deadline post-blank)
   "Build planning element with TYPE and TIME."
@@ -938,17 +924,14 @@ VALUE is the part inside the '%%(value)' part of the sexp."
                    switches string-or-null-p
                    parameters string-or-null-p
                    preserve-indent booleanp)
-  (-> (list :value value
-            :language language
-            :switches switches
-            :parameters parameters
-            :preserve-indent preserve-indent
-            ;; placeholders
-            :number-lines nil
-            :retain-labels nil
-            :use-labels nil
-            :label-fmt nil)
-   (om-elem--build-element 'src-block post-blank)))
+  (-> '(:number-lines :retain-labels :use-labels :label-fmt)
+      (om-elem--init-properties)
+      (append (list :value value
+                    :language language
+                    :switches switches
+                    :parameters parameters
+                    :preserve-indent preserve-indent))
+      (om-elem--build-element 'src-block post-blank)))
 
 ;; container elements
 
@@ -984,8 +967,8 @@ VALUE is the part inside the '%%(value)' part of the sexp."
   "Create drawer greater element with NAME and ELEMS as contents."
   (om-elem--verify drawer-name stringp
                    elems om-elem--all-elements-p)
-  (om-elem--build-container-element `(:drawer-name ,drawer-name)
-                                  'drawer post-blank elems))
+  (-> `(:drawer-name ,drawer-name)
+      (om-elem--build-container-element 'drawer post-blank elems)))
 
 (om-elem--defun om-elem-build-dynamic-block (block-name
                                              arguments
@@ -997,8 +980,9 @@ provide ELEMS as contents."
   (om-elem--verify block-name stringp
                    arguments stringp
                    elems om-elem--all-elements-p)
-  (-> `(:block-name ,block-name :arguments ,arguments)
-      (om-elem--build-container-element 'dynamic-block post-blank elems)))
+  (->
+   `(:block-name ,block-name :arguments ,arguments)
+   (om-elem--build-container-element 'dynamic-block post-blank elems)))
 
 (om-elem--defun om-elem-build-footnote-definition (label
                                                    &key post-blank
@@ -1079,8 +1063,9 @@ Optionally provide ELEMS as contents."
    ;; TODO only allow item elems
   "Build a plain-list greater element with ELEMS as contents."
   (om-elem--verify elems (lambda (e) (--all? (om-elem-is-type-p 'item it) e)))
-  (om-elem--build-container-element '(:structure nil :type nil)
-                                  'plain-list post-blank elems))
+  (->
+   '(:structure nil :type nil)
+   (om-elem--build-container-element 'plain-list post-blank elems)))
 
 (om-elem--defun om-elem-build-property-drawer (&key post-blank &rest elems)
   "Build a property-drawer greater element with ELEMS as contents."
