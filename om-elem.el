@@ -958,7 +958,7 @@ Optionally provide ELEMS as contents."
                    (om-elem--init-properties))))
     (->>
      (om-elem--build-container-element props 'headline post-blank elems)
-     (om-elem--set-pre-blank pre-blank)
+     (om-elem--headline-set-pre-blank pre-blank)
      (om-elem--headline-set-todo todo-keyword)
      (om-elem--headline-set-title title)
      (om-elem--headline-set-level level)
@@ -970,34 +970,20 @@ Optionally provide ELEMS as contents."
 
 ;; TODO add inline text
 
-(defun om-elem--format-bullet (bullet)
-  (cond
-   ((integerp bullet) (format "%s. " bullet))
-   ((memq bullet '(- +)) (format "%s " bullet))
-   ;; TODO use alphanumeric if org-list-allow-alphabetical = t
-   ((and (stringp bullet)
-         (s-matches? "[:space:]*[0-9]+\\(\\.\\|)\\)[:space:]*" bullet))
-    bullet)
-   (t (error "Invalid bullet: %s" bullet))))
-
 (om-elem--defun om-elem-build-item (&key (bullet '-) checkbox tag
                                          counter post-blank
                                          &rest elems)
   "Build a plain-list greater element with ELEMS as contents."
-  (om-elem--verify
-   checkbox (lambda (c) (memq c '(nil on off trans)))
-   tag om-elem--item-tag-is-allowed-p
-   ;; TODO allow alphabetical counters
-   counter (lambda (c) (or (null c) (om-elem--non-neg-integer-p c)))
-   ;; TODO this probably isn't actually true
-   elems om-elem--all-elements-p)
-  (-> (list :bullet (om-elem--format-bullet bullet)
-            :checkbox checkbox
-            :counter counter
-            :tag tag
-            ;; placeholders
-            :structure nil)
-      (om-elem--build-container-element 'item post-blank elems)))
+  ;; TODO are all elements actually allowed?
+  (om-elem--verify elems om-elem--all-elements-p)
+  (let ((props (-> '(:bullet :checkbox :counter :tag :structure)
+                   (om-elem--init-properties))))
+    (->>
+     (om-elem--build-container-element props 'item post-blank elems)
+     (om-elem--item-set-bullet bullet)
+     (om-elem--item-set-checkbox checkbox)
+     (om-elem--item-set-tag tag)
+     (om-elem--item-set-counter counter))))
 
 (om-elem--defun om-elem-build-plain-list (&key post-blank &rest elems)
    ;; TODO only allow item elems
@@ -2224,14 +2210,14 @@ property list in ELEM."
   (om-elem--verify elem om-elem-is-element-or-object-p)
   (om-elem--set-post-blank post-blank elem))
 
-(defun om-elem--set-pre-blank (pre-blank elem)
+
+;; headline
+
+(defun om-elem--headline-set-pre-blank (pre-blank headline)
   (om-elem--verify pre-blank om-elem--non-neg-integer-p)
   ;; unlike post-blank, we assume this will never be needed for
   ;; plain text, so don't test for stringp here
-  (om-elem-set-property :pre-blank pre-blank elem))
-
-
-;; headline
+  (om-elem-set-property :pre-blank pre-blank headline))
 
 (defun om-elem--headline-set-todo (todo headline)
   "Set the todo keyword of HEADLINE element to TODO."
@@ -2241,7 +2227,7 @@ property list in ELEM."
 (defun om-elem-headline-set-pre-blank (pre-blank headline)
   "Set the :pre-blank property of HEADLINE to PRE-BLANK."
   (om-elem--verify elem om-elem-is-headline-p)
-  (om-elem--set-pre-blank pre-blank headline))
+  (om-elem--headline-set-pre-blank pre-blank headline))
 
 (defun om-elem-headline-set-todo (todo headline)
   "Set the todo keyword of HEADLINE element to TODO."
@@ -2369,28 +2355,65 @@ property list in ELEM."
 
 ;; item
 
+(defun om-elem--item-set-checkbox (state item)
+  "Set the checkbox of ITEM element to STATE.
+STATE is one of 'on', 'off', 'trans'. Setting to nil removes the
+checkbox."
+  (unless (memq state '(nil on off trans))
+    (error ("Invalid checkbox state: %s" state)))
+  (om-elem--set-property :checkbox state item))
+
 (defun om-elem-item-set-checkbox (state item)
   "Set the checkbox of ITEM element to STATE.
 STATE is one of 'on', 'off', 'trans'. Setting to nil removes the
 checkbox."
-  (om-elem--verify state (lambda (s) (memq s '(nil on off trans)))
-                   item om-elem-is-item-p)
-  (om-elem-set-property :checkbox state item))
+  (om-elem--verify item om-elem-is-item-p)
+  (om-elem--item-set-checkbox state item))
+
+(defun om-elem--format-bullet (bullet)
+  (cond
+   ((integerp bullet) (format "%s. " bullet))
+   ((memq bullet '(- +)) (format "%s " bullet))
+   ;; TODO use alphanumeric if org-list-allow-alphabetical = t
+   ((and (stringp bullet)
+         (s-matches? "[:space:]*[0-9]+\\(\\.\\|)\\)[:space:]*" bullet))
+    bullet)
+   (t (error "Invalid bullet: %s" bullet))))
+
+(defun om-elem--item-set-bullet (bullet item)
+  (let ((b (cond
+            ((integerp bullet) (format "%s. " bullet))
+            ((memq bullet '(- +)) (format "%s " bullet))
+            ;; TODO use alphanumeric if org-list-allow-alphabetical = t
+            ((and (stringp bullet)
+                  (s-matches? "[:space:]*[0-9]+\\(\\.\\|)\\)[:space:]*" bullet))
+             bullet)
+            (t (error "Invalid bullet: %s" bullet)))))
+    (om-elem--set-property :bullet b item)))
 
 (defun om-elem-item-set-bullet (bullet item)
   "Set the bullet of ITEM element to BULLET.
 BULLET is either '-' or '+' or an integer greater than zero.
 Note that `org-element-item-interpreter' currently does not interpret
 '+' bullets properly and will render these as '-'."
-  ;; bullet verified elsewhere
   (om-elem--verify item om-elem-is-item-p)
-  (om-elem-set-property :bullet (om-elem--format-bullet bullet) item))
+  (om-elem--item-set-bullet bullet item))
+
+(defun om-elem--item-set-tag (tag item)
+  "Set the tag of ITEM element to TAG where TAG is a string or nil."
+  (om-elem--verify tag om-elem--item-tag-is-allowed-p)
+  (om-elem--set-property :tag tag item))
 
 (defun om-elem-item-set-tag (tag item)
   "Set the tag of ITEM element to TAG where TAG is a string or nil."
-  (om-elem--verify tag om-elem--item-tag-is-allowed-p
-                  item om-elem-is-item-p)
-  (om-elem-set-property :tag tag item))
+  (om-elem--verify item om-elem-is-item-p)
+  (om-elem--item-set-tag tag item))
+
+(defun om-elem--item-set-counter (counter item)
+  "Set the tag of ITEM element to COUNTER."
+  ;; TODO what about alphabetic counters?
+  (om-elem--verify counter (lambda (c) (or (null c) (om-elem--non-neg-integer-p c))))
+  (om-elem--set-property :counter counter item))
 
 ;; TODO there seems to be a bug in the org-interpeter that prevents
 ;; "+" bullets from being recognized (as of org-9.1.9 they are simply
