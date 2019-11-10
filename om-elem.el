@@ -633,30 +633,30 @@ Optionally provide PARAMETERS."
          :key key)
    'macro post-blank))
 
-(om-elem--defun om-elem-build-statistics-cookie (number &key
-                                                        denominator
-                                                        post-blank)
+(om-elem--defun om-elem-build-statistics-cookie (value &key post-blank)
   "Build a statistics cookie object with NUMBER and DENOMINATOR."
-  (om-elem--verify
-   number (lambda (n) (or (null n) (om-elem--non-neg-integer-p n)))
-   denominator (lambda (d) (or (null d) (om-elem--non-neg-integer-p d))))
-  (cl-flet
-      ((mk-stat
-        (n d)
-        (cond
-         ((and n d)
-          (if (> n d) (error "Number greater than denominator")
-            (format "%s/%s" n d)))
-         ((and (not n) d)
-          (format "/"))
-         (n
-          (if (< 100 n) (error "Number greater than 100")
-            (format "%s%%" n)))
-         (t "%"))))
-    (--> (mk-stat number denominator)
-         (format "[%s]" it)
-         (list :value it)
-         (om-elem--build-object it 'statistics-cookie post-blank))))
+  ;; (om-elem--verify
+  ;;  number (lambda (n) (or (null n) (om-elem--non-neg-integer-p n)))
+  ;;  denominator (lambda (d) (or (null d) (om-elem--non-neg-integer-p d))))
+  ;; (cl-flet
+  ;;     ((mk-stat
+  ;;       (n d)
+  ;;       (cond
+  ;;        ((and n d)
+  ;;         (if (> n d) (error "Number greater than denominator")
+  ;;           (format "%s/%s" n d)))
+  ;;        ((and (not n) d)
+  ;;         (format "/"))
+  ;;        (n
+  ;;         (if (< 100 n) (error "Number greater than 100")
+  ;;           (format "%s%%" n)))
+  ;;        (t "%"))))
+  ;;   (--> (mk-stat number denominator)
+  ;;        (format "[%s]" it)
+  ;;        (list :value it)
+  (->>
+   (om-elem--build-object '(:value nil) 'statistics-cookie post-blank)
+   (om-elem--statistics-cookie-set-value value)))
 
 (om-elem--defun om-elem-build-target (value &key post-blank)
   "Build a target object with VALUE."
@@ -2464,6 +2464,39 @@ Setting TYPE to nil will result in a 'fuzzy' type link."
      ((member (symbol-name type) valid-types)
       (om-elem-set-property :type (symbol-name type) link))
      (t (error "Invalid link type: %s" type)))))
+
+;; statistics cookie
+
+(defun om-elem--statistics-cookie-set-value (value statistics-cookie)
+  "Set the value or STATISTICS-COOKIE object with VALUE.
+This is the internal version of `om-elem-statistics-cookie-set-value'
+without element verification."
+  (cl-flet
+      ((mk-stat
+        (v)
+        (pcase v
+          (`nil "%")
+          (`(nil) "/")
+          ((and (pred integerp) n)
+           (if (< 100 n) (error "Number greater than 100")
+             (format "%s%%" n)))
+          (`(,(and (pred integerp) n)
+             ,(and (pred integerp) d))
+           (if (> n d) (error "Number greater than denominator")
+             (format "%s/%s" n d)))
+          (_ (error "Invalid stat-cookie value: %s" v)))))
+    (let ((value* (format "[%s]" (mk-stat value))))
+      (om-elem-set-property :value value* statistics-cookie))))
+
+(defun om-elem-statistics-cookie-set-value (value statistics-cookie)
+  "Set the value or STATISTICS-COOKIE object with VALUE.
+VALUE can take four forms which determine the format of the value:
+- integer X from 0 to 100 -> 'X%'
+- nil -> '%'
+- (integer X integer Y) -> 'X/Y'
+- (nil) -> '/'"
+  (om-elem--verify statistics-cookie om-elem-is-statistics-cookie-p)
+  (om-elem-statistics--cookie-set-value value statistics-cookie))
 
 ;; timestamp
 

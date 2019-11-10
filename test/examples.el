@@ -86,13 +86,13 @@
          (om-elem-to-trimmed-string)) => "\\\\")
 
   (defexamples om-elem-build-statistics-cookie
-    (->> (om-elem-build-statistics-cookie 50)
-         (om-elem-to-trimmed-string)) => "[50%]"
     (->> (om-elem-build-statistics-cookie nil)
          (om-elem-to-trimmed-string)) => "[%]"
-    (->> (om-elem-build-statistics-cookie 1 :denominator 3)
+    (->> (om-elem-build-statistics-cookie 50)
+         (om-elem-to-trimmed-string)) => "[50%]"
+    (->> (om-elem-build-statistics-cookie '(1 3))
          (om-elem-to-trimmed-string)) => "[1/3]"
-    (->> (om-elem-build-statistics-cookie nil :denominator 0)
+    (->> (om-elem-build-statistics-cookie '(nil))
          (om-elem-to-trimmed-string)) => "[/]")
 
   (defexamples om-elem-build-target
