@@ -943,38 +943,30 @@ Optionally provide ELEMS as contents."
    `(:label ,label) 'footnote-definition post-blank elems))
 
 (om-elem--defun om-elem-build-headline (&key title (level 1)
-                                             pre-blank todo-keyword
+                                             (pre-blank 0) todo-keyword
                                              tags priority
                                              footnote-section-p
                                              commentedp archivedp
                                              post-blank
                                              &rest elems)
   "Build a headline."
-                                             ;; TODO bound this by org-lowest/highest-priority
   (om-elem--verify
-   title om-elem--headline-title-is-allowed-p
-   level om-elem--non-neg-integer-p
-   pre-blank (lambda (p) (or (null p) (om-elem--non-neg-integer-p p)))
-   todo-keyword string-or-null-p
-   tags (lambda (tags) (-all? #'string tags))
-   priority (lambda (p) (or (null p) (om-elem--non-neg-integer-p p)))
-   footnote-section-p booleanp
-   commentedp booleanp
-   archivedp booleanp
    elems (lambda (e) (--all? (om-elem-is-any-type-p '(section headline) it) e)))
-  (-> (list :title title
-            :pre-blank pre-blank
-            :level level
-            :todo-keyword todo-keyword
-            :tags tags
-            :priority priority
-            :footnote-section-p footnote-section-p
-            :commentedp commentedp
-            :archivedp archivedp
-            ;; placeholders
-            :todo-type nil
-            :raw-value nil)
-      (om-elem--build-container-element 'headline post-blank elems)))
+  (let ((props (-> (list :title :pre-blank :level :todo-keyword :tags
+                         :priority :footnote-section-p :commentedp
+                         :archivedp :todo-type :raw-value)
+                   (om-elem--init-properties))))
+    (->>
+     (om-elem--build-container-element props 'headline post-blank elems)
+     (om-elem--set-pre-blank pre-blank)
+     (om-elem--headline-set-todo todo-keyword)
+     (om-elem--headline-set-title title)
+     (om-elem--headline-set-level level)
+     (om-elem--headline-set-priority priority)
+     (om-elem--headline-set-footnote-section footnote-section-p)
+     (om-elem--headline-set-archived archivedp)
+     (om-elem--headline-set-commented commentedp)
+     (om-elem--headline-set-tags tags))))
 
 ;; TODO add inline text
 
@@ -2181,26 +2173,38 @@ and object containers and includes the 'plain-text' type.")
 
 ;; generic
 
-(defun om-elem-set-property (prop value elem)
+(defun om-elem--set-property (prop value elem)
   "Set property PROP in element ELEM to VALUE."
   ;; TODO validate that prop exists in elem first?
-  (om-elem--verify elem om-elem-is-element-or-object-p)
   (if (stringp elem) (org-add-props elem nil prop value)
     (om-elem--elem-list
      (om-elem-type elem)
      (plist-put (om-elem-properties elem) prop value)
      (om-elem-contents elem))))
 
-(defun om-elem-set-properties (plist elem)
+(defun om-elem-set-property (prop value elem)
+  "Set property PROP in element ELEM to VALUE."
+  ;; TODO validate that prop exists in elem first?
+  (om-elem--verify elem om-elem-is-element-or-object-p)
+  (om-elem--set-property prop value elem))
+
+(defun om-elem--set-properties (plist elem)
   "Set all properties in ELEM to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that correspond to the
 property list in ELEM."
   (cond
    ((not plist) elem)
    ((om-elem--is-plist-p plist)
-    (->> (om-elem-set-property (nth 0 plist) (nth 1 plist) elem)
-         (om-elem-set-properties (-drop 2 plist))))
+    (->> (om-elem--set-property (nth 0 plist) (nth 1 plist) elem)
+         (om-elem--set-properties (-drop 2 plist))))
    (t (error "Not a plist: %s" plist))))
+
+(defun om-elem-set-properties (plist elem)
+  "Set all properties in ELEM to the values corresponding to PLIST.
+PLIST is a list of property-value pairs that correspond to the
+property list in ELEM."
+  (om-elem--verify elem om-elem-is-element-or-object-p)
+  (om-elem--set-properties plist elem))
 
 (defun om-elem-set-recursive-content (content elem)
   ;; TODO this should only allow recursive types (eg bold, link, etc)
@@ -2209,42 +2213,81 @@ property list in ELEM."
    (let ((head (om-elem-head elem)))
      (if content (append head content) head)))
 
-(defun om-elem-set-post-blank (post-blank elem)
+(defun om-elem--set-post-blank (post-blank elem)
   "Set the :post-blank property of ELEM to POST-BLANK."
-  (om-elem--verify post-blank om-elem--non-neg-integer-p
-                   elem om-elem-is-element-or-object-p)
+  (om-elem--verify post-blank om-elem--non-neg-integer-p)
   (if (stringp elem) (s-append (s-repeat post-blank " ") elem)
     (om-elem-set-property :post-blank post-blank elem)))
 
+(defun om-elem-set-post-blank (post-blank elem)
+  "Set the :post-blank property of ELEM to POST-BLANK."
+  (om-elem--verify elem om-elem-is-element-or-object-p)
+  (om-elem--set-post-blank post-blank elem))
+
+(defun om-elem--set-pre-blank (pre-blank elem)
+  (om-elem--verify pre-blank om-elem--non-neg-integer-p)
+  ;; unlike post-blank, we assume this will never be needed for
+  ;; plain text, so don't test for stringp here
+  (om-elem-set-property :pre-blank pre-blank elem))
+
+
 ;; headline
+
+(defun om-elem--headline-set-todo (todo headline)
+  "Set the todo keyword of HEADLINE element to TODO."
+  (om-elem--verify todo string-or-null-p)
+  (om-elem--set-property :todo-keyword todo headline))
+
+(defun om-elem-headline-set-pre-blank (pre-blank headline)
+  "Set the :pre-blank property of HEADLINE to PRE-BLANK."
+  (om-elem--verify elem om-elem-is-headline-p)
+  (om-elem--set-pre-blank pre-blank headline))
 
 (defun om-elem-headline-set-todo (todo headline)
   "Set the todo keyword of HEADLINE element to TODO."
-  (om-elem--verify todo string-or-null-p
-                   headline om-elem-is-headline-p)
-  (om-elem-set-property :todo-keyword todo headline))
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-set-todo todo headline))
 
-;; (defun om-elem-headline-set-level (level elem)
-;;   (om-elem-set-property :level level elem))
+(defun om-elem--headline-set-level (level elem)
+  (om-elem--verify level (lambda (L) (< 0 L)))
+  (om-elem--set-property :level level elem))
+
+(defun om-elem--headline-set-archived (flag headline)
+  "Set the archived flag of HEADLINE element to FLAG."
+  (om-elem--verify flag booleanp)
+  ;; TODO does the archive flag need to be set?
+  ;; TODO abstract this in a set-tags function
+  (let ((new-tags (--> (om-elem-property :tags headline)
+                       (if flag (cons org-archive-tag it)
+                         (-remove-item org-archive-tag it)))))
+    (->> headline
+         (om-elem--set-property :archivedp flag)
+         (om-elem--set-property :tags new-tags))))
 
 (defun om-elem-headline-set-archived (flag headline)
   "Set the archived flag of HEADLINE element to FLAG."
-  (om-elem--verify flag booleanp
-                   headline om-elem-is-headline-p)
-  ;; TODO does the archive flag need to be set?
-  (let ((new-tags
-         (--> (om-elem-property :tags headline)
-              (if flag (cons org-archive-tag it)
-                (-remove-item org-archive-tag it)))))
-    (->> headline
-         (om-elem-set-property :archivedp flag)
-         (om-elem-set-property :tags new-tags))))
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-set-archived flag headline))
+
+(defun om-elem--headline-set-commented (flag headline)
+  "Set the commented flag of HEADLINE element to FLAG."
+  (om-elem--verify flag booleanp)
+  (om-elem--set-property :commentedp flag headline))
+
+(defun om-elem--headline-set-footnote-section (flag headline)
+  "Set the footnote section flag of HEADLINE element to FLAG."
+  (om-elem--verify flag booleanp)
+  (om-elem--set-property :footnote-section-p flag headline))
 
 (defun om-elem-headline-set-commented (flag headline)
   "Set the commented flag of HEADLINE element to FLAG."
-  (om-elem--verify flag booleanp
-                   headline om-elem-is-headline-p)
-  (om-elem-set-property :commentedp flag headline))
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-set-commented flag headline))
+
+(defun om-elem--headline-set-tags (tags headline)
+  "Set the tags of HEADLINE element to TAGS."
+  (om-elem--verify tags (lambda (tags) (-all? #'stringp tags)))
+  (om-elem--set-property :tags tags headline))
 
 (defun om-elem-headline-update-statistics-cookie (todo headline)
   ;; TODO the todo arg is clunky
@@ -2274,9 +2317,9 @@ property list in ELEM."
                 (t (error "Invalid statistics cookie %s" it)))
                (om-elem-set-property :value it cookie)))
          (new-title (-replace-first cookie new-cookie title)))
-    (om-elem-set-property :title new-title headline)))
+    (om-elem--set-property :title new-title headline)))
 
-(defun om--to-relative-priority (p)
+(defun om-elem--to-relative-priority (p)
   "Convert P from character value to counting integer starting at 0."
   ;; ironically the highest priority is actually the lowest integer
   (when p
@@ -2284,28 +2327,36 @@ property list in ELEM."
         (- p org-highest-priority)
       (error "Absolute priority out of range: %s" p))))
 
-(defun om--to-absolute-priority (p)
+(defun om-elem--to-absolute-priority (p)
   (when p
     (if (and (>= p 0)
              (<= p (abs (- org-highest-priority org-lowest-priority))))
         (+ org-highest-priority p)
       (error "Relative priority out of range: %s" priority))))
 
+(defun om-elem--headline-set-priority (priority headline)
+  "Set the priority of HEADLINE element to PRIORITY."
+  ;; TODO bound this by org-lowest/highest-priority
+  (om-elem--verify
+   priority (lambda (p) (or (null p) (om-elem--non-neg-integer-p p))))
+  ;; (let ((priority (om-elem--to-absolute-priority priority)))
+  (om-elem--set-property :priority priority headline))
+
 (defun om-elem-headline-set-priority (priority headline)
   "Set the priority of HEADLINE element to PRIORITY."
-  (om-elem--verify
-   priority (lambda (p) (or (null p) (om-elem--non-neg-integer-p p)))
-   headline om-elem-is-headline-p)
-  ;; (let ((priority (om--to-absolute-priority priority)))
-  (om-elem-set-property :priority priority headline))
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-set-priority priority headline))
 
-(defun om-elem-headline-set-title (title headline)
+(defun om-elem--headline-set-title (title headline)
   "Set the title of HEADLINE element to TITLE."
-  (om-elem--verify title om-elem--headline-title-is-allowed-p
-                   headline om-elem-is-headline-p)
-  (om-elem-set-property :title title headline))
+  (om-elem--verify title om-elem--headline-title-is-allowed-p)
+  (om-elem--set-property :title title headline))
 
 ;; TODO make shortcut function for setting the headline title
+(defun om-elem-headline-set-title (title headline)
+  "Set the title of HEADLINE element to TITLE."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-set-title title headline))
 
 (defun om--plist-get-keys (plist)
   (-slice plist 0 nil 2))
@@ -2666,7 +2717,7 @@ SHIFT is a positive or negative integer."
         (if (not shift) priority
           (let ((diff (+ 1 (abs (- org-lowest-priority
                                    org-highest-priority))))
-                (relp (om--to-relative-priority priority)))
+                (relp (om-elem--to-relative-priority priority)))
             (--> (- relp shift)
                  (mod it diff)
                  (- it relp)
