@@ -993,10 +993,13 @@ Optionally provide ELEMS as contents."
    '(:structure nil :type nil)
    (om-elem--build-container-element 'plain-list post-blank items)))
 
-(om-elem--defun om-elem-build-property-drawer (&key post-blank &rest elems)
-  "Build a property-drawer greater element with ELEMS as contents."
-  (om-elem--verify elems (lambda (e) (--all? (om-elem-is-type-p 'node-property it) e)))
-  (om-elem--build-container-element nil 'property-drawer post-blank elems))
+(om-elem--defun om-elem-build-property-drawer (&key post-blank &rest
+                                                    node-properties)
+  "Build a property-drawer greater element containing NODE-PROPERTIES."
+  (unless (--all? (om-elem-is-type-p 'node-property it) node-properties)
+    (error "Only node-properties are allowed inside property-drawers"))
+  (om-elem--build-container-element nil 'property-drawer post-blank
+                                    node-properties))
 
 (om-elem--defun om-elem-build-quote-block (&key post-blank &rest elems)
   "Build a quote-block greater element with ELEMS as contents."
