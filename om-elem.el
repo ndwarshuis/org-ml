@@ -633,17 +633,30 @@ Optionally provide PARAMETERS."
          :key key)
    'macro post-blank))
 
-;; TODO this function needs to be refactored
-(om-elem--defun om-elem-build-statistics-cookie (&optional num dem &key post-blank)
-  "Build a statistics cookie object with NUM and DEM."
-  (let ((props
-         (->> (cond
-               ((and num dem) (format "%s/%s" num dem))
-               (num (format "%s%%" num dem))
-               (t "%"))
-              (format "[%s]")
-              (list :value))))
-    (om-elem--build-object props 'statistics-cookie post-blank)))
+(om-elem--defun om-elem-build-statistics-cookie (number &key
+                                                        denominator
+                                                        post-blank)
+  "Build a statistics cookie object with NUMBER and DENOMINATOR."
+  (om-elem--verify
+   number (lambda (n) (or (null n) (om-elem--non-neg-integer-p n)))
+   denominator (lambda (d) (or (null d) (om-elem--non-neg-integer-p d))))
+  (cl-flet
+      ((mk-stat
+        (n d)
+        (cond
+         ((and n d)
+          (if (> n d) (error "Number greater than denominator")
+            (format "%s/%s" n d)))
+         ((and (not n) d)
+          (format "/"))
+         (n
+          (if (< 100 n) (error "Number greater than 100")
+            (format "%s%%" n)))
+         (t "%"))))
+    (--> (mk-stat number denominator)
+         (format "[%s]" it)
+         (list :value it)
+         (om-elem--build-object it 'statistics-cookie post-blank))))
 
 (om-elem--defun om-elem-build-target (value &key post-blank)
   "Build a target object with VALUE."

@@ -56,7 +56,9 @@
   (om-elem--compare-object-props
    (om-elem-build-macro "value") "{{{value}}}"))
 
-;; TODO add statistics cookie
+(ert-deftest om-elem--statistics-cookie/valid-props ()
+  (om-elem--compare-object-props
+   (om-elem-build-statistics-cookie 1) "[/]"))
 
 (ert-deftest om-elem--target/valid-props ()
   (om-elem--compare-object-props
