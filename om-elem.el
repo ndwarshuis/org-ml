@@ -635,25 +635,6 @@ Optionally provide PARAMETERS."
 
 (om-elem--defun om-elem-build-statistics-cookie (value &key post-blank)
   "Build a statistics cookie object with NUMBER and DENOMINATOR."
-  ;; (om-elem--verify
-  ;;  number (lambda (n) (or (null n) (om-elem--non-neg-integer-p n)))
-  ;;  denominator (lambda (d) (or (null d) (om-elem--non-neg-integer-p d))))
-  ;; (cl-flet
-  ;;     ((mk-stat
-  ;;       (n d)
-  ;;       (cond
-  ;;        ((and n d)
-  ;;         (if (> n d) (error "Number greater than denominator")
-  ;;           (format "%s/%s" n d)))
-  ;;        ((and (not n) d)
-  ;;         (format "/"))
-  ;;        (n
-  ;;         (if (< 100 n) (error "Number greater than 100")
-  ;;           (format "%s%%" n)))
-  ;;        (t "%"))))
-  ;;   (--> (mk-stat number denominator)
-  ;;        (format "[%s]" it)
-  ;;        (list :value it)
   (->>
    (om-elem--build-object '(:value nil) 'statistics-cookie post-blank)
    (om-elem--statistics-cookie-set-value value)))
