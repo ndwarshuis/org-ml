@@ -120,7 +120,7 @@
 
   (defexamples om-elem-build-footnote-reference
     (->> (om-elem-build-footnote-reference)
-         (om-elem-to-trimmed-string)) => "[fn:1]"
+         (om-elem-to-trimmed-string)) => "[fn:]"
     (->> (om-elem-build-footnote-reference :label "label")
          (om-elem-to-trimmed-string)) => "[fn:label]"
     (->> (om-elem-build-footnote-reference :label "label" "content")
