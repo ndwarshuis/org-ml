@@ -684,11 +684,10 @@ and object containers and includes the 'plain-text' type.")
 
 (defun om-elem--headline-set-priority (priority headline)
   "Set the priority of HEADLINE element to PRIORITY."
-  ;; TODO bound this by org-lowest/highest-priority
-  (om-elem--verify
-   priority (lambda (p) (or (null p) (om-elem--non-neg-integer-p p))))
-  ;; (let ((priority (om-elem--to-absolute-priority priority)))
-  (om-elem--set-property :priority priority headline))
+  (if (or (null priority) (and (>= org-lowest-priority priority)
+                               (>= priority org-highest-priority)))
+      (om-elem--set-property :priority priority headline)
+    (error "Invalid priority given: %S" priority)))
 
 ;; TODO refactor this
 (defun om-elem--headline-title-is-allowed-p (secondary-string)
@@ -2705,7 +2704,7 @@ VALUE can take four forms which determine the format of the value:
   (om-elem--verify statistics-cookie om-elem-is-statistics-cookie-p)
   (om-elem-statistics--cookie-set-value value statistics-cookie))
 
-;; timestamp (external)
+;; timestamp
 
 (defun om-elem-timestamp-set-time (time timestamp)
   "Set start time of TIMESTAMP element to TIME.
