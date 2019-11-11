@@ -2733,18 +2733,6 @@ This will also change the type to (un)ranged as appropriate."
 TYPE can be either 'active' or 'inactive'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-set-type type timestamp))
-  ;; (let* ((cur-type (om-elem-property :type timestamp))
-  ;;        (is-ranged? (->> (symbol-name cur-type)
-  ;;                         (s-ends-with? "-range")))
-  ;;        (new-type
-  ;;         (cl-case type
-  ;;           (active (if is-ranged? 'active-range 'active))
-  ;;           (inactive (if is-ranged? 'inactive-range 'inactive))
-  ;;           ;; TODO, I honestly have no idea what a diary timestamp
-  ;;           ;; is and if this makes any sense...
-  ;;           ;; (diary diary)
-  ;;           (t (error "Invalid timestamp type: %s" type)))))
-  ;;   (om-elem-set-property :type new-type timestamp)))
 
 ;; TOOD add a switch for precision
 (defun om-elem-timestamp-set-time-unixtime (unixtime timestamp)
