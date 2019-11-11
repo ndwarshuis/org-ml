@@ -535,29 +535,28 @@ nested element to return."
   "Return a plist where the keys are PROPS and all values are nil."
   (--splice 't (list it nil) props))
 
-(defun om-elem--build (type props init-props post-blank contents)
-  (let ((props (-> (om-elem--init-properties init-props)
-                   (plist-put :post-blank post-blank)
-                   (append props))))
-    (om-elem--elem-list type props contents)))
+(defun om-elem--build (type props init-props post-blank)
+  (let ((props (append props (om-elem--init-properties init-props))))
+    (->> (om-elem--elem-list type props nil)
+         (om-elem--set-post-blank (or post-blank 0)))))
 
 (defun om-elem--build-object (props type post-blank)
   (let ((init-props om-elem--object-properties))
-    (om-elem--build type props init-props post-blank nil)))
+    (om-elem--build type props init-props post-blank)))
 
 (defun om-elem--build-recursive-object (props type post-blank objs)
-  (om-elem--verify
-   objs (lambda (os) (--all? (om-elem-is-allowed-object-p type it) os)))
   (let ((init-props om-elem--recursive-object-properties))
-    (om-elem--build type props init-props post-blank objs)))
+    (->> (om-elem--build type props init-props post-blank)
+         (om-elem--set-contents-by-type type objs))))
 
 (defun om-elem--build-element (props type post-blank)
   (let ((init-props om-elem--element-properties))
-    (om-elem--build type props init-props post-blank nil)))
+    (om-elem--build type props init-props post-blank)))
 
 (defun om-elem--build-container-element (props type post-blank elems)
   (let ((init-props om-elem--container-element-properties))
-    (om-elem--build type props init-props post-blank elems)))
+    (->> (om-elem--build type props init-props post-blank)
+         (om-elem--set-contents-by-type type elems))))
 
 (defun om-elem--all-elements-p (elems)
   (-all? #'om-elem-is-element-p elems))
@@ -645,7 +644,6 @@ Optionally provide PARAMETERS."
                                               warning
                                               post-blank)
   "Build a timestamp..."
-  ;; no verification, all done in set functions
   (let ((props (-> '(:type :raw-value :repeater-type :repeater-unit
                            :repeater-value :warning-type :warning-unit
                            :warning-value :year-start
@@ -697,17 +695,16 @@ STRING is a lisp form as a string."
   "Build an italic object from STRING."
   (om-elem--build-recursive-object nil 'italic post-blank objs))
 
-(om-elem--defun om-elem-build-link (path &key (type "fuzzy") format
-                                         post-blank &rest objs)
+(om-elem--defun om-elem-build-link (path &key type format post-blank
+                                         &rest objs)
   "Build a link object from TARGET with OBJS as the description."
-  (om-elem--verify path stringp
-                   ;; TODO there are a finite set of types
-                   type string-or-null-p
-                   format (lambda (f) (or (null f) (memq f '(plain angle bracket)))))
-  (-> '(:raw-link :application :search-option)
-      (om-elem--init-properties)
-      (append (list :path path :type type :format format))
-      (om-elem--build-recursive-object 'link post-blank objs)))
+  (let ((props (-> (list :path :type :format :raw-link :application
+                         :search-option)
+                   (om-elem--init-properties))))
+    (->> (om-elem--build-recursive-object props 'link post-blank objs)
+         (om-elem--link-set-path path)
+         (om-elem--link-set-type type)
+         (om-elem--link-set-format format))))
 
 (om-elem--defun om-elem-build-radio-target (&key post-blank &rest objs)
   "Build a radio target object from STRING."
@@ -900,18 +897,12 @@ VALUE is the part inside the '%%(value)' part of the sexp."
 
 (om-elem--defun om-elem-build-center-block (&key post-blank &rest elems)
   "Build a center block greater element with ELEMS as contents."
-  ;; TODO need to hack this so that when elems is nil we insert
-  ;; a blank paragraph. Otherwise the interpreter will put nil
-  ;; as the value when we print it
-  ;; TODO there are others affected by this, make more unit tests
-  (om-elem--verify elems om-elem--all-elements-p)
   (om-elem--build-container-element nil 'center-block post-blank elems))
 
 (om-elem--defun om-elem-build-drawer (drawer-name &key post-blank
                                                   &rest elems)
   "Create drawer greater element with NAME and ELEMS as contents."
-  (om-elem--verify drawer-name stringp
-                   elems om-elem--all-elements-p)
+  (om-elem--verify drawer-name stringp)
   (-> `(:drawer-name ,drawer-name)
       (om-elem--build-container-element 'drawer post-blank elems)))
 
@@ -923,8 +914,7 @@ VALUE is the part inside the '%%(value)' part of the sexp."
 PARAMS is s list of cons cells for each key/val pair. Optionally
 provide ELEMS as contents."
   (om-elem--verify block-name stringp
-                   arguments stringp
-                   elems om-elem--all-elements-p)
+                   arguments stringp)
   (->
    `(:block-name ,block-name :arguments ,arguments)
    (om-elem--build-container-element 'dynamic-block post-blank elems)))
@@ -934,8 +924,7 @@ provide ELEMS as contents."
                                                    &rest elems)
   "Build a footnote-definition greater element for LABEL.
 Optionally provide ELEMS as contents."
-  (om-elem--verify label stringp
-                   elems om-elem--all-elements-p)
+  (om-elem--verify label stringp)
   (om-elem--build-container-element
    `(:label ,label) 'footnote-definition post-blank elems))
 
@@ -947,8 +936,6 @@ Optionally provide ELEMS as contents."
                                              post-blank
                                              &rest elems)
   "Build a headline."
-  (unless (--all? (om-elem-is-any-type-p '(section headline) it) elems)
-    (error "Only sections and headlines allowed inside headlines"))
   (let ((props (-> (list :title :pre-blank :level :todo-keyword :tags
                          :priority :footnote-section-p :commentedp
                          :archivedp :todo-type :raw-value)
@@ -972,7 +959,6 @@ Optionally provide ELEMS as contents."
                                          &rest elems)
   "Build a plain-list greater element with ELEMS as contents."
   ;; TODO are all elements actually allowed?
-  (om-elem--verify elems om-elem--all-elements-p)
   (let ((props (-> '(:bullet :checkbox :counter :tag :structure)
                    (om-elem--init-properties))))
     (->>
@@ -984,8 +970,6 @@ Optionally provide ELEMS as contents."
 
 (om-elem--defun om-elem-build-plain-list (&key post-blank &rest items)
   "Build a plain-list greater element with ELEMS as contents."
-  (unless (--all? (om-elem-is-type-p 'item it) items)
-    (error "Only items are allowed inside plain-lists"))
   (->
    '(:structure nil :type nil)
    (om-elem--build-container-element 'plain-list post-blank items)))
@@ -993,26 +977,21 @@ Optionally provide ELEMS as contents."
 (om-elem--defun om-elem-build-property-drawer (&key post-blank &rest
                                                     node-properties)
   "Build a property-drawer greater element containing NODE-PROPERTIES."
-  (unless (--all? (om-elem-is-type-p 'node-property it) node-properties)
-    (error "Only node-properties are allowed inside property-drawers"))
   (om-elem--build-container-element nil 'property-drawer post-blank
                                     node-properties))
 
 (om-elem--defun om-elem-build-quote-block (&key post-blank &rest elems)
   "Build a quote-block greater element with ELEMS as contents."
-  (om-elem--verify elems om-elem--all-elements-p)
   (om-elem--build-container-element nil 'quote-block post-blank elems))
 
 (om-elem--defun om-elem-build-section (&key post-blank &rest elems)
   "Build a section grater element with ELEMS as contents."
-  (om-elem--verify elems om-elem--all-elements-p)
   (om-elem--build-container-element nil 'section post-blank elems))
 
 (om-elem--defun om-elem-build-special-block (type &key post-blank
                                                   &rest elems)
   "Build a special block greater element with ELEMS as contents."
-  (om-elem--verify type stringp
-                   elems om-elem--all-elements-p)
+  (om-elem--verify type stringp)
   (om-elem--build-container-element `(:type ,type) 'special-block
                                     post-blank elems))
 
@@ -1020,8 +999,6 @@ Optionally provide ELEMS as contents."
                                           table-rows)
   "Build a section grater element containing TABLE-ROWS."
   ;; TODO this only deals with org tables for now
-  (unless (--all? (om-elem-is-type-p 'table-row it) table-rows)
-    (error "Only table-rows are allowed inside tables"))
   (om-elem--verify tblfm (lambda (f) (-all? #'stringp f)))
   (-> `(:tblfm ,tblfm :type org :value nil)
       (om-elem--build-container-element 'table post-blank table-rows)))
@@ -1947,15 +1924,6 @@ FUN is a predicate function that takes one argument."
       (-difference om-elem-recursive-objects))
   "List of objects that are not containers.")
 
-(defconst om-elem-object-restrictions
-  (->> org-element-object-restrictions
-       ;; remove non-objects
-       (--remove (memq (car it) '(item headline keyword)))
-       ;; add plain-text type
-       (--map-when (not (eq (car it) 'table-row)) (-snoc it 'plain-text)))
-  "List of object restrictions.
-Unlike `org-element-object-restrictions', this only includes objects
-and object containers and includes the 'plain-text' type.")
 
 (defconst om-elem-atoms
   (append om-elem-atomic-objects om-elem-atomic-elements)
@@ -2208,6 +2176,74 @@ PLIST is a list of property-value pairs that correspond to the
 property list in ELEM."
   (om-elem--verify elem om-elem-is-element-or-object-p)
   (om-elem--set-properties plist elem))
+
+(defun om-elem--set-contents (contents elem)
+   (let ((head (om-elem-head elem)))
+     (if contents (append head contents) head)))
+
+(defconst om-elem-object-restrictions
+  (->> org-element-object-restrictions
+       ;; remove non-objects
+       (--remove (memq (car it) '(inlinetask item headline keyword)))
+       ;; add plain-text type
+       (--map-when (not (eq (car it) 'table-row)) (-snoc it 'plain-text)))
+  "Alist of object restrictions for object containers.
+Unlike `org-element-object-restrictions', this only includes objects
+and object containers and includes the 'plain-text' type.")
+
+(defconst om-elem-element-restrictions
+  ;; TODO add inlinetask
+  ;; this includes all elements except those that are restricted
+  ;; (see comments below)
+  (let ((standard '(babel-call center-block clock comment
+                          comment-block diary-sexp drawer
+                          dynamic-block example-block
+                          export-block fixed-width footnote-definition
+                          horizontal-rule
+                          keyword latex-environment
+                          paragraph
+                          plain-list planning property-drawer
+                          quote-block special-block
+                          src-block table verse-block)))
+    `((center-block ,@standard)
+      (drawer ,@standard)
+      (dynamic-block ,@standard)
+      (footnote-definition ,@standard)
+      ;; headlines and sections can only be in headlines
+      (headline headline section)
+      (item ,@standard)
+      ;; items can only be in plain-lists
+      (plain-list item)
+      ;; node-properties can only be in property-drawers
+      (property-drawer node-property)
+      (quote-block ,@standard)
+      (section ,@standard)
+      (special-block ,@standard)
+      ;; table-rows can only be in tables
+      (table table-row)))
+  "Alist of element restrictions for greater elements.")
+
+(defconst om-elem-restrictions
+  (append om-elem-element-restrictions om-elem-object-restrictions)
+  "Alist of all restrictions for containers.")
+
+(defun om-elem--set-contents-restricted (types contents elem)
+  ;; TODO this should recursively dig up all types in contents
+  ;; even if they are nested
+  (-when-let (illegal (-some->> (-map #'om-elem-type contents)
+                                (--remove (memq it types))
+                                (-map #'symbol-name)
+                                (s-join ", ")))
+    (error "Illegal types found: %s; allowed types are: %s"
+           illegal (s-join ", " (-map #'symbol-name types))))
+  (om-elem--set-contents contents elem))
+
+(defun om-elem--set-contents-by-type (container-type contents elem)
+  ;; TODO there may be additional restrictions, such as newlines
+  ;; in strings not being allowed
+  (-if-let (types (alist-get container-type om-elem-restrictions))
+      (om-elem--set-contents-restricted types contents elem)
+    (error "Invalid container type requested: %s" container-type)))
 
 (defun om-elem-set-recursive-content (content elem)
   ;; TODO this should only allow recursive types (eg bold, link, etc)
@@ -2485,31 +2521,48 @@ TYPE is '-', '+', or 'ordered'."
 
 ;; link
 
-;; TODO not sure how I feel about this here since it is not a
-;; property-based function
-(defun om-elem-link-set-description (desc link)
-  (om-elem--verify link om-elem-is-link-p)
-  (om-elem-set-recursive-content (list desc) link))
-
-(defun om-elem-link-set-path (path link)
+(defun om-elem--link-set-path (path link)
   "Set the path of LINK element to PATH (a string)."
-  (om-elem--verify path stringp
-                   link om-elem-is-link-p)
-  (om-elem-set-property :path path link))
+  (om-elem--set-property-pred 'stringp :path path link))
 
-(defun om-elem-link-set-type (type link)
+(defun om-elem--link-set-type (type link)
   "Set the type of LINK element to TYPE (a symbol).
 Setting TYPE to nil will result in a 'fuzzy' type link."
-  (om-elem--verify link om-elem-is-link-p)
   (let ((valid-types (append (org-link-types)
                              (list "coderef" "custom-id" "file"
                                    "id" "radio" "fuzzy"))))
     (cond
      ((not type)
-      (om-elem-set-property :type "fuzzy" link))
-     ((member (symbol-name type) valid-types)
-      (om-elem-set-property :type (symbol-name type) link))
-     (t (error "Invalid link type: %s" type)))))
+      (om-elem--set-property :type "fuzzy" link))
+     ((member type valid-types)
+      (om-elem--set-property :type type link))
+     (t (error "Invalid link type: %S" type)))))
+
+(defun om-elem--link-set-format (format link)
+  (if (memq format '(nil plain angle bracket))
+      (om-elem--set-property :format format link)
+    (error "Invalid link format: %S" format)))
+
+(defun om-elem-link-set-description (desc link)
+  (om-elem--verify link om-elem-is-link-p)
+  (om-elem--set-contents-by-type 'link desc link))
+
+(defun om-elem-link-set-path (path link)
+  "Set the path of LINK element to PATH (a string)."
+  (om-elem--verify link om-elem-is-link-p)
+  (om-elem--link-set-path path link))
+
+(defun om-elem-link-set-type (type link)
+  "Set the type of LINK element to TYPE (a symbol).
+Setting TYPE to nil will result in a 'fuzzy' type link."
+  (om-elem--verify link om-elem-is-link-p)
+  (om-elem--link-set-type type link))
+
+(defun om-elem-link-set-format (format link)
+  "Set the type of LINK element to TYPE (a symbol).
+Setting TYPE to nil will result in a 'fuzzy' type link."
+  (om-elem--verify link om-elem-is-link-p)
+  (om-elem--link-set-format format link))
 
 ;; statistics cookie
 

@@ -1205,7 +1205,7 @@ and here is even more *text4* and *text5*
     nil
     (:content "[[eldorado]]")
     (->> (om-elem-parse-this-object)
-         (om-elem-link-set-type 'file)
+         (om-elem-link-set-type "file")
          (om-elem-to-trimmed-string))
     => "[[file:eldorado]]"
     (:content "[[file:eldorado]]")
@@ -1214,7 +1214,7 @@ and here is even more *text4* and *text5*
          (om-elem-to-trimmed-string))
     => "[[eldorado]]"
     (->> (om-elem-parse-this-object)
-         (om-elem-link-set-type 'fuzzy)
+         (om-elem-link-set-type "fuzzy")
          (om-elem-to-trimmed-string))
     => "[[eldorado]]")
 
