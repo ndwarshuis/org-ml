@@ -790,6 +790,13 @@ checkbox."
   (om-elem--verify counter (lambda (c) (or (null c) (om-elem--non-neg-integer-p c))))
   (om-elem--set-property :counter counter item))
 
+;; latex environment
+
+(defun om-elem--latex-environment-set-value (env body latex-environment)
+  (om-elem--verify env stringp body stringp)
+  (let ((v (format "\\begin{%1$s}\n%2$s\n\\end{%1$s}" env body)))
+    (om-elem--set-property :value v latex-environment)))
+
 ;; link
 
 (defun om-elem--link-set-path (path link)
@@ -1254,13 +1261,11 @@ VALUE is the part inside the '%%(value)' part of the sexp."
          (om-elem--set-key key)
          (om-elem--set-value value))))
 
-(om-elem--defun om-elem-build-latex-environment (env text &key post-blank)
+(om-elem--defun om-elem-build-latex-environment (env body &key post-blank)
   "Build a latex-environment element with environment ENV and TEXT."
-  (om-elem--verify env stringp text stringp)
-  (let ((props (->> text
-                    (format "\\begin{%1$s}\n%2$s\n\\end{%1$s}" env)
-                    (list :value))))
-    (om-elem--build-element props 'latex-environment post-blank)))
+  (->>
+   (om-elem--build-element '(:value nil) 'latex-environment post-blank)
+   (om-elem--latex-environment-set-value env body)))
 
 (om-elem--defun om-elem-build-node-property (key value &key post-blank)
   "Build a node property object with KEY and VAL."
