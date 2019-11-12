@@ -814,6 +814,18 @@ Setting TYPE to nil will result in a 'fuzzy' type link."
       (om-elem--set-property :format format link)
     (error "Invalid link format: %S" format)))
 
+;; macro
+
+(defun om-elem--macro-set-args (args macro)
+  (om-elem--verify args (lambda (as) (-all? #'stringp as)))
+  (om-elem--set-property :args args macro))
+
+(defun om-elem--macro-update-value (macro)
+  (let* ((k (om-elem-property :key macro))
+         (as (om-elem-property :args macro))
+         (v (if as (format "%s(%s)" k (s-join "," as)) k)))
+    (om-elem--set-property :value (format "{{{%s}}}" v) macro)))
+
 ;; planning
 
 ;; TODO add repeater/warning to this
@@ -1048,11 +1060,11 @@ Optionally provide PARAMETERS."
 
 (om-elem--defun om-elem-build-macro (key &key args post-blank)
   "Build a macro object with KEY and optional ARGS."
-  (om-elem--verify key stringp args (lambda (as) (-all? #'stringp as)))
-  (let ((props '(:value nil :args nil :key nil))
-        (value (if args (format "%s(%s)" key (s-join "," args)) key)))
+  (let ((props '(:value nil :args nil :key nil)))
     (->> (om-elem--build-object props 'macro post-blank)
-         (om-elem--set-property :value (format "{{{%s}}}" value)))))
+         (om-elem--set-key key)
+         (om-elem--macro-set-args args)
+         (om-elem--macro-update-value))))
 
 (om-elem--defun om-elem-build-statistics-cookie (value &key post-blank)
   "Build a statistics cookie object with NUMBER and DENOMINATOR."
