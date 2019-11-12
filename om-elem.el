@@ -640,6 +640,39 @@ and object containers and includes the 'plain-text' type.")
   "Set the value of ELEM element to VALUE (a string)."
   (om-elem--set-property-pred 'stringp :value value elem))
 
+;; clock
+
+;; (defun om-elem--clock-set-timestamp (start end clock)
+;;   (let ((ts* (om-elem-build-timestamp 'inactive start :end end)))
+;;     (om-elem--set-property :value ts* clock)))
+
+(defun om-elem--clock-update-duration (clock)
+  (cl-flet*
+      ((encode-epoch
+        (min hour day month year)
+        (-> (encode-time 0 (or min 0) (or hour 0) day month year)
+            (float-time)
+            (round)))
+       (format-duration
+        (seconds)
+        (let* ((h (-> seconds (/ 3600) (floor)))
+               (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
+          (format "%2d:%02d" h m)))
+       (get-duration
+        (timestamp)
+        (-let (((&plist :year-start y :year-end Y
+                        :month-start m :month-end M
+                        :day-start d :day-end D
+                        :hour-start h :hour-end H
+                        :minute-start n :minute-end N)
+                (om-elem-properties timestamp)))
+          (-> (- (encode-epoch N H D M Y) (encode-epoch n h d m y))
+              (format-duration)))))
+    (let ((ts (om-elem-property :value clock)))
+      (if (om-elem-property-is-eq-p :type 'inactive-range ts)
+          (om-elem--set-property :duration (get-duration ts) clock)
+        (om-elem--set-property :duration nil clock)))))
+
 ;; headline
 
 (defun om-elem--headline-set-pre-blank (pre-blank headline)
@@ -780,6 +813,23 @@ Setting TYPE to nil will result in a 'fuzzy' type link."
   (if (memq format '(nil plain angle bracket))
       (om-elem--set-property :format format link)
     (error "Invalid link format: %S" format)))
+
+;; planning
+
+;; TODO add repeater/warning to this
+(defun om-elem--planning-set-property (prop time planning)
+  (if (not time) (om-elem--set-property prop nil planning)
+    (let ((ts (om-elem-build-timestamp 'inactive time)))
+      (om-elem--set-property prop ts planning))))
+
+(defun om-elem--planning-set-closed (time planning)
+  (om-elem--planning-set-property :closed time planning))
+
+(defun om-elem--planning-set-deadline (time planning)
+  (om-elem--planning-set-property :deadline time planning))
+
+(defun om-elem--planning-set-scheduled (time planning)
+  (om-elem--planning-set-property :scheduled time planning))
 
 ;; statistics cookie
 
@@ -1134,26 +1184,11 @@ STRING is a lisp form as a string."
 (om-elem--defun om-elem-build-clock (start &key end post-blank)
   "Build a clock element with TIME1.
 Optionally supply TIME2 to create a closed clock."
-  ;; no verification here, all done when building timestamp
-  (cl-flet
-      ((format-duration
-        (seconds)
-        (let* ((h (-> seconds (/ 3600) floor))
-               (m (-> seconds (- (* h 3600)) (/ 60) floor)))
-          (format "%2d:%02d" h m)))
-       (ts2ft
-        (ts)
-        (->> (om-elem-property :raw-value ts)
-             (org-2ft)
-             (round))))
-    (let* ((ts (om-elem-build-timestamp 'inactive start :end end))
-           (duration
-            (when end
-              (let ((ft1 (ts2ft (org-timestamp-split-range ts)))
-                    (ft2 (ts2ft (org-timestamp-split-range ts t))))
-                (-> (- ft2 ft1) (round) (format-duration))))))
-      (-> `(:status nil :value ,ts :duration ,duration)
-          (om-elem--build-element 'clock post-blank)))))
+  (let ((props '(:status nil :value nil :duration nil))
+        (ts (om-elem-build-timestamp 'inactive start :end end)))
+    (->> (om-elem--build-element props 'clock post-blank)
+         (om-elem--set-property :value ts)
+         (om-elem--clock-update-duration))))
 
 (om-elem--defun om-elem-build-comment (value &key post-blank)
   "Build a comment element with VALUE."
@@ -1225,14 +1260,11 @@ VALUE is the part inside the '%%(value)' part of the sexp."
 (om-elem--defun om-elem-build-planning (&key closed scheduled deadline
                                              post-blank)
   "Build planning element with TYPE and TIME."
-  (cl-flet
-      ((mk-ts
-        (time)
-        (and time (om-elem-build-timestamp 'inactive time))))
-    (-> (list :closed (mk-ts closed)
-              :scheduled (mk-ts scheduled)
-              :deadline (mk-ts deadline))
-        (om-elem--build-element 'planning post-blank))))
+  (let ((props '(:closed nil :scheduled nil :deadline nil)))
+    (->> (om-elem--build-element props 'planning post-blank)
+         (om-elem--planning-set-closed closed)
+         (om-elem--planning-set-deadline deadline)
+         (om-elem--planning-set-scheduled scheduled))))
 
 (om-elem--defun om-elem-build-src-block (value &key language switches
                                                parameters
