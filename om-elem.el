@@ -30,10 +30,6 @@
 (require 'dash)
 (require 's)
 
-;; property key verification - make sure that newly built properties
-;; have the same properties specified in org-element.el
-
-
 ;;; better cl-defun
 ;; some functions here require a clean way to use &rest and &key
 ;; at the same time, which `cl-defun' does not do...let's roll our own
