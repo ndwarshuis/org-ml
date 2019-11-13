@@ -628,6 +628,9 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--set-brackets (flag elem)
   (om-elem--set-property-pred 'booleanp :use-brackets-p flag elem))
 
+(defun om-elem--set-indent (flag elem)
+  (om-elem--set-property-pred 'booleanp :preserve-indent flag elem))
+
 (defun om-elem--set-key (key elem)
   "Set the key of ELEM element to KEY (a string)."
   (om-elem--set-property-pred 'stringp :key key elem))
@@ -635,6 +638,20 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--set-value (value elem)
   "Set the value of ELEM element to VALUE (a string)."
   (om-elem--set-property-pred 'stringp :value value elem))
+
+(defun om-elem--set-property-list-string (prop args delim elem)
+  (unless (and (listp args) (-all? #'stringp args))
+    (error "Arguments must be supplied as a list of strings."))
+  (let ((s (and args (s-join delim args))))
+      (om-elem--set-property prop s elem)))
+
+(defun om-elem--set-property-plist (props plist elem)
+  (unless (om-elem--is-plist-p plist)
+    (error "Invalid plist given: %S" plist))
+  (unless (->> (-slice plist 1 nil 2) (-all? #'symbolp))
+    (error "All plist values must be symbols: %S" plist))
+  (let ((s (-some->> (-map #'symbol-name plist) (s-join " "))))
+      (om-elem--set-property props s elem)))
 
 ;; clock
 
@@ -819,9 +836,9 @@ Setting TYPE to nil will result in a 'fuzzy' type link."
 
 ;; macro
 
-(defun om-elem--macro-set-args (args macro)
-  (om-elem--verify args (lambda (as) (-all? #'stringp as)))
-  (om-elem--set-property :args args macro))
+(defun om-elem--set-property-strings (prop strings macro)
+  (om-elem--verify strings (lambda (ss) (-all? #'stringp ss)))
+  (om-elem--set-property prop strings macro))
 
 (defun om-elem--macro-update-value (macro)
   (let* ((k (om-elem-property :key macro))
@@ -1038,10 +1055,9 @@ args END."
     (->>
      (om-elem--build-object props 'inline-babel-call post-blank)
      (om-elem--set-property-pred 'stringp :call call)
-     (om-elem--set-properties-pred 'string-or-null-p
-                                   (list :arguments arguments
-                                         :inside-header inside-header
-                                         :end-header end-header)))))
+     (om-elem--set-property-list-string :arguments arguments ",")
+     (om-elem--set-property-plist :inside-header inside-header)
+     (om-elem--set-property-plist :end-header end-header))))
 
 (om-elem--defun om-elem-build-inline-src-block (language value
                                                          &key
@@ -1053,7 +1069,7 @@ Optionally provide PARAMETERS."
     (->> (om-elem--build-object props 'inline-src-block post-blank)
          (om-elem--set-value value)
          (om-elem--set-property-pred 'stringp :language language)
-         (om-elem--set-property-pred 'string-or-null-p :parameters parameters))))
+         (om-elem--set-property-plist :parameters parameters))))
 
 ;; TODO add latex-fragment
 
@@ -1066,7 +1082,7 @@ Optionally provide PARAMETERS."
   (let ((props '(:value nil :args nil :key nil)))
     (->> (om-elem--build-object props 'macro post-blank)
          (om-elem--set-key key)
-         (om-elem--macro-set-args args)
+         (om-elem--set-property-strings :args args)
          (om-elem--macro-update-value))))
 
 (om-elem--defun om-elem-build-statistics-cookie (value &key post-blank)
@@ -1191,10 +1207,9 @@ STRING is a lisp form as a string."
              (om-elem--init-properties))))
     (->> (om-elem--build-element props 'babel-call post-blank)
          (om-elem--set-property-pred 'stringp :call call)
-         (om-elem--set-properties-pred 'string-or-null-p
-                                       (list :arguments arguments
-                                             :inside-header inside-header
-                                             :end-header end-header)))))
+         (om-elem--set-property-list-string :arguments arguments ",")
+         (om-elem--set-property-plist :inside-header inside-header)
+         (om-elem--set-property-plist :end-header end-header))))
 
 (om-elem--defun om-elem-build-clock (start &key end post-blank)
   "Build a clock element with TIME1.
@@ -1230,8 +1245,8 @@ VALUE is the part inside the '%%(value)' part of the sexp."
                    (om-elem--init-properties))))
     (->> (om-elem--build-element props 'example-block post-blank)
          (om-elem--set-value (org-element-normalize-string value))
-         (om-elem--set-property-pred 'string-or-null-p :switches switches)
-         (om-elem--set-property-pred 'booleanp :preserve-indent preserve-indent))))
+         (om-elem--set-property-list-string :switches switches " ")
+         (om-elem--set-indent preserve-indent))))
   
 
 (om-elem--defun om-elem-build-export-block (type value &key post-blank)
@@ -1290,11 +1305,10 @@ VALUE is the part inside the '%%(value)' part of the sexp."
     (->>
      (om-elem--build-element props 'src-block post-blank)
      (om-elem--set-value value)
-     (om-elem--set-property-pred 'booleanp :preserve-indent preserve-indent)
-     (om-elem--set-properties-pred 'string-or-null-p
-                                   (list :language language
-                                         :switches switches
-                                         :parameters parameters)))))
+     (om-elem--set-indent preserve-indent)
+     (om-elem--set-property-pred 'string-or-null-p :language language)
+     (om-elem--set-property-list-string :switches switches " ")
+     (om-elem--set-property-plist :parameters parameters))))
 
 ;; container elements
 
@@ -1334,20 +1348,20 @@ VALUE is the part inside the '%%(value)' part of the sexp."
   "Build a dynamic block greater element called NAME with PARAMS.
 PARAMS is s list of cons cells for each key/val pair. Optionally
 provide ELEMS as contents."
-  (om-elem--verify block-name stringp
-                   arguments stringp)
-  (->
-   `(:block-name ,block-name :arguments ,arguments)
-   (om-elem--build-container-element 'dynamic-block post-blank elems)))
+  (let ((props '(:block-name nil :arguments nil)))
+    (->>
+     (om-elem--build-container-element props 'dynamic-block post-blank elems)
+     (om-elem--set-property-pred #'stringp :block-name block-name)
+     (om-elem--set-property-plist :arguments arguments))))
 
 (om-elem--defun om-elem-build-footnote-definition (label
                                                    &key post-blank
                                                    &rest elems)
   "Build a footnote-definition greater element for LABEL.
 Optionally provide ELEMS as contents."
-  (om-elem--verify label stringp)
-  (om-elem--build-container-element
-   `(:label ,label) 'footnote-definition post-blank elems))
+  (->> (om-elem--build-container-element
+        '(:label nil) 'footnote-definition post-blank elems)
+       (om-elem--set-property-pred 'stringp :label label)))
 
 (om-elem--defun om-elem-build-headline (&key title (level 1)
                                              (pre-blank 0) todo-keyword
@@ -1368,10 +1382,11 @@ Optionally provide ELEMS as contents."
      (om-elem--headline-set-title title)
      (om-elem--headline-set-level level)
      (om-elem--headline-set-priority priority)
+     (om-elem--set-property-strings :tags tags)
      (om-elem--headline-set-footnote-section footnote-section-p)
+     ;; this must go after setting tags since it alters the tags
      (om-elem--headline-set-archived archivedp)
-     (om-elem--headline-set-commented commentedp)
-     (om-elem--headline-set-tags tags))))
+     (om-elem--headline-set-commented commentedp))))
 
 ;; TODO add inline text
 
@@ -1379,7 +1394,6 @@ Optionally provide ELEMS as contents."
                                          counter post-blank
                                          &rest elems)
   "Build a plain-list greater element with ELEMS as contents."
-  ;; TODO are all elements actually allowed?
   (let ((props (-> '(:bullet :checkbox :counter :tag :structure)
                    (om-elem--init-properties))))
     (->>
@@ -1412,17 +1426,17 @@ Optionally provide ELEMS as contents."
 (om-elem--defun om-elem-build-special-block (type &key post-blank
                                                   &rest elems)
   "Build a special block greater element with ELEMS as contents."
-  (om-elem--verify type stringp)
-  (om-elem--build-container-element `(:type ,type) 'special-block
-                                    post-blank elems))
+  (->> (om-elem--build-container-element '(:type nil) 'special-block
+                                         post-blank elems)
+       (om-elem--set-property-pred #'stringp :type type)))
 
 (om-elem--defun om-elem-build-table (&key tblfm post-blank &rest
                                           table-rows)
   "Build a section grater element containing TABLE-ROWS."
   ;; TODO this only deals with org tables for now
-  (om-elem--verify tblfm (lambda (f) (-all? #'stringp f)))
-  (-> `(:tblfm ,tblfm :type org :value nil)
-      (om-elem--build-container-element 'table post-blank table-rows)))
+  (let ((props '(:tblfm nil :type org :value nil)))
+    (->> (om-elem--build-container-element props 'table post-blank table-rows)
+         (om-elem--set-property-strings :tblfm tblfm))))
 
 ;; shortcut builders
 

@@ -68,18 +68,18 @@
   (defexamples om-elem-build-inline-babel-call
     (->> (om-elem-build-inline-babel-call "name")
          (om-elem-to-trimmed-string)) => "call_name()"
-    (->> (om-elem-build-inline-babel-call "name" :arguments "args")
-         (om-elem-to-trimmed-string)) => "call_name(args)"
-    (->> (om-elem-build-inline-babel-call "name" :inside-header "in")
-         (om-elem-to-trimmed-string)) => "call_name[in]()"
-    (->> (om-elem-build-inline-babel-call "name" :end-header "end")
-         (om-elem-to-trimmed-string)) => "call_name()[end]")
+    (->> (om-elem-build-inline-babel-call "name" :arguments '("n=4"))
+         (om-elem-to-trimmed-string)) => "call_name(n=4)"
+    (->> (om-elem-build-inline-babel-call "name" :inside-header '(:key val))
+         (om-elem-to-trimmed-string)) => "call_name[:key val]()"
+    (->> (om-elem-build-inline-babel-call "name" :end-header '(:key val))
+         (om-elem-to-trimmed-string)) => "call_name()[:key val]")
 
   (defexamples om-elem-build-inline-src-block
     (->> (om-elem-build-inline-src-block "lang" "value")
          (om-elem-to-trimmed-string)) => "src_lang{value}"
-    (->> (om-elem-build-inline-src-block "lang" "value" :parameters "params")
-         (om-elem-to-trimmed-string)) => "src_lang[params]{value}")
+    (->> (om-elem-build-inline-src-block "lang" "value" :parameters '(:key val))
+         (om-elem-to-trimmed-string)) => "src_lang[:key val]{value}")
 
   (defexamples om-elem-build-line-break
     (->> (om-elem-build-line-break)
@@ -169,12 +169,12 @@
   (defexamples om-elem-build-babel-call
     (->> (om-elem-build-babel-call "name")
          (om-elem-to-trimmed-string)) => "#+CALL: name()"
-    (->> (om-elem-build-babel-call "name" :arguments "args")
-         (om-elem-to-trimmed-string)) => "#+CALL: name(args)"
-    (->> (om-elem-build-babel-call "name" :inside-header "inside")
-         (om-elem-to-trimmed-string)) => "#+CALL: name[inside]()"
-    (->> (om-elem-build-babel-call "name" :end-header "end")
-         (om-elem-to-trimmed-string)) => "#+CALL: name() end")
+    (->> (om-elem-build-babel-call "name" :arguments '("arg=x"))
+         (om-elem-to-trimmed-string)) => "#+CALL: name(arg=x)"
+    (->> (om-elem-build-babel-call "name" :inside-header '(:key val))
+         (om-elem-to-trimmed-string)) => "#+CALL: name[:key val]()"
+    (->> (om-elem-build-babel-call "name" :end-header '(:key val))
+         (om-elem-to-trimmed-string)) => "#+CALL: name() :key val")
 
   (defexamples om-elem-build-clock
     (->> (om-elem-build-clock '(2019 1 1 0 0))
@@ -197,7 +197,7 @@
   (defexamples om-elem-build-example-block
     (->> (om-elem-build-example-block "text")
          (om-elem-to-trimmed-string)) => "#+BEGIN_EXAMPLE\ntext\n#+END_EXAMPLE"
-    (->> (om-elem-build-example-block "text" :switches "switches")
+    (->> (om-elem-build-example-block "text" :switches '("switches"))
          (om-elem-to-trimmed-string)) => "#+BEGIN_EXAMPLE switches\ntext\n#+END_EXAMPLE")
 
   (defexamples om-elem-build-export-block
@@ -238,11 +238,11 @@
     (->> (om-elem-build-src-block "body" :language "emacs-lisp")
          (om-elem-to-trimmed-string)) => "#+BEGIN_SRC emacs-lisp\n  body\n#+END_SRC"
          ;; TODO pretty sure this makes no sense...
-    (->> (om-elem-build-src-block "body" :switches "switches")
-         (om-elem-to-trimmed-string)) => "#+BEGIN_SRC switches\n  body\n#+END_SRC"
+    (->> (om-elem-build-src-block "body" :switches '("-n 20" "-r"))
+         (om-elem-to-trimmed-string)) => "#+BEGIN_SRC -n 20 -r\n  body\n#+END_SRC"
          ;; TODO and this...
-    (->> (om-elem-build-src-block "body" :parameters "params")
-         (om-elem-to-trimmed-string)) => "#+BEGIN_SRC params\n  body\n#+END_SRC")
+    (->> (om-elem-build-src-block "body" :parameters '(:key val))
+         (om-elem-to-trimmed-string)) => "#+BEGIN_SRC :key val\n  body\n#+END_SRC")
 
   (defexamples om-elem-build-table-row-hline
     (->>  (om-elem-build-table
