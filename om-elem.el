@@ -639,12 +639,14 @@ and object containers and includes the 'plain-text' type.")
   "Set the value of ELEM element to VALUE (a string)."
   (om-elem--set-property-pred 'stringp :value value elem))
 
+;; TODO make the inverse of this
 (defun om-elem--set-property-list-string (prop args delim elem)
   (unless (and (listp args) (-all? #'stringp args))
     (error "Arguments must be supplied as a list of strings."))
   (let ((s (and args (s-join delim args))))
       (om-elem--set-property prop s elem)))
 
+;; TODO make the inverse of this
 (defun om-elem--set-property-plist (props plist elem)
   (unless (om-elem--is-plist-p plist)
     (error "Invalid plist given: %S" plist))
@@ -652,6 +654,11 @@ and object containers and includes the 'plain-text' type.")
     (error "All plist values must be symbols: %S" plist))
   (let ((s (-some->> (-map #'symbol-name plist) (s-join " "))))
       (om-elem--set-property props s elem)))
+
+(defun om-elem--set-property-strings (prop strings elem)
+  (om-elem--verify strings (lambda (ss) (-all? #'stringp ss)))
+  (om-elem--set-property prop strings elem))
+
 
 ;; clock
 
@@ -718,11 +725,6 @@ and object containers and includes the 'plain-text' type.")
   "Set the commented flag of HEADLINE element to FLAG."
   (om-elem--set-property-pred 'booleanp :commentedp flag headline))
 
-(defun om-elem--headline-set-tags (tags headline)
-  "Set the tags of HEADLINE element to TAGS."
-  (om-elem--verify tags (lambda (tags) (-all? #'stringp tags)))
-  (om-elem--set-property :tags tags headline))
-
 (defun om-elem--headline-set-footnote-section (flag headline)
   "Set the footnote section flag of HEADLINE element to FLAG."
   (om-elem--set-property-pred 'booleanp :footnote-section-p flag
@@ -762,16 +764,6 @@ checkbox."
   (unless (memq state '(nil on off trans))
     (error ("Invalid checkbox state: %s" state)))
   (om-elem--set-property :checkbox state item))
-
-(defun om-elem--format-bullet (bullet)
-  (cond
-   ((integerp bullet) (format "%s. " bullet))
-   ((memq bullet '(- +)) (format "%s " bullet))
-   ;; TODO use alphanumeric if org-list-allow-alphabetical = t
-   ((and (stringp bullet)
-         (s-matches? "[:space:]*[0-9]+\\(\\.\\|)\\)[:space:]*" bullet))
-    bullet)
-   (t (error "Invalid bullet: %s" bullet))))
 
 (defun om-elem--item-set-bullet (bullet item)
   (let ((b (cond
@@ -835,10 +827,6 @@ Setting TYPE to nil will result in a 'fuzzy' type link."
     (error "Invalid link format: %S" format)))
 
 ;; macro
-
-(defun om-elem--set-property-strings (prop strings macro)
-  (om-elem--verify strings (lambda (ss) (-all? #'stringp ss)))
-  (om-elem--set-property prop strings macro))
 
 (defun om-elem--macro-update-value (macro)
   (let* ((k (om-elem-property :key macro))
