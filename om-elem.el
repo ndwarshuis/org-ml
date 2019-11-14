@@ -939,6 +939,23 @@ without element verification."
   (om-elem--verify string stringp)
   (om-elem--set-property :raw-value (format "<%%%%%s>" string)))
 
+
+;;; internal mappers
+
+;; generic
+
+(defun om-elem--map-first (fun list)
+  (->> (cdr list) (cons (funcall fun (car list)))))
+
+(defmacro om-elem--map-first* (form list)
+  `(om-elem--map-first (lambda (it) ,form) list))
+
+(defun om-elem--map-last (fun list)
+  (->> (nreverse list) (om-elem--map-first fun list) (nreverse)))
+
+(defmacro om-elem--map-last* (form list)
+  `(om-elem--map-last (lambda (it) ,form) list))
+
 ;;; builders
 
 ;; build helpers
