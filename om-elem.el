@@ -1486,8 +1486,7 @@ TYPE is a symbol, PROPS is a plist, and CONTENTS is a list or nil."
       (list)))
 
     ;; type
-    ((and (pred symbolp) type)
-     ;; TODO check for valid type?
+    ((and (pred (lambda (y) (memq y om-elem-elements-and-objects))) type)
      (--filter (om-elem-is-type-p type it) contents))
 
     ;; relative index
