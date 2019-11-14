@@ -753,9 +753,9 @@ checkbox."
             ((integerp bullet) (format "%s. " bullet))
             ((memq bullet '(- +)) (format "%s " bullet))
             ;; TODO use alphanumeric if org-list-allow-alphabetical = t
-            ((and (stringp bullet)
-                  (s-matches? "[:space:]*[0-9]+\\(\\.\\|)\\)[:space:]*" bullet))
-             bullet)
+            ;; ((and (stringp bullet)
+            ;;       (s-matches? "[:space:]*[0-9]+\\(\\.\\|)\\)[:space:]*" bullet))
+            ;;  bullet)
             (t (error "Invalid bullet: %s" bullet)))))
     (om-elem--set-property :bullet b item)))
 
@@ -997,6 +997,7 @@ without element verification."
   (->> (om-elem--build-object '(:value nil) 'code post-blank)
        (om-elem--set-value value)))
 
+;; TODO this needs to be validated against `org-entity-get'
 (om-elem--defun om-elem-build-entity (name &key use-brackets-p post-blank)
   "Build a entity object from NAME."
   (let ((props (-> (list :html :ascii :latex :latex-math-p :latin1
