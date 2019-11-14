@@ -621,7 +621,6 @@ and object containers and includes the 'plain-text' type.")
   (om-elem--verify strings (lambda (ss) (-all? #'stringp ss)))
   (om-elem--set-property prop strings elem))
 
-
 ;; clock
 
 ;; (defun om-elem--clock-set-timestamp (start end clock)
@@ -654,6 +653,13 @@ and object containers and includes the 'plain-text' type.")
       (if (om-elem-property-is-eq-p :type 'inactive-range ts)
           (om-elem--set-property :duration (get-duration ts) clock)
         (om-elem--set-property :duration nil clock)))))
+
+;; entity
+
+(defun om-elem--entity-set-name (name elem)
+  (unless (or (assoc name org-entities-user) (assoc name org-entities)) 
+    (error "Invalid entity: %S" name))
+  (om-elem--set-property :name name elem))
 
 ;; headline
 
@@ -976,7 +982,7 @@ without element verification."
   (let ((init '(:html :ascii :latex :latex-math-p :latin1 :utf-8)))
     (->> (om-elem--build-object 'entity post-blank)
          (om-elem--set-brackets use-brackets-p)
-         (om-elem--set-property-pred 'stringp :name name)
+         (om-elem--entity-set-name name)
          (om-elem--set-properties-nil init))))
 
 (om-elem--defun om-elem-build-export-snippet (back-end value &key post-blank)

@@ -32,7 +32,7 @@
 
 (ert-deftest om-elem--entity/valid-props ()
   (om-elem--compare-object-props
-   (om-elem-build-entity "name") "\\pi"))
+   (om-elem-build-entity "pi") "\\pi"))
 
 (ert-deftest om-elem--export-snippet/valid-props ()
   (om-elem--compare-object-props
