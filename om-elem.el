@@ -654,6 +654,12 @@ and object containers and includes the 'plain-text' type.")
           (om-elem--set-property :duration (get-duration ts) clock)
         (om-elem--set-property :duration nil clock)))))
 
+;; diary-sexp
+
+(defun om-elem--diary-sexp-set-value (string elem)
+  (om-elem--verify string stringp)
+  (om-elem--set-property :value (format "%%%%(%s)" string) elem))
+
 ;; entity
 
 (defun om-elem--entity-set-name (name elem)
@@ -925,6 +931,10 @@ without element verification."
     (-> (om-elem--timestamp-format-decorator repeater 'repeater types)
         (om-elem-set-properties timestamp))))
 
+(defun om-elem--timestamp-set-diary-sexp (string timestamp)
+  (om-elem--verify string stringp)
+  (om-elem--set-property :raw-value (format "<%%%%%s>" string)))
+
 ;;; builders
 
 ;; build helpers
@@ -1066,7 +1076,7 @@ STRING is a lisp form as a string."
                :year-end :month-end :day-end :hour-end :minute-end))
     (->> (om-elem--build-object 'timestamp post-blank)
          (om-elem--set-property :type 'diary)
-         (om-elem--set-property :raw-value (format "<%%%%%s>" string))
+         (om-elem--timestamp-set-diary-sexp string)
          (om-elem--init-properties init))))
         
 (om-elem--defun om-elem-build-verbatim (value &key post-blank)
@@ -1166,11 +1176,11 @@ Optionally supply TIME2 to create a closed clock."
   (->> (om-elem--build-element 'comment-block post-blank)
        (om-elem--set-value value)))
 
-(om-elem--defun om-elem-build-diary-sexp (value &key post-blank)
+(om-elem--defun om-elem-build-diary-sexp (string &key post-blank)
   "Build a diary sexp element from VALUE.
 VALUE is the part inside the '%%(value)' part of the sexp."
   (->> (om-elem--build-element 'diary-sexp post-blank)
-       (om-elem--set-value (format "%%%%(%s)" value))))
+       (om-elem--diary-sexp-set-value string)))
 
 (om-elem--defun om-elem-build-example-block (value &key switches
                                                    preserve-indent
