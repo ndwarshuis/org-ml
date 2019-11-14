@@ -838,16 +838,17 @@ without element verification."
       ((mk-stat
         (v)
         (pcase v
-          (`nil "%")
-          (`(nil) "/")
-          ((and (pred integerp) n)
-           (if (< 100 n) (error "Number greater than 100")
-             (format "%s%%" n)))
-          (`(,(and (pred integerp) n)
-             ,(and (pred integerp) d))
-           (if (> n d) (error "Number greater than denominator")
-             (format "%s/%s" n d)))
-          (_ (error "Invalid stat-cookie value: %s" v)))))
+          (`(nil) "%")
+          (`(nil nil) "/")
+          (`(,(and (pred integerp) percent))
+           (if (< 100 percent) (error "Percent greater than 100")
+             (format "%s%%" percent)))
+          (`(,(and (pred integerp) numerator)
+             ,(and (pred integerp) denominator))
+           (if (> numerator denominator)
+               (error "Numerator greater than denominator")
+             (format "%s/%s" numerator denominator)))
+          (_ (error "Invalid stat-cookie value: %S" v)))))
     (let ((value* (format "[%s]" (mk-stat value))))
       (om-elem--set-property :value value* statistics-cookie))))
 
@@ -2529,7 +2530,8 @@ property list in ELEM."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-set-commented flag headline))
 
-(defun om-elem-headline-update-statistics-cookie (todo headline)
+(defun om-elem-headline-update-statistics-cookie (headline)
+  (om-elem--verify headline om-elem-is-headline-p)
   ;; TODO the todo arg is clunky
   ;; TODO make sure there is actually a cookie to modify
   (let* ((title (om-elem-property :title headline))
@@ -2692,7 +2694,7 @@ VALUE can take four forms which determine the format of the value:
 - (integer X integer Y) -> 'X/Y'
 - (nil) -> '/'"
   (om-elem--verify statistics-cookie om-elem-is-statistics-cookie-p)
-  (om-elem-statistics--cookie-set-value value statistics-cookie))
+  (om-elem--statistics-cookie-set-value value statistics-cookie))
 
 ;; timestamp
 
