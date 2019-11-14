@@ -222,6 +222,7 @@
 
 (defun om-elem--set-blank-contents (elem)
   "Set the contents of ELEM to a blank string (\"\")."
+  ;; TODO depreciate this function
   (om-elem-set-recursive-content '("") elem))
 
 (defun om-elem-is-zero-length-p (elem)
@@ -2445,7 +2446,6 @@ FUN is a predicate function that takes one argument."
   (or (om-elem-property-is-eq-p :type 'active-range timestamp)
       (om-elem-property-is-eq-p :type 'inactive-range timestamp)))
 
-;; TODO these are all relative to localtime, need to control for that
 (defun om-elem-timestamp-is-less-than-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is less than UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
@@ -2639,9 +2639,9 @@ TYPE is '-', '+', or 'ordered'."
    ((memq type '(+ -))
     (om-elem-map* '(item) (om-elem-item-set-bullet type it) plain-list))
    ((eq type 'ordered)
-    ;; TODO the org-interpreter seems to use the correct, ordered
-    ;; numbers if any number is set here. This behavior is likely not
-    ;; reliable. Need to make an om-elem-map-index for this
+    ;; NOTE the org-interpreter seems to use the correct, ordered
+    ;; numbers if any number is set here. This behavior may not be
+    ;; reliable.
     (om-elem-map* '(item) (om-elem-item-set-bullet 1 it) plain-list))
    (t (error "Invalid type: %s" type))))
 
@@ -2733,7 +2733,7 @@ TYPE can be either 'active' or 'inactive'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-set-type type timestamp))
 
-;; TOOD add a switch for precision
+;; TODO add a switch for precision
 (defun om-elem-timestamp-set-time-unixtime (unixtime timestamp)
   "Set start time of TIMESTAMP element to UNIXTIME (an integer).
 This assumes one wants HH:MM precision."
