@@ -290,35 +290,6 @@ This is a workaround for a bug.")
        (om-elem--blank)
        (org-element-interpret-data)
        (substring-no-properties)))
-  ;; (let*
-  ;;     ((rm-if-empty '(table plain-list bold italic radio-target
-  ;;                           strike-through superscript subscript
-  ;;                           table-cell underline))
-  ;;      (blank-if-empty '(center-block drawer dynamic-block
-  ;;                                     property-drawer quote-block
-  ;;                                     special-block))
-  ;;      (elem*
-  ;;       (cond
-  ;;        ((and (om-elem-is-any-type-p rm-if-empty elem)
-  ;;              ;; TODO need to test if elem is empty or if it is filled
-  ;;              ;; with empty forbidden elements
-  ;;              (om-elem-is-zero-length-p elem))
-  ;;         nil)
-  ;;        ((and (om-elem-is-any-type-p blank-if-empty elem)
-  ;;              (om-elem-is-empty-p elem))
-  ;;         (om-elem-set-recursive-content '("") elem))
-  ;;        (t (-some->>
-  ;;            elem
-  ;;            ;; delete empty things
-  ;;            (om-elem-delete `(:many! (:and (:pred om-elem-is-zero-length-p)
-  ;;                                           (:or ,@rm-if-empty))))
-  ;;            ;; insert blank in empty greater elements
-  ;;            (om-elem-map* `(:many! (:and (:pred om-elem-is-empty-p)
-  ;;                                         (:or ,@blank-if-empty)))
-  ;;                          (om-elem-set-recursive-content '("") it)))))))
-  ;;   (and elem* (substring-no-properties
-  ;;               (org-element-interpret-data elem*)))))
-  ;; (and elem (substring-no-properties (org-element-interpret-data elem))))
 
 (defun om-elem-to-trimmed-string (elem)
   "Like `om-elem-to-string' but strip whitespace when returning ELEM."
