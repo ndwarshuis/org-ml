@@ -2756,17 +2756,10 @@ This assumes one wants HH:MM precision."
 
 ;; generic
 
-(defun om-elem-map-property (property fun elem)
-  (om-elem--verify fun functionp
-                   elem om-elem-is-element-or-object-p)
-  ;; TODO check if property exists first?
-  (let ((value (->> (om-elem-property property elem)
-                    (funcall fun))))
-    (if (stringp elem) (org-add-props elem nil property value)
-      (om-elem--elem-list
-       (om-elem-type elem)
-       (plist-put (nth 1 elem) property value)
-       (-drop 2 elem)))))
+(defun om-elem-map-property (prop fun elem)
+  (om-elem--verify fun functionp)
+  (let ((value (funcall fun (om-elem-property prop elem))))
+    (om-elem-set-property prop value elem)))
 
 (defun om-elem-map-properties (plist elem)
   (cond
