@@ -585,7 +585,7 @@ and object containers and includes the 'plain-text' type.")
   "Set the :post-blank property of ELEM to POST-BLANK."
   (om-elem--verify post-blank om-elem--non-neg-integer-p)
   (if (stringp elem) (s-append (s-repeat post-blank " ") elem)
-    (om-elem-set-property :post-blank post-blank elem)))
+    (om-elem--set-property :post-blank post-blank elem)))
 
 (defun om-elem--set-brackets (flag elem)
   (om-elem--set-property-pred 'booleanp :use-brackets-p flag elem))
@@ -850,7 +850,7 @@ without element verification."
              (format "%s/%s" n d)))
           (_ (error "Invalid stat-cookie value: %s" v)))))
     (let ((value* (format "[%s]" (mk-stat value))))
-      (om-elem-set-property :value value* statistics-cookie))))
+      (om-elem--set-property :value value* statistics-cookie))))
 
 ;; timestamp
 
@@ -869,7 +869,7 @@ without element verification."
                   (active (if range? 'active-range 'active))
                   (inactive (if range? 'inactive-range 'inactive))
                   (t (error "Invalid timestamp type: %s" type)))))
-    (om-elem-set-property :type type* timestamp)))
+    (om-elem--set-property :type type* timestamp)))
 
 (defun om-elem--timestamp-format-time (time suffix)
   (let ((props (->> '(year month day hour minute)
@@ -898,7 +898,7 @@ without element verification."
 (defun om-elem--timestamp-set-time (time timestamp)
   "Set the start TIME of TIMESTAMP."
   (-> (om-elem--timestamp-format-time time 'start)
-      (om-elem-set-properties timestamp)))
+      (om-elem--set-properties timestamp)))
 
 (defun om-elem--timestamp-set-time-end (time timestamp)
   "Set the end TIME of TIMESTAMP."
@@ -2484,8 +2484,9 @@ FUN is a predicate function that takes one argument."
 
 (defun om-elem-set-property (prop value elem)
   "Set property PROP in element ELEM to VALUE."
-  ;; TODO validate that prop exists in elem first?
   (om-elem--verify elem om-elem-is-element-or-object-p)
+  (unless (plist-member (om-elem-properties elem) prop)
+    (error "Property %s does not exist in %s" prop elem))
   (om-elem--set-property prop value elem))
 
 (defun om-elem-set-properties (plist elem)
