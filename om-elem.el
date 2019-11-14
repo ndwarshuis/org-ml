@@ -485,6 +485,15 @@ property list in ELEM."
          (om-elem--set-properties (-drop 2 plist))))
    (t (error "Not a plist: %s" plist))))
 
+(defun om-elem--set-property-nil (prop elem)
+  "Set property PROP to nil in ELEM."
+  (om-elem--set-property prop nil elem))
+
+(defun om-elem--set-properties-nil (props elem)
+  "Set all properties PROPS to new in ELEM."
+  (let ((plist (--mapcat (list it nil) props)))
+    (om-elem--set-properties plist elem)))
+
 (defun om-elem--set-property-pred (fun prop value elem)
   (eval `(om-elem--verify value ,fun) `((value . ,value)))
   (om-elem--set-property prop value elem))
@@ -934,55 +943,47 @@ without element verification."
   "Return a plist where the keys are PROPS and all values are nil."
   (--splice 't (list it nil) props))
 
-(defun om-elem--build (type props init-props post-blank)
-  (let ((props (append props (om-elem--init-properties init-props))))
-    (->> (om-elem--elem-list type props nil)
-         (om-elem--set-post-blank (or post-blank 0)))))
+(defun om-elem--build (type post-blank props)
+  (->> (om-elem--set-post-blank (or post-blank 0) `(,type nil))
+       (om-elem--set-properties-nil props)))
 
-(defun om-elem--build-object (props type post-blank)
-  (let ((init-props om-elem--object-properties))
-    (om-elem--build type props init-props post-blank)))
+(defun om-elem--build-object (type post-blank)
+  (om-elem--build type post-blank om-elem--object-properties))
 
-(defun om-elem--build-recursive-object (props type post-blank objs)
-  (let ((init-props om-elem--recursive-object-properties))
-    (->> (om-elem--build type props init-props post-blank)
-         (om-elem--set-contents-by-type type objs))))
+(defun om-elem--build-recursive-object (type post-blank objs)
+  (->> om-elem--recursive-object-properties
+       (om-elem--build type post-blank)
+       (om-elem--set-contents-by-type type objs)))
 
-(defun om-elem--build-element (props type post-blank)
-  (let ((init-props om-elem--element-properties))
-    (om-elem--build type props init-props post-blank)))
+(defun om-elem--build-element (type post-blank)
+  (om-elem--build type post-blank om-elem--element-properties))
 
-(defun om-elem--build-container-element (props type post-blank elems)
-  (let ((init-props om-elem--container-element-properties))
-    (->> (om-elem--build type props init-props post-blank)
-         (om-elem--set-contents-by-type type elems))))
-
-(defun om-elem--all-elements-p (elems)
-  (-all? #'om-elem-is-element-p elems))
+(defun om-elem--build-container-element (type post-blank elems)
+  (->> om-elem--container-element-properties
+       (om-elem--build type post-blank)
+       (om-elem--set-contents-by-type type elems)))
 
 ;; objects
 
 (om-elem--defun om-elem-build-code (value &key post-blank)
   "Build a code object from VALUE."
-  (->> (om-elem--build-object '(:value nil) 'code post-blank)
+  (->> (om-elem--build-object 'code post-blank)
        (om-elem--set-value value)))
 
 ;; TODO this needs to be validated against `org-entity-get'
 (om-elem--defun om-elem-build-entity (name &key use-brackets-p post-blank)
   "Build a entity object from NAME."
-  (let ((props (-> (list :html :ascii :latex :latex-math-p :latin1
-                         :utf-8 :use-brackets-p :name)
-                   (om-elem--init-properties))))
-    (->> (om-elem--build-object props 'entity post-blank)
+  (let ((init '(:html :ascii :latex :latex-math-p :latin1 :utf-8)))
+    (->> (om-elem--build-object 'entity post-blank)
          (om-elem--set-brackets use-brackets-p)
-         (om-elem--set-property-pred 'stringp :name name))))
+         (om-elem--set-property-pred 'stringp :name name)
+         (om-elem--set-properties-nil init))))
 
 (om-elem--defun om-elem-build-export-snippet (back-end value &key post-blank)
   "Build an export-block element with BACK-END and TYPE."
-  (let ((props '(:value nil :back-end nil)))
-    (->> (om-elem--build-object props 'export-snippet post-blank)
-         (om-elem--set-value value)
-         (om-elem--set-property-pred 'stringp :back-end back-end))))
+  (->> (om-elem--build-object 'export-snippet post-blank)
+       (om-elem--set-value value)
+       (om-elem--set-property-pred 'stringp :back-end back-end)))
 
 (om-elem--defun om-elem-build-inline-babel-call (call &key post-blank
                                                       arguments
@@ -991,15 +992,13 @@ without element verification."
   "Build an inline-babel-call element for NAME.
 Optionally provide ARGS, inside header args INSIDE, and end header
 args END."
-  (let ((props (->
-                '(:call :arguments :inside-header :end-header :value)
-                (om-elem--init-properties))))
-    (->>
-     (om-elem--build-object props 'inline-babel-call post-blank)
-     (om-elem--set-property-pred 'stringp :call call)
-     (om-elem--set-property-list-string :arguments arguments ",")
-     (om-elem--set-property-plist :inside-header inside-header)
-     (om-elem--set-property-plist :end-header end-header))))
+  (->>
+   (om-elem--build-object 'inline-babel-call post-blank)
+   (om-elem--set-property-pred 'stringp :call call)
+   (om-elem--set-property-list-string :arguments arguments ",")
+   (om-elem--set-property-plist :inside-header inside-header)
+   (om-elem--set-property-plist :end-header end-header)
+   (om-elem--set-property-nil :value)))
 
 (om-elem--defun om-elem-build-inline-src-block (language value
                                                          &key
@@ -1007,35 +1006,32 @@ args END."
                                                          post-blank)
   "Build an inline-src-block object with LANGUAGE and VALUE.
 Optionally provide PARAMETERS."
-  (let ((props '(:language nil :value nil :parameters nil)))
-    (->> (om-elem--build-object props 'inline-src-block post-blank)
-         (om-elem--set-value value)
-         (om-elem--set-property-pred 'stringp :language language)
-         (om-elem--set-property-plist :parameters parameters))))
+  (->> (om-elem--build-object 'inline-src-block post-blank)
+       (om-elem--set-value value)
+       (om-elem--set-property-pred 'stringp :language language)
+       (om-elem--set-property-plist :parameters parameters)))
 
 ;; TODO add latex-fragment
 
 (om-elem--defun om-elem-build-line-break (&key post-blank)
   "Build a line-break object."
-  (om-elem--build-object nil 'line-break post-blank))
+  (om-elem--build-object 'line-break post-blank))
 
 (om-elem--defun om-elem-build-macro (key &key args post-blank)
   "Build a macro object with KEY and optional ARGS."
-  (let ((props '(:value nil :args nil :key nil)))
-    (->> (om-elem--build-object props 'macro post-blank)
-         (om-elem--set-key key)
-         (om-elem--set-property-strings :args args)
-         (om-elem--macro-update-value))))
+  (->> (om-elem--build-object 'macro post-blank)
+       (om-elem--set-key key)
+       (om-elem--set-property-strings :args args)
+       (om-elem--macro-update-value)))
 
 (om-elem--defun om-elem-build-statistics-cookie (value &key post-blank)
   "Build a statistics cookie object with NUMBER and DENOMINATOR."
-  (->>
-   (om-elem--build-object '(:value nil) 'statistics-cookie post-blank)
-   (om-elem--statistics-cookie-set-value value)))
+  (->> (om-elem--build-object 'statistics-cookie post-blank)
+       (om-elem--statistics-cookie-set-value value)))
 
 (om-elem--defun om-elem-build-target (value &key post-blank)
   "Build a target object with VALUE."
-  (->> (om-elem--build-object '(:value nil) 'target post-blank)
+  (->> (om-elem--build-object 'target post-blank)
        (om-elem--set-value value)))
 
 (om-elem--defun om-elem-build-timestamp (type start &key end
@@ -1043,100 +1039,91 @@ Optionally provide PARAMETERS."
                                               warning
                                               post-blank)
   "Build a timestamp..."
-  (let ((props (-> '(:type :raw-value :repeater-type :repeater-unit
-                           :repeater-value :warning-type :warning-unit
-                           :warning-value :year-start
-                           :month-start :day-start :hour-start
-                           :minute-start :year-end :month-end :day-end
-                           :hour-end :minute-end)
-                   (om-elem--init-properties))))
-    (-->
-     (om-elem--build-object props 'timestamp post-blank)
-     (om-elem--timestamp-set-time start it)
-     (om-elem--timestamp-set-time-end end it)
-     (om-elem--timestamp-set-type type it)
-     (if warning (om-elem--timestamp-set-warning warning it) it)
-     (if repeater (om-elem--timestamp-set-repeater repeater it) it))))
+  (->> (om-elem--build-object 'timestamp post-blank)
+       (om-elem--timestamp-set-time start)
+       (om-elem--timestamp-set-time-end end)
+       (om-elem--timestamp-set-type type)
+       (om-elem--timestamp-set-warning warning)
+       (om-elem--timestamp-set-repeater repeater)
+       (om-elem--set-property-nil :raw-value)))
 
 (om-elem--defun om-elem-build-diary-sexp-timestamp (string &key post-blank)
   "Build a diary-sexp timestamp element from STRING.
 STRING is a lisp form as a string."
   (om-elem--verify string stringp)
-  (-> (list :repeater-type :repeater-unit :repeater-value
-            :warning-type :warning-unit :warning-value :year-start
-            :month-start :day-start :hour-start :minute-start
-            :year-end :month-end :day-end :hour-end :minute-end)
-      (om-elem--init-properties)
-      (append `(:type diary :raw-value (format "<%%%%%s>" string)))
-      (om-elem--build-object 'timestamp post-blank)))
+  (let ((init :repeater-type :repeater-unit :repeater-value
+               :warning-type :warning-unit :warning-value :year-start
+               :month-start :day-start :hour-start :minute-start
+               :year-end :month-end :day-end :hour-end :minute-end))
+    (->> (om-elem--build-object 'timestamp post-blank)
+         (om-elem--set-property :type 'diary)
+         (om-elem--set-property :raw-value (format "<%%%%%s>" string))
+         (om-elem--init-properties init))))
         
 (om-elem--defun om-elem-build-verbatim (value &key post-blank)
   "Build a verbatim object with VALUE."
-  (->> (om-elem--build-object '(:value nil) 'verbatim post-blank)
+  (->> (om-elem--build-object 'verbatim post-blank)
        (om-elem--set-value value)))
 
 ;; recursive objects
 
 (om-elem--defun om-elem-build-bold (&key post-blank &rest objs)
   "Build a bold object containing OBJS."
-  (om-elem--build-recursive-object nil 'bold post-blank objs))
+  (om-elem--build-recursive-object 'bold post-blank objs))
 
 (om-elem--defun om-elem-build-footnote-reference (&key label
                                                        post-blank
                                                        &rest objs)
   "Build a footnote reference object to TARGET."
-  (let ((props '(:label nil :type nil)))
-    (->>
-     (om-elem--build-recursive-object props 'footnote-reference post-blank objs)
-     (om-elem--set-property-pred 'string-or-null-p :label label))))
+  (->>
+   (om-elem--build-recursive-object 'footnote-reference post-blank objs)
+   (om-elem--set-property-pred 'string-or-null-p :label label)
+   (om-elem--set-property-nil :type)))
 
 (om-elem--defun om-elem-build-italic (&key post-blank &rest objs)
   "Build an italic object from STRING."
-  (om-elem--build-recursive-object nil 'italic post-blank objs))
+  (om-elem--build-recursive-object 'italic post-blank objs))
 
 (om-elem--defun om-elem-build-link (path &key type format post-blank
                                          &rest objs)
   "Build a link object from TARGET with OBJS as the description."
-  (let ((props (-> (list :path :type :format :raw-link :application
-                         :search-option)
-                   (om-elem--init-properties))))
-    (->> (om-elem--build-recursive-object props 'link post-blank objs)
+  (let ((init '(:raw-link :application :search-option)))
+    (->> (om-elem--build-recursive-object 'link post-blank objs)
          (om-elem--link-set-path path)
          (om-elem--link-set-type type)
-         (om-elem--link-set-format format))))
+         (om-elem--link-set-format format)
+         (om-elem--set-properties-nil init))))
 
 (om-elem--defun om-elem-build-radio-target (&key post-blank &rest objs)
   "Build a radio target object from STRING."
-  (om-elem--build-recursive-object '(:value nil) 'radio-target
-                                   post-blank objs))
+  (->> (om-elem--build-recursive-object 'radio-target post-blank objs)
+       (om-elem--set-property-nil :value)))
 
 (om-elem--defun om-elem-build-strike-through (&key post-blank &rest objs)
   "Build a strike-through object from STRING."
-  (om-elem--build-recursive-object nil 'strike-through post-blank objs))
+  (om-elem--build-recursive-object 'strike-through post-blank objs))
 
 (om-elem--defun om-elem-build-superscript (&key use-brackets-p
                                                 post-blank
                                                 &rest objs)
   "Build a superscript object from STRING."
-  (let ((props '(:use-brackets-p nil)))
-    (->> (om-elem--build-recursive-object props 'superscript post-blank objs)
-         (om-elem--set-brackets use-brackets-p))))
+  (->> (om-elem--build-recursive-object 'superscript post-blank objs)
+       (om-elem--set-brackets use-brackets-p)))
 
 (om-elem--defun om-elem-build-subscript (&key use-brackets-p
                                               post-blank
                                               &rest objs)
   "Build a subscript object from STRING."
-  (let ((props '(:use-brackets-p nil)))
-    (->> (om-elem--build-recursive-object props 'subscript post-blank objs)
-         (om-elem--set-brackets use-brackets-p))))
+  (->> (om-elem--build-recursive-object 'subscript post-blank objs)
+       (om-elem--set-brackets use-brackets-p)))
 
 (om-elem--defun om-elem-build-table-cell (&key post-blank &rest objs)
   "Build a table cell object containing TEXT."
-  (om-elem--build-recursive-object nil 'table-cell post-blank objs))
+  (om-elem--build-recursive-object 'table-cell post-blank objs))
 
 (om-elem--defun om-elem-build-underline (&key post-blank &rest objs)
   "Build an underline object from STRING."
-  (om-elem--build-recursive-object nil 'underline post-blank objs))
+  (om-elem--build-recursive-object 'underline post-blank objs))
 
 ;; elements
 
@@ -1144,144 +1131,134 @@ STRING is a lisp form as a string."
                                                inside-header
                                                end-header post-blank)
   "Build a babel-call element for NAME."
-  (let ((props
-         (-> '(:call :arguments :inside-header :end-header :value)
-             (om-elem--init-properties))))
-    (->> (om-elem--build-element props 'babel-call post-blank)
-         (om-elem--set-property-pred 'stringp :call call)
-         (om-elem--set-property-list-string :arguments arguments ",")
-         (om-elem--set-property-plist :inside-header inside-header)
-         (om-elem--set-property-plist :end-header end-header))))
+  (->> (om-elem--build-element 'babel-call post-blank)
+       (om-elem--set-property-pred 'stringp :call call)
+       (om-elem--set-property-list-string :arguments arguments ",")
+       (om-elem--set-property-plist :inside-header inside-header)
+       (om-elem--set-property-plist :end-header end-header)
+       (om-elem--set-property-nil :value)))
 
 (om-elem--defun om-elem-build-clock (start &key end post-blank)
   "Build a clock element with TIME1.
 Optionally supply TIME2 to create a closed clock."
-  (let ((props '(:status nil :value nil :duration nil))
-        (ts (om-elem-build-timestamp 'inactive start :end end)))
-    (->> (om-elem--build-element props 'clock post-blank)
+  (let ((ts (om-elem-build-timestamp 'inactive start :end end)))
+    (->> (om-elem--build-element 'clock post-blank)
          (om-elem--set-property :value ts)
-         (om-elem--clock-update-duration))))
+         (om-elem--clock-update-duration)
+         (om-elem--set-property-nil :status))))
 
 (om-elem--defun om-elem-build-comment (value &key post-blank)
   "Build a comment element with VALUE."
-  (->> (om-elem--build-element '(:value nil) 'comment post-blank)
+  (->> (om-elem--build-element 'comment post-blank)
        (om-elem--set-value value)))
 
 (om-elem--defun om-elem-build-comment-block (value &key post-blank)
   "Build a comment block element from VALUE."
-  (->> (om-elem--build-element '(:value nil) 'comment-block post-blank)
+  (->> (om-elem--build-element 'comment-block post-blank)
        (om-elem--set-value value)))
 
 (om-elem--defun om-elem-build-diary-sexp (value &key post-blank)
   "Build a diary sexp element from VALUE.
 VALUE is the part inside the '%%(value)' part of the sexp."
-  (->> (om-elem--build-element '(:value nil) 'diary-sexp post-blank)
+  (->> (om-elem--build-element 'diary-sexp post-blank)
        (om-elem--set-value (format "%%%%(%s)" value))))
 
 (om-elem--defun om-elem-build-example-block (value &key switches
                                                    preserve-indent
                                                    post-blank)
   "Build a example block element from STRING."
-  (let ((props (-> (list :number-lines :retain-labels :use-labels
-                         :label-fmt :value :switches :preserve-indent)
-                   (om-elem--init-properties))))
-    (->> (om-elem--build-element props 'example-block post-blank)
+  (let ((init '(:number-lines :retain-labels :use-labels :label-fmt)))
+    (->> (om-elem--build-element 'example-block post-blank)
          (om-elem--set-value (org-element-normalize-string value))
          (om-elem--set-property-list-string :switches switches " ")
-         (om-elem--set-indent preserve-indent))))
-  
+         (om-elem--set-indent preserve-indent)
+         (om-elem--set-properties-nil init))))
 
 (om-elem--defun om-elem-build-export-block (type value &key post-blank)
   "Build an export-block element with TYPE and VALUE."
-  (let ((props '(:value nil :type nil)))
-    (->> (om-elem--build-element props 'export-block post-blank)
-         (om-elem--set-value value)
-         (om-elem--set-property-pred 'stringp :type type))))
+  (->> (om-elem--build-element 'export-block post-blank)
+       (om-elem--set-value value)
+       (om-elem--set-property-pred 'stringp :type type)))
 
 (om-elem--defun om-elem-build-fixed-width (value &key post-blank)
   "Build a fixed-width element from STRING."
-  (->> (om-elem--build-element '(:value nil) 'fixed-width post-blank)
+  (->> (om-elem--build-element 'fixed-width post-blank)
        (om-elem--set-value value)))
 
 (om-elem--defun om-elem-build-horizontal-rule (&key post-blank)
   "Build a horizontal-rule element."
-  (om-elem--build-element nil 'horizontal-rule post-blank))
+  (om-elem--build-element 'horizontal-rule post-blank))
 
 (om-elem--defun om-elem-build-keyword (key value &key post-blank)
   "Build keyword element with keyword KEY and value VAL."
-  (let ((props '(:key nil :value nil)))
-    (->> (om-elem--build-element props 'keyword post-blank)
-         (om-elem--set-key key)
-         (om-elem--set-value value))))
+  (->> (om-elem--build-element 'keyword post-blank)
+       (om-elem--set-key key)
+       (om-elem--set-value value)))
 
 (om-elem--defun om-elem-build-latex-environment (env body &key post-blank)
   "Build a latex-environment element with environment ENV and TEXT."
-  (->>
-   (om-elem--build-element '(:value nil) 'latex-environment post-blank)
-   (om-elem--latex-environment-set-value env body)))
+  (->> (om-elem--build-element 'latex-environment post-blank)
+       (om-elem--latex-environment-set-value env body)))
 
 (om-elem--defun om-elem-build-node-property (key value &key post-blank)
   "Build a node property object with KEY and VAL."
-  (let ((props '(:key nil :value nil)))
-    (->> (om-elem--build-element props 'node-property post-blank)
-         (om-elem--set-key key)
-         (om-elem--set-value value))))
+  (->> (om-elem--build-element 'node-property post-blank)
+       (om-elem--set-key key)
+       (om-elem--set-value value)))
 
 (om-elem--defun om-elem-build-planning (&key closed scheduled deadline
                                              post-blank)
   "Build planning element with TYPE and TIME."
-  (let ((props '(:closed nil :scheduled nil :deadline nil)))
-    (->> (om-elem--build-element props 'planning post-blank)
-         (om-elem--planning-set-closed closed)
-         (om-elem--planning-set-deadline deadline)
-         (om-elem--planning-set-scheduled scheduled))))
+  (->> (om-elem--build-element 'planning post-blank)
+       (om-elem--planning-set-closed closed)
+       (om-elem--planning-set-deadline deadline)
+       (om-elem--planning-set-scheduled scheduled)))
 
 (om-elem--defun om-elem-build-src-block (value &key language switches
                                                parameters
                                                preserve-indent
                                                post-blank)
-  (let ((props (-> (list :value :language :switches :parameters
-                         :preserve-indent :number-lines
-                         :retain-labels :use-labels :label-fmt)
-                   (om-elem--init-properties))))
+  (let ((init (list :preserve-indent :number-lines :retain-labels
+                    :use-labels :label-fmt)))
     (->>
-     (om-elem--build-element props 'src-block post-blank)
+     (om-elem--build-element 'src-block post-blank)
      (om-elem--set-value value)
      (om-elem--set-indent preserve-indent)
      (om-elem--set-property-pred 'string-or-null-p :language language)
      (om-elem--set-property-list-string :switches switches " ")
-     (om-elem--set-property-plist :parameters parameters))))
+     (om-elem--set-property-plist :parameters parameters)
+     (om-elem--set-properties-nil init))))
 
 ;; container elements
 
 (om-elem--defun om-elem-build-paragraph (&key post-blank &rest objs)
   "Build a paragraph container element with OBJECTS as contents."
-  (om-elem--build-container-element nil 'paragraph post-blank objs))
+  (om-elem--build-container-element 'paragraph post-blank objs))
 
 (om-elem--defun om-elem-build-table-row (&key post-blank &rest objs)
   "Build a table-row container element with OBJECTS as contents."
-  (om-elem--build-container-element '(:type standard) 'table-row
-                                   post-blank objs))
+  (->> (om-elem--build-container-element 'table-row post-blank objs)
+       (om-elem--set-property :type 'standard)))
 
 (om-elem--defun om-elem-build-table-row-hline (&key post-blank)
-  (om-elem--build-container-element `(:type rule) 'table-row post-blank nil))
+  (->> (om-elem--build-container-element 'table-row post-blank nil)
+       (om-elem--set-property :type 'rule)))
 
 (om-elem--defun om-elem-build-verse-block (&key post-blank &rest objs)
   "Build a verse-block container element with OBJECTS as contents."
-  (om-elem--build-container-element nil 'verse-block post-blank objs))
+  (om-elem--build-container-element 'verse-block post-blank objs))
 
 ;; greater elements
 
 (om-elem--defun om-elem-build-center-block (&key post-blank &rest elems)
   "Build a center block greater element with ELEMS as contents."
-  (om-elem--build-container-element nil 'center-block post-blank elems))
+  (om-elem--build-container-element 'center-block post-blank elems))
 
 (om-elem--defun om-elem-build-drawer (drawer-name &key post-blank
                                                   &rest elems)
   "Create drawer greater element with NAME and ELEMS as contents."
-  (om-elem--verify drawer-name stringp)
-  (-> `(:drawer-name ,drawer-name)
-      (om-elem--build-container-element 'drawer post-blank elems)))
+  (->> (om-elem--build-container-element 'drawer post-blank elems)
+       (om-elem--set-property-pred #'stringp :drawer-name drawer-name)))
 
 (om-elem--defun om-elem-build-dynamic-block (block-name
                                              arguments
@@ -1290,20 +1267,18 @@ VALUE is the part inside the '%%(value)' part of the sexp."
   "Build a dynamic block greater element called NAME with PARAMS.
 PARAMS is s list of cons cells for each key/val pair. Optionally
 provide ELEMS as contents."
-  (let ((props '(:block-name nil :arguments nil)))
-    (->>
-     (om-elem--build-container-element props 'dynamic-block post-blank elems)
-     (om-elem--set-property-pred #'stringp :block-name block-name)
-     (om-elem--set-property-plist :arguments arguments))))
+  (->> (om-elem--build-container-element 'dynamic-block post-blank elems)
+       (om-elem--set-property-pred #'stringp :block-name block-name)
+       (om-elem--set-property-plist :arguments arguments)))
 
 (om-elem--defun om-elem-build-footnote-definition (label
                                                    &key post-blank
                                                    &rest elems)
   "Build a footnote-definition greater element for LABEL.
 Optionally provide ELEMS as contents."
-  (->> (om-elem--build-container-element
-        '(:label nil) 'footnote-definition post-blank elems)
-       (om-elem--set-property-pred 'stringp :label label)))
+  (->>
+   (om-elem--build-container-element 'footnote-definition post-blank elems)
+   (om-elem--set-property-pred #'stringp :label label)))
 
 (om-elem--defun om-elem-build-headline (&key title (level 1)
                                              (pre-blank 0) todo-keyword
@@ -1313,22 +1288,18 @@ Optionally provide ELEMS as contents."
                                              post-blank
                                              &rest elems)
   "Build a headline."
-  (let ((props (-> (list :title :pre-blank :level :todo-keyword :tags
-                         :priority :footnote-section-p :commentedp
-                         :archivedp :todo-type :raw-value)
-                   (om-elem--init-properties))))
-    (->>
-     (om-elem--build-container-element props 'headline post-blank elems)
-     (om-elem--headline-set-pre-blank pre-blank)
-     (om-elem--headline-set-todo todo-keyword)
-     (om-elem--headline-set-title title)
-     (om-elem--headline-set-level level)
-     (om-elem--headline-set-priority priority)
-     (om-elem--set-property-strings :tags tags)
-     (om-elem--headline-set-footnote-section footnote-section-p)
-     ;; this must go after setting tags since it alters the tags
-     (om-elem--headline-set-archived archivedp)
-     (om-elem--headline-set-commented commentedp))))
+  (->> (om-elem--build-container-element 'headline post-blank elems)
+       (om-elem--headline-set-pre-blank pre-blank)
+       (om-elem--headline-set-todo todo-keyword)
+       (om-elem--headline-set-title title)
+       (om-elem--headline-set-level level)
+       (om-elem--headline-set-priority priority)
+       (om-elem--set-property-strings :tags tags)
+       (om-elem--headline-set-footnote-section footnote-section-p)
+       ;; this must go after setting tags since it alters the tags
+       (om-elem--headline-set-archived archivedp)
+       (om-elem--headline-set-commented commentedp)
+       (om-elem--set-properties-nil '(:todo-type :raw-value))))
 
 ;; TODO add inline text
 
@@ -1336,49 +1307,47 @@ Optionally provide ELEMS as contents."
                                          counter post-blank
                                          &rest elems)
   "Build a plain-list greater element with ELEMS as contents."
-  (let ((props (-> '(:bullet :checkbox :counter :tag :structure)
-                   (om-elem--init-properties))))
-    (->>
-     (om-elem--build-container-element props 'item post-blank elems)
-     (om-elem--item-set-bullet bullet)
-     (om-elem--item-set-checkbox checkbox)
-     (om-elem--item-set-tag tag)
-     (om-elem--item-set-counter counter))))
+  (->> (om-elem--build-container-element 'item post-blank elems)
+       (om-elem--item-set-bullet bullet)
+       (om-elem--item-set-checkbox checkbox)
+       (om-elem--item-set-tag tag)
+       (om-elem--item-set-counter counter)
+       (om-elem--set-property-nil :structure)))
 
 (om-elem--defun om-elem-build-plain-list (&key post-blank &rest items)
   "Build a plain-list greater element with ELEMS as contents."
-  (->
-   '(:structure nil :type nil)
-   (om-elem--build-container-element 'plain-list post-blank items)))
+   (->> (om-elem--build-container-element 'plain-list post-blank items)
+        (om-elem--set-properties-nil '(:structure :type))))
 
 (om-elem--defun om-elem-build-property-drawer (&key post-blank &rest
                                                     node-properties)
   "Build a property-drawer greater element containing NODE-PROPERTIES."
-  (om-elem--build-container-element nil 'property-drawer post-blank
+  (om-elem--build-container-element 'property-drawer post-blank
                                     node-properties))
 
 (om-elem--defun om-elem-build-quote-block (&key post-blank &rest elems)
   "Build a quote-block greater element with ELEMS as contents."
-  (om-elem--build-container-element nil 'quote-block post-blank elems))
+  (om-elem--build-container-element 'quote-block post-blank elems))
 
 (om-elem--defun om-elem-build-section (&key post-blank &rest elems)
   "Build a section grater element with ELEMS as contents."
-  (om-elem--build-container-element nil 'section post-blank elems))
+  (om-elem--build-container-element 'section post-blank elems))
 
 (om-elem--defun om-elem-build-special-block (type &key post-blank
                                                   &rest elems)
   "Build a special block greater element with ELEMS as contents."
-  (->> (om-elem--build-container-element '(:type nil) 'special-block
-                                         post-blank elems)
-       (om-elem--set-property-pred #'stringp :type type)))
+  (->>
+   (om-elem--build-container-element 'special-block post-blank elems)
+   (om-elem--set-property-pred #'stringp :type type)))
 
 (om-elem--defun om-elem-build-table (&key tblfm post-blank &rest
                                           table-rows)
   "Build a section grater element containing TABLE-ROWS."
   ;; TODO this only deals with org tables for now
-  (let ((props '(:tblfm nil :type org :value nil)))
-    (->> (om-elem--build-container-element props 'table post-blank table-rows)
-         (om-elem--set-property-strings :tblfm tblfm))))
+  (->> (om-elem--build-container-element 'table post-blank table-rows)
+       (om-elem--set-property-strings :tblfm tblfm)
+       (om-elem--set-property :type 'org)
+       (om-elem--set-property-nil :value)))
 
 ;; shortcut builders
 
