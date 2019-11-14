@@ -739,15 +739,21 @@ checkbox."
     (error ("Invalid checkbox state: %s" state)))
   (om-elem--set-property :checkbox state item))
 
+;; NOTE the org element parser currently does not honor 1) or a) type
+;; bullets
+(defun om-elem--item-validate-counter (counter)
+  (if (integerp counter) counter
+    (let ((s (symbol-name counter)))
+      (when (s-matches? "^[a-zA-z]$" s)
+        (if org-list-allow-alphabetical counter
+          (error "Set `org-list-allow-alphabetical' to t to use alphabetical bullets"))))))
+
 (defun om-elem--item-set-bullet (bullet item)
-  (let ((b (cond
-            ((integerp bullet) (format "%s. " bullet))
-            ((memq bullet '(- +)) (format "%s " bullet))
-            ;; TODO use alphanumeric if org-list-allow-alphabetical = t
-            ;; ((and (stringp bullet)
-            ;;       (s-matches? "[:space:]*[0-9]+\\(\\.\\|)\\)[:space:]*" bullet))
-            ;;  bullet)
-            (t (error "Invalid bullet: %s" bullet)))))
+  (let ((b (if (memq bullet '(- +)) (format "%s " bullet)
+             (-if-let (c (->> (if (listp bullet) (car bullet) bullet)
+                              (om-elem--item-validate-counter)))
+                 (format (if (listp bullet) "%s) " "%s. ") c)
+               (error "Invalid bullet: %s" bullet)))))
     (om-elem--set-property :bullet b item)))
 
 ;; TODO refactor this
@@ -763,10 +769,12 @@ checkbox."
   (om-elem--verify tag om-elem--item-tag-is-allowed-p)
   (om-elem--set-property :tag tag item))
 
+;; NOTE org mode 9.1.9 will crash when given an alphabetic symbol
 (defun om-elem--item-set-counter (counter item)
   "Set the tag of ITEM element to COUNTER."
-  ;; TODO what about alphabetic counters?
-  (om-elem--verify counter (lambda (c) (or (null c) (om-elem--non-neg-integer-p c))))
+  (unless (or (null counter) (integerp counter))
+  ;; (unless (or (null counter) (om-elem--item-validate-counter counter))
+    (error "Invalid counter: %s" counter))
   (om-elem--set-property :counter counter item))
 
 ;; latex environment
