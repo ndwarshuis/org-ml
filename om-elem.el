@@ -1017,7 +1017,10 @@ Optionally provide PARAMETERS."
        (om-elem--set-property-pred 'stringp :language language)
        (om-elem--set-property-plist :parameters parameters)))
 
-;; TODO add latex-fragment
+(om-elem--defun om-elem-build-latex-fragment (value &key post-blank)
+  "Build a latex fragment object"
+  (->> (om-elem--build-object 'latex-fragment post-blank)
+       (om-elem--set-value value)))
 
 (om-elem--defun om-elem-build-line-break (&key post-blank)
   "Build a line-break object."
