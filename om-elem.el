@@ -222,8 +222,7 @@
 
 (defun om-elem--set-blank-contents (elem)
   "Set the contents of ELEM to a blank string (\"\")."
-  ;; TODO depreciate this function
-  (om-elem-set-recursive-content '("") elem))
+  (om-elem--set-contents '("") elem))
 
 (defun om-elem-is-zero-length-p (elem)
   "Return t if ELEM will print as a blank string."
@@ -2500,13 +2499,6 @@ PLIST is a list of property-value pairs that correspond to the
 property list in ELEM."
   (om-elem--verify elem om-elem-is-element-or-object-p)
   (om-elem--set-properties plist elem))
-
-(defun om-elem-set-recursive-content (content elem)
-  ;; TODO this should only allow recursive types (eg bold, link, etc)
-  ;; TODO add verification to this, but maybe refactor first
-  (om-elem--verify elem om-elem-is-element-or-object-p)
-   (let ((head (om-elem-head elem)))
-     (if content (append head content) head)))
 
 ;; misc
 
