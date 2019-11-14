@@ -249,8 +249,6 @@ This is a workaround for a bug.")
    ((and (or (om-elem-is-any-type-p om-elem--rm-if-empty elem)
              (and (om-elem-is-type-p 'table-row elem)
                   (om-elem-property-is-eq-p :type 'standard elem)))
-         ;; TODO need to test if elem is empty or if it is filled
-         ;; with empty forbidden elements
          (om-elem-is-zero-length-p elem))
     nil)
    (t (-some->>
