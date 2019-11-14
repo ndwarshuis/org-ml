@@ -153,29 +153,12 @@
                 ,@rest-let
                 ,@lets)))))
     ;; mercilessly stolen from cl--transform-whatever
-    ;; TODO need to remove the predicate functions from the args list
-    ;; (setq header
-    ;;       ;; Macro expansion can take place in the middle of
-    ;;       ;; apparently harmless computation, so it should not
-    ;;       ;; touch the match-data.
-    ;;       (save-match-data
-    ;;         (cons (help-add-fundoc-usage
-    ;;                (if (stringp (car header)) (pop header))
-    ;;                ;; Be careful with make-symbol and (back)quote,
-    ;;                ;; see bug#12884.
-    ;;                (help--docstring-quote
-    ;;                 (let ((print-gensym nil) (print-quoted t)
-    ;;                       (print-escape-newlines t))
-    ;;                   (format "%S" (cons 'fn (cl--make-usage-args
-    ;;                                           args))))))
-    ;;               header)))
     `(defun ,name ,arg-form
        ,header
        ,(macroexp-let*
          let-forms
          (macroexp-progn `(,body))))))
 
-;; TODO this docstring is wrong
 (defmacro om-elem--defun (name args &rest body)
   "Define NAME as a function.
 
