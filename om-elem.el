@@ -1521,14 +1521,12 @@ TYPE is a symbol, PROPS is a plist, and CONTENTS is a list or nil."
     ;; NOTE: this must go last if we don't want :and/:or/:not to
     ;; be interpreted as a plist
     ((and (pred om-elem--is-plist-p) plist)
-     ;; TODO refactor this with plist-member?
      (cl-flet
          ((all-props-match?
            (elem props)
-           (->> (-slice props 0 nil 2)
-                (--map (equal (plist-get props it)
-                              (om-elem-property it elem)))
-                (-none? #'null))))
+           (->> (-partition 2 (om-elem-properties elem))
+                (-difference (-partition 2 props))
+                (not))))
        (--filter (all-props-match? it plist) contents)))
     (_ (error "Invalid query: %s" query))))
 
