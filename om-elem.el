@@ -1477,6 +1477,14 @@ TYPE is a symbol, PROPS is a plist, and CONTENTS is a list or nil."
 
 (defun om-elem-filter-query (query contents)
   (pcase query
+    ;; quote (may be accidentally in query
+    (`(quote . ,_)
+     (error "'quote' not allowed in query"))
+
+    ;; function (may be accidentally in query
+    (`(function . ,_)
+     (error "'function' not allowed in query"))
+    
     ;; index
     ((and (pred integerp) index)
      (-some->
