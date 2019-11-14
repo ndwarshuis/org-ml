@@ -711,22 +711,18 @@ and object containers and includes the 'plain-text' type.")
       (om-elem--set-property :priority priority headline)
     (error "Invalid priority given: %S" priority)))
 
-;; TODO refactor this
-(defun om-elem--headline-title-is-allowed-p (secondary-string)
-  "Return t if SECONDARY-STRING is valid for a headline title."
-  (let ((r (->> org-element-object-restrictions
-                (alist-get 'headline)
-                (cons 'plain-text))))
-    (--all? (om-elem-is-any-type-p r it) secondary-string)))
-;; (defconst om-elem--headline-restrictions
-;;   (->> org-element-object-restrictions
-;;        (alist-get 'headline)
-;;        (cons 'plain-text))
-;;   "Alist of objects that can be in a headline title.")
+(defconst om-elem--headline-title-restrictions
+  (->> org-element-object-restrictions
+       (alist-get 'headline)
+       (cons 'plain-text)))
 
 (defun om-elem--headline-set-title (title headline)
   "Set the title of HEADLINE element to TITLE."
-  (om-elem--verify title om-elem--headline-title-is-allowed-p)
+  (unless
+      (--all?
+       (om-elem-is-any-type-p om-elem--headline-title-restrictions it)
+       title)
+    (error "Invalid title: %s" title))
   (om-elem--set-property :title title headline))
 
 ;; item
@@ -756,17 +752,17 @@ checkbox."
                (error "Invalid bullet: %s" bullet)))))
     (om-elem--set-property :bullet b item)))
 
-;; TODO refactor this
-(defun om-elem--item-tag-is-allowed-p (secondary-string)
-  "Return t if SECONDARY-STRING is valid for an item tag."
-  (let ((r (->> org-element-object-restrictions
-                (alist-get 'item)
-                (cons 'plain-text))))
-    (--all? (om-elem-is-any-type-p r it) secondary-string)))
+(defconst om-elem--item-tag-restrictions
+  (->> org-element-object-restrictions
+       (alist-get 'item)
+       (cons 'plain-text)))
 
 (defun om-elem--item-set-tag (tag item)
   "Set the tag of ITEM element to TAG where TAG is a string or nil."
-  (om-elem--verify tag om-elem--item-tag-is-allowed-p)
+  (unless (--all?
+           (om-elem-is-any-type-p om-elem--item-tag-restrictions it)
+           tag)
+    (error "Invalid tag: %s" tag))
   (om-elem--set-property :tag tag item))
 
 ;; NOTE org mode 9.1.9 will crash when given an alphabetic symbol
