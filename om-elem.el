@@ -724,6 +724,12 @@ and object containers and includes the 'plain-text' type.")
     (error "Invalid title: %s" title))
   (om-elem--set-property :title title headline))
 
+(defun om-elem--headline-set-title! (string stats headline)
+  (let* ((ss (om-elem-build-secondary-string string))
+         (title (if (not stats) ss
+                  (-snoc ss (om-elem-build-statistics-cookie)))))
+    (om-elem--headline-set-title title headline)))
+
 ;; item
 
 (defun om-elem--item-set-checkbox (state item)
@@ -1480,7 +1486,7 @@ Optionally provide ELEMS as contents."
 
 ;; shortcut builders
 
-(om-elem--defun om-elem-build-headline! (&key (level 1) text
+(om-elem--defun om-elem-build-headline! (&key (level 1) title-text
                                               todo-keyword tags
                                               pre-blank priority
                                               commentedp archivedp
@@ -1490,11 +1496,7 @@ Optionally provide ELEMS as contents."
                                               section-contents
                                               subheadlines)
   "Build a headline..."
-  (let* ((statistics-cookie (-some->>
-                             statistics-cookie
-                             (apply #'om-elem-build-statistics-cookie)))
-         (title (append (om-elem-build-secondary-string text) statistics-cookie))
-         (planning (-some->> planning (apply #'om-elem-build-planning)))
+  (let* ((planning (-some->> planning (apply #'om-elem-build-planning)))
          (property-drawer (-some->> properties (apply #'om-elem-build-property-drawer!)))
          (section (-some->>
                    (append `(,planning) `(,property-drawer) section-contents)
@@ -1502,14 +1504,15 @@ Optionally provide ELEMS as contents."
                    (apply #'om-elem-build-section)))
          (elems (-non-nil (append (list section) subheadlines))))
     ;; TODO set these things using setter functions
-    (apply #'om-elem-build-headline
-           :post-blank post-blank
-           :pre-blank pre-blank
-           :priority priority
-           :commentedp commentedp
-           :archivedp archivedp
-           :title title
-           elems)))
+    (->> (apply #'om-elem-build-headline
+                :post-blank post-blank
+                :pre-blank pre-blank
+                :priority priority
+                :commentedp commentedp
+                :archivedp archivedp
+                :title nil
+                elems)
+         (om-elem--headline-set-title! text statistics-cookie))))
 
 (om-elem--defun om-elem-build-item! (&key post-blank bullet checkbox
                                           tag paragraph counter
