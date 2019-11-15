@@ -724,9 +724,6 @@ and object containers and includes the 'plain-text' type.")
     (error "Invalid title: %s" title))
   (om-elem--set-property :title title headline))
 
-(defun om-elem--headline-map-statistics-cookie (fun headline)
-  (om-elem--map-property* :title (om-elem--title-map-statistics-cookie fun it) headline))
-
 ;; item
 
 (defun om-elem--item-set-checkbox (state item)
@@ -1008,6 +1005,45 @@ Optionally supply DOCSTRING to override the generic docstring."
            (lambda (index item) (if (cl-evenp index) item `(lambda (it) ,item)))
            ,plist)))
      (om-elem--map-properties new-plist ,elem)))
+
+;;; internal content getters
+
+;; headline
+
+(defun om-elem--headline-get-statistics-cookie (headline)
+  (->> (om-elem-property :title headline)
+       (-last-item)
+       (om-elem-allow-type 'statistics-cookie)))
+
+;;; internal content setters
+
+;; headline
+
+(defun om-elem--headline-set-statistics-cookie (value headline)
+  (om-elem--map-property*
+   :title
+   (let ((last? (om-elem-is-type-p 'statistics-cookie (-last-item it))))
+     (cond
+      ((and last? value)
+       (om-elem--map-last* (om-elem--statistics-cookie-set-value value) it))
+      ((and last? (not value))
+       (-drop-last 1 it))
+      (value 
+       (-snoc it (om-elem-build-statistics-cookie value)))
+      (t it)))))
+
+(defun om-elem--headline-set-statistics-cookie-fraction (done total headline)
+  (om-elem--verify headline om-elem-is-headline-p)
+  (let* ((format (->>
+                  (om-elem--headline-get-statistics-cookie headline)
+                  (om-elem--statistics-cookie-get-format)))
+         (value (if (eq 'percent format) `(done total)
+                  (-> (float done)
+                      (/ total)
+                      (* 100)
+                      (round)
+                      (list)))))
+    (om-elem--headline-set-statistics-cookie value)))
 
 ;;; builders
 
@@ -2600,45 +2636,19 @@ property list in ELEM."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-set-commented flag headline))
 
-(defun om-elem--title-map-statistics-cookie (fun title)
-  ;; assume secondary string, and assume cookie will be the last
-  ;; thing if present
-  (let ((title* (nreverse title)))
-    (-if-let (sc (om-elem-allow-type 'statistics-cookie (car title*)))
-        (->> (cdr title*)
-             (cons (funcall fun sc))
-             (nreverse))
-      title)))
+(defun om-elem-headline-update-item-statistics (headline)
+  (let ((items (om-elem-find '(section plain-list item) headline))
+        (done (length (-filter #'om-elem-item-is-checked-p items)))
+        (total (length items)))
+    (om-elem--headline-set-statistics-cookie-fraction done total headline)))
 
-(defmacro om-elem--title-map-statistics-cookie* (form title)
-  `(om-elem--title-map-statistics-cookie (lambda (it) ,form) title))
-
-(defun om-elem-headline-update-statistics-cookie (headline)
-  (om-elem--verify headline om-elem-is-headline-p)
-  ;; TODO the todo arg is clunky
-  ;; TODO make sure there is actually a cookie to modify
-  (let* ((title (om-elem-property :title headline))
-         (cookie (assoc 'statistics-cookie title))
-         ;; TODO need to filter out non-todo headlines
-         ;; TODO use subheadlines function for this
-         (total (if todo (om-elem-find '(headline) headline)
-                  (om-elem-find '(section plain-list item) headline)))
-         ;; TODO these will error none found
-         (complete (if todo (-filter #'om-elem-headline-is-done-p total)
-                     (-filter #'om-elem-item-is-checked-p total)))
-         (total-len (length total))
-         (complete-len (length complete))
-         (new-cookie
-          (if (eq 'percent (om-elem--statistics-cookie-get-format cookie))
-              (om-elem--statistics-cookie-set-value `(complete-len total-len) cookie)
-            (-> (float complete-len)
-                (/ total-len)
-                (* 100)
-                (round)
-                (list)
-                (om-elem--statistics-cookie-set-value cookie))))
-         (new-title (-replace-first cookie new-cookie title)))
-    (om-elem--set-property :title new-title headline)))
+(defun om-elem-headline-update-todo-statistics (headline)
+  ;; TODO make this private
+  (let ((subtodo (->> (om-elem-headline-get-subheadlines headline)
+                      (--filter (om-elem-property :todo-keyword it)))
+        (done (length (-filter #'om-elem-headline-is-done-p subtodo)))
+        (total (length subtodo)))
+    (om-elem--headline-set-statistics-cookie-fraction done total headline))))
 
 (defun om-elem--to-relative-priority (p)
   "Convert P from character value to counting integer starting at 0."
