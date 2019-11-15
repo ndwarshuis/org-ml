@@ -724,6 +724,9 @@ and object containers and includes the 'plain-text' type.")
     (error "Invalid title: %s" title))
   (om-elem--set-property :title title headline))
 
+(defun om-elem--headline-map-statistics-cookie (fun headline)
+  (om-elem--map-property* :title (om-elem--title-map-statistics-cookie fun it) headline))
+
 ;; item
 
 (defun om-elem--item-set-checkbox (state item)
@@ -852,6 +855,12 @@ without element verification."
     (let ((value* (format "[%s]" (mk-stat value))))
       (om-elem--set-property :value value* statistics-cookie))))
 
+(defun om-elem--statistics-cookie-get-format (statistics-cookie)
+  (cond ((s-contains? "/" it) 'fraction)
+        ((s-contains? "%" it) 'percent)
+        (t (error "Unparsable statistics cookie value: %s"
+                  (om-elem-property :value)))))
+
 ;; timestamp
 
 (defun om-elem--timestamp-is-ranged (timestamp)
@@ -941,20 +950,64 @@ without element verification."
 
 
 ;;; internal mappers
+;; TODO, use setters here to ensure functions return the right type?
 
 ;; generic
 
 (defun om-elem--map-first (fun list)
+  (om-elem--verify fun functionp)
   (->> (cdr list) (cons (funcall fun (car list)))))
-
-(defmacro om-elem--map-first* (form list)
-  `(om-elem--map-first (lambda (it) ,form) list))
 
 (defun om-elem--map-last (fun list)
   (->> (nreverse list) (om-elem--map-first fun list) (nreverse)))
 
-(defmacro om-elem--map-last* (form list)
-  `(om-elem--map-last (lambda (it) ,form) list))
+(defun om-elem--map-property (prop fun elem)
+  (om-elem--verify fun functionp)
+  (let ((value (funcall fun (om-elem-property prop elem))))
+    (om-elem--set-property prop value elem)))
+
+(defun om-elem--map-properties (plist elem)
+  (cond
+   ((not plist) elem)
+   ((om-elem--is-plist-p plist)
+    (->> (om-elem--map-property (nth 0 plist) (nth 1 plist) elem)
+         (om-elem--map-properties (-drop 2 plist))))
+   (t (error "Not a plist: %s" plist))))
+
+;; node properties
+
+(defun om-elem--node-property-map-value (fun node-property)
+  (om-elem--map-property :value fun node-property))
+
+;; anaphoric forms
+
+(defun om-elem--gen-anaphoric-form (fun &optional docstring)
+  "Generate the anaphoric form of FUN where FUN points to a function.
+Optionally supply DOCSTRING to override the generic docstring."
+  (let* ((fun-name (intern (format "%s*" fun)))
+         (arglist (->> (help-function-arglist fun)
+                       (-replace 'fun 'form)))
+         (doc-string (format "Anaphoric form of `%s'" fun))
+         (funargs (->> (help-function-arglist fun)
+                       (--map (if (eq it 'fun)
+                                  "(lambda (it) ,form)"
+                                (format ",%s" it)))
+                       (-map #'read)))
+         (body `(backquote (,fun ,@funargs))))
+    (eval `(defmacro ,fun-name ,arglist ,doc-string ,body))))
+
+(--each '(om-elem--map-first
+          om-elem--map-last
+          om-elem--map-property
+          om-elem--node-property-map-value)
+  #'om-elem--gen-anaphoric-form)
+
+(defmacro om-elem--map-properties* (plist elem)
+  `(let ((plist*
+          (-map-indexed
+           (lambda (index item) (if (cl-evenp index) item `(lambda (it) ,item)))
+           ,plist)))
+     (om-elem--map-properties new-plist ,elem)))
 
 ;;; builders
 
@@ -2547,6 +2600,19 @@ property list in ELEM."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-set-commented flag headline))
 
+(defun om-elem--title-map-statistics-cookie (fun title)
+  ;; assume secondary string, and assume cookie will be the last
+  ;; thing if present
+  (let ((title* (nreverse title)))
+    (-if-let (sc (om-elem-allow-type 'statistics-cookie (car title*)))
+        (->> (cdr title*)
+             (cons (funcall fun sc))
+             (nreverse))
+      title)))
+
+(defmacro om-elem--title-map-statistics-cookie* (form title)
+  `(om-elem--title-map-statistics-cookie (lambda (it) ,form) title))
+
 (defun om-elem-headline-update-statistics-cookie (headline)
   (om-elem--verify headline om-elem-is-headline-p)
   ;; TODO the todo arg is clunky
@@ -2563,18 +2629,14 @@ property list in ELEM."
          (total-len (length total))
          (complete-len (length complete))
          (new-cookie
-          (--> (om-elem-property :value cookie)
-               (cond
-                ((s-contains? "/" it)
-                 (format "[%s/%s]" complete-len total-len))
-                ((s-contains? "%" it)
-                 (->> (float total-len)
-                      (/ complete-len)
-                      (* 100)
-                      (round)
-                      (format "[%s%%]")))
-                (t (error "Invalid statistics cookie %s" it)))
-               (om-elem-set-property :value it cookie)))
+          (if (eq 'percent (om-elem--statistics-cookie-get-format cookie))
+              (om-elem--statistics-cookie-set-value `(complete-len total-len) cookie)
+            (-> (float complete-len)
+                (/ total-len)
+                (* 100)
+                (round)
+                (list)
+                (om-elem--statistics-cookie-set-value cookie))))
          (new-title (-replace-first cookie new-cookie title)))
     (om-elem--set-property :title new-title headline)))
 
@@ -2773,52 +2835,36 @@ This assumes one wants HH:MM precision."
 ;; generic
 
 (defun om-elem-map-property (prop fun elem)
-  (om-elem--verify fun functionp)
-  (let ((value (funcall fun (om-elem-property prop elem))))
-    (om-elem-set-property prop value elem)))
+  (om-elem--verify elem om-elem-is-element-or-object-p)
+  (om-elem--map-property prop fun elem))
 
 (defun om-elem-map-properties (plist elem)
-  (cond
-   ((not plist) elem)
-   ((om-elem--is-plist-p plist)
-    (->> (om-elem-map-property (nth 0 plist) (nth 1 plist) elem)
-         (om-elem-map-properties (-drop 2 plist))))
-   (t (error "Not a plist: %s" plist))))
-
-(defmacro om-elem-map-property* (property form elem)
-  `(om-elem-map-property ,property (lambda (it) ,form) ,elem))
-
-(defmacro om-elem-map-properties* (plist elem)
-  `(let ((new-plist
-          (-map-indexed
-           (lambda (index item) (if (cl-evenp index) item `(lambda (it) ,item)))
-           ,plist)))
-     (om-elem-map-properties new-plist ,elem)))
+  (om-elem--verify elem om-elem-is-element-or-object-p)
+  (om-elem--map-properties plist elem))
 
 ;; headline
 
 (defun om-elem-headline-map-node-property (key fun headline)
-  (om-elem--verify key stringp
-                   headline om-elem-is-headline-p)
-  (let ((qs `(section property-drawer (:and node-property
-                                               (:key ,key)))))
-    (if (om-elem-find-first qs elem)
-        (om-elem-map-first*
-         qs (om-elem-node-property-map-value fun it) headline)
-      elem)))
-
-(defmacro om-elem-headline-map-node-property* (key form elem)
-  `(om-elem-headline-map-node-property ,key (lambda (it) ,form) ,elem))
+  (om-elem--verify key stringp headline om-elem-is-headline-p)
+  (om-elem-map-first*
+   `(section property-drawer (:and node-property (:key ,key)))
+    (om-elem--node-property-map-value fun it) headline))
 
 ;; node property
 
 (defun om-elem-node-property-map-value (fun node-property)
   (om-elem--verify node-property om-elem-is-node-property-p)
-  (let ((val (om-elem-property :value elem)))
-    (om-elem-set-property :value (funcall fun val) elem)))
+  (om-elem--node-property-map-value fun node-property))
 
-(defmacro om-elem-node-property-map-value* (form elem)
-  `(om-elem-node-property-map-value (lambda (it) ,form) ,elem))
+;; anaphoric forms
+
+(-each '(om-elem-map-property
+         om-elem-headline-map-node-property
+         om-elem-node-property-map-value)
+  #'om-elem--gen-anaphoric-form)
+
+(defmacro om-elem-map-properties* (plist elem)
+  `(om-elem--map-properties ,plist ,elem))
 
 ;;; element shifters
 ;; shift a numeric property
