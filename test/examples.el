@@ -1848,5 +1848,68 @@ and here is even more *text4* and *text5*
          (om-elem-to-trimmed-string))
     => nil))
 
-;; (def-group-example "Element content modifiers"
-;;   "modifiy contents and shit")
+(def-example-group "Element content modifiers"
+  "modifiy contents and shit"
+
+  (defexamples-content om-elem-plain-list-indent-item
+    nil
+    (:content "- one"
+              "- two"
+              "  - three"
+              "- four")
+    (:comment "It makes no sense to indent the first item")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-plain-list-indent-item 0)
+         (om-elem-to-trimmed-string))
+    !!> error
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-plain-list-indent-item 1)
+         (om-elem-to-trimmed-string))
+    => "- one\n  - two\n  - three\n- four"
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-plain-list-indent-item 2)
+         (om-elem-to-trimmed-string))
+    => "- one\n- two\n  - three\n  - four")
+
+  (defexamples-content om-elem-plain-list-indent-item-tree
+    nil
+    (:content "- one"
+              "- two"
+              "  - three"
+              "- four")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-plain-list-indent-item-tree 1)
+         (om-elem-to-trimmed-string))
+    => "- one\n  - two\n    - three\n- four")
+
+  (defexamples-content om-elem-plain-list-unindent-item
+    nil
+    (:content "- one"
+              "- two"
+              "  - three"
+              "  - three"
+              "  - three"
+              "- four")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-plain-list-unindent-item 1 0)
+         (om-elem-to-trimmed-string))
+    => "- one\n- two\n- three\n  - three\n  - three\n- four"
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-plain-list-unindent-item 1 1)
+         (om-elem-to-trimmed-string))
+    => "- one\n- two\n  - three\n- three\n  - three\n- four")
+  
+  (defexamples-content om-elem-plain-list-unindent-items
+    nil
+    (:content "- one"
+              "- two"
+              "  - three"
+              "  - three"
+              "  - three"
+              "- four")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-plain-list-unindent-items 1)
+         (om-elem-to-trimmed-string))
+    => "- one\n- two\n- three\n- three\n- three\n- four")
+
+  )

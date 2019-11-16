@@ -3291,6 +3291,13 @@ Return a list of objects."
      (om-elem--indent-items #'om-elem--append-indented-tree index items))
    plain-list))
 
+(defun om-elem-plain-list-indent-item (index plain-list)
+  (om-elem--verify plain-list om-elem-is-plain-list-p)
+  (om-elem--map-contents
+   (lambda (items)
+     (om-elem--indent-items #'om-elem--append-indented index items))
+   plain-list))
+
 (defun om-elem--plain-list-indent-after (index plain-list)
   (if (< index (1- (length (om-elem-contents plain-list))))
       (->> (om-elem-plain-list-indent-item-tree (1+ index) plain-list)
@@ -3305,7 +3312,7 @@ Return a list of objects."
                           (om-elem--map-contents
                            (lambda (contents)
                              (--map-first
-                              #'om-elem-is-plain-list-p
+                              (om-elem-is-plain-list-p it)
                               (om-elem--plain-list-indent-after index it)
                               contents)))))
              (parent* (om-elem--map-contents
@@ -3315,7 +3322,7 @@ Return a list of objects."
                               #'om-elem-is-plain-list-p
                               contents)
                            (--map-first
-                            #'om-elem-is-plain-list-p
+                            (om-elem-is-plain-list-p it)
                             (om-elem--map-contents
                              (lambda (items)
                                (-take index items))
