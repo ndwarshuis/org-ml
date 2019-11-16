@@ -962,7 +962,7 @@ without element verification."
   (->> (cdr list) (cons (funcall fun (car list)))))
 
 (defun om-elem--map-last (fun list)
-  (->> (nreverse list) (om-elem--map-first fun list) (nreverse)))
+  (->> (nreverse list) (om-elem--map-first fun) (nreverse)))
 
 (defun om-elem--map-property (prop fun elem)
   (om-elem--verify fun functionp)
@@ -3257,41 +3257,94 @@ Return a list of objects."
 
 ;; plain-list
 
-;; ;; TODO generalize this to multiple indents?
-;; (defun om-elem-list-indent-item (index elem)
-;;   (unless (< 0 index) (error "Index must be greater than 0"))
-;;   (unless (> (length (om-elem-contents elem)) index)
-;;     (error "Index higher than last item."))
-;;   (let* ((prev-index (- index 1))
-;;          (cell (om-elem-extract-first elem index))
-;;          (extracted-item (car cell))
-;;          (new-list (om-elem-build-plain-list extracted-item))
-;;          (new-elem (cdr cell))
-;;          (insert-index
-;;           (if (om-elem-find-first extracted-item 'paragraph) 1 0)))
-;;     (om-elem-insert-within new-elem new-list insert-index prev-index)))
+(defun om-elem--append-indented-tree (target-item item)
+  (let ((items-in-target (->> (om-elem-contents target-item)
+                              (-filter #'om-elem-is-plain-list-p))))
+    (om-elem--map-contents
+     (lambda (item-contents)
+       (append item-contents (list (om-elem-build-plain-list target-item))))
+     item)))
 
-(defun om-elem--indent-subsequent (index elem)
-  (if (< index (- (length (om-elem-contents elem)) 1))
-      (->> (om-elem-list-indent-item (+ 1 index) elem)
-           (om-elem--indent-subsequent index))
-    elem))
+(defun om-elem--append-indented (target-item item)
+  (let ((target-item*
+         (om-elem--map-contents*
+          (-remove #'om-elem-is-plain-list-p it) target-item))
+        (items-in-target (->> (om-elem-contents target-item)
+                              (-filter #'om-elem-is-plain-list-p))))
+    (om-elem--map-contents
+     (lambda (item-contents)
+       (append item-contents (list (om-elem-build-plain-list target-item*)) items-in-target))
+     item)))
 
-;; (defun om-elem-list-unindent-item (outer-index inner-index elem)
-;;   ;; TODO validate indices
-;;   ;; (unless (<= 0 outer-index) (error "Index must be positive"))
-;;   ;; (unless (> (length (om-elem-contents elem)) index)
-;;   ;; (error "Index higher than last item."))
-;;   ;; indent all items after the target item and then unindent the
-;;   ;; target item
-;;   (let* ((cell
-;;           (->> elem
-;;                (om-elem-map-first* `(,outer-index plain-list)
-;;                                    (om-elem--indent-subsequent inner-index it))
-;;                (om-elem-extract-first `(,outer-index plain-list ,inner-index))))
-;;          (new-item (car cell))
-;;          (new-elem (om-elem-clean (cdr cell))))
-;;     (om-elem-insert-within-element new-elem new-item (+ outer-index 1))))
+(defun om-elem--indent-items (fun index items)
+  (unless (< 0 index)
+    (error "Cannot indent topmost item at this level"))
+  (-let ((target-item (nth index items))
+         ((head tail) (-split-at index items)))
+    (-> (om-elem--map-last* (funcall fun target-item it) head)
+        (append (-drop 1 tail)))))
+
+(defun om-elem-plain-list-indent-item-tree (index plain-list)
+  (om-elem--verify plain-list om-elem-is-plain-list-p)
+  (om-elem--map-contents
+   (lambda (items)
+     (om-elem--indent-items #'om-elem--append-indented-tree index items))
+   plain-list))
+
+(defun om-elem--plain-list-indent-after (index plain-list)
+  (if (< index (1- (length (om-elem-contents plain-list))))
+      (->> (om-elem-plain-list-indent-item-tree (1+ index) plain-list)
+           (om-elem--plain-list-indent-after index))
+    plain-list))
+
+(defun om-elem-plain-list-unindent-item (parent-index index plain-list)
+  (om-elem--map-contents
+   (lambda (items)
+     (-let* (((head tail) (-split-at parent-index items))
+             (parent (->> (-first-item tail)
+                          (om-elem--map-contents
+                           (lambda (contents)
+                             (--map-first
+                              #'om-elem-is-plain-list-p
+                              (om-elem--plain-list-indent-after index it)
+                              contents)))))
+             (parent* (om-elem--map-contents
+                       (lambda (contents)
+                         (if (= 0 index)
+                             (-remove-first
+                              #'om-elem-is-plain-list-p
+                              contents)
+                           (--map-first
+                            #'om-elem-is-plain-list-p
+                            (om-elem--map-contents
+                             (lambda (items)
+                               (-take index items))
+                             it)
+                            contents)))
+                       parent))
+             (unindented (->> (om-elem-contents parent)
+                              (-first #'om-elem-is-plain-list-p)
+                              (om-elem-contents)
+                              (-drop index))))
+       (append head (list parent*) unindented (-drop 1 tail))))
+   plain-list))
+
+(defun om-elem-plain-list-unindent-items (index plain-list)
+  (om-elem--map-contents
+   (lambda (items)
+     (-let* (((head tail) (-split-at index items))
+             (parent (-first-item tail))
+             (parent* (om-elem--map-contents
+                       (lambda (contents)
+                         (-remove-first
+                          #'om-elem-is-plain-list-p
+                          contents))
+                       parent))
+             (unindented (->> (om-elem-contents parent)
+                              (-first #'om-elem-is-plain-list-p)
+                              (om-elem-contents))))
+       (append head (list parent*) unindented (-drop 1 tail))))
+   plain-list))
 
 ;; table
 
