@@ -3307,13 +3307,19 @@ Return a list of objects."
      (lambda (rows) (-insert-at index row rows))
      table)))
 
-;; (defun om-elem-table-delete-table-row (index elem)
-;;   (om-elem-delete-first elem index))
+(defun om-elem-table-delete-row (index table)
+  (om-elem--map-contents (lambda (rows) (-remove-at index rows)) table))
 
-;; (defun om-elem-table-delete-table-column (index table)
-;;   ;; TODO what if index out of range
-;;   (om-elem-map* '(:and table-row (:type standard))
-;;                 (om-elem-delete-first it index) table))
+(defun om-elem-table-delete-column (index table)
+  (cl-flet*
+      ((delete
+        (cells)
+        (-remove-at index cells))
+       (map-row 
+        (row)
+        (if (om-elem-property-is-eq-p :type 'rule row) row
+          (om-elem--map-contents #'delete row))))
+    (om-elem--map-contents (lambda (rows) (-map #'map-row rows)) table)))
 
 (defun om-elem-table-insert-column (column index table)
   (let* ((rows (om-elem-contents table))
