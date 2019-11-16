@@ -977,6 +977,22 @@ without element verification."
          (om-elem--map-properties (-drop 2 plist))))
    (t (error "Not a plist: %s" plist))))
 
+;; contents
+
+(defun om-elem--map-contents (fun elem)
+  (let ((contents (om-elem-contents elem)))
+    (om-elem--set-contents (funcall fun contents) elem)))
+
+(defun om-elem--map-contained (pred fun elem)
+  (om-elem--map-contents*
+   (--map-when (funcall pred it) (funcall fun it) it)
+   elem))
+
+(defun om-elem--map-contained-first (pred fun elem)
+  (om-elem--map-contents*
+   (--map-first (funcall pred it) (funcall fun it) it)
+   elem))
+
 ;; node properties
 
 (defun om-elem--node-property-map-value (fun node-property)
@@ -999,10 +1015,11 @@ Optionally supply DOCSTRING to override the generic docstring."
          (body `(backquote (,fun ,@funargs))))
     (eval `(defmacro ,fun-name ,arglist ,doc-string ,body))))
 
-(--each '(om-elem--map-first
-          om-elem--map-last
-          om-elem--map-property
-          om-elem--node-property-map-value)
+(-each '(om-elem--map-first
+         om-elem--map-last
+         om-elem--map-property
+         om-elem--map-contents
+         om-elem--node-property-map-value)
   #'om-elem--gen-anaphoric-form)
 
 (defmacro om-elem--map-properties* (plist elem)
@@ -1025,6 +1042,66 @@ Optionally supply DOCSTRING to override the generic docstring."
 
 ;; headline
 
+(defun om-elem--headline-set-section (section headline)
+  (let ((subheadlines (om-elem-headline-get-subheadlines headline)))
+    (om-elem--set-contents (cons section subheadlines) headline)))
+
+(defun om-elem--headline-set-property-drawer (property-drawer headline)
+  (om-elem--headline-set-section (om-elem-build-section property-drawer)))
+
+(defun om-elem--map-or-build (map-fun build-fun pred-fun pos elem)
+  (om-elem--map-contents
+   (lambda (contents)
+     (-if-let (target (--first (funcall pred-fun it) contents))
+         ;; TODO this is probably not the most efficient
+         (-replace target (funcall map-fun target) contents)
+       (let ((pos
+              (cond
+               ((integerp pos)
+                pos)
+               ((functionp pos)
+                (or (--find-index (funcall pos it) contents) 0))
+               (t (error "Invalid pos given: %S" pos))))
+             (new (funcall build-fun)))
+         (-insert-at pos new contents))))
+   elem))
+
+(defmacro om-elem--map-or-build-nested (map-form &rest args)
+  ;; forms are of form (pred builder pos-fun)
+  (declare (indent 1))
+  (let* ((elem (-last-item args))
+         (forms (-drop-last 1 args))
+         (first (car args))
+         (rem (cdr forms))
+         (pred-fun `(lambda (it) ,(nth 0 first)))
+         (build-fun `(lambda () (->> ,@(nreverse (--map (nth 1 it) forms)))))
+         (pos-fun `(lambda (it) ,(nth 2 first)))
+         (map-fun
+          (if (not rem) `(lambda (it) ,map-form)
+            `(lambda (inner)
+               (om-elem--map-or-build-nested ,map-form ,@rem inner)))))
+    `(om-elem--map-or-build ,map-fun ,build-fun ,pred-fun ,pos-fun ,elem)))
+
+(defun om-elem--headline-set-node-property (key value headline)
+  (om-elem--map-or-build-nested (om-elem--set-value value it)
+    ((om-elem-is-section-p it)
+     (om-elem-build-section)
+     0)
+    ((om-elem-is-property-drawer-p it)
+     (om-elem-build-property-drawer)
+     (-if-let (i (-find-index (om-elem-is-planning-p it) it)) ((1+ i) it)))
+    ((and (om-elem-is-node-property-p it)
+          (om-elem-property-is-equal-p :value key it))
+     (om-elem-build-node-property key value) 
+     0)
+    headline))
+
+(defun om-elem--headline-set-planning (planning headline)
+  (om-elem--map-or-build-nested (om-elem--set-value value it)
+    ((om-elem-is-section-p it) (om-elem-build-section) 0)
+    ((om-elem-is-planning-p it) (apply #'om-elem-build-planning planning) 0)
+    headline))
+
 (defun om-elem--headline-set-statistics-cookie (value headline)
   (om-elem--map-property*
    :title
@@ -1036,7 +1113,8 @@ Optionally supply DOCSTRING to override the generic docstring."
        (-drop-last 1 it))
       (value 
        (-snoc it (om-elem-build-statistics-cookie value)))
-      (t it)))))
+      (t it)))
+   headline))
 
 (defun om-elem--headline-set-statistics-cookie-fraction (done total headline)
   (om-elem--verify headline om-elem-is-headline-p)
