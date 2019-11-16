@@ -1130,6 +1130,14 @@ Optionally supply DOCSTRING to override the generic docstring."
                       (list)))))
     (om-elem--headline-set-statistics-cookie value)))
 
+;; table
+
+(defun om-elem--table-get-height (table)
+  (length (om-elem-contents table)))
+
+(defun om-elem--table-get-width (table)
+  (->> (om-elem-contents table) (-map #'length) (-max)))
+
 ;;; builders
 
 ;; build helpers
@@ -3287,28 +3295,17 @@ Return a list of objects."
 
 ;; table
 
-;; ;; TODO use the pad function somewhere here to save lines of code
-;; (defun om-elem-table-insert-table-row (row index elem)
-;;   (let ((new-row
-;;          (if (eq row 'hline)
-;;              (om-elem-build-table-hline)
-;;            (let* ((width (->>
-;;                           (om-elem-find-first
-;;                            elem :any
-;;                            '(:and table-row (:type standard)))
-;;                           (om-elem-contents)
-;;                           (length)))
-;;                   (row-len (length row)))
-;;              (->>
-;;               (cond
-;;                ((> row-len width)
-;;                 (error "Row length exceeds table width."))
-;;                ((< row-len width)
-;;                 (append row (- row-len width) (repeat "")))
-;;                (t row))
-;;               (--map (om-elem-build-table-cell it))
-;;               (apply #'om-elem-build-table-row))))))
-;;     (om-elem-insert-within-element elem new-row index)))
+(defun om-elem-table-insert-row (row index table)
+  (let ((row (if (eq row 'hline) (om-elem-build-table-row-hline)
+               (let* ((width (om-elem--table-get-width table))
+                      (blanks (- width (length row))))
+                 (->> (if (< 0 blanks) (-slice row 0 (1- width))
+                        (append row (-repeat "" blanks)))
+                      (--map (om-elem-build-table-cell it))
+                      (apply #'om-elem-build-table-row))))))
+    (om-elem--map-contents
+     (lambda (rows) (-insert-at index row rows))
+     table)))
 
 ;; (defun om-elem-table-delete-table-row (index elem)
 ;;   (om-elem-delete-first elem index))
@@ -3318,7 +3315,7 @@ Return a list of objects."
 ;;   (om-elem-map* '(:and table-row (:type standard))
 ;;                 (om-elem-delete-first it index) table))
 
-(defun om-elem-table-insert-table-column (column index table)
+(defun om-elem-table-insert-column (column index table)
   (let* ((rows (om-elem-contents table))
          (nrows (length rows))
          (blanks (- nrows (length column)))
