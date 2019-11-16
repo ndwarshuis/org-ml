@@ -1097,6 +1097,7 @@ Optionally supply DOCSTRING to override the generic docstring."
     headline))
 
 (defun om-elem--headline-set-planning (planning headline)
+  ;; TODO what if we give this a nil?
   (om-elem--map-or-build-nested (om-elem--set-value value it)
     ((om-elem-is-section-p it) (om-elem-build-section) 0)
     ((om-elem-is-planning-p it) (apply #'om-elem-build-planning planning) 0)
@@ -3317,27 +3318,27 @@ Return a list of objects."
 ;;   (om-elem-map* '(:and table-row (:type standard))
 ;;                 (om-elem-delete-first it index) table))
 
-;; ;; TODO this is best done with some sort of zip function
-;; (defun om-elem-table-insert-table-column (column index elem)
-;;   (cl-labels
-;;       ((insert-cells
-;;         (col elem)
-;;         (-if-let (cur-cell (car col))
-;;             (let ((cur-row-index (- (length col) 1))
-;;                   (new-cell (om-elem-build-table-cell cur-cell)))
-;;               ;; TODO this currently does not skip hlines
-;;               ;; need to modify the map function
-;;               (->>
-;;                (om-elem-map-first*
-;;                 elem (om-elem-insert-within-element it new-cell index)
-;;                 `(:and table-row (:type standard) ,cur-row-index))
-;;                (insert-cells (cdr col))))
-;;           elem)))
-;;     (let* ((height (->> (om-elem-find
-;;                          elem '(:and table-row (:type standard)))
-;;                         (length)))
-;;            (column (nreverse (om-elem--pad-list column height ""))))
-;;       (insert-cells column elem))))
+(defun om-elem-table-insert-table-column (column index table)
+  (let* ((rows (om-elem-contents table))
+         (nrows (length rows))
+         (blanks (- nrows (length column)))
+         (column
+          (--> (--find-indices (om-elem-property-is-eq-p :type 'rule it) rows)
+               (--reduce-from (-insert-at it "" acc) column it)
+               (if (< blanks 0) (-slice it 0 (1- nrows))
+                 (append it (-repeat blanks "")))
+               (--map (om-elem-build-table-cell it) it))))
+    (cl-flet*
+        ((zip-into-rows
+          (row new-cell)
+          (if (om-elem-property-is-eq-p :type 'rule row) row
+            (om-elem--map-contents
+             (lambda (cells) (-insert-at index new-cell cells))
+             row)))
+         (map-rows
+          (rows)
+          (-zip-with #'zip-into-rows rows column)))
+      (om-elem--map-contents #'map-rows table))))
 
 ;;; parsing functions
 
