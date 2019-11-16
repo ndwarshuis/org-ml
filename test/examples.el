@@ -1897,7 +1897,11 @@ and here is even more *text4* and *text5*
     (->> (om-elem-parse-element-at 1)
          (om-elem-plain-list-unindent-item 1 1)
          (om-elem-to-trimmed-string))
-    => "- one\n- two\n  - three\n- three\n  - three\n- four")
+    => "- one\n- two\n  - three\n- three\n  - three\n- four"
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-plain-list-unindent-item 2 1)
+         (om-elem-to-trimmed-string))
+    => "- one\n- two\n  - three\n  - three\n  - three\n- four")
   
   (defexamples-content om-elem-plain-list-unindent-items
     nil
@@ -1910,6 +1914,10 @@ and here is even more *text4* and *text5*
     (->> (om-elem-parse-element-at 1)
          (om-elem-plain-list-unindent-items 1)
          (om-elem-to-trimmed-string))
-    => "- one\n- two\n- three\n- three\n- three\n- four")
+    => "- one\n- two\n- three\n- three\n- three\n- four"
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-plain-list-unindent-items 2)
+         (om-elem-to-trimmed-string))
+    => "- one\n- two\n  - three\n  - three\n  - three\n- four")
 
   )

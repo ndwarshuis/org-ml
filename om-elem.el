@@ -3304,54 +3304,55 @@ Return a list of objects."
            (om-elem--plain-list-indent-after index))
     plain-list))
 
-(defun om-elem-plain-list-unindent-item (parent-index index plain-list)
-  (om-elem--map-contents
-   (lambda (items)
-     (-let* (((head tail) (-split-at parent-index items))
-             (parent (->> (-first-item tail)
+(defun om-elem--unindent-members (index parent-fun unindent-fun list)
+  (-let* (((head tail) (-split-at index list))
+          (parent (-first-item tail))
+          (parent* (funcall parent-fun parent))
+          (unindented (funcall unindent-fun parent)))
+    (append head (list parent*) unindented (-drop 1 tail))))
+
+(defun om-elem-plain-list-unindent-item (index child-index plain-list)
+  (cl-flet
+      ((trim
+        (parent)
+        (om-elem--map-contents
+         (lambda (contents)
+           (if (= 0 index)
+               (-remove-first #'om-elem-is-plain-list-p contents)
+             (--map-first (om-elem-is-plain-list-p it)
                           (om-elem--map-contents
-                           (lambda (contents)
-                             (--map-first
-                              (om-elem-is-plain-list-p it)
-                              (om-elem--plain-list-indent-after index it)
-                              contents)))))
-             (parent* (om-elem--map-contents
-                       (lambda (contents)
-                         (if (= 0 index)
-                             (-remove-first
-                              #'om-elem-is-plain-list-p
-                              contents)
-                           (--map-first
-                            (om-elem-is-plain-list-p it)
-                            (om-elem--map-contents
-                             (lambda (items)
-                               (-take index items))
-                             it)
-                            contents)))
-                       parent))
-             (unindented (->> (om-elem-contents parent)
-                              (-first #'om-elem-is-plain-list-p)
-                              (om-elem-contents)
-                              (-drop index))))
-       (append head (list parent*) unindented (-drop 1 tail))))
-   plain-list))
+                           (lambda (items) (-take child-index items)) it)
+                          contents)))
+         parent))
+       (extract
+        (parent)
+        (->> (om-elem-contents parent)
+             (-first #'om-elem-is-plain-list-p)
+             (om-elem--plain-list-indent-after child-index)
+             (om-elem-contents)
+             (-drop child-index))))
+    (om-elem--map-contents
+     (lambda (items)
+       (om-elem--unindent-members index #'trim #'extract items))
+     plain-list)))
 
 (defun om-elem-plain-list-unindent-items (index plain-list)
-  (om-elem--map-contents
-   (lambda (items)
-     (-let* (((head tail) (-split-at index items))
-             (parent (-first-item tail))
-             (parent* (om-elem--map-contents
-                       (lambda (contents)
-                         (-remove-first
-                          #'om-elem-is-plain-list-p
-                          contents))
-                       parent))
-             (unindented (->> (om-elem-contents parent)
-                              (-first #'om-elem-is-plain-list-p)
-                              (om-elem-contents))))
-       (append head (list parent*) unindented (-drop 1 tail))))
-   plain-list))
+  (cl-flet
+      ((trim
+        (parent)
+        (om-elem--map-contents
+         (lambda (contents)
+           (-remove-first #'om-elem-is-plain-list-p contents))
+         parent))
+       (extract
+        (parent)
+        (->> (om-elem-contents parent)
+             (-first #'om-elem-is-plain-list-p)
+             (om-elem-contents))))
+    (om-elem--map-contents
+     (lambda (items)
+       (om-elem--unindent-members index #'trim #'extract items))
+     plain-list)))
 
 ;; table
 
