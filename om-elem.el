@@ -1074,13 +1074,15 @@ Optionally supply DOCSTRING to override the generic docstring."
 ;; is usually true but makes a really hard error to catch when it
 ;; fails
 (defun om-elem--indent-after (indent-fun index elem)
+  (unless (and (integerp index) (<= 0 index))
+    (error "Index must be non-negative integer"))
   (if (< index (1- (length (om-elem-contents elem))))
       (->> (funcall indent-fun (1+ index) elem)
            (om-elem--indent-after indent-fun index))
     elem))
 
 (defun om-elem--indent-members (fun index members)
-  (unless (< 0 index)
+  (unless (and (integerp index) (< 0 index))
     (error "Cannot indent topmost item at this level"))
   (-let* (((head tail) (-split-at index members))
           (target (-first-item tail))
@@ -1088,6 +1090,8 @@ Optionally supply DOCSTRING to override the generic docstring."
     (append head* (-drop 1 tail))))
 
 (defun om-elem--unindent-members (index parent-fun unindent-fun list)
+  (unless (and (integerp index) (<= 0 index))
+    (error "Index must be non-negative integer"))
   (-let* (((head tail) (-split-at index list))
           (parent (-first-item tail))
           (parent* (funcall parent-fun parent))
