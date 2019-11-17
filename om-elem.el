@@ -242,34 +242,24 @@
   "Elements that require contents of \"\" to correctly print empty.
 This is a workaround for a bug.")
 
-;; TODO there is probably a more efficient way to do this...
+(defun om-elem--allow-non-zero-length (elem)
+  (unless (and (om-elem-is-empty-p elem)
+               (or (om-elem-is-any-type-p om-elem--rm-if-empty elem)
+                   (and (om-elem-is-type-p 'table-row elem)
+                        (om-elem-property-is-eq-p :type 'standard elem))))
+    elem))
+
 (defun om-elem--clean (elem)
-  "Remove elements from ELEM that are empty or recursively empty."
-  (cond
-   ((and (or (om-elem-is-any-type-p om-elem--rm-if-empty elem)
-             (and (om-elem-is-type-p 'table-row elem)
-                  (om-elem-property-is-eq-p :type 'standard elem)))
-         (om-elem-is-zero-length-p elem))
-    nil)
-   (t (-some->>
-       elem
-       ;; delete empty things
-       (om-elem-delete `(:many! (:and (:pred om-elem-is-zero-length-p)
-                                      (:or ,@om-elem--rm-if-empty
-                                           (:and table-row (:type standard))))))))))
+  (->> elem
+       (om-elem--map-contents* (-non-nil (-map #'om-elem--clean it)))
+       (om-elem--allow-non-zero-length)))
 
 (defun om-elem--blank (elem)
-  "Blank the contents of ELEM if empty."
-  (cond
-   ((and (om-elem-is-any-type-p om-elem--blank-if-empty elem)
-         (om-elem-is-empty-p elem))
-    (om-elem--set-blank-contents elem))
-   (t (-some->>
-       elem
-       ;; insert blank in empty greater elements
-       (om-elem-map* `(:many! (:and (:pred om-elem-is-empty-p)
-                                    (:or ,@om-elem--blank-if-empty)))
-                     (om-elem--set-blank-contents elem))))))
+  (if (om-elem-is-empty-p elem)
+      (if (om-elem-is-any-type-p om-elem--blank-if-empty elem)
+          (om-elem--set-blank-contents elem)
+        elem)
+    (om-elem--map-contents* (-map #'om-elem--blank it) elem)))
 
 ;; TODO should we return nil or "" here if ELEM evals to nil?
 (defun om-elem-to-string (elem)
