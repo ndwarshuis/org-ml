@@ -1972,4 +1972,94 @@ and here is even more *text4* and *text5*
          (om-elem-to-trimmed-string))
     => "* one\n** two\n** three\n** four\n** four\n** four")
 
+  ;; tables
+
+  (defexamples-content om-elem-table-delete-column
+    nil
+    (:content "| a | b |"
+              "|---+---|"
+              "| c | d |")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-table-delete-column 0)
+         (om-elem-to-trimmed-string))
+    => "| b |\n|---|\n| d |"
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-table-delete-column 1)
+         (om-elem-to-trimmed-string))
+    => "| a |\n|---|\n| c |")
+
+  (defexamples-content om-elem-table-delete-row
+    nil
+    (:content "| a | b |"
+              "|---+---|"
+              "| c | d |")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-table-delete-row 0)
+         (om-elem-to-trimmed-string))
+    => "|---+---|\n| c | d |"
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-table-delete-row 1)
+         (om-elem-to-trimmed-string))
+    => "| a | b |\n| c | d |")
+
+  (defexamples-content om-elem-table-insert-column
+    nil
+    (:content "| a | b |"
+              "|---+---|"
+              "| c | d |")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-table-insert-column
+          1
+          (list
+           (om-elem-build-table-cell "x")
+           (om-elem-build-table-cell "y")))
+         (om-elem-to-trimmed-string))
+    => "| a | x | b |\n|---+---+---|\n| c | y | d |")
+
+  (defexamples-content om-elem-table-insert-column!
+    nil
+    (:content "| a | b |"
+              "|---+---|"
+              "| c | d |")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-table-insert-column! 1 '("x" "y"))
+         (om-elem-to-trimmed-string))
+    => "| a | x | b |\n|---+---+---|\n| c | y | d |")
+
+  (defexamples-content om-elem-table-insert-row
+    nil
+    (:content "| a | b |"
+              "|---+---|"
+              "| c | d |")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-table-insert-row
+          1
+          (om-elem-build-table-row
+           (om-elem-build-table-cell "x")
+           (om-elem-build-table-cell "y")))
+         (om-elem-to-trimmed-string))
+    => "| a | b |\n| x | y |\n|---+---|\n| c | d |"
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-table-insert-row
+          2
+          (om-elem-build-table-row
+           (om-elem-build-table-cell "x")
+           (om-elem-build-table-cell "y")))
+         (om-elem-to-trimmed-string))
+    => "| a | b |\n|---+---|\n| x | y |\n| c | d |")
+
+  (defexamples-content om-elem-table-insert-row!
+    nil
+    (:content "| a | b |"
+              "|---+---|"
+              "| c | d |")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-table-insert-row! 1 '("x" "y"))
+         (om-elem-to-trimmed-string))
+    => "| a | b |\n| x | y |\n|---+---|\n| c | d |"
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-table-insert-row! 2 '("x" "y"))
+         (om-elem-to-trimmed-string))
+    => "| a | b |\n|---+---|\n| x | y |\n| c | d |")
+
   )

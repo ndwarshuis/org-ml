@@ -1070,6 +1070,14 @@ Optionally supply DOCSTRING to override the generic docstring."
        (-last-item)
        (om-elem-allow-type 'statistics-cookie)))
 
+;; table
+
+(defun om-elem--table-get-height (table)
+  (length (om-elem-contents table)))
+
+(defun om-elem--table-get-width (table)
+  (->> (om-elem-contents table) (-map #'length) (-max)))
+
 ;;; internal indentation
 
 ;; generic
@@ -1349,11 +1357,55 @@ Optionally supply DOCSTRING to override the generic docstring."
 
 ;; table
 
-(defun om-elem--table-get-height (table)
-  (length (om-elem-contents table)))
+(defun om-elem--pad-or-truncate (length pad list)
+  (let ((blanks (- length (length list))))
+    (if (< 0 blanks) (-slice list 0 (1- length))
+      (append list (-repeat blanks pad)))))
 
-(defun om-elem--table-get-width (table)
-  (->> (om-elem-contents table) (-map #'length) (-max)))
+(defun om-elem--table-pad-or-truncate (length list)
+  (let ((pad (om-elem-build-table-cell "")))
+    (om-elem--pad-or-truncate length pad list)))
+
+(defun om-elem--table-delete-column (index table)
+  (om-elem--verify index integerp)
+  (cl-flet*
+      ((delete-cell
+        (cells)
+        (-remove-at index cells))
+       (map-row 
+        (row)
+        (if (om-elem-property-is-eq-p :type 'rule row) row
+          (om-elem--map-contents #'delete-cell row))))
+    (om-elem--map-contents* (-map #'map-row it) table)))
+
+(defun om-elem--table-delete-row (index table)
+  (om-elem--verify index integerp)
+  (om-elem--map-contents* (-remove-at index it) table))
+
+(defun om-elem--table-insert-column (index column table)
+  (om-elem--verify index integerp)
+  (cl-flet*
+      ((zip-into-rows
+        (row new-cell)
+        (if (om-elem-property-is-eq-p :type 'rule row) row
+          (om-elem--map-contents
+           (lambda (cells) (-insert-at index new-cell cells))
+           row)))
+       (map-rows
+        (rows)
+        (->> rows
+             (--find-indices (om-elem-property-is-eq-p :type 'rule it))
+             (--reduce-from (-insert-at it nil acc) column)
+             (om-elem--table-pad-or-truncate (length rows))
+             (-zip-with #'zip-into-rows rows))))
+    (om-elem--map-contents #'map-rows table)))
+
+(defun om-elem--table-insert-row (index row table)
+  (om-elem--verify index integerp)
+  (let ((row (if (om-elem-property-is-eq-p :type 'rule row) row
+               (let ((width (om-elem--table-get-width table)))
+                 (om-elem--table-pad-or-truncate width row)))))
+    (om-elem--map-contents* (-insert-at index row it) table)))
 
 ;;; builders
 
@@ -3507,53 +3559,36 @@ Return a list of objects."
 
 ;; table
 
-(defun om-elem-table-insert-row (row index table)
-  (let ((row (if (eq row 'hline) (om-elem-build-table-row-hline)
-               (let* ((width (om-elem--table-get-width table))
-                      (blanks (- width (length row))))
-                 (->> (if (< 0 blanks) (-slice row 0 (1- width))
-                        (append row (-repeat "" blanks)))
-                      (--map (om-elem-build-table-cell it))
-                      (apply #'om-elem-build-table-row))))))
-    (om-elem--map-contents
-     (lambda (rows) (-insert-at index row rows))
-     table)))
-
 (defun om-elem-table-delete-row (index table)
-  (om-elem--map-contents (lambda (rows) (-remove-at index rows)) table))
+  (om-elem--verify table om-elem-is-table-p)
+  (om-elem--table-delete-row index table))
 
 (defun om-elem-table-delete-column (index table)
-  (cl-flet*
-      ((delete
-        (cells)
-        (-remove-at index cells))
-       (map-row 
-        (row)
-        (if (om-elem-property-is-eq-p :type 'rule row) row
-          (om-elem--map-contents #'delete row))))
-    (om-elem--map-contents (lambda (rows) (-map #'map-row rows)) table)))
+  (om-elem--verify table om-elem-is-table-p)
+  (om-elem--table-delete-column index table))
 
-(defun om-elem-table-insert-column (column index table)
-  (let* ((rows (om-elem-contents table))
-         (nrows (length rows))
-         (blanks (- nrows (length column)))
-         (column
-          (--> (--find-indices (om-elem-property-is-eq-p :type 'rule it) rows)
-               (--reduce-from (-insert-at it "" acc) column it)
-               (if (< blanks 0) (-slice it 0 (1- nrows))
-                 (append it (-repeat blanks "")))
-               (--map (om-elem-build-table-cell it) it))))
-    (cl-flet*
-        ((zip-into-rows
-          (row new-cell)
-          (if (om-elem-property-is-eq-p :type 'rule row) row
-            (om-elem--map-contents
-             (lambda (cells) (-insert-at index new-cell cells))
-             row)))
-         (map-rows
-          (rows)
-          (-zip-with #'zip-into-rows rows column)))
-      (om-elem--map-contents #'map-rows table))))
+(defun om-elem-table-insert-column (index column table)
+  (om-elem--verify table om-elem-is-table-p)
+  (unless (-all? #'om-elem-is-table-cell-p column)
+    (error "All members of column must be table cells"))
+  (om-elem--table-insert-column index column table))
+
+(defun om-elem-table-insert-column! (index column table)
+  (om-elem--verify table om-elem-is-table-p)
+  (let ((column (-map #'om-elem-build-table-cell column)))
+    (om-elem--table-insert-column index column table)))
+
+(defun om-elem-table-insert-row (index row table)
+  (om-elem--verify row om-elem-is-table-row-p
+                   table om-elem-is-table-p)
+  (om-elem--table-insert-row index row table))
+
+(defun om-elem-table-insert-row! (index row table)
+  (om-elem--verify table om-elem-is-table-p)
+  (let ((row (if (eq row 'hline) (om-elem-build-table-row-hline)
+               (->> (-map #'om-elem-build-table-cell row)
+                    (apply #'om-elem-build-table-row)))))
+    (om-elem--table-insert-row index row table)))
 
 ;;; parsing functions
 
