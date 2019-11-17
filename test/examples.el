@@ -39,7 +39,7 @@
        (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
        "text"))
     => "*text*   "
-    (om-elem-to-string nil) => nil)
+    (om-elem-to-string nil) => "")
 
   (defexamples om-elem-to-trimmed-string
     (om-elem-to-trimmed-string
@@ -52,7 +52,7 @@
        (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
        "text"))
     => "*text*"
-    (om-elem-to-trimmed-string nil) => nil)
+    (om-elem-to-trimmed-string nil) => "")
 
   )
 
@@ -578,7 +578,7 @@ and here is even more *text4* and *text5*
   ;;   (:comment "The toplevel headline has no headline parent, so return nil")
   ;;   (-> (om-elem-parse-this-subtree)
   ;;       (om-elem-parent-get-headline))
-  ;;   => nil)
+  ;;   => "")
 
   (defexamples-content om-elem-headline-get-subheadlines
     nil
@@ -613,7 +613,7 @@ and here is even more *text4* and *text5*
     (->> (om-elem-parse-this-subtree)
          (om-elem-headline-get-section)
          (om-elem-to-trimmed-string))
-    => nil)
+    => "")
 
   (defexamples-content om-elem-headline-get-drawer
     nil
@@ -630,7 +630,7 @@ and here is even more *text4* and *text5*
     (->> (om-elem-parse-this-subtree)
          (om-elem-headline-get-drawer "OTHER")
          (om-elem-to-trimmed-string))
-    => nil)
+    => "")
 
   ;; (defexamples-content om-elem-headline-get-path
   ;;   nil
@@ -666,7 +666,7 @@ and here is even more *text4* and *text5*
     (->> (om-elem-parse-this-item)
          (om-elem-item-get-sublist)
          (om-elem-to-trimmed-string))
-    => nil)
+    => "")
 
   (defexamples-content om-elem-item-get-paragraph
     nil
@@ -689,7 +689,7 @@ and here is even more *text4* and *text5*
     (->> (om-elem-parse-this-item)
          (om-elem-item-get-paragraph)
          (om-elem-to-trimmed-string))
-    => nil)
+    => "")
 
   (defexamples-content om-elem-table-get-cell
     nil
@@ -741,7 +741,7 @@ and here is even more *text4* and *text5*
     (->> (om-elem-parse-this-object)
          (om-elem-timestamp-get-end)
          (om-elem-to-trimmed-string))
-    => nil
+    => ""
     (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
     (->> (om-elem-parse-this-object)
          (om-elem-timestamp-get-end)
@@ -1751,7 +1751,7 @@ and here is even more *text4* and *text5*
     (:comment "Return nil if not under a headline")
     (->> (om-elem-parse-headline-at 1)
          (om-elem-to-trimmed-string))
-    => nil)
+    => "")
 
   (defexamples-content om-elem-parse-subtree-at
     nil
@@ -1781,7 +1781,7 @@ and here is even more *text4* and *text5*
     (:comment "Return nil if not under a headline")
     (->> (om-elem-parse-subtree-at 1)
          (om-elem-to-trimmed-string))
-    => nil)
+    => "")
 
   (defexamples-content om-elem-parse-item-at
     nil
@@ -1804,7 +1804,7 @@ and here is even more *text4* and *text5*
     (:comment "Return nil if not an item")
     (->> (om-elem-parse-item-at 1)
          (om-elem-to-trimmed-string))
-    => nil)
+    => "")
 
   (defexamples-content om-elem-parse-table-row-at
     nil
@@ -1821,7 +1821,7 @@ and here is even more *text4* and *text5*
     (:comment "Return nil if not a table-row")
     (->> (om-elem-parse-table-row-at 1)
          (om-elem-to-trimmed-string))
-    => nil)
+    => "")
   
   (defexamples-content om-elem-parse-section-at
     nil
@@ -1841,12 +1841,12 @@ and here is even more *text4* and *text5*
     (:comment "Return nil if no section under headline")
     (->> (om-elem-parse-section-at 1)
          (om-elem-to-trimmed-string))
-    => nil
+    => ""
     (:content "")
     (:comment "Return nil if no section at all")
     (->> (om-elem-parse-section-at 1)
          (om-elem-to-trimmed-string))
-    => nil))
+    => ""))
 
 (def-example-group "Element content modifiers"
   "modifiy contents and shit"

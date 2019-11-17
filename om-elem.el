@@ -261,10 +261,9 @@ This is a workaround for a bug.")
         elem)
     (om-elem--map-contents* (-map #'om-elem--blank it) elem)))
 
-;; TODO should we return nil or "" here if ELEM evals to nil?
 (defun om-elem-to-string (elem)
   "Return ELEM as an interpreted string without text properties."
-  (-some->> elem
+  (->> elem
        ;; some objects and greater elements should be removed if blank
        ;; table and plain list will error, and the others make no
        ;; sense if they are empty. This is an org mode bug, they
