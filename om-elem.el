@@ -966,6 +966,11 @@ without element verification."
          (om-elem--map-properties (-drop 2 plist))))
    (t (error "Not a plist: %s" plist))))
 
+(defun om-elem--shift-property (prop n elem)
+  "Shift PROP of ELEM by N where N is a positive or negative integer."
+  (om-elem--verify n integerp)
+  (om-elem--map-property* prop (+ n it) elem))
+
 ;; contents
 
 (defun om-elem--map-contents (fun elem)
@@ -3184,9 +3189,10 @@ This assumes one wants HH:MM precision."
 
 (defun om-elem-shift-property (prop n elem)
   "Shift PROP of ELEM by N where N is a positive or negative integer."
-  (om-elem--verify n integerp
-                   elem om-elem-is-element-or-object-p)
-  (om-elem-map-property* prop (+ n it) elem))
+  (om-elem--verify elem om-elem-is-element-or-object-p)
+  (unless (plist-member (om-elem-properties elem) prop)
+    (error "Property %s does not exist in %s" prop elem))
+  (om-elem--shift-property prop n elem))
 
 ;; headline
 
