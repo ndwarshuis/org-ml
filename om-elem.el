@@ -1076,6 +1076,187 @@ Optionally supply DOCSTRING to override the generic docstring."
        (-last-item)
        (om-elem-allow-type 'statistics-cookie)))
 
+;;; internal indentation
+
+;; generic
+
+;; TODO this is a bit sketchy...it depends on the indentation
+;; function to make the contents list one element shorter, which
+;; is usually true but makes a really hard error to catch when it
+;; fails
+(defun om-elem--indent-after (indent-fun index elem)
+  (if (< index (1- (length (om-elem-contents elem))))
+      (->> (funcall indent-fun (1+ index) elem)
+           (om-elem--indent-after indent-fun index))
+    elem))
+
+(defun om-elem--indent-members (fun index members)
+  (unless (< 0 index)
+    (error "Cannot indent topmost item at this level"))
+  (-let* (((head tail) (-split-at index members))
+          (target (-first-item tail))
+          (head* (om-elem--map-last* (funcall fun target it) head)))
+    (append head* (-drop 1 tail))))
+
+(defun om-elem--unindent-members (index parent-fun unindent-fun list)
+  (-let* (((head tail) (-split-at index list))
+          (parent (-first-item tail))
+          (parent* (funcall parent-fun parent))
+          (unindented (funcall unindent-fun parent)))
+    (append head (list parent*) unindented (-drop 1 tail))))
+
+;; headline
+
+(defun om-elem--headline-indent-subtree (index headline)
+  (cl-flet
+      ((append-indented
+        (target-headline parent-headline)
+        (let ((target-headline*
+               (om-elem--headline-subtree-shift-level 1 target-headline)))
+          (om-elem--map-contents
+           (lambda (headline-contents)
+             (append headline-contents (list target-headline*)))
+           parent-headline))))
+    (om-elem--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om-elem--indent-members #'append-indented index subheadlines))
+     headline)))
+
+(defun om-elem--headline-indent-subheadline (index headline)
+  (cl-flet
+      ((append-indented
+        (target-headline parent-headline)
+        (let ((target-headline*
+               (->> target-headline
+                    (om-elem--headline-map-subheadlines #'ignore)
+                    (om-elem--headline-shift-level 1)))
+              (headlines-in-target
+               (om-elem--headline-get-subheadlines target-headline))) 
+          (om-elem--map-contents
+           (lambda (contents)
+             (append contents (list target-headline*) headlines-in-target))
+           parent-headline))))
+    (om-elem--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om-elem--indent-members #'append-indented index subheadlines))
+     headline)))
+
+(defun om-elem--headline-unindent-subheadline (index child-index headline)
+  (cl-flet
+      ((trim
+        (parent)
+        (om-elem--headline-map-subheadlines
+         (lambda (subheadlines) (-take child-index subheadlines))
+         parent))
+       (extract
+        (parent)
+        (->> (om-elem--indent-after #'om-elem-headline-indent-subtree
+                                    child-index parent)
+             (om-elem-contents)
+             (-drop child-index)
+             (--map (om-elem--headline-subtree-shift-level -1 it)))))
+    (om-elem--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om-elem--unindent-members index #'trim #'extract subheadlines))
+     headline)))
+
+(defun om-elem--headline-unindent-subtree (index headline)
+  (cl-flet
+      ((trim
+        (parent)
+        (om-elem--headline-map-subheadlines #'ignore parent))
+       (extract
+        (parent)
+        (->> (om-elem-contents parent)
+             (--map (om-elem--headline-subtree-shift-level -1 it)))))
+    (om-elem--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om-elem--unindent-members index #'trim #'extract subheadlines))
+     headline)))
+
+;; plain-list
+
+(defun om-elem--plain-list-indent-item-tree (index plain-list)
+  (cl-flet
+      ((append-indented
+        (target-item parent-item)
+        (let ((target-item* (om-elem-build-plain-list target-item)))
+          (om-elem--map-contents
+           (lambda (item-contents) (append item-contents (list target-item*)))
+           parent-item))))
+    (om-elem--map-contents
+     (lambda (items)
+       (om-elem--indent-members #'append-indented index items))
+     plain-list)))
+
+(defun om-elem--plain-list-indent-item (index plain-list)
+  (cl-flet
+      ((append-indented
+        (target-item parent-item)
+        (let ((target-item*
+               (->> target-item
+                    (om-elem--map-contents*
+                     (-remove #'om-elem-is-plain-list-p it))
+                    (om-elem-build-plain-list)))
+              (items-in-target
+               (->> (om-elem-contents target-item)
+                    (-filter #'om-elem-is-plain-list-p))))
+          (om-elem--map-contents
+           (lambda (item-contents)
+             ;; TODO technically the target-item* should go in an
+             ;; existing plain list but I don't this matters (for now)
+             (append item-contents (list target-item*) items-in-target))
+           parent-item))))
+    (om-elem--map-contents
+     (lambda (items)
+       (om-elem--indent-members #'append-indented index items))
+     plain-list)))
+
+(defun om-elem--plain-list-unindent-item (index child-index plain-list)
+  (cl-flet
+      ((trim
+        (parent)
+        (om-elem--map-contents
+         (lambda (contents)
+           (if (= 0 index)
+               (-remove-first #'om-elem-is-plain-list-p contents)
+             (--map-first (om-elem-is-plain-list-p it)
+                          (om-elem--map-contents
+                           (lambda (items) (-take child-index items)) it)
+                          contents)))
+         parent))
+       (extract
+        (parent)
+        (->>
+         (om-elem-contents parent)
+         (-first #'om-elem-is-plain-list-p)
+         (om-elem--indent-after #'om-elem--plain-list-indent-item-tree
+                                child-index)
+         (om-elem-contents)
+         (-drop child-index))))
+    (om-elem--map-contents
+     (lambda (items)
+       (om-elem--unindent-members index #'trim #'extract items))
+     plain-list)))
+
+(defun om-elem--plain-list-unindent-items (index plain-list)
+  (cl-flet
+      ((trim
+        (parent)
+        (om-elem--map-contents
+         (lambda (contents)
+           (-remove-first #'om-elem-is-plain-list-p contents))
+         parent))
+       (extract
+        (parent)
+        (->> (om-elem-contents parent)
+             (-first #'om-elem-is-plain-list-p)
+             (om-elem-contents))))
+    (om-elem--map-contents
+     (lambda (items)
+       (om-elem--unindent-members index #'trim #'extract items))
+     plain-list)))
+
 ;;; internal content setters
 
 ;; headline
@@ -3289,193 +3470,41 @@ Return a list of objects."
 ;; TODO make drawer, prop-drawer, planning, and section insertion
 
 
-;; TODO this is a bit sketchy...it depends on the indentation
-;; function to make the contents list one element shorter, which
-;; is usually true but makes a really hard error to catch when it
-;; fails
-(defun om-elem--indent-after (index indent-fun elem)
-  (if (< index (1- (length (om-elem-contents elem))))
-      (->> (funcall indent-fun (1+ index) elem)
-           (om-elem--indent-after index))
-    elem))
-
-(defun om-elem--plain-list-indent-after (index plain-list)
-  (if (< index (1- (length (om-elem-contents plain-list))))
-      (->> (om-elem-plain-list-indent-item-tree (1+ index) plain-list)
-           (om-elem--plain-list-indent-after index))
-    plain-list))
-
-(defun om-elem--headline-indent-after (index headline)
-  (if (< index (1- (length (om-elem-contents headline))))
-      (->> (om-elem-headline-indent-subtree (1+ index) headline)
-           (om-elem--headline-indent-after index))
-    headline))
-
-(defun om-elem--indent-members (fun index members)
-  (unless (< 0 index)
-    (error "Cannot indent topmost item at this level"))
-  (-let* (((head tail) (-split-at index members))
-          (target (-first-item tail))
-          (head* (om-elem--map-last* (funcall fun target it) head)))
-    (append head* (-drop 1 tail))))
-
-(defun om-elem--unindent-members (index parent-fun unindent-fun list)
-  (-let* (((head tail) (-split-at index list))
-          (parent (-first-item tail))
-          (parent* (funcall parent-fun parent))
-          (unindented (funcall unindent-fun parent)))
-    (append head (list parent*) unindented (-drop 1 tail))))
-
 ;; headline
 
 (defun om-elem-headline-indent-subtree (index headline)
-  (cl-flet
-      ((append-indented
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (om-elem--headline-subtree-shift-level 1 target-headline)))
-          (om-elem--map-contents
-           (lambda (headline-contents)
-             (append headline-contents (list target-headline*)))
-           parent-headline))))
-    (om-elem--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om-elem--indent-members #'append-indented index subheadlines))
-     headline)))
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-indent-subtree index headline))
 
 (defun om-elem-headline-indent-subheadline (index headline)
-  (cl-flet
-      ((append-indented
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (->> target-headline
-                    (om-elem--headline-map-subheadlines #'ignore)
-                    (om-elem--headline-shift-level 1)))
-              (headlines-in-target
-               (om-elem--headline-get-subheadlines target-headline))) 
-          (om-elem--map-contents
-           (lambda (contents)
-             (append contents (list target-headline*) headlines-in-target))
-           parent-headline))))
-    (om-elem--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om-elem--indent-members #'append-indented index subheadlines))
-     headline)))
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-indent-subheadline index headline))
 
 (defun om-elem-headline-unindent-subheadline (index child-index headline)
-  (cl-flet
-      ((trim
-        (parent)
-        (om-elem--headline-map-subheadlines
-         (lambda (subheadlines) (-take child-index subheadlines))
-         parent))
-       (extract
-        (parent)
-        (->> (om-elem--headline-indent-after child-index parent)
-             (om-elem-contents)
-             (-drop child-index)
-             (--map (om-elem--headline-subtree-shift-level -1 it)))))
-    (om-elem--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om-elem--unindent-members index #'trim #'extract subheadlines))
-     headline)))
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-unindent-subheadline index child-index headline))
 
 (defun om-elem-headline-unindent-subtree (index headline)
-  (cl-flet
-      ((trim
-        (parent)
-        (om-elem--headline-map-subheadlines #'ignore parent))
-       (extract
-        (parent)
-        (->> (om-elem-contents parent)
-             (--map (om-elem--headline-subtree-shift-level -1 it)))))
-    (om-elem--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om-elem--unindent-members index #'trim #'extract subheadlines))
-     headline)))
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-unindent-subtree index headline))
 
 ;; plain-list
 
 (defun om-elem-plain-list-indent-item-tree (index plain-list)
   (om-elem--verify plain-list om-elem-is-plain-list-p)
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item* (om-elem-build-plain-list target-item)))
-          (om-elem--map-contents
-           (lambda (item-contents) (append item-contents (list target-item*)))
-           parent-item))))
-    (om-elem--map-contents
-     (lambda (items)
-       (om-elem--indent-members #'append-indented index items))
-     plain-list)))
+  (om-elem--plain-list-indent-item-tree index plain-list))
 
 (defun om-elem-plain-list-indent-item (index plain-list)
   (om-elem--verify plain-list om-elem-is-plain-list-p)
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item*
-               (->> target-item
-                    (om-elem--map-contents*
-                     (-remove #'om-elem-is-plain-list-p it))
-                    (om-elem-build-plain-list)))
-              (items-in-target
-               (->> (om-elem-contents target-item)
-                    (-filter #'om-elem-is-plain-list-p))))
-          (om-elem--map-contents
-           (lambda (item-contents)
-             ;; TODO technically the target-item* should go in an
-             ;; existing plain list but I don't this matters (for now)
-             (append item-contents (list target-item*) items-in-target))
-           parent-item))))
-    (om-elem--map-contents
-     (lambda (items)
-       (om-elem--indent-members #'append-indented index items))
-     plain-list)))
+  (om-elem--plain-list-indent-item index plain-list))
 
 (defun om-elem-plain-list-unindent-item (index child-index plain-list)
-  (cl-flet
-      ((trim
-        (parent)
-        (om-elem--map-contents
-         (lambda (contents)
-           (if (= 0 index)
-               (-remove-first #'om-elem-is-plain-list-p contents)
-             (--map-first (om-elem-is-plain-list-p it)
-                          (om-elem--map-contents
-                           (lambda (items) (-take child-index items)) it)
-                          contents)))
-         parent))
-       (extract
-        (parent)
-        (->> (om-elem-contents parent)
-             (-first #'om-elem-is-plain-list-p)
-             (om-elem--plain-list-indent-after child-index)
-             (om-elem-contents)
-             (-drop child-index))))
-    (om-elem--map-contents
-     (lambda (items)
-       (om-elem--unindent-members index #'trim #'extract items))
-     plain-list)))
+  (om-elem--verify plain-list om-elem-is-plain-list-p)
+  (om-elem--plain-list-unindent-item index child-index plain-list))
 
 (defun om-elem-plain-list-unindent-items (index plain-list)
-  (cl-flet
-      ((trim
-        (parent)
-        (om-elem--map-contents
-         (lambda (contents)
-           (-remove-first #'om-elem-is-plain-list-p contents))
-         parent))
-       (extract
-        (parent)
-        (->> (om-elem-contents parent)
-             (-first #'om-elem-is-plain-list-p)
-             (om-elem-contents))))
-    (om-elem--map-contents
-     (lambda (items)
-       (om-elem--unindent-members index #'trim #'extract items))
-     plain-list)))
+  (om-elem--verify plain-list om-elem-is-plain-list-p)
+  (om-elem--plain-list-unindent-items index plain-list))
 
 ;; table
 
