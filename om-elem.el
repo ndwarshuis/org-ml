@@ -1033,6 +1033,13 @@ Optionally supply DOCSTRING to override the generic docstring."
 
 ;; headline
 
+(defun om-elem--headline-get-subheadlines (headline)
+  (-some->> (om-elem-contents headline)
+            (--filter (om-elem-is-headline-p it))))
+
+(defun om-elem--headline-get-section (headline)
+  (-some->> (om-elem-contents headline) (assoc 'section)))
+
 (defun om-elem--headline-get-statistics-cookie (headline)
   (->> (om-elem-property :title headline)
        (-last-item)
@@ -2306,13 +2313,12 @@ QUERIES follows the same rules as `om-elem-find'."
 (defun om-elem-headline-get-subheadlines (headline)
   "Return list of subheadlines for HEADLINE element or nil if none."
   (om-elem--verify headline om-elem-is-headline-p)
-  (-some->> (om-elem-contents headline)
-            (--filter (om-elem-is-headline-p it))))
+  (om-elem--headline-get-subheadlines headline))
 
 (defun om-elem-headline-get-section (headline)
   "Return section for headline HEADLINE element or nil if none."
   (om-elem--verify headline om-elem-is-headline-p)
-  (-some->> (om-elem-contents headline) (assoc 'section)))
+  (om-elem--headline-get-section headline))
 
 (defun om-elem-headline-get-drawer (name headline)
   "Return first drawer with NAME in HEADLINE element or nil if none."
@@ -2734,7 +2740,7 @@ property list in ELEM."
 
 (defun om-elem-headline-update-todo-statistics (headline)
   ;; TODO make this private
-  (let ((subtodo (->> (om-elem-headline-get-subheadlines headline)
+  (let ((subtodo (->> (om-elem-headline--get-subheadlines headline)
                       (--filter (om-elem-property :todo-keyword it)))
         (done (length (-filter #'om-elem-headline-is-done-p subtodo)))
         (total (length subtodo)))
@@ -3248,10 +3254,6 @@ Return a list of objects."
 ;;                   (om-elem-insert-within-element headline it 0))))))))
 
 ;; ;; TODO make headline indent subtree (NOT this)
-;; (defun om-elem-headline-shift-level (level elem)
-;;   (let ((level* (+ level (om-elem-property :level elem))))
-;;     (if (< 1 level*) (om-elem-set-property :level level* elem)
-;;       (om-elem-set-property :level 1 elem))))
 
 ;; TODO make drawer, prop-drawer, planning, and section insertion
 
@@ -3273,16 +3275,18 @@ Return a list of objects."
                               (-filter #'om-elem-is-plain-list-p))))
     (om-elem--map-contents
      (lambda (item-contents)
+       ;; TODO technically the target-item* should go in an existing
+       ;; plain list but I don't this matters (for now)
        (append item-contents (list (om-elem-build-plain-list target-item*)) items-in-target))
      item)))
 
-(defun om-elem--indent-items (fun index items)
+(defun om-elem--indent-items (fun index members)
   (unless (< 0 index)
     (error "Cannot indent topmost item at this level"))
-  (-let ((target-item (nth index items))
-         ((head tail) (-split-at index items)))
-    (-> (om-elem--map-last* (funcall fun target-item it) head)
-        (append (-drop 1 tail)))))
+  (-let* (((head tail) (-split-at index members))
+          (target (-first-item tail))
+          (head* (om-elem--map-last* (funcall fun target it) head)))
+    (append head* (-drop 1 tail))))
 
 (defun om-elem-plain-list-indent-item-tree (index plain-list)
   (om-elem--verify plain-list om-elem-is-plain-list-p)
@@ -3297,6 +3301,66 @@ Return a list of objects."
    (lambda (items)
      (om-elem--indent-items #'om-elem--append-indented index items))
    plain-list))
+
+(defun om-elem--headline-map-subheadlines (fun headline)
+  (om-elem--map-contents
+   (lambda (contents)
+     (let ((section (assoc 'section contents))
+           (subheadlines (-some->>
+                          (-filter #'om-elem-is-headline-p contents)
+                          (funcall fun))))
+       (cond
+        ((and section subheadlines) (cons section subheadlines))
+        (section section)
+        (t subheadlines))))
+   headline))
+
+(defun om-elem--headline-shift-level (n headline)
+  (om-elem--verify n integerp)
+  (cl-flet
+      ((shift-level
+        (cur-level)
+        (let ((new-level (+ n cur-level))) ; of cooooonfideeeeence...
+          (if (< 1 new-level) new-level 1)))) ; and pooooooweeeeer...
+    (om-elem--map-property :level #'shift-level headline)))
+
+(defun om-elem--headline-subtree-shift-level (n headline)
+  (->>
+   (om-elem--headline-shift-level n headline)
+   (om-elem--headline-map-subheadlines
+    (lambda (headlines)
+      (--map (om-elem--headline-subtree-shift-level n it) headlines)))))
+
+(defun om-elem--append-indented-headline (target-headline parent-headline)
+  (let ((target-headline*
+         (->> target-headline
+              (om-elem--headline-map-subheadlines #'ignore)
+              (om-elem--headline-shift-level 1)))
+        (headlines-in-target (om-elem--headline-get-subheadlines target-headline))) 
+    (om-elem--map-contents
+     (lambda (contents)
+       (append contents (list target-headline*) headlines-in-target))
+     parent-headline)))
+
+(defun om-elem--append-indented-headline-tree (target-headline headline)
+  (let ((target-headline*
+         (om-elem--headline-subtree-shift-level 1 target-headline)))
+    (om-elem--map-contents
+     (lambda (headline-contents)
+       (append headline-contents (list target-headline*)))
+     headline)))
+
+(defun om-elem-headline-indent-subheadline (index headline)
+  (om-elem--headline-map-subheadlines
+   (lambda (subheadlines)
+     (om-elem--indent-items #'om-elem--append-indented-headline index subheadlines))
+   headline))
+
+(defun om-elem-headline-indent-subtree (index headline)
+  (om-elem--headline-map-subheadlines
+   (lambda (subheadlines)
+     (om-elem--indent-items #'om-elem--append-indented-headline-tree index subheadlines))
+   headline))
 
 (defun om-elem--plain-list-indent-after (index plain-list)
   (if (< index (1- (length (om-elem-contents plain-list))))
@@ -3353,6 +3417,48 @@ Return a list of objects."
      (lambda (items)
        (om-elem--unindent-members index #'trim #'extract items))
      plain-list)))
+
+;; TODO this is a bit sketchy...it depends on the indentation
+;; function to make the contents list one element shorter, which
+;; is usually true but makes a really hard error to catch when it
+;; fails
+(defun om-elem--headline-indent-after (index headline)
+  (if (< index (1- (length (om-elem-contents headline))))
+      (->> (om-elem-headline-indent-subtree (1+ index) headline)
+           (om-elem--headline-indent-after index))
+    headline))
+
+(defun om-elem-headline-unindent-subheadline (index child-index headline)
+  (cl-flet
+      ((trim
+        (parent)
+        (om-elem--headline-map-subheadlines
+         (lambda (subheadlines) (-take child-index subheadlines))
+         parent))
+       (extract
+        (parent)
+        (->> (om-elem--headline-indent-after child-index parent)
+             (om-elem-contents)
+             (-drop child-index)
+             (--map (om-elem--headline-subtree-shift-level -1 it)))))
+    (om-elem--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om-elem--unindent-members index #'trim #'extract subheadlines))
+     headline)))
+
+(defun om-elem-headline-unindent-subtree (index headline)
+  (cl-flet
+      ((trim
+        (parent)
+        (om-elem--headline-map-subheadlines #'ignore parent))
+       (extract
+        (parent)
+        (->> (om-elem-contents parent)
+             (--map (om-elem--headline-subtree-shift-level -1 it)))))
+    (om-elem--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om-elem--unindent-members index #'trim #'extract subheadlines))
+     headline)))
 
 ;; table
 

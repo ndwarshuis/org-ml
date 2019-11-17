@@ -1920,4 +1920,56 @@ and here is even more *text4* and *text5*
          (om-elem-to-trimmed-string))
     => "- one\n- two\n  - three\n  - three\n  - three\n- four")
 
+  (defexamples-content om-elem-headline-indent-subheadline
+    nil
+    (:content "* one"
+              "** two"
+              "** three"
+              "*** four")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-headline-indent-subheadline 0)
+         (om-elem-to-trimmed-string))
+    !!> error
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-headline-indent-subheadline 1)
+         (om-elem-to-trimmed-string))
+    => "* one\n** two\n*** three\n*** four")
+
+  (defexamples-content om-elem-headline-indent-subtree
+    nil
+    (:content "* one"
+              "** two"
+              "** three"
+              "*** four")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-headline-indent-subtree 1)
+         (om-elem-to-trimmed-string))
+    => "* one\n** two\n*** three\n**** four")
+
+  (defexamples-content om-elem-headline-unindent-subheadline
+    nil
+    (:content "* one"
+              "** two"
+              "** three"
+              "*** four"
+              "*** four"
+              "*** four")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-headline-unindent-subheadline 1 1)
+         (om-elem-to-trimmed-string))
+    => "* one\n** two\n** three\n*** four\n** four\n*** four")
+
+  (defexamples-content om-elem-headline-unindent-subtree
+    nil
+    (:content "* one"
+              "** two"
+              "** three"
+              "*** four"
+              "*** four"
+              "*** four")
+    (->> (om-elem-parse-element-at 1)
+         (om-elem-headline-unindent-subtree 1)
+         (om-elem-to-trimmed-string))
+    => "* one\n** two\n** three\n** four\n** four\n** four")
+
   )
