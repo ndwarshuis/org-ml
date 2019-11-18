@@ -621,7 +621,7 @@ X after the last element in LIST."
   (om-elem--verify index integerp string stringp)
   (om-elem--map-property* prop (om-elem--insert-at index string it) elem))
 
-(defun om-elem--remove-property-list (prop index string elem)
+(defun om-elem--remove-property-list (prop string elem)
   (om-elem--verify string stringp)
   (om-elem--map-property* prop (-remove-item string it) elem))
 
@@ -691,13 +691,11 @@ X after the last element in LIST."
 (defun om-elem--headline-set-archived (flag headline)
   "Set the archived flag of HEADLINE element to FLAG."
   ;; TODO does the archive flag need to be set?
-  ;; TODO abstract this in a set-tags function
-  (let ((new-tags (--> (om-elem-property :tags headline)
-                       (if flag (cons org-archive-tag it)
-                         (-remove-item org-archive-tag it)))))
-    (->> headline
-         (om-elem--set-property-pred 'booleanp :archivedp flag)
-         (om-elem--set-property :tags new-tags))))
+  (let ((headline*
+         (if flag
+             (om-elem--headline-insert-tag -1 org-archive-tag headline)
+           (om-elem--headline-remove-tag org-archive-tag headline))))
+    (om-elem--set-property-pred 'booleanp :archivedp flag headline*)))
 
 (defun om-elem--headline-set-commented (flag headline)
   "Set the commented flag of HEADLINE element to FLAG."
