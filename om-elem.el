@@ -590,14 +590,14 @@ and object containers and includes the 'plain-text' type.")
   (om-elem--set-property-pred 'stringp :value value elem))
 
 ;; TODO make the inverse of this
-(defun om-elem--set-property-list-string (prop args delim elem)
+(defun om-elem--set-property-strings-concat (prop args delim elem)
   (unless (and (listp args) (-all? #'stringp args))
     (error "Arguments must be supplied as a list of strings."))
   (let ((s (and args (s-join delim args))))
       (om-elem--set-property prop s elem)))
 
 ;; TODO make the inverse of this
-(defun om-elem--set-property-plist (props plist elem)
+(defun om-elem--set-property-plist-concat (props plist elem)
   (unless (om-elem--is-plist-p plist)
     (error "Invalid plist given: %S" plist))
   (unless (->> (-slice plist 1 nil 2) (-all? #'symbolp))
@@ -605,9 +605,17 @@ and object containers and includes the 'plain-text' type.")
   (let ((s (-some->> (-map #'symbol-name plist) (s-join " "))))
       (om-elem--set-property props s elem)))
 
-(defun om-elem--set-property-strings (prop strings elem)
+(defun om-elem--set-property-list (prop strings elem)
   (om-elem--verify strings (lambda (ss) (-all? #'stringp ss)))
   (om-elem--set-property prop strings elem))
+
+(defun om-elem--insert-property-list (prop index string elem)
+  (om-elem--verify index integerp string stringp)
+  (om-elem--map-property* prop (-insert-at index string it) elem))
+
+(defun om-elem--remove-property-list (prop index string elem)
+  (om-elem--verify string stringp)
+  (om-elem--map-property* prop (-remove-item string it) elem))
 
 ;; clock
 
@@ -1602,9 +1610,9 @@ args END."
   (->>
    (om-elem--build-object 'inline-babel-call post-blank)
    (om-elem--set-property-pred 'stringp :call call)
-   (om-elem--set-property-list-string :arguments arguments ",")
-   (om-elem--set-property-plist :inside-header inside-header)
-   (om-elem--set-property-plist :end-header end-header)
+   (om-elem--set-property-strings-concat :arguments arguments ",")
+   (om-elem--set-property-plist-concat :inside-header inside-header)
+   (om-elem--set-property-plist-concat :end-header end-header)
    (om-elem--set-property-nil :value)))
 
 (om-elem--defun om-elem-build-inline-src-block (language value
@@ -1616,7 +1624,7 @@ Optionally provide PARAMETERS."
   (->> (om-elem--build-object 'inline-src-block post-blank)
        (om-elem--set-value value)
        (om-elem--set-property-pred 'stringp :language language)
-       (om-elem--set-property-plist :parameters parameters)))
+       (om-elem--set-property-plist-concat :parameters parameters)))
 
 (om-elem--defun om-elem-build-latex-fragment (value &key post-blank)
   "Build a latex fragment object"
@@ -1631,7 +1639,7 @@ Optionally provide PARAMETERS."
   "Build a macro object with KEY and optional ARGS."
   (->> (om-elem--build-object 'macro post-blank)
        (om-elem--set-key key)
-       (om-elem--set-property-strings :args args)
+       (om-elem--set-property-list :args args)
        (om-elem--macro-update-value)))
 
 (om-elem--defun om-elem-build-statistics-cookie (value &key post-blank)
@@ -1743,9 +1751,9 @@ STRING is a lisp form as a string."
   "Build a babel-call element for NAME."
   (->> (om-elem--build-element 'babel-call post-blank)
        (om-elem--set-property-pred 'stringp :call call)
-       (om-elem--set-property-list-string :arguments arguments ",")
-       (om-elem--set-property-plist :inside-header inside-header)
-       (om-elem--set-property-plist :end-header end-header)
+       (om-elem--set-property-strings-concat :arguments arguments ",")
+       (om-elem--set-property-plist-concat :inside-header inside-header)
+       (om-elem--set-property-plist-concat :end-header end-header)
        (om-elem--set-property-nil :value)))
 
 (om-elem--defun om-elem-build-clock (start &key end post-blank)
@@ -1780,7 +1788,7 @@ VALUE is the part inside the '%%(value)' part of the sexp."
   (let ((init '(:number-lines :retain-labels :use-labels :label-fmt)))
     (->> (om-elem--build-element 'example-block post-blank)
          (om-elem--set-value (org-element-normalize-string value))
-         (om-elem--set-property-list-string :switches switches " ")
+         (om-elem--set-property-strings-concat :switches switches " ")
          (om-elem--set-indent preserve-indent)
          (om-elem--set-properties-nil init))))
 
@@ -1835,8 +1843,8 @@ VALUE is the part inside the '%%(value)' part of the sexp."
      (om-elem--set-value value)
      (om-elem--set-indent preserve-indent)
      (om-elem--set-property-pred 'string-or-null-p :language language)
-     (om-elem--set-property-list-string :switches switches " ")
-     (om-elem--set-property-plist :parameters parameters)
+     (om-elem--set-property-strings-concat :switches switches " ")
+     (om-elem--set-property-plist-concat :parameters parameters)
      (om-elem--set-properties-nil init))))
 
 ;; container elements
@@ -1879,7 +1887,7 @@ PARAMS is s list of cons cells for each key/val pair. Optionally
 provide ELEMS as contents."
   (->> (om-elem--build-container-element 'dynamic-block post-blank elems)
        (om-elem--set-property-pred #'stringp :block-name block-name)
-       (om-elem--set-property-plist :arguments arguments)))
+       (om-elem--set-property-plist-concat :arguments arguments)))
 
 (om-elem--defun om-elem-build-footnote-definition (label
                                                    &key post-blank
@@ -1904,7 +1912,7 @@ Optionally provide ELEMS as contents."
        (om-elem--headline-set-title title)
        (om-elem--headline-set-level level)
        (om-elem--headline-set-priority priority)
-       (om-elem--set-property-strings :tags tags)
+       (om-elem--set-property-list :tags tags)
        (om-elem--headline-set-footnote-section footnote-section-p)
        ;; this must go after setting tags since it alters the tags
        (om-elem--headline-set-archived archivedp)
@@ -1955,7 +1963,7 @@ Optionally provide ELEMS as contents."
   "Build a section grater element containing TABLE-ROWS."
   ;; TODO this only deals with org tables for now
   (->> (om-elem--build-container-element 'table post-blank table-rows)
-       (om-elem--set-property-strings :tblfm tblfm)
+       (om-elem--set-property-list :tblfm tblfm)
        (om-elem--set-property :type 'org)
        (om-elem--set-property-nil :value)))
 
