@@ -729,6 +729,15 @@ X after the last element in LIST."
     (error "Invalid title: %s" title))
   (om-elem--set-property :title title headline))
 
+(defun om-elem--headline-insert-tag (index tag headline)
+  (om-elem--insert-property-list :tags index tag headline))
+
+(defun om-elem--headline-add-tag (tag headline)
+  (om-elem--headline-insert-tag 0 tag headline))
+
+(defun om-elem--headline-remove-tag (tag headline)
+  (om-elem--remove-property-list :tags tag headline))
+
 (defun om-elem--headline-set-title! (string stats headline)
   (let* ((ss (om-elem-build-secondary-string string))
          (title (if (not stats) ss
