@@ -940,6 +940,87 @@ without element verification."
   (om-elem--verify string stringp)
   (om-elem--set-property :raw-value (format "<%%%%%s>" string)))
 
+(defun om-elem--pad-time-maybe (time)
+  (pcase time
+    (`(,(pred integerp)
+       ,(pred integerp)
+       ,(pred integerp))
+     (append time '(nil nil)))
+    ((or `(,(pred integerp)
+           ,(pred integerp)
+           ,(pred integerp)
+           ,(pred integerp)
+           ,(pred integerp))
+         `(,(pred integerp)
+           ,(pred integerp)
+           ,(pred integerp)
+           ,(pred null)
+           ,(pred null)))
+     time)
+    (_ (error "Invalid time: %S" time))))
+
+(defun om-elem--time-is-long-p (time)
+  (pcase time
+    (`(,(pred integerp) ,(pred integerp) ,(pred integerp)
+       ,(pred integerp) ,(pred integerp))
+     t)))
+
+(defun om-elem--time-shift (n unit time)
+  (cl-flet*
+      ((get-shifts-short
+        (n unit)
+        (cl-case unit
+          (day `(0 0 ,n 0 0))
+          (week `(0 0 ,(* 7 n) 0 0))
+          (month `(0 ,n 0 0 0))
+          (year `(,n 0 0 0 0))
+          ((minute hour)
+           (error "Invalid unit for short timestamps: %S" unit))
+          (t (error "Invalid time unit: %S" unit))))
+       (get-shifts-long
+        (n unit)
+        (cl-case unit
+          (minute `(0 0 0 0 ,n))
+          (hour `(0 0 0 ,n 0))
+          (t (get-shifts-short n unit))))
+       (apply-shifts
+        (shifts time)
+        (->> (-zip-with #'+ time shifts)
+             (nreverse)
+             (apply #'encode-time 0)
+             (decode-time))))
+    (if (om-elem--time-is-long-p time)
+        (let ((shifts (get-shifts-long n unit)))
+          (nreverse (-slice (apply-shifts shifts time) 1 6)))
+      (let ((shifts (get-shifts-short n unit))
+            (time* (-replace nil 0 time)))
+        (->> (-slice (apply-shifts shifts time*) 3 6)
+             (append '(nil nil))
+             (nreverse))))))
+
+(defun om-elem--timestamp-get-time-start (timestamp)
+  (-let (((&plist :minute-start n :hour-start h :day-start d
+                  :month-start m :year-start y)
+          (om-elem-properties timestamp)))
+    `(,y ,m ,d ,h ,n)))
+
+(defun om-elem--timestamp-get-time-end (timestamp)
+  (-let (((&plist :minute-end n :hour-end h :day-end d
+                  :month-end m :year-end y)
+          (om-elem-properties timestamp)))
+    `(,y ,m ,d ,h ,n)))
+
+(defun om-elem--timestamp-shift-time-start (n unit timestamp)
+  ;; TODO what if the start time is greater than the end time?
+  (let ((time* (->> (om-elem--timestamp-get-time-start timestamp)
+                    (om-elem--time-shift n unit))))
+    (om-elem--timestamp-set-time time* timestamp)))
+
+(defun om-elem--timestamp-shift-time-end (n unit timestamp)
+  ;; TODO what if the end time is less than the start time?
+  (let ((time-end (om-elem--timestamp-get-time-end timestamp)))
+    (-> (om-elem--time-shift n unit time-end)
+        (om-elem--timestamp-set-time-end timestamp))))
 
 ;;; internal mappers
 ;; TODO, use setters here to ensure functions return the right type?
@@ -1356,6 +1437,8 @@ Optionally supply DOCSTRING to override the generic docstring."
     (om-elem--headline-set-statistics-cookie value)))
 
 ;; table
+
+;; TODO if I feel like being super extra I can add pivot operators :)
 
 (defun om-elem--pad-or-truncate (length pad list)
   (let ((blanks (- length (length list))))
@@ -3283,27 +3366,27 @@ SHIFT is a positive or negative integer."
          (fun (lambda (it) (and it (+ ,value it)))))
      (om-elem-map-property prop fun ,timestamp)))
 
-(defun om-elem--timestamp-shift-time-start (unit value timestamp)
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-shift-time
-   ((minute :minute-start)
-    (hour :hour-start)
-    (day :day-start)
-    (month :month-start)
-    (year :year-start))
-   unit value timestamp))
+;; (defun om-elem--timestamp-shift-time-start (unit value timestamp)
+;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
+;;   (om-elem--timestamp-shift-time
+;;    ((minute :minute-start)
+;;     (hour :hour-start)
+;;     (day :day-start)
+;;     (month :month-start)
+;;     (year :year-start))
+;;    unit value timestamp))
 
-(defun om-elem--timestamp-shift-time-end (unit value timestamp)
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-shift-time
-   ((minute :minute-end)
-    (hour :hour-end)
-    (day :day-end)
-    (month :month-end)
-    (year :year-end))
-   unit value timestamp))
+;; (defun om-elem--timestamp-shift-time-end (unit value timestamp)
+;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
+;;   (om-elem--timestamp-shift-time
+;;    ((minute :minute-end)
+;;     (hour :hour-end)
+;;     (day :day-end)
+;;     (month :month-end)
+;;     (year :year-end))
+;;    unit value timestamp))
 
-(defun om-elem-timestamp-shift-time-start (unit value timestamp)
+(defun om-elem-timestamp-shift-time-start (n unit timestamp)
   "Shift the UNIT of TIMESTAMP element start time by VALUE.
 VALUE is a positive or negative integer and UNIT is one of 'minute',
 'hour', 'day', 'month', or 'year'. Value will wrap around larger units
@@ -3312,10 +3395,10 @@ will increase the hour property by 1."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (let ((type (om-elem-property :type timestamp)))
     (if (memq type '(active inactive))
-        (om-elem-timestamp-shift-time unit value timestamp)
-      (om-elem--timestamp-shift-time-start unit value timestamp))))
+        (om-elem-timestamp-shift-time n unit timestamp)
+      (om-elem--timestamp-shift-time-start n unit timestamp))))
 
-(defun om-elem-timestamp-shift-time-end (unit value timestamp)
+(defun om-elem-timestamp-shift-time-end (n unit timestamp)
   "Shift the UNIT of TIMESTAMP element end time by VALUE.
 The behavior is analogous to `om-elem-timestamp-shift-time-start',
 except that the timestamp will be unchanged if no ending time is
@@ -3323,15 +3406,15 @@ present."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (let ((type (om-elem-property :type timestamp)))
     (if (memq type '(active inactive)) timestamp
-      (om-elem--timestamp-shift-time-end unit value timestamp))))
+      (om-elem--timestamp-shift-time-end n unit timestamp))))
 
-(defun om-elem-timestamp-shift-time (unit value timestamp)
+(defun om-elem-timestamp-shift-time (n unit timestamp)
   "Shift the UNIT of TIMESTAMP element start and end time by VALUE.
 The behavior is analogous to `om-elem-timestamp-shift-time-start' for
 both timestamp halves."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (->> (om-elem--timestamp-shift-time-start unit value timestamp)
-       (om-elem--timestamp-shift-time-end unit value)))
+  (->> (om-elem--timestamp-shift-time-start n unit timestamp)
+       (om-elem--timestamp-shift-time-end n unit)))
 
 ;;; element toggles
 ;; flip a boolean (ish) property

@@ -1319,55 +1319,55 @@ and here is even more *text4* and *text5*
     (:content "[2019-01-01 Tue 12:00]")
     (:comment "Change each unit, and wrap around to the next unit as needed.")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-start 'minute 30)
+         (om-elem-timestamp-shift-time-start 30 'minute)
          (om-elem-to-trimmed-string))
     => "[2019-01-01 Tue 12:30]"
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-start 'minute 60)
+         (om-elem-timestamp-shift-time-start 60 'minute)
          (om-elem-to-trimmed-string))
     => "[2019-01-01 Tue 13:00]"
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-start 'hour 1)
+         (om-elem-timestamp-shift-time-start 1 'hour)
          (om-elem-to-trimmed-string))
     => "[2019-01-01 Tue 13:00]"
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-start 'day 1)
+         (om-elem-timestamp-shift-time-start 1 'day)
          (om-elem-to-trimmed-string))
     => "[2019-01-02 Wed 12:00]"
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-start 'day 31)
+         (om-elem-timestamp-shift-time-start 31 'day)
          (om-elem-to-trimmed-string))
     => "[2019-02-01 Fri 12:00]"
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-start 'month 1)
+         (om-elem-timestamp-shift-time-start 1 'month)
          (om-elem-to-trimmed-string))
     => "[2019-02-01 Fri 12:00]"
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-start 'month 13)
+         (om-elem-timestamp-shift-time-start 13 'month)
          (om-elem-to-trimmed-string))
     => "[2020-02-01 Sat 12:00]"
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-start 'year 1)
+         (om-elem-timestamp-shift-time-start 1 'year)
          (om-elem-to-trimmed-string))
     => "[2020-01-01 Wed 12:00]"
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-start 'year 0)
+         (om-elem-timestamp-shift-time-start 0 'year)
          (om-elem-to-trimmed-string))
     => "[2019-01-01 Tue 12:00]"
     (:content "[2019-01-01 Tue]")
-    (:comment "Do nothing to hour and minute")
+    (:comment "Error when shifting hour/minute in short format")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-start 'minute 30)
+         (om-elem-timestamp-shift-time-start 30 'minute)
          (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue]"
+    !!> error
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-start 'hour 30)
+         (om-elem-timestamp-shift-time-start 30 'hour)
          (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue]"
+    !!> error
     (:content "[2019-01-01 Tue]--[2019-01-03 Thu]")
     (:comment "Change only the start if a range")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-start 'day 1)
+         (om-elem-timestamp-shift-time-start 1 'day)
          (om-elem-to-trimmed-string))
     => "[2019-01-02 Wed]--[2019-01-03 Thu]")
 
@@ -1376,13 +1376,13 @@ and here is even more *text4* and *text5*
     (:content "[2019-01-01 Tue]")
     (:comment "Do nothing if not a range.")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-end 'day 1)
+         (om-elem-timestamp-shift-time-end 1 'day)
          (om-elem-to-trimmed-string))
     => "[2019-01-01 Tue]"
     (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
     (:comment "Move only the second time if a range.")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time-end 'day 1)
+         (om-elem-timestamp-shift-time-end 1 'day)
          (om-elem-to-trimmed-string))
     => "[2019-01-01 Tue]--[2019-01-03 Thu]")
 
@@ -1391,13 +1391,13 @@ and here is even more *text4* and *text5*
     (:content "[2019-01-01 Tue 12:00]")
     (:comment "Not a range, only change the start time.")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time 'year 1)
+         (om-elem-timestamp-shift-time 1 'year)
          (om-elem-to-trimmed-string))
     => "[2020-01-01 Wed 12:00]"
     (:content "[2019-01-01 Tue]--[2019-01-03 Thu]")
     (:comment "Change both start and end if a range")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-time 'day 1)
+         (om-elem-timestamp-shift-time 1 'day)
          (om-elem-to-trimmed-string))
     => "[2019-01-02 Wed]--[2019-01-04 Fri]"))
 
