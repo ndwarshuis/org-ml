@@ -608,10 +608,18 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--insert-at (n x list)
   "Like `-insert-at' but honors negative indices N.
 Negative indices count from the end of the list, with -1 inserting
-X after the last element in LIST."
-    (if (<= 0 n) (-insert-at n x list)
-      (let ((N (length list)))
-        (-insert-at (+ 1 N n) x list))))
+X after the last element in LIST. Will give an error if N refers to
+a non-existent index."
+  (let* ((N (length list))
+         (upper N)
+         (lower (- (- N) 1)))
+    (cond
+     ((and (<= 0 n) (>= upper n))
+      (-insert-at n x list))
+     ((and (>= -1 n) (<= lower n))
+      (-insert-at (+ 1 N n) x list))
+     (t (error "Index (%s) out of range; must be between %s and %s"
+               n lower upper)))))
 
 (defun om-elem--set-property-list (prop strings elem)
   (om-elem--verify strings (lambda (ss) (-all? #'stringp ss)))
