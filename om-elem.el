@@ -3451,10 +3451,6 @@ both timestamp halves."
         (t (error "This should not happen.")))
     item))
 
-;; statistics cookie
-
-;; TODO add stats cookie type toggle
-
 ;; timestamp
 
 (defun om-elem-timestamp-toggle-active (timestamp)
