@@ -605,13 +605,21 @@ and object containers and includes the 'plain-text' type.")
   (let ((s (-some->> (-map #'symbol-name plist) (s-join " "))))
       (om-elem--set-property props s elem)))
 
+(defun om-elem--insert-at (n x list)
+  "Like `-insert-at' but honors negative indices N.
+Negative indices count from the end of the list, with -1 inserting
+X after the last element in LIST."
+    (if (<= 0 n) (-insert-at n x list)
+      (let ((N (length list)))
+        (-insert-at (+ 1 N n) x list))))
+
 (defun om-elem--set-property-list (prop strings elem)
   (om-elem--verify strings (lambda (ss) (-all? #'stringp ss)))
   (om-elem--set-property prop strings elem))
 
 (defun om-elem--insert-property-list (prop index string elem)
   (om-elem--verify index integerp string stringp)
-  (om-elem--map-property* prop (-insert-at index string it) elem))
+  (om-elem--map-property* prop (om-elem--insert-at index string it) elem))
 
 (defun om-elem--remove-property-list (prop index string elem)
   (om-elem--verify string stringp)
@@ -1516,7 +1524,7 @@ Optionally supply DOCSTRING to override the generic docstring."
         (row new-cell)
         (if (om-elem-property-is-eq-p :type 'rule row) row
           (om-elem--map-contents
-           (lambda (cells) (-insert-at index new-cell cells))
+           (lambda (cells) (om-elem--insert-at index new-cell cells))
            row)))
        (map-rows
         (rows)
@@ -1532,7 +1540,7 @@ Optionally supply DOCSTRING to override the generic docstring."
   (let ((row (if (om-elem-property-is-eq-p :type 'rule row) row
                (let ((width (om-elem--table-get-width table)))
                  (om-elem--table-pad-or-truncate width row)))))
-    (om-elem--map-contents* (-insert-at index row it) table)))
+    (om-elem--map-contents* (om-elem--insert-at index row it) table)))
 
 ;;; builders
 
@@ -2497,7 +2505,7 @@ QUERIES follows the same rules as `om-elem-find'."
 
 ;; insert-within
 
-(defun om-elem--insert-at (elem elem* index)
+(defun om-elem--insert-in (elem elem* index)
   "Insert ELEM* into the contents of ELEM at INDEX."
   (let* ((contents (om-elem-contents elem))
          (i (om-elem--normalize-insert-index index contents)))
@@ -2519,7 +2527,7 @@ front."
   "Insert ELEM* at INDEX within TARGETS in the contents of ELEM."
   (om-elem--modify-contents
    elem (if (not (member elem targets)) it
-          (om-elem--insert-at it elem* index))))
+          (om-elem--insert-in it elem* index))))
 
 (defun om-elem-insert-within (queries index elem* elem)
   "Insert new element ELEM* into the contents of ELEM at INDEX.
@@ -2532,7 +2540,7 @@ QUERIES follows the same rules as `om-elem-find'."
       (-if-let (targets (om-elem-find queries elem))
           (om-elem--insert-within-targets elem elem* index targets)
         elem)
-    (om-elem--insert-at elem elem* index)))
+    (om-elem--insert-in elem elem* index)))
 
 ;; splice
 
