@@ -3424,7 +3424,7 @@ both timestamp halves."
 (defun om-elem-headline-toggle-commented (headline)
   "Toggle the commented/uncommented state of HEADLINE element."
   (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--toggle-property :commentedp elem))
+  (om-elem--toggle-property :commentedp headline))
 
 (defun om-elem-headline-toggle-footnote-section (headline)
   "Toggle the footnote-section state of HEADLINE element."
