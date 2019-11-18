@@ -903,6 +903,9 @@ without element verification."
   (om-elem--verify n integerp)
   (om-elem--map-property* prop (+ n it) elem))
 
+(defun om-elem--toggle-property (prop elem)
+  (om-elem--map-property prop #'not elem))
+
 ;; contents
 
 (defun om-elem--map-contents (fun elem)
@@ -3411,17 +3414,22 @@ both timestamp halves."
 
 (defun om-elem-toggle-property (prop elem)
   "Toggle the state of PROP in ELEM."
-  (om-elem-map-property prop #'not elem))
+  (om-elem--verify elem om-elem-is-element-or-object-p)
+  (unless (plist-member (om-elem-properties elem) prop)
+    (error "Property %s does not exist in %s" prop elem))
+  (om-elem--toggle-property prop elem))
 
 ;; headline
 
 (defun om-elem-headline-toggle-commented (headline)
   "Toggle the commented/uncommented state of HEADLINE element."
   (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem-toggle-property :commentedp headline))
+  (om-elem--toggle-property :commentedp elem))
 
-;; (defun om-elem-headline-toggle-quoted (elem)
-;;   (om-elem-toggle-property :quotedp elem))
+(defun om-elem-headline-toggle-footnote-section (headline)
+  "Toggle the footnote-section state of HEADLINE element."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--toggle-property :footnote-section-p elem))
 
 ;; TODO need a tag setter for this
 ;; (defun om-elem-headline-toggle-archived (headline)
