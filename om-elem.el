@@ -3352,40 +3352,6 @@ SHIFT is a positive or negative integer."
 
 ;; timestamp
 
-;; TODO add week to this?
-;; TODO this is a mess, refactor it :(
-(defmacro om-elem--timestamp-shift-time (unit-alist unit value
-                                                    timestamp)
-  ;; TODO this will fail if any other functions after it
-  ;; rely on the times being correct. If we give "month" as "15"
-  ;; it will be interpreted correctly but the ts will be wrong
-  `(let ((prop (cl-case ,unit
-                 ,@unit-alist
-                 (t (error "Invalid unit: %s" ,unit))))
-         ;; TODO make mapper only work on non-nil values?
-         (fun (lambda (it) (and it (+ ,value it)))))
-     (om-elem-map-property prop fun ,timestamp)))
-
-;; (defun om-elem--timestamp-shift-time-start (unit value timestamp)
-;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
-;;   (om-elem--timestamp-shift-time
-;;    ((minute :minute-start)
-;;     (hour :hour-start)
-;;     (day :day-start)
-;;     (month :month-start)
-;;     (year :year-start))
-;;    unit value timestamp))
-
-;; (defun om-elem--timestamp-shift-time-end (unit value timestamp)
-;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
-;;   (om-elem--timestamp-shift-time
-;;    ((minute :minute-end)
-;;     (hour :hour-end)
-;;     (day :day-end)
-;;     (month :month-end)
-;;     (year :year-end))
-;;    unit value timestamp))
-
 (defun om-elem-timestamp-shift-time-start (n unit timestamp)
   "Shift the UNIT of TIMESTAMP element start time by VALUE.
 VALUE is a positive or negative integer and UNIT is one of 'minute',
