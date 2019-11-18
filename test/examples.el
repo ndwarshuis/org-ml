@@ -717,39 +717,39 @@ and here is even more *text4* and *text5*
          (car))
     => nil)
 
-  (defexamples-content om-elem-timestamp-get-start
+  (defexamples-content om-elem-timestamp-get-start-timestamp
     nil
     (:content "[2019-01-01 Tue]")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-get-start)
+         (om-elem-timestamp-get-start-timestamp)
          (om-elem-to-trimmed-string))
     => "[2019-01-01 Tue]"
     (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-get-start)
+         (om-elem-timestamp-get-start-timestamp)
          (om-elem-to-trimmed-string))
     => "[2019-01-01 Tue]"
     (:content "[2019-01-01 Tue 00:00-12:00]")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-get-start)
+         (om-elem-timestamp-get-start-timestamp)
          (om-elem-to-trimmed-string))
     => "[2019-01-01 Tue 00:00]")
 
-  (defexamples-content om-elem-timestamp-get-end
+  (defexamples-content om-elem-timestamp-get-end-timestamp
     nil
     (:content "[2019-01-01 Tue]")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-get-end)
+         (om-elem-timestamp-get-end-timestamp)
          (om-elem-to-trimmed-string))
     => ""
     (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-get-end)
+         (om-elem-timestamp-get-end-timestamp)
          (om-elem-to-trimmed-string))
     => "[2019-01-02 Wed]"
     (:content "[2019-01-01 Tue 00:00-12:00]")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-get-end)
+         (om-elem-timestamp-get-end-timestamp)
          (om-elem-to-trimmed-string))
     => "[2019-01-01 Tue 12:00]")
 

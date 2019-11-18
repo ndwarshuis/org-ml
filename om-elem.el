@@ -853,93 +853,6 @@ without element verification."
         (t (error "Unparsable statistics cookie value: %s"
                   (om-elem-property :value)))))
 
-;; timestamp
-
-(defun om-elem--timestamp-is-ranged (timestamp)
-  (-let (((&plist :year-start y :year-end Y
-                  :month-start m :month-end M
-                  :day-start d :day-end D
-                  :hour-start h :hour-end H
-                  :minute-start n :minute-end N)
-          (om-elem-properties timestamp)))
-    (not (and (eq y Y) (eq m M) (eq d D) (eq h H) (eq n N)))))
-
-(defun om-elem--timestamp-set-type (type timestamp)
-  (let* ((range? (om-elem--timestamp-is-ranged timestamp))
-         (type* (cl-case type
-                  (active (if range? 'active-range 'active))
-                  (inactive (if range? 'inactive-range 'inactive))
-                  (t (error "Invalid timestamp type: %s" type)))))
-    (om-elem--set-property :type type* timestamp)))
-
-(defun om-elem--timestamp-format-time (time suffix)
-  (let ((props (->> '(year month day hour minute)
-                    (--map (intern (format ":%s-%s" it suffix))))))
-    (if (not time) (om-elem--init-properties props)
-      (->>
-       (pcase time
-         (`(,(pred integerp)
-            ,(pred integerp)
-            ,(pred integerp))
-          (append time '(nil nil)))
-         ((or `(,(pred integerp)
-                ,(pred integerp)
-                ,(pred integerp)
-                ,(pred integerp)
-                ,(pred integerp))
-              `(,(pred integerp)
-                ,(pred integerp)
-                ,(pred integerp)
-                ,(pred null)
-                ,(pred null)))
-          time)
-         (_ (error "Invalid time given: %s" time)))
-       (-interleave props)))))
-
-(defun om-elem--timestamp-set-time (time timestamp)
-  "Set the start TIME of TIMESTAMP."
-  (-> (om-elem--timestamp-format-time time 'start)
-      (om-elem--set-properties timestamp)))
-
-(defun om-elem--timestamp-set-time-end (time timestamp)
-  "Set the end TIME of TIMESTAMP."
-  (if time
-      (-> (om-elem--timestamp-format-time time 'end)
-          (om-elem-set-properties timestamp))
-    (-let* (((&plist :year-start y :month-start m :day-start d
-                     :hour-start H :minute-start M)
-             (om-elem-properties timestamp)))
-      (-> `(,y ,m ,d ,H ,M)
-          (om-elem--timestamp-format-time 'end)
-          (om-elem-set-properties timestamp)))))
-
-(defun om-elem--timestamp-format-decorator (dec dtype valid-types)
-  (let ((props (->> '(type value unit)
-                    (--map (intern (format ":%s-%s" dtype it))))))
-    (if (not dec) (om-elem--init-properties props)
-      (-let (((type value unit) dec))
-        (unless (memq type '(all first))
-          (error "Invalid %s type: %s" dtype type))
-        (unless (integerp value)
-          (error "Invalid %s value: %s" dtype value))
-        (unless (memq unit '(year month week day hour))
-          (error "Invalid %s unit: %s" dtype value))
-        (-interleave props (list type value unit))))))
-
-(defun om-elem--timestamp-set-warning (warning timestamp)
-  (let ((types '(all first)))
-    (-> (om-elem--timestamp-format-decorator warning 'warning types)
-        (om-elem-set-properties timestamp))))
-
-(defun om-elem--timestamp-set-repeater (repeater timestamp)
-  (let ((types '(catch-up restart cumulative)))
-    (-> (om-elem--timestamp-format-decorator repeater 'repeater types)
-        (om-elem-set-properties timestamp))))
-
-(defun om-elem--timestamp-set-diary-sexp (string timestamp)
-  (om-elem--verify string stringp)
-  (om-elem--set-property :raw-value (format "<%%%%%s>" string)))
-
 (defun om-elem--pad-time-maybe (time)
   (pcase time
     (`(,(pred integerp)
@@ -959,68 +872,6 @@ without element verification."
      time)
     (_ (error "Invalid time: %S" time))))
 
-(defun om-elem--time-is-long-p (time)
-  (pcase time
-    (`(,(pred integerp) ,(pred integerp) ,(pred integerp)
-       ,(pred integerp) ,(pred integerp))
-     t)))
-
-(defun om-elem--time-shift (n unit time)
-  (cl-flet*
-      ((get-shifts-short
-        (n unit)
-        (cl-case unit
-          (day `(0 0 ,n 0 0))
-          (week `(0 0 ,(* 7 n) 0 0))
-          (month `(0 ,n 0 0 0))
-          (year `(,n 0 0 0 0))
-          ((minute hour)
-           (error "Invalid unit for short timestamps: %S" unit))
-          (t (error "Invalid time unit: %S" unit))))
-       (get-shifts-long
-        (n unit)
-        (cl-case unit
-          (minute `(0 0 0 0 ,n))
-          (hour `(0 0 0 ,n 0))
-          (t (get-shifts-short n unit))))
-       (apply-shifts
-        (shifts time)
-        (->> (-zip-with #'+ time shifts)
-             (nreverse)
-             (apply #'encode-time 0)
-             (decode-time))))
-    (if (om-elem--time-is-long-p time)
-        (let ((shifts (get-shifts-long n unit)))
-          (nreverse (-slice (apply-shifts shifts time) 1 6)))
-      (let ((shifts (get-shifts-short n unit))
-            (time* (-replace nil 0 time)))
-        (->> (-slice (apply-shifts shifts time*) 3 6)
-             (append '(nil nil))
-             (nreverse))))))
-
-(defun om-elem--timestamp-get-time-start (timestamp)
-  (-let (((&plist :minute-start n :hour-start h :day-start d
-                  :month-start m :year-start y)
-          (om-elem-properties timestamp)))
-    `(,y ,m ,d ,h ,n)))
-
-(defun om-elem--timestamp-get-time-end (timestamp)
-  (-let (((&plist :minute-end n :hour-end h :day-end d
-                  :month-end m :year-end y)
-          (om-elem-properties timestamp)))
-    `(,y ,m ,d ,h ,n)))
-
-(defun om-elem--timestamp-shift-time-start (n unit timestamp)
-  ;; TODO what if the start time is greater than the end time?
-  (let ((time* (->> (om-elem--timestamp-get-time-start timestamp)
-                    (om-elem--time-shift n unit))))
-    (om-elem--timestamp-set-time time* timestamp)))
-
-(defun om-elem--timestamp-shift-time-end (n unit timestamp)
-  ;; TODO what if the end time is less than the start time?
-  (let ((time-end (om-elem--timestamp-get-time-end timestamp)))
-    (-> (om-elem--time-shift n unit time-end)
-        (om-elem--timestamp-set-time-end timestamp))))
 
 ;;; internal mappers
 ;; TODO, use setters here to ensure functions return the right type?
@@ -1134,6 +985,188 @@ Optionally supply DOCSTRING to override the generic docstring."
            (lambda (index item) (if (cl-evenp index) item `(lambda (it) ,item)))
            ,plist)))
      (om-elem--map-properties new-plist ,elem)))
+
+;;; internal timestamp functions
+
+;; time
+
+(defun om-elem--time-is-long-p (time)
+  (pcase time
+    (`(,(pred integerp) ,(pred integerp) ,(pred integerp)
+       ,(pred integerp) ,(pred integerp))
+     t)))
+
+(defun om-elem--time-to-unixtime (time)
+  (let ((encoded
+         (if (om-elem--time-is-long-p time)
+             (apply #'encode-time 0 (nreverse time))
+           (apply #'encode-time 0 0 0 (nreverse (-take 3 time))))))
+    (round (float-time encoded))))
+
+(defun om-elem--unixtime-to-time-long (time)
+  (nreverse (-slice (decode-time time) 1 6)))
+
+(defun om-elem--unixtime-to-time-short (time)
+  (-take 3 (om-elem--unixtime-to-time-long time)))
+
+(defun om-elem--time-shift (n unit time)
+  (cl-flet*
+      ((get-shifts-short
+        (n unit)
+        (cl-case unit
+          (day `(0 0 ,n 0 0))
+          (week `(0 0 ,(* 7 n) 0 0))
+          (month `(0 ,n 0 0 0))
+          (year `(,n 0 0 0 0))
+          ((minute hour)
+           (error "Invalid unit for short timestamps: %S" unit))
+          (t (error "Invalid time unit: %S" unit))))
+       (get-shifts-long
+        (n unit)
+        (cl-case unit
+          (minute `(0 0 0 0 ,n))
+          (hour `(0 0 0 ,n 0))
+          (t (get-shifts-short n unit))))
+       (apply-shifts
+        (shifts time)
+        (->> (-zip-with #'+ time shifts)
+             (nreverse)
+             (apply #'encode-time 0)
+             (decode-time))))
+    (if (om-elem--time-is-long-p time)
+        (let ((shifts (get-shifts-long n unit)))
+          (nreverse (-slice (apply-shifts shifts time) 1 6)))
+      (let ((shifts (get-shifts-short n unit))
+            (time* (-replace nil 0 time)))
+        (->> (-slice (apply-shifts shifts time*) 3 6)
+             (append '(nil nil))
+             (nreverse))))))
+
+;; getters
+
+(defun om-elem--timestamp-get-start-timestamp (timestamp)
+  ;; TODO this is inefficient
+  (let ((type (om-elem-property :type timestamp)))
+    (if (not (memq type '(inactive-range active-range))) timestamp
+      (org-timestamp-split-range timestamp))))
+
+(defun om-elem--timestamp-get-end-timestamp (timestamp)
+  ;; TODO this is inefficient
+  (let ((type (om-elem-property :type timestamp)))
+    (if (not (memq type '(inactive-range active-range))) nil
+      (org-timestamp-split-range timestamp t))))
+
+(defun om-elem--timestamp-get-start-time (timestamp)
+  (-let (((&plist :minute-start n :hour-start h :day-start d
+                  :month-start m :year-start y)
+          (om-elem-properties timestamp)))
+    `(,y ,m ,d ,h ,n)))
+
+(defun om-elem--timestamp-get-end-time (timestamp)
+  (-let (((&plist :minute-end n :hour-end h :day-end d
+                  :month-end m :year-end y)
+          (om-elem-properties timestamp)))
+    `(,y ,m ,d ,h ,n)))
+
+(defun om-elem--timestamp-get-start-unixtime (timestamp)
+  (->> (om-elem--timestamp-get-start-time timestamp)
+       (om-elem--time-to-unixtime)))
+
+(defun om-elem--timestamp-get-end-unixtime (timestamp)
+  (->> (om-elem--timestamp-get-end-time timestamp)
+       (om-elem--time-to-unixtime)))
+
+(defun om-elem--timestamp-is-ranged (timestamp)
+  (/= (om-elem--timestamp-get-start-unixtime timestamp)
+      (om-elem--timestamp-get-end-unixtime timestamp)))
+
+;; setters
+
+(defun om-elem--timestamp-set-type (type timestamp)
+  (let* ((range? (om-elem--timestamp-is-ranged timestamp))
+         (type* (cl-case type
+                  (active (if range? 'active-range 'active))
+                  (inactive (if range? 'inactive-range 'inactive))
+                  (t (error "Invalid timestamp type: %s" type)))))
+    (om-elem--set-property :type type* timestamp)))
+
+(defun om-elem--time-format-props (time suffix)
+  (let* ((props (->> '(year month day hour minute)
+                     (--map (intern (format ":%s-%s" it suffix)))))
+         (time* (pcase time
+                  (`(,(pred integerp)
+                     ,(pred integerp)
+                     ,(pred integerp))
+                   (append time '(nil nil)))
+                  ((or `(,(pred integerp)
+                         ,(pred integerp)
+                         ,(pred integerp)
+                         ,(pred integerp)
+                         ,(pred integerp))
+                       `(,(pred integerp)
+                         ,(pred integerp)
+                         ,(pred integerp)
+                         ,(pred null)
+                         ,(pred null)))
+                   time)
+                  (`nil (-repeat 5 nil))
+                  (_ (error "Invalid time given: %s" time)))))
+    (-interleave props time*)))
+
+(defun om-elem--timestamp-set-time (time timestamp)
+  "Set the start TIME of TIMESTAMP."
+  (-> (om-elem--time-format-props time 'start)
+      (om-elem--set-properties timestamp)))
+
+(defun om-elem--timestamp-set-time-end (time timestamp)
+  "Set the end TIME of TIMESTAMP."
+  (if time
+      (-> (om-elem--time-format-props time 'end)
+          (om-elem-set-properties timestamp))
+    (-> (om-elem--timestamp-get-start-time timestamp)
+        (om-elem--time-format-props 'end)
+        (om-elem-set-properties timestamp))))
+
+(defun om-elem--decorator-format (dec dtype valid-types)
+  (let ((props (->> '(type value unit)
+                    (--map (intern (format ":%s-%s" dtype it))))))
+    (if (not dec) (om-elem--init-properties props)
+      (-let (((type value unit) dec))
+        (unless (memq type '(all first))
+          (error "Invalid %s type: %s" dtype type))
+        (unless (integerp value)
+          (error "Invalid %s value: %s" dtype value))
+        (unless (memq unit '(year month week day hour))
+          (error "Invalid %s unit: %s" dtype value))
+        (-interleave props (list type value unit))))))
+
+(defun om-elem--timestamp-set-warning (warning timestamp)
+  (let ((types '(all first)))
+    (-> (om-elem--decorator-format warning 'warning types)
+        (om-elem-set-properties timestamp))))
+
+(defun om-elem--timestamp-set-repeater (repeater timestamp)
+  (let ((types '(catch-up restart cumulative)))
+    (-> (om-elem--decorator-format repeater 'repeater types)
+        (om-elem-set-properties timestamp))))
+
+(defun om-elem--timestamp-set-diary-sexp (string timestamp)
+  (om-elem--verify string stringp)
+  (om-elem--set-property :raw-value (format "<%%%%%s>" string)))
+
+;; shifters
+
+(defun om-elem--timestamp-shift-time-start (n unit timestamp)
+  ;; TODO what if the start time is greater than the end time?
+  (let ((time* (->> (om-elem--timestamp-get-start-time timestamp)
+                    (om-elem--time-shift n unit))))
+    (om-elem--timestamp-set-time time* timestamp)))
+
+(defun om-elem--timestamp-shift-time-end (n unit timestamp)
+  ;; TODO what if the end time is less than the start time?
+  (let ((time-end (om-elem--timestamp-get-end-time timestamp)))
+    (-> (om-elem--time-shift n unit time-end)
+        (om-elem--timestamp-set-time-end timestamp))))
 
 ;;; internal content getters
 
@@ -2732,39 +2765,28 @@ zero-indexed."
 
 ;; timestamp
 
-(defun om-elem-timestamp-get-start (timestamp)
+(defun om-elem-timestamp-get-start-timestamp (timestamp)
   "Return the start of TIMESTAMP element."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (let ((type (om-elem-property :type timestamp)))
-    (if (memq type '(inactive-range active-range))
-        (org-timestamp-split-range timestamp)
-      timestamp)))
+  (om-elem--timestamp-get-start-timestamp timestamp))
 
-(defun om-elem-timestamp-get-end (timestamp)
+(defun om-elem-timestamp-get-end-timestamp (timestamp)
   "Return the end of TIMESTAMP element or nil if not present."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (let ((type (om-elem-property :type timestamp)))
-    (if (memq type '(inactive-range active-range))
-        (org-timestamp-split-range timestamp t))))
+  (if (not (om-elem--timestamp-is-ranged timestamp)) nil
+    (om-elem--timestamp-get-end-timestamp timestamp)))
 
-(defun om-elem-timestamp-get-unixtime (timestamp)
+(defun om-elem-timestamp-get-start-unixtime (timestamp)
   "Return the unixtime value of TIMESTAMP element as an integer.
 Note this only considers the start of the timestamp if it is range."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (let ((minute (or (om-elem-property :minute-start elem) 0))
-        (hour (or (om-elem-property :hour-start elem) 0))
-        (day (om-elem-property :day-start elem))
-        (month (om-elem-property :month-start elem))
-        (year (om-elem-property :year-start elem)))
-    (-> (encode-time 0 minute hour day month year)
-        (float-time)
-        (round))))
+  (om-elem--timestamp-get-start-unixtime timestamp))
 
 (defun om-elem-timestamp-get-end-unixtime (timestamp)
   "Return the unixtime value of TIMESTAMP's end as an integer."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (-some->> (om-elem-timestamp-get-end timestamp)
-            (om-elem-timestamp-get-unixtime)))
+  (if (not (om-elem--timestamp-is-ranged timestamp)) nil
+    (om-elem--timestamp-get-end-unixtime)))
 
 ;;; element predicates
 
