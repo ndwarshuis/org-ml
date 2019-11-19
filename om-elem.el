@@ -1026,6 +1026,15 @@ SHIFT is a positive or negative integer."
                  (+ priority it))))))
     (om-elem--map-property :priority #'fun headline)))
 
+;; item
+
+(defun om-elem--item-toggle-checkbox (item)
+  (cl-case (om-elem-property :checkbox item)
+    ((or trans nil) item)
+    ('on (om-elem--set-property :checkbox 'off item))
+    ('off (om-elem--set-property :checkbox 'on item))
+    (t (error "This should not happen"))))
+
 ;; node properties
 
 (defun om-elem--node-property-map-value (fun node-property)
@@ -3495,13 +3504,7 @@ both timestamp halves."
 (defun om-elem-item-toggle-checkbox (item)
   "Toggle the checked/unchecked state of ITEM element."
   (om-elem--verify item om-elem-is-item-p)
-  (-if-let (cur-state (om-elem-property :checkbox item))
-      (cl-case cur-state
-        ('trans item)
-        ('on (om-elem-set-property :checkbox 'off item))
-        ('off (om-elem-set-property :checkbox 'on item))
-        (t (error "This should not happen.")))
-    item))
+  (om-elem--item-toggle-checkbox item))
 
 ;; timestamp
 
