@@ -605,6 +605,16 @@ and object containers and includes the 'plain-text' type.")
   (let ((s (-some->> (-map #'symbol-name plist) (s-join " "))))
       (om-elem--set-property props s elem)))
 
+(defun om-elem--convert-index (n list)
+  (let* ((N (length list))
+         (upper N)
+         (lower (- (- N) 1)))
+    (cond
+     ((and (<= 0 n) (>= upper n)) n)
+     ((and (>= -1 n) (<= lower n)) (+ 1 N n))
+     (t (error "Index (%s) out of range; must be between %s and %s"
+               n lower upper)))))
+
 (defun om-elem--insert-at (n x list)
   "Like `-insert-at' but honors negative indices N.
 Negative indices count from the end of the list, with -1 inserting
@@ -618,6 +628,22 @@ a non-existent index."
       (-insert-at n x list))
      ((and (>= -1 n) (<= lower n))
       (-insert-at (+ 1 N n) x list))
+     (t (error "Index (%s) out of range; must be between %s and %s"
+               n lower upper)))))
+
+(defun om-elem--remove-at (n list)
+  "Like `-remove-at' but honors negative indices N.
+Negative indices count from the end of the list, with -1 inserting
+X after the last element in LIST. Will give an error if N refers to
+a non-existent index."
+  (let* ((N (length list))
+         (upper (1- N))
+         (lower (- N)))
+    (cond
+     ((and (<= 0 n) (>= upper n))
+      (-remove-at n list))
+     ((and (>= -1 n) (<= lower n))
+      (-remove-at (+ N n) list))
      (t (error "Index (%s) out of range; must be between %s and %s"
                n lower upper)))))
 
@@ -1521,7 +1547,7 @@ Optionally supply DOCSTRING to override the generic docstring."
   (cl-flet*
       ((delete-cell
         (cells)
-        (-remove-at index cells))
+        (om-elem--remove-at index cells))
        (map-row 
         (row)
         (if (om-elem-property-is-eq-p :type 'rule row) row
@@ -1530,7 +1556,7 @@ Optionally supply DOCSTRING to override the generic docstring."
 
 (defun om-elem--table-delete-row (index table)
   (om-elem--verify index integerp)
-  (om-elem--map-contents* (-remove-at index it) table))
+  (om-elem--map-contents* (om-elem--remove-at index it) table))
 
 (defun om-elem--table-insert-column (index column table)
   (om-elem--verify index integerp)
