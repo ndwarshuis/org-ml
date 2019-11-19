@@ -1010,6 +1010,22 @@ without element verification."
           (--map (om-elem--headline-subtree-shift-level n it)
                  headlines)))))
 
+(defun om-elem--headline-shift-priority (shift headline)
+  "Shift the priority property of HEADLINE element by SHIFT.
+SHIFT is a positive or negative integer."
+  ;; positive goes up (B -> A) and vice versa
+  (cl-flet
+      ((fun
+        (priority)
+        (when priority
+          (let ((diff (1+ (- org-lowest-priority org-highest-priority)))
+                (offset (- priority org-highest-priority)))
+            (--> (- offset shift)
+                 (mod it diff)
+                 (- it offset)
+                 (+ priority it))))))
+    (om-elem--map-property :priority #'fun headline)))
+
 ;; node properties
 
 (defun om-elem--node-property-map-value (fun node-property)
@@ -3173,21 +3189,6 @@ property list in ELEM."
         (total (length subtodo)))
     (om-elem--headline-set-statistics-cookie-fraction done total headline))))
 
-(defun om-elem--to-relative-priority (p)
-  "Convert P from character value to counting integer starting at 0."
-  ;; ironically the highest priority is actually the lowest integer
-  (when p
-    (if (and (<= p org-lowest-priority) (>= p org-highest-priority))
-        (- p org-highest-priority)
-      (error "Absolute priority out of range: %s" p))))
-
-(defun om-elem--to-absolute-priority (p)
-  (when p
-    (if (and (>= p 0)
-             (<= p (abs (- org-highest-priority org-lowest-priority))))
-        (+ org-highest-priority p)
-      (error "Relative priority out of range: %s" priority))))
-
 (defun om-elem-headline-set-priority (priority headline)
   "Set the priority of HEADLINE element to PRIORITY."
   (om-elem--verify headline om-elem-is-headline-p)
@@ -3413,24 +3414,10 @@ This assumes one wants HH:MM precision."
 
 ;; headline
 
+
 (defun om-elem-headline-shift-priority (shift headline)
-  "Shift the priority property of HEADLINE element by SHIFT.
-SHIFT is a positive or negative integer."
-  ;; positive goes up (B -> A) and vice versa
   (om-elem--verify headline om-elem-is-headline-p)
-  (cl-flet
-      ((fun
-        (priority)
-        (if (not shift) priority
-          (let ((diff (+ 1 (abs (- org-lowest-priority
-                                   org-highest-priority))))
-                (relp (om-elem--to-relative-priority priority)))
-            (--> (- relp shift)
-                 (mod it diff)
-                 (- it relp)
-                 (+ priority it))))))
-    (if (not (om-elem-property :priority headline)) headline
-      (om-elem-map-property :priority #'fun headline))))
+  (om-elem--headline-shift-priority shift headline))
 
 ;; timestamp
 
