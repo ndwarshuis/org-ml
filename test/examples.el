@@ -698,22 +698,22 @@ and here is even more *text4* and *text5*
               "| a | b | c |")
     (->> (om-elem-parse-this-element)
          (om-elem-table-get-cell 0 0)
-         (om-elem-contents)
+         (om-elem--get-contents)
          (car))
     => "1"
     (->> (om-elem-parse-this-element)
          (om-elem-table-get-cell 1 0)
-         (om-elem-contents)
+         (om-elem--get-contents)
          (car))
     => "a"
     (->> (om-elem-parse-this-element)
          (om-elem-table-get-cell 0 2)
-         (om-elem-contents)
+         (om-elem--get-contents)
          (car))
     => "3"
     (->> (om-elem-parse-this-element)
          (om-elem-table-get-cell 0 3)
-         (om-elem-contents)
+         (om-elem--get-contents)
          (car))
     => nil)
 
@@ -761,64 +761,64 @@ and here is even more *text4* and *text5*
 (def-example-group "Element predicate functions"
   "pred shit"
   
-  (defexamples-content om-elem-is-empty-p
-    nil
-    (:content "* dummy\nfilled with useless knowledge")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-is-empty-p))
-    => nil
-    (:content "* dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-is-empty-p))
-    => t)
+  ;; (defexamples-content om-elem-is-empty-p
+  ;;   nil
+  ;;   (:content "* dummy\nfilled with useless knowledge")
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-is-empty-p))
+  ;;   => nil
+  ;;   (:content "* dummy")
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-is-empty-p))
+  ;;   => t)
 
-  (defexamples-content om-elem-property-is-nil-p
-    nil
-    (:content "* TODO dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-property-is-nil-p :todo-keyword))
-    => nil
-    (->> (om-elem-parse-this-headline)
-         (om-elem-property-is-nil-p :commentedp))
-    => t)
+  ;; (defexamples-content om-elem-property-is-nil-p
+  ;;   nil
+  ;;   (:content "* TODO dummy")
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-property-is-nil-p :todo-keyword))
+  ;;   => nil
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-property-is-nil-p :commentedp))
+  ;;   => t)
 
-  (defexamples-content om-elem-property-is-non-nil-p
-    nil
-    (:content "* TODO dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-property-is-non-nil-p :todo-keyword))
-    => t
-    (->> (om-elem-parse-this-headline)
-         (om-elem-property-is-non-nil-p :commentedp))
-    => nil)
+  ;; (defexamples-content om-elem-property-is-non-nil-p
+  ;;   nil
+  ;;   (:content "* TODO dummy")
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-property-is-non-nil-p :todo-keyword))
+  ;;   => t
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-property-is-non-nil-p :commentedp))
+  ;;   => nil)
 
-  (defexamples-content om-elem-property-is-eq-p
-    nil
-    (:content "* [#A] dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-property-is-eq-p :priority ?A))
-    => t
-    (->> (om-elem-parse-this-headline)
-         (om-elem-property-is-eq-p :priority ?B))
-    => nil)
+  ;; (defexamples-content om-elem-property-is-eq-p
+  ;;   nil
+  ;;   (:content "* [#A] dummy")
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-property-is-eq-p :priority ?A))
+  ;;   => t
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-property-is-eq-p :priority ?B))
+  ;;   => nil)
 
-  (defexamples-content om-elem-property-is-equal-p
-    nil
-    (:content "* TODO dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-property-is-equal-p :todo-keyword "TODO"))
-    => t
-    (->> (om-elem-parse-this-headline)
-         (om-elem-property-is-equal-p :todo-keyword "DONE"))
-    => nil)
+  ;; (defexamples-content om-elem-property-is-equal-p
+  ;;   nil
+  ;;   (:content "* TODO dummy")
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-property-is-equal-p :todo-keyword "TODO"))
+  ;;   => t
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-property-is-equal-p :todo-keyword "DONE"))
+  ;;   => nil)
 
-  (defexamples-content om-elem-property-is-predicate-p
-    nil
-    (:content "* this is a dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-property-is-predicate-p*
-          :title (s-contains? "dummy" (car it))))
-    => t)
+  ;; (defexamples-content om-elem-property-is-predicate-p
+  ;;   nil
+  ;;   (:content "* this is a dummy")
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-property-is-predicate-p*
+  ;;         :title (s-contains? "dummy" (car it))))
+  ;;   => t)
 
   (defexamples-content om-elem-contains-point-p
     nil
@@ -843,28 +843,28 @@ and here is even more *text4* and *text5*
          (om-elem-contents-contains-point-p (point-max)))
     => t)
 
-  (defexamples-content om-elem-is-type-p
-    nil
-    (:content "*ziltoid*")
-    (->> (om-elem-parse-this-object)
-         (om-elem-is-type-p 'bold))
-    => t
-    (->> (om-elem-parse-this-object)
-         (om-elem-is-type-p 'italic))
-    => nil)
+  ;; (defexamples-content om-elem-is-type-p
+  ;;   nil
+  ;;   (:content "*ziltoid*")
+  ;;   (->> (om-elem-parse-this-object)
+  ;;        (om-elem-is-type-p 'bold))
+  ;;   => t
+  ;;   (->> (om-elem-parse-this-object)
+  ;;        (om-elem-is-type-p 'italic))
+  ;;   => nil)
 
-  (defexamples-content om-elem-is-any-type-p
-    nil
-    (:content "*ziltoid*")
-    (->> (om-elem-parse-this-object)
-         (om-elem-is-any-type-p '(bold)))
-    => t
-    (->> (om-elem-parse-this-object)
-         (om-elem-is-any-type-p '(bold italic)))
-    => t
-    (->> (om-elem-parse-this-object)
-         (om-elem-is-any-type-p '(italic)))
-    => nil)
+  ;; (defexamples-content om-elem-is-any-type-p
+  ;;   nil
+  ;;   (:content "*ziltoid*")
+  ;;   (->> (om-elem-parse-this-object)
+  ;;        (om-elem-is-any-type-p '(bold)))
+  ;;   => t
+  ;;   (->> (om-elem-parse-this-object)
+  ;;        (om-elem-is-any-type-p '(bold italic)))
+  ;;   => t
+  ;;   (->> (om-elem-parse-this-object)
+  ;;        (om-elem-is-any-type-p '(italic)))
+  ;;   => nil)
 
   (defexamples-content om-elem-clock-is-running-p
     nil
@@ -964,7 +964,7 @@ and here is even more *text4* and *text5*
               "- [X] three"
               "- [-] four")
     (->> (om-elem-parse-this-element)
-         (om-elem-contents)
+         (om-elem--get-contents)
          (-map #'om-elem-item-is-unchecked-p))
     => '(nil t nil nil))
 
@@ -975,7 +975,7 @@ and here is even more *text4* and *text5*
               "- [X] three"
               "- [-] four")
     (->> (om-elem-parse-this-element)
-         (om-elem-contents)
+         (om-elem--get-contents)
          (-map #'om-elem-item-is-checked-p))
     => '(nil nil t nil))
 
@@ -986,7 +986,7 @@ and here is even more *text4* and *text5*
               "- [X] three"
               "- [-] four")
     (->> (om-elem-parse-this-element)
-         (om-elem-contents)
+         (om-elem--get-contents)
          (-map #'om-elem-item-is-trans-p))
     => '(nil nil nil t))
 
@@ -1499,167 +1499,166 @@ and here is even more *text4* and *text5*
     nil
     (:content "*text*")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'bold
     (:content "~text~")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'code
     ;; TODO add entity
     ;; TODO add export snippet
     (:content "[fn:1:text]")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'footnote-reference
     (:content "call_name()")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'inline-babel-call
     (:content "src_emacs{}")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'inline-src-block
     (:content "/text/")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'italic
     (:content "\\\\")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'line-break
     ;; TODO add latex frag
     (:content "[[path][desc]]")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'link
     (:content "{{{macro}}}")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'macro
     (:content "<<<text>>>")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'radio-target
     (:content "[1/2]")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'statistics-cookie
     (:content "+text+")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'strike-through
     ;; TODO this is confusing for docs
     (:content "a_b")
     (->> (om-elem-parse-object-at 3)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'subscript
     (:content "a^b")
     (->> (om-elem-parse-object-at 3)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'superscript
     (:content "| a |")
     (->> (om-elem-parse-object-at 2)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'table-cell
     (:content "<<text>>")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'target
     (:content "[2019-01-01 Tue]")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'timestamp
     (:content "_text_")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'underline
     (:content "=text=")
     (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'verbatim
     (:content "- notme")
     (:comment "Return nil when parsing an element")
-    (->> (om-elem-parse-object-at 1)
-         (om-elem-type))
+    (om-elem-parse-object-at 1)
     => nil)
 
   (defexamples-content om-elem-parse-element-at
     nil
     (:content "#+CALL: of_ktulu()")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'babel-call
     (:content "#+BEGIN_CENTER"
               "#+END_CENTER")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'center-block
     (:content "CLOCK: [2019-01-01 Tue]")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'clock
     (:content "# oops I looked")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'comment
     (:content "#+BEGIN_COMMENT"
               "oops I looked again"
               "#+END_COMMENT")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'comment-block
     (:content "%%(diary of a madman)")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'diary-sexp
     (:content ":DRAWER:"
               "- underwear"
               "- savings account"
               ":END:")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'drawer
     (:content "#+BEGIN countdown"
               "#+END")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'dynamic-block
     (:content "#+BEGIN_EXAMPLE"
               "#+END_EXAMPLE")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'example-block
     (:content "#+BEGIN_EXPORT latex"
               "#+END_EXPORT")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'export-block
     (:content ": mini mini mini")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'fixed-width
     (:content "[fn:1]")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'footnote-definition
     (:content "* murder, young girl killed"
               "* desperate shooting at echo's hill")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'headline
     (:content "-----")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'horizontal-rule
     ;; TODO add inlinetask
     (:content "- item")
     (:comment "Explicitly ask for item instead of plain-list")
     (->> (om-elem-parse-element-at 1 'item)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'item
     (:content "#+QUOTE: unquote")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'keyword
     ;; TODO add latex env
     (:content "* headline"
@@ -1667,60 +1666,60 @@ and here is even more *text4* and *text5*
               ":key: val"
               ":END:")
     (->> (om-elem-parse-element-at 25)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'node-property
     (:content "Just for the record"
               "The weather today is slightly sarcastic with a good chance of"
               "A. Indifference and B. disinterest in what the critics say")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'paragraph
     (:content "- plain-list")
     (:comment "Give the plain-list since we didn't explicitly ask for item")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'plain-list
     (:content "* deadhead"
               "DEADLINE: [2019-01-01 Tue]")
     (->> (om-elem-parse-element-at 12)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'planning
     (:content "* headline"
               ":PROPERTIES:"
               ":END:")
     (->> (om-elem-parse-element-at 12)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'property-drawer
     (:content "#+BEGIN_QUOTE"
               "Oh glorious cheeseburger, we bow to thee"
               "The secrets of the universe are between the buns"
               "#+END_QUOTE")
     (->> (om-elem-parse-element-at 12)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'quote-block
     (:content "#+begin_dot dot.png"
               "#+end_dot")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'special-block
     (:content "#+BEGIN_SRC emacs"
               "(launch-missiles)"
               "#+END_SRC")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'src-block
     (:content "| R | A |"
               "| G | E |")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'table
     (->> (om-elem-parse-element-at 1 'table-row)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'table-row
     (:content "#+BEGIN_VERSE"
               "#+END_VERSE")
     (->> (om-elem-parse-element-at 1)
-         (om-elem-type))
+         (om-elem-get-type))
     => 'verse-block)
 
   (defexamples-content om-elem-parse-headline-at

@@ -7,7 +7,7 @@
 (require 'dash)
 
 (defun should-have-equal-properties (e1 e2)
-  (unless (eq (om-elem-type e1) (om-elem-type e2))
+  (unless (eq (om-elem--get-type e1) (om-elem--get-type e2))
     (error "Type mismatch: %s\n\n%s" e1 e2))
   (cl-flet ((plist-get-keys (plist) (-slice plist 0 nil 2)))
     (let ((p1 (plist-get-keys (nth 1 e1)))
@@ -23,8 +23,8 @@
 (defun om-elem--compare-object-props (elem string)
   (should-have-equal-properties
    elem
-   (->> (om-elem-from-string (concat " " string))
-        (om-elem-get-nested-content '(0 1)))))
+   (->> (om-elem--from-string (concat " " string))
+        (om-elem--get-nested-contents '(0 1)))))
 
 (ert-deftest om-elem--code/valid-props ()
   (om-elem--compare-object-props
@@ -104,20 +104,20 @@
 (ert-deftest om-elem--superscript/valid-props ()
   (should-have-equal-properties
    (om-elem-build-superscript)
-   (->> (om-elem-from-string "thisis^super")
-        (om-elem-get-nested-content '(0 1)))))
+   (->> (om-elem--from-string "thisis^super")
+        (om-elem--get-nested-contents '(0 1)))))
 
 (ert-deftest om-elem--subscript/valid-props ()
   (should-have-equal-properties
    (om-elem-build-subscript)
-   (->> (om-elem-from-string "thisis_subpar")
-        (om-elem-get-nested-content '(0 1)))))
+   (->> (om-elem--from-string "thisis_subpar")
+        (om-elem--get-nested-contents '(0 1)))))
 
 (ert-deftest om-elem--table-cell/valid-props ()
   (should-have-equal-properties
    (om-elem-build-table-cell "cell")
-   (->> (om-elem-from-string "| cell |")
-        (om-elem-get-nested-content '(0 0 0)))))
+   (->> (om-elem--from-string "| cell |")
+        (om-elem--get-nested-contents '(0 0 0)))))
 
 (ert-deftest om-elem--underline/valid-props ()
   (om-elem--compare-object-props
@@ -128,8 +128,8 @@
 (defun om-elem--compare-element-props (elem string)
   (should-have-equal-properties
    elem
-   (->> (om-elem-from-string string)
-        (om-elem-get-nested-content '(0)))))
+   (->> (om-elem--from-string string)
+        (om-elem--get-nested-contents '(0)))))
 
 (ert-deftest om-elem--babel-call/valid-props ()
   (om-elem--compare-element-props
@@ -182,14 +182,14 @@
 (ert-deftest om-elem--node-property/valid-props ()
   (should-have-equal-properties
    (om-elem-build-node-property "key" "value")
-   (->> (om-elem-from-string "* dummy\n:PROPERTIES:\n:key: val\n:END:")
-        (om-elem-get-nested-content '(0 0 0)))))
+   (->> (om-elem--from-string "* dummy\n:PROPERTIES:\n:key: val\n:END:")
+        (om-elem--get-nested-contents '(0 0 0)))))
 
 (ert-deftest om-elem--planning/valid-props ()
   (should-have-equal-properties
    (om-elem-build-planning :closed '(2019 1 1))
-   (->> (om-elem-from-string "* dummy\nCLOSED: [2019-01-01 Tue]")
-        (om-elem-get-nested-content '(0 0)))))
+   (->> (om-elem--from-string "* dummy\nCLOSED: [2019-01-01 Tue]")
+        (om-elem--get-nested-contents '(0 0)))))
 
 (ert-deftest om-elem--src-block/valid-props ()
   (om-elem--compare-element-props
@@ -201,20 +201,20 @@
 (ert-deftest om-elem--paragraph/valid-props ()
   (should-have-equal-properties
    (om-elem-build-paragraph)
-   (->> (om-elem-from-string "text")
-        (om-elem-get-nested-content '(0)))))
+   (->> (om-elem--from-string "text")
+        (om-elem--get-nested-contents '(0)))))
 
 (ert-deftest om-elem--table-row/valid-props ()
   (should-have-equal-properties
    (om-elem-build-table-row)
-   (->> (om-elem-from-string "| row |")
-        (om-elem-get-nested-content '(0 0)))))
+   (->> (om-elem--from-string "| row |")
+        (om-elem--get-nested-contents '(0 0)))))
 
 (ert-deftest om-elem--verse-block/valid-props ()
   (should-have-equal-properties
    (om-elem-build-verse-block)
-   (->> (om-elem-from-string "#+BEGIN_VERSE\nthing\n#+END_VERSE")
-        (om-elem-get-nested-content '(0)))))
+   (->> (om-elem--from-string "#+BEGIN_VERSE\nthing\n#+END_VERSE")
+        (om-elem--get-nested-contents '(0)))))
 
 (ert-deftest om-elem--center-block/valid-props ()
   (om-elem--compare-element-props
@@ -238,13 +238,13 @@
 (ert-deftest om-elem--headline/valid-props ()
   (should-have-equal-properties
    (om-elem-build-headline)
-   (om-elem-from-string "* head")))
+   (om-elem--from-string "* head")))
 
 (ert-deftest om-elem--item/valid-props ()
   (should-have-equal-properties
    (om-elem-build-item)
-   (->> (om-elem-from-string "- head")
-        (om-elem-get-nested-content '(0 0)))))
+   (->> (om-elem--from-string "- head")
+        (om-elem--get-nested-contents '(0 0)))))
 
 (ert-deftest om-elem--plain-list/valid-props ()
   (om-elem--compare-element-props
@@ -253,8 +253,8 @@
 (ert-deftest om-elem--property-drawer/valid-props ()
   (should-have-equal-properties
    (om-elem-build-property-drawer)
-   (->> (om-elem-from-string "* dummy\n:PROPERTIES:\n:END:")
-        (om-elem-get-nested-content '(0 0)))))
+   (->> (om-elem--from-string "* dummy\n:PROPERTIES:\n:END:")
+        (om-elem--get-nested-contents '(0 0)))))
 
 (ert-deftest om-elem--quote-block/valid-props ()
   (om-elem--compare-element-props
