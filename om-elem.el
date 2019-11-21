@@ -3458,58 +3458,6 @@ Return a list of objects."
          (-interleave keys it)
          (om-elem-set-properties it headline))))
 
-;; (defun om-elem-headline-set-planning (planning-plist headline)
-;;   (-if-let (plan-elem (-some->> (om--plist-non-nil planning-plist)
-;;                                 (apply #'om-elem-build-planning)))
-;;       (cond
-;;        ((om-elem-find-first '(section planning) headline)
-;;         (om-elem-map-first*
-;;          '(section planning)
-;;          (om-elem-set-planning planning-plist it)
-;;          headline))
-;;        ((om-elem-find-first '(section) headline)
-;;         (om-elem-insert-within '(0 section) plan-elem headline))
-;;        (t 
-;;         (--> (om-elem-build-section plan-elem)
-;;              (om-elem-insert-within-element it 0 headline))))
-;;     (om-elem-delete-first '(section planning) headline)))
-
-;; (defun om-elem-headline-set-node-property (key val headline)
-;;   (let* ((section-query '(section))
-;;          (drawer-query `(,@section-query property-drawer))
-;;          (np-query `(,@drawer-query (:and node-property (:key ,key)))))
-;;     ;; delete the property if val is nil
-;;     (if (not val)
-;;         (-> (apply #'om-elem-delete-first headline np-query)
-;;             (om-elem-clean))
-;;       (let ((np-elem (om-elem-build-node-property key val)))
-;;         (cond
-;;          ;; set node property if present
-;;          ((apply #'om-elem-find-first headline np-query)
-;;           (apply #'om-elem-map-first headline
-;;                  (-partial #'om-elem-node-property-set-value val)
-;;                  np-query))
-;;          ;; add node property if drawer present
-;;          ((apply #'om-elem-find-first headline drawer-query)
-;;           (apply #'om-elem-insert-within headline np-elem 0 drawer-query))
-;;          ;; make new drawer and node property if no drawer
-;;          ((apply #'om-elem-find-first headline section-query)
-;;           ;; TODO this will not always work, sometimes there are lists
-;;           ;; and clocks before the property drawer for the logbook
-;;           (let ((index
-;;                  (cond
-;;                   ((om-elem-find-first headline 'section 'planning) 1)
-;;                   (t 0))))
-;;             (--> (om-elem-build-property-drawer key val)
-;;                  (apply #'om-elem-insert-within headline it index
-;;                         section-query))))
-;;           ;; make new section with drawer/property if not present
-;;           (t (--> (om-elem-build-property-drawer key val)
-;;                   (om-elem-build-section it)
-;;                   (om-elem-insert-within-element headline it 0))))))))
-
-;; ;; TODO make headline indent subtree (NOT this)
-
 ;; TODO make drawer, prop-drawer, planning, and section insertion
 
 
