@@ -902,17 +902,14 @@ float-times, which assumes the :type property is valid."
 ;;     (om-elem--set-property :value ts* clock)))
 
 (defun om-elem--clock-update-duration (clock)
-  (cl-flet*
-      ((get-duration
-        (timestamp)
-        (let* ((seconds (om-elem--timestamp-get-range timestamp))
-               (h (-> seconds (/ 3600) (floor)))
-               (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
-          (format "%2d:%02d" h m))))
-    (let ((ts (om-elem--get-property :value clock)))
+  (let ((ts (om-elem--get-property :value clock)))
       (if (om-elem--timestamp-is-ranged-fast-p ts)
-          (om-elem--set-property :duration (get-duration ts) clock)
-        (om-elem--set-property :duration nil clock)))))
+          (let* ((seconds (om-elem--timestamp-get-range ts))
+                 (h (-> seconds (/ 3600) (floor)))
+                 (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
+            (om-elem--set-property :duration (format "%2d:%02d" h m)
+                                   clock))
+        (om-elem--set-property :duration nil clock))))
 
 ;; TOOD add some of the functions from timestamp
 
