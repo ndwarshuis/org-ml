@@ -2282,45 +2282,42 @@ Note this only considers the start of the timestamp if it is range."
   (or (om-elem--property-is-eq-p :type 'active-range timestamp)
       (om-elem--property-is-eq-p :type 'inactive-range timestamp)))
 
-(defun om-elem-timestamp-is-less-than-p (unixtime timestamp)
+(defun om-elem-timestamp-start-is-less-than-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is less than UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (< (om-elem-timestamp-get-unixtime timestamp) unixtime))
+  (< (om-elem--timestamp-get-start-unixtime timestamp) unixtime))
 
-(defun om-elem-timestamp-is-greater-than-p (unixtime timestamp)
+(defun om-elem-timestamp-start-is-greater-than-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is greater than UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (> (om-elem-timestamp-get-unixtime timestamp) unixtime))
+  (> (om-elem--timestamp-get-start-unixtime timestamp) unixtime))
 
-(defun om-elem-timestamp-is-equal-p (unixtime timestamp)
+(defun om-elem-timestamp-start-is-equal-to-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is equal to UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (= (om-elem-timestamp-get-unixtime timestamp) unixtime))
+  (= (om-elem--timestamp-get-start-unixtime timestamp) unixtime))
 
-(defun om-elem-timestamp-is-end-less-than-p (unixtime timestamp)
+(defun om-elem-timestamp-end-is-less-than-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is less than UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (-when-let (end (om-elem-timestamp-get-end-unixtime timestamp))
-    (< end unixtime)))
+  (< (om-elem--timestamp-get-end-unixtime timestamp) unixtime))
 
-(defun om-elem-timestamp-is-end-greater-than-p (unixtime timestamp)
+(defun om-elem-timestamp-end-is-greater-than-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is greater than UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (-when-let (end (om-elem-timestamp-get-end-unixtime timestamp))
-    (> end unixtime)))
+  (> (om-elem--timestamp-get-end-unixtime timestamp) unixtime))
 
-(defun om-elem-timestamp-is-end-equal-p (unixtime timestamp)
+(defun om-elem-timestamp-end-is-equal-to-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is equal to UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (-when-let (end (om-elem-timestamp-get-end-unixtime timestamp))
-    (= end unixtime)))
+  (= (om-elem--timestamp-get-end-unixtime timestamp) unixtime))
 
-(defun om-elem-timestamp-is-in-range-p (unixtime timestamp)
+(defun om-elem-timestamp-range-contains-p (unixtime timestamp)
   "Return t if UNIXTIME is between start and end of TIMESTAMP elem."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (let ((ut1 (om-elem-timestamp-get-unixtime timestamp))
-        (ut2 (om-elem-timestamp-get-end-unixtime timestamp)))
-    (when ut2 (< ut1 unixtime ut2))))
+  (let ((ut1 (om-elem--timestamp-get-start-unixtime timestamp))
+        (ut2 (om-elem--timestamp-get-end-unixtime timestamp)))
+    (< ut1 unixtime ut2)))
 
 (defun om-elem-timestamp-set-time (time timestamp)
   "Set start time of TIMESTAMP element to TIME.
