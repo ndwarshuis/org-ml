@@ -718,11 +718,11 @@ without element verification."
            (apply #'encode-time 0 0 0 (nreverse (-take 3 time))))))
     (round (float-time encoded))))
 
-(defun om-elem--unixtime-to-time-long (time)
-  (nreverse (-slice (decode-time time) 1 6)))
+(defun om-elem--unixtime-to-time-long (unixtime)
+  (nreverse (-slice (decode-time unixtime) 1 6)))
 
-(defun om-elem--unixtime-to-time-short (time)
-  (-take 3 (om-elem--unixtime-to-time-long time)))
+(defun om-elem--unixtime-to-time-short (unixtime)
+  (-take 3 (om-elem--unixtime-to-time-long unixtime)))
 
 (defun om-elem--time-shift (n unit time)
   (cl-flet*
@@ -834,6 +834,14 @@ without element verification."
 (defun om-elem--timestamp-is-ranged-p (timestamp)
   (< 0 (om-elem--timestamp-get-range timestamp)))
 
+(defun om-elem--timestamp-start-is-long-p (timestamp)
+  (->> (om-elem--timestamp-get-start-time timestamp)
+       (om-elem--time-is-long-p)))
+
+(defun om-elem--timestamp-end-is-long-p (timestamp)
+  (->> (om-elem--timestamp-get-end-time timestamp)
+       (om-elem--time-is-long-p)))
+
 (defun om-elem--timestamp-is-ranged-fast-p (timestamp)
   "Like `om-elem--timestamp-is-ranged-p' but faster.
 This only looks at TIMESTAMP's :type property rather than computing
@@ -846,6 +854,14 @@ float-times, which assumes the :type property is valid."
   (-> (om-elem--time-format-props time 'start)
       (om-elem--set-properties timestamp)))
 
+(defun om-elem--timestamp-set-start-unixtime-long (unixtime timestamp)
+  (-> (om-elem--unixtime-to-time-long unixtime)
+      (om-elem--timestamp-set-start-time timestamp)))
+
+(defun om-elem--timestamp-set-start-unixtime-short (unixtime timestamp)
+  (-> (om-elem--unixtime-to-time-short unixtime)
+      (om-elem--timestamp-set-start-time timestamp)))
+
 (defun om-elem--timestamp-set-end-time (time timestamp)
   "Set the end TIME of TIMESTAMP."
   (if time
@@ -854,6 +870,20 @@ float-times, which assumes the :type property is valid."
     (-> (om-elem--timestamp-get-start-time timestamp)
         (om-elem--time-format-props 'end)
         (om-elem-set-properties timestamp))))
+
+(defun om-elem--timestamp-set-end-unixtime-long (unixtime timestamp)
+  (-> (om-elem--unixtime-to-time-long unixtime)
+      (om-elem--timestamp-set-end-time timestamp)))
+
+(defun om-elem--timestamp-set-end-unixtime-short (unixtime timestamp)
+  (let ((time (and unixtime (om-elem--unixtime-to-time-short unixtime))))
+    (om-elem--timestamp-set-end-time time timestamp)))
+
+(defun om-elem--timestamp-set-range (range timestamp)
+  (let ((t2 (+ (om-elem--timestamp-get-start-unixtime timestamp) range)))
+    (if (om-elem--timestamp-end-is-long-p timestamp)
+        (om-elem--timestamp-set-end-unixtime-long t2 timestamp)
+      (om-elem--timestamp-set-end-unixtime-short t2 timestamp))))
 
 (defun om-elem--timestamp-set-type (type timestamp)
   (let* ((range? (om-elem--timestamp-is-ranged-p timestamp))
@@ -881,9 +911,13 @@ float-times, which assumes the :type property is valid."
 
 (defun om-elem--timestamp-shift-end-time (n unit timestamp)
   ;; TODO what if the end time is less than the start time?
-  (let ((time-end (om-elem--timestamp-get-end-time timestamp)))
-    (-> (om-elem--time-shift n unit time-end)
-        (om-elem--timestamp-set-end-time timestamp))))
+  (let ((time* (->> (om-elem--timestamp-get-end-time timestamp)
+                    (om-elem--time-shift n unit))))
+    (om-elem--timestamp-set-end-time time* timestamp)))
+
+(defun om-elem--timestamp-shift-range (n unit timestamp)
+  (->> (om-elem--timestamp-shift-start-time n unit timestamp)
+       (om-elem--timestamp-shift-end-time n unit)))
 
 ;; timestamp (diary sexp)
 
@@ -894,12 +928,64 @@ float-times, which assumes the :type property is valid."
 ;;; elements
 
 ;; clock
-;; TODO add some of the timestamp functions (range, unixtime, etc)
-;; TODO add get status
 
-;; (defun om-elem--clock-set-timestamp (start end clock)
-;;   (let ((ts* (om-elem-build-timestamp 'inactive start :end end)))
-;;     (om-elem--set-property :value ts* clock)))
+(defun om-elem--clock-get-duration (clock)
+  (->> (om-elem--property :value clock)
+       (om-elem--timestamp-get-range)))
+
+(defun om-elem--clock-is-running-p (clock)
+  (->> (om-elem--property :value clock)
+       (om-elem--timestamp-is-ranged-fast-p)))
+
+(defun om-elem--clock-set-duration (duration clock)
+  (om-elem--map-property* :value
+   (om-elem--timestamp-set-range duration it)
+   clock))
+
+(defun om-elem--clock-set-start-time (time clock)
+  (om-elem--map-property* :value
+   (om-elem--timestamp-set-start-time time it)
+   clock))
+
+(defun om-elem--clock-set-start-unixtime-long (time clock)
+  (om-elem--map-property* :value
+   (om-elem--timestamp-set-start-unixtime-long time it)
+   clock))
+
+(defun om-elem--clock-set-start-unixtime-short (time clock)
+  (om-elem--map-property* :value
+   (om-elem--timestamp-set-start-unixtime-short time it)
+   clock))
+
+(defun om-elem--clock-set-end-time (time clock)
+  (om-elem--map-property* :value
+   (om-elem--timestamp-set-end-time time it)
+   clock))
+
+(defun om-elem--clock-set-end-unixtime-long (time clock)
+  (om-elem--map-property* :value
+   (om-elem--timestamp-set-end-unixtime-long time it)
+   clock))
+
+(defun om-elem--clock-set-end-unixtime-short (time clock)
+  (om-elem--map-property* :value
+   (om-elem--timestamp-set-end-unixtime-short time it)
+   clock))
+
+(defun om-elem--clock-shift-timestamp-start (n unit clock)
+  (om-elem--map-property* :value
+   (om-elem--timestamp-shift-start-time n unit it)
+   clock))
+
+(defun om-elem--clock-shift-timestamp-end (n unit clock)
+  (om-elem--map-property* :value
+   (om-elem--timestamp-shift-end-time n unit it)
+   clock))
+
+(defun om-elem--clock-shift-range (n unit clock)
+  (om-elem--map-property* :value
+   (om-elem--timestamp-shift-range n unit it)
+   clock))
 
 (defun om-elem--clock-update-duration (clock)
   (let ((ts (om-elem--get-property :value clock)))
@@ -910,8 +996,6 @@ float-times, which assumes the :type property is valid."
             (om-elem--set-property :duration (format "%2d:%02d" h m)
                                    clock))
         (om-elem--set-property :duration nil clock))))
-
-;; TOOD add some of the functions from timestamp
 
 ;; diary-sexp
 ;; TODO add value getter
