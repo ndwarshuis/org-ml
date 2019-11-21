@@ -30,7 +30,7 @@
 (require 'dash)
 (require 's)
 
-;;; better cl-defun
+;;; BETTER CL-DEFUN
 ;; some functions here require a clean way to use &rest and &key
 ;; at the same time, which `cl-defun' does not do...let's roll our own
 
@@ -178,36 +178,7 @@
            (indent 2))
   (om-elem--transform-lambda args body name))
 
-;;; type predicates
-
-;; make a predicate function for all org elements and objects
-;; (--each org-element-object-restrictions
-;;   (let ((fun-name
-;;          (intern (format "om-elem-%s-allowed-object-p" (car it))))
-;;         (doc-string
-;;          (format "Return t if '%s' element is allowed to contain object O"
-;;                  (car it)))
-;;         (allowed (cdr it)))
-;;     (eval `(defun ,fun-name (o)
-;;              ,doc-string
-;;              (memq (org-element-type o) (quote (plain-text ,@allowed)))))))
-
-;; (defun om-elem-element-list-p (l)
-;;   "Return t is all in L are org elements (and not objects)."
-;;   (--all? (eq 'element (org-element-class it)) l))
-
-;; (defun om-elem-non-negative-integer-p (x)
-;;   "Return t if X is a positive integer or 0."
-;;   (and (integerp x) (<= 0 x)))
-
-;; (defun om-elem-in-list-p (list m)
-;;   "Return t if M is in LIST using EQ."
-;;   (not (null (memq m list))))
-
-;; (defun om-elem-valid-bullet-p (b)
-;;   (or (integerp b) (memq b '(- +))))
-
-;;; misc helper functions
+;;; MISC HELPER FUNCTIONS
 
 (defun om-elem--construct (type props contents)
   "Make a new org element list structure of TYPE, PROPS, and CONTENTS.
@@ -256,7 +227,12 @@ Optionally supply DOCSTRING to override the generic docstring."
          (body `(backquote (,fun ,@funargs))))
     (eval `(defmacro ,fun-name ,arglist ,doc-string ,body))))
 
-;;; list operations (extending dash)
+;;; LIST OPERATIONS (EXTENDING DASH)
+
+(defun om-elem--pad-or-truncate (length pad list)
+  (let ((blanks (- length (length list))))
+    (if (< 0 blanks) (-slice list 0 (1- length))
+      (append list (-repeat blanks pad)))))
 
 (defun om--plist-get-keys (plist)
   (-slice plist 0 nil 2))
@@ -327,7 +303,7 @@ a non-existent index."
 
 (om-elem--gen-anaphoric-form #'om-elem--map-last)
 
-;;; internal constants
+;;; INTERNAL CONSTANTS
 
 (defconst om-elem-object-restrictions
   (->> org-element-object-restrictions
@@ -412,8 +388,6 @@ and object containers and includes the 'plain-text' type.")
   (append om-elem-atomic-objects om-elem-atomic-elements)
   "List of objects and elements that are not containers.")
 
-;; getters
-
 (defalias 'om-elem--get-type 'org-element-type)
 (defalias 'om-elem--get-class 'org-element-class)
 
@@ -479,8 +453,9 @@ and object containers and includes the 'plain-text' type.")
   "Return ELEM if it is one of TYPES or nil otherwise."
   (and (om-elem--is-any-type-p types elem) elem))
 
-;;; INTERNAL PROPERTY FUNCTIONS - GENERIC
-;; getters
+;;; INTERNAL PROPERTY FUNCTIONS
+
+;;; generic
 
 (defalias 'om-elem--get-property 'org-element-property)
 
@@ -492,7 +467,14 @@ and object containers and includes the 'plain-text' type.")
   "Return the parent of ELEM."
   (om-elem--get-property :parent elem))
 
-;; setters
+;; TODO refactor this
+(defun om-elem--get-parent-headline (elem)
+  "Return the most immediate parent headline of ELEM."
+  (om-elem-find-parent elem :many 'headline))
+
+;; (defun om-elem--get-parent-item (elem)
+;;   "Return the parent item element for ELEM."
+;;   (om-elem-find-parent elem :many 'item))
 
 (defun om-elem--set-property (prop value elem)
   "Set property PROP in element ELEM to VALUE."
@@ -540,7 +522,7 @@ property list in ELEM."
          (om-elem--set-properties-pred pred (-drop 2 plist))))
    (t (error "Not a plist: %s" plist))))
 
-;; setters (property specific)
+;;; property-specific
 
 (defun om-elem--set-post-blank (post-blank elem)
   "Set the :post-blank property of ELEM to POST-BLANK."
@@ -590,8 +572,6 @@ property list in ELEM."
   (om-elem--verify string stringp)
   (om-elem--map-property* prop (-remove-item string it) elem))
 
-;; mappers
-
 (defun om-elem--map-property (prop fun elem)
   (om-elem--verify fun functionp)
   (let ((value (funcall fun (om-elem--get-property prop elem))))
@@ -622,8 +602,6 @@ property list in ELEM."
 (defun om-elem--toggle-property (prop elem)
   (om-elem--map-property prop #'not elem))
 
-;; predicates
-
 (defun om-elem--property-is-nil-p (prop elem)
   "Return t if PROP in ELEM is nil."
   (not (om-elem--get-property prop elem)))
@@ -647,17 +625,16 @@ FUN is a predicate function that takes one argument."
 
 (om-elem--gen-anaphoric-form #'om-elem--property-is-predicate-p)
 
-;;; INTERNAL PROPERTY FUNCTIONS - GENERIC
-;; ENTITY
-;; setters
+;;; objects
+;;
+;; entity
 
 (defun om-elem--entity-set-name (name elem)
   (unless (or (assoc name org-entities-user) (assoc name org-entities)) 
     (error "Invalid entity: %S" name))
   (om-elem--set-property :name name elem))
 
-;; LINK
-;; setters
+;; link
 
 (defun om-elem--link-set-path (path link)
   "Set the path of LINK element to PATH (a string)."
@@ -681,8 +658,7 @@ Setting TYPE to nil will result in a 'fuzzy' type link."
       (om-elem--set-property :format format link)
     (error "Invalid link format: %S" format)))
 
-;; MACRO
-;; setters
+;; macro
 
 (defun om-elem--macro-update-value (macro)
   (let* ((k (om-elem--get-property :key macro))
@@ -690,24 +666,20 @@ Setting TYPE to nil will result in a 'fuzzy' type link."
          (v (if as (format "%s(%s)" k (s-join "," as)) k)))
     (om-elem--set-property :value (format "{{{%s}}}" v) macro)))
 
-;; NODE-PROPERTY
-;; mappers
+;; node-property
 
 (defun om-elem--node-property-map-value (fun node-property)
   (om-elem--map-property :value fun node-property))
 
 (om-elem--gen-anaphoric-form #'om-elem--node-property-map-value)
 
-;; STATISTICS-COOKIE
-;; getters
+;; statistics-cookie
 
 (defun om-elem--statistics-cookie-get-format (statistics-cookie)
   (cond ((s-contains? "/" it) 'fraction)
         ((s-contains? "%" it) 'percent)
         (t (error "Unparsable statistics cookie value: %s"
                   (om-elem--get-property :value)))))
-
-;; setters
 
 (defun om-elem--statistics-cookie-set-value (value statistics-cookie)
   "Set the value or STATISTICS-COOKIE object with VALUE.
@@ -731,7 +703,7 @@ without element verification."
     (let ((value* (format "[%s]" (mk-stat value))))
       (om-elem--set-property :value value* statistics-cookie))))
 
-;; TIMESTAMP 
+;; timestamp 
 ;; auxiliary time functions
 
 (defun om-elem--time-is-long-p (time)
@@ -786,8 +758,6 @@ without element verification."
              (append '(nil nil))
              (nreverse))))))
 
-;; getters
-
 (defun om-elem--timestamp-get-start-timestamp (timestamp)
   ;; TODO this is inefficient
   (let ((type (om-elem--get-property :type timestamp)))
@@ -823,8 +793,6 @@ without element verification."
 (defun om-elem--timestamp-is-ranged (timestamp)
   (/= (om-elem--timestamp-get-start-unixtime timestamp)
       (om-elem--timestamp-get-end-unixtime timestamp)))
-
-;; setters
 
 (defun om-elem--timestamp-set-type (type timestamp)
   (let* ((range? (om-elem--timestamp-is-ranged timestamp))
@@ -898,8 +866,6 @@ without element verification."
   (om-elem--verify string stringp)
   (om-elem--set-property :raw-value (format "<%%%%%s>" string)))
 
-;; mappers
-
 (defun om-elem--timestamp-shift-time-start (n unit timestamp)
   ;; TODO what if the start time is greater than the end time?
   (let ((time* (->> (om-elem--timestamp-get-start-time timestamp)
@@ -912,14 +878,11 @@ without element verification."
     (-> (om-elem--time-shift n unit time-end)
         (om-elem--timestamp-set-time-end timestamp))))
 
-;;; INTERNAL PROPERTY FUNCTIONS - ELEMENTS
+;;; elements
 
-;; CLOCK
-;; getters
+;; clock
 ;; TODO add some of the timestamp functions (range, unixtime, etc)
 ;; TODO add get status
-
-;; setters
 
 ;; (defun om-elem--clock-set-timestamp (start end clock)
 ;;   (let ((ts* (om-elem-build-timestamp 'inactive start :end end)))
@@ -952,24 +915,17 @@ without element verification."
           (om-elem--set-property :duration (get-duration ts) clock)
         (om-elem--set-property :duration nil clock)))))
 
-;; mappers
 ;; TOOD add some of the functions from timestamp
 
-;; DIARY-SEXP
-;; getters
+;; diary-sexp
 ;; TODO add value getter
-
-;; setters
 
 (defun om-elem--diary-sexp-set-value (string elem)
   (om-elem--verify string stringp)
   (om-elem--set-property :value (format "%%%%(%s)" string) elem))
 
-;; HEADLINE
-;; getters
+;; headline
 ;; TODO add all the getters
-
-;; setters
 
 (defun om-elem--headline-set-pre-blank (pre-blank headline)
   ;; unlike post-blank, we assume this will never be needed for
@@ -1040,8 +996,6 @@ without element verification."
                   (-snoc ss (om-elem-build-statistics-cookie)))))
     (om-elem--headline-set-title title headline)))
 
-;; mappers
-
 (defun om-elem--headline-shift-level (n headline)
   (om-elem--verify n integerp)
   (cl-flet
@@ -1092,11 +1046,8 @@ SHIFT is a positive or negative integer."
 ;;          (om-elem-map-property :archivedp #'not)
 ;;          (om-elem-map-property :tags #'toggle-tags))))
 
-;; ITEM
-;; getters
+;; item
 ;; TODO add all the getters
-
-;; setters
 
 (defun om-elem--item-set-checkbox (state item)
   "Set the checkbox of ITEM element to STATE.
@@ -1144,8 +1095,6 @@ checkbox."
     (error "Invalid counter: %s" counter))
   (om-elem--set-property :counter counter item))
 
-;; mappers
-
 (defun om-elem--item-toggle-checkbox (item)
   (cl-case (om-elem--get-property :checkbox item)
     ((or trans nil) item)
@@ -1153,16 +1102,14 @@ checkbox."
     ('off (om-elem--set-property :checkbox 'on item))
     (t (error "This should not happen"))))
 
-;; LATEX ENVIRONMENT
-;; setters
+;; latex environment
 
 (defun om-elem--latex-environment-set-value (env body latex-environment)
   (om-elem--verify env stringp body stringp)
   (let ((v (format "\\begin{%1$s}\n%2$s\n\\end{%1$s}" env body)))
     (om-elem--set-property :value v latex-environment)))
 
-;; PLANNING
-;; setters
+;; planning
 
 ;; TODO add repeater/warning to this
 (defun om-elem--planning-set-property (prop time planning)
@@ -1179,458 +1126,7 @@ checkbox."
 (defun om-elem--planning-set-scheduled (time planning)
   (om-elem--planning-set-property :scheduled time planning))
 
-;;; INTERNAL CONTENT FUNCTIONS
-;; operations on contents of containers
-
-;; GENERIC
-;; getters
-
-(defalias 'om-elem--get-contents 'org-element-contents)
-
-(defun om-elem--get-nested-contents (indices elem)
-  "Return the nested contents of ELEM as given by INDICES.
-INDICES is a list of integers specifying the index and level of the
-nested element to return."
-  (if (not indices) elem
-    (->> (om-elem--get-contents elem)
-         (nth (car indices))
-         (om-elem--get-nested-contents (cdr indices)))))
-
-(defun om-elem--get-head (elem)
-  "Return the type and properties cells of ELEM."
-  (if (stringp elem) elem
-    (-take 2 elem)))
-
-;; setters
-
-(defun om-elem--set-contents (contents elem)
-   (let ((head (om-elem--get-head elem)))
-     (if contents (append head contents) head)))
-
-(defun om-elem--set-contents-restricted (types contents elem)
-  ;; TODO this should recursively dig up all types in contents
-  ;; even if they are nested
-  (-when-let (illegal (-some->> (-map #'om-elem--get-type contents)
-                                (--remove (memq it types))
-                                (-map #'symbol-name)
-                                (s-join ", ")))
-    (error "Illegal types found: %s; allowed types are: %s"
-           illegal (s-join ", " (-map #'symbol-name types))))
-  (om-elem--set-contents contents elem))
-
-(defun om-elem--set-contents-by-type (container-type contents elem)
-  ;; TODO there may be additional restrictions, such as newlines
-  ;; in strings not being allowed
-  (-if-let (types (alist-get container-type om-elem-restrictions))
-      (om-elem--set-contents-restricted types contents elem)
-    (error "Invalid container type requested: %s" container-type)))
-
-;; mappers
-
-(defun om-elem--map-contents (fun elem)
-  (let ((contents (om-elem--get-contents elem)))
-    (om-elem--set-contents (funcall fun contents) elem)))
-
-(om-elem--gen-anaphoric-form #'om-elem--map-contents)
-
-(defun om-elem--map-contained (pred fun elem)
-  (om-elem--map-contents*
-   (--map-when (funcall pred it) (funcall fun it) it)
-   elem))
-
-(defun om-elem--map-contained-first (pred fun elem)
-  (om-elem--map-contents*
-   (--map-first (funcall pred it) (funcall fun it) it)
-   elem))
-
-;; predicates
-
-(defun om-elem--is-empty-p (elem)
-  "Return t if ELEM has no contents."
-  (not (om-elem--get-contents elem)))
-
-;; content setters
-
-;; HEADLINE
-;; getters
-
-(defun om-elem--headline-get-subheadlines (headline)
-  (-some->> (om-elem--get-contents headline)
-            (--filter (om-elem-is-headline-p it))))
-
-(defun om-elem--headline-get-section (headline)
-  (-some->> (om-elem--get-contents headline) (assoc 'section)))
-
-(defun om-elem--headline-get-statistics-cookie (headline)
-  (->> (om-elem--get-property :title headline)
-       (-last-item)
-       (om-elem--allow-type 'statistics-cookie)))
-
-;; setters
-
-(defun om-elem--headline-set-section (section headline)
-  (let ((subheadlines (om-elem-headline-get-subheadlines headline)))
-    (om-elem--set-contents (cons section subheadlines) headline)))
-
-(defun om-elem--headline-set-property-drawer (property-drawer headline)
-  (om-elem--headline-set-section (om-elem-build-section property-drawer)))
-
-(defun om-elem--headline-set-node-property (key value headline)
-  (om-elem--map-or-build-nested (om-elem--set-value value it)
-    ((om-elem-is-section-p it)
-     (om-elem-build-section)
-     0)
-    ((om-elem-is-property-drawer-p it)
-     (om-elem-build-property-drawer)
-     (-if-let (i (-find-index (om-elem-is-planning-p it) it)) ((1+ i) it)))
-    ((and (om-elem-is-node-property-p it)
-          (om-elem--property-is-equal-p :value key it))
-     (om-elem-build-node-property key value) 
-     0)
-    headline))
-
-(defun om-elem--headline-set-planning (planning headline)
-  ;; TODO what if we give this a nil?
-  (om-elem--map-or-build-nested (om-elem--set-value value it)
-    ((om-elem-is-section-p it) (om-elem-build-section) 0)
-    ((om-elem-is-planning-p it) (apply #'om-elem-build-planning planning) 0)
-    headline))
-
-(defun om-elem--headline-set-statistics-cookie (value headline)
-  (om-elem--map-property*
-   :title
-   (let ((last? (om-elem--is-type-p 'statistics-cookie (-last-item it))))
-     (cond
-      ((and last? value)
-       (om-elem--map-last* (om-elem--statistics-cookie-set-value value) it))
-      ((and last? (not value))
-       (-drop-last 1 it))
-      (value 
-       (-snoc it (om-elem-build-statistics-cookie value)))
-      (t it)))
-   headline))
-
-(defun om-elem--headline-set-statistics-cookie-fraction (done total headline)
-  (om-elem--verify headline om-elem-is-headline-p)
-  (let* ((format (->>
-                  (om-elem--headline-get-statistics-cookie headline)
-                  (om-elem--statistics-cookie-get-format)))
-         (value (if (eq 'percent format) `(done total)
-                  (-> (float done)
-                      (/ total)
-                      (* 100)
-                      (round)
-                      (list)))))
-    (om-elem--headline-set-statistics-cookie value)))
-
-;; mappers
-
-(defun om-elem--headline-map-subheadlines (fun headline)
-  (om-elem--map-contents
-   (lambda (contents)
-     (let ((section (assoc 'section contents))
-           (subheadlines (-some->>
-                          (-filter #'om-elem-is-headline-p contents)
-                          (funcall fun))))
-       (cond
-        ((and section subheadlines) (cons section subheadlines))
-        (section section)
-        (t subheadlines))))
-   headline))
-
-(defun om-elem-headline-map-node-property (key fun headline)
-  (om-elem--verify key stringp headline om-elem-is-headline-p)
-  (om-elem-map-first*
-   `(section property-drawer (:and node-property (:key ,key)))
-    (om-elem--node-property-map-value fun it) headline))
-
-(defun om-elem--map-or-build (map-fun build-fun pred-fun pos elem)
-  (om-elem--map-contents
-   (lambda (contents)
-     (-if-let (target (--first (funcall pred-fun it) contents))
-         ;; TODO this is probably not the most efficient
-         (-replace target (funcall map-fun target) contents)
-       (let ((pos
-              (cond
-               ((integerp pos)
-                pos)
-               ((functionp pos)
-                (or (--find-index (funcall pos it) contents) 0))
-               (t (error "Invalid pos given: %S" pos))))
-             (new (funcall build-fun)))
-         (-insert-at pos new contents))))
-   elem))
-
-(defmacro om-elem--map-or-build-nested (map-form &rest args)
-  ;; forms are of form (pred builder pos-fun)
-  (declare (indent 1))
-  (let* ((elem (-last-item args))
-         (forms (-drop-last 1 args))
-         (first (car args))
-         (rem (cdr forms))
-         (pred-fun `(lambda (it) ,(nth 0 first)))
-         (build-fun `(lambda () (->> ,@(nreverse (--map (nth 1 it) forms)))))
-         (pos-fun `(lambda (it) ,(nth 2 first)))
-         (map-fun
-          (if (not rem) `(lambda (it) ,map-form)
-            `(lambda (inner)
-               (om-elem--map-or-build-nested ,map-form ,@rem inner)))))
-    `(om-elem--map-or-build ,map-fun ,build-fun ,pred-fun ,pos-fun ,elem)))
-
-(defun om-elem--headline-subtree-shift-level (n headline)
-  (->> (om-elem--headline-shift-level n headline)
-       (om-elem--headline-map-subheadlines
-        (lambda (headlines)
-          (--map (om-elem--headline-subtree-shift-level n it)
-                 headlines)))))
-
-;; TABLE
-;; getters
-
-(defun om-elem--table-get-height (table)
-  (length (om-elem--get-contents table)))
-
-(defun om-elem--table-get-width (table)
-  (->> (om-elem--get-contents table) (-map #'length) (-max)))
-
-;; setters
-;; TODO if I feel like being super extra I can add pivot operators :)
-
-(defun om-elem--pad-or-truncate (length pad list)
-  (let ((blanks (- length (length list))))
-    (if (< 0 blanks) (-slice list 0 (1- length))
-      (append list (-repeat blanks pad)))))
-
-(defun om-elem--table-pad-or-truncate (length list)
-  (let ((pad (om-elem-build-table-cell "")))
-    (om-elem--pad-or-truncate length pad list)))
-
-(defun om-elem--table-delete-column (index table)
-  (om-elem--verify index integerp)
-  (cl-flet*
-      ((delete-cell
-        (cells)
-        (om-elem--remove-at index cells))
-       (map-row 
-        (row)
-        (if (om-elem--property-is-eq-p :type 'rule row) row
-          (om-elem--map-contents #'delete-cell row))))
-    (om-elem--map-contents* (-map #'map-row it) table)))
-
-(defun om-elem--table-delete-row (index table)
-  (om-elem--verify index integerp)
-  (om-elem--map-contents* (om-elem--remove-at index it) table))
-
-(defun om-elem--table-insert-column (index column table)
-  (om-elem--verify index integerp)
-  (cl-flet*
-      ((zip-into-rows
-        (row new-cell)
-        (if (om-elem--property-is-eq-p :type 'rule row) row
-          (om-elem--map-contents
-           (lambda (cells) (om-elem--insert-at index new-cell cells))
-           row)))
-       (map-rows
-        (rows)
-        (->> rows
-             (--find-indices (om-elem--property-is-eq-p :type 'rule it))
-             (--reduce-from (-insert-at it nil acc) column)
-             (om-elem--table-pad-or-truncate (length rows))
-             (-zip-with #'zip-into-rows rows))))
-    (om-elem--map-contents #'map-rows table)))
-
-(defun om-elem--table-insert-row (index row table)
-  (om-elem--verify index integerp)
-  (let ((row (if (om-elem--property-is-eq-p :type 'rule row) row
-               (let ((width (om-elem--table-get-width table)))
-                 (om-elem--table-pad-or-truncate width row)))))
-    (om-elem--map-contents* (om-elem--insert-at index row it) table)))
-
-;;; INTERNAL INDENTATION
-;; GENERIC
-
-;; TODO this is a bit sketchy...it depends on the indentation
-;; function to make the contents list one element shorter, which
-;; is usually true but makes a really hard error to catch when it
-;; fails
-(defun om-elem--indent-after (indent-fun index elem)
-  (unless (and (integerp index) (<= 0 index))
-    (error "Index must be non-negative integer"))
-  (if (< index (1- (length (om-elem--get-contents elem))))
-      (->> (funcall indent-fun (1+ index) elem)
-           (om-elem--indent-after indent-fun index))
-    elem))
-
-(defun om-elem--indent-members (fun index members)
-  (unless (and (integerp index) (< 0 index))
-    (error "Cannot indent topmost item at this level"))
-  (-let* (((head tail) (-split-at index members))
-          (target (-first-item tail))
-          (head* (om-elem--map-last* (funcall fun target it) head)))
-    (append head* (-drop 1 tail))))
-
-(defun om-elem--unindent-members (index parent-fun unindent-fun list)
-  (unless (and (integerp index) (<= 0 index))
-    (error "Index must be non-negative integer"))
-  (-let* (((head tail) (-split-at index list))
-          (parent (-first-item tail))
-          (parent* (funcall parent-fun parent))
-          (unindented (funcall unindent-fun parent)))
-    (append head (list parent*) unindented (-drop 1 tail))))
-
-;; HEADLINE
-
-(defun om-elem--headline-indent-subtree (index headline)
-  (cl-flet
-      ((append-indented
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (om-elem--headline-subtree-shift-level 1 target-headline)))
-          (om-elem--map-contents
-           (lambda (headline-contents)
-             (append headline-contents (list target-headline*)))
-           parent-headline))))
-    (om-elem--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om-elem--indent-members #'append-indented index subheadlines))
-     headline)))
-
-(defun om-elem--headline-indent-subheadline (index headline)
-  (cl-flet
-      ((append-indented
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (->> target-headline
-                    (om-elem--headline-map-subheadlines #'ignore)
-                    (om-elem--headline-shift-level 1)))
-              (headlines-in-target
-               (om-elem--headline-get-subheadlines target-headline))) 
-          (om-elem--map-contents
-           (lambda (contents)
-             (append contents (list target-headline*) headlines-in-target))
-           parent-headline))))
-    (om-elem--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om-elem--indent-members #'append-indented index subheadlines))
-     headline)))
-
-(defun om-elem--headline-unindent-subheadline (index child-index headline)
-  (cl-flet
-      ((trim
-        (parent)
-        (om-elem--headline-map-subheadlines
-         (lambda (subheadlines) (-take child-index subheadlines))
-         parent))
-       (extract
-        (parent)
-        (->> (om-elem--indent-after #'om-elem-headline-indent-subtree
-                                    child-index parent)
-             (om-elem--get-contents)
-             (-drop child-index)
-             (--map (om-elem--headline-subtree-shift-level -1 it)))))
-    (om-elem--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om-elem--unindent-members index #'trim #'extract subheadlines))
-     headline)))
-
-(defun om-elem--headline-unindent-subtree (index headline)
-  (cl-flet
-      ((trim
-        (parent)
-        (om-elem--headline-map-subheadlines #'ignore parent))
-       (extract
-        (parent)
-        (->> (om-elem--get-contents parent)
-             (--map (om-elem--headline-subtree-shift-level -1 it)))))
-    (om-elem--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om-elem--unindent-members index #'trim #'extract subheadlines))
-     headline)))
-
-;; PLAIN-LIST
-
-(defun om-elem--plain-list-indent-item-tree (index plain-list)
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item* (om-elem-build-plain-list target-item)))
-          (om-elem--map-contents
-           (lambda (item-contents) (append item-contents (list target-item*)))
-           parent-item))))
-    (om-elem--map-contents
-     (lambda (items)
-       (om-elem--indent-members #'append-indented index items))
-     plain-list)))
-
-(defun om-elem--plain-list-indent-item (index plain-list)
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item*
-               (->> target-item
-                    (om-elem--map-contents*
-                     (-remove #'om-elem-is-plain-list-p it))
-                    (om-elem-build-plain-list)))
-              (items-in-target
-               (->> (om-elem--get-contents target-item)
-                    (-filter #'om-elem-is-plain-list-p))))
-          (om-elem--map-contents
-           (lambda (item-contents)
-             ;; TODO technically the target-item* should go in an
-             ;; existing plain list but I don't this matters (for now)
-             (append item-contents (list target-item*) items-in-target))
-           parent-item))))
-    (om-elem--map-contents
-     (lambda (items)
-       (om-elem--indent-members #'append-indented index items))
-     plain-list)))
-
-(defun om-elem--plain-list-unindent-item (index child-index plain-list)
-  (cl-flet
-      ((trim
-        (parent)
-        (om-elem--map-contents
-         (lambda (contents)
-           (if (= 0 index)
-               (-remove-first #'om-elem-is-plain-list-p contents)
-             (--map-first (om-elem-is-plain-list-p it)
-                          (om-elem--map-contents
-                           (lambda (items) (-take child-index items)) it)
-                          contents)))
-         parent))
-       (extract
-        (parent)
-        (->>
-         (om-elem--get-contents parent)
-         (-first #'om-elem-is-plain-list-p)
-         (om-elem--indent-after #'om-elem--plain-list-indent-item-tree
-                                child-index)
-         (om-elem--get-contents)
-         (-drop child-index))))
-    (om-elem--map-contents
-     (lambda (items)
-       (om-elem--unindent-members index #'trim #'extract items))
-     plain-list)))
-
-(defun om-elem--plain-list-unindent-items (index plain-list)
-  (cl-flet
-      ((trim
-        (parent)
-        (om-elem--map-contents
-         (lambda (contents)
-           (-remove-first #'om-elem-is-plain-list-p contents))
-         parent))
-       (extract
-        (parent)
-        (->> (om-elem--get-contents parent)
-             (-first #'om-elem-is-plain-list-p)
-             (om-elem--get-contents))))
-    (om-elem--map-contents
-     (lambda (items)
-       (om-elem--unindent-members index #'trim #'extract items))
-     plain-list)))
-
-;;; builders
+;;; BUILDER FUNCTIONS
 
 ;; build helpers
 
@@ -2063,7 +1559,7 @@ Optionally provide ELEMS as contents."
        (om-elem--set-property :type 'org)
        (om-elem--set-property-nil :value)))
 
-;; shortcut builders
+;;; shortcut builders
 
 (om-elem--defun om-elem-build-headline! (&key (level 1) title-text
                                               todo-keyword tags
@@ -2136,6 +1632,1604 @@ represented like ':KEY: VAL'."
          (apply #'om-elem-build-table
                 :tblfm tblfm
                 :post-blank post-blank))))
+
+;;; INTERNAL CONTENT FUNCTIONS
+;; operations on contents of containers
+
+;; generic
+
+(defalias 'om-elem--get-contents 'org-element-contents)
+
+(defun om-elem--get-nested-contents (indices elem)
+  "Return the nested contents of ELEM as given by INDICES.
+INDICES is a list of integers specifying the index and level of the
+nested element to return."
+  (if (not indices) elem
+    (->> (om-elem--get-contents elem)
+         (nth (car indices))
+         (om-elem--get-nested-contents (cdr indices)))))
+
+(defun om-elem--get-head (elem)
+  "Return the type and properties cells of ELEM."
+  (if (stringp elem) elem
+    (-take 2 elem)))
+
+(defun om-elem--is-empty-p (elem)
+  "Return t if ELEM has no contents."
+  (not (om-elem--get-contents elem)))
+
+(defun om-elem--map-contents (fun elem)
+  (let ((contents (om-elem--get-contents elem)))
+    (om-elem--set-contents (funcall fun contents) elem)))
+
+(om-elem--gen-anaphoric-form #'om-elem--map-contents)
+
+(defun om-elem--map-contained (pred fun elem)
+  (om-elem--map-contents*
+   (--map-when (funcall pred it) (funcall fun it) it)
+   elem))
+
+(defun om-elem--map-contained-first (pred fun elem)
+  (om-elem--map-contents*
+   (--map-first (funcall pred it) (funcall fun it) it)
+   elem))
+
+(defun om-elem--set-contents (contents elem)
+   (let ((head (om-elem--get-head elem)))
+     (if contents (append head contents) head)))
+
+(defun om-elem--set-contents-restricted (types contents elem)
+  ;; TODO this should recursively dig up all types in contents
+  ;; even if they are nested
+  (-when-let (illegal (-some->> (-map #'om-elem--get-type contents)
+                                (--remove (memq it types))
+                                (-map #'symbol-name)
+                                (s-join ", ")))
+    (error "Illegal types found: %s; allowed types are: %s"
+           illegal (s-join ", " (-map #'symbol-name types))))
+  (om-elem--set-contents contents elem))
+
+(defun om-elem--set-contents-by-type (container-type contents elem)
+  ;; TODO there may be additional restrictions, such as newlines
+  ;; in strings not being allowed
+  (-if-let (types (alist-get container-type om-elem-restrictions))
+      (om-elem--set-contents-restricted types contents elem)
+    (error "Invalid container type requested: %s" container-type)))
+
+;; headline
+
+(defun om-elem--headline-get-subheadlines (headline)
+  (-some->> (om-elem--get-contents headline)
+            (--filter (om-elem-is-headline-p it))))
+
+(defun om-elem--headline-get-section (headline)
+  (-some->> (om-elem--get-contents headline) (assoc 'section)))
+
+(defun om-elem--headline-get-statistics-cookie (headline)
+  (->> (om-elem--get-property :title headline)
+       (-last-item)
+       (om-elem--allow-type 'statistics-cookie)))
+
+;; TODO refactor this
+(defun om-elem--headline-get-drawer (name headline)
+  "Return first drawer with NAME in HEADLINE element or nil if none."
+  (om-elem--verify name stringp)
+  (om-elem-find-first `(section (:drawer-name ,name)) headline))
+
+(defun om-elem--headline-get-path (headline)
+  "Return path of headline HEADLINE element as a list of strings."
+  (cl-labels
+      ((get-path
+        (hl)
+        (let ((title (om-elem--get-property :raw-value hl)))
+          (-if-let (parent (om-elem--get-parent-headline hl))
+              (cons title (get-path parent))
+            (list title)))))
+    (reverse (get-path headline))))
+
+(defun om-elem--headline-map-subheadlines (fun headline)
+  (om-elem--map-contents
+   (lambda (contents)
+     (let ((section (assoc 'section contents))
+           (subheadlines (-some->>
+                          (-filter #'om-elem-is-headline-p contents)
+                          (funcall fun))))
+       (cond
+        ((and section subheadlines) (cons section subheadlines))
+        (section section)
+        (t subheadlines))))
+   headline))
+
+(defun om-elem-headline-map-node-property (key fun headline)
+  (om-elem--verify key stringp headline om-elem-is-headline-p)
+  (om-elem-map-first*
+   `(section property-drawer (:and node-property (:key ,key)))
+    (om-elem--node-property-map-value fun it) headline))
+
+(defun om-elem--map-or-build (map-fun build-fun pred-fun pos elem)
+  (om-elem--map-contents
+   (lambda (contents)
+     (-if-let (target (--first (funcall pred-fun it) contents))
+         ;; TODO this is probably not the most efficient
+         (-replace target (funcall map-fun target) contents)
+       (let ((pos
+              (cond
+               ((integerp pos)
+                pos)
+               ((functionp pos)
+                (or (--find-index (funcall pos it) contents) 0))
+               (t (error "Invalid pos given: %S" pos))))
+             (new (funcall build-fun)))
+         (-insert-at pos new contents))))
+   elem))
+
+(defmacro om-elem--map-or-build-nested (map-form &rest args)
+  ;; forms are of form (pred builder pos-fun)
+  (declare (indent 1))
+  (let* ((elem (-last-item args))
+         (forms (-drop-last 1 args))
+         (first (car args))
+         (rem (cdr forms))
+         (pred-fun `(lambda (it) ,(nth 0 first)))
+         (build-fun `(lambda () (->> ,@(nreverse (--map (nth 1 it) forms)))))
+         (pos-fun `(lambda (it) ,(nth 2 first)))
+         (map-fun
+          (if (not rem) `(lambda (it) ,map-form)
+            `(lambda (inner)
+               (om-elem--map-or-build-nested ,map-form ,@rem inner)))))
+    `(om-elem--map-or-build ,map-fun ,build-fun ,pred-fun ,pos-fun ,elem)))
+
+(defun om-elem--headline-subtree-shift-level (n headline)
+  (->> (om-elem--headline-shift-level n headline)
+       (om-elem--headline-map-subheadlines
+        (lambda (headlines)
+          (--map (om-elem--headline-subtree-shift-level n it)
+                 headlines)))))
+
+(defun om-elem--headline-set-section (section headline)
+  (let ((subheadlines (om-elem-headline-get-subheadlines headline)))
+    (om-elem--set-contents (cons section subheadlines) headline)))
+
+(defun om-elem--headline-set-property-drawer (property-drawer headline)
+  (om-elem--headline-set-section (om-elem-build-section property-drawer)))
+
+(defun om-elem--headline-set-node-property (key value headline)
+  (om-elem--map-or-build-nested (om-elem--set-value value it)
+    ((om-elem-is-section-p it)
+     (om-elem-build-section)
+     0)
+    ((om-elem-is-property-drawer-p it)
+     (om-elem-build-property-drawer)
+     (-if-let (i (-find-index (om-elem-is-planning-p it) it)) ((1+ i) it)))
+    ((and (om-elem-is-node-property-p it)
+          (om-elem--property-is-equal-p :value key it))
+     (om-elem-build-node-property key value) 
+     0)
+    headline))
+
+(defun om-elem--headline-set-planning (planning headline)
+  ;; TODO what if we give this a nil?
+  (om-elem--map-or-build-nested (om-elem--set-value value it)
+    ((om-elem-is-section-p it) (om-elem-build-section) 0)
+    ((om-elem-is-planning-p it) (apply #'om-elem-build-planning planning) 0)
+    headline))
+
+(defun om-elem--headline-set-statistics-cookie (value headline)
+  (om-elem--map-property*
+   :title
+   (let ((last? (om-elem--is-type-p 'statistics-cookie (-last-item it))))
+     (cond
+      ((and last? value)
+       (om-elem--map-last* (om-elem--statistics-cookie-set-value value) it))
+      ((and last? (not value))
+       (-drop-last 1 it))
+      (value 
+       (-snoc it (om-elem-build-statistics-cookie value)))
+      (t it)))
+   headline))
+
+(defun om-elem--headline-set-statistics-cookie-fraction (done total headline)
+  (om-elem--verify headline om-elem-is-headline-p)
+  (let* ((format (->>
+                  (om-elem--headline-get-statistics-cookie headline)
+                  (om-elem--statistics-cookie-get-format)))
+         (value (if (eq 'percent format) `(done total)
+                  (-> (float done)
+                      (/ total)
+                      (* 100)
+                      (round)
+                      (list)))))
+    (om-elem--headline-set-statistics-cookie value)))
+
+
+;; item
+
+(defun om-elem--item-get-level (item)
+  "Return the level of ITEM element item (1 indexed)."
+  (cl-labels
+      ((get-level
+        (item acc)
+        (let ((parent (->> (om-elem--get-property :parent item)
+                           (om-elem--get-property :parent))))
+          (if (om-elem-item-p parent)
+              (get-level parent (+ 1 acc))
+            acc))))
+    (get-level item 1)))
+
+(defun om-elem--item-get-sublist (item)
+  "Return plain-list under ITEM element or nil if none."
+  (-some->> (om-elem--get-contents item) (assoc 'plain-list)))
+
+(defun om-elem--item-get-paragraph (item)
+  "Return paragraph under ITEM element or nil if none."
+  (-some->> (om-elem--get-contents item) (assoc 'paragraph)))
+
+;; table
+
+(defun om-elem--table-pad-or-truncate (length list)
+  (let ((pad (om-elem-build-table-cell "")))
+    (om-elem--pad-or-truncate length pad list)))
+
+;; TODO if I feel like being super extra I can add pivot operators :)
+
+;; TODO add negative indices
+(defun om-elem--table-delete-column (index table)
+  (om-elem--verify index integerp)
+  (cl-flet*
+      ((delete-cell
+        (cells)
+        (om-elem--remove-at index cells))
+       (map-row 
+        (row)
+        (if (om-elem--property-is-eq-p :type 'rule row) row
+          (om-elem--map-contents #'delete-cell row))))
+    (om-elem--map-contents* (-map #'map-row it) table)))
+
+(defun om-elem--table-delete-row (index table)
+  (om-elem--verify index integerp)
+  (om-elem--map-contents* (om-elem--remove-at index it) table))
+
+(defun om-elem--table-insert-column (index column table)
+  (om-elem--verify index integerp)
+  (cl-flet*
+      ((zip-into-rows
+        (row new-cell)
+        (if (om-elem--property-is-eq-p :type 'rule row) row
+          (om-elem--map-contents
+           (lambda (cells) (om-elem--insert-at index new-cell cells))
+           row)))
+       (map-rows
+        (rows)
+        (->> rows
+             (--find-indices (om-elem--property-is-eq-p :type 'rule it))
+             (--reduce-from (-insert-at it nil acc) column)
+             (om-elem--table-pad-or-truncate (length rows))
+             (-zip-with #'zip-into-rows rows))))
+    (om-elem--map-contents #'map-rows table)))
+
+(defun om-elem--table-insert-row (index row table)
+  (om-elem--verify index integerp)
+  (let ((row (if (om-elem--property-is-eq-p :type 'rule row) row
+               (let ((width (om-elem--table-get-width table)))
+                 (om-elem--table-pad-or-truncate width row)))))
+    (om-elem--map-contents* (om-elem--insert-at index row it) table)))
+
+(defun om-elem--table-get-cell (row column table)
+  "Return table-cell element at ROW and COLUMN indices in TABLE element.
+Hlines do not count toward row indices, and all indices are
+zero-indexed."
+  (om-elem--verify table om-elem-is-table-p)
+  (-some->> (om-elem--get-contents table)
+            (--filter (om-elem--property-is-eq-p :type 'standard it))
+            (nth row)
+            (om-elem--get-contents)
+            (nth column)))
+
+(defun om-elem--table-get-height (table)
+  (length (om-elem--get-contents table)))
+
+(defun om-elem--table-get-width (table)
+  (->> (om-elem--get-contents table) (-map #'length) (-max)))
+
+
+;;; INTERNAL INDENTATION
+
+;;; helper functions
+
+;; TODO this is a bit sketchy...it depends on the indentation
+;; function to make the contents list one element shorter, which
+;; is usually true but makes a really hard error to catch when it
+;; fails
+(defun om-elem--indent-after (indent-fun index elem)
+  (unless (and (integerp index) (<= 0 index))
+    (error "Index must be non-negative integer"))
+  (if (< index (1- (length (om-elem--get-contents elem))))
+      (->> (funcall indent-fun (1+ index) elem)
+           (om-elem--indent-after indent-fun index))
+    elem))
+
+(defun om-elem--indent-members (fun index members)
+  (unless (and (integerp index) (< 0 index))
+    (error "Cannot indent topmost item at this level"))
+  (-let* (((head tail) (-split-at index members))
+          (target (-first-item tail))
+          (head* (om-elem--map-last* (funcall fun target it) head)))
+    (append head* (-drop 1 tail))))
+
+(defun om-elem--unindent-members (index parent-fun unindent-fun list)
+  (unless (and (integerp index) (<= 0 index))
+    (error "Index must be non-negative integer"))
+  (-let* (((head tail) (-split-at index list))
+          (parent (-first-item tail))
+          (parent* (funcall parent-fun parent))
+          (unindented (funcall unindent-fun parent)))
+    (append head (list parent*) unindented (-drop 1 tail))))
+
+;;; elements functions
+
+;; headline
+
+(defun om-elem--headline-indent-subtree (index headline)
+  (cl-flet
+      ((append-indented
+        (target-headline parent-headline)
+        (let ((target-headline*
+               (om-elem--headline-subtree-shift-level 1 target-headline)))
+          (om-elem--map-contents
+           (lambda (headline-contents)
+             (append headline-contents (list target-headline*)))
+           parent-headline))))
+    (om-elem--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om-elem--indent-members #'append-indented index subheadlines))
+     headline)))
+
+(defun om-elem--headline-indent-subheadline (index headline)
+  (cl-flet
+      ((append-indented
+        (target-headline parent-headline)
+        (let ((target-headline*
+               (->> target-headline
+                    (om-elem--headline-map-subheadlines #'ignore)
+                    (om-elem--headline-shift-level 1)))
+              (headlines-in-target
+               (om-elem--headline-get-subheadlines target-headline))) 
+          (om-elem--map-contents
+           (lambda (contents)
+             (append contents (list target-headline*) headlines-in-target))
+           parent-headline))))
+    (om-elem--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om-elem--indent-members #'append-indented index subheadlines))
+     headline)))
+
+(defun om-elem--headline-unindent-subheadline (index child-index headline)
+  (cl-flet
+      ((trim
+        (parent)
+        (om-elem--headline-map-subheadlines
+         (lambda (subheadlines) (-take child-index subheadlines))
+         parent))
+       (extract
+        (parent)
+        (->> (om-elem--indent-after #'om-elem-headline-indent-subtree
+                                    child-index parent)
+             (om-elem--get-contents)
+             (-drop child-index)
+             (--map (om-elem--headline-subtree-shift-level -1 it)))))
+    (om-elem--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om-elem--unindent-members index #'trim #'extract subheadlines))
+     headline)))
+
+(defun om-elem--headline-unindent-subtree (index headline)
+  (cl-flet
+      ((trim
+        (parent)
+        (om-elem--headline-map-subheadlines #'ignore parent))
+       (extract
+        (parent)
+        (->> (om-elem--get-contents parent)
+             (--map (om-elem--headline-subtree-shift-level -1 it)))))
+    (om-elem--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om-elem--unindent-members index #'trim #'extract subheadlines))
+     headline)))
+
+;; plain-list
+
+(defun om-elem--plain-list-indent-item-tree (index plain-list)
+  (cl-flet
+      ((append-indented
+        (target-item parent-item)
+        (let ((target-item* (om-elem-build-plain-list target-item)))
+          (om-elem--map-contents
+           (lambda (item-contents) (append item-contents (list target-item*)))
+           parent-item))))
+    (om-elem--map-contents
+     (lambda (items)
+       (om-elem--indent-members #'append-indented index items))
+     plain-list)))
+
+(defun om-elem--plain-list-indent-item (index plain-list)
+  (cl-flet
+      ((append-indented
+        (target-item parent-item)
+        (let ((target-item*
+               (->> target-item
+                    (om-elem--map-contents*
+                     (-remove #'om-elem-is-plain-list-p it))
+                    (om-elem-build-plain-list)))
+              (items-in-target
+               (->> (om-elem--get-contents target-item)
+                    (-filter #'om-elem-is-plain-list-p))))
+          (om-elem--map-contents
+           (lambda (item-contents)
+             ;; TODO technically the target-item* should go in an
+             ;; existing plain list but I don't this matters (for now)
+             (append item-contents (list target-item*) items-in-target))
+           parent-item))))
+    (om-elem--map-contents
+     (lambda (items)
+       (om-elem--indent-members #'append-indented index items))
+     plain-list)))
+
+(defun om-elem--plain-list-unindent-item (index child-index plain-list)
+  (cl-flet
+      ((trim
+        (parent)
+        (om-elem--map-contents
+         (lambda (contents)
+           (if (= 0 index)
+               (-remove-first #'om-elem-is-plain-list-p contents)
+             (--map-first (om-elem-is-plain-list-p it)
+                          (om-elem--map-contents
+                           (lambda (items) (-take child-index items)) it)
+                          contents)))
+         parent))
+       (extract
+        (parent)
+        (->>
+         (om-elem--get-contents parent)
+         (-first #'om-elem-is-plain-list-p)
+         (om-elem--indent-after #'om-elem--plain-list-indent-item-tree
+                                child-index)
+         (om-elem--get-contents)
+         (-drop child-index))))
+    (om-elem--map-contents
+     (lambda (items)
+       (om-elem--unindent-members index #'trim #'extract items))
+     plain-list)))
+
+(defun om-elem--plain-list-unindent-items (index plain-list)
+  (cl-flet
+      ((trim
+        (parent)
+        (om-elem--map-contents
+         (lambda (contents)
+           (-remove-first #'om-elem-is-plain-list-p contents))
+         parent))
+       (extract
+        (parent)
+        (->> (om-elem--get-contents parent)
+             (-first #'om-elem-is-plain-list-p)
+             (om-elem--get-contents))))
+    (om-elem--map-contents
+     (lambda (items)
+       (om-elem--unindent-members index #'trim #'extract items))
+     plain-list)))
+
+;;; PUBLIC TYPE FUNCTIONS
+
+;;; PUBLIC PROPERTY FUNCTIONS
+
+;;; generic
+
+(defun om-elem-map-property (prop fun elem)
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--map-property prop fun elem))
+
+(om-elem--gen-anaphoric-form #'om-elem-map-property)
+
+(defun om-elem-map-properties (plist elem)
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--map-properties plist elem))
+
+(defmacro om-elem-map-properties* (plist elem)
+  `(om-elem--map-properties ,plist ,elem))
+
+(defun om-elem-set-property (prop value elem)
+  "Set property PROP in element ELEM to VALUE."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (unless (plist-member (om-elem--get-properties elem) prop)
+    (error "Property %s does not exist in %s" prop elem))
+  (om-elem--set-property prop value elem))
+
+(defun om-elem-set-properties (plist elem)
+  "Set all properties in ELEM to the values corresponding to PLIST.
+PLIST is a list of property-value pairs that correspond to the
+property list in ELEM."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--set-properties plist elem))
+
+(defun om-elem-shift-property (prop n elem)
+  "Shift PROP of ELEM by N where N is a positive or negative integer."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (unless (plist-member (om-elem--get-properties elem) prop)
+    (error "Property %s does not exist in %s" prop elem))
+  (om-elem--shift-property prop n elem))
+
+(defun om-elem-toggle-property (prop elem)
+  "Toggle the state of PROP in ELEM."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (unless (plist-member (om-elem--get-properties elem) prop)
+    (error "Property %s does not exist in %s" prop elem))
+  (om-elem--toggle-property prop elem))
+
+;; property specific
+
+(defun om-elem-set-post-blank (post-blank elem)
+  "Set the :post-blank property of ELEM to POST-BLANK."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--set-post-blank post-blank elem))
+
+;;; objects
+;;
+;; node properties
+
+(defun om-elem-node-property-set-key (key node-property)
+  "Set the key of NODE-PROPERTY element to KEY (a string)."
+  (om-elem--verify node-property om-elem-is-node-property-p)
+  (om-elem--set-key key node-property))
+
+(defun om-elem-node-property-set-value (value node-property)
+  "Set the value of NODE-PROPERTY element to VALUE (a string)."
+  (om-elem--verify node-property om-elem-is-node-property-p)
+  (om-elem--set-value value node-property))
+
+(defun om-elem-node-property-map-value (fun node-property)
+  (om-elem--verify node-property om-elem-is-node-property-p)
+  (om-elem--node-property-map-value fun node-property))
+
+(om-elem--gen-anaphoric-form #'om-elem-node-property-map-value)
+
+;; link
+
+(defun om-elem-link-set-path (path link)
+  "Set the path of LINK element to PATH (a string)."
+  (om-elem--verify link om-elem-is-link-p)
+  (om-elem--link-set-path path link))
+
+(defun om-elem-link-set-type (type link)
+  "Set the type of LINK element to TYPE (a symbol).
+Setting TYPE to nil will result in a 'fuzzy' type link."
+  (om-elem--verify link om-elem-is-link-p)
+  (om-elem--link-set-type type link))
+
+(defun om-elem-link-set-format (format link)
+  "Set the type of LINK element to TYPE (a symbol).
+Setting TYPE to nil will result in a 'fuzzy' type link."
+  (om-elem--verify link om-elem-is-link-p)
+  (om-elem--link-set-format format link))
+
+;; statistics cookie
+
+(defun om-elem-statistics-cookie-set-value (value statistics-cookie)
+  "Set the value or STATISTICS-COOKIE object with VALUE.
+VALUE can take four forms which determine the format of the value:
+- integer X from 0 to 100 -> 'X%'
+- nil -> '%'
+- (integer X integer Y) -> 'X/Y'
+- (nil) -> '/'"
+  (om-elem--verify statistics-cookie om-elem-is-statistics-cookie-p)
+  (om-elem--statistics-cookie-set-value value statistics-cookie))
+
+(defun om-elem-statistics-cookie-is-complete-p (statistics-cookie)
+  "Return t is STATISTICS-COOKIE element is complete."
+  (om-elem--verify statistics-cookie om-elem-is-statistics-cookie-p)
+  (let ((val (om-elem--get-property :value statistics-cookie)))
+    (or (-some->>
+         (s-match "\\([[:digit:]]+\\)%" val)
+         (nth 1)
+         (string-to-number)
+         (= 100))
+        (-some->>
+         (s-match "\\([[:digit:]]+\\)/\\([[:digit:]]+\\)" val)
+         (-drop 1)
+         (-map #'string-to-number)
+         (apply #'=)))))
+
+;; timestamp
+
+(defun om-elem-timestamp-get-start-timestamp (timestamp)
+  "Return the start of TIMESTAMP element."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (om-elem--timestamp-get-start-timestamp timestamp))
+
+(defun om-elem-timestamp-get-end-timestamp (timestamp)
+  "Return the end of TIMESTAMP element or nil if not present."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (if (not (om-elem--timestamp-is-ranged timestamp)) nil
+    (om-elem--timestamp-get-end-timestamp timestamp)))
+
+(defun om-elem-timestamp-get-start-unixtime (timestamp)
+  "Return the unixtime value of TIMESTAMP element as an integer.
+Note this only considers the start of the timestamp if it is range."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (om-elem--timestamp-get-start-unixtime timestamp))
+
+(defun om-elem-timestamp-get-end-unixtime (timestamp)
+  "Return the unixtime value of TIMESTAMP's end as an integer."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (if (not (om-elem--timestamp-is-ranged timestamp)) nil
+    (om-elem--timestamp-get-end-unixtime)))
+
+(defun om-elem-timestamp-is-active-p (timestamp)
+  "Return t if TIMESTAMP elem is active."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (or (om-elem--property-is-eq-p :type 'active timestamp)
+      (om-elem--property-is-eq-p :type 'active-range timestamp)))
+
+(defun om-elem-timestamp-is-inactive-p (timestamp)
+  "Return t if TIMESTAMP elem is inactive."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (or (om-elem--property-is-eq-p :type 'inactive timestamp)
+      (om-elem--property-is-eq-p :type 'inactive-range timestamp)))
+
+(defun om-elem-timestamp-is-ranged-p (timestamp)
+  "Return t if TIMESTAMP elem is ranged."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (or (om-elem--property-is-eq-p :type 'active-range timestamp)
+      (om-elem--property-is-eq-p :type 'inactive-range timestamp)))
+
+(defun om-elem-timestamp-is-less-than-p (unixtime timestamp)
+  "Return t if TIMESTAMP elem is less than UNIXTIME."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (< (om-elem-timestamp-get-unixtime timestamp) unixtime))
+
+(defun om-elem-timestamp-is-greater-than-p (unixtime timestamp)
+  "Return t if TIMESTAMP elem is greater than UNIXTIME."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (> (om-elem-timestamp-get-unixtime timestamp) unixtime))
+
+(defun om-elem-timestamp-is-equal-p (unixtime timestamp)
+  "Return t if TIMESTAMP elem is equal to UNIXTIME."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (= (om-elem-timestamp-get-unixtime timestamp) unixtime))
+
+(defun om-elem-timestamp-is-end-less-than-p (unixtime timestamp)
+  "Return t if TIMESTAMP elem is less than UNIXTIME."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (-when-let (end (om-elem-timestamp-get-end-unixtime timestamp))
+    (< end unixtime)))
+
+(defun om-elem-timestamp-is-end-greater-than-p (unixtime timestamp)
+  "Return t if TIMESTAMP elem is greater than UNIXTIME."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (-when-let (end (om-elem-timestamp-get-end-unixtime timestamp))
+    (> end unixtime)))
+
+(defun om-elem-timestamp-is-end-equal-p (unixtime timestamp)
+  "Return t if TIMESTAMP elem is equal to UNIXTIME."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (-when-let (end (om-elem-timestamp-get-end-unixtime timestamp))
+    (= end unixtime)))
+
+(defun om-elem-timestamp-is-in-range-p (unixtime timestamp)
+  "Return t if UNIXTIME is between start and end of TIMESTAMP elem."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (let ((ut1 (om-elem-timestamp-get-unixtime timestamp))
+        (ut2 (om-elem-timestamp-get-end-unixtime timestamp)))
+    (when ut2 (< ut1 unixtime ut2))))
+
+(defun om-elem-timestamp-set-time (time timestamp)
+  "Set start time of TIMESTAMP element to TIME.
+TIME is a list like '(year month day)' or '(year month day hour min)'."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (om-elem--timestamp-set-time time timestamp))
+
+(defun om-elem-timestamp-set-time-end (time timestamp)
+  "Set end time of TIMESTAMP element to TIME.
+TIME is a list like '(year month day)' or '(year month day hour min)'.
+This will also change the type to (un)ranged as appropriate."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  ;; TODO this could be refactored
+  (let ((cur-type (--> (om-elem--get-property :type timestamp)
+                       (cl-case it
+                         (inactive-range 'inactive)
+                         (active-range 'active)
+                         (t it)))))
+    (->> (om-elem--timestamp-set-time-end time timestamp)
+         ;; this will flip the range of the type if needed
+         (om-elem--timestamp-set-type cur-type))))
+
+(defun om-elem-timestamp-set-type (type timestamp)
+  "Set type of TIMESTAMP element to TYPE.
+TYPE can be either 'active' or 'inactive'."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (om-elem--timestamp-set-type type timestamp))
+
+;; TODO add a switch for precision
+(defun om-elem-timestamp-set-time-unixtime (unixtime timestamp)
+  "Set start time of TIMESTAMP element to UNIXTIME (an integer).
+This assumes one wants HH:MM precision."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (-> (decode-time unixtime)
+      (-slice 1 6)
+      (om-elem-timestamp-set-time timestamp)))
+
+(defun om-elem-timestamp-set-time-end-unixtime (unixtime timestamp)
+  "Set end time of TIMESTAMP element to UNIXTIME (an integer).
+This assumes one wants HH:MM precision."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (-> (decode-time unixtime)
+      (-slice 1 6)
+      (om-elem-timestamp-set-time-end timestamp)))
+
+(defun om-elem-timestamp-shift-time-start (n unit timestamp)
+  "Shift the UNIT of TIMESTAMP element start time by VALUE.
+VALUE is a positive or negative integer and UNIT is one of 'minute',
+'hour', 'day', 'month', or 'year'. Value will wrap around larger units
+as needed; for instance, supplying 'minute' for UNIT and 60 for VALUE
+will increase the hour property by 1."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (let ((type (om-elem--get-property :type timestamp)))
+    (if (memq type '(active inactive))
+        (om-elem-timestamp-shift-time n unit timestamp)
+      (om-elem--timestamp-shift-time-start n unit timestamp))))
+
+(defun om-elem-timestamp-shift-time-end (n unit timestamp)
+  "Shift the UNIT of TIMESTAMP element end time by VALUE.
+The behavior is analogous to `om-elem-timestamp-shift-time-start',
+except that the timestamp will be unchanged if no ending time is
+present."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (let ((type (om-elem--get-property :type timestamp)))
+    (if (memq type '(active inactive)) timestamp
+      (om-elem--timestamp-shift-time-end n unit timestamp))))
+
+(defun om-elem-timestamp-shift-time (n unit timestamp)
+  "Shift the UNIT of TIMESTAMP element start and end time by VALUE.
+The behavior is analogous to `om-elem-timestamp-shift-time-start' for
+both timestamp halves."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (->> (om-elem--timestamp-shift-time-start n unit timestamp)
+       (om-elem--timestamp-shift-time-end n unit)))
+
+(defun om-elem-timestamp-toggle-active (timestamp)
+  "Toggle the active/inactive type of TIMESTAMP element."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (let ((cur-type (om-elem--get-property :type timestamp)))
+    (cond
+     ((memq cur-type '(inactive inactive-range))
+      (om-elem-timestamp-set-type 'active timestamp))
+     ((memq cur-type '(active active-range))
+      (om-elem-timestamp-set-type 'inactive timestamp))
+     ;; TODO puke out when given a diary timestamp
+     (t timestamp))))
+
+;;; elements
+;;
+;; clock
+
+(defun om-elem-clock-is-running-p (clock)
+  "Return t if CLOCK element is running (eg is open)."
+  (om-elem--verify clock om-elem-is-clock-p)
+  (om-elem--property-is-eq-p :status 'running clock))
+
+;; headline
+
+(defun om-elem-headline-is-done-p (headline)
+  "Return t if HEADLINE element has a DONE todo keyword."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--property-is-eq-p :todo-type 'done headline))
+
+(defun om-elem-headline-is-scheduled-p (headline)
+  "Return t if HEADLINE element is scheduled."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--property-is-non-nil-p :scheduled headline))
+
+(defun om-elem-headline-is-deadlined-p (headline)
+  "Return t if HEADLINE element has a deadline."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--property-is-non-nil-p :deadline headline))
+
+(defun om-elem-headline-is-closed-p (headline)
+  "Return t if HEADLINE element is closed."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--property-is-non-nil-p :closed headline))
+
+(defun om-elem-headline-is-archived-p (headline)
+  "Return t if HEADLINE element is archived."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--property-is-non-nil-p :archivedp headline))
+
+(defun om-elem-headline-is-commented-p (headline)
+  "Return t if HEADLINE element is commented."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--property-is-non-nil-p :commentedp headline))
+
+(defun om-elem-headline-has-tag-p (tag headline)
+  "Return t if HEADLINE element is tagged with TAG."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (if (member tag (om-elem--get-property :tags headline)) t))
+
+(defun om-elem-headline-set-archived (flag headline)
+  "Set the archived flag of HEADLINE element to FLAG."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-set-archived flag headline))
+
+(defun om-elem-headline-set-commented (flag headline)
+  "Set the commented flag of HEADLINE element to FLAG."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-set-commented flag headline))
+
+(defun om-elem-headline-set-pre-blank (pre-blank headline)
+  "Set the :pre-blank property of HEADLINE to PRE-BLANK."
+  (om-elem--verify elem om-elem-is-headline-p)
+  (om-elem--headline-set-pre-blank pre-blank headline))
+
+(defun om-elem-headline-set-todo (todo headline)
+  "Set the todo keyword of HEADLINE element to TODO."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-set-todo todo headline))
+
+(defun om-elem-headline-set-priority (priority headline)
+  "Set the priority of HEADLINE element to PRIORITY."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-set-priority priority headline))
+
+;; TODO make shortcut function for setting the headline title
+(defun om-elem-headline-set-title (title headline)
+  "Set the title of HEADLINE element to TITLE."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-set-title title headline))
+
+(defun om-elem-headline-shift-priority (shift headline)
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-shift-priority shift headline))
+
+(defun om-elem-headline-update-item-statistics (headline)
+  (let ((items (om-elem-find '(section plain-list item) headline))
+        (done (length (-filter #'om-elem-item-is-checked-p items)))
+        (total (length items)))
+    (om-elem--headline-set-statistics-cookie-fraction done total headline)))
+
+(defun om-elem-headline-update-todo-statistics (headline)
+  ;; TODO make this private
+  (let ((subtodo (->> (om-elem-headline--get-subheadlines headline)
+                      (--filter (om-elem--get-property :todo-keyword it)))
+        (done (length (-filter #'om-elem-headline-is-done-p subtodo)))
+        (total (length subtodo)))
+    (om-elem--headline-set-statistics-cookie-fraction done total headline))))
+
+;; item
+
+(defun om-elem-item-is-checked-p (item)
+  "Return t if ITEM element is checked."
+  (om-elem--verify item om-elem-is-item-p)
+  (om-elem--property-is-eq-p :checkbox 'on item))
+
+(defun om-elem-item-is-unchecked-p (item)
+  "Return t if ITEM element is unchecked."
+  (om-elem--verify item om-elem-is-item-p)
+  (om-elem--property-is-eq-p :checkbox 'off item))
+
+(defun om-elem-item-is-trans-p (item)
+  "Return t if ITEM element is transitional."
+  (om-elem--verify item om-elem-is-item-p)
+  (om-elem--property-is-eq-p :checkbox 'trans item))
+
+(defun om-elem-item-set-checkbox (state item)
+  "Set the checkbox of ITEM element to STATE.
+STATE is one of 'on', 'off', 'trans'. Setting to nil removes the
+checkbox."
+  (om-elem--verify item om-elem-is-item-p)
+  (om-elem--item-set-checkbox state item))
+
+(defun om-elem-item-set-bullet (bullet item)
+  "Set the bullet of ITEM element to BULLET.
+BULLET is either '-' or '+' or an integer greater than zero.
+Note that `org-element-item-interpreter' currently does not interpret
+'+' bullets properly and will render these as '-'."
+  (om-elem--verify item om-elem-is-item-p)
+  (om-elem--item-set-bullet bullet item))
+
+(defun om-elem-item-set-tag (tag item)
+  "Set the tag of ITEM element to TAG where TAG is a string or nil."
+  (om-elem--verify item om-elem-is-item-p)
+  (om-elem--item-set-tag tag item))
+
+(defun om-elem-item-toggle-checkbox (item)
+  "Toggle the checked/unchecked state of ITEM element."
+  (om-elem--verify item om-elem-is-item-p)
+  (om-elem--item-toggle-checkbox item))
+
+;; keyword
+
+(defun om-elem-keyword-set-key (key keyword)
+  "Set the key of KEYWORD element to KEY (a string)."
+  (om-elem--verify keyword om-elem-is-keyword-p)
+  (om-elem--set-key key keyword))
+
+(defun om-elem-keyword-set-value (value keyword)
+  "Set the value of KEYWORD element to VALUE (a string)."
+  (om-elem--verify keyword om-elem-is-keyword-p)
+  (om-elem--set-value value keyword))
+
+;;; PUBLIC CONTENT FUNCTIONS
+
+;; generic
+
+(defun om-elem-contains-point-p (point elem)
+  "Return t if integer POINT is within the beginning and end of ELEM."
+  (<= (om-elem--get-property :begin elem) point
+      (om-elem--get-property :end elem)))
+
+(defun om-elem-contents-contains-point-p (point elem)
+  "Return t if integer POINT is within the beginning and end of ELEM's contents."
+  (<= (om-elem--get-property :contents-begin elem) point
+      (om-elem--get-property :contents-end elem)))
+
+(defun om-elem--wrap (type args)
+  (-> (format "om-elem-build-%s" type) (intern) (apply args)))
+
+(defun om-elem-wrap-object (type &rest args)
+  "Call build function of TYPE to wrap objects contained in ARGS.
+ARGS is actually a list if keywords and objects that will be
+passed to the builder function. For example with TYPE of 'bold'
+and ARGS of ':post-blank 2 \"foo\"', the function `om-elem-build-bold'
+will be called with keyword argument ':postblank 2' and \"foo\" in
+the rest args slot."
+  (if (memq type (append org-element-recursive-objects
+                         org-element-object-containers))
+      (om-elem--wrap type args)
+    (error "Invalid type: %s" type)))
+
+(defun om-elem-wrap-element (type &rest args)
+  (if (memq type org-element-greater-elements)
+      (om-elem--wrap type args)
+    (error "Invalid type: %s" type)))
+
+;; TODO is this a meaningful distinction?
+(defun om-elem-unwrap (obj)
+  "Remove the contents of recursive/container object or greater element OBJ."
+  (if (om-elem-plain-list-p obj) (list obj)
+    (let* ((contents (om-elem--get-contents obj))
+           (post-blank (om-elem--get-property :post-blank obj))
+           (first (-drop-last 1 contents))
+           (last* (->> (-last-item contents)
+                       (om-elem-set-post-blank post-blank)
+                       (list))))
+      (append first last*))))
+
+(defun om-elem-unwrap-deep (types obj)
+  "Remove the contents of all objects of type in TYPES from OBJ.
+Return a list of objects."
+  (cond
+   ((om-elem--is-any-type-p types obj) 
+    (let* ((contents (om-elem--get-contents obj))
+           (post-blank (om-elem--get-property :post-blank obj))
+           (first (-drop-last 1 contents))
+           (last* (->> (-last-item contents)
+                       (om-elem-set-post-blank post-blank)
+                       (list))))
+      (--mapcat (om-elem-unwrap-deep types it) (append first last*))))
+   ((om-elem--is-plain-text-p obj) (list obj))
+   (t (list obj))))
+
+(defun om-elem-remove-formatting (types elem)
+  "Remove all recursive formatting TYPES from ELEM."
+  (om-elem-map* `(:many! (:or ,@types))
+                (om-elem-unwrap-deep types it) elem))
+
+(defun om-elem-remove-all-formatting (elem)
+  "Remove all recursive formatting from ELEM."
+  (om-elem-remove-formatting org-element-all-objects elem))
+
+;; objects
+;;
+;; link
+
+(defun om-elem-link-set-description (desc link)
+  (om-elem--verify link om-elem-is-link-p)
+  (om-elem--set-contents-by-type 'link desc link))
+
+;; elements
+;;
+;; headline
+
+(defun om-elem-headline-get-subheadlines (headline)
+  "Return list of subheadlines for HEADLINE element or nil if none."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-get-subheadlines headline))
+
+(defun om-elem-headline-get-section (headline)
+  "Return section for headline HEADLINE element or nil if none."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-get-section headline))
+
+(defun om-elem-headline-get-drawer (name headline)
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-get-drawer name headline))
+
+(defun om-elem-set-planning (planning-plist headline)
+  (om-elem--verify headline om-elem-is-headline-p)
+  (let ((keys (om--plist-get-keys planning-plist)))
+    (--> (om--plist-get-vals planning-plist)
+         (--map (-some->> it (om-elem-build-timestamp 'inactive)) it)
+         (-interleave keys it)
+         (om-elem-set-properties it headline))))
+
+;; item
+
+(defun om-elem-item-get-paragraph (item)
+  (om-elem--verify item om-elem-is-item-p)
+  (om-elem--item-get-paragraph item))
+
+(defun om-elem-item-get-sublist (item)
+  (om-elem--verify item om-elem-is-item-p)
+  (om-elem--item-get-sublist item))
+
+;; plain-list
+
+;; TODO there seems to be a bug in the org-interpeter that prevents
+;; "+" bullets from being recognized (as of org-9.1.9 they are simply
+;; read as "-")
+(defun om-elem-plain-list-set-type (type plain-list)
+  "Set the type of PLAIN-LIST greater element to TYPE.
+TYPE is '-', '+', or 'ordered'."
+  (om-elem--verify plain-list om-elem-is-plain-list-p)
+  (cond
+   ((memq type '(+ -))
+    (om-elem-map* '(item) (om-elem-item-set-bullet type it) plain-list))
+   ((eq type 'ordered)
+    ;; NOTE the org-interpreter seems to use the correct, ordered
+    ;; numbers if any number is set here. This behavior may not be
+    ;; reliable.
+    (om-elem-map* '(item) (om-elem-item-set-bullet 1 it) plain-list))
+   (t (error "Invalid type: %s" type))))
+
+;; table
+
+(defun om-elem-table-get-cell (row column table)
+  "Return table-cell element at ROW and COLUMN indices in TABLE element.
+Hlines do not count toward row indices, and all indices are
+zero-indexed."
+  (om-elem--verify table om-elem-is-table-p)
+  (om-elem--table-get-cell row column table))
+
+(defun om-elem-table-delete-row (index table)
+  (om-elem--verify table om-elem-is-table-p)
+  (om-elem--table-delete-row index table))
+
+(defun om-elem-table-delete-column (index table)
+  (om-elem--verify table om-elem-is-table-p)
+  (om-elem--table-delete-column index table))
+
+(defun om-elem-table-insert-column (index column table)
+  (om-elem--verify table om-elem-is-table-p)
+  (unless (-all? #'om-elem-is-table-cell-p column)
+    (error "All members of column must be table cells"))
+  (om-elem--table-insert-column index column table))
+
+(defun om-elem-table-insert-column! (index column table)
+  (om-elem--verify table om-elem-is-table-p)
+  (let ((column (-map #'om-elem-build-table-cell column)))
+    (om-elem--table-insert-column index column table)))
+
+(defun om-elem-table-insert-row (index row table)
+  (om-elem--verify row om-elem-is-table-row-p
+                   table om-elem-is-table-p)
+  (om-elem--table-insert-row index row table))
+
+(defun om-elem-table-insert-row! (index row table)
+  (om-elem--verify table om-elem-is-table-p)
+  (let ((row (if (eq row 'hline) (om-elem-build-table-row-hline)
+               (->> (-map #'om-elem-build-table-cell row)
+                    (apply #'om-elem-build-table-row)))))
+    (om-elem--table-insert-row index row table)))
+
+;; PUBLIC INDENTATION FUNCTIONS
+
+;; headline
+
+(defun om-elem-headline-indent-subtree (index headline)
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-indent-subtree index headline))
+
+(defun om-elem-headline-indent-subheadline (index headline)
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-indent-subheadline index headline))
+
+(defun om-elem-headline-unindent-subheadline (index child-index headline)
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-unindent-subheadline index child-index headline))
+
+(defun om-elem-headline-unindent-subtree (index headline)
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-unindent-subtree index headline))
+
+;; plain-list
+
+(defun om-elem-plain-list-indent-item-tree (index plain-list)
+  (om-elem--verify plain-list om-elem-is-plain-list-p)
+  (om-elem--plain-list-indent-item-tree index plain-list))
+
+(defun om-elem-plain-list-indent-item (index plain-list)
+  (om-elem--verify plain-list om-elem-is-plain-list-p)
+  (om-elem--plain-list-indent-item index plain-list))
+
+(defun om-elem-plain-list-unindent-item (index child-index plain-list)
+  (om-elem--verify plain-list om-elem-is-plain-list-p)
+  (om-elem--plain-list-unindent-item index child-index plain-list))
+
+(defun om-elem-plain-list-unindent-items (index plain-list)
+  (om-elem--verify plain-list om-elem-is-plain-list-p)
+  (om-elem--plain-list-unindent-items index plain-list))
+
+;;; printing functions
+
+(defun om-elem--set-blank-contents (elem)
+  "Set the contents of ELEM to a blank string (\"\")."
+  (om-elem--set-contents '("") elem))
+
+(defun om-elem-is-zero-length-p (elem)
+  "Return t if ELEM will print as a blank string."
+  (-if-let (contents (om-elem--get-contents elem))
+      (-all? #'om-elem-is-zero-length-p contents)
+    (and (om-elem--is-any-type-p om-elem--rm-if-empty elem)
+         (om-elem--is-empty-p elem))))
+
+(defconst om-elem--rm-if-empty
+  '(table plain-list bold italic radio-target strike-through
+          superscript subscript table-cell underline)
+  "Elements/objects that will be blank if printed and empty.")
+
+(defconst om-elem--blank-if-empty
+  '(center-block drawer dynamic-block property-drawer quote-block
+                 special-block verse-block)
+  "Elements that require contents of \"\" to correctly print empty.
+This is a workaround for a bug.")
+
+(defun om-elem--allow-non-zero-length (elem)
+  (unless (and (om-elem--is-empty-p elem)
+               (or (om-elem--is-any-type-p om-elem--rm-if-empty elem)
+                   (and (om-elem--is-type-p 'table-row elem)
+                        (om-elem--property-is-eq-p :type 'standard elem))))
+    elem))
+
+(defun om-elem--clean (elem)
+  (->> elem
+       (om-elem--map-contents* (-non-nil (-map #'om-elem--clean it)))
+       (om-elem--allow-non-zero-length)))
+
+(defun om-elem--blank (elem)
+  (if (om-elem--is-empty-p elem)
+      (if (om-elem--is-any-type-p om-elem--blank-if-empty elem)
+          (om-elem--set-blank-contents elem)
+        elem)
+    (om-elem--map-contents* (-map #'om-elem--blank it) elem)))
+
+(defun om-elem-to-string (elem)
+  "Return ELEM as an interpreted string without text properties."
+  (->> elem
+       ;; some objects and greater elements should be removed if blank
+       ;; table and plain list will error, and the others make no
+       ;; sense if they are empty. This is an org mode bug, they
+       ;; should not be printed by the interpreter by default
+       (om-elem--clean)
+       ;; some greater elements will print "nil" in their contents if
+       ;; they are empty. This is likely an org bug, since it means
+       ;; that the element <-> string conversion is not 100%
+       ;; reproducible. The workaround for this is to set the contents
+       ;; to a single blank string if empty
+       (om-elem--blank)
+       (org-element-interpret-data)
+       (substring-no-properties)))
+
+(defun om-elem-to-trimmed-string (elem)
+  "Like `om-elem-to-string' but strip whitespace when returning ELEM."
+  (-some->> (om-elem-to-string elem) (s-trim)))
+
+(defun om-elem-remove-properties (elem &rest props)
+  (if (stringp elem)
+      (progn
+        (remove-text-properties
+         0 (length elem) (--mapcat (list it nil) props) elem)
+        elem)
+    (let ((new-props
+           (->> (om-elem--get-properties elem)
+                (-partition 2)
+                (--map (unless (memq (car it) props) it))
+                (-non-nil)
+                (apply #'append))))
+      (append
+       (list (om-elem--get-type elem) new-props)
+       (om-elem--get-contents elem)))))
+
+(defun om-elem-strip-parent (elem)
+  (om-elem-remove-properties elem :parent))
+
+(defun om-elem-strip-text-properties (elem)
+  (cl-labels
+      ((strip-props
+        (e)
+        (if (stringp e) e
+          (let ((new-props
+                 (->>
+                  (om-elem--get-properties e)
+                  (--map
+                   ;; I think this covers everything? (strings and list
+                   ;; of strings?)
+                   (cond
+                    ((stringp it)
+                     (substring-no-properties it))
+                    ((listp it)
+                     (-map-when #'stringp #'substring-no-properties it))
+                    (t it))))))
+            (append (list (om-elem--get-type e) new-props)
+                    (org-element-contents e)))))
+       (map-rec
+        (e)
+        (if (stringp e) (substring-no-properties e)
+          (->>
+           (om-elem--get-contents e)
+           (--map (strip-props it))
+           (--map (map-rec it))
+           (append (list (om-elem--get-type e) (nth 1 e)))))))
+    (->> (strip-props elem) (map-rec))))
+
+(defun om-elem-print (elem)
+  (->> (om-elem-strip-parent elem)
+       (om-elem-strip-text-properties)
+       (format "%S")))
+
+(defun om-elem-pretty-print (elem)
+  (->> (om-elem-remove-properties elem :begin :end :contents-begin
+                                  :contents-end :post-affiliated)
+       (om-elem-print)))
+
+(defun om-elem--indent-string (s)
+  "Indent string S by 2 spaces.
+Return new string.  If S is the empty string, return it."
+  (if (equal "" s) s (replace-regexp-in-string "^ *\\S-" " \\&" s)))
+
+;; TODO this is a terrible way to strip the properties and such
+(defun om-elem-indent-print (elem)
+  (let ((rem-props '(:begin :end :contents-begin :contents-end
+                            :post-affiliated :parent :structure)))
+    (cl-labels
+        ((print-rec
+          (e)
+          (if (stringp e)
+              (->> (s-trim e) (om-elem-print))
+            (let ((head-str (format "%S %S" (org-element-type e)
+                                    (nth 1 e))))
+              (-if-let (contents (org-element-contents e))
+                  (->> (--map (apply #'om-elem-remove-properties
+                                     it rem-props)
+                              contents)
+                       (--map (print-rec it))
+                       (s-join "\n")
+                       (om-elem--indent-string)
+                       (format "(%s\n%s)" head-str))
+                (->> (format "(%s)" head-str)))))))
+                     ;; (om-elem--indent-string)))))))
+      (->> (apply #'om-elem-remove-properties elem rem-props)
+           (om-elem-strip-text-properties)
+           (print-rec)))))
+
+;;; parsing functions
+
+;; point functions
+
+(defun om-elem-parse-object-at (point &optional type)
+  "Return the object tree under POINT or nil if not on an object.
+
+If TYPE is supplied, only return nil if the object under point is
+not of that type. TYPE is a symbol from `org-element-all-objects'."
+  (save-excursion
+    (goto-char point)
+    (let* ((context (org-element-context))
+           (type (om-elem--get-type context))
+           (offset (cond
+                    ((memq type '(superscript subscript)) -1)
+                    ((eq type 'table-cell) -1)
+                    (t 0)))
+           (nesting (cond
+                     ((memq type '(superscript subscript)) '(0 1))
+                     ((eq type 'table-cell) '(0 0 0))
+                     (t '(0 0)))))
+      (-let* (((&plist :begin :end) (om-elem--get-properties context))
+              (tree (org-element--parse-elements (+ begin offset) end 'first-section
+                                                 nil nil nil nil)))
+        (--> (car tree)
+             (om-elem--get-nested-contents nesting it)
+             (om-elem--allow-types org-element-all-objects it)
+             (if type (om-elem--allow-type type it) it))))))
+
+(defun om-elem-parse-element-at (point &optional type)
+  "Return element immediately under POINT.
+For a list of all possible return types refer to
+`org-element-all-elements'; this will return everything in this list
+except 'section' which is ambiguous when referring to a single point.
+(see `om-elem-parse-section-at').
+
+If TYPE is supplied, only return nil if the object under point is
+not of that type. TYPE is a symbol from `org-element-all-elements'.
+Furthermore, setting TYPE to 'table-row' will prefer table-row
+elements over table elements and likewise when setting TYPE to 'item'
+for plain-list elements vs item elements."
+  (save-excursion
+    (goto-char point)
+    (let*
+        ((elem (org-element-at-point))
+         (elem-type (om-elem--get-type elem)))
+      (if (not
+           (memq elem-type (append org-element-greater-elements
+                                   org-element-object-containers)))
+          elem
+        (-let* (((&plist :begin :end) (om-elem--get-properties elem))
+                (tree (car (org-element--parse-elements
+                            begin end 'first-section nil nil nil nil)))
+                (nesting (cl-case elem-type
+                           (headline nil)
+                           (table (if (eq type 'table-row) '(0 0) '(0)))
+                           (plain-list (if (eq type 'item) '(0 0) '(0)))
+                           (t '(0)))))
+          (--> (om-elem--get-nested-contents nesting tree)
+               (if type (om-elem--allow-type type it) it)))))))
+
+(defun om-elem-parse-table-row-at (point)
+  "Return table-row element under POINT or nil if not found."
+  (save-excursion
+    (goto-char point)
+    (beginning-of-line)
+    (om-elem-parse-element-at (point) 'table-row)))
+
+(defun om-elem-parse-item-at (point)
+  "Return item element under POINT or nil if not found.
+Unlike `om-elem-parse-element-at', this will return then item even if
+POINT is not at the beginning of the line."
+  (save-excursion
+    (goto-char point)
+    (beginning-of-line)
+    (om-elem-parse-element-at (point) 'item)))
+
+(defun om-elem--parse-headline-subtree-at (point subtree)
+  (save-excursion
+    (goto-char point)
+    (when (ignore-errors (org-back-to-heading))
+      (let ((b (point))
+            (e (if subtree (org-end-of-subtree)
+                 (or (outline-next-heading) (point-max)))))
+        (car (org-element--parse-elements b e 'first-section
+                                          nil nil nil nil))))))
+
+(defun om-elem-parse-headline-at (point)
+  "Return element tree of the headline under POINT or nil if none.
+POINT does not need to be on the headline itself. Only the headline
+and its section will be returned (no subheadlines)."
+  (om-elem--parse-headline-subtree-at point nil))
+
+(defun om-elem-parse-subtree-at (point)
+  "Return element tree of the headline under POINT or nil if none.
+POINT does not need to be on the headline itself. Unlike
+`om-elem-parse-headline-at', the returned tree will include
+subheadlines."
+  (om-elem--parse-headline-subtree-at point t))
+
+(defun om-elem-parse-section-at (point)
+  "Return tree of the current section under POINT.
+If POINT is on or within a headline, return the section under that
+headline. If POINT is before the first headline (if any), return
+the section at the top of the org buffer."
+  (save-excursion
+    (goto-char point)
+    (om-elem--get-nested-contents
+     '(0)
+     (condition-case nil
+         (progn
+           (org-back-to-heading)
+           ;; TODO this is redundant
+           (om-elem--parse-headline-subtree-at point nil))
+       (error
+        (progn
+          (org-element--parse-elements
+           (point-min) (or (outline-next-heading) (point-max))
+           'first-section nil nil nil nil)))))))
+
+;; parse at current point
+
+(defun om-elem-parse-this-object (&optional type)
+  "Call `om-elem-parse-object-at' with the current point.
+
+If TYPE is supplied, only return nil if the object under point is
+not of that type. TYPE is a symbol from `org-element-all-objects'."
+  (om-elem-parse-object-at (point) type))
+
+(defun om-elem-parse-this-element (&optional type)
+  "Call `om-elem-parse-element-at' with the current point.
+
+If TYPE is supplied, only return nil if the element under point is
+not of that type. TYPE is a symbol from `org-element-all-elements'."
+  (om-elem-parse-element-at (point) type))
+
+(defun om-elem-parse-this-table-row ()
+  "Call `om-elem-parse-table-row-at' with the current point."
+  (om-elem-parse-table-row-at (point)))
+
+(defun om-elem-parse-this-item ()
+  "Call `om-elem-parse-item-at' with the current point."
+  (om-elem-parse-item-at (point)))
+
+(defun om-elem-parse-this-headline ()
+  "Call `om-elem-parse-headline-at' with the current point."
+  (om-elem-parse-headline-at (point)))
+
+(defun om-elem-parse-this-subtree ()
+  "Call `om-elem-parse-subtree-at' with the current point."
+  (om-elem-parse-subtree-at (point)))
+
+(defun om-elem-parse-this-section ()
+  "Call `om-elem-parse-section-at' with the current point."
+  (om-elem-parse-section-at (point)))
+
+(defalias 'om-elem-parse-this-buffer 'org-element-parse-buffer)
+
+;;; side effects
+
+;; write
+
+(defun om-elem-insert (point elem)
+  "Convert ELEM to a string and insert at POINT in the current buffer.
+Return ELEM."
+  (om-elem--verify point integerp
+                   elem om-elem--is-element-or-object-p)
+  (save-excursion
+    (goto-char point)
+    (insert (om-elem-to-string elem)))
+  elem)
+
+(defun om-elem-insert-tail (point elem)
+  "Like `om-elem-insert' but insert ELEM at POINT and move to the end of inserted string."
+  (om-elem--verify point integerp
+                   elem om-elem--is-element-or-object-p)
+  (let ((s (om-elem-to-string elem)))
+    (save-excursion
+      (goto-char point)
+      (insert s))
+    (goto-char (+ point (length s))))
+  elem)
+
+(defun om-elem--apply-overlays (os)
+  (cl-flet
+      ((apply-overlays
+        (o)
+        (let* ((beg (plist-get o :start))
+               (end (plist-get o :end))
+               (props (plist-get o :props))
+               (o* (make-overlay beg end)))
+          (--each (-partition 2 props) (apply #'overlay-put o* it)))))
+    (-each os #'apply-overlays)))
+
+(defun om-elem-update (fun elem)
+  "Replace ELEM in the current buffer with a new one. 
+FUN is a function that takes ELEM as its only argument and returns a
+modified ELEM. This modified element is then written in place of the
+old element in the current buffer."
+  (om-elem--verify fun functionp
+                   elem om-elem--is-element-or-object-p)
+  ;; if elem is of type 'org-data' it will have no props
+  (let* ((begin (or (om-elem--get-property :begin elem) (point-min)))
+         (end (or (om-elem--get-property :end elem) (point-max)))
+         ;; get the outline overlays that make text invisible
+         (ov-cmd (->>
+                  (overlays-in begin end)
+                  (--filter (eq 'outline (overlay-get it 'invisible)))
+                  (--map (list :start (overlay-start it)
+                               :end (overlay-end it)
+                               :props (overlay-properties it)))
+                  (list 'apply 'om-elem--apply-overlays))))
+    ;; hacky way to add overlays to undo tree
+    (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
+    (delete-region begin end)
+    (->> (funcall fun elem) (om-elem-insert begin))
+    nil))
+
+(defmacro om-elem-update* (form elem)
+  "Anaphoric form of `om-elem-update'.
+IN-FORM and PROC-FORM are forms corresponding to 'in-fun' and 
+'proc-fun'. The latter has the variable 'it' available to it, which
+holds the element returned from IN-FORM."
+  (declare (indent 1))
+  `(om-elem-update (lambda () ,form) elem))
+
+(defun om-elem-update-object-at (point fun &optional type)
+  (om-elem-update fun (om-elem-parse-object-at point type)))
+
+(defun om-elem-update-element-at (point fun &optional type)
+  (om-elem-update fun (om-elem-parse-element-at point type)))
+
+(defun om-elem-update-item-at (point fun)
+  (om-elem-update fun (om-elem-parse-headline-at point)))
+
+(defun om-elem-update-table-row-at (point fun)
+  (om-elem-update fun (om-elem-parse-headline-at point)))
+
+(defun om-elem-update-headline-at (point fun)
+  (om-elem-update fun (om-elem-parse-headline-at point)))
+
+(defun om-elem-update-subtree-at (point fun)
+  (om-elem-update fun (om-elem-parse-subtree-at point)))
+
+(defun om-elem-update-section-at (point fun)
+  (om-elem-update fun (om-elem-parse-subtree-at point)))
+
+;; TODO just make a function to create these from the point versions
+
+(defun om-elem-update-this-object (fun &optional type)
+  (om-elem-update-object-at (point) fun type))
+
+(defun om-elem-update-this-element (fun &optional type)
+  (om-elem-update-element-at (point) fun type))
+
+(defun om-elem-update-this-item (fun)
+  (om-elem-update-item-at (point) fun))
+
+(defun om-elem-update-this-table-row (fun)
+  (om-elem-update-table-row-at (point) fun))
+
+(defun om-elem-update-this-headline (fun)
+  (om-elem-update-headline-at (point) fun))
+
+(defun om-elem-update-this-subtree (fun)
+  (om-elem-update-subtree-at (point) fun))
+
+(defun om-elem-update-this-section (fun)
+  (om-elem-update-section-at (point) fun))
+
+;; fold
+(defun om-elem--flag-elem-contents (flag elem)
+  (om-elem--verify flag booleanp
+                   elem om-elem--is-element-or-object-p)
+  (-let (((&plist :contents-begin :contents-end) (om-elem--get-properties elem)))
+    (outline-flag-region (- contents-begin 1) (- contents-end 1) flag)))
+
+(defun om-elem-fold-contents (elem)
+  "Fold the contents of ELEM if they exist."
+  (om-elem--flag-elem-contents t elem))
+
+(defun om-elem-unfold-contents (elem)
+  "Unfold the contents of ELEM if they exist."
+  (om-elem--flag-elem-contents nil elem))
+
+;;; misc functions
+
+(defun om-elem-length (elem)
+  "Return the character length of ELEM."
+  (if (not elem) 0
+    (let ((b (om-elem--get-property :begin elem))
+          (e (om-elem--get-property :end elem)))
+      (if (and b e) (- e b)
+        (error "Can't determine element length")))))
+
+(defun om-elem-now ()
+  "Return list representing the current time without hours and minutes.
+This is meant to be used as input for functions such as
+`om-elem-build-timestamp'."
+  (->> (decode-time) (-select-by-indices '(3 4 5)) (reverse)))
+
+(defun om-elem-now-long ()
+  "Return list representing the current time with hours and minutes.
+This is meant to be used as input for functions such as
+`om-elem-build-timestamp'."
+  (->> (decode-time) (-select-by-indices '(1 2 3 4 5)) (reverse)))
+
+(defun om-elem-get-type (elem)
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--get-type elem))
 
 ;;; generalized CRUD operations
 
@@ -2775,1223 +3869,6 @@ QUERIES follows the same rules as `om-elem-find'."
         (body `(backquote (,it ,',queries (lambda (it) ,',form ) ,',elem))))
     (eval `(defmacro ,fun-name (queries form elem)
                  ,doc-string ,body))))
-
-;;; element meta-getters
-
-;; generic
-
-;; (defun om-elem--get-parent-get-headline (elem)
-;;   "Return the most immediate parent headline of ELEM."
-;;   (om-elem-find-parent elem :many 'headline))
-
-;; (defun om-elem--get-parent-get-item (elem)
-;;   "Return the parent item element for ELEM."
-;;   (om-elem-find-parent elem :many 'item))
-
-;; headline
-
-(defun om-elem-headline-get-subheadlines (headline)
-  "Return list of subheadlines for HEADLINE element or nil if none."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-get-subheadlines headline))
-
-(defun om-elem-headline-get-section (headline)
-  "Return section for headline HEADLINE element or nil if none."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-get-section headline))
-
-(defun om-elem-headline-get-drawer (name headline)
-  "Return first drawer with NAME in HEADLINE element or nil if none."
-  (om-elem--verify name stringp
-                   headline om-elem-is-headline-p)
-  (om-elem-find-first `(section (:drawer-name ,name)) headline))
-
-;; (defun om-elem-headline-logbook (elem)
-;;   "Return contents of headline ELEM's logbook drawer or nil if none."
-;;   ;; TODO what if org-log-into-drawer is nil?
-;;   (-some-->
-;;    (om-elem-headline-section elem)
-;;    (om-elem-find-first it `(:drawer-name ,org-log-into-drawer))
-;;    (om-elem--get-contents it)))
-
-(defun om-elem-headline-get-path (headline)
-  "Return path of headline HEADLINE element as a list of strings."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (cl-labels
-      ((get-path
-        (hl)
-        (let ((title (om-elem--get-property :raw-value hl)))
-          (-if-let (parent (om-elem--get-parent-get-headline hl))
-              (cons title (get-path parent))
-            (list title)))))
-    (reverse (get-path headline))))
-
-;; item
-
-(defun om-elem-item-get-level (item)
-  "Return the level of ITEM element item (1 indexed)."
-  (om-elem--verify item om-elem-is-item-p)
-  (cl-labels
-      ((get-level
-        (item acc)
-        (let ((parent (->> (om-elem--get-property :parent item)
-                           (om-elem--get-property :parent))))
-          (if (om-elem-item-p parent)
-              (get-level parent (+ 1 acc))
-            acc))))
-    (get-level item 1)))
-
-(defun om-elem-item-get-sublist (item)
-  "Return plain-list under ITEM element or nil if none."
-  (om-elem--verify item om-elem-is-item-p)
-  (-some->> (om-elem--get-contents item) (assoc 'plain-list)))
-
-(defun om-elem-item-get-paragraph (item)
-  "Return paragraph under ITEM element or nil if none."
-  (om-elem--verify item om-elem-is-item-p)
-  (-some->> (om-elem--get-contents item) (assoc 'paragraph)))
-
-;; table
-
-;; TODO add negative indices
-(defun om-elem-table-get-cell (row column table)
-  "Return table-cell element at ROW and COLUMN indices in TABLE element.
-Hlines do not count toward row indices, and all indices are
-zero-indexed."
-  (om-elem--verify table om-elem-is-table-p)
-  (-some->> (om-elem--get-contents table)
-            (--filter (om-elem--property-is-eq-p :type 'standard it))
-            (nth row)
-            (om-elem--get-contents)
-            (nth column)))
-
-;; timestamp
-
-(defun om-elem-timestamp-get-start-timestamp (timestamp)
-  "Return the start of TIMESTAMP element."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-get-start-timestamp timestamp))
-
-(defun om-elem-timestamp-get-end-timestamp (timestamp)
-  "Return the end of TIMESTAMP element or nil if not present."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (if (not (om-elem--timestamp-is-ranged timestamp)) nil
-    (om-elem--timestamp-get-end-timestamp timestamp)))
-
-(defun om-elem-timestamp-get-start-unixtime (timestamp)
-  "Return the unixtime value of TIMESTAMP element as an integer.
-Note this only considers the start of the timestamp if it is range."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-get-start-unixtime timestamp))
-
-(defun om-elem-timestamp-get-end-unixtime (timestamp)
-  "Return the unixtime value of TIMESTAMP's end as an integer."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (if (not (om-elem--timestamp-is-ranged timestamp)) nil
-    (om-elem--timestamp-get-end-unixtime)))
-
-;;; element predicates
-
-;; generic
-
-(defun om-elem-contains-point-p (point elem)
-  "Return t if integer POINT is within the beginning and end of ELEM."
-  (<= (om-elem--get-property :begin elem) point
-      (om-elem--get-property :end elem)))
-
-(defun om-elem-contents-contains-point-p (point elem)
-  "Return t if integer POINT is within the beginning and end of ELEM's contents."
-  (<= (om-elem--get-property :contents-begin elem) point
-      (om-elem--get-property :contents-end elem)))
-
-;; clock
-
-(defun om-elem-clock-is-running-p (clock)
-  "Return t if CLOCK element is running (eg is open)."
-  (om-elem--verify clock om-elem-is-clock-p)
-  (om-elem--property-is-eq-p :status 'running clock))
-
-;; headline
-
-(defun om-elem-headline-is-done-p (headline)
-  "Return t if HEADLINE element has a DONE todo keyword."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-eq-p :todo-type 'done headline))
-
-(defun om-elem-headline-is-scheduled-p (headline)
-  "Return t if HEADLINE element is scheduled."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-non-nil-p :scheduled headline))
-
-(defun om-elem-headline-is-deadlined-p (headline)
-  "Return t if HEADLINE element has a deadline."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-non-nil-p :deadline headline))
-
-(defun om-elem-headline-is-closed-p (headline)
-  "Return t if HEADLINE element is closed."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-non-nil-p :closed headline))
-
-;; (defun om-elem-headline-is-quoted-p (headline)
-;;   "Return t if HEADLINE element is quoted."
-;;   (om-elem--property-is-non-nil-p :quotedp headline))
-
-(defun om-elem-headline-is-archived-p (headline)
-  "Return t if HEADLINE element is archived."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-non-nil-p :archivedp headline))
-
-(defun om-elem-headline-is-commented-p (headline)
-  "Return t if HEADLINE element is commented."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-non-nil-p :commentedp headline))
-
-(defun om-elem-headline-has-tag-p (tag headline)
-  "Return t if HEADLINE element is tagged with TAG."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (if (member tag (om-elem--get-property :tags headline)) t))
-
-;; item
-
-(defun om-elem-item-is-checked-p (item)
-  "Return t if ITEM element is checked."
-  (om-elem--verify item om-elem-is-item-p)
-  (om-elem--property-is-eq-p :checkbox 'on item))
-
-(defun om-elem-item-is-unchecked-p (item)
-  "Return t if ITEM element is unchecked."
-  (om-elem--verify item om-elem-is-item-p)
-  (om-elem--property-is-eq-p :checkbox 'off item))
-
-(defun om-elem-item-is-trans-p (item)
-  "Return t if ITEM element is transitional."
-  (om-elem--verify item om-elem-is-item-p)
-  (om-elem--property-is-eq-p :checkbox 'trans item))
-
-;; statistics cookie
-
-(defun om-elem-statistics-cookie-is-complete-p (statistics-cookie)
-  "Return t is STATISTICS-COOKIE element is complete."
-  (om-elem--verify statistics-cookie om-elem-is-statistics-cookie-p)
-  (let ((val (om-elem--get-property :value statistics-cookie)))
-    (or (-some->>
-         (s-match "\\([[:digit:]]+\\)%" val)
-         (nth 1)
-         (string-to-number)
-         (= 100))
-        (-some->>
-         (s-match "\\([[:digit:]]+\\)/\\([[:digit:]]+\\)" val)
-         (-drop 1)
-         (-map #'string-to-number)
-         (apply #'=)))))
-
-;; timestamp
-
-(defun om-elem-timestamp-is-active-p (timestamp)
-  "Return t if TIMESTAMP elem is active."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (or (om-elem--property-is-eq-p :type 'active timestamp)
-      (om-elem--property-is-eq-p :type 'active-range timestamp)))
-
-(defun om-elem-timestamp-is-inactive-p (timestamp)
-  "Return t if TIMESTAMP elem is inactive."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (or (om-elem--property-is-eq-p :type 'inactive timestamp)
-      (om-elem--property-is-eq-p :type 'inactive-range timestamp)))
-
-(defun om-elem-timestamp-is-ranged-p (timestamp)
-  "Return t if TIMESTAMP elem is ranged."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (or (om-elem--property-is-eq-p :type 'active-range timestamp)
-      (om-elem--property-is-eq-p :type 'inactive-range timestamp)))
-
-(defun om-elem-timestamp-is-less-than-p (unixtime timestamp)
-  "Return t if TIMESTAMP elem is less than UNIXTIME."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (< (om-elem-timestamp-get-unixtime timestamp) unixtime))
-
-(defun om-elem-timestamp-is-greater-than-p (unixtime timestamp)
-  "Return t if TIMESTAMP elem is greater than UNIXTIME."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (> (om-elem-timestamp-get-unixtime timestamp) unixtime))
-
-(defun om-elem-timestamp-is-equal-p (unixtime timestamp)
-  "Return t if TIMESTAMP elem is equal to UNIXTIME."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (= (om-elem-timestamp-get-unixtime timestamp) unixtime))
-
-(defun om-elem-timestamp-is-end-less-than-p (unixtime timestamp)
-  "Return t if TIMESTAMP elem is less than UNIXTIME."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (-when-let (end (om-elem-timestamp-get-end-unixtime timestamp))
-    (< end unixtime)))
-
-(defun om-elem-timestamp-is-end-greater-than-p (unixtime timestamp)
-  "Return t if TIMESTAMP elem is greater than UNIXTIME."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (-when-let (end (om-elem-timestamp-get-end-unixtime timestamp))
-    (> end unixtime)))
-
-(defun om-elem-timestamp-is-end-equal-p (unixtime timestamp)
-  "Return t if TIMESTAMP elem is equal to UNIXTIME."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (-when-let (end (om-elem-timestamp-get-end-unixtime timestamp))
-    (= end unixtime)))
-
-(defun om-elem-timestamp-is-in-range-p (unixtime timestamp)
-  "Return t if UNIXTIME is between start and end of TIMESTAMP elem."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (let ((ut1 (om-elem-timestamp-get-unixtime timestamp))
-        (ut2 (om-elem-timestamp-get-end-unixtime timestamp)))
-    (when ut2 (< ut1 unixtime ut2))))
-
-;;; element setters
-
-;; generic
-
-(defun om-elem-set-property (prop value elem)
-  "Set property PROP in element ELEM to VALUE."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (unless (plist-member (om-elem--get-properties elem) prop)
-    (error "Property %s does not exist in %s" prop elem))
-  (om-elem--set-property prop value elem))
-
-(defun om-elem-set-properties (plist elem)
-  "Set all properties in ELEM to the values corresponding to PLIST.
-PLIST is a list of property-value pairs that correspond to the
-property list in ELEM."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--set-properties plist elem))
-
-;; misc
-
-(defun om-elem-set-post-blank (post-blank elem)
-  "Set the :post-blank property of ELEM to POST-BLANK."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--set-post-blank post-blank elem))
-
-;; headline
-
-(defun om-elem-headline-set-archived (flag headline)
-  "Set the archived flag of HEADLINE element to FLAG."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-set-archived flag headline))
-
-(defun om-elem-headline-set-pre-blank (pre-blank headline)
-  "Set the :pre-blank property of HEADLINE to PRE-BLANK."
-  (om-elem--verify elem om-elem-is-headline-p)
-  (om-elem--headline-set-pre-blank pre-blank headline))
-
-(defun om-elem-headline-set-todo (todo headline)
-  "Set the todo keyword of HEADLINE element to TODO."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-set-todo todo headline))
-
-(defun om-elem-headline-set-commented (flag headline)
-  "Set the commented flag of HEADLINE element to FLAG."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-set-commented flag headline))
-
-(defun om-elem-headline-update-item-statistics (headline)
-  (let ((items (om-elem-find '(section plain-list item) headline))
-        (done (length (-filter #'om-elem-item-is-checked-p items)))
-        (total (length items)))
-    (om-elem--headline-set-statistics-cookie-fraction done total headline)))
-
-(defun om-elem-headline-update-todo-statistics (headline)
-  ;; TODO make this private
-  (let ((subtodo (->> (om-elem-headline--get-subheadlines headline)
-                      (--filter (om-elem--get-property :todo-keyword it)))
-        (done (length (-filter #'om-elem-headline-is-done-p subtodo)))
-        (total (length subtodo)))
-    (om-elem--headline-set-statistics-cookie-fraction done total headline))))
-
-(defun om-elem-headline-set-priority (priority headline)
-  "Set the priority of HEADLINE element to PRIORITY."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-set-priority priority headline))
-
-;; TODO make shortcut function for setting the headline title
-(defun om-elem-headline-set-title (title headline)
-  "Set the title of HEADLINE element to TITLE."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-set-title title headline))
-
-;; item
-
-(defun om-elem-item-set-checkbox (state item)
-  "Set the checkbox of ITEM element to STATE.
-STATE is one of 'on', 'off', 'trans'. Setting to nil removes the
-checkbox."
-  (om-elem--verify item om-elem-is-item-p)
-  (om-elem--item-set-checkbox state item))
-
-(defun om-elem-item-set-bullet (bullet item)
-  "Set the bullet of ITEM element to BULLET.
-BULLET is either '-' or '+' or an integer greater than zero.
-Note that `org-element-item-interpreter' currently does not interpret
-'+' bullets properly and will render these as '-'."
-  (om-elem--verify item om-elem-is-item-p)
-  (om-elem--item-set-bullet bullet item))
-
-(defun om-elem-item-set-tag (tag item)
-  "Set the tag of ITEM element to TAG where TAG is a string or nil."
-  (om-elem--verify item om-elem-is-item-p)
-  (om-elem--item-set-tag tag item))
-
-;; plain-list
-
-;; TODO there seems to be a bug in the org-interpeter that prevents
-;; "+" bullets from being recognized (as of org-9.1.9 they are simply
-;; read as "-")
-(defun om-elem-plain-list-set-type (type plain-list)
-  "Set the type of PLAIN-LIST greater element to TYPE.
-TYPE is '-', '+', or 'ordered'."
-  (om-elem--verify plain-list om-elem-is-plain-list-p)
-  (cond
-   ((memq type '(+ -))
-    (om-elem-map* '(item) (om-elem-item-set-bullet type it) plain-list))
-   ((eq type 'ordered)
-    ;; NOTE the org-interpreter seems to use the correct, ordered
-    ;; numbers if any number is set here. This behavior may not be
-    ;; reliable.
-    (om-elem-map* '(item) (om-elem-item-set-bullet 1 it) plain-list))
-   (t (error "Invalid type: %s" type))))
-
-;; keywords
-
-(defun om-elem-keyword-set-key (key keyword)
-  "Set the key of KEYWORD element to KEY (a string)."
-  (om-elem--verify keyword om-elem-is-keyword-p)
-  (om-elem--set-key key keyword))
-
-(defun om-elem-keyword-set-value (value keyword)
-  "Set the value of KEYWORD element to VALUE (a string)."
-  (om-elem--verify keyword om-elem-is-keyword-p)
-  (om-elem--set-value value keyword))
-
-;; node properties
-
-(defun om-elem-node-property-set-key (key node-property)
-  "Set the key of NODE-PROPERTY element to KEY (a string)."
-  (om-elem--verify node-property om-elem-is-node-property-p)
-  (om-elem--set-key key node-property))
-
-(defun om-elem-node-property-set-value (value node-property)
-  "Set the value of NODE-PROPERTY element to VALUE (a string)."
-  (om-elem--verify node-property om-elem-is-node-property-p)
-  (om-elem--set-value value node-property))
-
-;; link
-
-(defun om-elem-link-set-description (desc link)
-  (om-elem--verify link om-elem-is-link-p)
-  (om-elem--set-contents-by-type 'link desc link))
-
-(defun om-elem-link-set-path (path link)
-  "Set the path of LINK element to PATH (a string)."
-  (om-elem--verify link om-elem-is-link-p)
-  (om-elem--link-set-path path link))
-
-(defun om-elem-link-set-type (type link)
-  "Set the type of LINK element to TYPE (a symbol).
-Setting TYPE to nil will result in a 'fuzzy' type link."
-  (om-elem--verify link om-elem-is-link-p)
-  (om-elem--link-set-type type link))
-
-(defun om-elem-link-set-format (format link)
-  "Set the type of LINK element to TYPE (a symbol).
-Setting TYPE to nil will result in a 'fuzzy' type link."
-  (om-elem--verify link om-elem-is-link-p)
-  (om-elem--link-set-format format link))
-
-;; statistics cookie
-
-(defun om-elem-statistics-cookie-set-value (value statistics-cookie)
-  "Set the value or STATISTICS-COOKIE object with VALUE.
-VALUE can take four forms which determine the format of the value:
-- integer X from 0 to 100 -> 'X%'
-- nil -> '%'
-- (integer X integer Y) -> 'X/Y'
-- (nil) -> '/'"
-  (om-elem--verify statistics-cookie om-elem-is-statistics-cookie-p)
-  (om-elem--statistics-cookie-set-value value statistics-cookie))
-
-;; timestamp
-
-(defun om-elem-timestamp-set-time (time timestamp)
-  "Set start time of TIMESTAMP element to TIME.
-TIME is a list like '(year month day)' or '(year month day hour min)'."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-set-time time timestamp))
-
-(defun om-elem-timestamp-set-time-end (time timestamp)
-  "Set end time of TIMESTAMP element to TIME.
-TIME is a list like '(year month day)' or '(year month day hour min)'.
-This will also change the type to (un)ranged as appropriate."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  ;; TODO this could be refactored
-  (let ((cur-type (--> (om-elem--get-property :type timestamp)
-                       (cl-case it
-                         (inactive-range 'inactive)
-                         (active-range 'active)
-                         (t it)))))
-    (->> (om-elem--timestamp-set-time-end time timestamp)
-         ;; this will flip the range of the type if needed
-         (om-elem--timestamp-set-type cur-type))))
-
-(defun om-elem-timestamp-set-type (type timestamp)
-  "Set type of TIMESTAMP element to TYPE.
-TYPE can be either 'active' or 'inactive'."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-set-type type timestamp))
-
-;; TODO add a switch for precision
-(defun om-elem-timestamp-set-time-unixtime (unixtime timestamp)
-  "Set start time of TIMESTAMP element to UNIXTIME (an integer).
-This assumes one wants HH:MM precision."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (-> (decode-time unixtime)
-      (-slice 1 6)
-      (om-elem-timestamp-set-time timestamp)))
-
-(defun om-elem-timestamp-set-time-end-unixtime (unixtime timestamp)
-  "Set end time of TIMESTAMP element to UNIXTIME (an integer).
-This assumes one wants HH:MM precision."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (-> (decode-time unixtime)
-      (-slice 1 6)
-      (om-elem-timestamp-set-time-end timestamp)))
-
-(defun om-elem--pad-list (list length fill)
-  (let ((diff (- (length list) length)))
-    (cond
-     ((> 0 diff)
-      (append list (-repeat (abs diff) fill)))
-     ((< 0 diff)
-      (-take length list))
-     (t list))))
-
-;; element mappers
-
-;; generic
-
-(defun om-elem-map-property (prop fun elem)
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--map-property prop fun elem))
-
-(defun om-elem-map-properties (plist elem)
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--map-properties plist elem))
-
-;; headline
-
-
-;; node property
-
-(defun om-elem-node-property-map-value (fun node-property)
-  (om-elem--verify node-property om-elem-is-node-property-p)
-  (om-elem--node-property-map-value fun node-property))
-
-;; anaphoric forms
-
-(-each '(om-elem-map-property
-         om-elem-headline-map-node-property
-         om-elem-node-property-map-value)
-  #'om-elem--gen-anaphoric-form)
-
-(defmacro om-elem-map-properties* (plist elem)
-  `(om-elem--map-properties ,plist ,elem))
-
-;;; element shifters
-;; shift a numeric property
-
-;; generic
-
-(defun om-elem-shift-property (prop n elem)
-  "Shift PROP of ELEM by N where N is a positive or negative integer."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (unless (plist-member (om-elem--get-properties elem) prop)
-    (error "Property %s does not exist in %s" prop elem))
-  (om-elem--shift-property prop n elem))
-
-;; headline
-
-
-(defun om-elem-headline-shift-priority (shift headline)
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-shift-priority shift headline))
-
-;; timestamp
-
-(defun om-elem-timestamp-shift-time-start (n unit timestamp)
-  "Shift the UNIT of TIMESTAMP element start time by VALUE.
-VALUE is a positive or negative integer and UNIT is one of 'minute',
-'hour', 'day', 'month', or 'year'. Value will wrap around larger units
-as needed; for instance, supplying 'minute' for UNIT and 60 for VALUE
-will increase the hour property by 1."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (let ((type (om-elem--get-property :type timestamp)))
-    (if (memq type '(active inactive))
-        (om-elem-timestamp-shift-time n unit timestamp)
-      (om-elem--timestamp-shift-time-start n unit timestamp))))
-
-(defun om-elem-timestamp-shift-time-end (n unit timestamp)
-  "Shift the UNIT of TIMESTAMP element end time by VALUE.
-The behavior is analogous to `om-elem-timestamp-shift-time-start',
-except that the timestamp will be unchanged if no ending time is
-present."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (let ((type (om-elem--get-property :type timestamp)))
-    (if (memq type '(active inactive)) timestamp
-      (om-elem--timestamp-shift-time-end n unit timestamp))))
-
-(defun om-elem-timestamp-shift-time (n unit timestamp)
-  "Shift the UNIT of TIMESTAMP element start and end time by VALUE.
-The behavior is analogous to `om-elem-timestamp-shift-time-start' for
-both timestamp halves."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (->> (om-elem--timestamp-shift-time-start n unit timestamp)
-       (om-elem--timestamp-shift-time-end n unit)))
-
-;;; element toggles
-;; flip a boolean (ish) property
-
-;; generic
-
-(defun om-elem-toggle-property (prop elem)
-  "Toggle the state of PROP in ELEM."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (unless (plist-member (om-elem--get-properties elem) prop)
-    (error "Property %s does not exist in %s" prop elem))
-  (om-elem--toggle-property prop elem))
-
-;; headline
-
-;; item
-
-(defun om-elem-item-toggle-checkbox (item)
-  "Toggle the checked/unchecked state of ITEM element."
-  (om-elem--verify item om-elem-is-item-p)
-  (om-elem--item-toggle-checkbox item))
-
-;; timestamp
-
-(defun om-elem-timestamp-toggle-active (timestamp)
-  "Toggle the active/inactive type of TIMESTAMP element."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (let ((cur-type (om-elem--get-property :type timestamp)))
-    (cond
-     ((memq cur-type '(inactive inactive-range))
-      (om-elem-timestamp-set-type 'active timestamp))
-     ((memq cur-type '(active active-range))
-      (om-elem-timestamp-set-type 'inactive timestamp))
-     ;; TODO puke out when given a diary timestamp
-     (t timestamp))))
-
-;;; content modification
-
-(defun om-elem--wrap (type args)
-  (-> (format "om-elem-build-%s" type) (intern) (apply args)))
-
-(defun om-elem-wrap-object (type &rest args)
-  "Call build function of TYPE to wrap objects contained in ARGS.
-ARGS is actually a list if keywords and objects that will be
-passed to the builder function. For example with TYPE of 'bold'
-and ARGS of ':post-blank 2 \"foo\"', the function `om-elem-build-bold'
-will be called with keyword argument ':postblank 2' and \"foo\" in
-the rest args slot."
-  (if (memq type (append org-element-recursive-objects
-                         org-element-object-containers))
-      (om-elem--wrap type args)
-    (error "Invalid type: %s" type)))
-
-(defun om-elem-wrap-element (type &rest args)
-  (if (memq type org-element-greater-elements)
-      (om-elem--wrap type args)
-    (error "Invalid type: %s" type)))
-
-;; TODO is this a meaningful distinction?
-(defun om-elem-unwrap (obj)
-  "Remove the contents of recursive/container object or greater element OBJ."
-  (if (om-elem-plain-list-p obj) (list obj)
-    (let* ((contents (om-elem--get-contents obj))
-           (post-blank (om-elem--get-property :post-blank obj))
-           (first (-drop-last 1 contents))
-           (last* (->> (-last-item contents)
-                       (om-elem-set-post-blank post-blank)
-                       (list))))
-      (append first last*))))
-
-(defun om-elem-unwrap-deep (types obj)
-  "Remove the contents of all objects of type in TYPES from OBJ.
-Return a list of objects."
-  (cond
-   ((om-elem--is-any-type-p types obj) 
-    (let* ((contents (om-elem--get-contents obj))
-           (post-blank (om-elem--get-property :post-blank obj))
-           (first (-drop-last 1 contents))
-           (last* (->> (-last-item contents)
-                       (om-elem-set-post-blank post-blank)
-                       (list))))
-      (--mapcat (om-elem-unwrap-deep types it) (append first last*))))
-   ((om-elem--is-plain-text-p obj) (list obj))
-   (t (list obj))))
-
-(defun om-elem-remove-formatting (types elem)
-  "Remove all recursive formatting TYPES from ELEM."
-  (om-elem-map* `(:many! (:or ,@types))
-                (om-elem-unwrap-deep types it) elem))
-
-(defun om-elem-remove-all-formatting (elem)
-  "Remove all recursive formatting from ELEM."
-  (om-elem-remove-formatting org-element-all-objects elem))
-
-;; headline
-
-(defun om-elem-set-planning (planning-plist headline)
-  (om-elem--verify headline om-elem-is-headline-p)
-  (let ((keys (om--plist-get-keys planning-plist)))
-    (--> (om--plist-get-vals planning-plist)
-         (--map (-some->> it (om-elem-build-timestamp 'inactive)) it)
-         (-interleave keys it)
-         (om-elem-set-properties it headline))))
-
-;; TODO make drawer, prop-drawer, planning, and section insertion
-
-
-;; headline
-
-(defun om-elem-headline-indent-subtree (index headline)
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-indent-subtree index headline))
-
-(defun om-elem-headline-indent-subheadline (index headline)
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-indent-subheadline index headline))
-
-(defun om-elem-headline-unindent-subheadline (index child-index headline)
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-unindent-subheadline index child-index headline))
-
-(defun om-elem-headline-unindent-subtree (index headline)
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-unindent-subtree index headline))
-
-;; plain-list
-
-(defun om-elem-plain-list-indent-item-tree (index plain-list)
-  (om-elem--verify plain-list om-elem-is-plain-list-p)
-  (om-elem--plain-list-indent-item-tree index plain-list))
-
-(defun om-elem-plain-list-indent-item (index plain-list)
-  (om-elem--verify plain-list om-elem-is-plain-list-p)
-  (om-elem--plain-list-indent-item index plain-list))
-
-(defun om-elem-plain-list-unindent-item (index child-index plain-list)
-  (om-elem--verify plain-list om-elem-is-plain-list-p)
-  (om-elem--plain-list-unindent-item index child-index plain-list))
-
-(defun om-elem-plain-list-unindent-items (index plain-list)
-  (om-elem--verify plain-list om-elem-is-plain-list-p)
-  (om-elem--plain-list-unindent-items index plain-list))
-
-;; table
-
-(defun om-elem-table-delete-row (index table)
-  (om-elem--verify table om-elem-is-table-p)
-  (om-elem--table-delete-row index table))
-
-(defun om-elem-table-delete-column (index table)
-  (om-elem--verify table om-elem-is-table-p)
-  (om-elem--table-delete-column index table))
-
-(defun om-elem-table-insert-column (index column table)
-  (om-elem--verify table om-elem-is-table-p)
-  (unless (-all? #'om-elem-is-table-cell-p column)
-    (error "All members of column must be table cells"))
-  (om-elem--table-insert-column index column table))
-
-(defun om-elem-table-insert-column! (index column table)
-  (om-elem--verify table om-elem-is-table-p)
-  (let ((column (-map #'om-elem-build-table-cell column)))
-    (om-elem--table-insert-column index column table)))
-
-(defun om-elem-table-insert-row (index row table)
-  (om-elem--verify row om-elem-is-table-row-p
-                   table om-elem-is-table-p)
-  (om-elem--table-insert-row index row table))
-
-(defun om-elem-table-insert-row! (index row table)
-  (om-elem--verify table om-elem-is-table-p)
-  (let ((row (if (eq row 'hline) (om-elem-build-table-row-hline)
-               (->> (-map #'om-elem-build-table-cell row)
-                    (apply #'om-elem-build-table-row)))))
-    (om-elem--table-insert-row index row table)))
-
-;;; printing functions
-
-(defun om-elem--set-blank-contents (elem)
-  "Set the contents of ELEM to a blank string (\"\")."
-  (om-elem--set-contents '("") elem))
-
-(defun om-elem-is-zero-length-p (elem)
-  "Return t if ELEM will print as a blank string."
-  (-if-let (contents (om-elem--get-contents elem))
-      (-all? #'om-elem-is-zero-length-p contents)
-    (and (om-elem--is-any-type-p om-elem--rm-if-empty elem)
-         (om-elem--is-empty-p elem))))
-
-(defconst om-elem--rm-if-empty
-  '(table plain-list bold italic radio-target strike-through
-          superscript subscript table-cell underline)
-  "Elements/objects that will be blank if printed and empty.")
-
-(defconst om-elem--blank-if-empty
-  '(center-block drawer dynamic-block property-drawer quote-block
-                 special-block verse-block)
-  "Elements that require contents of \"\" to correctly print empty.
-This is a workaround for a bug.")
-
-(defun om-elem--allow-non-zero-length (elem)
-  (unless (and (om-elem--is-empty-p elem)
-               (or (om-elem--is-any-type-p om-elem--rm-if-empty elem)
-                   (and (om-elem--is-type-p 'table-row elem)
-                        (om-elem--property-is-eq-p :type 'standard elem))))
-    elem))
-
-(defun om-elem--clean (elem)
-  (->> elem
-       (om-elem--map-contents* (-non-nil (-map #'om-elem--clean it)))
-       (om-elem--allow-non-zero-length)))
-
-(defun om-elem--blank (elem)
-  (if (om-elem--is-empty-p elem)
-      (if (om-elem--is-any-type-p om-elem--blank-if-empty elem)
-          (om-elem--set-blank-contents elem)
-        elem)
-    (om-elem--map-contents* (-map #'om-elem--blank it) elem)))
-
-(defun om-elem-to-string (elem)
-  "Return ELEM as an interpreted string without text properties."
-  (->> elem
-       ;; some objects and greater elements should be removed if blank
-       ;; table and plain list will error, and the others make no
-       ;; sense if they are empty. This is an org mode bug, they
-       ;; should not be printed by the interpreter by default
-       (om-elem--clean)
-       ;; some greater elements will print "nil" in their contents if
-       ;; they are empty. This is likely an org bug, since it means
-       ;; that the element <-> string conversion is not 100%
-       ;; reproducible. The workaround for this is to set the contents
-       ;; to a single blank string if empty
-       (om-elem--blank)
-       (org-element-interpret-data)
-       (substring-no-properties)))
-
-(defun om-elem-to-trimmed-string (elem)
-  "Like `om-elem-to-string' but strip whitespace when returning ELEM."
-  (-some->> (om-elem-to-string elem) (s-trim)))
-
-(defun om-elem-remove-properties (elem &rest props)
-  (if (stringp elem)
-      (progn
-        (remove-text-properties
-         0 (length elem) (--mapcat (list it nil) props) elem)
-        elem)
-    (let ((new-props
-           (->> (om-elem--get-properties elem)
-                (-partition 2)
-                (--map (unless (memq (car it) props) it))
-                (-non-nil)
-                (apply #'append))))
-      (append
-       (list (om-elem--get-type elem) new-props)
-       (om-elem--get-contents elem)))))
-
-(defun om-elem-strip-parent (elem)
-  (om-elem-remove-properties elem :parent))
-
-(defun om-elem-strip-text-properties (elem)
-  (cl-labels
-      ((strip-props
-        (e)
-        (if (stringp e) e
-          (let ((new-props
-                 (->>
-                  (om-elem--get-properties e)
-                  (--map
-                   ;; I think this covers everything? (strings and list
-                   ;; of strings?)
-                   (cond
-                    ((stringp it)
-                     (substring-no-properties it))
-                    ((listp it)
-                     (-map-when #'stringp #'substring-no-properties it))
-                    (t it))))))
-            (append (list (om-elem--get-type e) new-props)
-                    (org-element-contents e)))))
-       (map-rec
-        (e)
-        (if (stringp e) (substring-no-properties e)
-          (->>
-           (om-elem--get-contents e)
-           (--map (strip-props it))
-           (--map (map-rec it))
-           (append (list (om-elem--get-type e) (nth 1 e)))))))
-    (->> (strip-props elem) (map-rec))))
-
-(defun om-elem-print (elem)
-  (->> (om-elem-strip-parent elem)
-       (om-elem-strip-text-properties)
-       (format "%S")))
-
-(defun om-elem-pretty-print (elem)
-  (->> (om-elem-remove-properties elem :begin :end :contents-begin
-                                  :contents-end :post-affiliated)
-       (om-elem-print)))
-
-(defun om-elem--indent-string (s)
-  "Indent string S by 2 spaces.
-Return new string.  If S is the empty string, return it."
-  (if (equal "" s) s (replace-regexp-in-string "^ *\\S-" " \\&" s)))
-
-;; TODO this is a terrible way to strip the properties and such
-(defun om-elem-indent-print (elem)
-  (let ((rem-props '(:begin :end :contents-begin :contents-end
-                            :post-affiliated :parent :structure)))
-    (cl-labels
-        ((print-rec
-          (e)
-          (if (stringp e)
-              (->> (s-trim e) (om-elem-print))
-            (let ((head-str (format "%S %S" (org-element-type e)
-                                    (nth 1 e))))
-              (-if-let (contents (org-element-contents e))
-                  (->> (--map (apply #'om-elem-remove-properties
-                                     it rem-props)
-                              contents)
-                       (--map (print-rec it))
-                       (s-join "\n")
-                       (om-elem--indent-string)
-                       (format "(%s\n%s)" head-str))
-                (->> (format "(%s)" head-str)))))))
-                     ;; (om-elem--indent-string)))))))
-      (->> (apply #'om-elem-remove-properties elem rem-props)
-           (om-elem-strip-text-properties)
-           (print-rec)))))
-
-;;; parsing functions
-
-;; point functions
-
-(defun om-elem-parse-object-at (point &optional type)
-  "Return the object tree under POINT or nil if not on an object.
-
-If TYPE is supplied, only return nil if the object under point is
-not of that type. TYPE is a symbol from `org-element-all-objects'."
-  (save-excursion
-    (goto-char point)
-    (let* ((context (org-element-context))
-           (type (om-elem--get-type context))
-           (offset (cond
-                    ((memq type '(superscript subscript)) -1)
-                    ((eq type 'table-cell) -1)
-                    (t 0)))
-           (nesting (cond
-                     ((memq type '(superscript subscript)) '(0 1))
-                     ((eq type 'table-cell) '(0 0 0))
-                     (t '(0 0)))))
-      (-let* (((&plist :begin :end) (om-elem--get-properties context))
-              (tree (org-element--parse-elements (+ begin offset) end 'first-section
-                                                 nil nil nil nil)))
-        (--> (car tree)
-             (om-elem--get-nested-contents nesting it)
-             (om-elem--allow-types org-element-all-objects it)
-             (if type (om-elem--allow-type type it) it))))))
-
-(defun om-elem-parse-element-at (point &optional type)
-  "Return element immediately under POINT.
-For a list of all possible return types refer to
-`org-element-all-elements'; this will return everything in this list
-except 'section' which is ambiguous when referring to a single point.
-(see `om-elem-parse-section-at').
-
-If TYPE is supplied, only return nil if the object under point is
-not of that type. TYPE is a symbol from `org-element-all-elements'.
-Furthermore, setting TYPE to 'table-row' will prefer table-row
-elements over table elements and likewise when setting TYPE to 'item'
-for plain-list elements vs item elements."
-  (save-excursion
-    (goto-char point)
-    (let*
-        ((elem (org-element-at-point))
-         (elem-type (om-elem--get-type elem)))
-      (if (not
-           (memq elem-type (append org-element-greater-elements
-                                   org-element-object-containers)))
-          elem
-        (-let* (((&plist :begin :end) (om-elem--get-properties elem))
-                (tree (car (org-element--parse-elements
-                            begin end 'first-section nil nil nil nil)))
-                (nesting (cl-case elem-type
-                           (headline nil)
-                           (table (if (eq type 'table-row) '(0 0) '(0)))
-                           (plain-list (if (eq type 'item) '(0 0) '(0)))
-                           (t '(0)))))
-          (--> (om-elem--get-nested-contents nesting tree)
-               (if type (om-elem--allow-type type it) it)))))))
-
-(defun om-elem-parse-table-row-at (point)
-  "Return table-row element under POINT or nil if not found."
-  (save-excursion
-    (goto-char point)
-    (beginning-of-line)
-    (om-elem-parse-element-at (point) 'table-row)))
-
-(defun om-elem-parse-item-at (point)
-  "Return item element under POINT or nil if not found.
-Unlike `om-elem-parse-element-at', this will return then item even if
-POINT is not at the beginning of the line."
-  (save-excursion
-    (goto-char point)
-    (beginning-of-line)
-    (om-elem-parse-element-at (point) 'item)))
-
-(defun om-elem--parse-headline-subtree-at (point subtree)
-  (save-excursion
-    (goto-char point)
-    (when (ignore-errors (org-back-to-heading))
-      (let ((b (point))
-            (e (if subtree (org-end-of-subtree)
-                 (or (outline-next-heading) (point-max)))))
-        (car (org-element--parse-elements b e 'first-section
-                                          nil nil nil nil))))))
-
-(defun om-elem-parse-headline-at (point)
-  "Return element tree of the headline under POINT or nil if none.
-POINT does not need to be on the headline itself. Only the headline
-and its section will be returned (no subheadlines)."
-  (om-elem--parse-headline-subtree-at point nil))
-
-(defun om-elem-parse-subtree-at (point)
-  "Return element tree of the headline under POINT or nil if none.
-POINT does not need to be on the headline itself. Unlike
-`om-elem-parse-headline-at', the returned tree will include
-subheadlines."
-  (om-elem--parse-headline-subtree-at point t))
-
-(defun om-elem-parse-section-at (point)
-  "Return tree of the current section under POINT.
-If POINT is on or within a headline, return the section under that
-headline. If POINT is before the first headline (if any), return
-the section at the top of the org buffer."
-  (save-excursion
-    (goto-char point)
-    (om-elem--get-nested-contents
-     '(0)
-     (condition-case nil
-         (progn
-           (org-back-to-heading)
-           ;; TODO this is redundant
-           (om-elem--parse-headline-subtree-at point nil))
-       (error
-        (progn
-          (org-element--parse-elements
-           (point-min) (or (outline-next-heading) (point-max))
-           'first-section nil nil nil nil)))))))
-
-;; parse at current point
-
-(defun om-elem-parse-this-object (&optional type)
-  "Call `om-elem-parse-object-at' with the current point.
-
-If TYPE is supplied, only return nil if the object under point is
-not of that type. TYPE is a symbol from `org-element-all-objects'."
-  (om-elem-parse-object-at (point) type))
-
-(defun om-elem-parse-this-element (&optional type)
-  "Call `om-elem-parse-element-at' with the current point.
-
-If TYPE is supplied, only return nil if the element under point is
-not of that type. TYPE is a symbol from `org-element-all-elements'."
-  (om-elem-parse-element-at (point) type))
-
-(defun om-elem-parse-this-table-row ()
-  "Call `om-elem-parse-table-row-at' with the current point."
-  (om-elem-parse-table-row-at (point)))
-
-(defun om-elem-parse-this-item ()
-  "Call `om-elem-parse-item-at' with the current point."
-  (om-elem-parse-item-at (point)))
-
-(defun om-elem-parse-this-headline ()
-  "Call `om-elem-parse-headline-at' with the current point."
-  (om-elem-parse-headline-at (point)))
-
-(defun om-elem-parse-this-subtree ()
-  "Call `om-elem-parse-subtree-at' with the current point."
-  (om-elem-parse-subtree-at (point)))
-
-(defun om-elem-parse-this-section ()
-  "Call `om-elem-parse-section-at' with the current point."
-  (om-elem-parse-section-at (point)))
-
-(defalias 'om-elem-parse-this-buffer 'org-element-parse-buffer)
-
-;;; side effects
-
-;; write
-
-(defun om-elem-insert (point elem)
-  "Convert ELEM to a string and insert at POINT in the current buffer.
-Return ELEM."
-  (om-elem--verify point integerp
-                   elem om-elem--is-element-or-object-p)
-  (save-excursion
-    (goto-char point)
-    (insert (om-elem-to-string elem)))
-  elem)
-
-(defun om-elem-insert-tail (point elem)
-  "Like `om-elem-insert' but insert ELEM at POINT and move to the end of inserted string."
-  (om-elem--verify point integerp
-                   elem om-elem--is-element-or-object-p)
-  (let ((s (om-elem-to-string elem)))
-    (save-excursion
-      (goto-char point)
-      (insert s))
-    (goto-char (+ point (length s))))
-  elem)
-
-(defun om-elem--apply-overlays (os)
-  (cl-flet
-      ((apply-overlays
-        (o)
-        (let* ((beg (plist-get o :start))
-               (end (plist-get o :end))
-               (props (plist-get o :props))
-               (o* (make-overlay beg end)))
-          (--each (-partition 2 props) (apply #'overlay-put o* it)))))
-    (-each os #'apply-overlays)))
-
-(defun om-elem-update (fun elem)
-  "Replace ELEM in the current buffer with a new one. 
-FUN is a function that takes ELEM as its only argument and returns a
-modified ELEM. This modified element is then written in place of the
-old element in the current buffer."
-  (om-elem--verify fun functionp
-                   elem om-elem--is-element-or-object-p)
-  ;; if elem is of type 'org-data' it will have no props
-  (let* ((begin (or (om-elem--get-property :begin elem) (point-min)))
-         (end (or (om-elem--get-property :end elem) (point-max)))
-         ;; get the outline overlays that make text invisible
-         (ov-cmd (->>
-                  (overlays-in begin end)
-                  (--filter (eq 'outline (overlay-get it 'invisible)))
-                  (--map (list :start (overlay-start it)
-                               :end (overlay-end it)
-                               :props (overlay-properties it)))
-                  (list 'apply 'om-elem--apply-overlays))))
-    ;; hacky way to add overlays to undo tree
-    (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
-    (delete-region begin end)
-    (->> (funcall fun elem) (om-elem-insert begin))
-    nil))
-
-(defmacro om-elem-update* (form elem)
-  "Anaphoric form of `om-elem-update'.
-IN-FORM and PROC-FORM are forms corresponding to 'in-fun' and 
-'proc-fun'. The latter has the variable 'it' available to it, which
-holds the element returned from IN-FORM."
-  (declare (indent 1))
-  `(om-elem-update (lambda () ,form) elem))
-
-(defun om-elem-update-object-at (point fun &optional type)
-  (om-elem-update fun (om-elem-parse-object-at point type)))
-
-(defun om-elem-update-element-at (point fun &optional type)
-  (om-elem-update fun (om-elem-parse-element-at point type)))
-
-(defun om-elem-update-item-at (point fun)
-  (om-elem-update fun (om-elem-parse-headline-at point)))
-
-(defun om-elem-update-table-row-at (point fun)
-  (om-elem-update fun (om-elem-parse-headline-at point)))
-
-(defun om-elem-update-headline-at (point fun)
-  (om-elem-update fun (om-elem-parse-headline-at point)))
-
-(defun om-elem-update-subtree-at (point fun)
-  (om-elem-update fun (om-elem-parse-subtree-at point)))
-
-(defun om-elem-update-section-at (point fun)
-  (om-elem-update fun (om-elem-parse-subtree-at point)))
-
-;; TODO just make a function to create these from the point versions
-
-(defun om-elem-update-this-object (fun &optional type)
-  (om-elem-update-object-at (point) fun type))
-
-(defun om-elem-update-this-element (fun &optional type)
-  (om-elem-update-element-at (point) fun type))
-
-(defun om-elem-update-this-item (fun)
-  (om-elem-update-item-at (point) fun))
-
-(defun om-elem-update-this-table-row (fun)
-  (om-elem-update-table-row-at (point) fun))
-
-(defun om-elem-update-this-headline (fun)
-  (om-elem-update-headline-at (point) fun))
-
-(defun om-elem-update-this-subtree (fun)
-  (om-elem-update-subtree-at (point) fun))
-
-(defun om-elem-update-this-section (fun)
-  (om-elem-update-section-at (point) fun))
-
-;; fold
-(defun om-elem--flag-elem-contents (flag elem)
-  (om-elem--verify flag booleanp
-                   elem om-elem--is-element-or-object-p)
-  (-let (((&plist :contents-begin :contents-end) (om-elem--get-properties elem)))
-    (outline-flag-region (- contents-begin 1) (- contents-end 1) flag)))
-
-(defun om-elem-fold-contents (elem)
-  "Fold the contents of ELEM if they exist."
-  (om-elem--flag-elem-contents t elem))
-
-(defun om-elem-unfold-contents (elem)
-  "Unfold the contents of ELEM if they exist."
-  (om-elem--flag-elem-contents nil elem))
-
-;;; misc functions
-
-(defun om-elem-length (elem)
-  "Return the character length of ELEM."
-  (if (not elem) 0
-    (let ((b (om-elem--get-property :begin elem))
-          (e (om-elem--get-property :end elem)))
-      (if (and b e) (- e b)
-        (error "Can't determine element length")))))
-
-(defun om-elem-now ()
-  "Return list representing the current time without hours and minutes.
-This is meant to be used as input for functions such as
-`om-elem-build-timestamp'."
-  (->> (decode-time) (-select-by-indices '(3 4 5)) (reverse)))
-
-(defun om-elem-now-long ()
-  "Return list representing the current time with hours and minutes.
-This is meant to be used as input for functions such as
-`om-elem-build-timestamp'."
-  (->> (decode-time) (-select-by-indices '(1 2 3 4 5)) (reverse)))
-
-(defun om-elem-get-type (elem)
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--get-type elem))
 
 (provide 'om-elem)
 ;;; om-elem.el ends here
