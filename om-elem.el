@@ -819,7 +819,6 @@ without element verification."
           (om-elem--get-properties timestamp)))
     `(,y ,m ,d ,h ,n)))
 
-
 (defun om-elem--timestamp-get-start-unixtime (timestamp)
   (->> (om-elem--timestamp-get-start-time timestamp)
        (om-elem--time-to-unixtime)))
@@ -828,9 +827,19 @@ without element verification."
   (->> (om-elem--timestamp-get-end-time timestamp)
        (om-elem--time-to-unixtime)))
 
-(defun om-elem--timestamp-is-ranged (timestamp)
-  (/= (om-elem--timestamp-get-start-unixtime timestamp)
-      (om-elem--timestamp-get-end-unixtime timestamp)))
+(defun om-elem--timestamp-get-range (timestamp)
+  (- (om-elem--timestamp-get-end-unixtime timestamp)
+     (om-elem--timestamp-get-start-unixtime timestamp)))
+
+(defun om-elem--timestamp-is-ranged-p (timestamp)
+  (< 0 (om-elem--timestamp-get-range timestamp)))
+
+(defun om-elem--timestamp-is-ranged-fast-p (timestamp)
+  "Like `om-elem--timestamp-is-ranged-p' but faster.
+This only looks at TIMESTAMP's :type property rather than computing
+float-times, which assumes the :type property is valid."
+  (memq (om-elem--get-property :type timestamp)
+        '(active-range inactive-range)))
 
 (defun om-elem--timestamp-set-start-time (time timestamp)
   "Set the start TIME of TIMESTAMP."
@@ -847,7 +856,7 @@ without element verification."
         (om-elem-set-properties timestamp))))
 
 (defun om-elem--timestamp-set-type (type timestamp)
-  (let* ((range? (om-elem--timestamp-is-ranged timestamp))
+  (let* ((range? (om-elem--timestamp-is-ranged-p timestamp))
          (type* (cl-case type
                   (active (if range? 'active-range 'active))
                   (inactive (if range? 'inactive-range 'inactive))
@@ -894,28 +903,14 @@ without element verification."
 
 (defun om-elem--clock-update-duration (clock)
   (cl-flet*
-      ((encode-epoch
-        (min hour day month year)
-        (-> (encode-time 0 (or min 0) (or hour 0) day month year)
-            (float-time)
-            (round)))
-       (format-duration
-        (seconds)
-        (let* ((h (-> seconds (/ 3600) (floor)))
-               (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
-          (format "%2d:%02d" h m)))
-       (get-duration
+      ((get-duration
         (timestamp)
-        (-let (((&plist :year-start y :year-end Y
-                        :month-start m :month-end M
-                        :day-start d :day-end D
-                        :hour-start h :hour-end H
-                        :minute-start n :minute-end N)
-                (om-elem--get-properties timestamp)))
-          (-> (- (encode-epoch N H D M Y) (encode-epoch n h d m y))
-              (format-duration)))))
+        (let* ((seconds (om-elem--timestamp-get-range timestamp))
+               (h (-> seconds (/ 3600) (floor)))
+               (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
+          (format "%2d:%02d" h m))))
     (let ((ts (om-elem--get-property :value clock)))
-      (if (om-elem--property-is-eq-p :type 'inactive-range ts)
+      (if (om-elem--timestamp-is-ranged-fast-p ts)
           (om-elem--set-property :duration (get-duration ts) clock)
         (om-elem--set-property :duration nil clock)))))
 
@@ -2253,8 +2248,8 @@ VALUE can take four forms which determine the format of the value:
 (defun om-elem-timestamp-get-end-timestamp (timestamp)
   "Return the end of TIMESTAMP element or nil if not present."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (if (not (om-elem--timestamp-is-ranged timestamp)) nil
-    (om-elem--timestamp-get-end-timestamp timestamp)))
+  (and (om-elem--timestamp-is-ranged-fast-p timestamp)
+       (om-elem--timestamp-get-end-timestamp timestamp)))
 
 (defun om-elem-timestamp-get-start-unixtime (timestamp)
   "Return the unixtime value of TIMESTAMP element as an integer.
@@ -2265,8 +2260,8 @@ Note this only considers the start of the timestamp if it is range."
 (defun om-elem-timestamp-get-end-unixtime (timestamp)
   "Return the unixtime value of TIMESTAMP's end as an integer."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (if (not (om-elem--timestamp-is-ranged timestamp)) nil
-    (om-elem--timestamp-get-end-unixtime)))
+  (and (om-elem--timestamp-is-ranged-fast-p timestamp)
+       (om-elem--timestamp-get-end-unixtime timestamp)))
 
 (defun om-elem-timestamp-is-active-p (timestamp)
   "Return t if TIMESTAMP elem is active."
