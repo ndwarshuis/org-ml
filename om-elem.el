@@ -948,54 +948,6 @@ float-times, which assumes the :type property is valid."
 
 ;; clock
 
-(defun om-elem--clock-get-duration (clock)
-  (->> (om-elem--property :value clock)
-       (om-elem--timestamp-get-range)))
-
-(defun om-elem--clock-is-running-p (clock)
-  (->> (om-elem--property :value clock)
-       (om-elem--timestamp-is-ranged-fast-p)))
-
-(defun om-elem--clock-set-duration (duration clock)
-  (om-elem--map-property* :value
-   (om-elem--timestamp-set-range duration it)
-   clock))
-
-(defun om-elem--clock-set-start-time (time clock)
-  (om-elem--map-property* :value
-   (om-elem--timestamp-set-start-time time it)
-   clock))
-
-(defun om-elem--clock-set-end-time (time clock)
-  (om-elem--map-property* :value
-   (om-elem--timestamp-set-end-time time it)
-   clock))
-
-(defun om-elem--clock-set-single-time (time clock)
-  (om-elem--map-property* :value
-   (om-elem--timestamp-set-single-time time it)
-   clock))
-
-(defun om-elem--clock-shift-timestamp-start (n unit clock)
-  (om-elem--map-property* :value
-   (om-elem--timestamp-shift-start n unit it)
-   clock))
-
-(defun om-elem--clock-shift-timestamp-end (n unit clock)
-  (om-elem--map-property* :value
-   (om-elem--timestamp-shift-end n unit it)
-   clock))
-
-(defun om-elem--clock-shift-timestamp (n unit clock)
-  (om-elem--map-property* :value
-   (om-elem--timestamp-shift-range n unit it)
-   clock))
-
-(defun om-elem--clock-shift-range (n unit clock)
-  (om-elem--map-property* :value
-   (om-elem--timestamp-shift-range n unit it)
-   clock))
-
 (defun om-elem--clock-update-duration (clock)
   (let* ((ts (om-elem--get-property :value clock))
          (plist
@@ -1006,6 +958,12 @@ float-times, which assumes the :type property is valid."
                 `(:duration ,(format "%2d:%02d" h m) :status running))
             '(:duration nil :status closed))))
     (om-elem--set-properties plist clock)))
+
+(defun om-elem--clock-map-timestamp (fun clock)
+  (->> (om-elem--map-property :value fun clock)
+       (om-elem--clock-update-duration)))
+
+(om-elem--gen-anaphoric-form #'om-elem--clock-map-timestamp)
 
 ;; diary-sexp
 ;; TODO add value getter
@@ -2495,6 +2453,59 @@ both timestamp halves."
   "Return t if CLOCK element is running (eg is open)."
   (om-elem--verify clock om-elem-is-clock-p)
   (om-elem--property-is-eq-p :status 'running clock))
+
+(defun om-elem-clock-get-duration (clock)
+  (om-elem--verify clock om-elem-is-clock-p)
+  (->> (om-elem--property :value clock)
+       (om-elem--timestamp-get-range)))
+
+(defun om-elem-clock-set-duration (duration clock)
+  (om-elem--verify clock om-elem-is-clock-p)
+  (om-elem--clock-map-timestamp*
+   (om-elem--timestamp-set-range duration it)
+   clock))
+
+(defun om-elem--clock-set-start-time (time clock)
+  (om-elem--verify clock om-elem-is-clock-p)
+  (om-elem--clock-map-timestamp*
+   (om-elem--timestamp-set-start-time time it)
+   clock))
+
+(defun om-elem--clock-set-end-time (time clock)
+  (om-elem--verify clock om-elem-is-clock-p)
+  (om-elem--clock-map-timestamp*
+   (om-elem--timestamp-set-end-time time it)
+   clock))
+
+(defun om-elem--clock-set-single-time (time clock)
+  (om-elem--verify clock om-elem-is-clock-p)
+  (om-elem--clock-map-timestamp*
+   (om-elem--timestamp-set-single-time time it)
+   clock))
+
+(defun om-elem--clock-shift-timestamp-start (n unit clock)
+  (om-elem--verify clock om-elem-is-clock-p)
+  (om-elem--clock-map-timestamp*
+   (om-elem--timestamp-shift-start n unit it)
+   clock))
+
+(defun om-elem--clock-shift-timestamp-end (n unit clock)
+  (om-elem--verify clock om-elem-is-clock-p)
+  (om-elem--clock-map-timestamp*
+   (om-elem--timestamp-shift-end n unit it)
+   clock))
+
+(defun om-elem--clock-shift-timestamp (n unit clock)
+  (om-elem--verify clock om-elem-is-clock-p)
+  (om-elem--clock-map-timestamp*
+   (om-elem--timestamp-shift-range n unit it)
+   clock))
+
+(defun om-elem--clock-shift-range (n unit clock)
+  (om-elem--verify clock om-elem-is-clock-p)
+  (om-elem--clock-map-timestamp*
+   (om-elem--timestamp-shift-range n unit it)
+   clock))
 
 ;; headline
 
