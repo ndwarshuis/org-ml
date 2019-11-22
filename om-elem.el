@@ -849,20 +849,16 @@ float-times, which assumes the :type property is valid."
   (memq (om-elem--get-property :type timestamp)
         '(active-range inactive-range)))
 
-(defun om-elem--timestamp-set-start-time (time timestamp)
+(defun om-elem--timestamp-set-start-time-nocheck (time timestamp)
   "Set the start TIME of TIMESTAMP."
-  (-> (om-elem--time-format-props time 'start)
-      (om-elem--set-properties timestamp)))
+  (let ((time* (om-elem--time-format-props time 'start)))
+      (om-elem--set-properties time* timestamp)))
 
-(defun om-elem--timestamp-set-start-unixtime-long (unixtime timestamp)
-  (-> (om-elem--unixtime-to-time-long unixtime)
-      (om-elem--timestamp-set-start-time timestamp)))
+(defun om-elem--timestamp-set-start-time (time timestamp)
+  (->> (om-elem--timestamp-set-start-time-nocheck time timestamp)
+       (om-elem--timestamp-update-type-ranged)))
 
-(defun om-elem--timestamp-set-start-unixtime-short (unixtime timestamp)
-  (-> (om-elem--unixtime-to-time-short unixtime)
-      (om-elem--timestamp-set-start-time timestamp)))
-
-(defun om-elem--timestamp-set-end-time (time timestamp)
+(defun om-elem--timestamp-set-end-time-nocheck (time timestamp)
   "Set the end TIME of TIMESTAMP."
   (if time
       (-> (om-elem--time-format-props time 'end)
@@ -871,19 +867,40 @@ float-times, which assumes the :type property is valid."
         (om-elem--time-format-props 'end)
         (om-elem-set-properties timestamp))))
 
-(defun om-elem--timestamp-set-end-unixtime-long (unixtime timestamp)
-  (-> (om-elem--unixtime-to-time-long unixtime)
-      (om-elem--timestamp-set-end-time timestamp)))
+(defun om-elem--timestamp-set-end-time (time timestamp)
+  (let ((ts* (om-elem--timestamp-set-end-time-nocheck time timestamp)))
+    (if time (om-elem--timestamp-update-type-ranged ts*)
+      (om-elem--timestamp-set-type-ranged nil ts*))))
 
-(defun om-elem--timestamp-set-end-unixtime-short (unixtime timestamp)
-  (let ((time (and unixtime (om-elem--unixtime-to-time-short unixtime))))
-    (om-elem--timestamp-set-end-time time timestamp)))
+(defun om-elem--timestamp-set-single-time (time timestamp)
+  "Set the start TIME of TIMESTAMP."
+  (->> (om-elem--timestamp-set-start-time-nocheck time timestamp)
+       (om-elem--timestamp-set-end-time-nocheck time)
+       (om-elem--timestamp-set-type-ranged nil)))
 
 (defun om-elem--timestamp-set-range (range timestamp)
-  (let ((t2 (+ (om-elem--timestamp-get-start-unixtime timestamp) range)))
-    (if (om-elem--timestamp-end-is-long-p timestamp)
-        (om-elem--timestamp-set-end-unixtime-long t2 timestamp)
-      (om-elem--timestamp-set-end-unixtime-short t2 timestamp))))
+  (let ((t2 (+ (om-elem--timestamp-get-start-unixtime timestamp) range))
+        (timestamp*
+         (if (om-elem--timestamp-end-is-long-p timestamp)
+             (om-elem--timestamp-set-end-unixtime-long t2 timestamp)
+           (om-elem--timestamp-set-end-unixtime-short t2 timestamp))))
+    (om-elem--timestamp-set-type-ranged (< 0 range) timestamp)))
+
+(defun om-elem--timestamp-update-type-ranged (timestamp)
+  (-> (om-elem--timestamp-is-ranged-p timestamp)
+      (om-elem--timestamp-set-type-ranged timestamp)))
+
+(defun om-elem--timestamp-set-type-ranged (ranged? timestamp)
+  (cl-flet
+      ((update-range
+       (type)
+       (cl-case type
+         ((active active-range)
+          (if ranged? 'active-range 'active))
+         ((inactive inactive-range)
+          (if ranged? 'inactive-range 'inactive))
+         (t (error "Invalid timestamp type: %s" type)))))
+    (om-elem--map-property :type #'update-range timestamp)))
 
 (defun om-elem--timestamp-set-type (type timestamp)
   (let* ((range? (om-elem--timestamp-is-ranged-p timestamp))
@@ -903,21 +920,23 @@ float-times, which assumes the :type property is valid."
     (-> (om-elem--decorator-format repeater 'repeater types)
         (om-elem-set-properties timestamp))))
 
-(defun om-elem--timestamp-shift-start-time (n unit timestamp)
+(defun om-elem--timestamp-shift-start (n unit timestamp)
   ;; TODO what if the start time is greater than the end time?
   (let ((time* (->> (om-elem--timestamp-get-start-time timestamp)
                     (om-elem--time-shift n unit))))
-    (om-elem--timestamp-set-start-time time* timestamp)))
+    (->> (om-elem--timestamp-set-start-time time* timestamp)
+         (om-elem--timestamp-update-type-ranged))))
 
-(defun om-elem--timestamp-shift-end-time (n unit timestamp)
+(defun om-elem--timestamp-shift-end (n unit timestamp)
   ;; TODO what if the end time is less than the start time?
   (let ((time* (->> (om-elem--timestamp-get-end-time timestamp)
                     (om-elem--time-shift n unit))))
-    (om-elem--timestamp-set-end-time time* timestamp)))
+    (->> (om-elem--timestamp-set-end-time time* timestamp)
+         (om-elem--timestamp-update-type-ranged))))
 
 (defun om-elem--timestamp-shift-range (n unit timestamp)
-  (->> (om-elem--timestamp-shift-start-time n unit timestamp)
-       (om-elem--timestamp-shift-end-time n unit)))
+  (->> (om-elem--timestamp-shift-start n unit timestamp)
+       (om-elem--timestamp-shift-end n unit)))
 
 ;; timestamp (diary sexp)
 
@@ -947,39 +966,29 @@ float-times, which assumes the :type property is valid."
    (om-elem--timestamp-set-start-time time it)
    clock))
 
-(defun om-elem--clock-set-start-unixtime-long (time clock)
-  (om-elem--map-property* :value
-   (om-elem--timestamp-set-start-unixtime-long time it)
-   clock))
-
-(defun om-elem--clock-set-start-unixtime-short (time clock)
-  (om-elem--map-property* :value
-   (om-elem--timestamp-set-start-unixtime-short time it)
-   clock))
-
 (defun om-elem--clock-set-end-time (time clock)
   (om-elem--map-property* :value
    (om-elem--timestamp-set-end-time time it)
    clock))
 
-(defun om-elem--clock-set-end-unixtime-long (time clock)
+(defun om-elem--clock-set-single-time (time clock)
   (om-elem--map-property* :value
-   (om-elem--timestamp-set-end-unixtime-long time it)
-   clock))
-
-(defun om-elem--clock-set-end-unixtime-short (time clock)
-  (om-elem--map-property* :value
-   (om-elem--timestamp-set-end-unixtime-short time it)
+   (om-elem--timestamp-set-single-time time it)
    clock))
 
 (defun om-elem--clock-shift-timestamp-start (n unit clock)
   (om-elem--map-property* :value
-   (om-elem--timestamp-shift-start-time n unit it)
+   (om-elem--timestamp-shift-start n unit it)
    clock))
 
 (defun om-elem--clock-shift-timestamp-end (n unit clock)
   (om-elem--map-property* :value
-   (om-elem--timestamp-shift-end-time n unit it)
+   (om-elem--timestamp-shift-end n unit it)
+   clock))
+
+(defun om-elem--clock-shift-timestamp (n unit clock)
+  (om-elem--map-property* :value
+   (om-elem--timestamp-shift-range n unit it)
    clock))
 
 (defun om-elem--clock-shift-range (n unit clock)
@@ -1330,8 +1339,8 @@ Optionally provide PARAMETERS."
                                               post-blank)
   "Build a timestamp..."
   (->> (om-elem--build-object 'timestamp post-blank)
-       (om-elem--timestamp-set-start-time start)
-       (om-elem--timestamp-set-end-time end)
+       (om-elem--timestamp-set-start-time-nocheck start)
+       (om-elem--timestamp-set-end-time-nocheck end)
        (om-elem--timestamp-set-type type)
        (om-elem--timestamp-set-warning warning)
        (om-elem--timestamp-set-repeater repeater)
@@ -2411,14 +2420,7 @@ TIME is a list like '(year month day)' or '(year month day hour min)'.
 This will also change the type to (un)ranged as appropriate."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   ;; TODO this could be refactored
-  (let ((cur-type (--> (om-elem--get-property :type timestamp)
-                       (cl-case it
-                         (inactive-range 'inactive)
-                         (active-range 'active)
-                         (t it)))))
-    (->> (om-elem--timestamp-set-end-time time timestamp)
-         ;; this will flip the range of the type if needed
-         (om-elem--timestamp-set-type cur-type))))
+  (om-elem--timestamp-set-end-time time timestamp))
 
 (defun om-elem-timestamp-set-type (type timestamp)
   "Set type of TIMESTAMP element to TYPE.
@@ -2453,7 +2455,7 @@ will increase the hour property by 1."
   (let ((type (om-elem--get-property :type timestamp)))
     (if (memq type '(active inactive))
         (om-elem-timestamp-shift-time n unit timestamp)
-      (om-elem--timestamp-shift-start-time n unit timestamp))))
+      (om-elem--timestamp-shift-start n unit timestamp))))
 
 (defun om-elem-timestamp-shift-time-end (n unit timestamp)
   "Shift the UNIT of TIMESTAMP element end time by VALUE.
@@ -2463,15 +2465,15 @@ present."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (let ((type (om-elem--get-property :type timestamp)))
     (if (memq type '(active inactive)) timestamp
-      (om-elem--timestamp-shift-end-time n unit timestamp))))
+      (om-elem--timestamp-shift-end n unit timestamp))))
 
 (defun om-elem-timestamp-shift-time (n unit timestamp)
   "Shift the UNIT of TIMESTAMP element start and end time by VALUE.
 The behavior is analogous to `om-elem-timestamp-shift-time-start' for
 both timestamp halves."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (->> (om-elem--timestamp-shift-start-time n unit timestamp)
-       (om-elem--timestamp-shift-end-time n unit)))
+  (->> (om-elem--timestamp-shift-start n unit timestamp)
+       (om-elem--timestamp-shift-end n unit)))
 
 (defun om-elem-timestamp-toggle-active (timestamp)
   "Toggle the active/inactive type of TIMESTAMP element."
