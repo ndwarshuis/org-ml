@@ -578,15 +578,18 @@ FUN is a predicate function that takes one argument."
 
 ;;; property-specific
 
+;; TODO add shifter for this
 (defun om-elem--set-post-blank (post-blank elem)
   "Set the :post-blank property of ELEM to POST-BLANK."
   (om-elem--verify post-blank om-elem--non-neg-integer-p)
   (if (stringp elem) (s-append (s-repeat post-blank " ") elem)
     (om-elem--set-property :post-blank post-blank elem)))
 
+;; TODO add toggle for this
 (defun om-elem--set-brackets (flag elem)
   (om-elem--set-property-pred 'booleanp :use-brackets-p flag elem))
 
+;; TODO add toggle for this
 (defun om-elem--set-indent (flag elem)
   (om-elem--set-property-pred 'booleanp :preserve-indent flag elem))
 
@@ -978,7 +981,8 @@ float-times, which assumes the :type property is valid."
   (om-elem--set-property :value (format "%%%%%S" form) diary-sexp))
 
 ;; headline
-;; TODO add shortcut title getter (interprets the secondary string)
+;; TODO add title getter
+;; TODO make title setter also set raw-value
 
 (defun om-elem--headline-set-pre-blank (pre-blank headline)
   ;; unlike post-blank, we assume this will never be needed for
@@ -1104,7 +1108,8 @@ SHIFT is a positive or negative integer."
 ;; TODO add toggle for ordered/unordered
 ;; TODO add predicate for ordered/unordered
 ;; TODO add shortcut title setter
-;; TODO add shortcut title getter (interprets the secondary string)
+;; TODO make title setter also set raw-value
+;; TODO add shortcut title getter
 ;; TODO add shift counter
 
 (defun om-elem--item-set-checkbox (state item)
@@ -1972,6 +1977,12 @@ nested element to return."
                (let ((width (om-elem--table-get-width table)))
                  (om-elem--table-pad-or-truncate width row)))))
     (om-elem--map-contents* (om-elem--insert-at index row it) table)))
+
+;; TODO add get row (cells and strings)
+;; TODO add get column (cells and strings)
+;; TODO add map row/column
+;; TODO add replace row/column (see map)
+;; TODO add clear row/column
 
 (defun om-elem--table-get-cell (row column table)
   "Return table-cell element at ROW and COLUMN indices in TABLE element.
