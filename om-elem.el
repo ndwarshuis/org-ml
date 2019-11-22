@@ -977,7 +977,7 @@ float-times, which assumes the :type property is valid."
   (om-elem--set-property :value (format "%%%%%S" form) diary-sexp))
 
 ;; headline
-;; TODO add all the getters
+;; TODO add shortcut title getter (interprets the secondary string)
 
 (defun om-elem--headline-set-pre-blank (pre-blank headline)
   ;; unlike post-blank, we assume this will never be needed for
@@ -1099,7 +1099,12 @@ SHIFT is a positive or negative integer."
 ;;          (om-elem-map-property :tags #'toggle-tags))))
 
 ;; item
-;; TODO add all the getters
+
+;; TODO add toggle for ordered/unordered
+;; TODO add predicate for ordered/unordered
+;; TODO add shortcut title setter
+;; TODO add shortcut title getter (interprets the secondary string)
+;; TODO add shift counter
 
 (defun om-elem--item-set-checkbox (state item)
   "Set the checkbox of ITEM element to STATE.
@@ -1163,6 +1168,7 @@ checkbox."
 
 ;; planning
 
+;; TODO add mappers to manipulate the timestamps (similar to clock)
 ;; TODO add repeater/warning to this
 (defun om-elem--planning-set-property (prop time planning)
   (if (not time) (om-elem--set-property prop nil planning)
@@ -2491,26 +2497,14 @@ both timestamp halves."
 
 ;; headline
 
+;; TODO this should reference org-done-keywords
+;; not side effect free...
 (defun om-elem-headline-is-done-p (headline)
   "Return t if HEADLINE element has a DONE todo keyword."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--property-is-eq-p :todo-type 'done headline))
 
-(defun om-elem-headline-is-scheduled-p (headline)
-  "Return t if HEADLINE element is scheduled."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-non-nil-p :scheduled headline))
-
-(defun om-elem-headline-is-deadlined-p (headline)
-  "Return t if HEADLINE element has a deadline."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-non-nil-p :deadline headline))
-
-(defun om-elem-headline-is-closed-p (headline)
-  "Return t if HEADLINE element is closed."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-non-nil-p :closed headline))
-
+;; TODO this should look for the archived tag
 (defun om-elem-headline-is-archived-p (headline)
   "Return t if HEADLINE element is archived."
   (om-elem--verify headline om-elem-is-headline-p)
@@ -2521,6 +2515,7 @@ both timestamp halves."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--property-is-non-nil-p :commentedp headline))
 
+;; TODO refactor this to be in terms of property-list functions
 (defun om-elem-headline-has-tag-p (tag headline)
   "Return t if HEADLINE element is tagged with TAG."
   (om-elem--verify headline om-elem-is-headline-p)
@@ -2574,6 +2569,8 @@ both timestamp halves."
         (done (length (-filter #'om-elem-headline-is-done-p subtodo)))
         (total (length subtodo)))
     (om-elem--headline-set-statistics-cookie-fraction done total headline))))
+
+;; TODO add toggles
 
 ;; item
 
@@ -2724,6 +2721,22 @@ Return a list of objects."
 (defun om-elem-headline-get-drawer (name headline)
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-get-drawer name headline))
+
+;; TODO these should reference planning
+(defun om-elem-headline-is-scheduled-p (headline)
+  "Return t if HEADLINE element is scheduled."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--property-is-non-nil-p :scheduled headline))
+
+(defun om-elem-headline-is-deadlined-p (headline)
+  "Return t if HEADLINE element has a deadline."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--property-is-non-nil-p :deadline headline))
+
+(defun om-elem-headline-is-closed-p (headline)
+  "Return t if HEADLINE element is closed."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--property-is-non-nil-p :closed headline))
 
 (defun om-elem-set-planning (planning-plist headline)
   (om-elem--verify headline om-elem-is-headline-p)
