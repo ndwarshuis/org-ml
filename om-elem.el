@@ -997,14 +997,15 @@ float-times, which assumes the :type property is valid."
    clock))
 
 (defun om-elem--clock-update-duration (clock)
-  (let ((ts (om-elem--get-property :value clock)))
-      (if (om-elem--timestamp-is-ranged-fast-p ts)
-          (let* ((seconds (om-elem--timestamp-get-range ts))
-                 (h (-> seconds (/ 3600) (floor)))
-                 (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
-            (om-elem--set-property :duration (format "%2d:%02d" h m)
-                                   clock))
-        (om-elem--set-property :duration nil clock))))
+  (let* ((ts (om-elem--get-property :value clock))
+         (plist
+          (if (om-elem--timestamp-is-ranged-fast-p ts)
+              (let* ((seconds (om-elem--timestamp-get-range ts))
+                     (h (-> seconds (/ 3600) (floor)))
+                     (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
+                `(:duration ,(format "%2d:%02d" h m) :status running))
+            '(:duration nil :status closed))))
+    (om-elem--set-properties plist clock)))
 
 ;; diary-sexp
 ;; TODO add value getter
@@ -2472,8 +2473,7 @@ present."
 The behavior is analogous to `om-elem-timestamp-shift-time-start' for
 both timestamp halves."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (->> (om-elem--timestamp-shift-start n unit timestamp)
-       (om-elem--timestamp-shift-end n unit)))
+  (om-elem--timestamp-shift-range n unit timestamp))
 
 (defun om-elem-timestamp-toggle-active (timestamp)
   "Toggle the active/inactive type of TIMESTAMP element."
