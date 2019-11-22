@@ -522,56 +522,6 @@ property list in ELEM."
          (om-elem--set-properties-pred pred (-drop 2 plist))))
    (t (error "Not a plist: %s" plist))))
 
-;;; property-specific
-
-(defun om-elem--set-post-blank (post-blank elem)
-  "Set the :post-blank property of ELEM to POST-BLANK."
-  (om-elem--verify post-blank om-elem--non-neg-integer-p)
-  (if (stringp elem) (s-append (s-repeat post-blank " ") elem)
-    (om-elem--set-property :post-blank post-blank elem)))
-
-(defun om-elem--set-brackets (flag elem)
-  (om-elem--set-property-pred 'booleanp :use-brackets-p flag elem))
-
-(defun om-elem--set-indent (flag elem)
-  (om-elem--set-property-pred 'booleanp :preserve-indent flag elem))
-
-(defun om-elem--set-key (key elem)
-  "Set the key of ELEM element to KEY (a string)."
-  (om-elem--set-property-pred 'stringp :key key elem))
-
-(defun om-elem--set-value (value elem)
-  "Set the value of ELEM element to VALUE (a string)."
-  (om-elem--set-property-pred 'stringp :value value elem))
-
-;; TODO make the inverse of this
-(defun om-elem--set-property-strings-concat (prop args delim elem)
-  (unless (and (listp args) (-all? #'stringp args))
-    (error "Arguments must be supplied as a list of strings."))
-  (let ((s (and args (s-join delim args))))
-      (om-elem--set-property prop s elem)))
-
-;; TODO make the inverse of this
-(defun om-elem--set-property-plist-concat (props plist elem)
-  (unless (om-elem--is-plist-p plist)
-    (error "Invalid plist given: %S" plist))
-  (unless (->> (-slice plist 1 nil 2) (-all? #'symbolp))
-    (error "All plist values must be symbols: %S" plist))
-  (let ((s (-some->> (-map #'symbol-name plist) (s-join " "))))
-      (om-elem--set-property props s elem)))
-
-(defun om-elem--set-property-list (prop strings elem)
-  (om-elem--verify strings (lambda (ss) (-all? #'stringp ss)))
-  (om-elem--set-property prop strings elem))
-
-(defun om-elem--insert-property-list (prop index string elem)
-  (om-elem--verify index integerp string stringp)
-  (om-elem--map-property* prop (om-elem--insert-at index string it) elem))
-
-(defun om-elem--remove-property-list (prop string elem)
-  (om-elem--verify string stringp)
-  (om-elem--map-property* prop (-remove-item string it) elem))
-
 (defun om-elem--map-property (prop fun elem)
   (om-elem--verify fun functionp)
   (let ((value (funcall fun (om-elem--get-property prop elem))))
@@ -624,6 +574,57 @@ FUN is a predicate function that takes one argument."
   (->> (om-elem--get-property prop elem) (funcall fun) (and)))
 
 (om-elem--gen-anaphoric-form #'om-elem--property-is-predicate-p)
+
+
+;;; property-specific
+
+(defun om-elem--set-post-blank (post-blank elem)
+  "Set the :post-blank property of ELEM to POST-BLANK."
+  (om-elem--verify post-blank om-elem--non-neg-integer-p)
+  (if (stringp elem) (s-append (s-repeat post-blank " ") elem)
+    (om-elem--set-property :post-blank post-blank elem)))
+
+(defun om-elem--set-brackets (flag elem)
+  (om-elem--set-property-pred 'booleanp :use-brackets-p flag elem))
+
+(defun om-elem--set-indent (flag elem)
+  (om-elem--set-property-pred 'booleanp :preserve-indent flag elem))
+
+(defun om-elem--set-key (key elem)
+  "Set the key of ELEM element to KEY (a string)."
+  (om-elem--set-property-pred 'stringp :key key elem))
+
+(defun om-elem--set-value (value elem)
+  "Set the value of ELEM element to VALUE (a string)."
+  (om-elem--set-property-pred 'stringp :value value elem))
+
+;; TODO make the inverse of this
+(defun om-elem--set-property-strings-concat (prop args delim elem)
+  (unless (and (listp args) (-all? #'stringp args))
+    (error "Arguments must be supplied as a list of strings."))
+  (let ((s (and args (s-join delim args))))
+      (om-elem--set-property prop s elem)))
+
+;; TODO make the inverse of this
+(defun om-elem--set-property-plist-concat (props plist elem)
+  (unless (om-elem--is-plist-p plist)
+    (error "Invalid plist given: %S" plist))
+  (unless (->> (-slice plist 1 nil 2) (-all? #'symbolp))
+    (error "All plist values must be symbols: %S" plist))
+  (let ((s (-some->> (-map #'symbol-name plist) (s-join " "))))
+      (om-elem--set-property props s elem)))
+
+(defun om-elem--set-property-list (prop strings elem)
+  (om-elem--verify strings (lambda (ss) (-all? #'stringp ss)))
+  (om-elem--set-property prop strings elem))
+
+(defun om-elem--insert-property-list (prop index string elem)
+  (om-elem--verify index integerp string stringp)
+  (om-elem--map-property* prop (om-elem--insert-at index string it) elem))
+
+(defun om-elem--remove-property-list (prop string elem)
+  (om-elem--verify string stringp)
+  (om-elem--map-property* prop (-remove-item string it) elem))
 
 ;;; objects
 ;;
