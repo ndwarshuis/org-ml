@@ -2367,13 +2367,13 @@ Note this only considers the start of the timestamp if it is range."
         (ut2 (om-elem--timestamp-get-end-unixtime timestamp)))
     (< ut1 unixtime ut2)))
 
-(defun om-elem-timestamp-set-time (time timestamp)
+(defun om-elem-timestamp-set-start-time (time timestamp)
   "Set start time of TIMESTAMP element to TIME.
 TIME is a list like '(year month day)' or '(year month day hour min)'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-set-start-time time timestamp))
 
-(defun om-elem-timestamp-set-time-end (time timestamp)
+(defun om-elem-timestamp-set-end-time (time timestamp)
   "Set end time of TIMESTAMP element to TIME.
 TIME is a list like '(year month day)' or '(year month day hour min)'.
 This will also change the type to (un)ranged as appropriate."
@@ -2387,46 +2387,24 @@ TYPE can be either 'active' or 'inactive'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-set-type type timestamp))
 
-;; TODO add a switch for precision
-(defun om-elem-timestamp-set-time-unixtime (unixtime timestamp)
-  "Set start time of TIMESTAMP element to UNIXTIME (an integer).
-This assumes one wants HH:MM precision."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (-> (decode-time unixtime)
-      (-slice 1 6)
-      (om-elem-timestamp-set-time timestamp)))
-
-(defun om-elem-timestamp-set-time-end-unixtime (unixtime timestamp)
-  "Set end time of TIMESTAMP element to UNIXTIME (an integer).
-This assumes one wants HH:MM precision."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (-> (decode-time unixtime)
-      (-slice 1 6)
-      (om-elem-timestamp-set-time-end timestamp)))
-
-(defun om-elem-timestamp-shift-time-start (n unit timestamp)
+(defun om-elem-timestamp-shift-start (n unit timestamp)
   "Shift the UNIT of TIMESTAMP element start time by VALUE.
 VALUE is a positive or negative integer and UNIT is one of 'minute',
 'hour', 'day', 'month', or 'year'. Value will wrap around larger units
 as needed; for instance, supplying 'minute' for UNIT and 60 for VALUE
 will increase the hour property by 1."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (let ((type (om-elem--get-property :type timestamp)))
-    (if (memq type '(active inactive))
-        (om-elem-timestamp-shift-time n unit timestamp)
-      (om-elem--timestamp-shift-start n unit timestamp))))
+  (om-elem--timestamp-shift-start n unit timestamp))
 
-(defun om-elem-timestamp-shift-time-end (n unit timestamp)
+(defun om-elem-timestamp-shift-end (n unit timestamp)
   "Shift the UNIT of TIMESTAMP element end time by VALUE.
 The behavior is analogous to `om-elem-timestamp-shift-time-start',
 except that the timestamp will be unchanged if no ending time is
 present."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (let ((type (om-elem--get-property :type timestamp)))
-    (if (memq type '(active inactive)) timestamp
-      (om-elem--timestamp-shift-end n unit timestamp))))
+  (om-elem--timestamp-shift-end n unit timestamp))
 
-(defun om-elem-timestamp-shift-time (n unit timestamp)
+(defun om-elem-timestamp-shift (n unit timestamp)
   "Shift the UNIT of TIMESTAMP element start and end time by VALUE.
 The behavior is analogous to `om-elem-timestamp-shift-time-start' for
 both timestamp halves."
