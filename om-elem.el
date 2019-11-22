@@ -966,11 +966,15 @@ float-times, which assumes the :type property is valid."
 (om-elem--gen-anaphoric-form #'om-elem--clock-map-timestamp)
 
 ;; diary-sexp
-;; TODO add value getter
 
-(defun om-elem--diary-sexp-set-value (string elem)
-  (om-elem--verify string stringp)
-  (om-elem--set-property :value (format "%%%%(%s)" string) elem))
+(defun om-elem--diary-sexp-get-value (diary-sexp)
+  (->> (om-elem--get-property :value diary-sexp)
+       (s-chop-prefix "%%")
+       (read)))
+
+(defun om-elem--diary-sexp-set-value (form diary-sexp)
+  (om-elem--verify form listp)
+  (om-elem--set-property :value (format "%%%%%S" form) diary-sexp))
 
 ;; headline
 ;; TODO add all the getters

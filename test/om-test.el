@@ -150,7 +150,7 @@
 
 (ert-deftest om-elem--diary-sexp/valid-props ()
   (om-elem--compare-element-props
-   (om-elem-build-diary-sexp "value") "%%(value)"))
+   (om-elem-build-diary-sexp '(value)) "%%(value)"))
 
 (ert-deftest om-elem--example-block/valid-props ()
   (om-elem--compare-element-props

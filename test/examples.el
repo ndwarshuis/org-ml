@@ -191,7 +191,7 @@
          (om-elem-to-trimmed-string)) => "#+BEGIN_COMMENT\ntext\n#+END_COMMENT")
 
   (defexamples om-elem-build-diary-sexp
-    (->> (om-elem-build-diary-sexp "text")
+    (->> (om-elem-build-diary-sexp '(text))
          (om-elem-to-trimmed-string)) => "%%(text)")
 
   (defexamples om-elem-build-example-block
