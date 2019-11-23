@@ -697,6 +697,19 @@ Setting TYPE to nil will result in a 'fuzzy' type link."
 
 ;; TODO add complete predicate
 
+(defun om-elem--statistics-cookie-is-complete (statistics-cookie)
+  (let ((val (om-elem--get-property :value statistics-cookie)))
+    (or (-some->>
+         (s-match "\\([[:digit:]]+\\)%" val)
+         (nth 1)
+         (string-to-number)
+         (= 100))
+        (-some->>
+         (s-match "\\([[:digit:]]+\\)/\\([[:digit:]]+\\)" val)
+         (-drop 1)
+         (-map #'string-to-number)
+         (apply #'=)))))
+
 (defun om-elem--statistics-cookie-get-format (statistics-cookie)
   (cond ((s-contains? "/" it) 'fraction)
         ((s-contains? "%" it) 'percent)
@@ -2315,17 +2328,7 @@ VALUE can take four forms which determine the format of the value:
 (defun om-elem-statistics-cookie-is-complete-p (statistics-cookie)
   "Return t is STATISTICS-COOKIE element is complete."
   (om-elem--verify statistics-cookie om-elem-is-statistics-cookie-p)
-  (let ((val (om-elem--get-property :value statistics-cookie)))
-    (or (-some->>
-         (s-match "\\([[:digit:]]+\\)%" val)
-         (nth 1)
-         (string-to-number)
-         (= 100))
-        (-some->>
-         (s-match "\\([[:digit:]]+\\)/\\([[:digit:]]+\\)" val)
-         (-drop 1)
-         (-map #'string-to-number)
-         (apply #'=)))))
+  (om-elem--statistics-cookie-is-complete statistics-cookie))
 
 ;; timestamp
 
