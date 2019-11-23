@@ -594,13 +594,17 @@ FUN is a predicate function that takes one argument."
   (let* ((pb* (+ n (om-elem--get-post-blank elem))))
     (om-elem--set-post-blank (if (< pb* 0) 0 pb*) elem)))
 
-;; TODO add toggle for this
 (defun om-elem--set-use-brackets (flag elem)
   (om-elem--set-property-pred 'booleanp :use-brackets-p flag elem))
 
-;; TODO add toggle for this
+(defun om-elem--toggle-use-brackets (elem)
+  (om-elem--toggle-property :use-brackets-p elem))
+
 (defun om-elem--set-preserve-indent (flag elem)
   (om-elem--set-property-pred 'booleanp :preserve-indent flag elem))
+
+(defun om-elem--toggle-use-brackets (elem)
+  (om-elem--toggle-property :preserve-indent elem))
 
 (defun om-elem--set-key (key elem)
   "Set the key of ELEM element to KEY (a string)."
