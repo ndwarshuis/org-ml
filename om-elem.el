@@ -695,8 +695,6 @@ Setting TYPE to nil will result in a 'fuzzy' type link."
 
 ;; statistics-cookie
 
-;; TODO add complete predicate
-
 (defun om-elem--statistics-cookie-is-complete (statistics-cookie)
   (let ((val (om-elem--get-property :value statistics-cookie)))
     (or (-some->>
@@ -830,18 +828,6 @@ without element verification."
 
 ;; timestamp (regular)
 
-(defun om-elem--timestamp-get-start-timestamp (timestamp)
-  ;; TODO this is inefficient
-  (let ((type (om-elem--get-property :type timestamp)))
-    (if (not (memq type '(inactive-range active-range))) timestamp
-      (org-timestamp-split-range timestamp))))
-
-(defun om-elem--timestamp-get-end-timestamp (timestamp)
-  ;; TODO this is inefficient
-  (let ((type (om-elem--get-property :type timestamp)))
-    (if (not (memq type '(inactive-range active-range))) nil
-      (org-timestamp-split-range timestamp t))))
-
 (defun om-elem--timestamp-get-start-time (timestamp)
   (-let (((&plist :minute-start n :hour-start h :day-start d
                   :month-start m :year-start y)
@@ -853,6 +839,15 @@ without element verification."
                   :month-end m :year-end y)
           (om-elem--get-properties timestamp)))
     `(,y ,m ,d ,h ,n)))
+
+(defun om-elem--timestamp-get-start-timestamp (timestamp)
+  (if (not (om-elem--timestamp-is-ranged-fast-p timestamp)) timestamp
+    (om-elem--timestamp-set-end-time nil timestamp)))
+
+(defun om-elem--timestamp-get-end-timestamp (timestamp)
+  (when (om-elem--timestamp-is-ranged-fast-p timestamp)
+    (-> (om-elem--timestamp-get-end-time timestamp)
+        (om-elem--timestamp-set-single-time timestamp))))
 
 (defun om-elem--timestamp-get-start-unixtime (timestamp)
   (->> (om-elem--timestamp-get-start-time timestamp)
