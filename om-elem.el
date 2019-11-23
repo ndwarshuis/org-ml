@@ -579,19 +579,27 @@ FUN is a predicate function that takes one argument."
 
 ;;; property-specific
 
-;; TODO add shifter for this
+(defun om-elem--get-post-blank (elem)
+  (if (stringp elem)
+      (-> (s-match "[[:space:]]+$" elem) (car) (length))
+    (om-elem--get-property :post-blank elem)))
+
 (defun om-elem--set-post-blank (post-blank elem)
   "Set the :post-blank property of ELEM to POST-BLANK."
   (om-elem--verify post-blank om-elem--non-neg-integer-p)
   (if (stringp elem) (s-append (s-repeat post-blank " ") elem)
     (om-elem--set-property :post-blank post-blank elem)))
 
+(defun om-elem--shift-post-blank (n elem)
+  (let* ((pb* (+ n (om-elem--get-post-blank elem))))
+    (om-elem--set-post-blank (if (< pb* 0) 0 pb*) elem)))
+
 ;; TODO add toggle for this
-(defun om-elem--set-brackets (flag elem)
+(defun om-elem--set-use-brackets (flag elem)
   (om-elem--set-property-pred 'booleanp :use-brackets-p flag elem))
 
 ;; TODO add toggle for this
-(defun om-elem--set-indent (flag elem)
+(defun om-elem--set-preserve-indent (flag elem)
   (om-elem--set-property-pred 'booleanp :preserve-indent flag elem))
 
 (defun om-elem--set-key (key elem)
@@ -1249,7 +1257,7 @@ checkbox."
   "Build a entity object from NAME."
   (let ((init '(:html :ascii :latex :latex-math-p :latin1 :utf-8)))
     (->> (om-elem--build-object 'entity post-blank)
-         (om-elem--set-brackets use-brackets-p)
+         (om-elem--set-use-brackets use-brackets-p)
          (om-elem--entity-set-name name)
          (om-elem--set-properties-nil init))))
 
@@ -1385,14 +1393,14 @@ STRING is a lisp form as a string."
                                                 &rest objs)
   "Build a superscript object from STRING."
   (->> (om-elem--build-recursive-object 'superscript post-blank objs)
-       (om-elem--set-brackets use-brackets-p)))
+       (om-elem--set-use-brackets use-brackets-p)))
 
 (om-elem--defun om-elem-build-subscript (&key use-brackets-p
                                               post-blank
                                               &rest objs)
   "Build a subscript object from STRING."
   (->> (om-elem--build-recursive-object 'subscript post-blank objs)
-       (om-elem--set-brackets use-brackets-p)))
+       (om-elem--set-use-brackets use-brackets-p)))
 
 (om-elem--defun om-elem-build-table-cell (&key post-blank &rest objs)
   "Build a table cell object containing TEXT."
@@ -1448,7 +1456,7 @@ VALUE is the part inside the '%%(value)' part of the sexp."
     (->> (om-elem--build-element 'example-block post-blank)
          (om-elem--set-value (org-element-normalize-string value))
          (om-elem--set-property-strings-concat :switches switches " ")
-         (om-elem--set-indent preserve-indent)
+         (om-elem--set-preserve-indent preserve-indent)
          (om-elem--set-properties-nil init))))
 
 (om-elem--defun om-elem-build-export-block (type value &key post-blank)
@@ -1500,7 +1508,7 @@ VALUE is the part inside the '%%(value)' part of the sexp."
     (->>
      (om-elem--build-element 'src-block post-blank)
      (om-elem--set-value value)
-     (om-elem--set-indent preserve-indent)
+     (om-elem--set-preserve-indent preserve-indent)
      (om-elem--set-property-pred 'string-or-null-p :language language)
      (om-elem--set-property-strings-concat :switches switches " ")
      (om-elem--set-property-plist-concat :parameters parameters)
