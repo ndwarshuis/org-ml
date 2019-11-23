@@ -679,6 +679,8 @@ Setting TYPE to nil will result in a 'fuzzy' type link."
 
 ;; statistics-cookie
 
+;; TODO add complete predicate
+
 (defun om-elem--statistics-cookie-get-format (statistics-cookie)
   (cond ((s-contains? "/" it) 'fraction)
         ((s-contains? "%" it) 'percent)
@@ -2236,7 +2238,7 @@ property list in ELEM."
     (error "Property %s does not exist in %s" prop elem))
   (om-elem--toggle-property prop elem))
 
-;; property specific
+;;; property specific
 
 (defun om-elem-set-post-blank (post-blank elem)
   "Set the :post-blank property of ELEM to POST-BLANK."
