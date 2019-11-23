@@ -576,7 +576,6 @@ FUN is a predicate function that takes one argument."
 
 (om-elem--gen-anaphoric-form #'om-elem--property-is-predicate-p)
 
-
 ;;; property-specific
 
 (defun om-elem--get-post-blank (elem)
@@ -614,14 +613,18 @@ FUN is a predicate function that takes one argument."
   "Set the value of ELEM element to VALUE (a string)."
   (om-elem--set-property-pred 'stringp :value value elem))
 
-;; TODO make the inverse of this
+(defun om-elem--get-property-strings (prop delim elem)
+  (s-split delim (om-elem--get-property prop elem)))
+
 (defun om-elem--set-property-strings-concat (prop args delim elem)
   (unless (and (listp args) (-all? #'stringp args))
     (error "Arguments must be supplied as a list of strings."))
   (let ((s (and args (s-join delim args))))
       (om-elem--set-property prop s elem)))
 
-;; TODO make the inverse of this
+(defun om-elem--get-property-plist (prop elem)
+  (-map #'intern (om-elem--get-property-strings prop " " elem)))
+
 (defun om-elem--set-property-plist-concat (props plist elem)
   (unless (om-elem--is-plist-p plist)
     (error "Invalid plist given: %S" plist))
