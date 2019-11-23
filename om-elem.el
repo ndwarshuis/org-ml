@@ -490,14 +490,14 @@ and object containers and includes the 'plain-text' type.")
   "Set all properties in ELEM to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that correspond to the
 property list in ELEM."
-  ;; TODO this is not the most efficient, it builds a new elem with
-  ;; every iteration
-  (cond
-   ((not plist) elem)
-   ((om-elem--is-plist-p plist)
-    (->> (om-elem--set-property (nth 0 plist) (nth 1 plist) elem)
-         (om-elem--set-properties (-drop 2 plist))))
-   (t (error "Not a plist: %s" plist))))
+  (if (om-elem--is-plist-p plist)
+      (let ((props (om-elem--get-properties elem)))
+        (om-elem--construct
+         (om-elem--get-type elem)
+         (->> (-partition 2 plist)
+              (--reduce-from (apply #'plist-put acc it) props))
+         (om-elem--get-contents elem)))
+    (error "Not a plist: %S" plist)))
 
 (defun om-elem--set-property-nil (prop elem)
   "Set property PROP to nil in ELEM."
