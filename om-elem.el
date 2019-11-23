@@ -467,10 +467,11 @@ and object containers and includes the 'plain-text' type.")
   "Return the parent of ELEM."
   (om-elem--get-property :parent elem))
 
-;; TODO refactor this
 (defun om-elem--get-parent-headline (elem)
   "Return the most immediate parent headline of ELEM."
-  (om-elem-find-parent elem :many 'headline))
+  (-when-let (parent (om-elem--get-parent elem))
+    (if (om-elem--is-type-p 'headline parent) parent
+      (om-elem--get-parent-headline parent))))
 
 ;; (defun om-elem--get-parent-item (elem)
 ;;   "Return the parent item element for ELEM."
