@@ -872,6 +872,24 @@ without element verification."
   (->> (om-elem--timestamp-get-end-time timestamp)
        (om-elem--time-is-long-p)))
 
+(defun om-elem--timestamp-start-is-less-than-p (unixtime timestamp)
+  (< (om-elem--timestamp-get-start-unixtime timestamp) unixtime))
+
+(defun om-elem--timestamp-start-is-greater-than-p (unixtime timestamp)
+  (> (om-elem--timestamp-get-start-unixtime timestamp) unixtime))
+
+(defun om-elem--timestamp-start-is-equal-to-p (unixtime timestamp)
+  (= (om-elem--timestamp-get-start-unixtime timestamp) unixtime))
+
+(defun om-elem--timestamp-end-is-less-than-p (unixtime timestamp)
+  (< (om-elem--timestamp-get-end-unixtime timestamp) unixtime))
+
+(defun om-elem--timestamp-end-is-greater-than-p (unixtime timestamp)
+  (> (om-elem--timestamp-get-end-unixtime timestamp) unixtime))
+
+(defun om-elem--timestamp-end-is-equal-to-p (unixtime timestamp)
+  (= (om-elem--timestamp-get-end-unixtime timestamp) unixtime))
+
 (defun om-elem--timestamp-is-ranged-fast-p (timestamp)
   "Like `om-elem--timestamp-is-ranged-p' but faster.
 This only looks at TIMESTAMP's :type property rather than computing
@@ -890,6 +908,7 @@ float-times, which assumes the :type property is valid."
 
 (defun om-elem--timestamp-set-end-time-nocheck (time timestamp)
   "Set the end TIME of TIMESTAMP."
+  ;; TODO what if the start time is greater than the end time?
   (if time
       (-> (om-elem--time-format-props time 'end)
           (om-elem-set-properties timestamp))
@@ -898,6 +917,7 @@ float-times, which assumes the :type property is valid."
         (om-elem-set-properties timestamp))))
 
 (defun om-elem--timestamp-set-end-time (time timestamp)
+  ;; TODO what if the start time is greater than the end time?
   (let ((ts* (om-elem--timestamp-set-end-time-nocheck time timestamp)))
     (if time (om-elem--timestamp-update-type-ranged ts*)
       (om-elem--timestamp-set-type-ranged nil ts*))))
@@ -2371,32 +2391,32 @@ Note this only considers the start of the timestamp if it is range."
 (defun om-elem-timestamp-start-is-less-than-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is less than UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (< (om-elem--timestamp-get-start-unixtime timestamp) unixtime))
+  (om-elem--timestamp-start-is-less-than-p unixtime timestamp))
 
 (defun om-elem-timestamp-start-is-greater-than-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is greater than UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (> (om-elem--timestamp-get-start-unixtime timestamp) unixtime))
+  (om-elem--timestamp-start-is-greater-than-p unixtime timestamp))
 
 (defun om-elem-timestamp-start-is-equal-to-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is equal to UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (= (om-elem--timestamp-get-start-unixtime timestamp) unixtime))
+  (om-elem--timestamp-start-is-equal-to-p unixtime timestamp))
 
 (defun om-elem-timestamp-end-is-less-than-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is less than UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (< (om-elem--timestamp-get-end-unixtime timestamp) unixtime))
+  (om-elem--timestamp-end-is-less-than-p unixtime timestamp))
 
 (defun om-elem-timestamp-end-is-greater-than-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is greater than UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (> (om-elem--timestamp-get-end-unixtime timestamp) unixtime))
+  (om-elem--timestamp-end-is-greater-than-p unixtime timestamp))
 
 (defun om-elem-timestamp-end-is-equal-to-p (unixtime timestamp)
   "Return t if TIMESTAMP elem is equal to UNIXTIME."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (= (om-elem--timestamp-get-end-unixtime timestamp) unixtime))
+  (om-elem--timestamp-end-is-equal-to-p unixtime timestamp))
 
 (defun om-elem-timestamp-range-contains-p (unixtime timestamp)
   "Return t if UNIXTIME is between start and end of TIMESTAMP elem."
