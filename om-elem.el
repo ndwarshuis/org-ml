@@ -926,6 +926,11 @@ float-times, which assumes the :type property is valid."
        (om-elem--timestamp-set-end-time-nocheck time)
        (om-elem--timestamp-set-type-ranged nil)))
 
+(defun om-elem--timestamp-set-double-time (time1 time2 timestamp)
+  (->> (om-elem--timestamp-set-start-time-nocheck time1 timestamp)
+       (om-elem--timestamp-set-end-time-nocheck time2)
+       (om-elem--timestamp-set-type-ranged nil)))
+
 (defun om-elem--timestamp-set-range (range timestamp)
   (let ((t2 (+ (om-elem--timestamp-get-start-unixtime timestamp) range))
         (timestamp*
