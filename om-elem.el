@@ -858,6 +858,9 @@ without element verification."
   (- (om-elem--timestamp-get-end-unixtime timestamp)
      (om-elem--timestamp-get-start-unixtime timestamp)))
 
+(defun om-elem--timestamp-is-active-p (timestamp)
+   (memq (om-elem--get-property :type timestamp) '(active active-range)))
+
 (defun om-elem--timestamp-is-ranged-p (timestamp)
   (/= 0 (om-elem--timestamp-get-range timestamp)))
 
@@ -985,6 +988,11 @@ float-times, which assumes the :type property is valid."
 (defun om-elem--timestamp-shift-range (n unit timestamp)
   (->> (om-elem--timestamp-shift-start n unit timestamp)
        (om-elem--timestamp-shift-end n unit)))
+
+(defun om-elem--timestamp-toggle-active (timestamp)
+  (--> (om-elem--timestamp-is-active-p timestamp)
+       (if it 'inactive 'active)
+       (om-elem--timestamp-set-type it timestamp)))
 
 ;; timestamp (diary sexp)
 
@@ -2068,6 +2076,8 @@ zero-indexed."
     (print (om-elem--table-get-width table))
     (om-elem--map-contents* (om-elem--replace-at index (apply #'om-elem-build-table-row row) it) table)))
 
+;; TODO make replace/clear cell
+
 (defun om-elem--table-clear-row (index table)
   ;; this assumes the blank cell will be padded with other blank cells
   (om-elem--table-replace-row index (list (om-elem-build-table-cell "")) table))
@@ -2472,7 +2482,6 @@ TIME is a list like '(year month day)' or '(year month day hour min)'."
 TIME is a list like '(year month day)' or '(year month day hour min)'.
 This will also change the type to (un)ranged as appropriate."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  ;; TODO this could be refactored
   (om-elem--timestamp-set-end-time time timestamp))
 
 (defun om-elem-timestamp-set-type (type timestamp)
@@ -2508,14 +2517,7 @@ both timestamp halves."
 (defun om-elem-timestamp-toggle-active (timestamp)
   "Toggle the active/inactive type of TIMESTAMP element."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (let ((cur-type (om-elem--get-property :type timestamp)))
-    (cond
-     ((memq cur-type '(inactive inactive-range))
-      (om-elem-timestamp-set-type 'active timestamp))
-     ((memq cur-type '(active active-range))
-      (om-elem-timestamp-set-type 'inactive timestamp))
-     ;; TODO puke out when given a diary timestamp
-     (t timestamp))))
+  (om-elem--timestamp-toggle-active timestamp))
 
 ;;; elements
 ;;
