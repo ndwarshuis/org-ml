@@ -451,6 +451,103 @@ and object containers and includes the 'plain-text' type.")
   "Return ELEM if it is one of TYPES or nil otherwise."
   (and (om-elem--is-any-type-p types elem) elem))
 
+(defconst om-elem--type-alist
+  '((babel-call :call stringp
+                :inside-header string-or-null-p
+                :arguments string-or-null-p
+                :end-header string-or-null-p
+                :value stringp)
+    (bold)
+    (center-block)
+    (clock :duration string-or-null-p
+           :status (closed running)
+           :value is-timestamp-p)
+    (code :value stringp)
+    (comment :value stringp)
+    (comment-block :value stringp)
+    (drawer :drawer-name stringp)
+    (dynamic-block :arguments stringp
+                   :block-name stringp)
+    (entity :name stringp ; restricted by `org-entity-get'
+            :use-brackets-p booleanp)
+    (example-block :language stringp
+                   :parameters string-or-null-p
+                   :preserve-indent booleanp
+                   :switches string-or-null-p
+                   :value stringp)
+    (export-block :type stringp
+                  :value stringp)
+    (export-snippet :back-end stringp
+                    :value stringp)
+    (fixed-width :value stringp)
+    (footnote-definition :label stringp)
+    (footnote-reference :label stringp
+                        :type (inline standard))
+    (headline :archivedp booleanp
+              :commentedp booleanp
+              :footnote-section-p booleanp
+              :level (lambda (x) (<= 0 x))
+              :pre-blank (lambda (x) (<= 0 x))
+              :priority integerp ; technically bounded
+              :tags (--all? #'stringp it)
+              :title #'ignore ; restricted
+              :todo-keyword stringp) ; restricted
+    (horizontal-rule)
+    (inline-babel-call :call stringp
+                       :inside-header string-or-null-p
+                       :arguments string-or-null-p
+                       :end-header string-or-null-p
+                       :value string)
+    (inline-src-block :language stringp
+                      :parameters string-or-null-p
+                      :value string)
+    ;; (inlinetask)
+    (italic)
+    (item :bullet #'ignore ; allow valid bullets
+          :checkbox (nil on off trans)
+          :counter integerp ; for now...
+          :tag #'ignore) ; restricted
+    (keyword :key stringp
+             :value stringp)
+    (latex-environment :value stringp)
+    (latex-fragment :value stringp)
+    (line-break)
+    (link :format (plain angle bracket)
+          :path stringp
+          :type #'ignore) ; restricted
+    (macro :args (--all? #'stringp it)
+           :key stringp
+           :value stringp)
+    (node-property :key stringp
+                   :value stringp)
+    (paragraph)
+    (plain-list)
+    (planning :closed is-timestamp
+              :deadline is-timestamp
+              :scheduled is-timestamp)
+    (property-drawer)
+    (quote-block)
+    (radio-target)
+    (section)
+    (special-block :type stringp)
+    (src-block :language string-or-null-p
+               :parameters string-or-null-p
+               :preserve-indent booleanp
+               :switches string-or-null-p
+               :value stringp)
+    (statistics-cookie :value stringp)
+    (strike-through)
+    (subscript :use-brackets-p booleanp)
+    (superscript :use-brackets-p booleanp)
+    (table :tblfm (--all? #'stringp it))
+    (table-cell)
+    (table-row :type (rule standard))
+    (target :value stringp)
+    ;; (timestamp)
+    (underline)
+    (verbatim :value stringp)
+    (verse-block)))
+
 ;;; INTERNAL PROPERTY FUNCTIONS
 
 ;;; generic
