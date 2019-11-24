@@ -338,6 +338,26 @@
          (om-elem-build-table)
          (om-elem-to-trimmed-string)) => "| cell |"))
 
+(def-example-group "Generic property functions"
+  "..."
+
+  (defexamples-content om-elem-toggle-property
+    nil
+    (:content "* headline")
+    (:comment "Flip the property")
+    (->> (om-elem-parse-this-headline)
+         (om-elem-toggle-property :commentedp)
+         (om-elem-to-trimmed-string))
+    => "* COMMENT headline"
+    (:comment "Flip the property twice (do nothing)")
+    (->> (om-elem-parse-this-headline)
+         (om-elem-toggle-property :commentedp)
+         (om-elem-toggle-property :commentedp)
+         (om-elem-to-trimmed-string))
+    => "* headline")
+
+  )
+
 (def-example-group "Element matching functions"
   "match shit"
 
@@ -1399,20 +1419,6 @@ and here is even more *text4* and *text5*
 (def-example-group "Element toggle functions."
   "Toggle shit"
 
-  (defexamples-content om-elem-toggle-property
-    nil
-    (:content "* headline")
-    (:comment "Flip the property")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-toggle-property :commentedp)
-         (om-elem-to-trimmed-string))
-    => "* COMMENT headline"
-    (:comment "Flip the property twice (do nothing)")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-toggle-property :commentedp)
-         (om-elem-toggle-property :commentedp)
-         (om-elem-to-trimmed-string))
-    => "* headline")
 
   (defexamples-content om-elem-headline-toggle-commented
     nil
