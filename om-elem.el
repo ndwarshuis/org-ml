@@ -1836,6 +1836,11 @@ nested element to return."
    (--first (and (om-elem--is-type-p 'drawer it)
                  (om-elem--property-is-equal-p :drawer-name name it)))))
 
+(defun om-elem--headline-get-planning (headline)
+  (-some->> (om-elem--headline-get-section headline)
+            (om-elem--get-contents)
+            (--first (om-elem--is-type 'planning it))))
+
 (defun om-elem--headline-get-path (headline)
   "Return path of headline HEADLINE element as a list of strings."
   (cl-labels
@@ -2668,9 +2673,6 @@ both timestamp halves."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--toggle-property :footnote-section-p elem))
 
-
-;; TODO add toggles
-
 ;; item
 
 (defun om-elem-item-is-checked-p (item)
@@ -2821,21 +2823,26 @@ Return a list of objects."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-get-drawer name headline))
 
-;; TODO these should reference planning
-(defun om-elem-headline-is-scheduled-p (headline)
-  "Return t if HEADLINE element is scheduled."
+(defun om-elem-headline-is-closed-p (headline)
+  "Return t if HEADLINE element is closed."
   (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-non-nil-p :scheduled headline))
+  (and (->> (om-elem--headline-get-planning headline)
+            (om-elem--get-property :closed))
+       t))
 
 (defun om-elem-headline-is-deadlined-p (headline)
   "Return t if HEADLINE element has a deadline."
   (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-non-nil-p :deadline headline))
+  (and (->> (om-elem--headline-get-planning headline)
+            (om-elem--get-property :deadline))
+       t))
 
-(defun om-elem-headline-is-closed-p (headline)
-  "Return t if HEADLINE element is closed."
+(defun om-elem-headline-is-scheduled-p (headline)
+  "Return t if HEADLINE element is scheduled."
   (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-non-nil-p :closed headline))
+  (and (->> (om-elem--headline-get-planning headline)
+            (om-elem--get-property :scheduled))
+       t))
 
 (defun om-elem-set-planning (planning-plist headline)
   (om-elem--verify headline om-elem-is-headline-p)
