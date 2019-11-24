@@ -2048,7 +2048,7 @@ and here is even more *text4* and *text5*
     (->> (om-elem-parse-element-at 1)
          (om-elem-table-insert-row
           1
-          (om-elem-build-table-row
+          (list
            (om-elem-build-table-cell "x")
            (om-elem-build-table-cell "y")))
          (om-elem-to-trimmed-string))
@@ -2056,7 +2056,7 @@ and here is even more *text4* and *text5*
     (->> (om-elem-parse-element-at 1)
          (om-elem-table-insert-row
           2
-          (om-elem-build-table-row
+          (list
            (om-elem-build-table-cell "x")
            (om-elem-build-table-cell "y")))
          (om-elem-to-trimmed-string))
@@ -2064,7 +2064,7 @@ and here is even more *text4* and *text5*
     (->> (om-elem-parse-element-at 1)
          (om-elem-table-insert-row
           -1
-          (om-elem-build-table-row
+          (list
            (om-elem-build-table-cell "x")
            (om-elem-build-table-cell "y")))
          (om-elem-to-trimmed-string))

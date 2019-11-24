@@ -2039,7 +2039,7 @@ nested element to return."
   (let ((row (if (om-elem--property-is-eq-p :type 'rule row) row
                (let ((width (om-elem--table-get-width table)))
                  (om-elem--table-pad-or-truncate width row)))))
-    (om-elem--map-contents* (om-elem--insert-at index row it) table)))
+    (om-elem--map-contents* (om-elem--insert-at index (apply #'om-elem-build-table-row row) it) table)))
 
 (defun om-elem--table-get-column (column table)
   (-some->> (om-elem--get-contents table)
@@ -2901,15 +2901,13 @@ zero-indexed."
     (om-elem--table-insert-column index column table)))
 
 (defun om-elem-table-insert-row (index row table)
-  (om-elem--verify row om-elem-is-table-row-p
-                   table om-elem-is-table-p)
+  (om-elem--verify table om-elem-is-table-p)
   (om-elem--table-insert-row index row table))
 
 (defun om-elem-table-insert-row! (index row table)
   (om-elem--verify table om-elem-is-table-p)
   (let ((row (if (eq row 'hline) (om-elem-build-table-row-hline)
-               (->> (-map #'om-elem-build-table-cell row)
-                    (apply #'om-elem-build-table-row)))))
+               (-map #'om-elem-build-table-cell row))))
     (om-elem--table-insert-row index row table)))
 
 ;; PUBLIC INDENTATION FUNCTIONS
