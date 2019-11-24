@@ -2583,12 +2583,12 @@ both timestamp halves."
 
 ;; headline
 
-;; TODO this should reference org-done-keywords
-;; not side effect free...
 (defun om-elem-headline-is-done-p (headline)
   "Return t if HEADLINE element has a DONE todo keyword."
   (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--property-is-eq-p :todo-type 'done headline))
+  (-> (om-elem--get-property :todo-keyword headline)
+      (member org-done-keywords)
+      (and t)))
 
 ;; TODO this should look for the archived tag
 (defun om-elem-headline-is-archived-p (headline)
