@@ -1215,7 +1215,15 @@ checkbox."
 ;; TODO add repeater/warning to this
 (defun om-elem--planning-set-property (prop time planning)
   (if (not time) (om-elem--set-property prop nil planning)
-    (let ((ts (om-elem-build-timestamp 'inactive time)))
+    (let* ((part (-partition-before-pred
+                  (lambda (it) (memq it '(&warning &repeater)))
+                  time))
+           (time (car part))
+           (warning (alist-get '&warning part))
+           (repeater (alist-get '&repeater part))
+           (ts (om-elem-build-timestamp 'inactive time
+                                        :warning warning
+                                        :repeater repeater)))
       (om-elem--set-property prop ts planning))))
 
 (defun om-elem--planning-set-closed (time planning)
