@@ -862,7 +862,7 @@ without element verification."
      (om-elem--timestamp-get-start-unixtime timestamp)))
 
 (defun om-elem--timestamp-is-ranged-p (timestamp)
-  (< 0 (om-elem--timestamp-get-range timestamp)))
+  (/= 0 (om-elem--timestamp-get-range timestamp)))
 
 (defun om-elem--timestamp-start-is-long-p (timestamp)
   (->> (om-elem--timestamp-get-start-time timestamp)
@@ -908,7 +908,6 @@ float-times, which assumes the :type property is valid."
 
 (defun om-elem--timestamp-set-end-time-nocheck (time timestamp)
   "Set the end TIME of TIMESTAMP."
-  ;; TODO what if the start time is greater than the end time?
   (if time
       (-> (om-elem--time-format-props time 'end)
           (om-elem-set-properties timestamp))
@@ -917,7 +916,6 @@ float-times, which assumes the :type property is valid."
         (om-elem-set-properties timestamp))))
 
 (defun om-elem--timestamp-set-end-time (time timestamp)
-  ;; TODO what if the start time is greater than the end time?
   (let ((ts* (om-elem--timestamp-set-end-time-nocheck time timestamp)))
     (if time (om-elem--timestamp-update-type-ranged ts*)
       (om-elem--timestamp-set-type-ranged nil ts*))))
@@ -971,14 +969,12 @@ float-times, which assumes the :type property is valid."
         (om-elem-set-properties timestamp))))
 
 (defun om-elem--timestamp-shift-start (n unit timestamp)
-  ;; TODO what if the start time is greater than the end time?
   (let ((time* (->> (om-elem--timestamp-get-start-time timestamp)
                     (om-elem--time-shift n unit))))
     (->> (om-elem--timestamp-set-start-time time* timestamp)
          (om-elem--timestamp-update-type-ranged))))
 
 (defun om-elem--timestamp-shift-end (n unit timestamp)
-  ;; TODO what if the end time is less than the start time?
   (let ((time* (->> (om-elem--timestamp-get-end-time timestamp)
                     (om-elem--time-shift n unit))))
     (->> (om-elem--timestamp-set-end-time time* timestamp)
