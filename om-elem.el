@@ -1839,7 +1839,7 @@ nested element to return."
 (defun om-elem--headline-get-planning (headline)
   (-some->> (om-elem--headline-get-section headline)
             (om-elem--get-contents)
-            (--first (om-elem--is-type 'planning it))))
+            (--first (om-elem--is-type-p 'planning it))))
 
 (defun om-elem--headline-get-path (headline)
   "Return path of headline HEADLINE element as a list of strings."
