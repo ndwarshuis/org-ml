@@ -1133,11 +1133,6 @@ SHIFT is a positive or negative integer."
 
 ;; item
 
-;; TODO add shortcut title setter
-;; TODO make title setter also set raw-value
-;; TODO add shortcut title getter
-;; TODO add shift counter
-
 (defun om-elem--item-is-unordered (item)
   (and (member (om-elem--get-property :bullet item) '("- " "+ ")) t))
 
@@ -1198,6 +1193,14 @@ checkbox."
     ('on (om-elem--set-property :checkbox 'off item))
     ('off (om-elem--set-property :checkbox 'on item))
     (t (error "This should not happen"))))
+
+(defun om-elem--item-shift-counter (n item)
+  (cl-flet
+      ((shift
+        (c)
+        (let ((c* (+ c n) ))
+          (if (< c* 0) 0 c*))))
+  (om-elem--map-property :counter #'shift item)))
 
 ;; latex environment
 
