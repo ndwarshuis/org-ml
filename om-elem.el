@@ -1213,9 +1213,7 @@ checkbox."
 
 ;; planning
 
-;; TODO add mappers to manipulate the timestamps (similar to clock)
-;; TODO add repeater/warning to this
-(defun om-elem--planning-set-property (prop time planning)
+(defun om-elem--planning-set-timestamp-time (prop time planning)
   (if (not time) (om-elem--set-property prop nil planning)
     (let* ((part (-partition-before-pred
                   (lambda (it) (memq it '(&warning &repeater)))
@@ -1228,14 +1226,17 @@ checkbox."
                                         :repeater repeater)))
       (om-elem--set-property prop ts planning))))
 
+(defun om-elem--planning-map-property (prop fun planning)
+  (om-elem--property-map prop fun planning))
+
 (defun om-elem--planning-set-closed (time planning)
-  (om-elem--planning-set-property :closed time planning))
+  (om-elem--planning-set-timestamp-time :closed time planning))
 
 (defun om-elem--planning-set-deadline (time planning)
-  (om-elem--planning-set-property :deadline time planning))
+  (om-elem--planning-set-timestamp-time :deadline time planning))
 
 (defun om-elem--planning-set-scheduled (time planning)
-  (om-elem--planning-set-property :scheduled time planning))
+  (om-elem--planning-set-timestamp-time :scheduled time planning))
 
 ;;; BUILDER FUNCTIONS
 
