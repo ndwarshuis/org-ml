@@ -1681,21 +1681,23 @@ Optionally provide ELEMS as contents."
                                               section-contents
                                               subheadlines)
   "Build a headline..."
-  (let* ((planning (-some->> planning (apply #'om-elem-build-planning)))
-         (property-drawer (-some->> properties (apply #'om-elem-build-property-drawer!)))
+  (let* ((planning (-some->>
+                    planning
+                    (apply #'om-elem-build-planning)))
+         (property-drawer (-some->>
+                           properties
+                           (apply #'om-elem-build-property-drawer!)))
          (section (-some->>
                    (append `(,planning) `(,property-drawer) section-contents)
                    (-non-nil)
                    (apply #'om-elem-build-section)))
          (elems (-non-nil (append (list section) subheadlines))))
-    ;; TODO set these things using setter functions
     (->> (apply #'om-elem-build-headline
                 :post-blank post-blank
                 :pre-blank pre-blank
                 :priority priority
                 :commentedp commentedp
                 :archivedp archivedp
-                :title nil
                 elems)
          (om-elem--headline-set-title! text statistics-cookie))))
 
