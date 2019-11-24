@@ -1028,8 +1028,6 @@ float-times, which assumes the :type property is valid."
   (om-elem--set-property :value (format "%%%%%S" form) diary-sexp))
 
 ;; headline
-;; TODO add title getter
-;; TODO make title setter also set raw-value
 
 (defun om-elem--headline-set-pre-blank (pre-blank headline)
   ;; unlike post-blank, we assume this will never be needed for
@@ -1048,7 +1046,6 @@ float-times, which assumes the :type property is valid."
 
 (defun om-elem--headline-set-archived (flag headline)
   "Set the archived flag of HEADLINE element to FLAG."
-  ;; TODO does the archive flag need to be set?
   (let ((headline*
          (if flag
              (om-elem--headline-insert-tag -1 org-archive-tag headline)
@@ -1083,8 +1080,10 @@ float-times, which assumes the :type property is valid."
        (om-elem--is-any-type-p om-elem--headline-title-restrictions it)
        title)
     (error "Invalid title: %s" title))
-  (om-elem--set-property :title title headline))
+  (->> (om-elem--set-property :title title headline)
+       (om-elem--set-property :raw-value (om-elem-to-string title))))
 
+;; TODO restrict the archive tag
 (defun om-elem--headline-insert-tag (index tag headline)
   (om-elem--insert-property-list :tags index tag headline))
 
@@ -1125,39 +1124,22 @@ SHIFT is a positive or negative integer."
                  (+ priority it))))))
     (om-elem--map-property :priority #'fun headline)))
 
-(defun om-elem-headline-toggle-commented (headline)
-  "Toggle the commented/uncommented state of HEADLINE element."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--toggle-property :commentedp headline))
-
-(defun om-elem-headline-toggle-footnote-section (headline)
-  "Toggle the footnote-section state of HEADLINE element."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--toggle-property :footnote-section-p elem))
-
-;; TODO need a tag setter for this
-;; (defun om-elem-headline-toggle-archived (headline)
-;;   (let ((state (om-elem--get-property :archivedp headline)))
-;;     (cl-flet
-;;         ((toggle-tags
-;;           (elem)
-;;           (print  (om-elem--get-property :tags elem))
-;;           (--> (om-elem--get-property :tags elem)
-;;                (if (member org-archive-tag it)
-;;                    (-remove-item org-archive-tag it)
-;;                  (cons org-archive-tag it)))))
-;;     (->> elem
-;;          (om-elem-map-property :archivedp #'not)
-;;          (om-elem-map-property :tags #'toggle-tags))))
+(defun om-elem--headline-toggle-archived (headline)
+  ;; this assumes the archived property is always in sync with the
+  ;; tag
+  (-> (om-elem--property-is-non-nil-p :archivedp headline)
+      (not)
+      (om-elem--headline-set-archived headline)))
 
 ;; item
 
-;; TODO add toggle for ordered/unordered
-;; TODO add predicate for ordered/unordered
 ;; TODO add shortcut title setter
 ;; TODO make title setter also set raw-value
 ;; TODO add shortcut title getter
 ;; TODO add shift counter
+
+(defun om-elem--item-is-unordered (item)
+  (and (member (om-elem--get-property :bullet item) '("- " "+ ")) t))
 
 (defun om-elem--item-set-checkbox (state item)
   "Set the checkbox of ITEM element to STATE.
@@ -1195,7 +1177,12 @@ checkbox."
            (om-elem--is-any-type-p om-elem--item-tag-restrictions it)
            tag)
     (error "Invalid tag: %s" tag))
-  (om-elem--set-property :tag tag item))
+  (->> (om-elem--set-property :tag tag item)
+       (om-elem--set-property :raw-tag (om-elem-to-string tag))))
+
+(defun om-elem--item-set-tag! (raw-tag item)
+  (-> (om-elem--build-secondary-string raw-tag)
+      (om-elem--item-set-tag item)))
 
 ;; NOTE org mode 9.1.9 will crash when given an alphabetic symbol
 (defun om-elem--item-set-counter (counter item)
@@ -2618,6 +2605,17 @@ both timestamp halves."
         (done (length (-filter #'om-elem-headline-is-done-p subtodo)))
         (total (length subtodo)))
     (om-elem--headline-set-statistics-cookie-fraction done total headline))))
+
+(defun om-elem-headline-toggle-commented (headline)
+  "Toggle the commented/uncommented state of HEADLINE element."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--toggle-property :commentedp headline))
+
+(defun om-elem-headline-toggle-footnote-section (headline)
+  "Toggle the footnote-section state of HEADLINE element."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--toggle-property :footnote-section-p elem))
+
 
 ;; TODO add toggles
 
