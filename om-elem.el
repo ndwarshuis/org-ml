@@ -1986,7 +1986,6 @@ nested element to return."
 
 ;; TODO if I feel like being super extra I can add pivot operators :)
 
-;; TODO add negative indices
 (defun om-elem--table-delete-column (index table)
   (om-elem--verify index integerp)
   (cl-flet*
