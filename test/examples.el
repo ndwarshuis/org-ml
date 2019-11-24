@@ -715,7 +715,7 @@ and here is even more *text4* and *text5*
          (om-elem-table-get-cell 0 3)
          (om-elem--get-contents)
          (car))
-    => nil)
+    !!> error)
 
   (defexamples-content om-elem-timestamp-get-start-timestamp
     nil

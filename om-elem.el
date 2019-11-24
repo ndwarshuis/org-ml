@@ -231,7 +231,7 @@ Optionally supply DOCSTRING to override the generic docstring."
 
 (defun om-elem--pad-or-truncate (length pad list)
   (let ((blanks (- length (length list))))
-    (if (< 0 blanks) (-slice list 0 (1- length))
+    (if (< blanks 0) (-slice list 0 (1- length))
       (append list (-repeat blanks pad)))))
 
 (defun om--plist-get-keys (plist)
@@ -250,13 +250,23 @@ Optionally supply DOCSTRING to override the generic docstring."
    (cl-evenp (length obj))
    (-all? #'symbolp (-slice obj 0 nil 2))))
 
-(defun om-elem--convert-index (n list)
+(defun om-elem--convert-intra-index (n list)
+  (let* ((N (length list))
+         (upper (1- N))
+         (lower (- N)))
+    (cond
+     ((<= 0 n upper) n)
+     ((>= -1 n lower) (+ N n))
+     (t (error "Index (%s) out of range; must be between %s and %s"
+               n lower upper)))))
+
+(defun om-elem--convert-inter-index (n list)
   (let* ((N (length list))
          (upper N)
          (lower (- (- N) 1)))
     (cond
-     ((and (<= 0 n) (>= upper n)) n)
-     ((and (>= -1 n) (<= lower n)) (+ 1 N n))
+     ((<= 0 n upper) n)
+     ((>= -1 n lower) (+ 1 N n))
      (t (error "Index (%s) out of range; must be between %s and %s"
                n lower upper)))))
 
@@ -265,32 +275,20 @@ Optionally supply DOCSTRING to override the generic docstring."
 Negative indices count from the end of the list, with -1 inserting
 X after the last element in LIST. Will give an error if N refers to
 a non-existent index."
-  (let* ((N (length list))
-         (upper N)
-         (lower (- (- N) 1)))
-    (cond
-     ((and (<= 0 n) (>= upper n))
-      (-insert-at n x list))
-     ((and (>= -1 n) (<= lower n))
-      (-insert-at (+ 1 N n) x list))
-     (t (error "Index (%s) out of range; must be between %s and %s"
-               n lower upper)))))
+  (-insert-at (om-elem--convert-inter-index n list) x list))
 
 (defun om-elem--remove-at (n list)
   "Like `-remove-at' but honors negative indices N.
 Negative indices count from the end of the list, with -1 inserting
 X after the last element in LIST. Will give an error if N refers to
 a non-existent index."
-  (let* ((N (length list))
-         (upper (1- N))
-         (lower (- N)))
-    (cond
-     ((and (<= 0 n) (>= upper n))
-      (-remove-at n list))
-     ((and (>= -1 n) (<= lower n))
-      (-remove-at (+ N n) list))
-     (t (error "Index (%s) out of range; must be between %s and %s"
-               n lower upper)))))
+  (-remove-at (om-elem--convert-intra-index n list) list))
+
+(defun om-elem--replace-at (n x list)
+  (-replace-at (om-elem--convert-intra-index n list) x list))
+
+(defun om-elem--nth (n list)
+  (nth (om-elem--convert-intra-index n list) list))
 
 (defun om-elem--map-first (fun list)
   (om-elem--verify fun functionp)
@@ -1980,6 +1978,7 @@ nested element to return."
 
 ;; table
 
+
 (defun om-elem--table-pad-or-truncate (length list)
   (let ((pad (om-elem-build-table-cell "")))
     (om-elem--pad-or-truncate length pad list)))
@@ -2002,14 +2001,14 @@ nested element to return."
   (om-elem--verify index integerp)
   (om-elem--map-contents* (om-elem--remove-at index it) table))
 
-(defun om-elem--table-insert-column (index column table)
-  (om-elem--verify index integerp)
+(defun om-elem--column-map-down-rows (fun column table)
   (cl-flet*
       ((zip-into-rows
         (row new-cell)
         (if (om-elem--property-is-eq-p :type 'rule row) row
           (om-elem--map-contents
-           (lambda (cells) (om-elem--insert-at index new-cell cells))
+           ;; (lambda (cells) (om-elem--insert-at index new-cell cells))
+           (lambda (cells) (funcall fun new-cell cells))
            row)))
        (map-rows
         (rows)
@@ -2020,6 +2019,13 @@ nested element to return."
              (-zip-with #'zip-into-rows rows))))
     (om-elem--map-contents #'map-rows table)))
 
+(defun om-elem--table-insert-column (index column table)
+  (om-elem--verify index integerp)
+  (om-elem--column-map-down-rows
+   (lambda (new-cell cells) (om-elem--insert-at index new-cell cells))
+   column
+   table))
+
 (defun om-elem--table-insert-row (index row table)
   (om-elem--verify index integerp)
   (let ((row (if (om-elem--property-is-eq-p :type 'rule row) row
@@ -2027,29 +2033,56 @@ nested element to return."
                  (om-elem--table-pad-or-truncate width row)))))
     (om-elem--map-contents* (om-elem--insert-at index row it) table)))
 
-;; TODO add get row (cells and strings)
-;; TODO add get column (cells and strings)
-;; TODO add map row/column
-;; TODO add replace row/column (see map)
-;; TODO add clear row/column
+(defun om-elem--table-get-column (column table)
+  (-some->> (om-elem--get-contents table)
+            (--filter (om-elem--property-is-eq-p :type 'standard it))
+            (--map (->> (om-elem--get-contents it)
+                        (om-elem--nth column)))))
+
+(defun om-elem--table-get-row (row table)
+  (-some->> (om-elem--get-contents table)
+            (--filter (om-elem--property-is-eq-p :type 'standard it))
+            (om-elem--nth row)))
 
 (defun om-elem--table-get-cell (row column table)
   "Return table-cell element at ROW and COLUMN indices in TABLE element.
 Hlines do not count toward row indices, and all indices are
 zero-indexed."
-  (om-elem--verify table om-elem-is-table-p)
-  (-some->> (om-elem--get-contents table)
-            (--filter (om-elem--property-is-eq-p :type 'standard it))
-            (nth row)
+  (-some->> (om-elem--table-get-row row table)
             (om-elem--get-contents)
-            (nth column)))
+            (om-elem--nth column)))
+
+(defun om-elem--table-replace-column (index column table)
+  (om-elem--verify index integerp)
+  (om-elem--column-map-down-rows
+   (lambda (new-cell cells) (om-elem--replace-at index new-cell cells))
+   column
+   table))
+
+;; TODO this is not dry...
+(defun om-elem--table-replace-row (index row table)
+  (om-elem--verify index integerp)
+  (let ((row (if (om-elem--property-is-eq-p :type 'rule row) row
+               (let ((width (om-elem--table-get-width table)))
+                 (om-elem--table-pad-or-truncate width row)))))
+    (print (om-elem--table-get-width table))
+    (om-elem--map-contents* (om-elem--replace-at index (apply #'om-elem-build-table-row row) it) table)))
+
+(defun om-elem--table-clear-row (index table)
+  ;; this assumes the blank cell will be padded with other blank cells
+  (om-elem--table-replace-row index (list (om-elem-build-table-cell "")) table))
+
+(defun om-elem--table-clear-column (index table)
+  ;; this assumes the blank cell will be padded with other blank cells
+  (om-elem--table-replace-column index (list (om-elem-build-table-cell "")) table))
 
 (defun om-elem--table-get-height (table)
   (length (om-elem--get-contents table)))
 
 (defun om-elem--table-get-width (table)
-  (->> (om-elem--get-contents table) (-map #'length) (-max)))
-
+  (->> (om-elem--get-contents table)
+       (--map (length (om-elem--get-contents it)))
+       (-max)))
 
 ;;; INTERNAL INDENTATION
 
