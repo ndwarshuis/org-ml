@@ -3453,11 +3453,7 @@ original contents to be modified."
     
     ;; index
     ((and (pred integerp) index)
-     (-some->
-      (if (< index 0)
-          (nth (- (* -1 index) 1) (nreverse contents))
-        (nth index contents))
-      (list)))
+     (-some-> (om-elem--nth index contents) (list)))
 
     ;; type
     ((and (pred (lambda (y) (memq y om-elem-elements-and-objects))) type)
