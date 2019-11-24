@@ -1822,11 +1822,13 @@ nested element to return."
        (-last-item)
        (om-elem--allow-type 'statistics-cookie)))
 
-;; TODO refactor this
 (defun om-elem--headline-get-drawer (name headline)
   "Return first drawer with NAME in HEADLINE element or nil if none."
   (om-elem--verify name stringp)
-  (om-elem-find-first `(section (:drawer-name ,name)) headline))
+  (-some->>
+   (om-elem--headline-get-section headline)
+   (--first (and (om-elem--is-type-p 'drawer it)
+                 (om-elem--property-is-equal-p :drawer-name name it)))))
 
 (defun om-elem--headline-get-path (headline)
   "Return path of headline HEADLINE element as a list of strings."
