@@ -1220,17 +1220,17 @@ and here is even more *text4* and *text5*
 
   (defexamples-content om-elem-timestamp-set-start-time
     nil
-    (:content "[2019-01-01 Tue]")
-    (:comment "Set a different time.")
+    (:content "[2019-01-02 Wed]")
+    (:comment "If not a range this will turn into a range by moving only the start time.")
     (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-set-start-time '(2019 1 2))
+         (om-elem-timestamp-set-start-time '(2019 1 1))
          (om-elem-to-trimmed-string))
-    => "[2019-01-02 Wed]"
+    => "[2019-01-01 Tue]--[2019-01-02 Wed]"
     (:comment "Set a different time with different precision.")
     (->> (om-elem-parse-this-object)
          (om-elem-timestamp-set-start-time '(2019 1 1 10 0))
          (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue 10:00]")
+    => "[2019-01-01 Tue 10:00]--[2019-01-02 Wed]")
 
   ;; TODO this tests localtime vs GMT time
   ;; (defexamples om-elem-timestamp-set-time-unixtime

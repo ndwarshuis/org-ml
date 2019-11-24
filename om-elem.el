@@ -1133,6 +1133,9 @@ SHIFT is a positive or negative integer."
 
 ;; item
 
+(defun om-elm--item-get-tag (item)
+  (->> (om-elem--get-property :tag item) (om-elem-to-string)))
+
 (defun om-elem--item-is-unordered (item)
   (and (member (om-elem--get-property :bullet item) '("- " "+ ")) t))
 
@@ -1172,8 +1175,7 @@ checkbox."
            (om-elem--is-any-type-p om-elem--item-tag-restrictions it)
            tag)
     (error "Invalid tag: %s" tag))
-  (->> (om-elem--set-property :tag tag item)
-       (om-elem--set-property :raw-tag (om-elem-to-string tag))))
+  (om-elem--set-property :tag tag item))
 
 (defun om-elem--item-set-tag! (raw-tag item)
   (-> (om-elem--build-secondary-string raw-tag)
