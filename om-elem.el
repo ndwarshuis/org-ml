@@ -2590,7 +2590,6 @@ both timestamp halves."
       (member org-done-keywords)
       (and t)))
 
-;; TODO this should look for the archived tag
 (defun om-elem-headline-is-archived-p (headline)
   "Return t if HEADLINE element is archived."
   (om-elem--verify headline om-elem-is-headline-p)
@@ -2632,11 +2631,14 @@ both timestamp halves."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-set-priority priority headline))
 
-;; TODO make shortcut function for setting the headline title
 (defun om-elem-headline-set-title (title headline)
   "Set the title of HEADLINE element to TITLE."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-set-title title headline))
+
+(defun om-elem-headline-set-title! (text stats headline)
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-set-title! text stats headline))
 
 (defun om-elem-headline-shift-priority (shift headline)
   (om-elem--verify headline om-elem-is-headline-p)
