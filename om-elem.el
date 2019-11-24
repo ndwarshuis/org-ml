@@ -3551,8 +3551,7 @@ the keyword, where :any can be followed by at least one.
 
 In the example above, ':any paragraph' would return the same match,
 assuming that the ELEM has only one section."
-  ;; TODO validate elem (should be any valid element or object)
-  (unless elem (error "No element given"))
+  (om-elem--verify elem om-elem--is-element-or-object-p)
   ;; the non-nil is required for cases where we may get
   ;; a nil for queries instead of no argument
   (let ((queries (-non-nil queries)))
