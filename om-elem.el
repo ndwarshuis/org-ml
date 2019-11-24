@@ -650,8 +650,7 @@ FUN is a predicate function that takes one argument."
 ;; entity
 
 (defun om-elem--entity-set-name (name elem)
-  (unless (or (assoc name org-entities-user) (assoc name org-entities)) 
-    (error "Invalid entity: %S" name))
+  (unless (org-entity-get name) (error "Invalid entity: %S" name))
   (om-elem--set-property :name name elem))
 
 ;; link
@@ -1289,7 +1288,6 @@ checkbox."
   (->> (om-elem--build-object 'code post-blank)
        (om-elem--set-value value)))
 
-;; TODO this needs to be validated against `org-entity-get'
 (om-elem--defun om-elem-build-entity (name &key use-brackets-p post-blank)
   "Build a entity object from NAME."
   (let ((init '(:html :ascii :latex :latex-math-p :latin1 :utf-8)))
