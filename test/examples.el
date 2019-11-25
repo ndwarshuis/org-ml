@@ -789,6 +789,8 @@
   (def-example-subgroup "Generic"
     nil
 
+    ;; TODO add get/set/shift post-blank
+
     ;; (defexamples-content om-elem-property-is-nil-p
     ;;   nil
     ;;   (:content "* TODO dummy")
@@ -839,13 +841,19 @@
     )
 
   (def-example-subgroup "Babel Call"
-    nil)
+    nil
+    ;; TODO add get/set/map to call/value
+    ;; TODO add get/set/insert/remove to arguments/inside-header/end-header
+    )
 
   ;; bold has no specific properties
   ;; center-block has no specific properties
 
   (def-example-subgroup "Clock"
     nil
+
+    ;; TODO add get/set/shift duration
+    ;; TODO add get/set/shift start/end/single/double time
 
     (defexamples-content om-elem-clock-is-running-p
       nil
@@ -859,43 +867,78 @@
       => nil))
 
   (def-example-subgroup "Code"
-    nil)
+    nil
+    ;; TODO add get/set/map for value
+    )
 
   (def-example-subgroup "Comment"
-    nil)
+    nil
+    ;; TODO add get/set/map for value
+    )
 
   (def-example-subgroup "Comment Block"
-    nil)
+    nil
+    ;; TODO add get/set/map for value
+    )
 
   (def-example-subgroup "Diary Sexp"
-    nil)
+    nil
+    ;; TODO add get/set/map for value
+    )
   
   (def-example-subgroup "Drawer"
-    nil)
+    nil
+    ;; TODO add get/set/map for drawer-name
+    )
 
   (def-example-subgroup "Dynamic Block"
-    nil)
+    nil
+    ;; TODO add get/set/map for block-name
+    ;; TODO add get/set/insert/remove for arguments
+    )
 
   (def-example-subgroup "Entity"
-    nil)
+    nil
+    ;; TODO add get/set name
+    ;; TODO add predicate/toggle for use-brackets
+    )
  
   (def-example-subgroup "Example Block"
-    nil)
+    nil
+    ;; TODO add get value
+    ;; TODO add set value
+    ;; TODO add map value
+    ;; TODO add set/get/insert/remove for switches
+    ;; TODO add toggle/predicate for preserve-indent
+    )
 
   (def-example-subgroup "Export Block"
-    nil)
+    nil
+    ;; TODO add get value
+    ;; TODO add set value
+    ;; TODO add map value
+    ;; TODO add get/set type
+    )
 
   (def-example-subgroup "Export Snippet"
-    nil)
+    nil
+    ;; TODO add get/set/map value/back-end
+    )
 
   (def-example-subgroup "Fixed Width"
-    nil)
+    nil
+    ;; TODO add get/set/map value
+    )
 
   (def-example-subgroup "Footnote Definition"
-    nil)
+    nil
+    ;; TODO add get/set/map label
+    )
 
   (def-example-subgroup "Footnote Reference"
-    nil)
+    nil
+    ;; TODO add get/set/map label
+    )
 
   (def-example-subgroup "Headline"
     nil
@@ -909,42 +952,6 @@
       (:content "* DONE yay")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-is-done-p))
-      => t)
-
-    (defexamples-content om-elem-headline-is-scheduled-p
-      nil
-      (:content "* lazy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-is-scheduled-p))
-      => nil
-      (:content "* proactive"
-                "SCHEDULED: [2019-01-01 Tue]")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-is-scheduled-p))
-      => t)
-
-    (defexamples-content om-elem-headline-is-deadlined-p
-      nil
-      (:content "* lazy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-is-deadlined-p))
-      => nil
-      (:content "* proactive"
-                "DEADLINE: [2019-01-01 Tue]")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-is-deadlined-p))
-      => t)
-    
-    (defexamples-content om-elem-headline-is-closed-p
-      nil
-      (:content "* lazy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-is-closed-p))
-      => nil
-      (:content "* proactive"
-                "CLOSED: [2019-01-01 Tue]")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-is-closed-p))
       => t)
 
     (defexamples-content om-elem-headline-is-archived-p
@@ -1032,6 +1039,7 @@
            (om-elem-to-trimmed-string))
       => "* dummy")
 
+    ;; TODO add the shortcut version of this
     (defexamples-content om-elem-headline-set-title
       nil
       (:content "* dummy")
@@ -1044,7 +1052,6 @@
            (om-elem-headline-set-title nil)
            (om-elem-to-trimmed-string))
       => "*")
-
 
     ;; (defexamples-content om-elem-headline-toggle-archived
     ;;   nil
@@ -1093,21 +1100,31 @@
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-shift-priority 1)
            (om-elem-to-trimmed-string))
-      => "* [#C] headline"))
+      => "* [#C] headline")
+
+    ;; TODO add get title
+    ;; TODO add set/get/shift level
+    ;; TODO add set/get/toggle/pred footnote-section
+    )
 
   ;; horizontal rule has no specific properties
 
   (def-example-subgroup "Inline Babel Call"
-    nil)
+    nil
+    ;; TODO add get/set/map value
+    )
   
   (def-example-subgroup "Inline Src Block"
-    nil)
+    nil
+    ;; TODO add get/set/map value
+    )
 
   ;; TODO add inlinetask
 
   (def-example-subgroup "Item"
     nil
 
+    ;; TODO add get checkbox
     (defexamples-content om-elem-item-set-checkbox
       nil
       (:content "- [ ] one")
@@ -1120,6 +1137,7 @@
            (om-elem-to-trimmed-string))
       => "- one")
 
+    ;; TODO add get bullet
     (defexamples-content om-elem-item-set-bullet
       nil
       (:content "- one")
@@ -1138,6 +1156,8 @@
            (om-elem-to-trimmed-string))
       => "- one")
 
+    ;; TODO add get tag
+    ;; TODO add shortcut version
     (defexamples-content om-elem-item-set-tag
       nil
       (:content "- one")
@@ -1205,24 +1225,33 @@
       (->> (om-elem-parse-this-item)
            (om-elem-item-toggle-checkbox)
            (om-elem-to-trimmed-string))
-      => "- one"))
+      => "- one")
+    ;; TODO add set/get/shift counter
+    )
 
   ;; italic has no specific properties
 
   (def-example-subgroup "Keyword"
-    nil)
+    nil
+    ;; TODO add get/set/map value
+    )
 
   (def-example-subgroup "Latex Environment"
-    nil)
+    nil
+    ;; TODO add get/set/map value
+    )
 
   (def-example-subgroup "Latex Fragment"
-    nil)
+    nil
+    ;; TODO add get/set/map value
+    )
 
   ;; line break has no specific properties
 
   (def-example-subgroup "Link"
     nil
 
+    ;; TODO add get/map path
     (defexamples-content om-elem-link-set-path
       nil
       (:content "[[eldorado][gold]]")
@@ -1236,6 +1265,7 @@
            (om-elem-to-trimmed-string))
       => "[[file:404][gold]]")
 
+    ;; TODO add get type
     (defexamples-content om-elem-link-set-type
       nil
       (:content "[[eldorado]]")
@@ -1251,14 +1281,20 @@
       (->> (om-elem-parse-this-object)
            (om-elem-link-set-type "fuzzy")
            (om-elem-to-trimmed-string))
-      => "[[eldorado]]"))
+      => "[[eldorado]]")
+    ;; TODO add get/set format
+    )
 
   (def-example-subgroup "Macro"
-    nil)
+    nil
+    ;; TODO add get/set/map key/value
+    ;; TODO add get/set/add/remove arg
+    )
 
-  (def-example-subgroup "Node-property"
+  (def-example-subgroup "Node Property"
     nil
     
+    ;; TODO add get/map key
     (defexamples-content om-elem-node-property-set-key
       nil
       (:content "* dummy"
@@ -1274,6 +1310,7 @@
 :lock:     value
 :END:")
 
+    ;; TODO add get/map value
     (defexamples-content om-elem-node-property-set-value
       nil
       (:content "* dummy"
@@ -1293,7 +1330,9 @@
   ;; plain-list has no specific properties
 
   (def-example-subgroup "Planning"
-    nil)
+    nil
+    ;; TODO add all timestamp function analogs for each type
+    )
 
   ;; property-drawer has no specific properties
   ;; quote-block has no specific properties
@@ -1301,38 +1340,53 @@
   ;; section has no specific properties
 
   (def-example-subgroup "Special Block"
-    nil)
+    nil
+    ;; TODO add get/set/map type
+    )
 
   (def-example-subgroup "Src Block"
-    nil)
+    nil
+    ;; TODO add get/set/map value
+    ;; TODO add get/set/map language
+    ;; TODO add get/set/add/remove switches/parameters
+    ;; TODO add get/set/toggle preserve-indent
+    )
 
   (def-example-subgroup "Statistics Cookie"
-    nil)
+    nil
+    ;; TODO add get/set value
+    ;; TODO add predicate for complete/empty
+    )
 
   ;; strike-through has no specific properties
 
   (def-example-subgroup "Subscript"
-    nil)
+    nil
+    ;; TODO add get/set/toggle for use-brackets
+    )
 
   (def-example-subgroup "Superscript"
-    nil)
+    nil
+    ;; TODO add get/set/toggle for use-brackets
+    )
 
   (def-example-subgroup "Table"
-    nil)
+    nil
+    ;; TODO add get/set/add/remove tblfm
+    )
   
   ;; table-cell has no specific properties
   ;; table-row has no specific properties
 
   (def-example-subgroup "Target"
     nil
-    ;; TODO add get value
-    ;; TODO add set value
-    ;; TODO add map value
+    ;; TODO add get/set/map value
     )
 
   (def-example-subgroup "Timestamp"
     nil
 
+    ;; TODO add get start/end for timestamp and unixtime
     (defexamples-content om-elem-timestamp-get-start-timestamp
       nil
       (:content "[2019-01-01 Tue]")
@@ -1406,6 +1460,7 @@
            (om-elem-timestamp-is-ranged-p))
       => nil)
 
+    ;; TODO add set unixtime and range
     (defexamples-content om-elem-timestamp-set-start-time
       nil
       (:content "[2019-01-02 Wed]")
@@ -1551,9 +1606,7 @@
 
   (def-example-subgroup "Verbatim"
     nil
-    ;; TODO add get value
-    ;; TODO add set value
-    ;; TODO add map value
+    ;; TODO add get/set/map value
     )
 
   ;; verse-block has no specific properties
@@ -1594,6 +1647,42 @@
 
   (def-example-subgroup "Headline"
     nil
+
+    (defexamples-content om-elem-headline-is-scheduled-p
+      nil
+      (:content "* lazy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-scheduled-p))
+      => nil
+      (:content "* proactive"
+                "SCHEDULED: [2019-01-01 Tue]")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-scheduled-p))
+      => t)
+
+    (defexamples-content om-elem-headline-is-deadlined-p
+      nil
+      (:content "* lazy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-deadlined-p))
+      => nil
+      (:content "* proactive"
+                "DEADLINE: [2019-01-01 Tue]")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-deadlined-p))
+      => t)
+    
+    (defexamples-content om-elem-headline-is-closed-p
+      nil
+      (:content "* lazy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-closed-p))
+      => nil
+      (:content "* proactive"
+                "CLOSED: [2019-01-01 Tue]")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-closed-p))
+      => t)
 
     (defexamples-content om-elem-headline-get-subheadlines
       nil
