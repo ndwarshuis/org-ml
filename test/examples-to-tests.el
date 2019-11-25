@@ -25,14 +25,18 @@
 (require 'dash)
 
 (defun example-to-should (actual sym expected)
-  (cond ((eq sym '=>)
-         `(should (equal ,actual ,expected)))
-        ((eq sym '~>)
-         `(should (approx-equal ,actual ,expected)))
-        ((eq sym '!!>)
-         `(should-error (eval ',actual) :type ',expected))
-        (t
-         (error "Invalid test case: %S" `(,actual ,sym ,expected)))))
+  (let ((expected
+         (if (eq (and (listp expected) (car expected)) :result)
+             (s-join "\n" (cdr expected))
+           expected)))
+    (cond ((eq sym '=>)
+           `(should (equal ,actual ,expected)))
+          ((eq sym '~>)
+           `(should (approx-equal ,actual ,expected)))
+          ((eq sym '!!>)
+           `(should-error (eval ',actual) :type ',expected))
+          (t
+           (error "Invalid test case: %S" `(,actual ,sym ,expected))))))
 
 (defmacro defexamples (cmd &rest examples)
   (let ((tests (->> (-partition 3 examples)
