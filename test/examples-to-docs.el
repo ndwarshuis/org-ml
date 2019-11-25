@@ -144,6 +144,13 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
                                      doc
                                      example)))))
 
+(defmacro def-example-subgroup (group desc &rest examples)
+  `(progn
+     (add-to-list 'functions ,(concat "#### " group))
+     (when ,desc
+       (add-to-list 'functions ,desc))
+     ,@examples))
+
 (defmacro def-example-group (group desc &rest examples)
   `(progn
      (add-to-list 'functions ,(concat "### " group))

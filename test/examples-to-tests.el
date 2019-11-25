@@ -61,6 +61,8 @@
                 (-map #'make-test))))
       `(ert-deftest ,cmd () ,@body))))
 
+(defun def-example-subgroup (&rest _)) ; ignore
+
 (defun def-example-group (&rest _)) ; ignore
 
 (provide 'examples-to-tests)
