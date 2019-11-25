@@ -25,1474 +25,6 @@
 ;; (require 'om)
 (require 's)
 
-(def-example-group "Printing functions"
-  "print shit"
-
-  (defexamples om-elem-to-string
-    (om-elem-to-string
-     '(bold
-       (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
-       "text"))
-    => "*text*"
-    (om-elem-to-string
-     '(bold
-       (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
-       "text"))
-    => "*text*   "
-    (om-elem-to-string nil) => "")
-
-  (defexamples om-elem-to-trimmed-string
-    (om-elem-to-trimmed-string
-     '(bold
-       (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
-       "text"))
-    => "*text*"
-    (om-elem-to-trimmed-string
-     '(bold
-       (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
-       "text"))
-    => "*text*"
-    (om-elem-to-trimmed-string nil) => "")
-
-  )
-
-(def-example-group "Object Builders"
-  "build shit"
-
-  (defexamples om-elem-build-code
-    (->> (om-elem-build-code "text")
-         (om-elem-to-trimmed-string)) => "~text~")
-
-  ;; TODO add entity
-
-  (defexamples om-elem-build-inline-babel-call
-    (->> (om-elem-build-inline-babel-call "name")
-         (om-elem-to-trimmed-string)) => "call_name()"
-    (->> (om-elem-build-inline-babel-call "name" :arguments '("n=4"))
-         (om-elem-to-trimmed-string)) => "call_name(n=4)"
-    (->> (om-elem-build-inline-babel-call "name" :inside-header '(:key val))
-         (om-elem-to-trimmed-string)) => "call_name[:key val]()"
-    (->> (om-elem-build-inline-babel-call "name" :end-header '(:key val))
-         (om-elem-to-trimmed-string)) => "call_name()[:key val]")
-
-  (defexamples om-elem-build-inline-src-block
-    (->> (om-elem-build-inline-src-block "lang" "value")
-         (om-elem-to-trimmed-string)) => "src_lang{value}"
-    (->> (om-elem-build-inline-src-block "lang" "value" :parameters '(:key val))
-         (om-elem-to-trimmed-string)) => "src_lang[:key val]{value}")
-
-  (defexamples om-elem-build-line-break
-    (->> (om-elem-build-line-break)
-         (om-elem-to-trimmed-string)) => "\\\\")
-
-  (defexamples om-elem-build-statistics-cookie
-    (->> (om-elem-build-statistics-cookie '(nil))
-         (om-elem-to-trimmed-string)) => "[%]"
-    (->> (om-elem-build-statistics-cookie '(50))
-         (om-elem-to-trimmed-string)) => "[50%]"
-    (->> (om-elem-build-statistics-cookie '(1 3))
-         (om-elem-to-trimmed-string)) => "[1/3]"
-    (->> (om-elem-build-statistics-cookie '(nil nil))
-         (om-elem-to-trimmed-string)) => "[/]")
-
-  (defexamples om-elem-build-target
-    (->> (om-elem-build-target "text")
-         (om-elem-to-trimmed-string)) => "<<text>>"))
-
-  (defexamples om-elem-build-timestamp
-    (->> (om-elem-build-timestamp 'inactive '(2019 1 15))
-         (om-elem-to-trimmed-string)) => "[2019-01-15 Tue]"
-    (->> (om-elem-build-timestamp 'inactive '(2019 1 15 12 30))
-         (om-elem-to-trimmed-string)) => "[2019-01-15 Tue 12:30]"
-    (->> (om-elem-build-timestamp 'inactive '(2019 1 15) :end '(2020 1 1))
-         (om-elem-to-trimmed-string)) => "[2019-01-15 Tue]--[2020-01-01 Wed]")
-
-  (defexamples om-elem-build-verbatim
-    (->> (om-elem-build-verbatim "text")
-         (om-elem-to-trimmed-string)) => "=text=")
-
-(def-example-group "Recursive Object Builders"
-  "build shit"
-
-  (defexamples om-elem-build-bold
-    (->> (om-elem-build-bold "text")
-         (om-elem-to-trimmed-string)) => "*text*")
-
-  (defexamples om-elem-build-footnote-reference
-    (->> (om-elem-build-footnote-reference)
-         (om-elem-to-trimmed-string)) => "[fn:]"
-    (->> (om-elem-build-footnote-reference :label "label")
-         (om-elem-to-trimmed-string)) => "[fn:label]"
-    (->> (om-elem-build-footnote-reference :label "label" "content")
-         (om-elem-to-trimmed-string)) => "[fn:label:content]")
-
-  (defexamples om-elem-build-italic
-    (->> (om-elem-build-italic "text")
-         (om-elem-to-trimmed-string)) => "/text/")
-
-  (defexamples om-elem-build-link
-    (->> (om-elem-build-link "target")
-         (om-elem-to-trimmed-string)) => "[[target]]"
-    (->> (om-elem-build-link "target" :type "file")
-         (om-elem-to-trimmed-string)) => "[[file:target]]"
-    (->> (om-elem-build-link "target" "desc")
-         (om-elem-to-trimmed-string)) => "[[target][desc]]")
-
-  (defexamples om-elem-build-radio-target
-    (->> (om-elem-build-radio-target "text")
-         (om-elem-to-trimmed-string)) => "<<<text>>>")
-
-  (defexamples om-elem-build-strike-through
-    (->> (om-elem-build-strike-through "text")
-         (om-elem-to-trimmed-string)) => "+text+")
-
-  (defexamples om-elem-build-superscript
-    (->> (om-elem-build-superscript "text")
-         (om-elem-to-trimmed-string)) => "^text")
-
-  (defexamples om-elem-build-subscript
-    (->> (om-elem-build-subscript "text")
-         (om-elem-to-trimmed-string)) => "_text")
-
-  (defexamples om-elem-build-table-cell
-    (->> (om-elem-build-table-cell "text")
-         (om-elem-build-table-row)
-         (om-elem-to-trimmed-string)) => "| text |")
-
-  (defexamples om-elem-build-underline
-    (->> (om-elem-build-underline "text")
-         (om-elem-to-trimmed-string)) => "_text_"))
-
-(def-example-group "Element Builders"
-  "build shit"
-
-  (defexamples om-elem-build-babel-call
-    (->> (om-elem-build-babel-call "name")
-         (om-elem-to-trimmed-string)) => "#+CALL: name()"
-    (->> (om-elem-build-babel-call "name" :arguments '("arg=x"))
-         (om-elem-to-trimmed-string)) => "#+CALL: name(arg=x)"
-    (->> (om-elem-build-babel-call "name" :inside-header '(:key val))
-         (om-elem-to-trimmed-string)) => "#+CALL: name[:key val]()"
-    (->> (om-elem-build-babel-call "name" :end-header '(:key val))
-         (om-elem-to-trimmed-string)) => "#+CALL: name() :key val")
-
-  (defexamples om-elem-build-clock
-    (->> (om-elem-build-clock '(2019 1 1 0 0))
-         (om-elem-to-trimmed-string)) => "CLOCK: [2019-01-01 Tue 00:00]"
-    (->> (om-elem-build-clock '(2019 1 1 0 0) :end '(2019 1 1 1 0))
-         (om-elem-to-trimmed-string)) => "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00] =>  1:00")
-
-  (defexamples om-elem-build-comment
-    (->> (om-elem-build-comment "text")
-         (om-elem-to-trimmed-string)) => "# text")
-
-  (defexamples om-elem-build-comment-block
-    (->> (om-elem-build-comment-block "text")
-         (om-elem-to-trimmed-string)) => "#+BEGIN_COMMENT\ntext\n#+END_COMMENT")
-
-  (defexamples om-elem-build-diary-sexp
-    (->> (om-elem-build-diary-sexp '(text))
-         (om-elem-to-trimmed-string)) => "%%(text)")
-
-  (defexamples om-elem-build-example-block
-    (->> (om-elem-build-example-block "text")
-         (om-elem-to-trimmed-string)) => "#+BEGIN_EXAMPLE\ntext\n#+END_EXAMPLE"
-    (->> (om-elem-build-example-block "text" :switches '("switches"))
-         (om-elem-to-trimmed-string)) => "#+BEGIN_EXAMPLE switches\ntext\n#+END_EXAMPLE")
-
-  (defexamples om-elem-build-export-block
-    (->> (om-elem-build-export-block "type" "value\n")
-         (om-elem-to-trimmed-string)) => "#+BEGIN_EXPORT type\nvalue\n#+END_EXPORT")
-
-  (defexamples om-elem-build-fixed-width
-    (->> (om-elem-build-fixed-width "text")
-         (om-elem-to-trimmed-string)) => ": text")
-
-  (defexamples om-elem-build-horizontal-rule
-    (->> (om-elem-build-horizontal-rule)
-         (om-elem-to-trimmed-string)) => "-----")
-
-  (defexamples om-elem-build-keyword
-    (->> (om-elem-build-keyword "FILETAGS" "tmsu")
-         (om-elem-to-trimmed-string)) => "#+FILETAGS: tmsu")
-
-  (defexamples om-elem-build-latex-environment
-    (->> (om-elem-build-latex-environment "env" "text")
-         (om-elem-to-trimmed-string)) => "\\begin{env}\ntext\n\\end{env}")
-
-  (defexamples om-elem-build-node-property
-    (->> (om-elem-build-node-property "key" "val")
-         (om-elem-to-trimmed-string)) => ":key:      val")
-
-  (defexamples om-elem-build-planning
-    (->> (om-elem-build-planning :closed '(2019 1 1))
-         (om-elem-to-trimmed-string)) => "CLOSED: [2019-01-01 Tue]"
-    (->> (om-elem-build-planning :scheduled '(2019 1 1))
-         (om-elem-to-trimmed-string)) => "SCHEDULED: [2019-01-01 Tue]"
-    (->> (om-elem-build-planning :deadline '(2019 1 1))
-         (om-elem-to-trimmed-string)) => "DEADLINE: [2019-01-01 Tue]")
-
-  (defexamples om-elem-build-src-block
-    (->> (om-elem-build-src-block "body")
-         (om-elem-to-trimmed-string)) => "#+BEGIN_SRC\n  body\n#+END_SRC"
-    (->> (om-elem-build-src-block "body" :language "emacs-lisp")
-         (om-elem-to-trimmed-string)) => "#+BEGIN_SRC emacs-lisp\n  body\n#+END_SRC"
-         ;; TODO pretty sure this makes no sense...
-    (->> (om-elem-build-src-block "body" :switches '("-n 20" "-r"))
-         (om-elem-to-trimmed-string)) => "#+BEGIN_SRC -n 20 -r\n  body\n#+END_SRC"
-         ;; TODO and this...
-    (->> (om-elem-build-src-block "body" :parameters '(:key val))
-         (om-elem-to-trimmed-string)) => "#+BEGIN_SRC :key val\n  body\n#+END_SRC")
-
-  (defexamples om-elem-build-table-row-hline
-    (->>  (om-elem-build-table
-           (om-elem-build-table-row
-            (om-elem-build-table-cell "text"))
-           (om-elem-build-table-row-hline))
-          (om-elem-to-trimmed-string)) => "| text |\n|------|"))
-
-(def-example-group "Container Element Builders"
-  "build shit"
-  ;; TODO add paragraph
-  ;; TODO add table-row
-  ;; TODO add verse-block
-  )
-
-(def-example-group "Greater Element Builders"
-  "Build shit"
-
-  (defexamples om-elem-build-center-block
-    (->> (om-elem-build-paragraph "text")
-         (om-elem-build-center-block)
-         (om-elem-to-trimmed-string)) => "#+BEGIN_CENTER\ntext\n#+END_CENTER")
-
-  (defexamples om-elem-build-drawer
-    (->> (om-elem-build-paragraph "text")
-         (om-elem-build-drawer "NAME")
-         (om-elem-to-trimmed-string)) => ":NAME:\ntext\n:END:")
-
-  (defexamples om-elem-build-footnote-definition
-    (->> (om-elem-build-paragraph "footnote contents")
-         (om-elem-build-footnote-definition "label")
-         (om-elem-to-trimmed-string)) => "[fn:label] footnote contents")
-
-  ;; TODO, need tags and archive example, cumbersome since these outputs
-  ;; have lots of whitespace
-  (defexamples om-elem-build-headline
-    (->> (om-elem-build-headline)
-         (om-elem-to-trimmed-string)) => "*"
-    (->> (om-elem-build-headline :title '("dummy"))
-         (om-elem-to-trimmed-string)) => "* dummy"
-    (->> (om-elem-build-headline :title '("dummy") :level 3)
-         (om-elem-to-trimmed-string)) => "*** dummy"
-    (->> (om-elem-build-headline :title '("dummy") :todo-keyword "DONE")
-         (om-elem-to-trimmed-string)) => "* DONE dummy"
-    (->> (om-elem-build-headline :title '("dummy") :priority ?A)
-         (om-elem-to-trimmed-string)) => "* [#A] dummy"
-    (->> (om-elem-build-headline :title '("dummy") :footnote-section-p t)
-         (om-elem-to-trimmed-string)) => "* Footnotes"
-    (->> (om-elem-build-headline :title '("dummy") :commentedp t)
-         (om-elem-to-trimmed-string)) => "* COMMENT dummy")
-
-  (defexamples om-elem-build-item
-    (->> (om-elem-build-paragraph "item contents")
-         (om-elem-build-item)
-         (om-elem-to-trimmed-string)) => "- item contents"
-    (->> (om-elem-build-paragraph "item contents")
-         (om-elem-build-item :bullet 1)
-         (om-elem-to-trimmed-string)) => "1. item contents"
-    (->> (om-elem-build-paragraph "item contents")
-         (om-elem-build-item :checkbox 'on)
-         (om-elem-to-trimmed-string)) => "- [X] item contents"
-    (->> (om-elem-build-paragraph "item contents")
-         (om-elem-build-item :tag '("tmsu"))
-         (om-elem-to-trimmed-string)) => "- tmsu :: item contents"
-    (->> (om-elem-build-paragraph "item contents")
-         (om-elem-build-item :counter 10)
-         (om-elem-to-trimmed-string)) => "- [@10] item contents")
-
-  (defexamples om-elem-build-plain-list
-    (->> (om-elem-build-paragraph "item contents")
-         (om-elem-build-item)
-         (om-elem-build-plain-list)
-         (om-elem-to-trimmed-string)) => "- item contents")
-
-  (defexamples om-elem-build-property-drawer
-    (->> (om-elem-build-node-property "key" "val")
-         (om-elem-build-property-drawer)
-         (om-elem-to-trimmed-string)) => ":PROPERTIES:\n:key:      val\n:END:")
-
-  (defexamples om-elem-build-quote-block
-    (->> (om-elem-build-paragraph "quoted stuff")
-         (om-elem-build-quote-block)
-         (om-elem-to-trimmed-string)) => "#+BEGIN_QUOTE\nquoted stuff\n#+END_QUOTE")
-
-  (defexamples om-elem-build-section
-    (->> (om-elem-build-paragraph "text")
-         (om-elem-build-section)
-         (om-elem-to-trimmed-string)) => "text")
-
-  (defexamples om-elem-build-table
-    (->> (om-elem-build-table-cell "cell")
-         (om-elem-build-table-row)
-         (om-elem-build-table)
-         (om-elem-to-trimmed-string)) => "| cell |"))
-
-(def-example-group "Generic property functions"
-  "..."
-
-  (defexamples-content om-elem-toggle-property
-    nil
-    (:content "* headline")
-    (:comment "Flip the property")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-toggle-property :commentedp)
-         (om-elem-to-trimmed-string))
-    => "* COMMENT headline"
-    (:comment "Flip the property twice (do nothing)")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-toggle-property :commentedp)
-         (om-elem-toggle-property :commentedp)
-         (om-elem-to-trimmed-string))
-    => "* headline")
-
-  )
-
-(def-example-group "Element matching functions"
-  "match shit"
-
-  (defexamples-content om-elem-find
-    "docstring"
-
-    (:content "* headline one"
-              "** TODO headline two"
-              "** COMMENT headline three"
-              "** headline four")
-
-    (:comment "Use a symbol to match a type, in this case all "
-              "headlines.")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(headline))
-         (--map (om-elem-to-trimmed-string it)))
-    => '("** TODO headline two"
-         "** COMMENT headline three"
-         "** headline four")
-
-    (:comment "Use integers specify the index to return. Negative "
-              "integers count from the end. Out of range integers "
-              "return nil")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(1))
-         (--map (om-elem-to-trimmed-string it)))
-    => '("** COMMENT headline three")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(-1))
-         (--map (om-elem-to-trimmed-string it)))
-    => '("** headline four")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(3))
-         (--map (om-elem-to-trimmed-string it)))
-    => nil
-
-    (:comment "Use a two-membered list with an operator and an "
-              "integer to match a range of indices. Allowed "
-              "operators are <, >, <=, and and >=.")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '((> 0)))
-         (--map (om-elem-to-trimmed-string it)))
-    => '("** COMMENT headline three" "** headline four")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '((>= 1)))
-         (--map (om-elem-to-trimmed-string it)))
-    => '("** COMMENT headline three" "** headline four")
-
-    (:comment "Use a plist to match based on an elements properties.")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '((:todo-keyword "TODO")))
-         (--map (om-elem-to-trimmed-string it)))
-    => '("** TODO headline two")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '((:todo-keyword nil)))
-         (--map (om-elem-to-trimmed-string it)))
-    => '("** COMMENT headline three" "** headline four")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '((:todo-keyword "DONE")))
-         (--map (om-elem-to-trimmed-string it)))
-    => nil
-
-    (:content "* headline one"
-              "this is *text1* of *text2*"
-              "** headline two"
-              "here is more *text3*"
-              "*** headline three"
-              "and here is even more *text4* and *text5*"
-              "**** headline 4")
-
-    (:comment "Specify multiple levels of matching using multiple "
-              "queries.")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(section paragraph bold))
-         (--map (om-elem-to-trimmed-string it)))
-    => '("*text1*" "*text2*")
-
-    (:comment "Use the keyword :any as a wildcard to match any "
-              "element at a particular level.")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(:any :any bold))
-         (--map (om-elem-to-trimmed-string it)))
-    => '("*text1*" "*text2*")
-    ;; TODO not sure why an empty string comes out here
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(section paragraph :any))
-         (--map (om-elem-to-trimmed-string it)))
-    => '("this is" "*text1*" "of" "*text2*" "")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(:any bold))
-         (--map (om-elem-to-trimmed-string it)))
-    => nil
-
-    (:comment "Use the keyword :many to match one or more levels "
-              "of any element.")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(:many bold))
-         (--map (om-elem-to-trimmed-string it)))
-    => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
-
-    (:comment "Use the keyword :many! to match one or more levels, "
-              "except unlike :many do not match within any elements "
-              "that have already matched.")
-    ;; TODO add predicate???
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(headline :many! headline))
-         (--map (om-elem-to-trimmed-string it)))
-    => '("*** headline three
-and here is even more *text4* and *text5*
-**** headline 4"))
-  
-  (defexamples-content om-elem-find-first
-    nil
-
-    (:content
-     "* headline one"
-     "** TODO headline two"
-     "** COMMENT headline three"
-     "** headline four")
-
-    (:comment "Find the first subheadline")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find-first '(headline))
-         (om-elem-to-trimmed-string))
-    => "** TODO headline two")
-
-  (defexamples-content om-elem-find-last
-    nil
-
-    (:content "* headline one"
-               "** TODO headline two"
-               "** COMMENT headline three"
-               "** headline four")
-
-    (:comment "Find the last subheadline")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-find-last '(headline))
-         (om-elem-to-trimmed-string))
-    => "** headline four")
-
-  (defexamples-content om-elem-delete
-    nil
-
-    (:content "* headline one"
-               "** headline two"
-               "** headline three"
-               "** headline four")
-
-    (:comment "Selectively delete headlines")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-delete '(headline))
-         (om-elem-to-trimmed-string))
-    => "* headline one"
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-delete-first '(headline))
-         (om-elem-to-trimmed-string))
-    => "* headline one
-** headline three
-** headline four"
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-delete-last '(headline))
-         (om-elem-to-trimmed-string))
-    => "* headline one
-** headline two
-** headline three")
-
-  ;; TODO add extract
-  (defexamples-content om-elem-extract nil)
-
-  (defexamples-content om-elem-map
-    nil
-
-    (:content "* headline one"
-               "** TODO headline two"
-               "** headline three"
-               "** headline four")
-
-    (:comment "Selectively mark headlines as DONE")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-map '(headline) (lambda (it) (om-elem-headline-set-todo "DONE" it)))
-         (om-elem-to-trimmed-string))
-    => "* headline one
-** DONE headline two
-** DONE headline three
-** DONE headline four"
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-map-first* '(headline) (om-elem-headline-set-todo "DONE" it))
-         (om-elem-to-trimmed-string))
-    => "* headline one
-** DONE headline two
-** headline three
-** headline four"
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-map-last '(headline) (-partial #'om-elem-headline-set-todo "DONE"))
-         (om-elem-to-trimmed-string))
-    => "* headline one
-** TODO headline two
-** headline three
-** DONE headline four")
-  
-  ;; TODO add mapcat
-  (defexamples-content om-elem-mapcat nil)
-
-  ;; TODO add replace
-  (defexamples-content om-elem-replace nil)
-
-  ;; TOOD add insert-before
-  (defexamples-content om-elem-insert-before nil)
-
-  ;; TOOD add insert-after
-  (defexamples-content om-elem-insert-after nil)
-
-  ;; TOOD add insert-within
-  (defexamples-content om-elem-insert-within nil)
-
-  ;; TOOD add splice-before
-  (defexamples-content om-elem-splice-before nil)
-
-  ;; TOOD add splice-after
-  (defexamples-content om-elem-splice-after nil)
-
-  ;; TOOD add splice-within
-  (defexamples-content om-elem-splice-within nil))
-
-(def-example-group "Element get functions"
-  "get shit"
-
-  ;; (defexamples-content om-elem-parent-get-headline
-  ;;   nil
-  ;;   (:content "* headline 1"
-  ;;             "section stuff")
-  ;;   (:comment "Find the headline from the section element")
-  ;;   (--> (om-elem-parse-this-subtree)
-  ;;        (om-elem-find-first it 'section)
-  ;;        (om-elem-parent-get-headline it)
-  ;;        (om-elem-to-trimmed-string it))
-  ;;   => "* headline 1\nsection stuff"
-  ;;   (:comment "The toplevel headline has no headline parent, so return nil")
-  ;;   (-> (om-elem-parse-this-subtree)
-  ;;       (om-elem-parent-get-headline))
-  ;;   => "")
-
-  (defexamples-content om-elem-headline-get-subheadlines
-    nil
-    (:content "* headline 1"
-              "sectional stuff"
-              "** headline 2"
-              "** headline 3")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-headline-get-subheadlines)
-         (-map #'om-elem-to-trimmed-string))
-    => '("** headline 2" "** headline 3")
-    (:content "* headline 1"
-              "sectional stuff")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-headline-get-subheadlines)
-         (-map #'om-elem-to-trimmed-string))
-    => nil)
-
-  (defexamples-content om-elem-headline-get-section
-    nil
-    (:content "* headline 1"
-              "sectional stuff"
-              "** headline 2"
-              "** headline 3")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-headline-get-section)
-         (om-elem-to-trimmed-string))
-    => "sectional stuff"
-    (:content "* headline 1"
-              "** headline 2"
-              "** headline 3")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-headline-get-section)
-         (om-elem-to-trimmed-string))
-    => "")
-
-  (defexamples-content om-elem-headline-get-drawer
-    nil
-    (:content "* headline 1"
-              ":LOGBOOK:"
-              "- random note"
-              ":END:"
-              "rest of the section"
-              "** headline 2")
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-headline-get-drawer "LOGBOOK")
-         (om-elem-to-trimmed-string))
-    => ":LOGBOOK:\n- random note\n:END:"
-    (->> (om-elem-parse-this-subtree)
-         (om-elem-headline-get-drawer "OTHER")
-         (om-elem-to-trimmed-string))
-    => "")
-
-  ;; (defexamples-content om-elem-headline-get-path
-  ;;   nil
-  ;;   (:content "* one"
-  ;;             "** two"
-  ;;             "*** three")
-  ;;   (--> (om-elem-parse-this-subtree)
-  ;;        (om-elem-find-first it 'headline)
-  ;;        (om-elem-headline-get-path it)
-  ;;        (om-elem-to-trimmed-string it))
-  ;;   => '("one"))
-
-  ;; (defexamples-content om-elem-item-get-level
-  ;;   nil
-  ;;   (:content "- one"
-  ;;             "  - two"
-  ;;             "    - three")
-  ;;   (->> (om-elem-parse-this-item)
-  ;;        (om-elem-)))
-
-  (defexamples-content om-elem-item-get-sublist
-    nil
-    (:content "- one"
-              "  - two"
-              "  - three"
-              "- four")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-get-sublist)
-         (om-elem-to-trimmed-string))
-    => "- two\n- three"
-    (:content "- one"
-              "- two")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-get-sublist)
-         (om-elem-to-trimmed-string))
-    => "")
-
-  (defexamples-content om-elem-item-get-paragraph
-    nil
-    (:content "- one")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-get-paragraph)
-         (om-elem-to-trimmed-string))
-    => "one"
-    (:content "- [ ] one")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-get-paragraph)
-         (om-elem-to-trimmed-string))
-    => "one"
-    (:content "- tmsu :: one")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-get-paragraph)
-         (om-elem-to-trimmed-string))
-    => "one"
-    (:content "- tmsu ::")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-get-paragraph)
-         (om-elem-to-trimmed-string))
-    => "")
-
-  (defexamples-content om-elem-table-get-cell
-    nil
-    (:content "| 1 | 2 | 3 |"
-              "|---+---+---|"
-              "| a | b | c |")
-    (->> (om-elem-parse-this-element)
-         (om-elem-table-get-cell 0 0)
-         (om-elem--get-contents)
-         (car))
-    => "1"
-    (->> (om-elem-parse-this-element)
-         (om-elem-table-get-cell 1 0)
-         (om-elem--get-contents)
-         (car))
-    => "a"
-    (->> (om-elem-parse-this-element)
-         (om-elem-table-get-cell 0 2)
-         (om-elem--get-contents)
-         (car))
-    => "3"
-    (->> (om-elem-parse-this-element)
-         (om-elem-table-get-cell 0 3)
-         (om-elem--get-contents)
-         (car))
-    !!> error)
-
-  (defexamples-content om-elem-timestamp-get-start-timestamp
-    nil
-    (:content "[2019-01-01 Tue]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-get-start-timestamp)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue]"
-    (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-get-start-timestamp)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue]"
-    (:content "[2019-01-01 Tue 00:00-12:00]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-get-start-timestamp)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue 00:00]")
-
-  (defexamples-content om-elem-timestamp-get-end-timestamp
-    nil
-    (:content "[2019-01-01 Tue]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-get-end-timestamp)
-         (om-elem-to-trimmed-string))
-    => ""
-    (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-get-end-timestamp)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-02 Wed]"
-    (:content "[2019-01-01 Tue 00:00-12:00]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-get-end-timestamp)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue 12:00]")
-
-  ;; TODO add unixtime functions
-
-  )
-
-
-(def-example-group "Element predicate functions"
-  "pred shit"
-  
-  ;; (defexamples-content om-elem-is-empty-p
-  ;;   nil
-  ;;   (:content "* dummy\nfilled with useless knowledge")
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-is-empty-p))
-  ;;   => nil
-  ;;   (:content "* dummy")
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-is-empty-p))
-  ;;   => t)
-
-  ;; (defexamples-content om-elem-property-is-nil-p
-  ;;   nil
-  ;;   (:content "* TODO dummy")
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-property-is-nil-p :todo-keyword))
-  ;;   => nil
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-property-is-nil-p :commentedp))
-  ;;   => t)
-
-  ;; (defexamples-content om-elem-property-is-non-nil-p
-  ;;   nil
-  ;;   (:content "* TODO dummy")
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-property-is-non-nil-p :todo-keyword))
-  ;;   => t
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-property-is-non-nil-p :commentedp))
-  ;;   => nil)
-
-  ;; (defexamples-content om-elem-property-is-eq-p
-  ;;   nil
-  ;;   (:content "* [#A] dummy")
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-property-is-eq-p :priority ?A))
-  ;;   => t
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-property-is-eq-p :priority ?B))
-  ;;   => nil)
-
-  ;; (defexamples-content om-elem-property-is-equal-p
-  ;;   nil
-  ;;   (:content "* TODO dummy")
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-property-is-equal-p :todo-keyword "TODO"))
-  ;;   => t
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-property-is-equal-p :todo-keyword "DONE"))
-  ;;   => nil)
-
-  ;; (defexamples-content om-elem-property-is-predicate-p
-  ;;   nil
-  ;;   (:content "* this is a dummy")
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-property-is-predicate-p*
-  ;;         :title (s-contains? "dummy" (car it))))
-  ;;   => t)
-
-  (defexamples-content om-elem-contains-point-p
-    nil
-    (:content "* headline 1"
-              "* headline 2")
-    (:comment "The headline is parsed from 'point-min'")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-contains-point-p (point-min)))
-    => t
-    (->> (om-elem-parse-this-headline)
-         (om-elem-contains-point-p (point-max)))
-    => nil)
-
-  (defexamples-content om-elem-contents-contains-point-p
-    nil
-    (:content "* this is a dummy"
-              "filled with nonsense")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-contents-contains-point-p (point-min)))
-    => nil
-    (->> (om-elem-parse-this-headline)
-         (om-elem-contents-contains-point-p (point-max)))
-    => t)
-
-  ;; (defexamples-content om-elem-is-type-p
-  ;;   nil
-  ;;   (:content "*ziltoid*")
-  ;;   (->> (om-elem-parse-this-object)
-  ;;        (om-elem-is-type-p 'bold))
-  ;;   => t
-  ;;   (->> (om-elem-parse-this-object)
-  ;;        (om-elem-is-type-p 'italic))
-  ;;   => nil)
-
-  ;; (defexamples-content om-elem-is-any-type-p
-  ;;   nil
-  ;;   (:content "*ziltoid*")
-  ;;   (->> (om-elem-parse-this-object)
-  ;;        (om-elem-is-any-type-p '(bold)))
-  ;;   => t
-  ;;   (->> (om-elem-parse-this-object)
-  ;;        (om-elem-is-any-type-p '(bold italic)))
-  ;;   => t
-  ;;   (->> (om-elem-parse-this-object)
-  ;;        (om-elem-is-any-type-p '(italic)))
-  ;;   => nil)
-
-  (defexamples-content om-elem-clock-is-running-p
-    nil
-    (:content "CLOCK: [2019-01-01 Tue 00:00]")
-    (->> (om-elem-parse-this-element)
-         (om-elem-clock-is-running-p))
-    => t
-    (:content "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00")
-    (->> (om-elem-parse-this-element)
-         (om-elem-clock-is-running-p))
-    => nil)
-
-  (defexamples-content om-elem-headline-is-done-p
-    nil
-    (:content "* TODO darn")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-is-done-p))
-    => nil
-    (:content "* DONE yay")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-is-done-p))
-    => t)
-
-  (defexamples-content om-elem-headline-is-scheduled-p
-    nil
-    (:content "* lazy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-is-scheduled-p))
-    => nil
-    (:content "* proactive"
-              "SCHEDULED: [2019-01-01 Tue]")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-is-scheduled-p))
-    => t)
-
-  (defexamples-content om-elem-headline-is-deadlined-p
-    nil
-    (:content "* lazy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-is-deadlined-p))
-    => nil
-    (:content "* proactive"
-              "DEADLINE: [2019-01-01 Tue]")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-is-deadlined-p))
-    => t)
-  
-  (defexamples-content om-elem-headline-is-closed-p
-    nil
-    (:content "* lazy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-is-closed-p))
-    => nil
-    (:content "* proactive"
-              "CLOSED: [2019-01-01 Tue]")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-is-closed-p))
-    => t)
-
-  (defexamples-content om-elem-headline-is-archived-p
-    nil
-    (:content "* dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-is-archived-p))
-    => nil
-    (:content "* dummy                                                             :ARCHIVE:")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-is-archived-p))
-    => t)
-
-  (defexamples-content om-elem-headline-is-commented-p
-    nil
-    (:content "* dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-is-commented-p))
-    => nil
-    (:content "* COMMENT dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-is-commented-p))
-    => t)
-
-  (defexamples-content om-elem-headline-has-tag-p
-    nil
-    (:content "* dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-has-tag-p "tmsu"))
-    => nil
-    (:content "* dummy                                                             :tmsu:")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-has-tag-p "tmsu"))
-    => t)
-
-  (defexamples-content om-elem-item-is-unchecked-p
-    nil
-    (:content "- one"
-              "- [ ] two"
-              "- [X] three"
-              "- [-] four")
-    (->> (om-elem-parse-this-element)
-         (om-elem--get-contents)
-         (-map #'om-elem-item-is-unchecked-p))
-    => '(nil t nil nil))
-
-  (defexamples-content om-elem-item-is-checked-p
-    nil
-    (:content "- one"
-              "- [ ] two"
-              "- [X] three"
-              "- [-] four")
-    (->> (om-elem-parse-this-element)
-         (om-elem--get-contents)
-         (-map #'om-elem-item-is-checked-p))
-    => '(nil nil t nil))
-
-  (defexamples-content om-elem-item-is-trans-p
-    nil
-    (:content "- one"
-              "- [ ] two"
-              "- [X] three"
-              "- [-] four")
-    (->> (om-elem-parse-this-element)
-         (om-elem--get-contents)
-         (-map #'om-elem-item-is-trans-p))
-    => '(nil nil nil t))
-
-  ;; todo statistics cookie
-
-  (defexamples-content om-elem-timestamp-is-active-p
-    nil
-    (:content "<2019-01-01 Tue>")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-is-active-p))
-    => t
-    (:content "[2019-01-01 Tue]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-is-active-p))
-    => nil)
-
-  (defexamples-content om-elem-timestamp-is-inactive-p
-    nil
-    (:content "[2019-01-01 Tue]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-is-inactive-p))
-    => t
-    (:content "<2019-01-01 Tue>")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-is-inactive-p))
-    => nil)
-
-  (defexamples-content om-elem-timestamp-is-ranged-p
-    nil
-    (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-is-ranged-p))
-    => t
-    (:content "[2019-01-01 Tue 00:00-12:00]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-is-ranged-p))
-    => t
-    (:content "[2019-01-01 Tue]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-is-ranged-p))
-    => nil)
-
-  ;; TODO add the timestamp unixtime comparisons
-  )
-
-(def-example-group "Element setter functions"
-  "set shit"
-
-  (defexamples-content om-elem-headline-set-todo
-    nil
-    (:content "* TODO dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-set-todo "DONE")
-         (om-elem-to-trimmed-string))
-    => "* DONE dummy"
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-set-todo nil)
-         (om-elem-to-trimmed-string))
-    => "* dummy")
-
-  (defexamples-content om-elem-headline-set-archived
-    nil
-    ;; TODO this is annoying to test...add a regex operator
-    (:content "* dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-set-archived t)
-         (om-elem-to-trimmed-string))
-    => "* dummy                                                             :ARCHIVE:"
-    (:content "* dummy                                                             :ARCHIVE:")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-set-archived nil)
-         (om-elem-to-trimmed-string))
-    => "* dummy")
-
-  (defexamples-content om-elem-headline-set-commented
-    nil
-    (:content "* dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-set-commented t)
-         (om-elem-to-trimmed-string))
-    => "* COMMENT dummy"
-    (:content "* COMMENT dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-set-commented nil)
-         (om-elem-to-trimmed-string))
-    => "* dummy")
-
-  (defexamples-content om-elem-headline-set-priority
-    nil
-    (:content "* dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-set-priority ?A)
-         (om-elem-to-trimmed-string))
-    => "* [#A] dummy"
-    (:content "* [#A] dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-set-priority nil)
-         (om-elem-to-trimmed-string))
-    => "* dummy")
-
-  (defexamples-content om-elem-headline-set-title
-    nil
-    (:content "* dummy")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-set-title '("portishead"))
-         (om-elem-to-trimmed-string))
-    => "* portishead"
-    ;; TODO add an example with a secondary string
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-set-title nil)
-         (om-elem-to-trimmed-string))
-    => "*")
-
-  (defexamples-content om-elem-item-set-checkbox
-    nil
-    (:content "- [ ] one")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-set-checkbox 'on)
-         (om-elem-to-trimmed-string))
-    => "- [X] one"
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-set-checkbox nil)
-         (om-elem-to-trimmed-string))
-    => "- one")
-
-  (defexamples-content om-elem-item-set-bullet
-    nil
-    (:content "- one")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-set-bullet 1)
-         (om-elem-to-trimmed-string))
-    => "1. one"
-    (:comment "This is actually correct due to a bug")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-set-bullet '+)
-         (om-elem-to-trimmed-string))
-    => "- one"
-    (:content "1. one")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-set-bullet '-)
-         (om-elem-to-trimmed-string))
-    => "- one")
-
-  (defexamples-content om-elem-item-set-tag
-    nil
-    (:content "- one")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-set-tag '("tmsu"))
-         (om-elem-to-trimmed-string))
-    => "- tmsu :: one"
-    (:content "- tmsu :: one")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-set-tag nil)
-         (om-elem-to-trimmed-string))
-    => "- one")
-
-  (defexamples-content om-elem-plain-list-set-type
-    nil
-    (:content "- [ ] one"
-              "- [X] two")
-    (->> (om-elem-parse-this-element)
-         (om-elem-plain-list-set-type 'ordered)
-         (om-elem-to-trimmed-string))
-    => "1. [ ] one\n2. [X] two"
-    (:content "1. [ ] one"
-              "2. [X] two")
-    (->> (om-elem-parse-this-element)
-         (om-elem-plain-list-set-type '-)
-         (om-elem-to-trimmed-string))
-    => "- [ ] one\n- [X] two")
-
-  (defexamples-content om-elem-node-property-set-key
-    nil
-    (:content "* dummy"
-              ":PROPERTIES:"
-              ":key:      value"
-              ":END:")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-map* '(section property-drawer node-property)
-                       (om-elem-node-property-set-key "lock" it))
-         (om-elem-to-trimmed-string))
-    => "* dummy
-:PROPERTIES:
-:lock:     value
-:END:")
-
-  (defexamples-content om-elem-node-property-set-value
-    nil
-    (:content "* dummy"
-              ":PROPERTIES:"
-              ":key:      value"
-              ":END:")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-map* '(section property-drawer node-property)
-                       (om-elem-node-property-set-value "lock" it))
-         (om-elem-to-trimmed-string))
-    => "* dummy
-:PROPERTIES:
-:key:      lock
-:END:")
-
-  (defexamples-content om-elem-link-set-path
-    nil
-    (:content "[[eldorado][gold]]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-link-set-path "404")
-         (om-elem-to-trimmed-string))
-    => "[[404][gold]]"
-    (:content "[[file:eldorado][gold]]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-link-set-path "404")
-         (om-elem-to-trimmed-string))
-    => "[[file:404][gold]]")
-
-  (defexamples-content om-elem-link-set-type
-    nil
-    (:content "[[eldorado]]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-link-set-type "file")
-         (om-elem-to-trimmed-string))
-    => "[[file:eldorado]]"
-    (:content "[[file:eldorado]]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-link-set-type nil)
-         (om-elem-to-trimmed-string))
-    => "[[eldorado]]"
-    (->> (om-elem-parse-this-object)
-         (om-elem-link-set-type "fuzzy")
-         (om-elem-to-trimmed-string))
-    => "[[eldorado]]")
-
-  (defexamples-content om-elem-timestamp-set-start-time
-    nil
-    (:content "[2019-01-02 Wed]")
-    (:comment "If not a range this will turn into a range by moving only the start time.")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-set-start-time '(2019 1 1))
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-    (:comment "Set a different time with different precision.")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-set-start-time '(2019 1 1 10 0))
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue 10:00]--[2019-01-02 Wed]")
-
-  ;; TODO this tests localtime vs GMT time
-  ;; (defexamples om-elem-timestamp-set-time-unixtime
-  ;;   (->> (om-elem-build-timestamp 'inactive '(2019 1 1))
-  ;;        (om-elem-timestamp-set-time-unixtime 4511020320)
-  ;;        (om-elem-to-trimmed-string))
-  ;;   => "[2112-12-12 Wed 21:12]")
-
-  (defexamples-content om-elem-timestamp-set-end-time
-    nil
-    (:content "[2019-01-01 Tue]")
-    (:comment "Add the end time")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-set-end-time '(2019 1 2))
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-    (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
-    (:comment "Remove the end time")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-set-end-time nil)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue]")
-
-  (defexamples-content om-elem-timestamp-set-type
-    nil
-    (:content "[2019-01-01 Tue]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-set-type 'active)
-         (om-elem-to-trimmed-string))
-    => "<2019-01-01 Tue>")
-
-  )
-
-(def-example-group "Element shifter functions"
-  "shift shit"
-
-  (defexamples-content om-elem-shift-property
-    nil
-    (:content "[2019-01-01 Tue]")
-    (:comment "Shift up")
-    (->> (om-elem-parse-this-object)
-         (om-elem-shift-property :year-start 1)
-         (om-elem-to-trimmed-string))
-    => "[2020-01-01 Wed]"
-    (:comment "Shift down")
-    (->> (om-elem-parse-this-object)
-         (om-elem-shift-property :year-start -1)
-         (om-elem-to-trimmed-string))
-    => "[2018-01-01 Mon]"
-    (:comment "Do nothing")
-    (->> (om-elem-parse-this-object)
-         (om-elem-shift-property :year-start 0)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue]")
-    ;; (:comment "Error if the thing to be shifted is nil")
-    ;; (->> (om-elem-parse-this-object)
-    ;;      (om-elem-shift-property :day-start 0)
-    ;;      (om-elem-to-trimmed-string))
-    ;; !!> "bla")
-
-  ;; TODO need to ensure that the min/max priorities are always the
-  ;; same
-  (defexamples-content om-elem-headline-shift-priority
-    nil
-    (:content "* headline")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-shift-priority 1)
-         (om-elem-to-trimmed-string))
-    => "* headline"
-    (:content "* [#A] headline")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-shift-priority -1)
-         (om-elem-to-trimmed-string))
-    => "* [#B] headline"
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-shift-priority -2)
-         (om-elem-to-trimmed-string))
-    => "* [#C] headline"
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-shift-priority 1)
-         (om-elem-to-trimmed-string))
-    => "* [#C] headline")
-
-  (defexamples-content om-elem-timestamp-shift
-    nil
-    (:content "[2019-01-01 Tue 12:00]")
-    (:comment "Change each unit, and wrap around to the next unit as needed.")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift 30 'minute)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue 12:30]"
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift 60 'minute)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue 13:00]"
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift 1 'hour)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue 13:00]"
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift 1 'day)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-02 Wed 12:00]"
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift 31 'day)
-         (om-elem-to-trimmed-string))
-    => "[2019-02-01 Fri 12:00]"
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift 1 'month)
-         (om-elem-to-trimmed-string))
-    => "[2019-02-01 Fri 12:00]"
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift 13 'month)
-         (om-elem-to-trimmed-string))
-    => "[2020-02-01 Sat 12:00]"
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift 1 'year)
-         (om-elem-to-trimmed-string))
-    => "[2020-01-01 Wed 12:00]"
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift 0 'year)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue 12:00]"
-    (:content "[2019-01-01 Tue]")
-    (:comment "Error when shifting hour/minute in short format")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift 30 'minute)
-         (om-elem-to-trimmed-string))
-    !!> error
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift 30 'hour)
-         (om-elem-to-trimmed-string))
-    !!> error)
-
-  (defexamples-content om-elem-timestamp-shift-start
-    nil
-    (:content "[2019-01-01 Tue 12:00]")
-    (:comment "If not a range, change start time and leave implicit end time.")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-start -1 'year)
-         (om-elem-to-trimmed-string))
-    => "[2018-01-01 Mon 12:00]--[2019-01-01 Tue 12:00]"
-    (:content "[2019-01-01 Tue]--[2019-01-03 Thu]")
-    (:comment "Change only start time if a range")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-start 1 'day)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-02 Wed]--[2019-01-03 Thu]"))
-
-  (defexamples-content om-elem-timestamp-shift-end
-    nil
-    (:content "[2019-01-01 Tue]")
-    (:comment "Shift implicit end time if not a range.")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-end 1 'day)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-    (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
-    (:comment "Move only the second time if a range.")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-shift-end 1 'day)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue]--[2019-01-03 Thu]")
-
-
-(def-example-group "Element toggle functions."
-  "Toggle shit"
-
-
-  (defexamples-content om-elem-headline-toggle-commented
-    nil
-    (:content "* headline")
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-toggle-commented)
-         (om-elem-to-trimmed-string))
-    => "* COMMENT headline"
-    (->> (om-elem-parse-this-headline)
-         (om-elem-headline-toggle-commented)
-         (om-elem-headline-toggle-commented)
-         (om-elem-to-trimmed-string))
-    => "* headline")
-
-  ;; (defexamples-content om-elem-headline-toggle-archived
-  ;;   nil
-  ;;   (:content "* headline")
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-headline-toggle-archived)
-  ;;        (om-elem-to-trimmed-string))
-  ;;   => "* headline                                                          :ARCHIVE:"
-  ;;   ;; (->> (om-elem-parse-this-headline)
-  ;;   ;;      (om-elem-headline-toggle-archived)
-  ;;   ;;      (om-elem-headline-toggle-archived)
-  ;;   ;;      (om-elem-to-trimmed-string))
-  ;;   ;; => "* headline"
-  ;;   )
-
-  (defexamples-content om-elem-item-toggle-checkbox
-    nil
-    (:content "- [ ] one")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-toggle-checkbox)
-         (om-elem-to-trimmed-string))
-    => "- [X] one"
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-toggle-checkbox)
-         (om-elem-item-toggle-checkbox)
-         (om-elem-to-trimmed-string))
-    => "- [ ] one"
-    (:content "- [-] one")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-toggle-checkbox)
-         (om-elem-to-trimmed-string))
-    => "- [-] one"
-    (:content "- one")
-    (->> (om-elem-parse-this-item)
-         (om-elem-item-toggle-checkbox)
-         (om-elem-to-trimmed-string))
-    => "- one")
-
-  (defexamples-content om-elem-timestamp-toggle-active
-    nil
-    (:content "[2019-01-01 Tue]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-toggle-active)
-         (om-elem-to-trimmed-string))
-    => "<2019-01-01 Tue>"
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-toggle-active)
-         (om-elem-timestamp-toggle-active)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue]"
-    (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-toggle-active)
-         (om-elem-to-trimmed-string))
-    => "<2019-01-01 Tue>--<2019-01-02 Wed>"
-    (->> (om-elem-parse-this-object)
-         (om-elem-timestamp-toggle-active)
-         (om-elem-timestamp-toggle-active)
-         (om-elem-to-trimmed-string))
-    => "[2019-01-01 Tue]--[2019-01-02 Wed]"))
-
 (def-example-group "Element parsers"
   "parse shit"
 
@@ -1848,250 +380,1801 @@ and here is even more *text4* and *text5*
          (om-elem-to-trimmed-string))
     => ""))
 
-(def-example-group "Element content modifiers"
-  "modifiy contents and shit"
+(def-example-group "Printing functions"
+  "print shit"
 
-  (defexamples-content om-elem-plain-list-indent-item
-    nil
-    (:content "- one"
-              "- two"
-              "  - three"
-              "- four")
-    (:comment "It makes no sense to indent the first item")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-plain-list-indent-item 0)
-         (om-elem-to-trimmed-string))
-    !!> error
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-plain-list-indent-item 1)
-         (om-elem-to-trimmed-string))
-    => "- one\n  - two\n  - three\n- four"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-plain-list-indent-item 2)
-         (om-elem-to-trimmed-string))
-    => "- one\n- two\n  - three\n  - four")
+  (defexamples om-elem-to-string
+    (om-elem-to-string
+     '(bold
+       (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
+       "text"))
+    => "*text*"
+    (om-elem-to-string
+     '(bold
+       (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
+       "text"))
+    => "*text*   "
+    (om-elem-to-string nil) => "")
 
-  (defexamples-content om-elem-plain-list-indent-item-tree
-    nil
-    (:content "- one"
-              "- two"
-              "  - three"
-              "- four")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-plain-list-indent-item-tree 1)
-         (om-elem-to-trimmed-string))
-    => "- one\n  - two\n    - three\n- four")
-
-  (defexamples-content om-elem-plain-list-unindent-item
-    nil
-    (:content "- one"
-              "- two"
-              "  - three"
-              "  - three"
-              "  - three"
-              "- four")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-plain-list-unindent-item 1 0)
-         (om-elem-to-trimmed-string))
-    => "- one\n- two\n- three\n  - three\n  - three\n- four"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-plain-list-unindent-item 1 1)
-         (om-elem-to-trimmed-string))
-    => "- one\n- two\n  - three\n- three\n  - three\n- four"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-plain-list-unindent-item 2 1)
-         (om-elem-to-trimmed-string))
-    => "- one\n- two\n  - three\n  - three\n  - three\n- four")
-  
-  (defexamples-content om-elem-plain-list-unindent-items
-    nil
-    (:content "- one"
-              "- two"
-              "  - three"
-              "  - three"
-              "  - three"
-              "- four")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-plain-list-unindent-items 1)
-         (om-elem-to-trimmed-string))
-    => "- one\n- two\n- three\n- three\n- three\n- four"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-plain-list-unindent-items 2)
-         (om-elem-to-trimmed-string))
-    => "- one\n- two\n  - three\n  - three\n  - three\n- four")
-
-  (defexamples-content om-elem-headline-indent-subheadline
-    nil
-    (:content "* one"
-              "** two"
-              "** three"
-              "*** four")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-headline-indent-subheadline 0)
-         (om-elem-to-trimmed-string))
-    !!> error
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-headline-indent-subheadline 1)
-         (om-elem-to-trimmed-string))
-    => "* one\n** two\n*** three\n*** four")
-
-  (defexamples-content om-elem-headline-indent-subtree
-    nil
-    (:content "* one"
-              "** two"
-              "** three"
-              "*** four")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-headline-indent-subtree 1)
-         (om-elem-to-trimmed-string))
-    => "* one\n** two\n*** three\n**** four")
-
-  (defexamples-content om-elem-headline-unindent-subheadline
-    nil
-    (:content "* one"
-              "** two"
-              "** three"
-              "*** four"
-              "*** four"
-              "*** four")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-headline-unindent-subheadline 1 1)
-         (om-elem-to-trimmed-string))
-    => "* one\n** two\n** three\n*** four\n** four\n*** four")
-
-  (defexamples-content om-elem-headline-unindent-subtree
-    nil
-    (:content "* one"
-              "** two"
-              "** three"
-              "*** four"
-              "*** four"
-              "*** four")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-headline-unindent-subtree 1)
-         (om-elem-to-trimmed-string))
-    => "* one\n** two\n** three\n** four\n** four\n** four")
-
-  ;; tables
-
-  (defexamples-content om-elem-table-delete-column
-    nil
-    (:content "| a | b |"
-              "|---+---|"
-              "| c | d |")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-delete-column 0)
-         (om-elem-to-trimmed-string))
-    => "| b |\n|---|\n| d |"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-delete-column 1)
-         (om-elem-to-trimmed-string))
-    => "| a |\n|---|\n| c |"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-delete-column -1)
-         (om-elem-to-trimmed-string))
-    => "| a |\n|---|\n| c |")
-
-  (defexamples-content om-elem-table-delete-row
-    nil
-    (:content "| a | b |"
-              "|---+---|"
-              "| c | d |")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-delete-row 0)
-         (om-elem-to-trimmed-string))
-    => "|---+---|\n| c | d |"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-delete-row 1)
-         (om-elem-to-trimmed-string))
-    => "| a | b |\n| c | d |"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-delete-row -1)
-         (om-elem-to-trimmed-string))
-    => "| a | b |\n|---+---|")
-
-  (defexamples-content om-elem-table-insert-column
-    nil
-    (:content "| a | b |"
-              "|---+---|"
-              "| c | d |")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-insert-column
-          1
-          (list
-           (om-elem-build-table-cell "x")
-           (om-elem-build-table-cell "y")))
-         (om-elem-to-trimmed-string))
-    => "| a | x | b |\n|---+---+---|\n| c | y | d |"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-insert-column
-          -1
-          (list
-           (om-elem-build-table-cell "x")
-           (om-elem-build-table-cell "y")))
-         (om-elem-to-trimmed-string))
-    => "| a | b | x |\n|---+---+---|\n| c | d | y |")
-
-  (defexamples-content om-elem-table-insert-column!
-    nil
-    (:content "| a | b |"
-              "|---+---|"
-              "| c | d |")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-insert-column! 1 '("x" "y"))
-         (om-elem-to-trimmed-string))
-    => "| a | x | b |\n|---+---+---|\n| c | y | d |"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-insert-column! -1 '("x" "y"))
-         (om-elem-to-trimmed-string))
-    => "| a | b | x |\n|---+---+---|\n| c | d | y |")
-
-  (defexamples-content om-elem-table-insert-row
-    nil
-    (:content "| a | b |"
-              "|---+---|"
-              "| c | d |")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-insert-row
-          1
-          (list
-           (om-elem-build-table-cell "x")
-           (om-elem-build-table-cell "y")))
-         (om-elem-to-trimmed-string))
-    => "| a | b |\n| x | y |\n|---+---|\n| c | d |"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-insert-row
-          2
-          (list
-           (om-elem-build-table-cell "x")
-           (om-elem-build-table-cell "y")))
-         (om-elem-to-trimmed-string))
-    => "| a | b |\n|---+---|\n| x | y |\n| c | d |"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-insert-row
-          -1
-          (list
-           (om-elem-build-table-cell "x")
-           (om-elem-build-table-cell "y")))
-         (om-elem-to-trimmed-string))
-    => "| a | b |\n|---+---|\n| c | d |\n| x | y |")
-
-  (defexamples-content om-elem-table-insert-row!
-    nil
-    (:content "| a | b |"
-              "|---+---|"
-              "| c | d |")
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-insert-row! 1 '("x" "y"))
-         (om-elem-to-trimmed-string))
-    => "| a | b |\n| x | y |\n|---+---|\n| c | d |"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-insert-row! 2 '("x" "y"))
-         (om-elem-to-trimmed-string))
-    => "| a | b |\n|---+---|\n| x | y |\n| c | d |"
-    (->> (om-elem-parse-element-at 1)
-         (om-elem-table-insert-row! -1 '("x" "y"))
-         (om-elem-to-trimmed-string))
-    => "| a | b |\n|---+---|\n| c | d |\n| x | y |")
+  (defexamples om-elem-to-trimmed-string
+    (om-elem-to-trimmed-string
+     '(bold
+       (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
+       "text"))
+    => "*text*"
+    (om-elem-to-trimmed-string
+     '(bold
+       (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
+       "text"))
+    => "*text*"
+    (om-elem-to-trimmed-string nil) => "")
 
   )
+
+(def-example-group "Builder Functions"
+  "Functions that build elements and objects"
+
+  (def-example-subgroup "Object Builders"
+    "build objects"
+
+    (defexamples om-elem-build-code
+      (->> (om-elem-build-code "text")
+           (om-elem-to-trimmed-string)) => "~text~")
+
+    ;; TODO add entity
+
+    (defexamples om-elem-build-inline-babel-call
+      (->> (om-elem-build-inline-babel-call "name")
+           (om-elem-to-trimmed-string)) => "call_name()"
+      (->> (om-elem-build-inline-babel-call "name" :arguments '("n=4"))
+           (om-elem-to-trimmed-string)) => "call_name(n=4)"
+      (->> (om-elem-build-inline-babel-call "name" :inside-header '(:key val))
+           (om-elem-to-trimmed-string)) => "call_name[:key val]()"
+      (->> (om-elem-build-inline-babel-call "name" :end-header '(:key val))
+           (om-elem-to-trimmed-string)) => "call_name()[:key val]")
+
+    (defexamples om-elem-build-inline-src-block
+      (->> (om-elem-build-inline-src-block "lang" "value")
+           (om-elem-to-trimmed-string)) => "src_lang{value}"
+      (->> (om-elem-build-inline-src-block "lang" "value" :parameters '(:key val))
+           (om-elem-to-trimmed-string)) => "src_lang[:key val]{value}")
+
+    (defexamples om-elem-build-line-break
+      (->> (om-elem-build-line-break)
+           (om-elem-to-trimmed-string)) => "\\\\")
+
+    (defexamples om-elem-build-statistics-cookie
+      (->> (om-elem-build-statistics-cookie '(nil))
+           (om-elem-to-trimmed-string)) => "[%]"
+      (->> (om-elem-build-statistics-cookie '(50))
+           (om-elem-to-trimmed-string)) => "[50%]"
+      (->> (om-elem-build-statistics-cookie '(1 3))
+           (om-elem-to-trimmed-string)) => "[1/3]"
+      (->> (om-elem-build-statistics-cookie '(nil nil))
+           (om-elem-to-trimmed-string)) => "[/]")
+
+    (defexamples om-elem-build-target
+      (->> (om-elem-build-target "text")
+           (om-elem-to-trimmed-string)) => "<<text>>")
+
+    (defexamples om-elem-build-timestamp
+      (->> (om-elem-build-timestamp 'inactive '(2019 1 15))
+           (om-elem-to-trimmed-string)) => "[2019-01-15 Tue]"
+      (->> (om-elem-build-timestamp 'inactive '(2019 1 15 12 30))
+           (om-elem-to-trimmed-string)) => "[2019-01-15 Tue 12:30]"
+      (->> (om-elem-build-timestamp 'inactive '(2019 1 15) :end '(2020 1 1))
+           (om-elem-to-trimmed-string)) => "[2019-01-15 Tue]--[2020-01-01 Wed]")
+
+    (defexamples om-elem-build-verbatim
+      (->> (om-elem-build-verbatim "text")
+           (om-elem-to-trimmed-string)) => "=text="))
+
+  (def-example-subgroup "Recursive Object Builders"
+    "build recursive objects"
+
+    (defexamples om-elem-build-bold
+      (->> (om-elem-build-bold "text")
+           (om-elem-to-trimmed-string)) => "*text*")
+
+    (defexamples om-elem-build-footnote-reference
+      (->> (om-elem-build-footnote-reference)
+           (om-elem-to-trimmed-string)) => "[fn:]"
+      (->> (om-elem-build-footnote-reference :label "label")
+           (om-elem-to-trimmed-string)) => "[fn:label]"
+      (->> (om-elem-build-footnote-reference :label "label" "content")
+           (om-elem-to-trimmed-string)) => "[fn:label:content]")
+
+    (defexamples om-elem-build-italic
+      (->> (om-elem-build-italic "text")
+           (om-elem-to-trimmed-string)) => "/text/")
+
+    (defexamples om-elem-build-link
+      (->> (om-elem-build-link "target")
+           (om-elem-to-trimmed-string)) => "[[target]]"
+      (->> (om-elem-build-link "target" :type "file")
+           (om-elem-to-trimmed-string)) => "[[file:target]]"
+      (->> (om-elem-build-link "target" "desc")
+           (om-elem-to-trimmed-string)) => "[[target][desc]]")
+
+    (defexamples om-elem-build-radio-target
+      (->> (om-elem-build-radio-target "text")
+           (om-elem-to-trimmed-string)) => "<<<text>>>")
+
+    (defexamples om-elem-build-strike-through
+      (->> (om-elem-build-strike-through "text")
+           (om-elem-to-trimmed-string)) => "+text+")
+
+    (defexamples om-elem-build-superscript
+      (->> (om-elem-build-superscript "text")
+           (om-elem-to-trimmed-string)) => "^text")
+
+    (defexamples om-elem-build-subscript
+      (->> (om-elem-build-subscript "text")
+           (om-elem-to-trimmed-string)) => "_text")
+
+    (defexamples om-elem-build-table-cell
+      (->> (om-elem-build-table-cell "text")
+           (om-elem-build-table-row)
+           (om-elem-to-trimmed-string)) => "| text |")
+
+    (defexamples om-elem-build-underline
+      (->> (om-elem-build-underline "text")
+           (om-elem-to-trimmed-string)) => "_text_"))
+
+  (def-example-subgroup "Elements"
+    "build elements"
+
+    (defexamples om-elem-build-babel-call
+      (->> (om-elem-build-babel-call "name")
+           (om-elem-to-trimmed-string)) => "#+CALL: name()"
+      (->> (om-elem-build-babel-call "name" :arguments '("arg=x"))
+           (om-elem-to-trimmed-string)) => "#+CALL: name(arg=x)"
+      (->> (om-elem-build-babel-call "name" :inside-header '(:key val))
+           (om-elem-to-trimmed-string)) => "#+CALL: name[:key val]()"
+      (->> (om-elem-build-babel-call "name" :end-header '(:key val))
+           (om-elem-to-trimmed-string)) => "#+CALL: name() :key val")
+
+    (defexamples om-elem-build-clock
+      (->> (om-elem-build-clock '(2019 1 1 0 0))
+           (om-elem-to-trimmed-string)) => "CLOCK: [2019-01-01 Tue 00:00]"
+      (->> (om-elem-build-clock '(2019 1 1 0 0) :end '(2019 1 1 1 0))
+           (om-elem-to-trimmed-string)) => "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00] =>  1:00")
+
+    (defexamples om-elem-build-comment
+      (->> (om-elem-build-comment "text")
+           (om-elem-to-trimmed-string)) => "# text")
+
+    (defexamples om-elem-build-comment-block
+      (->> (om-elem-build-comment-block "text")
+           (om-elem-to-trimmed-string)) => "#+BEGIN_COMMENT\ntext\n#+END_COMMENT")
+
+    (defexamples om-elem-build-diary-sexp
+      (->> (om-elem-build-diary-sexp '(text))
+           (om-elem-to-trimmed-string)) => "%%(text)")
+
+    (defexamples om-elem-build-example-block
+      (->> (om-elem-build-example-block "text")
+           (om-elem-to-trimmed-string)) => "#+BEGIN_EXAMPLE\ntext\n#+END_EXAMPLE"
+      (->> (om-elem-build-example-block "text" :switches '("switches"))
+           (om-elem-to-trimmed-string)) => "#+BEGIN_EXAMPLE switches\ntext\n#+END_EXAMPLE")
+
+    (defexamples om-elem-build-export-block
+      (->> (om-elem-build-export-block "type" "value\n")
+           (om-elem-to-trimmed-string)) => "#+BEGIN_EXPORT type\nvalue\n#+END_EXPORT")
+
+    (defexamples om-elem-build-fixed-width
+      (->> (om-elem-build-fixed-width "text")
+           (om-elem-to-trimmed-string)) => ": text")
+
+    (defexamples om-elem-build-horizontal-rule
+      (->> (om-elem-build-horizontal-rule)
+           (om-elem-to-trimmed-string)) => "-----")
+
+    (defexamples om-elem-build-keyword
+      (->> (om-elem-build-keyword "FILETAGS" "tmsu")
+           (om-elem-to-trimmed-string)) => "#+FILETAGS: tmsu")
+
+    (defexamples om-elem-build-latex-environment
+      (->> (om-elem-build-latex-environment "env" "text")
+           (om-elem-to-trimmed-string)) => "\\begin{env}\ntext\n\\end{env}")
+
+    (defexamples om-elem-build-node-property
+      (->> (om-elem-build-node-property "key" "val")
+           (om-elem-to-trimmed-string)) => ":key:      val")
+
+    (defexamples om-elem-build-planning
+      (->> (om-elem-build-planning :closed '(2019 1 1))
+           (om-elem-to-trimmed-string)) => "CLOSED: [2019-01-01 Tue]"
+      (->> (om-elem-build-planning :scheduled '(2019 1 1))
+           (om-elem-to-trimmed-string)) => "SCHEDULED: [2019-01-01 Tue]"
+      (->> (om-elem-build-planning :deadline '(2019 1 1))
+           (om-elem-to-trimmed-string)) => "DEADLINE: [2019-01-01 Tue]")
+
+    (defexamples om-elem-build-src-block
+      (->> (om-elem-build-src-block "body")
+           (om-elem-to-trimmed-string)) => "#+BEGIN_SRC\n  body\n#+END_SRC"
+      (->> (om-elem-build-src-block "body" :language "emacs-lisp")
+           (om-elem-to-trimmed-string)) => "#+BEGIN_SRC emacs-lisp\n  body\n#+END_SRC"
+      ;; TODO pretty sure this makes no sense...
+      (->> (om-elem-build-src-block "body" :switches '("-n 20" "-r"))
+           (om-elem-to-trimmed-string)) => "#+BEGIN_SRC -n 20 -r\n  body\n#+END_SRC"
+      ;; TODO and this...
+      (->> (om-elem-build-src-block "body" :parameters '(:key val))
+           (om-elem-to-trimmed-string)) => "#+BEGIN_SRC :key val\n  body\n#+END_SRC")
+
+    (defexamples om-elem-build-table-row-hline
+      (->>  (om-elem-build-table
+             (om-elem-build-table-row
+              (om-elem-build-table-cell "text"))
+             (om-elem-build-table-row-hline))
+            (om-elem-to-trimmed-string)) => "| text |\n|------|"))
+
+  (def-example-subgroup "Object Containers"
+    "build object containers"
+    ;; TODO add paragraph
+    ;; TODO add table-row
+    ;; TODO add verse-block
+    )
+
+  (def-example-group "Greater Elements"
+    "Build shit"
+
+    (defexamples om-elem-build-center-block
+      (->> (om-elem-build-paragraph "text")
+           (om-elem-build-center-block)
+           (om-elem-to-trimmed-string)) => "#+BEGIN_CENTER\ntext\n#+END_CENTER")
+
+    (defexamples om-elem-build-drawer
+      (->> (om-elem-build-paragraph "text")
+           (om-elem-build-drawer "NAME")
+           (om-elem-to-trimmed-string)) => ":NAME:\ntext\n:END:")
+
+    (defexamples om-elem-build-footnote-definition
+      (->> (om-elem-build-paragraph "footnote contents")
+           (om-elem-build-footnote-definition "label")
+           (om-elem-to-trimmed-string)) => "[fn:label] footnote contents")
+
+    ;; TODO, need tags and archive example, cumbersome since these outputs
+    ;; have lots of whitespace
+    (defexamples om-elem-build-headline
+      (->> (om-elem-build-headline)
+           (om-elem-to-trimmed-string)) => "*"
+      (->> (om-elem-build-headline :title '("dummy"))
+           (om-elem-to-trimmed-string)) => "* dummy"
+      (->> (om-elem-build-headline :title '("dummy") :level 3)
+           (om-elem-to-trimmed-string)) => "*** dummy"
+      (->> (om-elem-build-headline :title '("dummy") :todo-keyword "DONE")
+           (om-elem-to-trimmed-string)) => "* DONE dummy"
+      (->> (om-elem-build-headline :title '("dummy") :priority ?A)
+           (om-elem-to-trimmed-string)) => "* [#A] dummy"
+      (->> (om-elem-build-headline :title '("dummy") :footnote-section-p t)
+           (om-elem-to-trimmed-string)) => "* Footnotes"
+      (->> (om-elem-build-headline :title '("dummy") :commentedp t)
+           (om-elem-to-trimmed-string)) => "* COMMENT dummy")
+
+    (defexamples om-elem-build-item
+      (->> (om-elem-build-paragraph "item contents")
+           (om-elem-build-item)
+           (om-elem-to-trimmed-string)) => "- item contents"
+      (->> (om-elem-build-paragraph "item contents")
+           (om-elem-build-item :bullet 1)
+           (om-elem-to-trimmed-string)) => "1. item contents"
+      (->> (om-elem-build-paragraph "item contents")
+           (om-elem-build-item :checkbox 'on)
+           (om-elem-to-trimmed-string)) => "- [X] item contents"
+      (->> (om-elem-build-paragraph "item contents")
+           (om-elem-build-item :tag '("tmsu"))
+           (om-elem-to-trimmed-string)) => "- tmsu :: item contents"
+      (->> (om-elem-build-paragraph "item contents")
+           (om-elem-build-item :counter 10)
+           (om-elem-to-trimmed-string)) => "- [@10] item contents")
+
+    (defexamples om-elem-build-plain-list
+      (->> (om-elem-build-paragraph "item contents")
+           (om-elem-build-item)
+           (om-elem-build-plain-list)
+           (om-elem-to-trimmed-string)) => "- item contents")
+
+    (defexamples om-elem-build-property-drawer
+      (->> (om-elem-build-node-property "key" "val")
+           (om-elem-build-property-drawer)
+           (om-elem-to-trimmed-string)) => ":PROPERTIES:\n:key:      val\n:END:")
+
+    (defexamples om-elem-build-quote-block
+      (->> (om-elem-build-paragraph "quoted stuff")
+           (om-elem-build-quote-block)
+           (om-elem-to-trimmed-string)) => "#+BEGIN_QUOTE\nquoted stuff\n#+END_QUOTE")
+
+    (defexamples om-elem-build-section
+      (->> (om-elem-build-paragraph "text")
+           (om-elem-build-section)
+           (om-elem-to-trimmed-string)) => "text")
+
+    (defexamples om-elem-build-table
+      (->> (om-elem-build-table-cell "cell")
+           (om-elem-build-table-row)
+           (om-elem-build-table)
+           (om-elem-to-trimmed-string)) => "| cell |")))
+
+(def-example-group "Type Predicate functions"
+  "Testing types of elements"
+
+  ;; (defexamples-content om-elem-contains-point-p
+  ;;   nil
+  ;;   (:content "* headline 1"
+  ;;             "* headline 2")
+  ;;   (:comment "The headline is parsed from 'point-min'")
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-contains-point-p (point-min)))
+  ;;   => t
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-contains-point-p (point-max)))
+  ;;   => nil)
+
+  ;; (defexamples-content om-elem-contents-contains-point-p
+  ;;   nil
+  ;;   (:content "* this is a dummy"
+  ;;             "filled with nonsense")
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-contents-contains-point-p (point-min)))
+  ;;   => nil
+  ;;   (->> (om-elem-parse-this-headline)
+  ;;        (om-elem-contents-contains-point-p (point-max)))
+  ;;   => t)
+
+  ;; (defexamples-content om-elem-is-type-p
+  ;;   nil
+  ;;   (:content "*ziltoid*")
+  ;;   (->> (om-elem-parse-this-object)
+  ;;        (om-elem-is-type-p 'bold))
+  ;;   => t
+  ;;   (->> (om-elem-parse-this-object)
+  ;;        (om-elem-is-type-p 'italic))
+  ;;   => nil)
+
+  ;; (defexamples-content om-elem-is-any-type-p
+  ;;   nil
+  ;;   (:content "*ziltoid*")
+  ;;   (->> (om-elem-parse-this-object)
+  ;;        (om-elem-is-any-type-p '(bold)))
+  ;;   => t
+  ;;   (->> (om-elem-parse-this-object)
+  ;;        (om-elem-is-any-type-p '(bold italic)))
+  ;;   => t
+  ;;   (->> (om-elem-parse-this-object)
+  ;;        (om-elem-is-any-type-p '(italic)))
+  ;;   => nil)
+  )
+
+(def-example-group "Property functions"
+  "Functions to get, set, and map properties."
+
+  (def-example-subgroup "Generic"
+    nil
+
+    ;; (defexamples-content om-elem-property-is-nil-p
+    ;;   nil
+    ;;   (:content "* TODO dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-property-is-nil-p :todo-keyword))
+    ;;   => nil
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-property-is-nil-p :commentedp))
+    ;;   => t)
+
+    ;; (defexamples-content om-elem-property-is-non-nil-p
+    ;;   nil
+    ;;   (:content "* TODO dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-property-is-non-nil-p :todo-keyword))
+    ;;   => t
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-property-is-non-nil-p :commentedp))
+    ;;   => nil)
+
+    ;; (defexamples-content om-elem-property-is-eq-p
+    ;;   nil
+    ;;   (:content "* [#A] dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-property-is-eq-p :priority ?A))
+    ;;   => t
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-property-is-eq-p :priority ?B))
+    ;;   => nil)
+
+    ;; (defexamples-content om-elem-property-is-equal-p
+    ;;   nil
+    ;;   (:content "* TODO dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-property-is-equal-p :todo-keyword "TODO"))
+    ;;   => t
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-property-is-equal-p :todo-keyword "DONE"))
+    ;;   => nil)
+
+    ;; (defexamples-content om-elem-property-is-predicate-p
+    ;;   nil
+    ;;   (:content "* this is a dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-property-is-predicate-p*
+    ;;         :title (s-contains? "dummy" (car it))))
+    ;;   => t)
+    )
+
+  (def-example-subgroup "Babel Call"
+    nil)
+
+  ;; bold has no specific properties
+  ;; center-block has no specific properties
+
+  (def-example-subgroup "Clock"
+    nil
+
+    (defexamples-content om-elem-clock-is-running-p
+      nil
+      (:content "CLOCK: [2019-01-01 Tue 00:00]")
+      (->> (om-elem-parse-this-element)
+           (om-elem-clock-is-running-p))
+      => t
+      (:content "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00")
+      (->> (om-elem-parse-this-element)
+           (om-elem-clock-is-running-p))
+      => nil))
+
+  (def-example-subgroup "Code"
+    nil)
+
+  (def-example-subgroup "Comment"
+    nil)
+
+  (def-example-subgroup "Comment Block"
+    nil)
+
+  (def-example-subgroup "Diary Sexp"
+    nil)
+  
+  (def-example-subgroup "Drawer"
+    nil)
+
+  (def-example-subgroup "Dynamic Block"
+    nil)
+
+  (def-example-subgroup "Entity"
+    nil)
+ 
+  (def-example-subgroup "Example Block"
+    nil)
+
+  (def-example-subgroup "Export Block"
+    nil)
+
+  (def-example-subgroup "Export Snippet"
+    nil)
+
+  (def-example-subgroup "Fixed Width"
+    nil)
+
+  (def-example-subgroup "Footnote Definition"
+    nil)
+
+  (def-example-subgroup "Footnote Reference"
+    nil)
+
+  (def-example-subgroup "Headline"
+    nil
+
+    (defexamples-content om-elem-headline-is-done-p
+      nil
+      (:content "* TODO darn")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-done-p))
+      => nil
+      (:content "* DONE yay")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-done-p))
+      => t)
+
+    (defexamples-content om-elem-headline-is-scheduled-p
+      nil
+      (:content "* lazy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-scheduled-p))
+      => nil
+      (:content "* proactive"
+                "SCHEDULED: [2019-01-01 Tue]")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-scheduled-p))
+      => t)
+
+    (defexamples-content om-elem-headline-is-deadlined-p
+      nil
+      (:content "* lazy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-deadlined-p))
+      => nil
+      (:content "* proactive"
+                "DEADLINE: [2019-01-01 Tue]")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-deadlined-p))
+      => t)
+    
+    (defexamples-content om-elem-headline-is-closed-p
+      nil
+      (:content "* lazy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-closed-p))
+      => nil
+      (:content "* proactive"
+                "CLOSED: [2019-01-01 Tue]")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-closed-p))
+      => t)
+
+    (defexamples-content om-elem-headline-is-archived-p
+      nil
+      (:content "* dummy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-archived-p))
+      => nil
+      (:content "* dummy                                                             :ARCHIVE:")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-archived-p))
+      => t)
+
+    (defexamples-content om-elem-headline-is-commented-p
+      nil
+      (:content "* dummy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-commented-p))
+      => nil
+      (:content "* COMMENT dummy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-is-commented-p))
+      => t)
+
+    (defexamples-content om-elem-headline-has-tag-p
+      nil
+      (:content "* dummy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-has-tag-p "tmsu"))
+      => nil
+      (:content "* dummy                                                             :tmsu:")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-has-tag-p "tmsu"))
+      => t)
+
+    (defexamples-content om-elem-headline-set-todo
+      nil
+      (:content "* TODO dummy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-set-todo "DONE")
+           (om-elem-to-trimmed-string))
+      => "* DONE dummy"
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-set-todo nil)
+           (om-elem-to-trimmed-string))
+      => "* dummy")
+
+    (defexamples-content om-elem-headline-set-archived
+      nil
+      ;; TODO this is annoying to test...add a regex operator
+      (:content "* dummy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-set-archived t)
+           (om-elem-to-trimmed-string))
+      => "* dummy                                                             :ARCHIVE:"
+      (:content "* dummy                                                             :ARCHIVE:")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-set-archived nil)
+           (om-elem-to-trimmed-string))
+      => "* dummy")
+
+    (defexamples-content om-elem-headline-set-commented
+      nil
+      (:content "* dummy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-set-commented t)
+           (om-elem-to-trimmed-string))
+      => "* COMMENT dummy"
+      (:content "* COMMENT dummy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-set-commented nil)
+           (om-elem-to-trimmed-string))
+      => "* dummy")
+
+    (defexamples-content om-elem-headline-set-priority
+      nil
+      (:content "* dummy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-set-priority ?A)
+           (om-elem-to-trimmed-string))
+      => "* [#A] dummy"
+      (:content "* [#A] dummy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-set-priority nil)
+           (om-elem-to-trimmed-string))
+      => "* dummy")
+
+    (defexamples-content om-elem-headline-set-title
+      nil
+      (:content "* dummy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-set-title '("portishead"))
+           (om-elem-to-trimmed-string))
+      => "* portishead"
+      ;; TODO add an example with a secondary string
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-set-title nil)
+           (om-elem-to-trimmed-string))
+      => "*")
+
+
+    ;; (defexamples-content om-elem-headline-toggle-archived
+    ;;   nil
+    ;;   (:content "* headline")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-toggle-archived)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "* headline                                                          :ARCHIVE:"
+    ;;   ;; (->> (om-elem-parse-this-headline)
+    ;;   ;;      (om-elem-headline-toggle-archived)
+    ;;   ;;      (om-elem-headline-toggle-archived)
+    ;;   ;;      (om-elem-to-trimmed-string))
+    ;;   ;; => "* headline"
+    ;;   )
+
+    (defexamples-content om-elem-headline-toggle-commented
+      nil
+      (:content "* headline")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-toggle-commented)
+           (om-elem-to-trimmed-string))
+      => "* COMMENT headline"
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-toggle-commented)
+           (om-elem-headline-toggle-commented)
+           (om-elem-to-trimmed-string))
+      => "* headline")
+    
+    ;; TODO need to ensure that the min/max priorities are always the same
+    (defexamples-content om-elem-headline-shift-priority
+      nil
+      (:content "* headline")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-shift-priority 1)
+           (om-elem-to-trimmed-string))
+      => "* headline"
+      (:content "* [#A] headline")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-shift-priority -1)
+           (om-elem-to-trimmed-string))
+      => "* [#B] headline"
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-shift-priority -2)
+           (om-elem-to-trimmed-string))
+      => "* [#C] headline"
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-shift-priority 1)
+           (om-elem-to-trimmed-string))
+      => "* [#C] headline"))
+
+  ;; horizontal rule has no specific properties
+
+  (def-example-subgroup "Inline Babel Call"
+    nil)
+  
+  (def-example-subgroup "Inline Src Block"
+    nil)
+
+  ;; TODO add inlinetask
+
+  (def-example-subgroup "Item"
+    nil
+
+    (defexamples-content om-elem-item-set-checkbox
+      nil
+      (:content "- [ ] one")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-set-checkbox 'on)
+           (om-elem-to-trimmed-string))
+      => "- [X] one"
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-set-checkbox nil)
+           (om-elem-to-trimmed-string))
+      => "- one")
+
+    (defexamples-content om-elem-item-set-bullet
+      nil
+      (:content "- one")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-set-bullet 1)
+           (om-elem-to-trimmed-string))
+      => "1. one"
+      (:comment "This is actually correct due to a bug")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-set-bullet '+)
+           (om-elem-to-trimmed-string))
+      => "- one"
+      (:content "1. one")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-set-bullet '-)
+           (om-elem-to-trimmed-string))
+      => "- one")
+
+    (defexamples-content om-elem-item-set-tag
+      nil
+      (:content "- one")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-set-tag '("tmsu"))
+           (om-elem-to-trimmed-string))
+      => "- tmsu :: one"
+      (:content "- tmsu :: one")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-set-tag nil)
+           (om-elem-to-trimmed-string))
+      => "- one")
+
+    (defexamples-content om-elem-item-is-unchecked-p
+      nil
+      (:content "- one"
+                "- [ ] two"
+                "- [X] three"
+                "- [-] four")
+      (->> (om-elem-parse-this-element)
+           (om-elem--get-contents)
+           (-map #'om-elem-item-is-unchecked-p))
+      => '(nil t nil nil))
+
+    (defexamples-content om-elem-item-is-checked-p
+      nil
+      (:content "- one"
+                "- [ ] two"
+                "- [X] three"
+                "- [-] four")
+      (->> (om-elem-parse-this-element)
+           (om-elem--get-contents)
+           (-map #'om-elem-item-is-checked-p))
+      => '(nil nil t nil))
+
+    (defexamples-content om-elem-item-is-trans-p
+      nil
+      (:content "- one"
+                "- [ ] two"
+                "- [X] three"
+                "- [-] four")
+      (->> (om-elem-parse-this-element)
+           (om-elem--get-contents)
+           (-map #'om-elem-item-is-trans-p))
+      => '(nil nil nil t))
+    
+    (defexamples-content om-elem-item-toggle-checkbox
+      nil
+      (:content "- [ ] one")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-toggle-checkbox)
+           (om-elem-to-trimmed-string))
+      => "- [X] one"
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-toggle-checkbox)
+           (om-elem-item-toggle-checkbox)
+           (om-elem-to-trimmed-string))
+      => "- [ ] one"
+      (:content "- [-] one")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-toggle-checkbox)
+           (om-elem-to-trimmed-string))
+      => "- [-] one"
+      (:content "- one")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-toggle-checkbox)
+           (om-elem-to-trimmed-string))
+      => "- one"))
+
+  ;; italic has no specific properties
+
+  (def-example-subgroup "Keyword"
+    nil)
+
+  (def-example-subgroup "Latex Environment"
+    nil)
+
+  (def-example-subgroup "Latex Fragment"
+    nil)
+
+  ;; line break has no specific properties
+
+  (def-example-subgroup "Link"
+    nil
+
+    (defexamples-content om-elem-link-set-path
+      nil
+      (:content "[[eldorado][gold]]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-link-set-path "404")
+           (om-elem-to-trimmed-string))
+      => "[[404][gold]]"
+      (:content "[[file:eldorado][gold]]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-link-set-path "404")
+           (om-elem-to-trimmed-string))
+      => "[[file:404][gold]]")
+
+    (defexamples-content om-elem-link-set-type
+      nil
+      (:content "[[eldorado]]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-link-set-type "file")
+           (om-elem-to-trimmed-string))
+      => "[[file:eldorado]]"
+      (:content "[[file:eldorado]]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-link-set-type nil)
+           (om-elem-to-trimmed-string))
+      => "[[eldorado]]"
+      (->> (om-elem-parse-this-object)
+           (om-elem-link-set-type "fuzzy")
+           (om-elem-to-trimmed-string))
+      => "[[eldorado]]"))
+
+  (def-example-subgroup "Macro"
+    nil)
+
+  (def-example-subgroup "Node-property"
+    nil
+    
+    (defexamples-content om-elem-node-property-set-key
+      nil
+      (:content "* dummy"
+                ":PROPERTIES:"
+                ":key:      value"
+                ":END:")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-map* '(section property-drawer node-property)
+                         (om-elem-node-property-set-key "lock" it))
+           (om-elem-to-trimmed-string))
+      => "* dummy
+:PROPERTIES:
+:lock:     value
+:END:")
+
+    (defexamples-content om-elem-node-property-set-value
+      nil
+      (:content "* dummy"
+                ":PROPERTIES:"
+                ":key:      value"
+                ":END:")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-map* '(section property-drawer node-property)
+                         (om-elem-node-property-set-value "lock" it))
+           (om-elem-to-trimmed-string))
+      => "* dummy
+:PROPERTIES:
+:key:      lock
+:END:"))
+
+  ;; paragraph has no specific properties
+  ;; plain-list has no specific properties
+
+  (def-example-subgroup "Planning"
+    nil)
+
+  ;; property-drawer has no specific properties
+  ;; quote-block has no specific properties
+  ;; radio-target has no specific properties
+  ;; section has no specific properties
+
+  (def-example-subgroup "Special Block"
+    nil)
+
+  (def-example-subgroup "Src Block"
+    nil)
+
+  (def-example-subgroup "Statistics Cookie"
+    nil)
+
+  ;; strike-through has no specific properties
+
+  (def-example-subgroup "Subscript"
+    nil)
+
+  (def-example-subgroup "Superscript"
+    nil)
+
+  (def-example-subgroup "Table"
+    nil)
+  
+  ;; table-cell has no specific properties
+  ;; table-row has no specific properties
+
+  (def-example-subgroup "Target"
+    nil)
+
+  (def-example-subgroup "Timestamp"
+    nil
+
+    (defexamples-content om-elem-timestamp-get-start-timestamp
+      nil
+      (:content "[2019-01-01 Tue]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-get-start-timestamp)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue]"
+      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-get-start-timestamp)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue]"
+      (:content "[2019-01-01 Tue 00:00-12:00]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-get-start-timestamp)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue 00:00]")
+
+    (defexamples-content om-elem-timestamp-get-end-timestamp
+      nil
+      (:content "[2019-01-01 Tue]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-get-end-timestamp)
+           (om-elem-to-trimmed-string))
+      => ""
+      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-get-end-timestamp)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-02 Wed]"
+      (:content "[2019-01-01 Tue 00:00-12:00]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-get-end-timestamp)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00]")
+
+    (defexamples-content om-elem-timestamp-is-active-p
+      nil
+      (:content "<2019-01-01 Tue>")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-is-active-p))
+      => t
+      (:content "[2019-01-01 Tue]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-is-active-p))
+      => nil)
+
+    (defexamples-content om-elem-timestamp-is-inactive-p
+      nil
+      (:content "[2019-01-01 Tue]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-is-inactive-p))
+      => t
+      (:content "<2019-01-01 Tue>")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-is-inactive-p))
+      => nil)
+
+    (defexamples-content om-elem-timestamp-is-ranged-p
+      nil
+      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-is-ranged-p))
+      => t
+      (:content "[2019-01-01 Tue 00:00-12:00]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-is-ranged-p))
+      => t
+      (:content "[2019-01-01 Tue]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-is-ranged-p))
+      => nil)
+
+    (defexamples-content om-elem-timestamp-set-start-time
+      nil
+      (:content "[2019-01-02 Wed]")
+      (:comment "If not a range this will turn into a range by moving only the start time.")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-set-start-time '(2019 1 1))
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      (:comment "Set a different time with different precision.")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-set-start-time '(2019 1 1 10 0))
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue 10:00]--[2019-01-02 Wed]")
+
+    (defexamples-content om-elem-timestamp-set-end-time
+      nil
+      (:content "[2019-01-01 Tue]")
+      (:comment "Add the end time")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-set-end-time '(2019 1 2))
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:comment "Remove the end time")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-set-end-time nil)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue]")
+
+    (defexamples-content om-elem-timestamp-set-type
+      nil
+      (:content "[2019-01-01 Tue]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-set-type 'active)
+           (om-elem-to-trimmed-string))
+      => "<2019-01-01 Tue>")
+
+    (defexamples-content om-elem-timestamp-shift
+      nil
+      (:content "[2019-01-01 Tue 12:00]")
+      (:comment "Change each unit, and wrap around to the next unit as needed.")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift 30 'minute)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue 12:30]"
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift 60 'minute)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue 13:00]"
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift 1 'hour)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue 13:00]"
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift 1 'day)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-02 Wed 12:00]"
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift 31 'day)
+           (om-elem-to-trimmed-string))
+      => "[2019-02-01 Fri 12:00]"
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift 1 'month)
+           (om-elem-to-trimmed-string))
+      => "[2019-02-01 Fri 12:00]"
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift 13 'month)
+           (om-elem-to-trimmed-string))
+      => "[2020-02-01 Sat 12:00]"
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift 1 'year)
+           (om-elem-to-trimmed-string))
+      => "[2020-01-01 Wed 12:00]"
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift 0 'year)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00]"
+      (:content "[2019-01-01 Tue]")
+      (:comment "Error when shifting hour/minute in short format")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift 30 'minute)
+           (om-elem-to-trimmed-string))
+      !!> error
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift 30 'hour)
+           (om-elem-to-trimmed-string))
+      !!> error)
+
+    (defexamples-content om-elem-timestamp-shift-start
+      nil
+      (:content "[2019-01-01 Tue 12:00]")
+      (:comment "If not a range, change start time and leave implicit end time.")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift-start -1 'year)
+           (om-elem-to-trimmed-string))
+      => "[2018-01-01 Mon 12:00]--[2019-01-01 Tue 12:00]"
+      (:content "[2019-01-01 Tue]--[2019-01-03 Thu]")
+      (:comment "Change only start time if a range")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift-start 1 'day)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-02 Wed]--[2019-01-03 Thu]")
+
+    (defexamples-content om-elem-timestamp-shift-end
+      nil
+      (:content "[2019-01-01 Tue]")
+      (:comment "Shift implicit end time if not a range.")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift-end 1 'day)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:comment "Move only the second time if a range.")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-shift-end 1 'day)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-03 Thu]")
+
+    (defexamples-content om-elem-timestamp-toggle-active
+      nil
+      (:content "[2019-01-01 Tue]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-toggle-active)
+           (om-elem-to-trimmed-string))
+      => "<2019-01-01 Tue>"
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-toggle-active)
+           (om-elem-timestamp-toggle-active)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue]"
+      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-toggle-active)
+           (om-elem-to-trimmed-string))
+      => "<2019-01-01 Tue>--<2019-01-02 Wed>"
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-toggle-active)
+           (om-elem-timestamp-toggle-active)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"))
+
+  ;; underline has no specific properties
+
+  (def-example-subgroup "Verbatim"
+    nil)
+
+  ;; verse-block has no specific properties
+  )
+
+
+
+
+(def-example-group "Content Modification Functions"
+  "Manipulate the contents of containers"
+
+  (def-example-subgroup "Generic"
+    nil
+
+    ;; (defexamples-content om-elem-parent-get-headline
+    ;;   nil
+    ;;   (:content "* headline 1"
+    ;;             "section stuff")
+    ;;   (:comment "Find the headline from the section element")
+    ;;   (--> (om-elem-parse-this-subtree)
+    ;;        (om-elem-find-first it 'section)
+    ;;        (om-elem-parent-get-headline it)
+    ;;        (om-elem-to-trimmed-string it))
+    ;;   => "* headline 1\nsection stuff"
+    ;;   (:comment "The toplevel headline has no headline parent, so return nil")
+    ;;   (-> (om-elem-parse-this-subtree)
+    ;;       (om-elem-parent-get-headline))
+    ;;   => "")
+    
+    ;; (defexamples-content om-elem-is-empty-p
+    ;;   nil
+    ;;   (:content "* dummy\nfilled with useless knowledge")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-is-empty-p))
+    ;;   => nil
+    ;;   (:content "* dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-is-empty-p))
+    ;;   => t)
+    )
+
+  (def-example-subgroup "Headline"
+    nil
+
+    (defexamples-content om-elem-headline-get-subheadlines
+      nil
+      (:content "* headline 1"
+                "sectional stuff"
+                "** headline 2"
+                "** headline 3")
+      (->> (om-elem-parse-this-subtree)
+           (om-elem-headline-get-subheadlines)
+           (-map #'om-elem-to-trimmed-string))
+      => '("** headline 2" "** headline 3")
+      (:content "* headline 1"
+                "sectional stuff")
+      (->> (om-elem-parse-this-subtree)
+           (om-elem-headline-get-subheadlines)
+           (-map #'om-elem-to-trimmed-string))
+      => nil)
+
+    (defexamples-content om-elem-headline-get-section
+      nil
+      (:content "* headline 1"
+                "sectional stuff"
+                "** headline 2"
+                "** headline 3")
+      (->> (om-elem-parse-this-subtree)
+           (om-elem-headline-get-section)
+           (om-elem-to-trimmed-string))
+      => "sectional stuff"
+      (:content "* headline 1"
+                "** headline 2"
+                "** headline 3")
+      (->> (om-elem-parse-this-subtree)
+           (om-elem-headline-get-section)
+           (om-elem-to-trimmed-string))
+      => "")
+
+    (defexamples-content om-elem-headline-get-drawer
+      nil
+      (:content "* headline 1"
+                ":LOGBOOK:"
+                "- random note"
+                ":END:"
+                "rest of the section"
+                "** headline 2")
+      (->> (om-elem-parse-this-subtree)
+           (om-elem-headline-get-drawer "LOGBOOK")
+           (om-elem-to-trimmed-string))
+      => ":LOGBOOK:\n- random note\n:END:"
+      (->> (om-elem-parse-this-subtree)
+           (om-elem-headline-get-drawer "OTHER")
+           (om-elem-to-trimmed-string))
+      => "")
+
+    ;; (defexamples-content om-elem-headline-get-path
+    ;;   nil
+    ;;   (:content "* one"
+    ;;             "** two"
+    ;;             "*** three")
+    ;;   (--> (om-elem-parse-this-subtree)
+    ;;        (om-elem-find-first it 'headline)
+    ;;        (om-elem-headline-get-path it)
+    ;;        (om-elem-to-trimmed-string it))
+    ;;   => '("one"))
+
+    (defexamples-content om-elem-headline-indent-subheadline
+      nil
+      (:content "* one"
+                "** two"
+                "** three"
+                "*** four")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-headline-indent-subheadline 0)
+           (om-elem-to-trimmed-string))
+      !!> error
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-headline-indent-subheadline 1)
+           (om-elem-to-trimmed-string))
+      => "* one\n** two\n*** three\n*** four")
+
+    (defexamples-content om-elem-headline-indent-subtree
+      nil
+      (:content "* one"
+                "** two"
+                "** three"
+                "*** four")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-headline-indent-subtree 1)
+           (om-elem-to-trimmed-string))
+      => "* one\n** two\n*** three\n**** four")
+
+    (defexamples-content om-elem-headline-unindent-subheadline
+      nil
+      (:content "* one"
+                "** two"
+                "** three"
+                "*** four"
+                "*** four"
+                "*** four")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-headline-unindent-subheadline 1 1)
+           (om-elem-to-trimmed-string))
+      => "* one\n** two\n** three\n*** four\n** four\n*** four")
+
+    (defexamples-content om-elem-headline-unindent-subtree
+      nil
+      (:content "* one"
+                "** two"
+                "** three"
+                "*** four"
+                "*** four"
+                "*** four")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-headline-unindent-subtree 1)
+           (om-elem-to-trimmed-string))
+      => "* one\n** two\n** three\n** four\n** four\n** four"))
+
+  (def-example-subgroup "Item"
+    nil
+
+    ;; (defexamples-content om-elem-item-get-level
+    ;;   nil
+    ;;   (:content "- one"
+    ;;             "  - two"
+    ;;             "    - three")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-)))
+
+    (defexamples-content om-elem-item-get-sublist
+      nil
+      (:content "- one"
+                "  - two"
+                "  - three"
+                "- four")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-get-sublist)
+           (om-elem-to-trimmed-string))
+      => "- two\n- three"
+      (:content "- one"
+                "- two")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-get-sublist)
+           (om-elem-to-trimmed-string))
+      => "")
+
+    (defexamples-content om-elem-item-get-paragraph
+      nil
+      (:content "- one")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-get-paragraph)
+           (om-elem-to-trimmed-string))
+      => "one"
+      (:content "- [ ] one")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-get-paragraph)
+           (om-elem-to-trimmed-string))
+      => "one"
+      (:content "- tmsu :: one")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-get-paragraph)
+           (om-elem-to-trimmed-string))
+      => "one"
+      (:content "- tmsu ::")
+      (->> (om-elem-parse-this-item)
+           (om-elem-item-get-paragraph)
+           (om-elem-to-trimmed-string))
+      => ""))
+
+  (def-example-subgroup "Plain List"
+    nil
+    
+    (defexamples-content om-elem-plain-list-set-type
+      nil
+      (:content "- [ ] one"
+                "- [X] two")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plain-list-set-type 'ordered)
+           (om-elem-to-trimmed-string))
+      => "1. [ ] one\n2. [X] two"
+      (:content "1. [ ] one"
+                "2. [X] two")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plain-list-set-type '-)
+           (om-elem-to-trimmed-string))
+      => "- [ ] one\n- [X] two")
+
+    (defexamples-content om-elem-plain-list-indent-item
+      nil
+      (:content "- one"
+                "- two"
+                "  - three"
+                "- four")
+      (:comment "It makes no sense to indent the first item")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-plain-list-indent-item 0)
+           (om-elem-to-trimmed-string))
+      !!> error
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-plain-list-indent-item 1)
+           (om-elem-to-trimmed-string))
+      => "- one\n  - two\n  - three\n- four"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-plain-list-indent-item 2)
+           (om-elem-to-trimmed-string))
+      => "- one\n- two\n  - three\n  - four")
+
+    (defexamples-content om-elem-plain-list-indent-item-tree
+      nil
+      (:content "- one"
+                "- two"
+                "  - three"
+                "- four")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-plain-list-indent-item-tree 1)
+           (om-elem-to-trimmed-string))
+      => "- one\n  - two\n    - three\n- four")
+
+    (defexamples-content om-elem-plain-list-unindent-item
+      nil
+      (:content "- one"
+                "- two"
+                "  - three"
+                "  - three"
+                "  - three"
+                "- four")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-plain-list-unindent-item 1 0)
+           (om-elem-to-trimmed-string))
+      => "- one\n- two\n- three\n  - three\n  - three\n- four"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-plain-list-unindent-item 1 1)
+           (om-elem-to-trimmed-string))
+      => "- one\n- two\n  - three\n- three\n  - three\n- four"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-plain-list-unindent-item 2 1)
+           (om-elem-to-trimmed-string))
+      => "- one\n- two\n  - three\n  - three\n  - three\n- four")
+  
+    (defexamples-content om-elem-plain-list-unindent-items
+      nil
+      (:content "- one"
+                "- two"
+                "  - three"
+                "  - three"
+                "  - three"
+                "- four")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-plain-list-unindent-items 1)
+           (om-elem-to-trimmed-string))
+      => "- one\n- two\n- three\n- three\n- three\n- four"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-plain-list-unindent-items 2)
+           (om-elem-to-trimmed-string))
+      => "- one\n- two\n  - three\n  - three\n  - three\n- four"))
+
+  (def-example-subgroup "Table"
+    nil
+
+    (defexamples-content om-elem-table-get-cell
+      nil
+      (:content "| 1 | 2 | 3 |"
+                "|---+---+---|"
+                "| a | b | c |")
+      (->> (om-elem-parse-this-element)
+           (om-elem-table-get-cell 0 0)
+           (om-elem--get-contents)
+           (car))
+      => "1"
+      (->> (om-elem-parse-this-element)
+           (om-elem-table-get-cell 1 0)
+           (om-elem--get-contents)
+           (car))
+      => "a"
+      (->> (om-elem-parse-this-element)
+           (om-elem-table-get-cell 0 2)
+           (om-elem--get-contents)
+           (car))
+      => "3"
+      (->> (om-elem-parse-this-element)
+           (om-elem-table-get-cell 0 3)
+           (om-elem--get-contents)
+           (car))
+      !!> error)
+
+    (defexamples-content om-elem-table-delete-column
+      nil
+      (:content "| a | b |"
+                "|---+---|"
+                "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-delete-column 0)
+           (om-elem-to-trimmed-string))
+      => "| b |\n|---|\n| d |"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-delete-column 1)
+           (om-elem-to-trimmed-string))
+      => "| a |\n|---|\n| c |"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-delete-column -1)
+           (om-elem-to-trimmed-string))
+      => "| a |\n|---|\n| c |")
+
+    (defexamples-content om-elem-table-delete-row
+      nil
+      (:content "| a | b |"
+                "|---+---|"
+                "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-delete-row 0)
+           (om-elem-to-trimmed-string))
+      => "|---+---|\n| c | d |"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-delete-row 1)
+           (om-elem-to-trimmed-string))
+      => "| a | b |\n| c | d |"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-delete-row -1)
+           (om-elem-to-trimmed-string))
+      => "| a | b |\n|---+---|")
+
+    (defexamples-content om-elem-table-insert-column
+      nil
+      (:content "| a | b |"
+                "|---+---|"
+                "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-insert-column
+            1
+            (list
+             (om-elem-build-table-cell "x")
+             (om-elem-build-table-cell "y")))
+           (om-elem-to-trimmed-string))
+      => "| a | x | b |\n|---+---+---|\n| c | y | d |"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-insert-column
+            -1
+            (list
+             (om-elem-build-table-cell "x")
+             (om-elem-build-table-cell "y")))
+           (om-elem-to-trimmed-string))
+      => "| a | b | x |\n|---+---+---|\n| c | d | y |")
+
+    (defexamples-content om-elem-table-insert-column!
+      nil
+      (:content "| a | b |"
+                "|---+---|"
+                "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-insert-column! 1 '("x" "y"))
+           (om-elem-to-trimmed-string))
+      => "| a | x | b |\n|---+---+---|\n| c | y | d |"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-insert-column! -1 '("x" "y"))
+           (om-elem-to-trimmed-string))
+      => "| a | b | x |\n|---+---+---|\n| c | d | y |")
+
+    (defexamples-content om-elem-table-insert-row
+      nil
+      (:content "| a | b |"
+                "|---+---|"
+                "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-insert-row
+            1
+            (list
+             (om-elem-build-table-cell "x")
+             (om-elem-build-table-cell "y")))
+           (om-elem-to-trimmed-string))
+      => "| a | b |\n| x | y |\n|---+---|\n| c | d |"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-insert-row
+            2
+            (list
+             (om-elem-build-table-cell "x")
+             (om-elem-build-table-cell "y")))
+           (om-elem-to-trimmed-string))
+      => "| a | b |\n|---+---|\n| x | y |\n| c | d |"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-insert-row
+            -1
+            (list
+             (om-elem-build-table-cell "x")
+             (om-elem-build-table-cell "y")))
+           (om-elem-to-trimmed-string))
+      => "| a | b |\n|---+---|\n| c | d |\n| x | y |")
+
+    (defexamples-content om-elem-table-insert-row!
+      nil
+      (:content "| a | b |"
+                "|---+---|"
+                "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-insert-row! 1 '("x" "y"))
+           (om-elem-to-trimmed-string))
+      => "| a | b |\n| x | y |\n|---+---|\n| c | d |"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-insert-row! 2 '("x" "y"))
+           (om-elem-to-trimmed-string))
+      => "| a | b |\n|---+---|\n| x | y |\n| c | d |"
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-insert-row! -1 '("x" "y"))
+           (om-elem-to-trimmed-string))
+      => "| a | b |\n|---+---|\n| c | d |\n| x | y |")))
+
+(def-example-group "Element matching functions"
+  "match shit"
+
+  (defexamples-content om-elem-find
+    "docstring"
+
+    (:content "* headline one"
+              "** TODO headline two"
+              "** COMMENT headline three"
+              "** headline four")
+
+    (:comment "Use a symbol to match a type, in this case all "
+              "headlines.")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '(headline))
+         (--map (om-elem-to-trimmed-string it)))
+    => '("** TODO headline two"
+         "** COMMENT headline three"
+         "** headline four")
+
+    (:comment "Use integers specify the index to return. Negative "
+              "integers count from the end. Out of range integers "
+              "return nil")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '(1))
+         (--map (om-elem-to-trimmed-string it)))
+    => '("** COMMENT headline three")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '(-1))
+         (--map (om-elem-to-trimmed-string it)))
+    => '("** headline four")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '(3))
+         (--map (om-elem-to-trimmed-string it)))
+    => nil
+
+    (:comment "Use a two-membered list with an operator and an "
+              "integer to match a range of indices. Allowed "
+              "operators are <, >, <=, and and >=.")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '((> 0)))
+         (--map (om-elem-to-trimmed-string it)))
+    => '("** COMMENT headline three" "** headline four")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '((>= 1)))
+         (--map (om-elem-to-trimmed-string it)))
+    => '("** COMMENT headline three" "** headline four")
+
+    (:comment "Use a plist to match based on an elements properties.")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '((:todo-keyword "TODO")))
+         (--map (om-elem-to-trimmed-string it)))
+    => '("** TODO headline two")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '((:todo-keyword nil)))
+         (--map (om-elem-to-trimmed-string it)))
+    => '("** COMMENT headline three" "** headline four")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '((:todo-keyword "DONE")))
+         (--map (om-elem-to-trimmed-string it)))
+    => nil
+
+    (:content "* headline one"
+              "this is *text1* of *text2*"
+              "** headline two"
+              "here is more *text3*"
+              "*** headline three"
+              "and here is even more *text4* and *text5*"
+              "**** headline 4")
+
+    (:comment "Specify multiple levels of matching using multiple "
+              "queries.")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '(section paragraph bold))
+         (--map (om-elem-to-trimmed-string it)))
+    => '("*text1*" "*text2*")
+
+    (:comment "Use the keyword :any as a wildcard to match any "
+              "element at a particular level.")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '(:any :any bold))
+         (--map (om-elem-to-trimmed-string it)))
+    => '("*text1*" "*text2*")
+    ;; TODO not sure why an empty string comes out here
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '(section paragraph :any))
+         (--map (om-elem-to-trimmed-string it)))
+    => '("this is" "*text1*" "of" "*text2*" "")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '(:any bold))
+         (--map (om-elem-to-trimmed-string it)))
+    => nil
+
+    (:comment "Use the keyword :many to match one or more levels "
+              "of any element.")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '(:many bold))
+         (--map (om-elem-to-trimmed-string it)))
+    => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
+
+    (:comment "Use the keyword :many! to match one or more levels, "
+              "except unlike :many do not match within any elements "
+              "that have already matched.")
+    ;; TODO add predicate???
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find '(headline :many! headline))
+         (--map (om-elem-to-trimmed-string it)))
+    => '("*** headline three
+and here is even more *text4* and *text5*
+**** headline 4"))
+  
+  (defexamples-content om-elem-find-first
+    nil
+
+    (:content
+     "* headline one"
+     "** TODO headline two"
+     "** COMMENT headline three"
+     "** headline four")
+
+    (:comment "Find the first subheadline")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find-first '(headline))
+         (om-elem-to-trimmed-string))
+    => "** TODO headline two")
+
+  (defexamples-content om-elem-find-last
+    nil
+
+    (:content "* headline one"
+               "** TODO headline two"
+               "** COMMENT headline three"
+               "** headline four")
+
+    (:comment "Find the last subheadline")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-find-last '(headline))
+         (om-elem-to-trimmed-string))
+    => "** headline four")
+
+  (defexamples-content om-elem-delete
+    nil
+
+    (:content "* headline one"
+               "** headline two"
+               "** headline three"
+               "** headline four")
+
+    (:comment "Selectively delete headlines")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-delete '(headline))
+         (om-elem-to-trimmed-string))
+    => "* headline one"
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-delete-first '(headline))
+         (om-elem-to-trimmed-string))
+    => "* headline one
+** headline three
+** headline four"
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-delete-last '(headline))
+         (om-elem-to-trimmed-string))
+    => "* headline one
+** headline two
+** headline three")
+
+  ;; TODO add extract
+  (defexamples-content om-elem-extract nil)
+
+  (defexamples-content om-elem-map
+    nil
+
+    (:content "* headline one"
+               "** TODO headline two"
+               "** headline three"
+               "** headline four")
+
+    (:comment "Selectively mark headlines as DONE")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-map '(headline) (lambda (it) (om-elem-headline-set-todo "DONE" it)))
+         (om-elem-to-trimmed-string))
+    => "* headline one
+** DONE headline two
+** DONE headline three
+** DONE headline four"
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-map-first* '(headline) (om-elem-headline-set-todo "DONE" it))
+         (om-elem-to-trimmed-string))
+    => "* headline one
+** DONE headline two
+** headline three
+** headline four"
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-map-last '(headline) (-partial #'om-elem-headline-set-todo "DONE"))
+         (om-elem-to-trimmed-string))
+    => "* headline one
+** TODO headline two
+** headline three
+** DONE headline four")
+  
+  ;; TODO add mapcat
+  (defexamples-content om-elem-mapcat nil)
+
+  ;; TODO add replace
+  (defexamples-content om-elem-replace nil)
+
+  ;; TOOD add insert-before
+  (defexamples-content om-elem-insert-before nil)
+
+  ;; TOOD add insert-after
+  (defexamples-content om-elem-insert-after nil)
+
+  ;; TOOD add insert-within
+  (defexamples-content om-elem-insert-within nil)
+
+  ;; TOOD add splice-before
+  (defexamples-content om-elem-splice-before nil)
+
+  ;; TOOD add splice-after
+  (defexamples-content om-elem-splice-after nil)
+
+  ;; TOOD add splice-within
+  (defexamples-content om-elem-splice-within nil))
