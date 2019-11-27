@@ -807,8 +807,7 @@
             :value (om-elem-build-timestamp
                     'inactive '(2019 1 1) :end '(2019 1 2)))
            (om-elem-to-trimmed-string))
-      ;; TODO update duration when setting
-      => "CLOCK: [2019-01-01 Tue]--[2019-01-02 Wed]"
+      => "CLOCK: [2019-01-01 Tue]--[2019-01-02 Wed] => 24:00"
 
       (:content "~learn to~")
       (->> (om-elem-parse-this-object)
@@ -902,6 +901,7 @@
       (:content "* dummy"
                 "stuff")
       (->> (om-elem-parse-this-element)
+           (om-elem-set-property :archivedp t)
            (om-elem-set-property :commentedp t)
            (om-elem-set-property :level 2)
            (om-elem-set-property :pre-blank 1)
@@ -910,7 +910,7 @@
            (om-elem-set-property :title '("smartie"))
            (om-elem-set-property :todo-keyword "TODO")
            (om-elem-to-trimmed-string))
-      => (:result "** TODO COMMENT [#A] smartie                                           :tmsu:"
+      => (:result "** TODO COMMENT [#A] smartie                                   :tmsu:ARCHIVE:"
                   ""
                   "stuff")
 
@@ -973,13 +973,12 @@
            (om-elem-to-trimmed-string))
       => "[[file:/dev/null]]"
 
-      ;; TODO update the value
-      ;; (:content "{{{economics}}}")
-      ;; (->> (om-elem-parse-this-object)
-      ;;      (om-elem-set-property :key "freakonomics")
-      ;;      (om-elem-set-property :args '("x=4" "y=2"))
-      ;;      (om-elem-to-trimmed-string))
-      ;; => "{{{freakonomics(x=4,y=2)}}}"
+      (:content "{{{economics}}}")
+      (->> (om-elem-parse-this-object)
+           (om-elem-set-property :key "freakonomics")
+           (om-elem-set-property :args '("x=4" "y=2"))
+           (om-elem-to-trimmed-string))
+      => "{{{freakonomics(x=4,y=2)}}}"
 
       (:content "* dummy"
                 ":PROPERTIES:"

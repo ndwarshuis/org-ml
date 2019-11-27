@@ -681,6 +681,34 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--pull-diary-sexp-value (v p eo)
   (->> (s-chop-prefix "%%" v) (read)))
 
+;; updaters
+
+(defun om-elem--macro-update-value (macro)
+  (let* ((k (om-elem--get-property :key macro))
+         (as (om-elem--get-property :args macro))
+         (v (if as (format "%s(%s)" k (s-join "," as)) k)))
+    (om-elem--set-property :value (format "{{{%s}}}" v) macro)))
+
+(defun om-elem--clock-update-duration (clock)
+  (let* ((ts (om-elem--get-property :value clock))
+         (plist
+          (if (om-elem--timestamp-is-ranged-fast-p ts)
+              (let* ((seconds (om-elem--timestamp-get-range ts))
+                     (h (-> seconds (/ 3600) (floor)))
+                     (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
+                `(:duration ,(format "%2d:%02d" h m) :status running))
+            '(:duration nil :status closed))))
+    (om-elem--set-properties plist clock)))
+
+(defun om-elem--headline-update-tags (headline)
+  (cl-flet
+      ((add-archive-tag-maybe
+        (tags)
+        (let ((tags* (--remove (equal it org-archive-tag) tags)))
+          (if (om-elem--get-property :archivedp headline)
+              (-snoc tags* org-archive-tag) tags*))))
+    (om-elem--map-property :tags #'add-archive-tag-maybe headline)))
+
 (defconst om-elem--type-alist
   '((babel-call (:call om-elem--allow-oneline-string)
                 (:inside-header om-elem--allow-from-plist
@@ -691,7 +719,9 @@ and object containers and includes the 'plain-text' type.")
                              om-elem--pull-to-plist))
     (bold)
     (center-block)
-    (clock (:value om-elem--allow-clock-timestamp))
+    (clock (:value om-elem--allow-clock-timestamp
+                   nil
+                   om-elem--clock-update-duration))
     (code (:value om-elem--allow-oneline-string))
     (comment (:value om-elem--allow-oneline-string))
     (comment-block (:value om-elem--allow-oneline-string))
@@ -714,14 +744,17 @@ and object containers and includes the 'plain-text' type.")
     (fixed-width (:value om-elem--allow-oneline-string))
     (footnote-definition (:label om-elem--allow-oneline-string-or-nil))
     (footnote-reference (:label om-elem--allow-oneline-string-or-nil))
-    (headline (:archivedp om-elem--allow-boolean)
+    (headline (:archivedp om-elem--allow-boolean
+                          nil
+                          om-elem--headline-update-tags)
               (:commentedp om-elem--allow-boolean)
               (:footnote-section-p om-elem--allow-boolean)
               (:level om-elem--allow-pos-integer)
               (:pre-blank om-elem--allow-non-neg-integer)
               (:priority om-elem--allow-headline-priority)
               (:tags om-elem--allow-headline-tags
-                     om-elem--to-headline-tags)
+                     om-elem--to-headline-tags
+                     om-elem--headline-update-tags)
               (:title om-elem--allow-headline-title)
               (:todo-keyword om-elem--allow-oneline-string-or-nil)) ; TODO restrict this?
     (horizontal-rule)
@@ -751,8 +784,12 @@ and object containers and includes the 'plain-text' type.")
     (link (:format om-elem--allow-link-format)
           (:path om-elem--allow-oneline-string)
           (:type om-elem--allow-link-type))
-    (macro (:args om-elem--allow-string-list)
-           (:key om-elem--allow-oneline-string))
+    (macro (:args om-elem--allow-string-list
+                  nil
+                  om-elem--macro-update-value)
+           (:key om-elem--allow-oneline-string
+                 nil
+                 om-elem--macro-update-value))
     (node-property (:key om-elem--allow-oneline-string)
                    (:value om-elem--allow-oneline-string))
     (paragraph)
@@ -822,27 +859,41 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--get-getter-function (type prop)
   (om-elem--get-strict-function 1 type prop))
 
+(defun om-elem--get-update-function (type prop)
+  (om-elem--get-strict-function 2 type prop))
+
 (defun om-elem--set-property-strict (prop value elem)
-  (let ((filter-fun (-> (om-elem--get-type elem)
-                        (om-elem--get-setter-function prop))))
-    (--> (funcall filter-fun value prop elem)
-         (om-elem--set-property prop it elem))))
+  (let* ((type (om-elem--get-type elem))
+         (filter-fun (om-elem--get-setter-function type prop))
+         (update-fun (om-elem--get-update-function type prop))
+         (elem* (--> (funcall filter-fun value prop elem)
+                     (om-elem--set-property prop it elem))))
+    (if update-fun (funcall update-fun elem*) elem*)))
 
 (defun om-elem--set-properties-strict (plist elem)
   (cl-flet
       ((filter
-        (acc prop-value)
+        (acc prop-value type)
         (-let* (((prop value) prop-value)
-                (filter-fun (-> (om-elem--get-type elem)
-                                (om-elem--get-setter-function prop))))
+                (filter-fun (om-elem--get-setter-function type prop)))
           (->> (funcall filter-fun value prop elem)
                (funcall #'plist-put acc prop)))))
     (if (om-elem--is-plist-p plist)
-        (let ((props (om-elem--get-properties elem)))
-          (om-elem--construct
-           (om-elem--get-type elem)
-           (->> (-partition 2 plist) (-reduce-from #'filter props))
-           (om-elem--get-contents elem)))
+        (let* ((cur-props (om-elem--get-properties elem))
+               (type (om-elem--get-type elem))
+               (prop-values (-partition 2 plist))
+               (update-funs
+                (->> (-map #'car prop-values)
+                     (--map (om-elem--get-update-function type it))
+                     (-uniq)
+                     (-non-nil)))
+               (elem*
+                (om-elem--construct
+                 (om-elem--get-type elem)
+                 (--reduce-from (filter acc it type) cur-props prop-values)
+                 (om-elem--get-contents elem))))
+          (if (not update-funs) elem*
+            (--reduce-from (funcall it acc) elem* update-funs)))
       (error "Not a plist: %S" plist))))
 
 (defun om-elem--get-property-strict (prop elem)
@@ -1457,14 +1508,14 @@ float-times, which assumes the :type property is valid."
            (om-elem--headline-remove-tag org-archive-tag headline))))
     (om-elem--set-property-pred 'booleanp :archivedp flag headline*)))
 
-(defun om-elem--headline-update-archived (headline)
-  (cl-flet
-      ((add-archive-tag-maybe
-        (tags)
-        (let ((filtered-tags (--remove org-archive-tag tags)))
-          (if (om-elem--get-property :archivedp headline)
-              (-snoc filtered-tags org-archive-tag) filtered-tags))))
-    (om-elem--map-property :tags #'add-archive-tag-maybe headline)))
+;; (defun om-elem--headline-update-tags (headline)
+;;   (cl-flet
+;;       ((add-archive-tag-maybe
+;;         (tags)
+;;         (let ((filtered-tags (--remove org-archive-tag tags)))
+;;           (if (om-elem--get-property :archivedp headline)
+;;               (-snoc filtered-tags org-archive-tag) filtered-tags))))
+;;     (om-elem--map-property :tags #'add-archive-tag-maybe headline)))
 
 (defun om-elem--headline-set-commented (flag headline)
   "Set the commented flag of HEADLINE element to FLAG."
@@ -1756,8 +1807,7 @@ Optionally provide PARAMETERS."
 (om-elem--defun om-elem-build-macro (key &key args post-blank)
   "Build a macro object with KEY and optional ARGS."
   (->> (om-elem--build-object 'macro post-blank)
-       (om-elem--set-properties-strict `(:key ,key :args ,args))
-       (om-elem--macro-update-value)))
+       (om-elem--set-properties-strict `(:key ,key :args ,args))))
 
 (om-elem--defun om-elem-build-statistics-cookie (value &key post-blank)
   "Build a statistics cookie object with NUMBER and DENOMINATOR."
@@ -1882,7 +1932,6 @@ Optionally supply TIME2 to create a closed clock."
   (let ((ts (om-elem-build-timestamp 'inactive start :end end)))
     (->> (om-elem--build-element 'clock post-blank)
          (om-elem--set-property-strict :value ts)
-         (om-elem--clock-update-duration)
          (om-elem--set-property-nil :status))))
 
 (om-elem--defun om-elem-build-comment (value &key post-blank)
@@ -2035,8 +2084,6 @@ Optionally provide ELEMS as contents."
               :footnote-section-p footnote-section-p
               :commentedp commentedp
               :archivedp archivedp))
-       ;; this must go after setting tags since it alters the tags
-       (om-elem--headline-update-archived)
        (om-elem--set-properties-nil '(:todo-type :raw-value))))
 
 ;; TODO add inline text
