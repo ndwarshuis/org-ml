@@ -455,7 +455,7 @@ and object containers and includes the 'plain-text' type.")
   (and (stringp s) (not (s-contains? "\n" s))))
 
 (defun om-elem--oneline-string-or-null-p (s)
-  (or (null s) (oneline-string-p s)))
+  (or (null s) (om-elem--oneline-string-p s)))
 
 (defun om-elem--allow (value prop elem msg pred)
   (declare (indent 4))
@@ -473,7 +473,7 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--allow-oneline-string (v p eo)
   (om-elem--allow v p eo "oneline string" #'om-elem--oneline-string-p))
 
-(defun om-elem--allow-oneline-string-or-nil (prop v)
+(defun om-elem--allow-oneline-string-or-nil (v p eo)
   (om-elem--allow v p eo "oneline string or nil"
     #'om-elem--oneline-string-or-null-p))
 
@@ -688,7 +688,7 @@ and object containers and includes the 'plain-text' type.")
     (radio-target)
     (section)
     (special-block (:type om-elem--allow-oneline-string))
-    (src-block (:language om-elem--allow-oneline-string-or-null)
+    (src-block (:language om-elem--allow-oneline-string-or-nil)
                (:parameters om-elem--allow-from-plist)
                (:preserve-indent om-elem--allow-boolean)
                (:switches om-elem--allow-from-string-list-space-delim)
