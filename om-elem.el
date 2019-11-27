@@ -250,6 +250,9 @@ Optionally supply DOCSTRING to override the generic docstring."
    (cl-evenp (length obj))
    (-all? #'symbolp (-slice obj 0 nil 2))))
 
+(defun om-elem--plist-remove (key plist)
+  (->> (-partition 2 plist) (--remove (eq (car it) key)) (-flatten-n 1)))
+
 (defun om-elem--convert-intra-index (n list)
   (let* ((N (length list))
          (upper (1- N))
@@ -2986,7 +2989,86 @@ strings.")
                     (eval `(cl-defmethod om-elem-remove-from-property
                              ,arglist ,doc-string ,@body))))))))
 
+;; plist-put
+
+(cl-defgeneric om-elem-plist-put-property (prop key value elem)
+  "Insert KEY and VALUE pair into PROP within ELEM.
+KEY is a keyword and VALUE is a symbol. This only applies to 
+properties that are represented as plists.")
+
+(-> om-elem--type-alist
+    (reverse)
+    (--each 
+        (let ((type (car it))
+              (props (cdr it)))
+          (-> (--filter (eq (om-elem--get-setter-function type (car it))
+                            'om-elem--allow-from-plist)
+                        props)
+              (--each
+                  (let* ((prop (car it))
+                         (arglist `((prop (eql ,prop)) key value
+                                    (elem (head ,type))))
+                         (doc-string "TODO add docstring")
+                         (body
+                          '((om-elem--verify key keywordp value symbol)
+                            (om-elem--map-property-strict*
+                             prop (plist-put it key value) elem))))
+                    (eval `(cl-defmethod om-elem-plist-put-property
+                             ,arglist ,doc-string ,@body))))))))
+
+;; plist-remove
+
+(cl-defgeneric om-elem-plist-remove-property (prop key elem)
+  "Remove KEY and its value from PROP within ELEM.
+KEY is a keyword. This only applies to properties that are
+represented as plists.")
+
+(-> om-elem--type-alist
+    (reverse)
+    (--each 
+        (let ((type (car it))
+              (props (cdr it)))
+          (-> (--filter (eq (om-elem--get-setter-function type (car it))
+                            'om-elem--allow-from-plist)
+                        props)
+              (--each
+                  (let* ((prop (car it))
+                         (arglist `((prop (eql ,prop)) key
+                                    (elem (head ,type))))
+                         (doc-string "TODO add docstring")
+                         (body
+                          '((om-elem--verify key keywordp)
+                            (om-elem--map-property-strict*
+                             prop (om-elem--plist-remove it key) elem))))
+                    (eval `(cl-defmethod om-elem-plist-remove-property
+                             ,arglist ,doc-string ,@body))))))))
+
 ;;; generic
+
+(cl-defgeneric om-elem-plist-put-property (prop key value elem)
+  "Insert KEY and VALUE pair into PROP within ELEM.
+KEY is a keyword and VALUE is a symbol. This only applies to 
+properties that are represented as plists.")
+
+(-> om-elem--type-alist
+    (reverse)
+    (--each 
+        (let ((type (car it))
+              (props (cdr it)))
+          (-> (--filter (eq (om-elem--get-setter-function type (car it))
+                            'om-elem--allow-from-plist)
+                        props)
+              (--each
+                  (let* ((prop (car it))
+                         (arglist `((prop (eql ,prop)) key value
+                                    (elem (head ,type))))
+                         (doc-string "TODO add docstring")
+                         (body
+                          '((om-elem--verify key keywordp value symbol)
+                            (om-elem--map-property-strict*
+                             prop (plist-put it key value) elem))))
+                    (eval `(cl-defmethod om-elem-plist-put-property
+                             ,arglist ,doc-string ,@body))))))))
 
 ;; (defun om-elem-map-property (prop fun elem)
 ;;   (om-elem--verify elem om-elem--is-element-or-object-p)
