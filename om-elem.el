@@ -713,157 +713,153 @@ and object containers and includes the 'plain-text' type.")
     (om-elem--map-property :tags #'add-archive-tag-maybe headline)))
 
 (defconst om-elem--type-alist
-  '((babel-call (:call om-elem--allow-oneline-string)
-                (:inside-header om-elem--allow-from-plist
-                                om-elem--pull-to-plist)
-                (:arguments om-elem--allow-from-string-list-comma-delim
-                            om-elem--pull-to-string-list-comma-delim)
-                (:end-header om-elem--allow-from-plist
-                             om-elem--pull-to-plist))
+  '((babel-call (:call :set om-elem--allow-oneline-string)
+                (:inside-header :set om-elem--allow-from-plist
+                                :get om-elem--pull-to-plist)
+                (:arguments :set om-elem--allow-from-string-list-comma-delim
+                            :get om-elem--pull-to-string-list-comma-delim)
+                (:end-header :set om-elem--allow-from-plist
+                             :get om-elem--pull-to-plist))
     (bold)
     (center-block)
-    (clock (:value om-elem--allow-clock-timestamp
-                   nil
-                   om-elem--clock-update-duration))
-    (code (:value om-elem--allow-oneline-string))
-    (comment (:value om-elem--allow-oneline-string))
-    (comment-block (:value om-elem--allow-oneline-string))
-    (drawer (:drawer-name om-elem--allow-oneline-string))
-    (diary-sexp (:value om-elem--allow-diary-sexp-value
-                        om-elem--pull-diary-sexp-value))
-    (dynamic-block (:arguments om-elem--allow-from-plist
-                               om-elem--pull-to-plist)
-                   (:block-name om-elem--allow-oneline-string))
-    (entity (:name om-elem--allow-entity-name)
-            (:use-brackets-p om-elem--allow-boolean))
-    (example-block (:preserve-indent om-elem--allow-boolean)
-                   (:switches om-elem--allow-from-string-list-space-delim
-                              om-elem--pull-to-string-list-space-delim)
-                   (:value om-elem--allow-string))
-    (export-block (:type om-elem--allow-oneline-string)
-                  (:value om-elem--allow-string))
-    (export-snippet (:back-end om-elem--allow-oneline-string)
-                    (:value om-elem--allow-string))
-    (fixed-width (:value om-elem--allow-oneline-string))
-    (footnote-definition (:label om-elem--allow-oneline-string-or-nil))
-    (footnote-reference (:label om-elem--allow-oneline-string-or-nil))
-    (headline (:archivedp om-elem--allow-boolean
-                          nil
-                          om-elem--headline-update-tags)
-              (:commentedp om-elem--allow-boolean)
-              (:footnote-section-p om-elem--allow-boolean)
-              (:level om-elem--allow-pos-integer)
-              (:pre-blank om-elem--allow-non-neg-integer)
-              (:priority om-elem--allow-headline-priority)
-              (:tags om-elem--allow-headline-tags
-                     om-elem--to-headline-tags
-                     om-elem--headline-update-tags)
-              (:title om-elem--allow-headline-title)
-              (:todo-keyword om-elem--allow-oneline-string-or-nil)) ; TODO restrict this?
+    (clock (:value :set om-elem--allow-clock-timestamp
+                   :cis om-elem--clock-update-duration))
+    (code (:value :set om-elem--allow-oneline-string))
+    (comment (:value :set om-elem--allow-oneline-string))
+    (comment-block (:value :set om-elem--allow-oneline-string))
+    (drawer (:drawer-name :set om-elem--allow-oneline-string))
+    (diary-sexp (:value :set om-elem--allow-diary-sexp-value
+                        :get om-elem--pull-diary-sexp-value))
+    (dynamic-block (:arguments :set om-elem--allow-from-plist
+                               :get om-elem--pull-to-plist)
+                   (:block-name :set om-elem--allow-oneline-string))
+    (entity (:name :set om-elem--allow-entity-name)
+            (:use-brackets-p :set om-elem--allow-boolean))
+    (example-block (:preserve-indent :set om-elem--allow-boolean)
+                   (:switches :set om-elem--allow-from-string-list-space-delim
+                              :get om-elem--pull-to-string-list-space-delim)
+                   (:value :set om-elem--allow-string))
+    (export-block (:type :set om-elem--allow-oneline-string)
+                  (:value :set om-elem--allow-string))
+    (export-snippet (:back-end :set om-elem--allow-oneline-string)
+                    (:value :set om-elem--allow-string))
+    (fixed-width (:value :set om-elem--allow-oneline-string))
+    (footnote-definition (:label :set om-elem--allow-oneline-string-or-nil))
+    (footnote-reference (:label :set om-elem--allow-oneline-string-or-nil))
+    (headline (:archivedp :set om-elem--allow-boolean
+                          :cis om-elem--headline-update-tags)
+              (:commentedp :set om-elem--allow-boolean)
+              (:footnote-section-p :set om-elem--allow-boolean)
+              (:level :set om-elem--allow-pos-integer)
+              (:pre-blank :set om-elem--allow-non-neg-integer)
+              (:priority :set om-elem--allow-headline-priority)
+              (:tags :set om-elem--allow-headline-tags
+                     :get om-elem--to-headline-tags
+                     :cis om-elem--headline-update-tags)
+              (:title :set om-elem--allow-headline-title)
+              (:todo-keyword :set om-elem--allow-oneline-string-or-nil)) ; TODO restrict this?
     (horizontal-rule)
-    (inline-babel-call (:call om-elem--allow-oneline-string)
-                       (:inside-header om-elem--allow-from-plist
-                                       om-elem--pull-to-plist)
-                       (:arguments om-elem--allow-from-string-list-comma-delim
-                                   om-elem--pull-to-string-list-comma-delim)
-                       (:end-header om-elem--allow-from-plist
-                                    om-elem--pull-to-plist))
-    (inline-src-block (:language om-elem--allow-oneline-string)
-                      (:parameters om-elem--allow-from-plist
-                                   om-elem--pull-to-plist)
-                      (:value om-elem--allow-oneline-string))
+    (inline-babel-call (:call :set om-elem--allow-oneline-string)
+                       (:inside-header :set om-elem--allow-from-plist
+                                       :get om-elem--pull-to-plist)
+                       (:arguments :set om-elem--allow-from-string-list-comma-delim
+                                   :get om-elem--pull-to-string-list-comma-delim)
+                       (:end-header :set om-elem--allow-from-plist
+                                    :get om-elem--pull-to-plist))
+    (inline-src-block (:language :set om-elem--allow-oneline-string)
+                      (:parameters :set om-elem--allow-from-plist
+                                   :get om-elem--pull-to-plist)
+                      (:value :set om-elem--allow-oneline-string))
     ;; (inlinetask)
     (italic)
-    (item (:bullet om-elem--allow-item-bullets
-                   om-elem--to-item-bullets)
-          (:checkbox om-elem--allow-item-checkbox-symbols)
-          (:counter om-elem--allow-pos-integer-or-nil)
-          (:tag om-elem--allow-item-tag))
-    (keyword (:key om-elem--allow-oneline-string)
-             (:value om-elem--allow-oneline-string))
-    (latex-environment (:value om-elem--allow-string))
-    (latex-fragment (:value om-elem--allow-string))
+    (item (:bullet :set om-elem--allow-item-bullets
+                   :get om-elem--to-item-bullets)
+          (:checkbox :set om-elem--allow-item-checkbox-symbols)
+          (:counter :set om-elem--allow-pos-integer-or-nil)
+          (:tag :set om-elem--allow-item-tag))
+    (keyword (:key :set om-elem--allow-oneline-string)
+             (:value :set om-elem--allow-oneline-string))
+    (latex-environment (:value :set om-elem--allow-string))
+    (latex-fragment (:value :set om-elem--allow-string))
     (line-break)
-    (link (:format om-elem--allow-link-format)
-          (:path om-elem--allow-oneline-string)
-          (:type om-elem--allow-link-type))
-    (macro (:args om-elem--allow-string-list
-                  nil
-                  om-elem--macro-update-value)
-           (:key om-elem--allow-oneline-string
-                 nil
-                 om-elem--macro-update-value))
-    (node-property (:key om-elem--allow-oneline-string)
-                   (:value om-elem--allow-oneline-string))
+    (link (:format :set om-elem--allow-link-format)
+          (:path :set om-elem--allow-oneline-string)
+          (:type :set om-elem--allow-link-type))
+    (macro (:args :set om-elem--allow-string-list
+                  :cis om-elem--macro-update-value)
+           (:key :set om-elem--allow-oneline-string
+                 :cis om-elem--macro-update-value))
+    (node-property (:key :set om-elem--allow-oneline-string)
+                   (:value :set om-elem--allow-oneline-string))
     (paragraph)
     (plain-list)
     (plain-text)
-    (planning (:closed om-elem--allow-planning-timestamp)
-              (:deadline om-elem--allow-planning-timestamp)
-              (:scheduled om-elem--allow-planning-timestamp))
+    (planning (:closed :set om-elem--allow-planning-timestamp)
+              (:deadline :set om-elem--allow-planning-timestamp)
+              (:scheduled :set om-elem--allow-planning-timestamp))
     (property-drawer)
     (quote-block)
     (radio-target)
     (section)
-    (special-block (:type om-elem--allow-oneline-string))
-    (src-block (:language om-elem--allow-oneline-string-or-nil)
-               (:parameters om-elem--allow-from-plist
-                            om-elem--pull-to-plist)
-               (:preserve-indent om-elem--allow-boolean)
-               (:switches om-elem--allow-from-string-list-space-delim
-                          om-elem--pull-to-string-list-space-delim)
-               (:value om-elem--allow-string))
-    (statistics-cookie (:value om-elem--allow-statistics-cookie-value
-                               om-elem--to-statistics-cookie))
+    (special-block (:type :set om-elem--allow-oneline-string))
+    (src-block (:language :set om-elem--allow-oneline-string-or-nil)
+               (:parameters :set om-elem--allow-from-plist
+                            :get om-elem--pull-to-plist)
+               (:preserve-indent :set om-elem--allow-boolean)
+               (:switches :set om-elem--allow-from-string-list-space-delim
+                          :get om-elem--pull-to-string-list-space-delim)
+               (:value :set om-elem--allow-string))
+    (statistics-cookie (:value :set om-elem--allow-statistics-cookie-value
+                               :get om-elem--to-statistics-cookie))
     (strike-through)
-    (subscript (:use-brackets-p om-elem--allow-boolean))
-    (superscript (:use-brackets-p om-elem--allow-boolean))
-    (table (:tblfm om-elem--allow-string-list))
+    (subscript (:use-brackets-p :set om-elem--allow-boolean))
+    (superscript (:use-brackets-p :set om-elem--allow-boolean))
+    (table (:tblfm :set om-elem--allow-string-list))
     (table-cell)
     (table-row)
-    (target (:value om-elem--allow-oneline-string))
-    (timestamp (:year-start om-elem--allow-pos-integer)
-               (:month-start om-elem--allow-pos-integer)
-               (:day-start om-elem--allow-pos-integer)
-               (:hour-start om-elem--allow-non-neg-integer-or-nil)
-               (:minute-start om-elem--allow-non-neg-integer-or-nil)
-               (:year-end om-elem--allow-pos-integer)
-               (:month-end om-elem--allow-pos-integer)
-               (:day-end om-elem--allow-pos-integer)
-               (:hour-end om-elem--allow-non-neg-integer-or-nil)
-               (:minute-end om-elem--allow-non-neg-integer-or-nil)
-               (:type om-elem--allow-timestamp-type)
-               (:repeater-type om-elem--allow-timestamp-repeater-type)
-               (:repeater-unit om-elem--allow-timestamp-unit)
-               (:repeater-value om-elem--allow-pos-integer)
-               (:warning-type om-elem--allow-timestamp-warning-type)
-               (:warning-unit om-elem--allow-timestamp-unit)
-               (:warning-value om-elem--allow-pos-integer))
+    (target (:value :set om-elem--allow-oneline-string))
+    (timestamp (:year-start :set om-elem--allow-pos-integer)
+               (:month-start :set om-elem--allow-pos-integer)
+               (:day-start :set om-elem--allow-pos-integer)
+               (:hour-start :set om-elem--allow-non-neg-integer-or-nil)
+               (:minute-start :set om-elem--allow-non-neg-integer-or-nil)
+               (:year-end :set om-elem--allow-pos-integer)
+               (:month-end :set om-elem--allow-pos-integer)
+               (:day-end :set om-elem--allow-pos-integer)
+               (:hour-end :set om-elem--allow-non-neg-integer-or-nil)
+               (:minute-end :set om-elem--allow-non-neg-integer-or-nil)
+               (:type :set om-elem--allow-timestamp-type)
+               (:repeater-type :set om-elem--allow-timestamp-repeater-type)
+               (:repeater-unit :set om-elem--allow-timestamp-unit)
+               (:repeater-value :set om-elem--allow-pos-integer)
+               (:warning-type :set om-elem--allow-timestamp-warning-type)
+               (:warning-unit :set om-elem--allow-timestamp-unit)
+               (:warning-value :set om-elem--allow-pos-integer))
     (underline)
-    (verbatim (:value om-elem--allow-oneline-string))
+    (verbatim (:value :set om-elem--allow-oneline-string))
     (verse-block)))
 
 ;; add post-blank functions to all entries
-(let ((post-blank-funs '(:post-blank om-elem--allow-non-neg-integer)))
+(let ((post-blank-funs '(:post-blank :set om-elem--allow-non-neg-integer)))
   (setq om-elem--type-alist
         (--map (-snoc it post-blank-funs) om-elem--type-alist)))
 
-(defun om-elem--get-strict-function (index type prop)
+(defun om-elem--get-strict-function (operation type prop)
   (-if-let (type-list (alist-get type om-elem--type-alist))
-      (-if-let (prop-list (alist-get prop type-list))
-          (nth index prop-list)
+      (-if-let (plist (alist-get prop type-list))
+          (plist-get plist operation)
         (error "Unsettable property '%s' for type '%s' requested"
                prop type))
     (error "Tried to get property for non-existent type %s" type)))
 
 (defun om-elem--get-setter-function (type prop)
-  (om-elem--get-strict-function 0 type prop))
+  (om-elem--get-strict-function :set type prop))
 
 (defun om-elem--get-getter-function (type prop)
-  (om-elem--get-strict-function 1 type prop))
+  (om-elem--get-strict-function :set type prop))
 
 (defun om-elem--get-update-function (type prop)
-  (om-elem--get-strict-function 2 type prop))
+  (om-elem--get-strict-function :cis type prop))
 
 (defun om-elem--set-property-strict (prop value elem)
   (let* ((type (om-elem--get-type elem))
