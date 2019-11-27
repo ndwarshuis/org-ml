@@ -2125,6 +2125,16 @@ nested element to return."
    (--first (and (om-elem--is-type-p 'drawer it)
                  (om-elem--property-is-equal-p :drawer-name name it)))))
 
+(defun om-elem--headline-get-properties-drawer (headline)
+  (-some->>
+   (om-elem--headline-get-section headline)
+   (--first (om-elem--is-type-p 'property-drawer it))))
+
+(defun om-elem--headline-get-node-properties (headline)
+  (-some->>
+   (om-elem--headline-get-properties-drawer headline)
+   (--filter (om-elem--is-type-p 'node-property it))))
+
 (defun om-elem--headline-get-planning (headline)
   (-some->> (om-elem--headline-get-section headline)
             (om-elem--get-contents)
