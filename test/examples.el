@@ -1138,7 +1138,6 @@
 
   (def-example-subgroup "Babel Call"
     nil
-    ;; TODO add get/set/map to call/value
     ;; TODO add get/set/insert/remove to arguments/inside-header/end-header
     )
 
@@ -1164,76 +1163,59 @@
 
   (def-example-subgroup "Code"
     nil
-    ;; TODO add get/set/map for value
     )
 
   (def-example-subgroup "Comment"
     nil
-    ;; TODO add get/set/map for value
     )
 
   (def-example-subgroup "Comment Block"
     nil
-    ;; TODO add get/set/map for value
     )
 
   (def-example-subgroup "Diary Sexp"
     nil
-    ;; TODO add get/set/map for value
     )
   
   (def-example-subgroup "Drawer"
     nil
-    ;; TODO add get/set/map for drawer-name
     )
 
   (def-example-subgroup "Dynamic Block"
     nil
-    ;; TODO add get/set/map for block-name
     ;; TODO add get/set/insert/remove for arguments
     )
 
   (def-example-subgroup "Entity"
     nil
-    ;; TODO add get/set name
     ;; TODO add predicate/toggle for use-brackets
     )
  
   (def-example-subgroup "Example Block"
     nil
-    ;; TODO add get value
-    ;; TODO add set value
-    ;; TODO add map value
     ;; TODO add set/get/insert/remove for switches
     ;; TODO add toggle/predicate for preserve-indent
     )
 
   (def-example-subgroup "Export Block"
     nil
-    ;; TODO add get value
-    ;; TODO add set value
-    ;; TODO add map value
     ;; TODO add get/set type
     )
 
   (def-example-subgroup "Export Snippet"
     nil
-    ;; TODO add get/set/map value/back-end
     )
 
   (def-example-subgroup "Fixed Width"
     nil
-    ;; TODO add get/set/map value
     )
 
   (def-example-subgroup "Footnote Definition"
     nil
-    ;; TODO add get/set/map label
     )
 
   (def-example-subgroup "Footnote Reference"
     nil
-    ;; TODO add get/set/map label
     )
 
   (def-example-subgroup "Headline"
@@ -1283,71 +1265,72 @@
            (om-elem-headline-has-tag-p "tmsu"))
       => t)
 
-    (defexamples-content om-elem-headline-set-todo
-      nil
-      (:content "* TODO dummy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-set-todo "DONE")
-           (om-elem-to-trimmed-string))
-      => "* DONE dummy"
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-set-todo nil)
-           (om-elem-to-trimmed-string))
-      => "* dummy")
+    ;; (defexamples-content om-elem-headline-set-todo
+    ;;   nil
+    ;;   (:content "* TODO dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-set-todo "DONE")
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "* DONE dummy"
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-set-todo nil)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "* dummy")
 
-    (defexamples-content om-elem-headline-set-archived
-      nil
-      ;; TODO this is annoying to test...add a regex operator
-      (:content "* dummy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-set-archived t)
-           (om-elem-to-trimmed-string))
-      => "* dummy                                                             :ARCHIVE:"
-      (:content "* dummy                                                             :ARCHIVE:")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-set-archived nil)
-           (om-elem-to-trimmed-string))
-      => "* dummy")
+    ;; (defexamples-content om-elem-headline-set-archived
+    ;;   nil
+    ;;   ;; TODO this is annoying to test...add a regex operator
+    ;;   (:content "* dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-set-archived t)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "* dummy                                                             :ARCHIVE:"
+    ;;   (:content "* dummy                                                             :ARCHIVE:")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-set-archived nil)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "* dummy")
 
-    (defexamples-content om-elem-headline-set-commented
-      nil
-      (:content "* dummy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-set-commented t)
-           (om-elem-to-trimmed-string))
-      => "* COMMENT dummy"
-      (:content "* COMMENT dummy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-set-commented nil)
-           (om-elem-to-trimmed-string))
-      => "* dummy")
+    ;; (defexamples-content om-elem-headline-set-commented
+    ;;   nil
+    ;;   (:content "* dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-set-commented t)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "* COMMENT dummy"
+    ;;   (:content "* COMMENT dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-set-commented nil)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "* dummy")
 
-    (defexamples-content om-elem-headline-set-priority
-      nil
-      (:content "* dummy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-set-priority ?A)
-           (om-elem-to-trimmed-string))
-      => "* [#A] dummy"
-      (:content "* [#A] dummy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-set-priority nil)
-           (om-elem-to-trimmed-string))
-      => "* dummy")
+    ;; (defexamples-content om-elem-headline-set-priority
+    ;;   nil
+    ;;   (:content "* dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-set-priority ?A)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "* [#A] dummy"
+    ;;   (:content "* [#A] dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-set-priority nil)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "* dummy")
 
     ;; TODO add the shortcut version of this
-    (defexamples-content om-elem-headline-set-title
-      nil
-      (:content "* dummy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-set-title '("portishead"))
-           (om-elem-to-trimmed-string))
-      => "* portishead"
-      ;; TODO add an example with a secondary string
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-set-title nil)
-           (om-elem-to-trimmed-string))
-      => "*")
+
+    ;; (defexamples-content om-elem-headline-set-title
+    ;;   nil
+    ;;   (:content "* dummy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-set-title '("portishead"))
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "* portishead"
+    ;;   ;; TODO add an example with a secondary string
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-set-title nil)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "*")
 
     ;; (defexamples-content om-elem-headline-toggle-archived
     ;;   nil
@@ -1407,12 +1390,10 @@
 
   (def-example-subgroup "Inline Babel Call"
     nil
-    ;; TODO add get/set/map value
     )
   
   (def-example-subgroup "Inline Src Block"
     nil
-    ;; TODO add get/set/map value
     )
 
   ;; TODO add inlinetask
@@ -1420,52 +1401,53 @@
   (def-example-subgroup "Item"
     nil
 
-    ;; TODO add get checkbox
-    (defexamples-content om-elem-item-set-checkbox
-      nil
-      (:content "- [ ] one")
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-set-checkbox 'on)
-           (om-elem-to-trimmed-string))
-      => "- [X] one"
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-set-checkbox nil)
-           (om-elem-to-trimmed-string))
-      => "- one")
+    ;; ;; TODO add get checkbox
+    ;; (defexamples-content om-elem-item-set-checkbox
+    ;;   nil
+    ;;   (:content "- [ ] one")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-set-checkbox 'on)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "- [X] one"
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-set-checkbox nil)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "- one")
 
-    ;; TODO add get bullet
-    (defexamples-content om-elem-item-set-bullet
-      nil
-      (:content "- one")
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-set-bullet 1)
-           (om-elem-to-trimmed-string))
-      => "1. one"
-      (:comment "This is actually correct due to a bug")
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-set-bullet '+)
-           (om-elem-to-trimmed-string))
-      => "- one"
-      (:content "1. one")
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-set-bullet '-)
-           (om-elem-to-trimmed-string))
-      => "- one")
+    ;; ;; TODO add get bullet
+    ;; (defexamples-content om-elem-item-set-bullet
+    ;;   nil
+    ;;   (:content "- one")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-set-bullet 1)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "1. one"
+    ;;   (:comment "This is actually correct due to a bug")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-set-bullet '+)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "- one"
+    ;;   (:content "1. one")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-set-bullet '-)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "- one")
 
-    ;; TODO add get tag
     ;; TODO add shortcut version
-    (defexamples-content om-elem-item-set-tag
-      nil
-      (:content "- one")
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-set-tag '("tmsu"))
-           (om-elem-to-trimmed-string))
-      => "- tmsu :: one"
-      (:content "- tmsu :: one")
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-set-tag nil)
-           (om-elem-to-trimmed-string))
-      => "- one")
+
+    ;; ;; TODO add get tag
+    ;; (defexamples-content om-elem-item-set-tag
+    ;;   nil
+    ;;   (:content "- one")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-set-tag '("tmsu"))
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "- tmsu :: one"
+    ;;   (:content "- tmsu :: one")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-set-tag nil)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "- one")
 
     (defexamples-content om-elem-item-is-unchecked-p
       nil
@@ -1529,17 +1511,14 @@
 
   (def-example-subgroup "Keyword"
     nil
-    ;; TODO add get/set/map value
     )
 
   (def-example-subgroup "Latex Environment"
     nil
-    ;; TODO add get/set/map value
     )
 
   (def-example-subgroup "Latex Fragment"
     nil
-    ;; TODO add get/set/map value
     )
 
   ;; line break has no specific properties
@@ -1547,80 +1526,80 @@
   (def-example-subgroup "Link"
     nil
 
-    ;; TODO add get/map path
-    (defexamples-content om-elem-link-set-path
-      nil
-      (:content "[[eldorado][gold]]")
-      (->> (om-elem-parse-this-object)
-           (om-elem-link-set-path "404")
-           (om-elem-to-trimmed-string))
-      => "[[404][gold]]"
-      (:content "[[file:eldorado][gold]]")
-      (->> (om-elem-parse-this-object)
-           (om-elem-link-set-path "404")
-           (om-elem-to-trimmed-string))
-      => "[[file:404][gold]]")
+    ;; ;; TODO add get/map path
+    ;; (defexamples-content om-elem-link-set-path
+    ;;   nil
+    ;;   (:content "[[eldorado][gold]]")
+    ;;   (->> (om-elem-parse-this-object)
+    ;;        (om-elem-link-set-path "404")
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "[[404][gold]]"
+    ;;   (:content "[[file:eldorado][gold]]")
+    ;;   (->> (om-elem-parse-this-object)
+    ;;        (om-elem-link-set-path "404")
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "[[file:404][gold]]")
 
-    ;; TODO add get type
-    (defexamples-content om-elem-link-set-type
-      nil
-      (:content "[[eldorado]]")
-      (->> (om-elem-parse-this-object)
-           (om-elem-link-set-type "file")
-           (om-elem-to-trimmed-string))
-      => "[[file:eldorado]]"
-      (:content "[[file:eldorado]]")
-      (->> (om-elem-parse-this-object)
-           (om-elem-link-set-type nil)
-           (om-elem-to-trimmed-string))
-      => "[[eldorado]]"
-      (->> (om-elem-parse-this-object)
-           (om-elem-link-set-type "fuzzy")
-           (om-elem-to-trimmed-string))
-      => "[[eldorado]]")
-    ;; TODO add get/set format
+    ;; ;; TODO add get type
+    ;; (defexamples-content om-elem-link-set-type
+    ;;   nil
+    ;;   (:content "[[eldorado]]")
+    ;;   (->> (om-elem-parse-this-object)
+    ;;        (om-elem-link-set-type "file")
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "[[file:eldorado]]"
+    ;;   (:content "[[file:eldorado]]")
+    ;;   (->> (om-elem-parse-this-object)
+    ;;        (om-elem-link-set-type nil)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "[[eldorado]]"
+    ;;   (->> (om-elem-parse-this-object)
+    ;;        (om-elem-link-set-type "fuzzy")
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "[[eldorado]]")
+    ;; ;; TODO add get/set format
     )
 
   (def-example-subgroup "Macro"
     nil
-    ;; TODO add get/set/map key/value
     ;; TODO add get/set/add/remove arg
     )
 
   (def-example-subgroup "Node Property"
     nil
     
-    ;; TODO add get/map key
-    (defexamples-content om-elem-node-property-set-key
-      nil
-      (:content "* dummy"
-                ":PROPERTIES:"
-                ":key:      value"
-                ":END:")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-map* '(section property-drawer node-property)
-                         (om-elem-node-property-set-key "lock" it))
-           (om-elem-to-trimmed-string))
-      => "* dummy
-:PROPERTIES:
-:lock:     value
-:END:")
+;;     ;; TODO add get/map key
+;;     (defexamples-content om-elem-node-property-set-key
+;;       nil
+;;       (:content "* dummy"
+;;                 ":PROPERTIES:"
+;;                 ":key:      value"
+;;                 ":END:")
+;;       (->> (om-elem-parse-this-headline)
+;;            (om-elem-map* '(section property-drawer node-property)
+;;                          (om-elem-node-property-set-key "lock" it))
+;;            (om-elem-to-trimmed-string))
+;;       => "* dummy
+;; :PROPERTIES:
+;; :lock:     value
+;; :END:")
 
-    ;; TODO add get/map value
-    (defexamples-content om-elem-node-property-set-value
-      nil
-      (:content "* dummy"
-                ":PROPERTIES:"
-                ":key:      value"
-                ":END:")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-map* '(section property-drawer node-property)
-                         (om-elem-node-property-set-value "lock" it))
-           (om-elem-to-trimmed-string))
-      => "* dummy
-:PROPERTIES:
-:key:      lock
-:END:"))
+;;     ;; TODO add get/map value
+;;     (defexamples-content om-elem-node-property-set-value
+;;       nil
+;;       (:content "* dummy"
+;;                 ":PROPERTIES:"
+;;                 ":key:      value"
+;;                 ":END:")
+;;       (->> (om-elem-parse-this-headline)
+;;            (om-elem-map* '(section property-drawer node-property)
+;;                          (om-elem-node-property-set-value "lock" it))
+;;            (om-elem-to-trimmed-string))
+;;       => "* dummy
+;; :PROPERTIES:
+;; :key:      lock
+;; :END:"))
+    )
 
   ;; paragraph has no specific properties
   ;; plain-list has no specific properties
@@ -1637,20 +1616,14 @@
 
   (def-example-subgroup "Special Block"
     nil
-    ;; TODO add get/set/map type
     )
 
   (def-example-subgroup "Src Block"
     nil
-    ;; TODO add get/set/map value
-    ;; TODO add get/set/map language
-    ;; TODO add get/set/add/remove switches/parameters
-    ;; TODO add get/set/toggle preserve-indent
     )
 
   (def-example-subgroup "Statistics Cookie"
     nil
-    ;; TODO add get/set value
     ;; TODO add predicate for complete/empty
     )
 
@@ -1676,7 +1649,6 @@
 
   (def-example-subgroup "Target"
     nil
-    ;; TODO add get/set/map value
     )
 
   (def-example-subgroup "Timestamp"
@@ -1902,7 +1874,6 @@
 
   (def-example-subgroup "Verbatim"
     nil
-    ;; TODO add get/set/map value
     )
 
   ;; verse-block has no specific properties
@@ -2644,21 +2615,21 @@ and here is even more *text4* and *text5*
 
     (:comment "Selectively mark headlines as DONE")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-map '(headline) (lambda (it) (om-elem-headline-set-todo "DONE" it)))
+         (om-elem-map '(headline) (lambda (it) (om-elem-set-property :todo-keyword "DONE" it)))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** DONE headline two"
                 "** DONE headline three"
                 "** DONE headline four")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-map-first* '(headline) (om-elem-headline-set-todo "DONE" it))
+         (om-elem-map-first* '(headline) (om-elem-set-property :todo-keyword "DONE" it))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** DONE headline two"
                 "** headline three"
                 "** headline four")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-map-last '(headline) (-partial #'om-elem-headline-set-todo "DONE"))
+         (om-elem-map-last '(headline) (-partial #'om-elem-set-property :todo-keyword "DONE"))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** TODO headline two"
