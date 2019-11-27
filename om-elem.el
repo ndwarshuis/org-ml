@@ -3045,31 +3045,6 @@ represented as plists.")
 
 ;;; generic
 
-(cl-defgeneric om-elem-plist-put-property (prop key value elem)
-  "Insert KEY and VALUE pair into PROP within ELEM.
-KEY is a keyword and VALUE is a symbol. This only applies to 
-properties that are represented as plists.")
-
-(-> om-elem--type-alist
-    (reverse)
-    (--each 
-        (let ((type (car it))
-              (props (cdr it)))
-          (-> (--filter (eq (om-elem--get-setter-function type (car it))
-                            'om-elem--allow-from-plist)
-                        props)
-              (--each
-                  (let* ((prop (car it))
-                         (arglist `((prop (eql ,prop)) key value
-                                    (elem (head ,type))))
-                         (doc-string "TODO add docstring")
-                         (body
-                          '((om-elem--verify key keywordp value symbol)
-                            (om-elem--map-property-strict*
-                             prop (plist-put it key value) elem))))
-                    (eval `(cl-defmethod om-elem-plist-put-property
-                             ,arglist ,doc-string ,@body))))))))
-
 ;; (defun om-elem-map-property (prop fun elem)
 ;;   (om-elem--verify elem om-elem--is-element-or-object-p)
 ;;   (om-elem--map-property prop fun elem))
@@ -3097,12 +3072,12 @@ property list in ELEM."
   (om-elem--verify elem om-elem--is-element-or-object-p)
   (om-elem--set-properties plist elem))
 
-(defun om-elem-shift-property (prop n elem)
-  "Shift PROP of ELEM by N where N is a positive or negative integer."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (unless (plist-member (om-elem--get-properties elem) prop)
-    (error "Property %s does not exist in %s" prop elem))
-  (om-elem--shift-property prop n elem))
+;; (defun om-elem-shift-property (prop n elem)
+;;   "Shift PROP of ELEM by N where N is a positive or negative integer."
+;;   (om-elem--verify elem om-elem--is-element-or-object-p)
+;;   (unless (plist-member (om-elem--get-properties elem) prop)
+;;     (error "Property %s does not exist in %s" prop elem))
+;;   (om-elem--shift-property prop n elem))
 
 ;; (defun om-elem-toggle-property (prop elem)
 ;;   "Toggle the state of PROP in ELEM."
