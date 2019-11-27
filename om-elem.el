@@ -1877,8 +1877,7 @@ VALUE is the part inside the '%%(value)' part of the sexp."
        (om-elem--set-property-pred #'stringp :drawer-name drawer-name)))
 
 (om-elem--defun om-elem-build-dynamic-block (block-name
-                                             arguments
-                                             &key post-blank
+                                             &key post-blank arguments
                                              &rest elems)
   "Build a dynamic block greater element called NAME with PARAMS.
 PARAMS is s list of cons cells for each key/val pair. Optionally
