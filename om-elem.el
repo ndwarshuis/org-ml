@@ -451,102 +451,290 @@ and object containers and includes the 'plain-text' type.")
   "Return ELEM if it is one of TYPES or nil otherwise."
   (and (om-elem--is-any-type-p types elem) elem))
 
+(defun om-elem--oneline-string-p (s)
+  (and (stringp s) (not (s-contains? "\n" s))))
+
+(defun om-elem--oneline-string-or-null-p (s)
+  (or (null s) (oneline-string-p s)))
+
+(defun om-elem--allow (value prop elem msg pred)
+  (declare (indent 4))
+  (if (funcall pred value) value
+    (error
+     "Property '%s' in element/object of type '%s' must be a %s. Got '%S'"
+     prop (om-elem--get-type elem) msg value)))
+
+(defun om-elem--allow-string (v p eo)
+  (om-elem--allow prop value prop elem "string" #'stringp))
+
+(defun om-elem--allow-string-or-nil (v p eo)
+  (om-elem--allow v p eo "string or nil" #'string-or-null-p))
+
+(defun om-elem--allow-oneline-string (v p eo)
+  (om-elem--allow v p eo "oneline string" #'om-elem--oneline-string-p))
+
+(defun om-elem--allow-oneline-string-or-nil (prop v)
+  (om-elem--allow v p eo "oneline string or nil"
+    #'om-elem--oneline-string-or-null-p))
+
+(defun om-elem--allow-boolean (v p eo)
+  (om-elem--allow v p eo #'booleanp "t or nil"))
+
+(defun om-elem--allow-non-neg-integer (v p eo)
+  (om-elem--allow v p eo "non-negative integer"
+    (lambda (x) (and (integerp x) (<= 0 x)))))
+
+(defun om-elem--allow-non-neg-integer-or-nil (v p eo)
+  (om-elem--allow v p eo "non-negative integer or nil"
+    (lambda (x) (or (null x) (and (integerp x) (<= 0 x))))))
+
+(defun om-elem--allow-pos-integer (v p eo)
+  (om-elem--allow v p eo "positive integer"
+    (lambda (x) (and (integerp x) (<= 0 x)))))
+
+(defun om-elem--allow-pos-integer-or-nil (v p eo)
+  (om-elem--allow v p eo "positive integer or nil"
+    (lambda (x) (or (null x) (and (integerp x) (<= 0 x))))))
+
+(defun om-elem--allow-string-list (v p eo)
+  (om-elem--allow v p eo "list of oneline strings"
+    (lambda (x) (or (null x) (and (listp x) (-all? #'oneline-string-p x))))))
+
+(defun om-elem--allow-from-string-list-delim (v p eo delom)
+  (-some->> (om-elem--allow-string-list v p eo) (s-join delim)))
+
+(defun om-elem--allow-from-string-list-space-delim (v p eo)
+  (allow-from-string-list-delim v p eo " "))
+
+(defun om-elem--allow-from-string-list-comma-delim (v p eo)
+  (allow-from-string-list-delim v p eo ","))
+
+(defun om-elem--allow-from-plist (v p eo)
+  (-some->> (om-elem--allow v p eo "plist with symbols as values"
+              (lambda (x)
+                (and (om-elem--is-plist-p x)
+                     (->> (-slice x 1 nil 2) (-all? #'symbolp)))))
+            (-map #'symbol-name)
+            (s-join " ")))
+
+(defun om-elem--allow-symbols (v p eo syms)
+  (om-elem--allow v p eo (format "symbol from %S" syms)
+    (lambda (x) (memq x syms))))
+
+(defun om-elem--allow-link-format (v p eo)
+  (om-elem--allow-symbols v p eo '(plain angle bracket)))
+
+(defun om-elem--allow-link-type (v p eo)
+  (let* ((builtin '("coderef" "custom-id" "file" "id" "radio" "fuzzy"))
+         (msg (format "string from built-in types %S or `org-link-types'"
+                      builtin)))
+    (om-elem--allow v p eo msg
+      ;; TODO allow nil here for fuzzy?
+      (lambda (type) (member type (append builtin (org-link-types)))))))
+
+(defun om-elem--allow-item-checkbox-symbols (v p eo)
+  (om-elem--allow-symbols v p eo '(nil on off trans)))
+
+(defun om-elem--allow-item-bullets (v p eo)
+  (if (memq bullet '(- +)) (format "%s " bullet)
+    (-if-let (c (->> (if (listp bullet) (car bullet) bullet)
+                     (om-elem--item-validate-counter)))
+        (format (if (listp bullet) "%s) " "%s. ") c)
+      ;; TODO need better message
+      (error "Invalid bullet: %s" bullet))))
+
+(defun om-elem--allow-item-tag (v p eo)
+  (om-elem--allow v p eo "secondary-string that follows `om-elem--item-tag-restrictions'"
+    (lambda (x)
+      (--all? (om-elem--is-any-type-p om-elem--item-tag-restrictions it) x))))
+
+(defun om-elem--allow-clock-timestamp (v p eo)
+  (om-elem--allow v p eo "(ranged) inactive timestamp with no warning/repeater"
+    (lambda (ts)
+      (and (om-elem--is-type-p 'timestamp ts)
+           (om-elem--property-is-predicate-p*
+            :type (memq it '(inactive inactive-range)) ts)
+           (om-elem--property-is-nil-p :repeater-type ts)))))
+
+(defun om-elem--allow-planning-timestamp (v p eo)
+  (om-elem--allow v p eo "an zero-range, inactive timestamp object"
+    (lambda (ts)
+      (and (om-elem--is-type-p 'timestamp ts)
+           (om-elem--property-is-eq-p :type 'inactive ts)))))
+
+(defun om-elem--allow-entity-name (v p eo)
+  (om-elem--allow v p eo "string that makes `org-entity-get' return non-nil"
+    (lambda (n) (org-entity-get n))))
+
+(defun om-elem--allow-headline-tags (v p eo)
+  (om-elem--allow v p eo "list of oneline strings with `org-archive-tag' at the end if present"
+    (lambda (x) (and (-all? #'om-elem--oneline-string-p x) 
+                (not (< 1 (length (member org-archive-tag tags))))))))
+
+(defun om-elem--allow-headline-priority (v p eo)
+  (om-elem--allow v p eo "integer between `org-lowest-priority' and `org-highest-priority'"
+    (lambda (x)
+      (or (null priority)
+          (and (integerp v)
+               (>= org-lowest-priority v org-highest-priority))))))
+
+(defun om-elem--allow-headline-title (v p eo)
+  (om-elem--allow v p eo "secondary-string that follows `om-elem--headline-title-restrictions'"
+    (lambda (x)
+      (--all? (om-elem--is-any-type-p om-elem--headline-title-restrictions it) x))))
+
+(defun om-elem--allow-statistics-cookie-value (v p eo)
+  ;; TODO need better error messages
+  (cl-flet
+      ((mk-stat
+        (v)
+        (pcase v
+          (`(nil) "%")
+          (`(nil nil) "/")
+          (`(,(and (pred integerp) percent))
+           (if (< 100 percent) (error "Percent greater than 100")
+             (format "%s%%" percent)))
+          (`(,(and (pred integerp) numerator)
+             ,(and (pred integerp) denominator))
+           (if (> numerator denominator)
+               (error "Numerator greater than denominator")
+             (format "%s/%s" numerator denominator)))
+          (_ (error "Invalid stat-cookie value: %S" v)))))
+    (format "[%s]" (mk-stat value))))
+
+(defun om-elem--allow-timestamp-type (v p eo)
+  (om-elem--allow-symbols v p eo '(inactive inactive-range active
+                                            active-range diary)))
+
+(defun om-elem--allow-timestamp-repeater-type (v p eo)
+  (om-elem--allow-symbols v p eo '(nil catch-up restart cumulate)))
+
+(defun om-elem--allow-timestamp-warning-type (v p eo)
+  (om-elem--allow-symbols v p eo '(nil all first)))
+
+(defun om-elem--allow-timestamp-unit (v p eo)
+  (om-elem--allow-symbols v p eo '(nil year month week day hour)))
+
 (defconst om-elem--type-alist
-  '((babel-call :call stringp
-                :inside-header string-or-null-p
-                :arguments string-or-null-p
-                :end-header string-or-null-p
-                :value stringp)
+  '((babel-call (:call om-elem--allow-oneline-string)
+                (:inside-header om-elem--allow-from-plist)
+                (:arguments om-elem--allow-from-string-list-comma-delim)
+                (:end-header om-elem--allow-from-plist)
+                (:value om-elem--allow-string))
     (bold)
     (center-block)
-    (clock :duration string-or-null-p
-           :status (closed running)
-           :value is-timestamp-p)
-    (code :value stringp)
-    (comment :value stringp)
-    (comment-block :value stringp)
-    (drawer :drawer-name stringp)
-    (dynamic-block :arguments stringp
-                   :block-name stringp)
-    (entity :name stringp ; restricted by `org-entity-get'
-            :use-brackets-p booleanp)
-    (example-block :language stringp
-                   :parameters string-or-null-p
-                   :preserve-indent booleanp
-                   :switches string-or-null-p
-                   :value stringp)
-    (export-block :type stringp
-                  :value stringp)
-    (export-snippet :back-end stringp
-                    :value stringp)
-    (fixed-width :value stringp)
-    (footnote-definition :label stringp)
-    (footnote-reference :label stringp
-                        :type (inline standard))
-    (headline :archivedp booleanp
-              :commentedp booleanp
-              :footnote-section-p booleanp
-              :level (lambda (x) (<= 0 x))
-              :pre-blank (lambda (x) (<= 0 x))
-              :priority integerp ; technically bounded
-              :tags (--all? #'stringp it)
-              :title #'ignore ; restricted
-              :todo-keyword stringp) ; restricted
+    (clock (:value om-elem--allow-clock-timestamp))
+    (code (:value om-elem--allow-oneline-string))
+    (comment (:value om-elem--allow-oneline-string))
+    (comment-block (:value om-elem--allow-oneline-string))
+    (drawer (:drawer-name om-elem--allow-oneline-string))
+    (dynamic-block (:arguments om-elem--allow-from-plist)
+                   (:block-name om-elem--allow-oneline-string))
+    (entity (:name om-elem--allow-entity-name)
+            (:use-brackets-p om-elem--allow-boolean))
+    (example-block (:language om-elem--allow-oneline-string)
+                   (:preserve-indent om-elem--allow-boolean)
+                   (:switches om-elem--allow-from-string-list-space-delim)
+                   (:value om-elem--allow-string))
+    (export-block (:type om-elem--allow-oneline-string)
+                  (:value om-elem--allow-string))
+    (export-snippet (:back-end om-elem--allow-oneline-string)
+                    (:value om-elem--allow-string))
+    (fixed-width (:value om-elem--allow-oneline-string))
+    (footnote-definition (:label om-elem--allow-oneline-string))
+    (footnote-reference (:label om-elem--allow-oneline-string))
+    (headline (:commentedp om-elem--allow-boolean)
+              (:footnote-section-p om-elem--allow-boolean)
+              (:level om-elem--allow-pos-integer)
+              (:pre-blank om-elem--allow-non-neg-integer)
+              (:priority om-elem--allow-headline-priority)
+              (:tags om-elem--allow-headline-tags)
+              (:title om-elem--allow-headline-title)
+              (:todo-keyword om-elem--allow-oneline-string)) ; TODO restrict this?
     (horizontal-rule)
-    (inline-babel-call :call stringp
-                       :inside-header string-or-null-p
-                       :arguments string-or-null-p
-                       :end-header string-or-null-p
-                       :value string)
-    (inline-src-block :language stringp
-                      :parameters string-or-null-p
-                      :value string)
+    (inline-babel-call (:call om-elem--allow-oneline-string)
+                       (:inside-header om-elem--allow-from-plist)
+                       (:arguments om-elem--allow-from-string-list-comma-delim)
+                       (:end-header om-elem--allow-from-plist)
+                       (:value om-elem--allow-oneline-string))
+    (inline-src-block (:language om-elem--allow-oneline-string)
+                      (:parameters om-elem--allow-from-plist)
+                      (:value om-elem--allow-oneline-string))
     ;; (inlinetask)
     (italic)
-    (item :bullet #'ignore ; allow valid bullets
-          :checkbox (nil on off trans)
-          :counter integerp ; for now...
-          :tag #'ignore) ; restricted
-    (keyword :key stringp
-             :value stringp)
-    (latex-environment :value stringp)
-    (latex-fragment :value stringp)
+    (item (:bullet om-elem--allow-item-bullets)
+          (:checkbox om-elem--allow-item-checkbox-symbols)
+          (:counter om-elem--allow-pos-integer-or-nil)
+          (:tag om-elem--allow-item-tag))
+    (keyword (:key om-elem--allow-oneline-string)
+             (:value om-elem--allow-oneline-string))
+    (latex-environment (:value om-elem--allow-string))
+    (latex-fragment (:value om-elem--allow-string))
     (line-break)
-    (link :format (plain angle bracket)
-          :path stringp
-          :type #'ignore) ; restricted
-    (macro :args (--all? #'stringp it)
-           :key stringp
-           :value stringp)
-    (node-property :key stringp
-                   :value stringp)
+    (link (:format om-elem--allow-link-format)
+          (:path om-elem--allow-oneline-string)
+          (:type om-elem--allow-link-type))
+    (macro (:args om-elem--allow-string-list)
+           (:key om-elem--allow-oneline-string))
+    (node-property (:key om-elem--allow-oneline-string)
+                   (:value om-elem--allow-oneline-string))
     (paragraph)
     (plain-list)
-    (planning :closed is-timestamp
-              :deadline is-timestamp
-              :scheduled is-timestamp)
+    (planning (:closed om-elem--allow-planning-timestamp)
+              (:deadline om-elem--allow-planning-timestamp)
+              (:scheduled om-elem--allow-planning-timestamp))
     (property-drawer)
     (quote-block)
     (radio-target)
     (section)
-    (special-block :type stringp)
-    (src-block :language string-or-null-p
-               :parameters string-or-null-p
-               :preserve-indent booleanp
-               :switches string-or-null-p
-               :value stringp)
-    (statistics-cookie :value stringp)
+    (special-block (:type om-elem--allow-oneline-string))
+    (src-block (:language om-elem--allow-oneline-string-or-null)
+               (:parameters om-elem--allow-from-plist)
+               (:preserve-indent om-elem--allow-boolean)
+               (:switches om-elem--allow-from-string-list-space-delim)
+               (:value om-elem--allow-string))
+    (statistics-cookie (:value om-elem--allow-statistics-cookie-value))
     (strike-through)
-    (subscript :use-brackets-p booleanp)
-    (superscript :use-brackets-p booleanp)
-    (table :tblfm (--all? #'stringp it))
+    (subscript (:use-brackets-p om-elem--allow-boolean))
+    (superscript (:use-brackets-p om-elem--allow-boolean))
+    (table (:tblfm om-elem--allow-string-list))
     (table-cell)
-    (table-row :type (rule standard))
-    (target :value stringp)
-    ;; (timestamp)
+    (table-row)
+    (target (:value om-elem--allow-oneline-string))
+    (timestamp (:year-start om-elem--allow-pos-integer)
+               (:month-start om-elem--allow-pos-integer)
+               (:day-start om-elem--allow-pos-integer)
+               (:hour-start om-elem--allow-non-neg-integer-or-nil)
+               (:minute-start om-elem--allow-non-neg-integer-or-nil)
+               (:year-end om-elem--allow-pos-integer)
+               (:month-end om-elem--allow-pos-integer)
+               (:day-end om-elem--allow-pos-integer)
+               (:hour-end om-elem--allow-non-neg-integer-or-nil)
+               (:minute-end om-elem--allow-non-neg-integer-or-nil)
+               (:type om-elem--allow-timestamp-type)
+               (:repeater-type om-elem--allow-timestamp-repeater-type)
+               (:repeater-unit om-elem--allow-timestamp-unit)
+               (:repeater-value om-elem--allow-pos-integer)
+               (:warning-type om-elem--allow-timestamp-warning-type)
+               (:warning-unit om-elem--allow-timestamp-unit)
+               (:warning-value om-elem--allow-pos-integer))
     (underline)
-    (verbatim :value stringp)
+    (verbatim (:value om-elem--allow-oneline-string))
     (verse-block)))
+
+(defun om-elem--get-setter-function (type prop)
+  (-if-let (type-list (alist-get type om-elem--type-alist))
+      (-if-let (prop-list (alist-get prop type-list))
+          (car prop-list)
+        (error "Unsettable property '%s' for type '%s' requested"
+               prop type))
+    (error "Tried to get property for non-existent type %s" type)))
+
+(defun om-elem--set-property-strict (prop value elem)
+  (let ((filter-fun (-> (om-elem--get-type elem)
+                        (om-elem--get-setter-function prop))))
+    (--> (funcall filter-fun value prop elem)
+         (om-elem--set-property prop it elem))))
 
 ;;; INTERNAL PROPERTY FUNCTIONS
 
