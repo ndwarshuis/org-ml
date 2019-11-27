@@ -2367,7 +2367,6 @@ zero-indexed."
   (let ((row (if (om-elem--property-is-eq-p :type 'rule row) row
                (let ((width (om-elem--table-get-width table)))
                  (om-elem--table-pad-or-truncate width row)))))
-    (print (om-elem--table-get-width table))
     (om-elem--map-contents* (om-elem--replace-at index (apply #'om-elem-build-table-row row) it) table)))
 
 ;; TODO make replace/clear cell
