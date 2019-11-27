@@ -2588,6 +2588,27 @@ zero-indexed."
 
 ;;; PUBLIC PROPERTY FUNCTIONS
 
+;;; polymorphic
+
+(cl-defgeneric om-elem-set-property (prop value elem))
+
+(defun om-elem--gen-set-property (type prop)
+  (let* ((arglist `((prop (eql ,prop)) value (elem (head ,type))))
+         (doc-string "TODO add docstring")
+         (body '(om-elem--set-property-strict prop value elem)))
+    (eval `(cl-defmethod om-elem-set-property ,arglist ,doc-string ,body))))
+
+(-> om-elem--type-alist
+    (reverse)
+    (--each 
+        (let ((type (car it))
+              (props (cdr it)))
+          (-> (--remove (eq (car it) :post-blank) props)
+              (--each props (om-elem--gen-set-property type (car it)))))))
+
+(cl-defmethod om-elem-set-property ((prop (eql :post-blank)) value elem)
+  (om-elem--set-property-strict prop value elem))
+
 ;;; generic
 
 (defun om-elem-map-property (prop fun elem)
@@ -2603,12 +2624,12 @@ zero-indexed."
 (defmacro om-elem-map-properties* (plist elem)
   `(om-elem--map-properties ,plist ,elem))
 
-(defun om-elem-set-property (prop value elem)
-  "Set property PROP in element ELEM to VALUE."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (unless (plist-member (om-elem--get-properties elem) prop)
-    (error "Property %s does not exist in %s" prop elem))
-  (om-elem--set-property prop value elem))
+;; (defun om-elem-set-property (prop value elem)
+;;   "Set property PROP in element ELEM to VALUE."
+;;   (om-elem--verify elem om-elem--is-element-or-object-p)
+;;   (unless (plist-member (om-elem--get-properties elem) prop)
+;;     (error "Property %s does not exist in %s" prop elem))
+;;   (om-elem--set-property prop value elem))
 
 (defun om-elem-set-properties (plist elem)
   "Set all properties in ELEM to the values corresponding to PLIST.
