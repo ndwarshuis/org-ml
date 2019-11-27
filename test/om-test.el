@@ -228,7 +228,7 @@
 
 (ert-deftest om-elem--dynamic-block/valid-props ()
   (om-elem--compare-element-props
-   (om-elem-build-dynamic-block "name" '(:key val))
+   (om-elem-build-dynamic-block "name" :arguments '(:key val))
    "#+BEGIN: name args\nuseless\n#+END:"))
 
 (ert-deftest om-elem--footnote-definition/valid-props ()
