@@ -907,6 +907,8 @@ and object containers and includes the 'plain-text' type.")
   (let ((value (funcall fun (om-elem--get-property-strict prop elem))))
     (om-elem--set-property-strict prop value elem)))
 
+(om-elem--gen-anaphoric-form #'om-elem--map-property-strict)
+
 ;;; INTERNAL PROPERTY FUNCTIONS
 
 ;;; generic
@@ -2927,6 +2929,62 @@ one, it will silently be reset to one."
   (om-elem--map-property-strict prop #'om-elem--shift-pos-integer elem))
 
 ;; insert
+
+(cl-defgeneric om-elem-insert-into-property (prop index member elem)
+  "Insert string MEMBER into list PROP at INDEX within ELEM.
+This only applies to properties that are represented as lists of 
+strings.")
+
+(-> om-elem--type-alist
+    (reverse)
+    (--each 
+        (let ((type (car it))
+              (props (cdr it)))
+          (-> (--filter (memq (om-elem--get-setter-function type (car it))
+                              '(om-elem--allow-string-list
+                                om-elem--allow-headline-tags
+                                om-elem--allow-from-string-list-space-delim
+                                om-elem--allow-from-string-list-comma-delim))
+                        props)
+              (--each
+                  (let* ((prop (car it))
+                         (arglist `((prop (eql ,prop)) index member
+                                    (elem (head ,type))))
+                         (doc-string "TODO add docstring")
+                         (body
+                          '((om-elem--map-property-strict*
+                             prop (om-elem--insert-at index member it) elem))))
+                    (eval `(cl-defmethod om-elem-insert-into-property
+                             ,arglist ,doc-string ,@body))))))))
+
+;; remove
+
+(cl-defgeneric om-elem-remove-from-property (prop member elem)
+  "Remove string MEMBER from list PROP within ELEM.
+This only applies to properties that are represented as lists of 
+strings.")
+
+(-> om-elem--type-alist
+    (reverse)
+    (--each 
+        (let ((type (car it))
+              (props (cdr it)))
+          (-> (--filter (memq (om-elem--get-setter-function type (car it))
+                              '(om-elem--allow-string-list
+                                om-elem--allow-headline-tags
+                                om-elem--allow-from-string-list-space-delim
+                                om-elem--allow-from-string-list-comma-delim))
+                        props)
+              (--each
+                  (let* ((prop (car it))
+                         (arglist `((prop (eql ,prop)) index member
+                                    (elem (head ,type))))
+                         (doc-string "TODO add docstring")
+                         (body
+                          '((om-elem--map-property-strict*
+                             prop (-remove-item member it) elem))))
+                    (eval `(cl-defmethod om-elem-remove-from-property
+                             ,arglist ,doc-string ,@body))))))))
 
 ;;; generic
 
