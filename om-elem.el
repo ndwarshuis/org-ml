@@ -1428,7 +1428,7 @@ SHIFT is a positive or negative integer."
 
 ;; item
 
-(defun om-elm--item-get-tag (item)
+(defun om-elem--item-get-tag (item)
   (->> (om-elem--get-property :tag item) (om-elem-to-string)))
 
 (defun om-elem--item-is-unordered (item)
