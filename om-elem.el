@@ -457,6 +457,8 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--oneline-string-or-null-p (s)
   (or (null s) (om-elem--oneline-string-p s)))
 
+;; filters
+
 (defun om-elem--allow (value prop elem msg pred)
   (declare (indent 4))
   (if (funcall pred value) value
@@ -502,14 +504,25 @@ and object containers and includes the 'plain-text' type.")
       (or (null x)
           (and (listp x) (-all? #'om-elem--oneline-string-p x))))))
 
+;; converters
+
 (defun om-elem--allow-from-string-list-delim (v p eo delim)
   (-some->> (om-elem--allow-string-list v p eo) (s-join delim)))
+
+(defun om-elem--pull-to-string-list-delim (v delim)
+  (s-split delim v))
 
 (defun om-elem--allow-from-string-list-space-delim (v p eo)
   (om-elem--allow-from-string-list-delim v p eo " "))
 
+(defun om-elem--pull-to-string-list-space-delim (v)
+  (om-elem--pull-to-string-list-delim " " delim v))
+
 (defun om-elem--allow-from-string-list-comma-delim (v p eo)
   (om-elem--allow-from-string-list-delim v p eo ","))
+
+(defun om-elem--pull-to-string-list-comma-delim (v)
+  (om-elem--pull-to-string-list-delim "," delim v))
 
 (defun om-elem--allow-from-plist (v p eo)
   (-some->> (om-elem--allow v p eo "plist with symbols as values"
@@ -518,6 +531,10 @@ and object containers and includes the 'plain-text' type.")
                      (->> (-slice x 1 nil 2) (-all? #'symbolp)))))
             (-map #'symbol-name)
             (s-join " ")))
+
+(defun om-elem--pull-to-plist (v)
+  (-map #'intern (om-elem--pull-to-string-list-space v)))
+
 
 (defun om-elem--allow-symbols (v p eo syms)
   (om-elem--allow v p eo (format "symbol from %S" syms)
@@ -545,10 +562,36 @@ and object containers and includes the 'plain-text' type.")
       ;; TODO need better message
       (error "Invalid bullet: %s" bullet))))
 
+(defun om-elem--to-item-bullets (bullet)
+  ;; TODO refactor this
+  (if (s-matches? "^\\(-\\|+\\)" bullet)
+      (intern (s-left 1 bullet))
+    (let* ((case-fold-search nil) ; need case-sensitivity
+           (n (or (-some->> (s-match "^[0-9]+" bullet)
+                            (car)
+                            (string-to-number))
+                  ;; convert letters to numbers if they are used
+                  (-some->> (s-match "^[a-z]+" bullet)
+                            (car)
+                            (string-to-char)
+                            (+ -96))
+                  (-some->> (s-match "^[A-Z]+" bullet)
+                            (car)
+                            (string-to-char)
+                            (+ -64))
+                  (error "Invalid bullet found: %s" bullet))))
+      (cond
+       ((s-matches? "^[a-zA-Z0-9]+." bullet) n)
+       ((s-matches? "^[a-zA-Z0-9]+)" bullet) (list n))
+       (t (error "Invalid bullet found: %s" bullet))))))
+
 (defun om-elem--allow-item-tag (v p eo)
   (om-elem--allow v p eo "secondary-string that follows `om-elem--item-tag-restrictions'"
     (lambda (x)
       (--all? (om-elem--is-any-type-p om-elem--item-tag-restrictions it) x))))
+
+(defun om-elem--to-item-tag (v)
+  (om-elem--build-secondary-string v))
 
 (defun om-elem--allow-clock-timestamp (v p eo)
   (om-elem--allow v p eo "(ranged) inactive timestamp with no warning/repeater"
@@ -569,9 +612,12 @@ and object containers and includes the 'plain-text' type.")
     (lambda (n) (org-entity-get n))))
 
 (defun om-elem--allow-headline-tags (v p eo)
-  (om-elem--allow v p eo "list of oneline strings with `org-archive-tag' at the end if present"
+  (om-elem--allow v p eo "list of oneline strings without `org-archive-tag'"
     (lambda (x) (and (-all? #'om-elem--oneline-string-p x) 
-                (not (< 1 (length (member org-archive-tag x))))))))
+                (not (member org-archive-tag x))))))
+
+(defun om-elem--to-headline-tags (v)
+  (--remove org-archive-tag v))
 
 (defun om-elem--allow-headline-priority (v p eo)
   (om-elem--allow v p eo "integer between `org-lowest-priority' and `org-highest-priority'"
@@ -604,6 +650,18 @@ and object containers and includes the 'plain-text' type.")
           (_ (error "Invalid stat-cookie value: %S" v)))))
     (format "[%s]" (mk-stat v))))
 
+(defun om-elem--to-statistics-cookie (v)
+  (cond
+   ((equal "[%]" v) '(nil))
+   ((equal "[/]" v) '(nil nil))
+   (t
+    (->> (or (s-match-strings-all "\\[\\([0-9]+\\)/\\([0-9]+\\)\\]" v)
+             (s-match-strings-all "\\[\\([0-9]+\\)%\\]" v)
+             (error "Invalid stats-cookie: %s" v))
+         (car)
+         (cdr)
+         (-map #'string-to-number)))))
+
 (defun om-elem--allow-timestamp-type (v p eo)
   (om-elem--allow-symbols v p eo '(inactive inactive-range active
                                             active-range diary)))
@@ -620,11 +678,17 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--allow-diary-sexp-value (v p eo)
   (->> (om-elem--allow v p eo "list form" #'listp) (format "%%%%%S")))
 
+(defun om-elem--pull-diary-sexp-value (v p eo)
+  (->> (s-chop-prefix "%%" v) (read)))
+
 (defconst om-elem--type-alist
   '((babel-call (:call om-elem--allow-oneline-string)
-                (:inside-header om-elem--allow-from-plist)
-                (:arguments om-elem--allow-from-string-list-comma-delim)
-                (:end-header om-elem--allow-from-plist))
+                (:inside-header om-elem--allow-from-plist
+                                om-elem--pull-to-plist)
+                (:arguments om-elem--allow-from-string-list-comma-delim
+                            om-elem--pull-to-string-list-comma-delim)
+                (:end-header om-elem--allow-from-plist
+                             om-elem--pull-to-plist))
     (bold)
     (center-block)
     (clock (:value om-elem--allow-clock-timestamp))
@@ -632,13 +696,16 @@ and object containers and includes the 'plain-text' type.")
     (comment (:value om-elem--allow-oneline-string))
     (comment-block (:value om-elem--allow-oneline-string))
     (drawer (:drawer-name om-elem--allow-oneline-string))
-    (diary-sexp (:value om-elem--allow-diary-sexp-value))
-    (dynamic-block (:arguments om-elem--allow-from-plist)
+    (diary-sexp (:value om-elem--allow-diary-sexp-value
+                        om-elem--pull-diary-sexp-value))
+    (dynamic-block (:arguments om-elem--allow-from-plist
+                               om-elem--pull-to-plist)
                    (:block-name om-elem--allow-oneline-string))
     (entity (:name om-elem--allow-entity-name)
             (:use-brackets-p om-elem--allow-boolean))
     (example-block (:preserve-indent om-elem--allow-boolean)
-                   (:switches om-elem--allow-from-string-list-space-delim)
+                   (:switches om-elem--allow-from-string-list-space-delim
+                              om-elem--pull-to-string-list-space-delim)
                    (:value om-elem--allow-string))
     (export-block (:type om-elem--allow-oneline-string)
                   (:value om-elem--allow-string))
@@ -647,25 +714,32 @@ and object containers and includes the 'plain-text' type.")
     (fixed-width (:value om-elem--allow-oneline-string))
     (footnote-definition (:label om-elem--allow-oneline-string-or-nil))
     (footnote-reference (:label om-elem--allow-oneline-string-or-nil))
-    (headline (:commentedp om-elem--allow-boolean)
+    (headline (:archivedp om-elem--allow-boolean)
+              (:commentedp om-elem--allow-boolean)
               (:footnote-section-p om-elem--allow-boolean)
               (:level om-elem--allow-pos-integer)
               (:pre-blank om-elem--allow-non-neg-integer)
               (:priority om-elem--allow-headline-priority)
-              (:tags om-elem--allow-headline-tags)
+              (:tags om-elem--allow-headline-tags
+                     om-elem--to-headline-tags)
               (:title om-elem--allow-headline-title)
               (:todo-keyword om-elem--allow-oneline-string-or-nil)) ; TODO restrict this?
     (horizontal-rule)
     (inline-babel-call (:call om-elem--allow-oneline-string)
-                       (:inside-header om-elem--allow-from-plist)
-                       (:arguments om-elem--allow-from-string-list-comma-delim)
-                       (:end-header om-elem--allow-from-plist))
+                       (:inside-header om-elem--allow-from-plist
+                                       om-elem--pull-to-plist)
+                       (:arguments om-elem--allow-from-string-list-comma-delim
+                                   om-elem--pull-to-string-list-comma-delim)
+                       (:end-header om-elem--allow-from-plist
+                                    om-elem--pull-to-plist))
     (inline-src-block (:language om-elem--allow-oneline-string)
-                      (:parameters om-elem--allow-from-plist)
+                      (:parameters om-elem--allow-from-plist
+                                   om-elem--pull-to-plist)
                       (:value om-elem--allow-oneline-string))
     ;; (inlinetask)
     (italic)
-    (item (:bullet om-elem--allow-item-bullets)
+    (item (:bullet om-elem--allow-item-bullets
+                   om-elem--to-item-bullets)
           (:checkbox om-elem--allow-item-checkbox-symbols)
           (:counter om-elem--allow-pos-integer-or-nil)
           (:tag om-elem--allow-item-tag))
@@ -693,11 +767,14 @@ and object containers and includes the 'plain-text' type.")
     (section)
     (special-block (:type om-elem--allow-oneline-string))
     (src-block (:language om-elem--allow-oneline-string-or-nil)
-               (:parameters om-elem--allow-from-plist)
+               (:parameters om-elem--allow-from-plist
+                            om-elem--pull-to-plist)
                (:preserve-indent om-elem--allow-boolean)
-               (:switches om-elem--allow-from-string-list-space-delim)
+               (:switches om-elem--allow-from-string-list-space-delim
+                          om-elem--pull-to-string-list-space-delim)
                (:value om-elem--allow-string))
-    (statistics-cookie (:value om-elem--allow-statistics-cookie-value))
+    (statistics-cookie (:value om-elem--allow-statistics-cookie-value
+                               om-elem--to-statistics-cookie))
     (strike-through)
     (subscript (:use-brackets-p om-elem--allow-boolean))
     (superscript (:use-brackets-p om-elem--allow-boolean))
@@ -731,13 +808,19 @@ and object containers and includes the 'plain-text' type.")
   (setq om-elem--type-alist
         (--map (-snoc it post-blank-funs) om-elem--type-alist)))
 
-(defun om-elem--get-setter-function (type prop)
+(defun om-elem--get-strict-function (index type prop)
   (-if-let (type-list (alist-get type om-elem--type-alist))
       (-if-let (prop-list (alist-get prop type-list))
-          (car prop-list)
+          (nth index prop-list)
         (error "Unsettable property '%s' for type '%s' requested"
                prop type))
     (error "Tried to get property for non-existent type %s" type)))
+
+(defun om-elem--get-setter-function (type prop)
+  (om-elem--get-strict-function 0 type prop))
+
+(defun om-elem--get-getter-function (type prop)
+  (om-elem--get-strict-function 1 type prop))
 
 (defun om-elem--set-property-strict (prop value elem)
   (let ((filter-fun (-> (om-elem--get-type elem)
@@ -761,6 +844,12 @@ and object containers and includes the 'plain-text' type.")
            (->> (-partition 2 plist) (-reduce-from #'filter props))
            (om-elem--get-contents elem)))
       (error "Not a plist: %S" plist))))
+
+(defun om-elem--get-property-strict (prop elem)
+  (let ((filter-fun (-> (om-elem--get-type elem)
+                        (om-elem--get-getter-function prop)))
+        (value (om-elem--get-property prop elem)))
+    (if filter-fun (funcall filter-fun value) value)))
 
 ;;; INTERNAL PROPERTY FUNCTIONS
 
@@ -1368,6 +1457,15 @@ float-times, which assumes the :type property is valid."
            (om-elem--headline-remove-tag org-archive-tag headline))))
     (om-elem--set-property-pred 'booleanp :archivedp flag headline*)))
 
+(defun om-elem--headline-update-archived (headline)
+  (cl-flet
+      ((add-archive-tag-maybe
+        (tags)
+        (let ((filtered-tags (--remove org-archive-tag tags)))
+          (if (om-elem--get-property :archivedp headline)
+              (-snoc filtered-tags org-archive-tag) filtered-tags))))
+    (om-elem--map-property :tags #'add-archive-tag-maybe headline)))
+
 (defun om-elem--headline-set-commented (flag headline)
   "Set the commented flag of HEADLINE element to FLAG."
   (om-elem--set-property-pred 'booleanp :commentedp flag headline))
@@ -1935,10 +2033,10 @@ Optionally provide ELEMS as contents."
               :priority priority
               :tags tags
               :footnote-section-p footnote-section-p
-              :commentedp commentedp))
+              :commentedp commentedp
+              :archivedp archivedp))
        ;; this must go after setting tags since it alters the tags
-       ;; TODO this can be hacked by setting tags instead
-       (om-elem--headline-set-archived archivedp)
+       (om-elem--headline-update-archived)
        (om-elem--set-properties-nil '(:todo-type :raw-value))))
 
 ;; TODO add inline text
