@@ -832,6 +832,8 @@
                   "still not here"
                   "#+END_COMMENT")
 
+      ;; TODO add diary-sexp
+
       (:content ":LOGBOOK:"
                 ":END:")
       (->> (om-elem-parse-this-element)
