@@ -902,6 +902,11 @@ and object containers and includes the 'plain-text' type.")
         (value (om-elem--get-property prop elem)))
     (if filter-fun (funcall filter-fun value) value)))
 
+(defun om-elem--map-property-strict (prop fun elem)
+  (om-elem--verify fun functionp)
+  (let ((value (funcall fun (om-elem--get-property-strict prop elem))))
+    (om-elem--set-property-strict prop value elem)))
+
 ;;; INTERNAL PROPERTY FUNCTIONS
 
 ;;; generic
@@ -2761,13 +2766,9 @@ zero-indexed."
 
 ;;; polymorphic
 
-(cl-defgeneric om-elem-set-property (prop value elem))
+;; get
 
-(defun om-elem--gen-set-property (type prop)
-  (let* ((arglist `((prop (eql ,prop)) value (elem (head ,type))))
-         (doc-string "TODO add docstring")
-         (body '(om-elem--set-property-strict prop value elem)))
-    (eval `(cl-defmethod om-elem-set-property ,arglist ,doc-string ,body))))
+(cl-defgeneric om-elem-get-property (prop elem))
 
 (-> om-elem--type-alist
     (reverse)
@@ -2775,18 +2776,165 @@ zero-indexed."
         (let ((type (car it))
               (props (cdr it)))
           (-> (--remove (eq (car it) :post-blank) props)
-              (--each props (om-elem--gen-set-property type (car it)))))))
+              (--each
+                (let* ((prop (car it))
+                       (arglist `((prop (eql ,prop))
+                                  (elem (head ,type))))
+                       (doc-string "TODO add docstring")
+                       (body '(om-elem--get-property-strict
+                               prop elem)))
+                  (eval `(cl-defmethod om-elem-get-property
+                           ,arglist ,doc-string ,body))))))))
+
+(cl-defmethod om-elem-get-property ((prop (eql :post-blank)) elem)
+  (om-elem--get-property-strict prop elem))
+
+;; set
+
+(cl-defgeneric om-elem-set-property (prop value elem))
+
+(-> om-elem--type-alist
+    (reverse)
+    (--each 
+        (let ((type (car it))
+              (props (cdr it)))
+          (-> (--remove (eq (car it) :post-blank) props)
+              (--each
+                (let* ((prop (car it))
+                       (arglist `((prop (eql ,prop)) value
+                                  (elem (head ,type))))
+                       (doc-string "TODO add docstring")
+                       (body '(om-elem--set-property-strict
+                               prop value elem)))
+                  (eval `(cl-defmethod om-elem-set-property
+                           ,arglist ,doc-string ,body))))))))
 
 (cl-defmethod om-elem-set-property ((prop (eql :post-blank)) value elem)
   (om-elem--set-property-strict prop value elem))
 
+;; map
+
+(cl-defgeneric om-elem-map-property (prop fun elem))
+
+(-> om-elem--type-alist
+    (reverse)
+    (--each 
+        (let ((type (car it))
+              (props (cdr it)))
+          (-> (--remove (eq (car it) :post-blank) props)
+              (--each
+                (let* ((prop (car it))
+                       (arglist `((prop (eql ,prop)) fun
+                                  (elem (head ,type))))
+                       (doc-string "TODO add docstring")
+                       (body '(om-elem--map-property-strict
+                               prop fun elem)))
+                  (eval `(cl-defmethod om-elem-map-property
+                           ,arglist ,doc-string ,body))))))))
+
+(cl-defmethod om-elem-set-property ((prop (eql :post-blank)) value elem)
+  (om-elem--map-property-strict prop value elem))
+
+(defmacro om-elem-map-property* (prop form elem)
+  `(om-elem-map-property ,prop (lambda (it) ,form) ,elem))
+
+;; toggle
+
+(cl-defgeneric om-elem-toggle-property (prop elem))
+
+(-> om-elem--type-alist
+    (reverse)
+    (--each 
+        (let ((type (car it))
+              (props (cdr it)))
+          (-> (--filter (eq 'om-elem--allow-boolean
+                            (om-elem--get-setter-function type (car it)))
+                        props)
+              (--each
+                  (let* ((prop (car it))
+                         (arglist `((prop (eql ,prop))
+                                    (elem (head ,type))))
+                         (doc-string "TODO add docstring")
+                         (body '(om-elem--map-property-strict
+                                 prop #'not elem)))
+                    (eval `(cl-defmethod om-elem-toggle-property
+                             ,arglist ,doc-string ,body))))))))
+
+;; shift
+
+(cl-defgeneric om-elem-shift-property (prop n elem)
+  "Shift property PROP by N (an integer) units within ELEM.
+This only applies the properties that are represented as integers.")
+
+(defun om-elem--shift-pos-integer (x n)
+  (om-elem--verify n integerp)
+  (when x
+    (let ((x* (+ x n)))
+      (if (< 0 x*) x* 0))))
+
+(defun om-elem--shift-non-neg-integer (x n)
+  (om-elem--verify n integerp)
+  (when x
+    (let ((x* (+ x* n)))
+      (if (<= 0 x*) x* 0))))
+
+(cl-defmethod om-elem-shift-property ((prop (eql :post-blank)) n elem)
+  "Shift :post-blank of ELEM by N units up or down.
+N is a positive or negative integer. If the final value is less than
+zero, it will silently be reset to zero."
+  (om-elem--map-property-strict prop #'om-elem--shift-non-neg-integer elem))
+
+(cl-defmethod om-elem-shift-property ((prop (eql :counter)) n
+                                      (elem (head item)))
+  "Shift :counter of an item by N units up or down.
+N is a positive or negative integer. If the final value is less than
+one, it will silently be reset to one."
+  (om-elem--map-property-strict prop #'om-elem--shift-pos-integer elem))
+
+(cl-defmethod om-elem-shift-property ((prop (eql :priority)) n
+                                      (elem (head headline)))
+  "Shift :priority of a headline by N units up or down.
+N is a positive or negative integer. Final value will wrap around
+if if is numerically greater than `org-lowest-priority' or less than
+`org-highest-priority' (similar to how the interactive cycling works
+when editing a buffer."
+  (om-elem--verify n integerp)
+  ;; positive goes up (B -> A) and vice versa
+  (cl-flet
+      ((shift-priority
+        (priority)
+        (when priority
+          (let ((diff (1+ (- org-lowest-priority org-highest-priority)))
+                (offset (- priority org-highest-priority)))
+            (--> (- offset n)
+                 (mod it diff)
+                 (- it offset)
+                 (+ priority it))))))
+    (om-elem--map-property-strict prop #'shift-priority elem)))
+
+(cl-defmethod om-elem-shift-property ((prop (eql :pre-blank)) n
+                                      (elem (head headline)))
+  "Shift :pre-blank of a headline by N units up or down.
+N is a positive or negative integer. If the final value is less than
+zero, it will silently be reset to zero."
+  (om-elem--map-property-strict prop #'om-elem--shift-non-neg-integer elem))
+
+(cl-defmethod om-elem-shift-property ((prop (eql :level)) n
+                                      (elem (head headline)))
+  "Shift :level of a headline by N units up or down.
+N is a positive or negative integer. If the final value is less than
+one, it will silently be reset to one."
+  (om-elem--map-property-strict prop #'om-elem--shift-pos-integer elem))
+
+;; insert
+
 ;;; generic
 
-(defun om-elem-map-property (prop fun elem)
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--map-property prop fun elem))
+;; (defun om-elem-map-property (prop fun elem)
+;;   (om-elem--verify elem om-elem--is-element-or-object-p)
+;;   (om-elem--map-property prop fun elem))
 
-(om-elem--gen-anaphoric-form #'om-elem-map-property)
+;; (om-elem--gen-anaphoric-form #'om-elem-map-property)
 
 (defun om-elem-map-properties (plist elem)
   (om-elem--verify elem om-elem--is-element-or-object-p)
@@ -2816,12 +2964,12 @@ property list in ELEM."
     (error "Property %s does not exist in %s" prop elem))
   (om-elem--shift-property prop n elem))
 
-(defun om-elem-toggle-property (prop elem)
-  "Toggle the state of PROP in ELEM."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (unless (plist-member (om-elem--get-properties elem) prop)
-    (error "Property %s does not exist in %s" prop elem))
-  (om-elem--toggle-property prop elem))
+;; (defun om-elem-toggle-property (prop elem)
+;;   "Toggle the state of PROP in ELEM."
+;;   (om-elem--verify elem om-elem--is-element-or-object-p)
+;;   (unless (plist-member (om-elem--get-properties elem) prop)
+;;     (error "Property %s does not exist in %s" prop elem))
+;;   (om-elem--toggle-property prop elem))
 
 ;;; property specific
 
