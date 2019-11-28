@@ -964,21 +964,6 @@ property list in ELEM."
   (let ((plist (--mapcat (list it nil) props)))
     (om-elem--set-properties plist elem)))
 
-;; (defun om-elem--set-property-pred (fun prop value elem)
-;;   (eval `(om-elem--verify value ,fun) `((value . ,value)))
-;;   (om-elem--set-property prop value elem))
-
-;; (defun om-elem--set-properties-pred (pred plist elem)
-;;   "Set all properties in ELEM to the values corresponding to PLIST.
-;; PLIST is a list of property-value pairs that correspond to the
-;; property list in ELEM."
-;;   (cond
-;;    ((not plist) elem)
-;;    ((om-elem--is-plist-p plist)
-;;     (->> (om-elem--set-property-pred pred (nth 0 plist) (nth 1 plist) elem)
-;;          (om-elem--set-properties-pred pred (-drop 2 plist))))
-;;    (t (error "Not a plist: %s" plist))))
-
 (defun om-elem--map-property (prop fun elem)
   (om-elem--verify fun functionp)
   (let ((value (funcall fun (om-elem--get-property prop elem))))
@@ -1000,14 +985,6 @@ property list in ELEM."
            (lambda (index item) (if (cl-evenp index) item `(lambda (it) ,item)))
            ,plist)))
      (om-elem--map-properties new-plist ,elem)))
-
-;; (defun om-elem--shift-property (prop n elem)
-;;   "Shift PROP of ELEM by N where N is a positive or negative integer."
-;;   (om-elem--verify n integerp)
-;;   (om-elem--map-property* prop (+ n it) elem))
-
-;; (defun om-elem--toggle-property (prop elem)
-;;   (om-elem--map-property prop #'not elem))
 
 (defun om-elem--property-is-nil-p (prop elem)
   "Return t if PROP in ELEM is nil."
@@ -1032,122 +1009,8 @@ FUN is a predicate function that takes one argument."
 
 (om-elem--gen-anaphoric-form #'om-elem--property-is-predicate-p)
 
-;;; property-specific
-
-;; (defun om-elem--get-post-blank (elem)
-;;   (if (stringp elem)
-;;       (-> (s-match "[[:space:]]+$" elem) (car) (length))
-;;     (om-elem--get-property :post-blank elem)))
-
-;; (defun om-elem--set-post-blank (post-blank elem)
-;;   "Set the :post-blank property of ELEM to POST-BLANK."
-;;   (om-elem--verify post-blank om-elem--non-neg-integer-p)
-;;   (if (stringp elem) (s-append (s-repeat post-blank " ") elem)
-;;     (om-elem--set-property :post-blank post-blank elem)))
-
-;; (defun om-elem--shift-post-blank (n elem)
-;;   (let* ((pb* (+ n (om-elem--get-post-blank elem))))
-;;     (om-elem--set-post-blank (if (< pb* 0) 0 pb*) elem)))
-
-;; (defun om-elem--set-use-brackets (flag elem)
-;;   (om-elem--set-property-pred 'booleanp :use-brackets-p flag elem))
-
-;; (defun om-elem--toggle-use-brackets (elem)
-;;   (om-elem--toggle-property :use-brackets-p elem))
-
-;; (defun om-elem--set-preserve-indent (flag elem)
-;;   (om-elem--set-property-pred 'booleanp :preserve-indent flag elem))
-
-;; (defun om-elem--toggle-use-brackets (elem)
-;;   (om-elem--toggle-property :preserve-indent elem))
-
-;; (defun om-elem--set-key (key elem)
-;;   "Set the key of ELEM element to KEY (a string)."
-;;   (om-elem--set-property-pred 'stringp :key key elem))
-
-;; (defun om-elem--set-value (value elem)
-;;   "Set the value of ELEM element to VALUE (a string)."
-;;   (om-elem--set-property-pred 'stringp :value value elem))
-
-;; (defun om-elem--get-property-strings (prop delim elem)
-;;   (s-split delim (om-elem--get-property prop elem)))
-
-;; (defun om-elem--set-property-strings-concat (prop args delim elem)
-;;   (unless (and (listp args) (-all? #'stringp args))
-;;     (error "Arguments must be supplied as a list of strings."))
-;;   (let ((s (and args (s-join delim args))))
-;;       (om-elem--set-property prop s elem)))
-
-;; (defun om-elem--get-property-plist (prop elem)
-;;   (-map #'intern (om-elem--get-property-strings prop " " elem)))
-
-;; (defun om-elem--set-property-plist-concat (props plist elem)
-;;   (unless (om-elem--is-plist-p plist)
-;;     (error "Invalid plist given: %S" plist))
-;;   (unless (->> (-slice plist 1 nil 2) (-all? #'symbolp))
-;;     (error "All plist values must be symbols: %S" plist))
-;;   (let ((s (-some->> (-map #'symbol-name plist) (s-join " "))))
-;;       (om-elem--set-property props s elem)))
-
-;; (defun om-elem--set-property-list (prop strings elem)
-;;   (om-elem--verify strings (lambda (ss) (-all? #'stringp ss)))
-;;   (om-elem--set-property prop strings elem))
-
-;; (defun om-elem--insert-property-list (prop index string elem)
-;;   (om-elem--verify index integerp string stringp)
-;;   (om-elem--map-property* prop (om-elem--insert-at index string it) elem))
-
-;; (defun om-elem--remove-property-list (prop string elem)
-;;   (om-elem--verify string stringp)
-;;   (om-elem--map-property* prop (-remove-item string it) elem))
-
 ;;; objects
 ;;
-;; entity
-
-;; (defun om-elem--entity-set-name (name elem)
-;;   (unless (org-entity-get name) (error "Invalid entity: %S" name))
-;;   (om-elem--set-property :name name elem))
-
-;; link
-
-;; (defun om-elem--link-set-path (path link)
-;;   "Set the path of LINK element to PATH (a string)."
-;;   (om-elem--set-property-pred 'stringp :path path link))
-
-;; (defun om-elem--link-set-type (type link)
-;;   "Set the type of LINK element to TYPE (a symbol).
-;; Setting TYPE to nil will result in a 'fuzzy' type link."
-;;   (let ((valid-types (append (org-link-types)
-;;                              (list "coderef" "custom-id" "file"
-;;                                    "id" "radio" "fuzzy"))))
-;;     (cond
-;;      ((not type)
-;;       (om-elem--set-property :type "fuzzy" link))
-;;      ((member type valid-types)
-;;       (om-elem--set-property :type type link))
-;;      (t (error "Invalid link type: %S" type)))))
-
-;; (defun om-elem--link-set-format (format link)
-;;   (if (memq format '(nil plain angle bracket))
-;;       (om-elem--set-property :format format link)
-;;     (error "Invalid link format: %S" format)))
-
-;; macro
-
-;; (defun om-elem--macro-update-value (macro)
-;;   (let* ((k (om-elem--get-property :key macro))
-;;          (as (om-elem--get-property :args macro))
-;;          (v (if as (format "%s(%s)" k (s-join "," as)) k)))
-;;     (om-elem--set-property :value (format "{{{%s}}}" v) macro)))
-
-;; node-property
-
-;; (defun om-elem--node-property-map-value (fun node-property)
-;;   (om-elem--map-property :value fun node-property))
-
-;; (om-elem--gen-anaphoric-form #'om-elem--node-property-map-value)
-
 ;; statistics-cookie
 
 (defun om-elem--statistics-cookie-is-complete (statistics-cookie)
@@ -1168,28 +1031,6 @@ FUN is a predicate function that takes one argument."
         ((s-contains? "%" it) 'percent)
         (t (error "Unparsable statistics cookie value: %s"
                   (om-elem--get-property :value)))))
-
-;; (defun om-elem--statistics-cookie-set-value (value statistics-cookie)
-;;   "Set the value or STATISTICS-COOKIE object with VALUE.
-;; This is the internal version of `om-elem-statistics-cookie-set-value'
-;; without element verification."
-;;   (cl-flet
-;;       ((mk-stat
-;;         (v)
-;;         (pcase v
-;;           (`(nil) "%")
-;;           (`(nil nil) "/")
-;;           (`(,(and (pred integerp) percent))
-;;            (if (< 100 percent) (error "Percent greater than 100")
-;;              (format "%s%%" percent)))
-;;           (`(,(and (pred integerp) numerator)
-;;              ,(and (pred integerp) denominator))
-;;            (if (> numerator denominator)
-;;                (error "Numerator greater than denominator")
-;;              (format "%s/%s" numerator denominator)))
-;;           (_ (error "Invalid stat-cookie value: %S" v)))))
-;;     (let ((value* (format "[%s]" (mk-stat value))))
-;;       (om-elem--set-property :value value* statistics-cookie))))
 
 ;; timestamp (auxiliary functions)
 
@@ -1462,108 +1303,18 @@ float-times, which assumes the :type property is valid."
 
 ;; clock
 
-;; (defun om-elem--clock-update-duration (clock)
-;;   (let* ((ts (om-elem--get-property :value clock))
-;;          (plist
-;;           (if (om-elem--timestamp-is-ranged-fast-p ts)
-;;               (let* ((seconds (om-elem--timestamp-get-range ts))
-;;                      (h (-> seconds (/ 3600) (floor)))
-;;                      (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
-;;                 `(:duration ,(format "%2d:%02d" h m) :status running))
-;;             '(:duration nil :status closed))))
-;;     (om-elem--set-properties plist clock)))
-
 (defun om-elem--clock-map-timestamp (fun clock)
   (->> (om-elem--map-property :value fun clock)
        (om-elem--clock-update-duration)))
 
 (om-elem--gen-anaphoric-form #'om-elem--clock-map-timestamp)
 
-;; diary-sexp
-
-;; (defun om-elem--diary-sexp-get-value (diary-sexp)
-;;   (->> (om-elem--get-property :value diary-sexp)
-;;        (s-chop-prefix "%%")
-;;        (read)))
-
-;; (defun om-elem--diary-sexp-set-value (form diary-sexp)
-;;   (om-elem--verify form listp)
-;;   (om-elem--set-property :value (format "%%%%%S" form) diary-sexp))
-
 ;; headline
-
-;; (defun om-elem--headline-set-pre-blank (pre-blank headline)
-;;   ;; unlike post-blank, we assume this will never be needed for
-;;   ;; plain text, so don't test for stringp here
-;;   (om-elem--set-property-pred 'om-elem--non-neg-integer-p :pre-blank
-;;                               pre-blank headline))
-
-;; (defun om-elem--headline-set-todo (todo headline)
-;;   "Set the todo keyword of HEADLINE element to TODO."
-;;   (om-elem--set-property-pred 'string-or-null-p :todo-keyword todo
-;;                               headline))
-
-;; (defun om-elem--headline-set-level (level elem)
-;;   (om-elem--verify level (lambda (L) (< 0 L)))
-;;   (om-elem--set-property :level level elem))
-
-;; (defun om-elem--headline-set-archived (flag headline)
-;;   "Set the archived flag of HEADLINE element to FLAG."
-;;   (let ((headline*
-;;          (if flag
-;;              (om-elem--headline-insert-tag -1 org-archive-tag headline)
-;;            (om-elem--headline-remove-tag org-archive-tag headline))))
-;;     (om-elem--set-property-pred 'booleanp :archivedp flag headline*)))
-
-;; (defun om-elem--headline-update-tags (headline)
-;;   (cl-flet
-;;       ((add-archive-tag-maybe
-;;         (tags)
-;;         (let ((filtered-tags (--remove org-archive-tag tags)))
-;;           (if (om-elem--get-property :archivedp headline)
-;;               (-snoc filtered-tags org-archive-tag) filtered-tags))))
-;;     (om-elem--map-property :tags #'add-archive-tag-maybe headline)))
-
-;; (defun om-elem--headline-set-commented (flag headline)
-;;   "Set the commented flag of HEADLINE element to FLAG."
-;;   (om-elem--set-property-pred 'booleanp :commentedp flag headline))
-
-;; (defun om-elem--headline-set-footnote-section (flag headline)
-;;   "Set the footnote section flag of HEADLINE element to FLAG."
-;;   (om-elem--set-property-pred 'booleanp :footnote-section-p flag
-;;                               headline))
-
-;; (defun om-elem--headline-set-priority (priority headline)
-;;   "Set the priority of HEADLINE element to PRIORITY."
-;;   (if (or (null priority) (and (>= org-lowest-priority priority)
-;;                                (>= priority org-highest-priority)))
-;;       (om-elem--set-property :priority priority headline)
-;;     (error "Invalid priority given: %S" priority)))
 
 (defconst om-elem--headline-title-restrictions
   (->> org-element-object-restrictions
        (alist-get 'headline)
        (cons 'plain-text)))
-
-;; (defun om-elem--headline-set-title (title headline)
-;;   "Set the title of HEADLINE element to TITLE."
-;;   (unless
-;;       (--all?
-;;        (om-elem--is-any-type-p om-elem--headline-title-restrictions it)
-;;        title)
-;;     (error "Invalid title: %s" title))
-;;   (->> (om-elem--set-property :title title headline)
-;;        (om-elem--set-property :raw-value (om-elem-to-string title))))
-
-;; ;; TODO restrict the archive tag
-;; (defun om-elem--headline-insert-tag (index tag headline)
-;;   (om-elem--insert-property-list :tags index tag headline))
-
-;; (defun om-elem--headline-add-tag (tag headline)
-;;   (om-elem--headline-insert-tag 0 tag headline))
-
-;; (defun om-elem--headline-remove-tag (tag headline)
-;;   (om-elem--remove-property-list :tags tag headline))
 
 (defun om-elem--headline-set-title! (string stats headline)
   (let* ((ss (om-elem--build-secondary-string string))
@@ -1580,44 +1331,10 @@ float-times, which assumes the :type property is valid."
           (if (< 1 new-level) new-level 1)))) ; and pooooooweeeeer...
     (om-elem--map-property :level #'shift-level headline)))
 
-;; (defun om-elem--headline-shift-priority (shift headline)
-;;   "Shift the priority property of HEADLINE element by SHIFT.
-;; SHIFT is a positive or negative integer."
-;;   ;; positive goes up (B -> A) and vice versa
-;;   (cl-flet
-;;       ((fun
-;;         (priority)
-;;         (when priority
-;;           (let ((diff (1+ (- org-lowest-priority org-highest-priority)))
-;;                 (offset (- priority org-highest-priority)))
-;;             (--> (- offset shift)
-;;                  (mod it diff)
-;;                  (- it offset)
-;;                  (+ priority it))))))
-;;     (om-elem--map-property :priority #'fun headline)))
-
-;; (defun om-elem--headline-toggle-archived (headline)
-;;   ;; this assumes the archived property is always in sync with the
-;;   ;; tag
-;;   (-> (om-elem--property-is-non-nil-p :archivedp headline)
-;;       (not)
-;;       (om-elem--headline-set-archived headline)))
-
 ;; item
-
-;; (defun om-elem--item-get-tag (item)
-;;   (->> (om-elem--get-property :tag item) (om-elem-to-string)))
 
 (defun om-elem--item-is-unordered (item)
   (and (member (om-elem--get-property :bullet item) '("- " "+ ")) t))
-
-;; (defun om-elem--item-set-checkbox (state item)
-;;   "Set the checkbox of ITEM element to STATE.
-;; STATE is one of 'on', 'off', 'trans'. Setting to nil removes the
-;; checkbox."
-;;   (unless (memq state '(nil on off trans))
-;;     (error ("Invalid checkbox state: %s" state)))
-;;   (om-elem--set-property :checkbox state item))
 
 ;; NOTE the org element parser currently does not honor 1) or a) type
 ;; bullets
@@ -1628,37 +1345,14 @@ float-times, which assumes the :type property is valid."
         (if org-list-allow-alphabetical counter
           (error "Set `org-list-allow-alphabetical' to t to use alphabetical bullets"))))))
 
-(defun om-elem--item-set-bullet (bullet item)
-  (let ((b (if (memq bullet '(- +)) (format "%s " bullet)
-             (-if-let (c (->> (if (listp bullet) (car bullet) bullet)
-                              (om-elem--item-validate-counter)))
-                 (format (if (listp bullet) "%s) " "%s. ") c)
-               (error "Invalid bullet: %s" bullet)))))
-    (om-elem--set-property :bullet b item)))
-
 (defconst om-elem--item-tag-restrictions
   (->> org-element-object-restrictions
        (alist-get 'item)
        (cons 'plain-text)))
 
-(defun om-elem--item-set-tag (tag item)
-  "Set the tag of ITEM element to TAG where TAG is a string or nil."
-  (unless (--all?
-           (om-elem--is-any-type-p om-elem--item-tag-restrictions it)
-           tag)
-    (error "Invalid tag: %s" tag))
-  (om-elem--set-property :tag tag item))
-
 (defun om-elem--item-set-tag! (raw-tag item)
   (-> (om-elem--build-secondary-string raw-tag)
       (om-elem--item-set-tag item)))
-
-(defun om-elem--item-set-counter (counter item)
-  "Set the tag of ITEM element to COUNTER."
-  (unless (or (null counter) (integerp counter))
-  ;; (unless (or (null counter) (om-elem--item-validate-counter counter))
-    (error "Invalid counter: %s" counter))
-  (om-elem--set-property :counter counter item))
 
 (defun om-elem--item-toggle-checkbox (item)
   (cl-case (om-elem--get-property :checkbox item)
@@ -1666,14 +1360,6 @@ float-times, which assumes the :type property is valid."
     ('on (om-elem--set-property :checkbox 'off item))
     ('off (om-elem--set-property :checkbox 'on item))
     (t (error "This should not happen"))))
-
-;; (defun om-elem--item-shift-counter (n item)
-;;   (cl-flet
-;;       ((shift
-;;         (c)
-;;         (let ((c* (+ c n) ))
-;;           (if (< c* 0) 0 c*))))
-;;   (om-elem--map-property :counter #'shift item)))
 
 ;; latex environment
 
