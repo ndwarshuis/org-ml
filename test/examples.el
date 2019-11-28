@@ -1085,34 +1085,43 @@
            (om-elem-to-trimmed-string))
       => "=You totally are=")
 
-    ;; (defexamples-content om-elem-headline-toggle-archived
-    ;;   nil
-    ;;   (:content "* headline")
-    ;;   (->> (om-elem-parse-this-headline)
-    ;;        (om-elem-headline-toggle-archived)
-    ;;        (om-elem-to-trimmed-string))
-    ;;   => "* headline                                                          :ARCHIVE:"
-    ;;   ;; (->> (om-elem-parse-this-headline)
-    ;;   ;;      (om-elem-headline-toggle-archived)
-    ;;   ;;      (om-elem-headline-toggle-archived)
-    ;;   ;;      (om-elem-to-trimmed-string))
-    ;;   ;; => "* headline"
-    ;;   )
-
     (defexamples-content om-elem-toggle-property
       nil
+
+      (:content "\\pi")
+      (->> (om-elem-parse-this-object)
+           (om-elem-toggle-property :use-brackets-p)
+           (om-elem-to-trimmed-string))
+      => "\\pi{}"
+
+      ;; TODO test src/example block preserve indent
+      
       (:content "* headline")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-toggle-property :archivedp)
+           (om-elem-to-trimmed-string))
+      => "* headline                                                          :ARCHIVE:"
       (->> (om-elem-parse-this-headline)
            (om-elem-toggle-property :commentedp)
            (om-elem-to-trimmed-string))
       => "* COMMENT headline"
       (->> (om-elem-parse-this-headline)
-           (om-elem-toggle-property :commentedp)
-           (om-elem-toggle-property :commentedp)
+           (om-elem-toggle-property :footnote-section-p)
            (om-elem-to-trimmed-string))
-      => "* headline"
-      )
-    
+      => "* Footnotes"
+
+      (:content "sub_woofer")
+      (->> (om-elem-parse-object-at 5)
+           (om-elem-toggle-property :use-brackets-p)
+           (om-elem-to-trimmed-string))
+      => "_{woofer}"
+
+      (:content "super^woofer")
+      (->> (om-elem-parse-object-at 7)
+           (om-elem-toggle-property :use-brackets-p)
+           (om-elem-to-trimmed-string))
+      => "^{woofer}")
+
     (defexamples-content om-elem-shift-property
       ;; TODO need to ensure that the min/max priorities are always the same
       nil
@@ -1184,8 +1193,110 @@
       (->> (om-elem-parse-this-object)
            (om-elem-shift-property :post-blank -1)
            (om-elem-to-string))
-      => "*bold*"
-      )
+      => "*bold*")
+
+
+    (defexamples-content om-elem-insert-into-property
+      nil
+
+      (:content "#+CALL: ktulu(y=1)")
+      (->> (om-elem-parse-this-element)
+           (om-elem-insert-into-property :arguments 0 "x=4")
+           (om-elem-to-trimmed-string))
+      => "#+CALL: ktulu(x=4,y=1)"
+
+      (:content "#+BEGIN_EXAMPLE -n"
+                "#+END_EXAMPLE")
+      (->> (om-elem-parse-this-element)
+           (om-elem-insert-into-property :switches -1 "-r")
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_EXAMPLE -n -r"
+                  "#+END_EXAMPLE")
+
+      (:content "* headline       :tag1:")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-insert-into-property :tags 0 "tag0")
+           (om-elem-to-trimmed-string))
+      => "* headline                                                        :tag0:tag1:"
+
+      (:content "call_ktulu(y=1)")
+      (->> (om-elem-parse-this-object)
+           (om-elem-insert-into-property :arguments 0 "x=4")
+           (om-elem-to-trimmed-string))
+      => "call_ktulu(x=4,y=1)"
+
+      (:content "{{{economics(x=4)}}}")
+      (->> (om-elem-parse-this-object)
+           (om-elem-insert-into-property :args 0 "z=2")
+           (om-elem-to-trimmed-string))
+      => "{{{economics(z=2,x=4)}}}"
+      
+      (:content "#+BEGIN_SRC emacs-lisp -n"
+                "#+END_SRC")
+      (->> (om-elem-parse-this-element)
+           (om-elem-insert-into-property :switches -1 "-r")
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_SRC emacs-lisp -n -r"
+                  "#+END_SRC")
+
+      (:content "| a |"
+                "#+TBLFM: x=$2")
+      (->> (om-elem-parse-this-element)
+           (om-elem-insert-into-property :tblfm -1 "y=$3")
+           (om-elem-to-trimmed-string))
+      => (:result "| a |"
+                  "#+TBLFM: y=$3"
+                  "#+TBLFM: x=$2"))
+
+    (defexamples-content om-elem-remove-from-property
+      nil
+
+      (:content "#+CALL: ktulu(y=1)")
+      (->> (om-elem-parse-this-element)
+           (om-elem-remove-from-property :arguments "y=1")
+           (om-elem-to-trimmed-string))
+      => "#+CALL: ktulu()"
+
+      (:content "#+BEGIN_EXAMPLE -n"
+                "#+END_EXAMPLE")
+      (->> (om-elem-parse-this-element)
+           (om-elem-remove-from-property :switches "-n")
+           (om-elem-to-trimmed-string))
+      => (:content "#+BEGIN_EXAMPLE"
+                "#+END_EXAMPLE")
+
+      (:content "* headline       :tag1:")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-remove-from-property :tags "tag1")
+           (om-elem-to-trimmed-string))
+      => "* headline"
+
+      (:content "call_ktulu(y=1)")
+      (->> (om-elem-parse-this-object)
+           (om-elem-remove-from-property :arguments "y=1")
+           (om-elem-to-trimmed-string))
+      => "call_ktulu()"
+
+      (:content "{{{economics(x=4)}}}")
+      (->> (om-elem-parse-this-object)
+           (om-elem-remove-from-property :args "x=4")
+           (om-elem-to-trimmed-string))
+      => "{{{economics}}}"
+      
+      (:content "#+BEGIN_SRC emacs-lisp -n"
+                "#+END_SRC")
+      (->> (om-elem-parse-this-element)
+           (om-elem-remove-from-property :switches "-n")
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_SRC emacs-lisp"
+                  "#+END_SRC")
+
+      (:content "| a |"
+                "#+TBLFM: x=$2")
+      (->> (om-elem-parse-this-element)
+           (om-elem-remove-from-property :tblfm "x=$2")
+           (om-elem-to-trimmed-string))
+      => "| a |")
 
     ;; (defexamples-content om-elem-property-is-nil-p
     ;;   nil
