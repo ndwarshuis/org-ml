@@ -536,8 +536,7 @@ and object containers and includes the 'plain-text' type.")
             (s-join " ")))
 
 (defun om-elem--pull-to-plist (v)
-  (-map #'intern (om-elem--pull-to-string-list-space v)))
-
+  (-map #'intern (om-elem--pull-to-string-list-space-delim v)))
 
 (defun om-elem--allow-symbols (v p eo syms)
   (om-elem--allow v p eo (format "symbol from %S" syms)
@@ -727,7 +726,8 @@ and object containers and includes the 'plain-text' type.")
                    :cis om-elem--clock-update-duration))
     (code (:value :set om-elem--allow-oneline-string))
     (comment (:value :set om-elem--allow-oneline-string))
-    (comment-block (:value :set om-elem--allow-oneline-string))
+    (comment-block (:value :set om-elem--allow-oneline-string
+                           :get s-trim-right))
     (drawer (:drawer-name :set om-elem--allow-oneline-string))
     (diary-sexp (:value :set om-elem--allow-diary-sexp-value
                         :get om-elem--pull-diary-sexp-value))
@@ -739,12 +739,14 @@ and object containers and includes the 'plain-text' type.")
     (example-block (:preserve-indent :set om-elem--allow-boolean)
                    (:switches :set om-elem--allow-from-string-list-space-delim
                               :get om-elem--pull-to-string-list-space-delim)
-                   (:value :set om-elem--allow-string))
+                   (:value :set om-elem--allow-string
+                           :get s-trim-right))
     (export-block (:type :set om-elem--allow-oneline-string)
                   (:value :set om-elem--allow-string))
     (export-snippet (:back-end :set om-elem--allow-oneline-string)
                     (:value :set om-elem--allow-string))
-    (fixed-width (:value :set om-elem--allow-oneline-string))
+    (fixed-width (:value :set om-elem--allow-oneline-string
+                         :get s-trim-right))
     (footnote-definition (:label :set om-elem--allow-oneline-string-or-nil))
     (footnote-reference (:label :set om-elem--allow-oneline-string-or-nil))
     (headline (:archivedp :set om-elem--allow-boolean
@@ -809,7 +811,8 @@ and object containers and includes the 'plain-text' type.")
                (:preserve-indent :set om-elem--allow-boolean)
                (:switches :set om-elem--allow-from-string-list-space-delim
                           :get om-elem--pull-to-string-list-space-delim)
-               (:value :set om-elem--allow-string))
+               (:value :set om-elem--allow-string
+                       :get s-trim-right))
     (statistics-cookie (:value :set om-elem--allow-statistics-cookie-value
                                :get om-elem--to-statistics-cookie))
     (strike-through)
