@@ -557,6 +557,7 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--allow-item-checkbox-symbols (v p eo)
   (om-elem--allow-symbols v p eo '(nil on off trans)))
 
+;; NOTE org mode 9.1.9 will crash when given an alphabetic symbol
 (defun om-elem--allow-item-bullets (bullet p eo)
   (if (memq bullet '(- +)) (format "%s " bullet)
     (-if-let (c (->> (if (listp bullet) (car bullet) bullet)
@@ -1000,13 +1001,13 @@ property list in ELEM."
            ,plist)))
      (om-elem--map-properties new-plist ,elem)))
 
-(defun om-elem--shift-property (prop n elem)
-  "Shift PROP of ELEM by N where N is a positive or negative integer."
-  (om-elem--verify n integerp)
-  (om-elem--map-property* prop (+ n it) elem))
+;; (defun om-elem--shift-property (prop n elem)
+;;   "Shift PROP of ELEM by N where N is a positive or negative integer."
+;;   (om-elem--verify n integerp)
+;;   (om-elem--map-property* prop (+ n it) elem))
 
-(defun om-elem--toggle-property (prop elem)
-  (om-elem--map-property prop #'not elem))
+;; (defun om-elem--toggle-property (prop elem)
+;;   (om-elem--map-property prop #'not elem))
 
 (defun om-elem--property-is-nil-p (prop elem)
   "Return t if PROP in ELEM is nil."
@@ -1092,13 +1093,13 @@ FUN is a predicate function that takes one argument."
 ;;   (om-elem--verify strings (lambda (ss) (-all? #'stringp ss)))
 ;;   (om-elem--set-property prop strings elem))
 
-(defun om-elem--insert-property-list (prop index string elem)
-  (om-elem--verify index integerp string stringp)
-  (om-elem--map-property* prop (om-elem--insert-at index string it) elem))
+;; (defun om-elem--insert-property-list (prop index string elem)
+;;   (om-elem--verify index integerp string stringp)
+;;   (om-elem--map-property* prop (om-elem--insert-at index string it) elem))
 
-(defun om-elem--remove-property-list (prop string elem)
-  (om-elem--verify string stringp)
-  (om-elem--map-property* prop (-remove-item string it) elem))
+;; (defun om-elem--remove-property-list (prop string elem)
+;;   (om-elem--verify string stringp)
+;;   (om-elem--map-property* prop (-remove-item string it) elem))
 
 ;;; objects
 ;;
@@ -1142,10 +1143,10 @@ FUN is a predicate function that takes one argument."
 
 ;; node-property
 
-(defun om-elem--node-property-map-value (fun node-property)
-  (om-elem--map-property :value fun node-property))
+;; (defun om-elem--node-property-map-value (fun node-property)
+;;   (om-elem--map-property :value fun node-property))
 
-(om-elem--gen-anaphoric-form #'om-elem--node-property-map-value)
+;; (om-elem--gen-anaphoric-form #'om-elem--node-property-map-value)
 
 ;; statistics-cookie
 
@@ -1554,15 +1555,15 @@ float-times, which assumes the :type property is valid."
 ;;   (->> (om-elem--set-property :title title headline)
 ;;        (om-elem--set-property :raw-value (om-elem-to-string title))))
 
-;; TODO restrict the archive tag
-(defun om-elem--headline-insert-tag (index tag headline)
-  (om-elem--insert-property-list :tags index tag headline))
+;; ;; TODO restrict the archive tag
+;; (defun om-elem--headline-insert-tag (index tag headline)
+;;   (om-elem--insert-property-list :tags index tag headline))
 
-(defun om-elem--headline-add-tag (tag headline)
-  (om-elem--headline-insert-tag 0 tag headline))
+;; (defun om-elem--headline-add-tag (tag headline)
+;;   (om-elem--headline-insert-tag 0 tag headline))
 
-(defun om-elem--headline-remove-tag (tag headline)
-  (om-elem--remove-property-list :tags tag headline))
+;; (defun om-elem--headline-remove-tag (tag headline)
+;;   (om-elem--remove-property-list :tags tag headline))
 
 (defun om-elem--headline-set-title! (string stats headline)
   (let* ((ss (om-elem--build-secondary-string string))
@@ -1579,44 +1580,44 @@ float-times, which assumes the :type property is valid."
           (if (< 1 new-level) new-level 1)))) ; and pooooooweeeeer...
     (om-elem--map-property :level #'shift-level headline)))
 
-(defun om-elem--headline-shift-priority (shift headline)
-  "Shift the priority property of HEADLINE element by SHIFT.
-SHIFT is a positive or negative integer."
-  ;; positive goes up (B -> A) and vice versa
-  (cl-flet
-      ((fun
-        (priority)
-        (when priority
-          (let ((diff (1+ (- org-lowest-priority org-highest-priority)))
-                (offset (- priority org-highest-priority)))
-            (--> (- offset shift)
-                 (mod it diff)
-                 (- it offset)
-                 (+ priority it))))))
-    (om-elem--map-property :priority #'fun headline)))
+;; (defun om-elem--headline-shift-priority (shift headline)
+;;   "Shift the priority property of HEADLINE element by SHIFT.
+;; SHIFT is a positive or negative integer."
+;;   ;; positive goes up (B -> A) and vice versa
+;;   (cl-flet
+;;       ((fun
+;;         (priority)
+;;         (when priority
+;;           (let ((diff (1+ (- org-lowest-priority org-highest-priority)))
+;;                 (offset (- priority org-highest-priority)))
+;;             (--> (- offset shift)
+;;                  (mod it diff)
+;;                  (- it offset)
+;;                  (+ priority it))))))
+;;     (om-elem--map-property :priority #'fun headline)))
 
-(defun om-elem--headline-toggle-archived (headline)
-  ;; this assumes the archived property is always in sync with the
-  ;; tag
-  (-> (om-elem--property-is-non-nil-p :archivedp headline)
-      (not)
-      (om-elem--headline-set-archived headline)))
+;; (defun om-elem--headline-toggle-archived (headline)
+;;   ;; this assumes the archived property is always in sync with the
+;;   ;; tag
+;;   (-> (om-elem--property-is-non-nil-p :archivedp headline)
+;;       (not)
+;;       (om-elem--headline-set-archived headline)))
 
 ;; item
 
-(defun om-elem--item-get-tag (item)
-  (->> (om-elem--get-property :tag item) (om-elem-to-string)))
+;; (defun om-elem--item-get-tag (item)
+;;   (->> (om-elem--get-property :tag item) (om-elem-to-string)))
 
 (defun om-elem--item-is-unordered (item)
   (and (member (om-elem--get-property :bullet item) '("- " "+ ")) t))
 
-(defun om-elem--item-set-checkbox (state item)
-  "Set the checkbox of ITEM element to STATE.
-STATE is one of 'on', 'off', 'trans'. Setting to nil removes the
-checkbox."
-  (unless (memq state '(nil on off trans))
-    (error ("Invalid checkbox state: %s" state)))
-  (om-elem--set-property :checkbox state item))
+;; (defun om-elem--item-set-checkbox (state item)
+;;   "Set the checkbox of ITEM element to STATE.
+;; STATE is one of 'on', 'off', 'trans'. Setting to nil removes the
+;; checkbox."
+;;   (unless (memq state '(nil on off trans))
+;;     (error ("Invalid checkbox state: %s" state)))
+;;   (om-elem--set-property :checkbox state item))
 
 ;; NOTE the org element parser currently does not honor 1) or a) type
 ;; bullets
@@ -1652,7 +1653,6 @@ checkbox."
   (-> (om-elem--build-secondary-string raw-tag)
       (om-elem--item-set-tag item)))
 
-;; NOTE org mode 9.1.9 will crash when given an alphabetic symbol
 (defun om-elem--item-set-counter (counter item)
   "Set the tag of ITEM element to COUNTER."
   (unless (or (null counter) (integerp counter))
@@ -1667,13 +1667,13 @@ checkbox."
     ('off (om-elem--set-property :checkbox 'on item))
     (t (error "This should not happen"))))
 
-(defun om-elem--item-shift-counter (n item)
-  (cl-flet
-      ((shift
-        (c)
-        (let ((c* (+ c n) ))
-          (if (< c* 0) 0 c*))))
-  (om-elem--map-property :counter #'shift item)))
+;; (defun om-elem--item-shift-counter (n item)
+;;   (cl-flet
+;;       ((shift
+;;         (c)
+;;         (let ((c* (+ c n) ))
+;;           (if (< c* 0) 0 c*))))
+;;   (om-elem--map-property :counter #'shift item)))
 
 ;; latex environment
 
@@ -3045,25 +3045,12 @@ represented as plists.")
 
 ;;; generic
 
-;; (defun om-elem-map-property (prop fun elem)
-;;   (om-elem--verify elem om-elem--is-element-or-object-p)
-;;   (om-elem--map-property prop fun elem))
-
-;; (om-elem--gen-anaphoric-form #'om-elem-map-property)
-
 (defun om-elem-map-properties (plist elem)
   (om-elem--verify elem om-elem--is-element-or-object-p)
   (om-elem--map-properties plist elem))
 
 (defmacro om-elem-map-properties* (plist elem)
   `(om-elem--map-properties ,plist ,elem))
-
-;; (defun om-elem-set-property (prop value elem)
-;;   "Set property PROP in element ELEM to VALUE."
-;;   (om-elem--verify elem om-elem--is-element-or-object-p)
-;;   (unless (plist-member (om-elem--get-properties elem) prop)
-;;     (error "Property %s does not exist in %s" prop elem))
-;;   (om-elem--set-property prop value elem))
 
 (defun om-elem-set-properties (plist elem)
   "Set all properties in ELEM to the values corresponding to PLIST.
@@ -3072,77 +3059,9 @@ property list in ELEM."
   (om-elem--verify elem om-elem--is-element-or-object-p)
   (om-elem--set-properties plist elem))
 
-;; (defun om-elem-shift-property (prop n elem)
-;;   "Shift PROP of ELEM by N where N is a positive or negative integer."
-;;   (om-elem--verify elem om-elem--is-element-or-object-p)
-;;   (unless (plist-member (om-elem--get-properties elem) prop)
-;;     (error "Property %s does not exist in %s" prop elem))
-;;   (om-elem--shift-property prop n elem))
-
-;; (defun om-elem-toggle-property (prop elem)
-;;   "Toggle the state of PROP in ELEM."
-;;   (om-elem--verify elem om-elem--is-element-or-object-p)
-;;   (unless (plist-member (om-elem--get-properties elem) prop)
-;;     (error "Property %s does not exist in %s" prop elem))
-;;   (om-elem--toggle-property prop elem))
-
-;;; property specific
-
-;; (defun om-elem-set-post-blank (post-blank elem)
-;;   "Set the :post-blank property of ELEM to POST-BLANK."
-;;   (om-elem--verify elem om-elem--is-element-or-object-p)
-;;   (om-elem--set-post-blank post-blank elem))
-
 ;;; objects
 ;;
-;; node properties
-
-;; (defun om-elem-node-property-set-key (key node-property)
-;;   "Set the key of NODE-PROPERTY element to KEY (a string)."
-;;   (om-elem--verify node-property om-elem-is-node-property-p)
-;;   (om-elem--set-key key node-property))
-
-;; (defun om-elem-node-property-set-value (value node-property)
-;;   "Set the value of NODE-PROPERTY element to VALUE (a string)."
-;;   (om-elem--verify node-property om-elem-is-node-property-p)
-;;   (om-elem--set-value value node-property))
-
-(defun om-elem-node-property-map-value (fun node-property)
-  (om-elem--verify node-property om-elem-is-node-property-p)
-  (om-elem--node-property-map-value fun node-property))
-
-(om-elem--gen-anaphoric-form #'om-elem-node-property-map-value)
-
-;; link
-
-;; (defun om-elem-link-set-path (path link)
-;;   "Set the path of LINK element to PATH (a string)."
-;;   (om-elem--verify link om-elem-is-link-p)
-;;   (om-elem--link-set-path path link))
-
-;; (defun om-elem-link-set-type (type link)
-;;   "Set the type of LINK element to TYPE (a symbol).
-;; Setting TYPE to nil will result in a 'fuzzy' type link."
-;;   (om-elem--verify link om-elem-is-link-p)
-;;   (om-elem--link-set-type type link))
-
-;; (defun om-elem-link-set-format (format link)
-;;   "Set the type of LINK element to TYPE (a symbol).
-;; Setting TYPE to nil will result in a 'fuzzy' type link."
-;;   (om-elem--verify link om-elem-is-link-p)
-;;   (om-elem--link-set-format format link))
-
-;; statistics cookie
-
-;; (defun om-elem-statistics-cookie-set-value (value statistics-cookie)
-;;   "Set the value or STATISTICS-COOKIE object with VALUE.
-;; VALUE can take four forms which determine the format of the value:
-;; - integer X from 0 to 100 -> 'X%'
-;; - nil -> '%'
-;; - (integer X integer Y) -> 'X/Y'
-;; - (nil) -> '/'"
-;;   (om-elem--verify statistics-cookie om-elem-is-statistics-cookie-p)
-;;   (om-elem--statistics-cookie-set-value value statistics-cookie))
+;; statistics-cookie
 
 (defun om-elem-statistics-cookie-is-complete-p (statistics-cookie)
   "Return t is STATISTICS-COOKIE element is complete."
@@ -3364,43 +3283,9 @@ both timestamp halves."
   (om-elem--verify headline om-elem-is-headline-p)
   (if (member tag (om-elem--get-property :tags headline)) t))
 
-;; (defun om-elem-headline-set-archived (flag headline)
-;;   "Set the archived flag of HEADLINE element to FLAG."
-;;   (om-elem--verify headline om-elem-is-headline-p)
-;;   (om-elem--headline-set-archived flag headline))
-
-;; (defun om-elem-headline-set-commented (flag headline)
-;;   "Set the commented flag of HEADLINE element to FLAG."
-;;   (om-elem--verify headline om-elem-is-headline-p)
-;;   (om-elem--headline-set-commented flag headline))
-
-;; (defun om-elem-headline-set-pre-blank (pre-blank headline)
-;;   "Set the :pre-blank property of HEADLINE to PRE-BLANK."
-;;   (om-elem--verify elem om-elem-is-headline-p)
-;;   (om-elem--headline-set-pre-blank pre-blank headline))
-
-;; (defun om-elem-headline-set-todo (todo headline)
-;;   "Set the todo keyword of HEADLINE element to TODO."
-;;   (om-elem--verify headline om-elem-is-headline-p)
-;;   (om-elem--headline-set-todo todo headline))
-
-;; (defun om-elem-headline-set-priority (priority headline)
-;;   "Set the priority of HEADLINE element to PRIORITY."
-;;   (om-elem--verify headline om-elem-is-headline-p)
-;;   (om-elem--headline-set-priority priority headline))
-
-;; (defun om-elem-headline-set-title (title headline)
-;;   "Set the title of HEADLINE element to TITLE."
-;;   (om-elem--verify headline om-elem-is-headline-p)
-;;   (om-elem--headline-set-title title headline))
-
 (defun om-elem-headline-set-title! (text stats headline)
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-set-title! text stats headline))
-
-(defun om-elem-headline-shift-priority (shift headline)
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-shift-priority shift headline))
 
 (defun om-elem-headline-update-item-statistics (headline)
   (let ((items (om-elem-find '(section plain-list item) headline))
@@ -3415,16 +3300,6 @@ both timestamp halves."
         (done (length (-filter #'om-elem-headline-is-done-p subtodo)))
         (total (length subtodo)))
     (om-elem--headline-set-statistics-cookie-fraction done total headline))))
-
-(defun om-elem-headline-toggle-commented (headline)
-  "Toggle the commented/uncommented state of HEADLINE element."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--toggle-property :commentedp headline))
-
-(defun om-elem-headline-toggle-footnote-section (headline)
-  "Toggle the footnote-section state of HEADLINE element."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--toggle-property :footnote-section-p elem))
 
 ;; item
 
@@ -3443,42 +3318,10 @@ both timestamp halves."
   (om-elem--verify item om-elem-is-item-p)
   (om-elem--property-is-eq-p :checkbox 'trans item))
 
-;; (defun om-elem-item-set-checkbox (state item)
-;;   "Set the checkbox of ITEM element to STATE.
-;; STATE is one of 'on', 'off', 'trans'. Setting to nil removes the
-;; checkbox."
-;;   (om-elem--verify item om-elem-is-item-p)
-;;   (om-elem--item-set-checkbox state item))
-
-;; (defun om-elem-item-set-bullet (bullet item)
-;;   "Set the bullet of ITEM element to BULLET.
-;; BULLET is either '-' or '+' or an integer greater than zero.
-;; Note that `org-element-item-interpreter' currently does not interpret
-;; '+' bullets properly and will render these as '-'."
-;;   (om-elem--verify item om-elem-is-item-p)
-;;   (om-elem--item-set-bullet bullet item))
-
-;; (defun om-elem-item-set-tag (tag item)
-;;   "Set the tag of ITEM element to TAG where TAG is a string or nil."
-;;   (om-elem--verify item om-elem-is-item-p)
-;;   (om-elem--item-set-tag tag item))
-
 (defun om-elem-item-toggle-checkbox (item)
   "Toggle the checked/unchecked state of ITEM element."
   (om-elem--verify item om-elem-is-item-p)
   (om-elem--item-toggle-checkbox item))
-
-;; keyword
-
-;; (defun om-elem-keyword-set-key (key keyword)
-;;   "Set the key of KEYWORD element to KEY (a string)."
-;;   (om-elem--verify keyword om-elem-is-keyword-p)
-;;   (om-elem--set-key key keyword))
-
-;; (defun om-elem-keyword-set-value (value keyword)
-;;   "Set the value of KEYWORD element to VALUE (a string)."
-;;   (om-elem--verify keyword om-elem-is-keyword-p)
-;;   (om-elem--set-value value keyword))
 
 ;;; PUBLIC CONTENT FUNCTIONS
 
@@ -4813,3 +4656,4 @@ QUERIES follows the same rules as `om-elem-find'."
 
 (provide 'om-elem)
 ;;; om-elem.el ends here
+
