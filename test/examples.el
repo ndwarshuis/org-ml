@@ -789,6 +789,356 @@
   (def-example-subgroup "Generic"
     nil
 
+    (defexamples-content om-elem-get-property
+      nil
+
+      (:content "#+CALL: ktulu[:cache no](x=4) :exports results")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :call))
+      => "ktulu"
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :inside-header))
+      => '(:cache no)
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :arguments))
+      => '("x=4")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :end-header))
+      => '(:exports results)
+
+      (:content "CLOCK: [2019-01-01 Tue]")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :value)
+           (om-elem-to-string))
+      => "[2019-01-01 Tue]"
+
+      (:content "~learn to~")
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :value))
+      => "learn to"
+
+      (:content "# not here")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :value))
+      => "not here"
+
+      (:content "#+BEGIN_COMMENT"
+                "not here"
+                "#+END_COMMENT")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :value))
+      => "not here"
+
+      ;; TODO add diary-sexp
+
+      (:content ":LOGBOOK:"
+                ":END:")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :drawer-name))
+      => "LOGBOOK"
+
+      (:content "#+BEGIN: blockhead :cache no"
+                  "#+END:")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :block-name))
+      => "blockhead"
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :arguments))
+      => '(:cache no)
+
+      (:content "\\pi{}")
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :name))
+      => "pi"
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :use-brackets-p))
+      => t
+
+      ;; TODO test preserve indentation...
+      => (:content "#+BEGIN_EXAMPLE -n"
+                   "example.com"
+                   "#+END_EXAMPLE")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :switches))
+      => '("-n")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :value))
+      => "example.com"
+
+      (:content "#+BEGIN_EXPORT domestic"
+                "bullets, bombs, and bigotry"
+                "#+END_EXPORT")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :type))
+      ;; TODO why capitalized?
+      => "DOMESTIC"
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :value))
+      => "bullets, bombs, and bigotry\n"
+
+      (:content "@@back-end:value@@")
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :back-end))
+      => "back-end"
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :value))
+      => "value"
+
+      (:content ": fixed")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :value))
+      => "fixed"
+
+      (:content "[fn:blacklabel] society")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :label))
+      => "blacklabel"
+
+      ;; TODO test footnote section
+      ;; TODO the priority should be parsable after "COMMENT"
+      (:content "** TODO [#A] COMMENT dummy                                   :tmsu:ARCHIVE:"
+                ""
+                "stuff")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :archivedp))
+      => '("ARCHIVE")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :commentedp))
+      => 21
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :level))
+      => 2
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :pre-blank))
+      => 1
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :priority))
+      => ?A
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :tags))
+      => '("tmsu")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :title))
+      => '("dummy")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :todo-keyword))
+      => "TODO"
+
+      (:content "call_ktulu[:cache no](x=4)[:exports results]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :call))
+      => "ktulu"
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :inside-header))
+      =>  '(:cache no)
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :arguments))
+      => '("x=4")
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :end-header))
+      => '(:exports results)
+
+      (:content "src_python[:cache no]{print \"yeah boi\"}")
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :language))
+      => "python"
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :parameters))
+      => '(:cache no)
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :value))
+      => "print \"yeah boi\""
+
+      (:content "- [@2] [X] tmsu :: thing")
+      (->> (om-elem-parse-this-item)
+           (om-elem-get-property :bullet))
+      => '-
+      (->> (om-elem-parse-this-item)
+           (om-elem-get-property :checkbox))
+      => 'on
+      (->> (om-elem-parse-this-item)
+           (om-elem-get-property :counter))
+      => 2
+      (->> (om-elem-parse-this-item)
+           (om-elem-get-property :tag))
+      => '("tmsu")
+
+      (:content "#+KEY: VAL")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :key))
+      => "KEY"
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :value))
+      => "VAL"
+
+      ;; this is stupid, who would ever do this?
+      (:content "\begin{env}"
+                "body"
+                "\end{env}")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :value))
+      => (:content "\begin{env}"
+                   "body"
+                   "\end{env}")
+
+      ;; TODO this is also stupid...
+      (:content "$2+2=4$")
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :value))
+      => "$2+2=4$"
+
+      (:content "[[file:/dev/null]]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :path))
+      => "/dev/null"
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :type))
+      => "file"
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :format))
+      => 'bracket
+
+      (:content "{{{economics(x=4,y=2)}}}")
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :key))
+      => "economics"
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :args))
+      => '("x=4" "y=2")
+
+      (:content "* dummy"
+                ":PROPERTIES:"
+                ":KEY: VAL"
+                ":END:")
+      ;; TODO need public function
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-node-properties)
+           (-first-item)
+           (om-elem-get-property :key))
+      => "KEY"
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-node-properties)
+           (-first-item)
+           (om-elem-get-property :value))
+      => "VAL"
+
+      (:content "* dummy"
+                "CLOSED: [2019-01-01 Tue]")
+      ;; TODO need public function
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-planning)
+           (om-elem-get-property :closed)
+           (om-elem-to-string))
+      => "[2019-01-01 Tue]"
+
+      (:content "#+BEGIN_special"
+                "#+END_special")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :type))
+      => "special"
+
+      (:content "#+BEGIN_SRC emacs -n :cache no"
+                "  (print 'hi)"
+                "#+END_SRC")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :language))
+      => "emacs"
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :value))
+      ;; TODO why indented?
+      => "  (print 'hi)"
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :parameters))
+      => '(:cache no)
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :switches))
+      => '("-n")
+
+      (:content "* dummy [50%]")
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-statistics-cookie)
+           (om-elem-get-property :value))
+      => '(50)
+
+      (:content "sub_{woofer}")
+      (->> (om-elem-parse-object-at 6)
+           (om-elem-get-property :use-brackets-p))
+      => 6
+
+      (:content "super_{woofer}")
+      (->> (om-elem-parse-object-at 8)
+           (om-elem-get-property :use-brackets-p))
+      => 8
+
+      (:content "| a |"
+                "#+TBLFM: x=$2")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-property :tblfm))
+      => '("x=$2")
+
+      (:content "<<found>>")
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :value))
+      => "found"
+
+      (:content "<2020-02-02 Sun 12:00 +1d -1d>--<2020-02-03 Mon 12:00 +1d -1d>")
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :year-start))
+      => 2020
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :month-start))
+      => 2
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :day-start))
+      => 2
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :hour-start))
+      => 12
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :minute-start))
+      => 0
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :year-end))
+      => 2020
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :month-end))
+      => 2
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :day-end))
+      => 3
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :hour-end))
+      => 12
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :minute-end))
+      => 0
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :type))
+      => 'active-range
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :warning-type))
+      => 'all
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :warning-unit))
+      => 'day
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :warning-value))
+      => 1
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :repeater-type))
+      => 'cumulate
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :repeater-unit))
+      => 'day
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :repeater-value))
+      => 1
+
+      (:content "=I am not a crook=")
+      (->> (om-elem-parse-this-object)
+           (om-elem-get-property :value))
+      => "I am not a crook")
+
     (defexamples-content om-elem-set-property
       nil
 
@@ -1084,6 +1434,171 @@
            (om-elem-set-property :value "You totally are")
            (om-elem-to-trimmed-string))
       => "=You totally are=")
+
+    (defexamples-content om-elem-map-property
+      nil
+
+      (:content "#+CALL: ktulu()")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-property :call #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => "#+CALL: KTULU()"
+
+      ;; TODO add clock
+
+      (:content "~learn to~")
+      (->> (om-elem-parse-this-object)
+           (om-elem-map-property :value #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => "~LEARN TO~"
+
+      (:content "# not here")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-property :value #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => "# NOT HERE"
+
+      (:content "#+BEGIN_COMMENT"
+                "not here"
+                "#+END_COMMENT")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-property :value #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_COMMENT"
+                  "NOT HERE"
+                  "#+END_COMMENT")
+
+      ;; TODO add diary-sexp
+
+      (:content ":LOGBOOK:"
+                ":END:")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-property :drawer-name #'s-capitalize)
+           (om-elem-to-trimmed-string))
+      => (:result ":Logbook:"
+                  ":END:")
+
+      (:content "#+BEGIN: blockhead"
+                "#+END:")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-property :block-name #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN: BLOCKHEAD"
+                  "#+END:")
+
+      ;; TODO add entity
+
+      (:content "#+BEGIN_EXAMPLE"
+                "example.com"
+                "#+END_EXAMPLE")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-property :value (lambda (it) (concat "https://")))
+           (om-elem-to-trimmed-string))
+      => (:content "#+BEGIN_EXAMPLE"
+                   "https://example.com"
+                   "#+END_EXAMPLE")
+
+      (:content "#+BEGIN_EXPORT domestic"
+                "bullets, bombs, and bigotry"
+                "#+END_EXPORT")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-property :type #'s-upcase)
+           (om-elem-map-property :value #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_EXPORT DOMESTIC"
+                   "BULLETS, BOMBS, AND BIGOTRY"
+                   "#+END_EXPORT")
+
+      (:content "@@back-end:value@@")
+      (->> (om-elem-parse-this-object)
+           (om-elem-map-property :back-end #'s-upcase)
+           (om-elem-map-property :value #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => "@@BACK-END:VALUE@@"
+
+      (:content ": fixed")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-property :value #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => ": FIXED"
+
+      (:content "[fn:blacklabel] society")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-property :label #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => "[fn:BLACKLABEL] society"
+
+      ;; TODO add example for headline
+
+      (:content "call_ktulu()")
+      (->> (om-elem-parse-this-object)
+           (om-elem-map-property :call #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => "call_KTULU()"
+
+      ;; TODO add example for inline src block
+
+      (:content "- tag :: thing")
+      (->> (om-elem-parse-this-item)
+           (om-elem-map-property :tag (lambda (it) (-map #'s-upcase it)))
+           (om-elem-to-trimmed-string))
+      => "- TAG :: thing"
+
+      (:content "#+KEY: VAL")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-property :key (-partial #'s-prepend "OM_"))
+           (om-elem-map-property :value (-partial #'s-prepend "OM_"))
+           (om-elem-to-trimmed-string))
+      => "#+OM_KEY: OM_VAL"
+
+      ;; TODO add examples for latex frag/env
+
+      ;; TODO add example for link
+
+      (:content "{{{economics}}}")
+      (->> (om-elem-parse-this-object)
+           (om-elem-map-property :key #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => "{{{ECONOMICS}}}"
+
+      (:content "* dummy"
+                ":PROPERTIES:"
+                ":KEY: VAL"
+                ":END:")
+      ;; TODO need public function
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-node-properties)
+           (-first-item)
+           (om-elem-map-property :key (-partial #'s-prepend "OM_"))
+           (om-elem-map-property :value (-partial #'s-prepend "OM_"))
+           (om-elem-to-trimmed-string))
+      => ":OM_KEY:   OM_VAL"
+
+      ;; TODO add example for planning
+
+      (:content "#+BEGIN_special"
+                "#+END_special")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-property :type #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_SPECIAL"
+                  "#+END_SPECIAL")
+
+      ;; TODO add example for src block
+
+      ;; TODO add example for statistics cookie
+
+      (:content "<<found>>")
+      (->> (om-elem-parse-this-object)
+           (om-elem-map-property :value #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => "<<FOUND>>"
+
+      (:content "=I am not a crook=")
+      (->> (om-elem-parse-this-object)
+           (om-elem-map-property :value #'s-upcase)
+           (om-elem-to-trimmed-string))
+      => "=I AM NOT A CROOK=")
 
     (defexamples-content om-elem-toggle-property
       nil
