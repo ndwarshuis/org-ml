@@ -519,13 +519,13 @@ and object containers and includes the 'plain-text' type.")
   (om-elem--allow-from-string-list-delim v p eo " "))
 
 (defun om-elem--pull-to-string-list-space-delim (v)
-  (om-elem--pull-to-string-list-delim " " delim v))
+  (om-elem--pull-to-string-list-delim v " "))
 
 (defun om-elem--allow-from-string-list-comma-delim (v p eo)
   (om-elem--allow-from-string-list-delim v p eo ","))
 
 (defun om-elem--pull-to-string-list-comma-delim (v)
-  (om-elem--pull-to-string-list-delim "," delim v))
+  (om-elem--pull-to-string-list-delim v ","))
 
 (defun om-elem--allow-from-plist (v p eo)
   (-some->> (om-elem--allow v p eo "plist with symbols as values"
@@ -620,7 +620,7 @@ and object containers and includes the 'plain-text' type.")
                 (not (member org-archive-tag x))))))
 
 (defun om-elem--to-headline-tags (v)
-  (--remove org-archive-tag v))
+  (remove org-archive-tag v))
 
 (defun om-elem--allow-headline-priority (v p eo)
   (om-elem--allow v p eo "integer between `org-lowest-priority' and `org-highest-priority'"
@@ -707,7 +707,7 @@ and object containers and includes the 'plain-text' type.")
   (cl-flet
       ((add-archive-tag-maybe
         (tags)
-        (let ((tags* (--remove (equal it org-archive-tag) tags)))
+        (let ((tags* (remove org-archive-tag tags)))
           (if (om-elem--get-property :archivedp headline)
               (-snoc tags* org-archive-tag) tags*))))
     (om-elem--map-property :tags #'add-archive-tag-maybe headline)))
@@ -856,7 +856,7 @@ and object containers and includes the 'plain-text' type.")
   (om-elem--get-strict-function :set type prop))
 
 (defun om-elem--get-getter-function (type prop)
-  (om-elem--get-strict-function :set type prop))
+  (om-elem--get-strict-function :get type prop))
 
 (defun om-elem--get-update-function (type prop)
   (om-elem--get-strict-function :cis type prop))
@@ -899,7 +899,7 @@ and object containers and includes the 'plain-text' type.")
   (let ((filter-fun (-> (om-elem--get-type elem)
                         (om-elem--get-getter-function prop)))
         (value (om-elem--get-property prop elem)))
-    (if filter-fun (funcall filter-fun value prop elem) value)))
+    (if filter-fun (funcall filter-fun value) value)))
 
 (defun om-elem--map-property-strict (prop fun elem)
   (om-elem--verify fun functionp)
@@ -2980,7 +2980,7 @@ strings.")
                         props)
               (--each
                   (let* ((prop (car it))
-                         (arglist `((prop (eql ,prop)) index member
+                         (arglist `((prop (eql ,prop)) member
                                     (elem (head ,type))))
                          (doc-string "TODO add docstring")
                          (body
