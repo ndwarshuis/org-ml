@@ -899,7 +899,7 @@ and object containers and includes the 'plain-text' type.")
   (let ((filter-fun (-> (om-elem--get-type elem)
                         (om-elem--get-getter-function prop)))
         (value (om-elem--get-property prop elem)))
-    (if filter-fun (funcall filter-fun value) value)))
+    (if filter-fun (funcall filter-fun value prop elem) value)))
 
 (defun om-elem--map-property-strict (prop fun elem)
   (om-elem--verify fun functionp)
@@ -2867,30 +2867,32 @@ zero-indexed."
   "Shift property PROP by N (an integer) units within ELEM.
 This only applies the properties that are represented as integers.")
 
-(defun om-elem--shift-pos-integer (x n)
+(defun om-elem--shift-pos-integer (n x)
   (om-elem--verify n integerp)
   (when x
     (let ((x* (+ x n)))
-      (if (< 0 x*) x* 0))))
+      (if (< 0 x*) x* 1))))
 
-(defun om-elem--shift-non-neg-integer (x n)
+(defun om-elem--shift-non-neg-integer (n x)
   (om-elem--verify n integerp)
   (when x
-    (let ((x* (+ x* n)))
+    (let ((x* (+ x n)))
       (if (<= 0 x*) x* 0))))
 
 (cl-defmethod om-elem-shift-property ((prop (eql :post-blank)) n elem)
   "Shift :post-blank of ELEM by N units up or down.
 N is a positive or negative integer. If the final value is less than
 zero, it will silently be reset to zero."
-  (om-elem--map-property-strict prop #'om-elem--shift-non-neg-integer elem))
+  (om-elem--map-property-strict*
+   prop (om-elem--shift-non-neg-integer n it) elem))
 
 (cl-defmethod om-elem-shift-property ((prop (eql :counter)) n
                                       (elem (head item)))
   "Shift :counter of an item by N units up or down.
 N is a positive or negative integer. If the final value is less than
 one, it will silently be reset to one."
-  (om-elem--map-property-strict prop #'om-elem--shift-pos-integer elem))
+  (om-elem--map-property-strict*
+   prop (om-elem--shift-pos-integer n it) elem))
 
 (cl-defmethod om-elem-shift-property ((prop (eql :priority)) n
                                       (elem (head headline)))
@@ -2918,14 +2920,16 @@ when editing a buffer."
   "Shift :pre-blank of a headline by N units up or down.
 N is a positive or negative integer. If the final value is less than
 zero, it will silently be reset to zero."
-  (om-elem--map-property-strict prop #'om-elem--shift-non-neg-integer elem))
+  (om-elem--map-property-strict*
+   prop (om-elem--shift-non-neg-integer n it) elem))
 
 (cl-defmethod om-elem-shift-property ((prop (eql :level)) n
                                       (elem (head headline)))
   "Shift :level of a headline by N units up or down.
 N is a positive or negative integer. If the final value is less than
 one, it will silently be reset to one."
-  (om-elem--map-property-strict prop #'om-elem--shift-pos-integer elem))
+  (om-elem--map-property-strict*
+   prop (om-elem--shift-pos-integer n it) elem))
 
 ;; insert
 
