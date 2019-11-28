@@ -1813,6 +1813,84 @@
            (om-elem-to-trimmed-string))
       => "| a |")
 
+    (defexamples-content om-elem-plist-put-property
+      nil
+
+      (:content "#+CALL: ktulu[:cache no]()")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plist-put-property :inside-header :cache 'yes)
+           (om-elem-plist-put-property :end-header :results 'html)
+           (om-elem-to-trimmed-string))
+      => "#+CALL: ktulu[:cache yes]() :results html"
+
+      (:content "#+BEGIN: blockhead :format \"[%s]\""
+                "#+END:")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plist-put-property :arguments :format "<%s>")
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN: blockhead :format \"<%s>\""
+                  "#+END:")
+
+      (:content "call_ktulu[:cache no]()")
+      (->> (om-elem-parse-this-object)
+           (om-elem-plist-put-property :inside-header :cache 'yes)
+           (om-elem-plist-put-property :end-header :results 'html)
+           (om-elem-to-trimmed-string))
+      => "call_ktulu[:cache yes]()[:results html]"
+
+      (:content "src_emacs-lisp[:exports results]{}")
+      (->> (om-elem-parse-this-object)
+           (om-elem-plist-put-property :parameters :exports 'both)
+           (om-elem-to-trimmed-string))
+      => "src_emacs-lisp[:exports both]{}"
+
+      (:content "#+BEGIN_SRC emacs-lisp -n :exports results"
+                "#+END_SRC")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plist-put-property :parameters :exports 'both)
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_SRC emacs-lisp -n :exports both"
+                  "#+END_SRC"))
+
+    (defexamples-content om-elem-plist-remove-property
+      nil
+
+      (:content "#+CALL: ktulu[:cache no]() :results html")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plist-remove-property :inside-header :cache)
+           (om-elem-plist-remove-property :end-header :results)
+           (om-elem-to-trimmed-string))
+      => "#+CALL: ktulu()"
+
+      (:content "#+BEGIN: blockhead :format \"[%s]\""
+                "#+END:")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plist-remove-property :arguments :format)
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN: blockhead"
+                  "#+END:")
+
+      (:content "call_ktulu[:cache no]()[:results html]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-plist-remove-property :inside-header :cache)
+           (om-elem-plist-remove-property :end-header :results)
+           (om-elem-to-trimmed-string))
+      => "call_ktulu()"
+
+      (:content "src_emacs-lisp[:exports results]{}")
+      (->> (om-elem-parse-this-object)
+           (om-elem-plist-remove-property :parameters :exports)
+           (om-elem-to-trimmed-string))
+      => "src_emacs-lisp{}"
+
+      (:content "#+BEGIN_SRC emacs-lisp -n :exports results"
+                "#+END_SRC")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plist-remove-property :parameters :exports)
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_SRC emacs-lisp -n"
+                  "#+END_SRC"))
+
     ;; (defexamples-content om-elem-property-is-nil-p
     ;;   nil
     ;;   (:content "* TODO dummy")
