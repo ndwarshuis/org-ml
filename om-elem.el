@@ -513,7 +513,7 @@ and object containers and includes the 'plain-text' type.")
   (-some->> (om-elem--allow-string-list v p eo) (s-join delim)))
 
 (defun om-elem--pull-to-string-list-delim (v delim)
-  (s-split delim v))
+  (and v (s-split delim v)))
 
 (defun om-elem--allow-from-string-list-space-delim (v p eo)
   (om-elem--allow-from-string-list-delim v p eo " "))
@@ -528,11 +528,8 @@ and object containers and includes the 'plain-text' type.")
   (om-elem--pull-to-string-list-delim v ","))
 
 (defun om-elem--allow-from-plist (v p eo)
-  (-some->> (om-elem--allow v p eo "plist with symbols as values"
-              (lambda (x)
-                (and (om-elem--is-plist-p x)
-                     (->> (-slice x 1 nil 2) (-all? #'symbolp)))))
-            (-map #'symbol-name)
+  (-some->> (om-elem--allow v p eo "plist" #'om-elem--is-plist-p)
+            (--map (format "%S" it))
             (s-join " ")))
 
 (defun om-elem--pull-to-plist (v)
@@ -3013,7 +3010,7 @@ properties that are represented as plists.")
                                     (elem (head ,type))))
                          (doc-string "TODO add docstring")
                          (body
-                          '((om-elem--verify key keywordp value symbol)
+                          '((om-elem--verify key keywordp)
                             (om-elem--map-property-strict*
                              prop (plist-put it key value) elem))))
                     (eval `(cl-defmethod om-elem-plist-put-property
@@ -3042,7 +3039,7 @@ represented as plists.")
                          (body
                           '((om-elem--verify key keywordp)
                             (om-elem--map-property-strict*
-                             prop (om-elem--plist-remove it key) elem))))
+                             prop (om-elem--plist-remove key it) elem))))
                     (eval `(cl-defmethod om-elem-plist-remove-property
                              ,arglist ,doc-string ,@body))))))))
 
