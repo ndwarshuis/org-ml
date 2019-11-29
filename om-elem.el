@@ -2538,7 +2538,7 @@ properties that may be used with this function."
 
 ;; map
 
-(defun om-elem-match-map-property (prop fun elem)
+(defun om-elem-map-property (prop fun elem)
   "Apply function FUN to the value of property PROP in ELEM.
 FUN takes one argument (the current value of PROP) and returns
 a new value to which PROP will be set.
@@ -2547,7 +2547,7 @@ See `om-elem-set-property' for a list of supported elements and
 properties that may be used with this function."
   (om-elem--map-property-strict prop fun elem))
 
-(om-elem--gen-anaphoric-form #'om-elem-match-map-property)
+(om-elem--gen-anaphoric-form #'om-elem-map-property)
 
 ;; toggle
 
@@ -2821,58 +2821,15 @@ both timestamp halves."
   (om-elem--verify clock om-elem-is-clock-p)
   (om-elem--property-is-eq-p :status 'running clock))
 
-(defun om-elem-clock-get-duration (clock)
+(defun om-elem-clock-map-timestamp (fun clock)
+  "Apply FUN to timestamp in CLOCK.
+FUN is a function that takes the current timestamp and returns
+a modified timestamp. The returned timestamp must be inactive and
+cannot contain any warnings or repeaters."
   (om-elem--verify clock om-elem-is-clock-p)
-  (->> (om-elem--property :value clock)
-       (om-elem--timestamp-get-range)))
+  (om-elem-map-property :value fun clock))
 
-(defun om-elem-clock-set-duration (duration clock)
-  (om-elem--verify clock om-elem-is-clock-p)
-  (om-elem--clock-map-timestamp*
-   (om-elem--timestamp-set-range duration it)
-   clock))
-
-(defun om-elem--clock-set-start-time (time clock)
-  (om-elem--verify clock om-elem-is-clock-p)
-  (om-elem--clock-map-timestamp*
-   (om-elem--timestamp-set-start-time time it)
-   clock))
-
-(defun om-elem--clock-set-end-time (time clock)
-  (om-elem--verify clock om-elem-is-clock-p)
-  (om-elem--clock-map-timestamp*
-   (om-elem--timestamp-set-end-time time it)
-   clock))
-
-(defun om-elem--clock-set-single-time (time clock)
-  (om-elem--verify clock om-elem-is-clock-p)
-  (om-elem--clock-map-timestamp*
-   (om-elem--timestamp-set-single-time time it)
-   clock))
-
-(defun om-elem--clock-shift-timestamp-start (n unit clock)
-  (om-elem--verify clock om-elem-is-clock-p)
-  (om-elem--clock-map-timestamp*
-   (om-elem--timestamp-shift-start n unit it)
-   clock))
-
-(defun om-elem--clock-shift-timestamp-end (n unit clock)
-  (om-elem--verify clock om-elem-is-clock-p)
-  (om-elem--clock-map-timestamp*
-   (om-elem--timestamp-shift-end n unit it)
-   clock))
-
-(defun om-elem--clock-shift-timestamp (n unit clock)
-  (om-elem--verify clock om-elem-is-clock-p)
-  (om-elem--clock-map-timestamp*
-   (om-elem--timestamp-shift-range n unit it)
-   clock))
-
-(defun om-elem--clock-shift-range (n unit clock)
-  (om-elem--verify clock om-elem-is-clock-p)
-  (om-elem--clock-map-timestamp*
-   (om-elem--timestamp-shift-range n unit it)
-   clock))
+(om-elem--gen-anaphoric-form 'om-elem-clock-map-timestamp)
 
 ;; headline
 
@@ -2938,6 +2895,10 @@ both timestamp halves."
   "Toggle the checked/unchecked state of ITEM element."
   (om-elem--verify item om-elem-is-item-p)
   (om-elem--item-toggle-checkbox item))
+
+;; planning
+
+;; TODO add planning public functions
 
 ;;; PUBLIC CONTENT FUNCTIONS
 

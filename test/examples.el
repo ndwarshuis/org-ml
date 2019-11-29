@@ -1472,12 +1472,12 @@
            (om-elem-get-property :value))
       !!> error)
 
-    (defexamples-content om-elem-match-map-property
+    (defexamples-content om-elem-map-property
       nil
 
       (:content "#+CALL: ktulu()")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-map-property :call #'s-upcase)
+           (om-elem-map-property :call #'s-upcase)
            (om-elem-to-trimmed-string))
       => "#+CALL: KTULU()"
 
@@ -1487,13 +1487,13 @@
 
       (:content "~learn to~")
       (->> (om-elem-parse-this-object)
-           (om-elem-match-map-property :value #'s-upcase)
+           (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "~LEARN TO~"
 
       (:content "# not here")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-map-property :value #'s-upcase)
+           (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "# NOT HERE"
 
@@ -1501,7 +1501,7 @@
                 "not here"
                 "#+END_COMMENT")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-map-property :value #'s-upcase)
+           (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_COMMENT"
                   "NOT HERE"
@@ -1512,7 +1512,7 @@
       (:content ":LOGBOOK:"
                 ":END:")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-map-property :drawer-name #'s-capitalize)
+           (om-elem-map-property :drawer-name #'s-capitalize)
            (om-elem-to-trimmed-string))
       => (:result ":Logbook:"
                   ":END:")
@@ -1520,7 +1520,7 @@
       (:content "#+BEGIN: blockhead"
                 "#+END:")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-map-property :block-name #'s-upcase)
+           (om-elem-map-property :block-name #'s-upcase)
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN: BLOCKHEAD"
                   "#+END:")
@@ -1533,7 +1533,7 @@
                 "example.com"
                 "#+END_EXAMPLE")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-map-property* :value (concat "https://" it))
+           (om-elem-map-property* :value (concat "https://" it))
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_EXAMPLE"
                   "https://example.com"
@@ -1545,8 +1545,8 @@
                 "bullets, bombs, and bigotry"
                 "#+END_EXPORT")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-map-property :type #'s-upcase)
-           (om-elem-match-map-property :value #'s-upcase)
+           (om-elem-map-property :type #'s-upcase)
+           (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_EXPORT DOMESTIC"
                    "BULLETS, BOMBS, AND BIGOTRY"
@@ -1554,20 +1554,20 @@
 
       (:content "@@back-end:value@@")
       (->> (om-elem-parse-this-object)
-           (om-elem-match-map-property :back-end #'s-upcase)
-           (om-elem-match-map-property :value #'s-upcase)
+           (om-elem-map-property :back-end #'s-upcase)
+           (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "@@BACK-END:VALUE@@"
 
       (:content ": fixed")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-map-property :value #'s-upcase)
+           (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => ": FIXED"
 
       (:content "[fn:blacklabel] society")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-map-property :label #'s-upcase)
+           (om-elem-map-property :label #'s-upcase)
            (om-elem-to-trimmed-string))
       => "[fn:BLACKLABEL] society"
 
@@ -1575,7 +1575,7 @@
 
       (:content "call_ktulu()")
       (->> (om-elem-parse-this-object)
-           (om-elem-match-map-property :call #'s-upcase)
+           (om-elem-map-property :call #'s-upcase)
            (om-elem-to-trimmed-string))
       => "call_KTULU()"
 
@@ -1583,14 +1583,14 @@
 
       (:content "- tag :: thing")
       (->> (om-elem-parse-this-item)
-           (om-elem-match-map-property :tag (lambda (it) (-map #'s-upcase it)))
+           (om-elem-map-property :tag (lambda (it) (-map #'s-upcase it)))
            (om-elem-to-trimmed-string))
       => "- TAG :: thing"
 
       (:content "#+KEY: VAL")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-map-property :key (-partial #'s-prepend "OM_"))
-           (om-elem-match-map-property :value (-partial #'s-prepend "OM_"))
+           (om-elem-map-property :key (-partial #'s-prepend "OM_"))
+           (om-elem-map-property :value (-partial #'s-prepend "OM_"))
            (om-elem-to-trimmed-string))
       => "#+OM_KEY: OM_VAL"
 
@@ -1600,7 +1600,7 @@
 
       (:content "{{{economics}}}")
       (->> (om-elem-parse-this-object)
-           (om-elem-match-map-property :key #'s-upcase)
+           (om-elem-map-property :key #'s-upcase)
            (om-elem-to-trimmed-string))
       => "{{{ECONOMICS}}}"
 
@@ -1612,8 +1612,8 @@
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-node-properties)
            (-first-item)
-           (om-elem-match-map-property :key (-partial #'s-prepend "OM_"))
-           (om-elem-match-map-property :value (-partial #'s-prepend "OM_"))
+           (om-elem-map-property :key (-partial #'s-prepend "OM_"))
+           (om-elem-map-property :value (-partial #'s-prepend "OM_"))
            (om-elem-to-trimmed-string))
       => ":OM_KEY:   OM_VAL"
 
@@ -1622,7 +1622,7 @@
       (:content "#+BEGIN_special"
                 "#+END_special")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-map-property :type #'s-upcase)
+           (om-elem-map-property :type #'s-upcase)
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_SPECIAL"
                   "#+END_SPECIAL")
@@ -1633,13 +1633,13 @@
 
       (:content "<<found>>")
       (->> (om-elem-parse-this-object)
-           (om-elem-match-map-property :value #'s-upcase)
+           (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "<<FOUND>>"
 
       (:content "=I am not a crook=")
       (->> (om-elem-parse-this-object)
-           (om-elem-match-map-property :value #'s-upcase)
+           (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "=I AM NOT A CROOK="
       :end-hidden
@@ -1647,12 +1647,12 @@
       (:content "~code~")
       (:comment "Throw error if property doesn't exist")
       (->> (om-elem-parse-this-object)
-           (om-elem-match-map-property :title #'s-upcase)
+           (om-elem-map-property :title #'s-upcase)
            (om-elem-to-trimmed-string))
       !!> error
       (:comment "Throw error if function doesn't return proper type")
       (->> (om-elem-parse-this-object)
-           (om-elem-match-map-property* :value (if it 1 0))
+           (om-elem-map-property* :value (if it 1 0))
            (om-elem-to-trimmed-string))
       !!> error)
 
@@ -2097,6 +2097,18 @@
       (->> (om-elem-parse-this-element)
            (om-elem-clock-is-running-p))
       => nil))
+
+  (defexamples-content om-elem-clock-map-timestamp
+    nil
+    ;; TODO add more unit tests for this
+    (:content "CLOCK: [2019-01-01 Tue 00:00]")
+    (->> (om-elem-parse-this-element)
+         (om-elem-clock-map-timestamp*
+          (om-elem-timestamp-shift 1 'day it))
+         (om-elem-to-trimmed-string))
+    => "CLOCK: [2019-01-02 Wed 00:00]"
+    )
+    
 
   (def-example-subgroup "Headline"
     nil
