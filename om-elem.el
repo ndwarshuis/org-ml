@@ -2687,27 +2687,39 @@ property list in ELEM."
 ;; timestamp
 
 (defun om-elem-timestamp-get-start-timestamp (timestamp)
-  "Return the start of TIMESTAMP element."
+  "Return the start of TIMESTAMP as a timestamp element.
+If not a range, this will simply return TIMESTAMP unmodified."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-get-start-timestamp timestamp))
 
 (defun om-elem-timestamp-get-end-timestamp (timestamp)
-  "Return the end of TIMESTAMP element or nil if not present."
+  "Return the end of TIMESTAMP as a timestamp element.
+If not a range, return nil."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (and (om-elem--timestamp-is-ranged-fast-p timestamp)
        (om-elem--timestamp-get-end-timestamp timestamp)))
 
-(defun om-elem-timestamp-get-start-unixtime (timestamp)
-  "Return the unixtime value of TIMESTAMP element as an integer.
-Note this only considers the start of the timestamp if it is range."
+(defun om-elem-timestamp-get-start-time (timestamp)
+  "Return the time list of TIMESTAMP or start time if a range.
+The return value will be a list as specified by the TIME argument in
+`om-elem-build-timestamp'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-get-start-unixtime timestamp))
+  (om-elem--timestamp-get-start-time timestamp))
 
-(defun om-elem-timestamp-get-end-unixtime (timestamp)
-  "Return the unixtime value of TIMESTAMP's end as an integer."
+(defun om-elem-timestamp-get-end-time (timestamp)
+  "Return the end time list of TIMESTAMP end or nil if not a range.
+The return value will be a list as specified by the TIME argument in
+`om-elem-build-timestamp'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (and (om-elem--timestamp-is-ranged-fast-p timestamp)
-       (om-elem--timestamp-get-end-unixtime timestamp)))
+       (om-elem--timestamp-get-end-time timestamp)))
+
+(defun om-elem-timestamp-get-range (timestamp)
+  "Return the range of TIMESTAMP in seconds as an integer.
+If non-ranged, this function will return 0. If ranged but
+the start time is in the future relative to end the time, return
+a negative integer."
+  (om-elem--timestamp-get-range timestamp))
 
 (defun om-elem-timestamp-is-active-p (timestamp)
   "Return t if TIMESTAMP elem is active."
@@ -2727,35 +2739,37 @@ Note this only considers the start of the timestamp if it is range."
   (or (om-elem--property-is-eq-p :type 'active-range timestamp)
       (om-elem--property-is-eq-p :type 'inactive-range timestamp)))
 
-(defun om-elem-timestamp-start-is-less-than-p (unixtime timestamp)
-  "Return t if TIMESTAMP elem is less than UNIXTIME."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-start-is-less-than-p unixtime timestamp))
+;; TODO not sure how I feel about these :(
+;; (defun om-elem-timestamp-start-is-less-than-p (unixtime timestamp)
+;;   "Return t if TIMESTAMP start time is less than UNIXTIME."
+;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
+;;   (om-elem--timestamp-start-is-less-than-p unixtime timestamp))
 
-(defun om-elem-timestamp-start-is-greater-than-p (unixtime timestamp)
-  "Return t if TIMESTAMP elem is greater than UNIXTIME."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-start-is-greater-than-p unixtime timestamp))
+;; (defun om-elem-timestamp-start-is-greater-than-p (unixtime timestamp)
+;;   "Return t if TIMESTAMP start time is greater than UNIXTIME."
+;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
+;;   (om-elem--timestamp-start-is-greater-than-p unixtime timestamp))
 
-(defun om-elem-timestamp-start-is-equal-to-p (unixtime timestamp)
-  "Return t if TIMESTAMP elem is equal to UNIXTIME."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-start-is-equal-to-p unixtime timestamp))
+;; (defun om-elem-timestamp-start-is-equal-to-p (unixtime timestamp)
+;;   "Return t if TIMESTAMP start time is equal to UNIXTIME."
+;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
+;;   (om-elem--timestamp-start-is-equal-to-p unixtime timestamp))
 
-(defun om-elem-timestamp-end-is-less-than-p (unixtime timestamp)
-  "Return t if TIMESTAMP elem is less than UNIXTIME."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-end-is-less-than-p unixtime timestamp))
+;; TODO what happens if not a range?
+;; (defun om-elem-timestamp-end-is-less-than-p (unixtime timestamp)
+;;   "Return t if TIMESTAMP end time is less than UNIXTIME."
+;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
+;;   (om-elem--timestamp-end-is-less-than-p unixtime timestamp))
 
-(defun om-elem-timestamp-end-is-greater-than-p (unixtime timestamp)
-  "Return t if TIMESTAMP elem is greater than UNIXTIME."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-end-is-greater-than-p unixtime timestamp))
+;; (defun om-elem-timestamp-end-is-greater-than-p (unixtime timestamp)
+;;   "Return t if TIMESTAMP end time is greater than UNIXTIME."
+;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
+;;   (om-elem--timestamp-end-is-greater-than-p unixtime timestamp))
 
-(defun om-elem-timestamp-end-is-equal-to-p (unixtime timestamp)
-  "Return t if TIMESTAMP elem is equal to UNIXTIME."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-end-is-equal-to-p unixtime timestamp))
+;; (defun om-elem-timestamp-end-is-equal-to-p (unixtime timestamp)
+;;   "Return t if TIMESTAMP end time is equal to UNIXTIME."
+;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
+;;   (om-elem--timestamp-end-is-equal-to-p unixtime timestamp))
 
 (defun om-elem-timestamp-range-contains-p (unixtime timestamp)
   "Return t if UNIXTIME is between start and end of TIMESTAMP elem."
@@ -2766,16 +2780,31 @@ Note this only considers the start of the timestamp if it is range."
 
 (defun om-elem-timestamp-set-start-time (time timestamp)
   "Set start time of TIMESTAMP element to TIME.
-TIME is a list like '(year month day)' or '(year month day hour min)'."
+TIME is a list analogous to the same argument specified in
+`om-elem-build-timestamp'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-set-start-time time timestamp))
 
 (defun om-elem-timestamp-set-end-time (time timestamp)
   "Set end time of TIMESTAMP element to TIME.
-TIME is a list like '(year month day)' or '(year month day hour min)'.
-This will also change the type to (un)ranged as appropriate."
+TIME is a list analogous to the same argument specified in
+`om-elem-build-timestamp'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-set-end-time time timestamp))
+
+(defun om-elem-timestamp-set-single-time (time timestamp)
+  "Set start time of TIMESTAMP to TIME, and remove the end time.
+TIME is a list analogous to the same argument specified in
+`om-elem-build-timestamp'."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (om-elem--timestamp-set-single-time time timestamp))
+
+(defun om-elem-timestamp-set-double-time (time1 time2 timestamp)
+  "Set start and end time of TIMESTAMP to TIME1 and TIME2 respectively.
+TIME1 and TIME2 are lists analogous to the TIME argument specified in
+`om-elem-build-timestamp'."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (om-elem--timestamp-set-double-time time1 time2 timestamp))
 
 (defun om-elem-timestamp-set-type (type timestamp)
   "Set type of TIMESTAMP element to TYPE.
@@ -2784,26 +2813,45 @@ TYPE can be either 'active' or 'inactive'."
   (om-elem--timestamp-set-type type timestamp))
 
 (defun om-elem-timestamp-shift-start (n unit timestamp)
-  "Shift the UNIT of TIMESTAMP element start time by VALUE.
-VALUE is a positive or negative integer and UNIT is one of 'minute',
-'hour', 'day', 'month', or 'year'. Value will wrap around larger units
-as needed; for instance, supplying 'minute' for UNIT and 60 for VALUE
-will increase the hour property by 1."
+  "Shift TIMESTAMP start time by N UNITS.
+
+N is a positive or negative integer and UNIT is one of 'minute',
+'hour', 'day', 'month', or 'year'. Overflows will wrap around
+transparently; for instance, supplying 'minute' for UNIT and 90 for N
+will increase the hour property by 1 and the minute property by 30.
+
+If TIMESTAMP is not range, the output will be a ranged timestamp with
+the shifted start time and the end time as that of TIMESTAMP. If this
+behavior is not desired, use `om-elem-timestamp-shift'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-shift-start n unit timestamp))
 
 (defun om-elem-timestamp-shift-end (n unit timestamp)
-  "Shift the UNIT of TIMESTAMP element end time by VALUE.
-The behavior is analogous to `om-elem-timestamp-shift-time-start',
-except that the timestamp will be unchanged if no ending time is
-present."
+  "Shift TIMESTAMP end time by N UNITS.
+
+N is a positive or negative integer and UNIT is one of 'minute',
+'hour', 'day', 'month', or 'year'. Overflows will wrap around
+transparently; for instance, supplying 'minute' for UNIT and 90 for N
+will increase the hour property by 1 and the minute property by 30.
+
+If TIMESTAMP is not range, the output will be a ranged timestamp with
+the shifted end time and the start time as that of TIMESTAMP. If this
+behavior is not desired, use `om-elem-timestamp-shift'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-shift-end n unit timestamp))
 
 (defun om-elem-timestamp-shift (n unit timestamp)
-  "Shift the UNIT of TIMESTAMP element start and end time by VALUE.
-The behavior is analogous to `om-elem-timestamp-shift-time-start' for
-both timestamp halves."
+  "Shift TIMESTAMP time by N UNITS.
+
+This function will move the start and end times together; therefore
+ranged inputs will always output ranged timestamps and same for
+non-ranged. To move the start and end time independently, use
+`om-elem-timestamp-shift-start' or `om-elem-timestamp-shift-end'.
+
+N is a positive or negative integer and UNIT is one of 'minute',
+'hour', 'day', 'month', or 'year'. Overflows will wrap around
+transparently; for instance, supplying 'minute' for UNIT and 90 for N
+will increase the hour property by 1 and the minute property by 30."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-shift-range n unit timestamp))
 
