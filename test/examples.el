@@ -615,11 +615,11 @@
            (om-elem-to-trimmed-string)) => ":key:      val")
 
     (defexamples om-elem-build-planning
-      (->> (om-elem-build-planning :closed '(2019 1 1))
+      (->> (om-elem-build-planning :closed (om-elem-build-timestamp 'inactive '(2019 1 1)))
            (om-elem-to-trimmed-string)) => "CLOSED: [2019-01-01 Tue]"
-      (->> (om-elem-build-planning :scheduled '(2019 1 1))
+      (->> (om-elem-build-planning :scheduled (om-elem-build-timestamp 'inactive '(2019 1 1)))
            (om-elem-to-trimmed-string)) => "SCHEDULED: [2019-01-01 Tue]"
-      (->> (om-elem-build-planning :deadline '(2019 1 1))
+      (->> (om-elem-build-planning :deadline (om-elem-build-timestamp 'inactive '(2019 1 1)))
            (om-elem-to-trimmed-string)) => "DEADLINE: [2019-01-01 Tue]")
 
     (defexamples om-elem-build-src-block

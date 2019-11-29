@@ -187,7 +187,7 @@
 
 (ert-deftest om-elem--planning/valid-props ()
   (should-have-equal-properties
-   (om-elem-build-planning :closed '(2019 1 1))
+   (om-elem-build-planning :closed (om-elem-build-timestamp 'inactive '(2019 1 1)))
    (->> (om-elem--from-string "* dummy\nCLOSED: [2019-01-01 Tue]")
         (om-elem--get-nested-contents '(0 0)))))
 

@@ -609,8 +609,9 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--allow-planning-timestamp (v p eo)
   (om-elem--allow v p eo "an zero-range, inactive timestamp object"
     (lambda (ts)
-      (and (om-elem--is-type-p 'timestamp ts)
-           (om-elem--property-is-eq-p :type 'inactive ts)))))
+      (or (null ts)
+          (and (om-elem--is-type-p 'timestamp ts)
+               (om-elem--property-is-eq-p :type 'inactive ts))))))
 
 (defun om-elem--allow-entity-name (v p eo)
   (om-elem--allow v p eo "string that makes `org-entity-get' return non-nil"
@@ -1731,9 +1732,9 @@ VALUE is the part inside the '%%(value)' part of the sexp."
                                              post-blank)
   "Build planning element with TYPE and TIME."
   (->> (om-elem--build-element 'planning post-blank)
-       (om-elem--planning-set-closed closed)
-       (om-elem--planning-set-deadline deadline)
-       (om-elem--planning-set-scheduled scheduled)))
+       (om-elem--set-properties-strict (list :closed closed
+                                             :deadline deadline
+                                             :scheduled scheduled))))
 
 (om-elem--defun om-elem-build-src-block (value &key language switches
                                                parameters
