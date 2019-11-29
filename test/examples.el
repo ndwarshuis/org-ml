@@ -194,15 +194,6 @@
          (om-elem-get-type))
     => 'horizontal-rule
     ;; TODO add inlinetask
-    :end-hidden
-    
-    (:content "- item")
-    (:comment "Explicitly ask for item instead of plain-list")
-    (->> (om-elem-parse-element-at 1 'item)
-         (om-elem-get-type))
-    => 'item
-
-    :begin-hidden
     (:content "#+QUOTE: unquote")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
@@ -224,7 +215,7 @@
     :end-hidden
     
     (:content "- plain-list")
-    (:comment "Give the plain-list since we didn't explicitly ask for item")
+    (:comment "Give the plain-list, not the item for this function")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'plain-list
@@ -263,14 +254,10 @@
     
     (:content "| R | A |"
               "| G | E |")
-    (:comment "Return a table if table-row not specified")
+    (:comment "Return a table, not the table-row for this function")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'table
-    (:comment "Return a table-row if explicitly requested")
-    (->> (om-elem-parse-element-at 1 'table-row)
-         (om-elem-get-type))
-    => 'table-row
 
     :begin-hidden
     (:content "#+BEGIN_VERSE"

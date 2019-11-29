@@ -3256,11 +3256,11 @@ This is a workaround for a bug.")
 
 ;; point functions
 
-(defun om-elem-parse-object-at (point &optional type)
+(defun om-elem-parse-object-at (point)
   "Return the object tree under POINT or nil if not on an object.
 
 If TYPE is supplied, only return nil if the object under point is
-not of that type. TYPE is a symbol from `org-element-all-objects'."
+not of that type. TYPE is a symbol from `om-elem-objects'."
   (save-excursion
     (goto-char point)
     (let* ((context (org-element-context))
@@ -3281,7 +3281,7 @@ not of that type. TYPE is a symbol from `org-element-all-objects'."
              (om-elem--allow-types org-element-all-objects it)
              (if type (om-elem--allow-type type it) it))))))
 
-(defun om-elem-parse-element-at (point &optional type)
+(defun om-elem--parse-element-at (point &optional type)
   "Return element immediately under POINT.
 For a list of all possible return types refer to
 `org-element-all-elements'; this will return everything in this list
@@ -3313,21 +3313,30 @@ for plain-list elements vs item elements."
           (--> (om-elem--get-nested-contents nesting tree)
                (if type (om-elem--allow-type type it) it)))))))
 
+(defun om-elem-parse-element-at (point)
+  "Return element under POINT or nil if not on an element.
+
+This function will return every element available in `om-elem-elements'
+with the exception of 'section', 'item', and 'table-row'. To
+specifically parse these, use the functions `om-elem-parse-section-at',
+`om-elem-parse-table-row-at', and `om-elem-parse-table-row-at'."
+  (om-elem--parse-element-at point))
+
 (defun om-elem-parse-table-row-at (point)
-  "Return table-row element under POINT or nil if not found."
+  "Return table-row element under POINT or nil if not on a table-row."
   (save-excursion
     (goto-char point)
     (beginning-of-line)
-    (om-elem-parse-element-at (point) 'table-row)))
+    (om-elem--parse-element-at (point) 'table-row)))
 
 (defun om-elem-parse-item-at (point)
-  "Return item element under POINT or nil if not found.
-Unlike `om-elem-parse-element-at', this will return then item even if
-POINT is not at the beginning of the line."
+  "Return item element under POINT or nil if not on an item.
+This will return the item even if POINT is not at the beginning of
+the line."
   (save-excursion
     (goto-char point)
     (beginning-of-line)
-    (om-elem-parse-element-at (point) 'item)))
+    (om-elem--parse-element-at (point) 'item)))
 
 (defun om-elem--parse-headline-subtree-at (point subtree)
   (save-excursion
@@ -3340,20 +3349,21 @@ POINT is not at the beginning of the line."
                                           nil nil nil nil))))))
 
 (defun om-elem-parse-headline-at (point)
-  "Return element tree of the headline under POINT or nil if none.
+  "Return headline tree under POINT or nil if not on a headline.
 POINT does not need to be on the headline itself. Only the headline
-and its section will be returned (no subheadlines)."
+and its section will be returned. To include subheadlines, use
+`om-elem-parse-headline-subtree-at'."
   (om-elem--parse-headline-subtree-at point nil))
 
 (defun om-elem-parse-subtree-at (point)
-  "Return element tree of the headline under POINT or nil if none.
+  "Return headline tree under POINT or nil if not on a headline.
 POINT does not need to be on the headline itself. Unlike
 `om-elem-parse-headline-at', the returned tree will include
 subheadlines."
   (om-elem--parse-headline-subtree-at point t))
 
 (defun om-elem-parse-section-at (point)
-  "Return tree of the current section under POINT.
+  "Return tree of the section under POINT or nil if not on a section.
 If POINT is on or within a headline, return the section under that
 headline. If POINT is before the first headline (if any), return
 the section at the top of the org buffer."
@@ -3374,39 +3384,13 @@ the section at the top of the org buffer."
 
 ;; parse at current point
 
-(defun om-elem-parse-this-object (&optional type)
-  "Call `om-elem-parse-object-at' with the current point.
-
-If TYPE is supplied, only return nil if the object under point is
-not of that type. TYPE is a symbol from `org-element-all-objects'."
-  (om-elem-parse-object-at (point) type))
-
-(defun om-elem-parse-this-element (&optional type)
-  "Call `om-elem-parse-element-at' with the current point.
-
-If TYPE is supplied, only return nil if the element under point is
-not of that type. TYPE is a symbol from `org-element-all-elements'."
-  (om-elem-parse-element-at (point) type))
-
-(defun om-elem-parse-this-table-row ()
-  "Call `om-elem-parse-table-row-at' with the current point."
-  (om-elem-parse-table-row-at (point)))
-
-(defun om-elem-parse-this-item ()
-  "Call `om-elem-parse-item-at' with the current point."
-  (om-elem-parse-item-at (point)))
-
-(defun om-elem-parse-this-headline ()
-  "Call `om-elem-parse-headline-at' with the current point."
-  (om-elem-parse-headline-at (point)))
-
-(defun om-elem-parse-this-subtree ()
-  "Call `om-elem-parse-subtree-at' with the current point."
-  (om-elem-parse-subtree-at (point)))
-
-(defun om-elem-parse-this-section ()
-  "Call `om-elem-parse-section-at' with the current point."
-  (om-elem-parse-section-at (point)))
+(-> '(object element table-row item headline subtree section)
+    (--each
+        (let* ((name (intern (format "om-elem-parse-this-%s" it)))
+               (call (intern (format "om-elem-parse-%s-at" it)))
+               (doc (format "Call `%s' with the current point." call))
+               (body `(,call (point))))
+          (eval `(defun ,name () ,doc ,body)))))
 
 (defalias 'om-elem-parse-this-buffer 'org-element-parse-buffer)
 
