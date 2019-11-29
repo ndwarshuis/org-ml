@@ -34,6 +34,8 @@
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'bold
+
+    :begin-hidden
     (:content "~text~")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
@@ -98,10 +100,14 @@
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'target
+    :end-hidden
+
     (:content "[2019-01-01 Tue]")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'timestamp
+
+    :begin-hidden
     (:content "_text_")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
@@ -110,6 +116,8 @@
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'verbatim
+    :end-hidden
+
     (:content "- notme")
     (:comment "Return nil when parsing an element")
     (om-elem-parse-object-at 1)
@@ -117,10 +125,12 @@
 
   (defexamples-content om-elem-parse-element-at
     nil
-    (:content "#+CALL: of_ktulu()")
+    (:content "#+CALL: ktulu()")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'babel-call
+
+    :begin-hidden
     (:content "#+BEGIN_CENTER"
               "#+END_CENTER")
     (->> (om-elem-parse-element-at 1)
@@ -184,11 +194,15 @@
          (om-elem-get-type))
     => 'horizontal-rule
     ;; TODO add inlinetask
+    :end-hidden
+    
     (:content "- item")
     (:comment "Explicitly ask for item instead of plain-list")
     (->> (om-elem-parse-element-at 1 'item)
          (om-elem-get-type))
     => 'item
+
+    :begin-hidden
     (:content "#+QUOTE: unquote")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
@@ -207,11 +221,15 @@
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'paragraph
+    :end-hidden
+    
     (:content "- plain-list")
     (:comment "Give the plain-list since we didn't explicitly ask for item")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'plain-list
+
+    :begin-hidden
     (:content "* deadhead"
               "DEADLINE: [2019-01-01 Tue]")
     (->> (om-elem-parse-element-at 12)
@@ -241,19 +259,26 @@
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'src-block
+    :end-hidden
+    
     (:content "| R | A |"
               "| G | E |")
+    (:comment "Return a table if table-row not specified")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'table
+    (:comment "Return a table-row if explicitly requested")
     (->> (om-elem-parse-element-at 1 'table-row)
          (om-elem-get-type))
     => 'table-row
+
+    :begin-hidden
     (:content "#+BEGIN_VERSE"
               "#+END_VERSE")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
-    => 'verse-block)
+    => 'verse-block
+    :end-hidden)
 
   (defexamples-content om-elem-parse-headline-at
     nil
@@ -806,6 +831,7 @@
            (om-elem-get-property :end-header))
       => '(:exports results)
 
+      :begin-hidden
       (:content "CLOCK: [2019-01-01 Tue]")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :value)
@@ -986,6 +1012,7 @@
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :value))
       => "$2+2=4$"
+      :end-hidden
 
       (:content "[[file:/dev/null]]")
       (->> (om-elem-parse-this-object)
@@ -997,7 +1024,8 @@
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :format))
       => 'bracket
-
+      
+      :begin-hidden
       (:content "{{{economics(x=4,y=2)}}}")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :key))
@@ -1137,7 +1165,16 @@
       (:content "=I am not a crook=")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :value))
-      => "I am not a crook")
+      => "I am not a crook"
+      :end-hidden
+
+      ;; TODO add post-blank
+
+      (:content "* not arguable")
+      (:comment "Throw error when requesting a property that doesn't exist")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-get-property :value))
+      !!> error)
 
     (defexamples-content om-elem-set-property
       nil
@@ -1151,6 +1188,7 @@
            (om-elem-to-trimmed-string))
       => "#+CALL: cthulhu[:cache no](x=4) :exports results"
 
+      :begin-hidden
       (:content "CLOCK: [2019-01-01 Tue]")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property
@@ -1280,6 +1318,7 @@
            (om-elem-set-property :value "print \"yeah boi\"")
            (om-elem-to-trimmed-string))
       => "src_python[:cache no]{print \"yeah boi\"}"
+      :end-hidden
 
       (:content "- thing")
       (->> (om-elem-parse-this-item)
@@ -1290,6 +1329,7 @@
            (om-elem-to-trimmed-string))
       => "1. [@2] [X] tmsu :: thing"
 
+      :begin-hidden
       (:content "#+KEY: VAL")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :key "kee")
@@ -1433,7 +1473,17 @@
       (->> (om-elem-parse-this-object)
            (om-elem-set-property :value "You totally are")
            (om-elem-to-trimmed-string))
-      => "=You totally are=")
+      => "=You totally are="
+      :end-hidden
+
+      ;; TODO add post-blank
+
+      (:content "* not valuable")
+      (:comment "Throw error when setting a property that doesn't exist")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-set-property :value "wtf")
+           (om-elem-to-trimmed-string))
+      !!> error)
 
     (defexamples-content om-elem-map-property
       nil
@@ -1443,6 +1493,8 @@
            (om-elem-map-property :call #'s-upcase)
            (om-elem-to-trimmed-string))
       => "#+CALL: KTULU()"
+
+      :begin-hidden
 
       ;; TODO add clock
 
@@ -1486,17 +1538,21 @@
       => (:result "#+BEGIN: BLOCKHEAD"
                   "#+END:")
 
+      :end-hidden
+
       ;; TODO add entity
 
       (:content "#+BEGIN_EXAMPLE"
                 "example.com"
                 "#+END_EXAMPLE")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-property :value (lambda (it) (concat "https://")))
+           (om-elem-map-property* :value (concat "https://" it))
            (om-elem-to-trimmed-string))
-      => (:content "#+BEGIN_EXAMPLE"
-                   "https://example.com"
-                   "#+END_EXAMPLE")
+      => (:result "#+BEGIN_EXAMPLE"
+                  "https://example.com"
+                  "#+END_EXAMPLE")
+
+      :begin-hidden
 
       (:content "#+BEGIN_EXPORT domestic"
                 "bullets, bombs, and bigotry"
@@ -1598,7 +1654,20 @@
       (->> (om-elem-parse-this-object)
            (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
-      => "=I AM NOT A CROOK=")
+      => "=I AM NOT A CROOK="
+      :end-hidden
+
+      (:content "~code~")
+      (:comment "Throw error if property doesn't exist")
+      (->> (om-elem-parse-this-object)
+           (om-elem-map-property :title #'s-upcase)
+           (om-elem-to-trimmed-string))
+      !!> error
+      (:comment "Throw error if function doesn't return proper type")
+      (->> (om-elem-parse-this-object)
+           (om-elem-map-property* :value (if it 1 0))
+           (om-elem-to-trimmed-string))
+      !!> error)
 
     (defexamples-content om-elem-toggle-property
       nil
@@ -1625,6 +1694,8 @@
            (om-elem-to-trimmed-string))
       => "* Footnotes"
 
+      :begin-hidden
+
       (:content "sub_woofer")
       (->> (om-elem-parse-object-at 5)
            (om-elem-toggle-property :use-brackets-p)
@@ -1635,54 +1706,61 @@
       (->> (om-elem-parse-object-at 7)
            (om-elem-toggle-property :use-brackets-p)
            (om-elem-to-trimmed-string))
-      => "^{woofer}")
+      => "^{woofer}"
+
+      :end-hidden
+
+      (:content "- [ ] nope")
+      (:comment "Throw an error when trying to toggle a non-boolean property")
+      (->> (om-elem-parse-this-item)
+           (om-elem-toggle-property :checkbox)
+           (om-elem-to-trimmed-string))
+      !!> error)
 
     (defexamples-content om-elem-shift-property
       ;; TODO need to ensure that the min/max priorities are always the same
       nil
-      (:content "* headline")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-shift-property :level 1)
-           (om-elem-to-trimmed-string))
-      => "** headline"
-      (->> (om-elem-parse-this-headline)
-           (om-elem-shift-property :level -1)
-           (om-elem-to-trimmed-string))
-      => "* headline"
 
-      (:content "* headline")
+      (:content "* no priorities")
+      (:comment "Do nothing if there is nothing to shift.")
       (->> (om-elem-parse-this-headline)
            (om-elem-shift-property :priority 1)
            (om-elem-to-trimmed-string))
-      => "* headline"
+      => "* no priorities"
 
-      (:content "* [#A] headline")
+      (:content "* [#A] priorities")
       (->> (om-elem-parse-this-headline)
            (om-elem-shift-property :priority -1)
            (om-elem-to-trimmed-string))
-      => "* [#B] headline"
+      => "* [#B] priorities"
       (->> (om-elem-parse-this-headline)
            (om-elem-shift-property :priority -2)
            (om-elem-to-trimmed-string))
-      => "* [#C] headline"
+      => "* [#C] priorities"
+      (:comment "Wrap priority around when crossing the min or max")
       (->> (om-elem-parse-this-headline)
            (om-elem-shift-property :priority 1)
            (om-elem-to-trimmed-string))
-      => "* [#C] headline"
+      => "* [#C] priorities"
 
-      (:content "* headline"
-                "stuff")
+      (:content "* TODO or not todo")
+      (:comment "Throw error when shifting an unshiftable property")
       (->> (om-elem-parse-this-headline)
-           (om-elem-shift-property :pre-blank 1)
-           (om-elem-to-trimmed-string))
-      => (:result "* headline"
-                  ""
-                  "stuff")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-shift-property :pre-blank -1)
-           (om-elem-to-trimmed-string))
-      => (:result "* headline"
-                  "stuff")
+           (om-elem-shift-property :todo-keyword 1)
+           (om-elem-to-string))
+      !!> error
+
+      :begin-hidden
+
+      (:content "*bold*")
+      (->> (om-elem-parse-this-object)
+           (om-elem-shift-property :post-blank 1)
+           (om-elem-to-string))
+      => "*bold* "
+      (->> (om-elem-parse-this-object)
+           (om-elem-shift-property :post-blank -1)
+           (om-elem-to-string))
+      => "*bold*"
 
       (:content "1. thing")
       (->> (om-elem-parse-this-item)
@@ -1700,16 +1778,32 @@
            (om-elem-to-trimmed-string))
       => "1. [@1] thing"
 
-      (:content "*bold*")
-      (->> (om-elem-parse-this-object)
-           (om-elem-shift-property :post-blank 1)
-           (om-elem-to-string))
-      => "*bold* "
-      (->> (om-elem-parse-this-object)
-           (om-elem-shift-property :post-blank -1)
-           (om-elem-to-string))
-      => "*bold*")
+      (:content "* noob level")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-shift-property :level 1)
+           (om-elem-to-trimmed-string))
+      => "** noob level"
 
+      (:comment "Do nothing when final value is less than one.")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-shift-property :level -1)
+           (om-elem-to-trimmed-string))
+      => "* noob level"
+
+      (:content "* headline"
+                "stuff")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-shift-property :pre-blank 1)
+           (om-elem-to-trimmed-string))
+      => (:result "* headline"
+                  ""
+                  "stuff")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-shift-property :pre-blank -1)
+           (om-elem-to-trimmed-string))
+      => (:result "* headline"
+                  "stuff")
+      :end-hidden)
 
     (defexamples-content om-elem-insert-into-property
       nil
@@ -1720,6 +1814,26 @@
            (om-elem-to-trimmed-string))
       => "#+CALL: ktulu(x=4,y=1)"
 
+      (:comment "Do nothing if the string is already in the list")
+      (->> (om-elem-parse-this-element)
+           (om-elem-insert-into-property :arguments 0 "y=1")
+           (om-elem-to-trimmed-string))
+      => "#+CALL: ktulu(y=1)"
+
+      (:comment "Throw error when inserting into a property that is not a list of strings")
+      (->> (om-elem-parse-this-element)
+           (om-elem-insert-into-property :end-header 0 "html")
+           (om-elem-to-trimmed-string))
+      !!> error
+
+      (:content "* headline       :tag1:")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-insert-into-property :tags 0 "tag0")
+           (om-elem-to-trimmed-string))
+      => "* headline                                                        :tag0:tag1:"
+
+      :begin-hidden
+
       (:content "#+BEGIN_EXAMPLE -n"
                 "#+END_EXAMPLE")
       (->> (om-elem-parse-this-element)
@@ -1728,11 +1842,6 @@
       => (:result "#+BEGIN_EXAMPLE -n -r"
                   "#+END_EXAMPLE")
 
-      (:content "* headline       :tag1:")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-insert-into-property :tags 0 "tag0")
-           (om-elem-to-trimmed-string))
-      => "* headline                                                        :tag0:tag1:"
 
       (:content "call_ktulu(y=1)")
       (->> (om-elem-parse-this-object)
@@ -1761,7 +1870,8 @@
            (om-elem-to-trimmed-string))
       => (:result "| a |"
                   "#+TBLFM: y=$3"
-                  "#+TBLFM: x=$2"))
+                  "#+TBLFM: x=$2")
+      :end-hidden)
 
     (defexamples-content om-elem-remove-from-property
       nil
@@ -1772,19 +1882,33 @@
            (om-elem-to-trimmed-string))
       => "#+CALL: ktulu()"
 
-      (:content "#+BEGIN_EXAMPLE -n"
-                "#+END_EXAMPLE")
+      (:comment "Do nothing if the string does not exist")
       (->> (om-elem-parse-this-element)
-           (om-elem-remove-from-property :switches "-n")
+           (om-elem-remove-from-property :arguments "d=666")
            (om-elem-to-trimmed-string))
-      => (:content "#+BEGIN_EXAMPLE"
-                "#+END_EXAMPLE")
+      => "#+CALL: ktulu(y=1)"
+
+      (:comment "Throw error when removing from property that is not a string list")
+      (->> (om-elem-parse-this-element)
+           (om-elem-remove-from-property :end-header ":results")
+           (om-elem-to-trimmed-string))
+      !!> error
 
       (:content "* headline       :tag1:")
       (->> (om-elem-parse-this-headline)
            (om-elem-remove-from-property :tags "tag1")
            (om-elem-to-trimmed-string))
       => "* headline"
+
+      :begin-hidden
+
+      (:content "#+BEGIN_EXAMPLE -n"
+                "#+END_EXAMPLE")
+      (->> (om-elem-parse-this-element)
+           (om-elem-remove-from-property :switches "-n")
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_EXAMPLE"
+                  "#+END_EXAMPLE")
 
       (:content "call_ktulu(y=1)")
       (->> (om-elem-parse-this-object)
@@ -1811,17 +1935,34 @@
       (->> (om-elem-parse-this-element)
            (om-elem-remove-from-property :tblfm "x=$2")
            (om-elem-to-trimmed-string))
-      => "| a |")
+      => "| a |"
+      :end-header)
 
     (defexamples-content om-elem-plist-put-property
       nil
 
       (:content "#+CALL: ktulu[:cache no]()")
       (->> (om-elem-parse-this-element)
-           (om-elem-plist-put-property :inside-header :cache 'yes)
            (om-elem-plist-put-property :end-header :results 'html)
            (om-elem-to-trimmed-string))
-      => "#+CALL: ktulu[:cache yes]() :results html"
+      => "#+CALL: ktulu[:cache no]() :results html"
+      (:comment "Change the value of key if it already is present")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plist-put-property :inside-header :cache 'yes)
+           (om-elem-to-trimmed-string))
+      => "#+CALL: ktulu[:cache yes]()"
+      (:comment "Do nothing if the key and value already exist")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plist-put-property :inside-header :cache 'no)
+           (om-elem-to-trimmed-string))
+      => "#+CALL: ktulu[:cache no]()"
+      (:comment "Throw error if setting property that isn't a plist")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plist-put-property :arguments :cache 'no)
+           (om-elem-to-trimmed-string))
+      !!> error
+
+      :begin-hidden
 
       (:content "#+BEGIN: blockhead :format \"[%s]\""
                 "#+END:")
@@ -1850,17 +1991,29 @@
            (om-elem-plist-put-property :parameters :exports 'both)
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_SRC emacs-lisp -n :exports both"
-                  "#+END_SRC"))
+                  "#+END_SRC")
+      :end-hidden)
 
     (defexamples-content om-elem-plist-remove-property
       nil
 
-      (:content "#+CALL: ktulu[:cache no]() :results html")
+      (:content "#+CALL: ktulu() :results html")
       (->> (om-elem-parse-this-element)
-           (om-elem-plist-remove-property :inside-header :cache)
            (om-elem-plist-remove-property :end-header :results)
            (om-elem-to-trimmed-string))
       => "#+CALL: ktulu()"
+      (:comment "Do nothing if the key is not present")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plist-remove-property :inside-header :cache)
+           (om-elem-to-trimmed-string))
+      => "#+CALL: ktulu() :results html"
+      (:comment "Throw error if trying to remove key from non-plist property")
+      (->> (om-elem-parse-this-element)
+           (om-elem-plist-remove-property :arguments :cache)
+           (om-elem-to-trimmed-string))
+      !!> error
+
+      :begin-hidden
 
       (:content "#+BEGIN: blockhead :format \"[%s]\""
                 "#+END:")
@@ -1889,7 +2042,8 @@
            (om-elem-plist-remove-property :parameters :exports)
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_SRC emacs-lisp -n"
-                  "#+END_SRC"))
+                  "#+END_SRC")
+      :end-hidden)
 
     ;; (defexamples-content om-elem-property-is-nil-p
     ;;   nil

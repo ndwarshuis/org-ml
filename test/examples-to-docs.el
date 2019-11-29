@@ -51,6 +51,10 @@
 
 (defun example-to-string (example)
   (-let* (((actual sym expected) example)
+          (expected
+           (if (eq (and (listp expected) (car expected)) :result)
+               (s-join "\n" (cdr expected))
+             expected))
           (actual (format-actual actual))
           (comment
            (cond
@@ -105,6 +109,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
       (->> (s-lines doc) (-drop-last 2) (s-join "\n")))))
 
 (defmacro defexamples (cmd &rest examples)
+  ;; (print cmd)
   `(add-to-list 'functions
                 (list
                  ',cmd
@@ -113,10 +118,15 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
                  (-map 'example-to-string (-partition 3 ',examples)))))
 
 (defmacro defexamples-content (cmd docstring &rest args)
+  ;; (print cmd)
   `(cl-flet
        ((formatted-string?
          (list)
          (memq (and (listp list) (car list)) '(:content :comment)))
+        (filter-hidden
+         (args)
+         (->> (--split-when (eq it :end-hidden) args)
+              (--mapcat (--take-while (not (eq it :begin-hidden)) it))))
         (format-content
          (list)
          (->> (car list)
@@ -129,7 +139,8 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
          (->> (car list) (-drop 1) (s-join " ") (format ";; %s"))))
      (let* ((doc (or ,docstring (format-doc ',cmd)))
             (example
-             (->> (-partition-by #'formatted-string? ',args)
+             (->> (filter-hidden ',args)
+                  (-partition-by #'formatted-string?)
                   (--map (cond
                           ((eq :comment (car (car it)))
                            (format-comment it))

@@ -60,6 +60,8 @@
              ,@tests))))
     (let ((body
            (->> args
+                (remove :begin-hidden)
+                (remove :end-hidden)
                 (-partition-before-pred
                  (lambda (it) (eq (and (listp it) (car it)) :content)))
                 (-map #'make-test))))
