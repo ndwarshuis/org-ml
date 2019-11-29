@@ -709,14 +709,38 @@ and object containers and includes the 'plain-text' type.")
               (-snoc tags* org-archive-tag) tags*))))
     (om-elem--map-property :tags #'add-archive-tag-maybe headline)))
 
+;; shifters
+
+(defun om-elem--shift-pos-integer (n x)
+  (when x
+    (let ((x* (+ x n)))
+      (if (< 0 x*) x* 1))))
+
+(defun om-elem--shift-non-neg-integer (n x)
+  (when x
+    (let ((x* (+ x n)))
+      (if (<= 0 x*) x* 0))))
+
+(defun om-elem--shift-headline-priority (n priority)
+  (when priority
+    (let ((diff (1+ (- org-lowest-priority org-highest-priority)))
+          (offset (- priority org-highest-priority)))
+      (--> (- offset n)
+           (mod it diff)
+           (- it offset)
+           (+ priority it)))))
+
 (defconst om-elem--type-alist
   '((babel-call (:call :set om-elem--allow-oneline-string)
                 (:inside-header :set om-elem--allow-from-plist
-                                :get om-elem--pull-to-plist)
+                                :get om-elem--pull-to-plist
+                                :plist t)
                 (:arguments :set om-elem--allow-from-string-list-comma-delim
-                            :get om-elem--pull-to-string-list-comma-delim)
+                            :get om-elem--pull-to-string-list-comma-delim
+                            :string-list t)
                 (:end-header :set om-elem--allow-from-plist
-                             :get om-elem--pull-to-plist))
+                             :get om-elem--pull-to-plist
+                             :plist t))
     (bold)
     (center-block)
     (clock (:value :set om-elem--allow-clock-timestamp
@@ -729,13 +753,17 @@ and object containers and includes the 'plain-text' type.")
     (diary-sexp (:value :set om-elem--allow-diary-sexp-value
                         :get om-elem--pull-diary-sexp-value))
     (dynamic-block (:arguments :set om-elem--allow-from-plist
-                               :get om-elem--pull-to-plist)
+                               :get om-elem--pull-to-plist
+                               :plist t)
                    (:block-name :set om-elem--allow-oneline-string))
     (entity (:name :set om-elem--allow-entity-name)
-            (:use-brackets-p :set om-elem--allow-boolean))
-    (example-block (:preserve-indent :set om-elem--allow-boolean)
+            (:use-brackets-p :set om-elem--allow-boolean
+                             :toggle t))
+    (example-block (:preserve-indent :set om-elem--allow-boolean
+                                     :toggle t)
                    (:switches :set om-elem--allow-from-string-list-space-delim
-                              :get om-elem--pull-to-string-list-space-delim)
+                              :get om-elem--pull-to-string-list-space-delim
+                              :string-list t)
                    (:value :set om-elem--allow-string
                            :get s-trim-right))
     (export-block (:type :set om-elem--allow-oneline-string)
@@ -747,35 +775,47 @@ and object containers and includes the 'plain-text' type.")
     (footnote-definition (:label :set om-elem--allow-oneline-string-or-nil))
     (footnote-reference (:label :set om-elem--allow-oneline-string-or-nil))
     (headline (:archivedp :set om-elem--allow-boolean
-                          :cis om-elem--headline-update-tags)
-              (:commentedp :set om-elem--allow-boolean)
-              (:footnote-section-p :set om-elem--allow-boolean)
-              (:level :set om-elem--allow-pos-integer)
-              (:pre-blank :set om-elem--allow-non-neg-integer)
-              (:priority :set om-elem--allow-headline-priority)
+                          :cis om-elem--headline-update-tags
+                          :toggle t)
+              (:commentedp :set om-elem--allow-boolean
+                           :toggle t)
+              (:footnote-section-p :set om-elem--allow-boolean
+                                   :toggle t)
+              (:level :set om-elem--allow-pos-integer
+                      :shift om-elem--shift-pos-integer)
+              (:pre-blank :set om-elem--allow-non-neg-integer
+                          :shift om-elem--shift-non-neg-integer)
+              (:priority :set om-elem--allow-headline-priority
+                         :shift om-elem--shift-headline-priority)
               (:tags :set om-elem--allow-headline-tags
                      :get om-elem--to-headline-tags
-                     :cis om-elem--headline-update-tags)
+                     :cis om-elem--headline-update-tags
+                     :string-list t)
               (:title :set om-elem--allow-headline-title)
               (:todo-keyword :set om-elem--allow-oneline-string-or-nil)) ; TODO restrict this?
     (horizontal-rule)
     (inline-babel-call (:call :set om-elem--allow-oneline-string)
                        (:inside-header :set om-elem--allow-from-plist
-                                       :get om-elem--pull-to-plist)
+                                       :get om-elem--pull-to-plist
+                                       :plist t)
                        (:arguments :set om-elem--allow-from-string-list-comma-delim
-                                   :get om-elem--pull-to-string-list-comma-delim)
+                                   :get om-elem--pull-to-string-list-comma-delim
+                                   :string-list t)
                        (:end-header :set om-elem--allow-from-plist
-                                    :get om-elem--pull-to-plist))
+                                    :get om-elem--pull-to-plist
+                                    :plist t))
     (inline-src-block (:language :set om-elem--allow-oneline-string)
                       (:parameters :set om-elem--allow-from-plist
-                                   :get om-elem--pull-to-plist)
+                                   :get om-elem--pull-to-plist
+                                   :plist t)
                       (:value :set om-elem--allow-oneline-string))
     ;; (inlinetask)
     (italic)
     (item (:bullet :set om-elem--allow-item-bullets
                    :get om-elem--to-item-bullets)
           (:checkbox :set om-elem--allow-item-checkbox-symbols)
-          (:counter :set om-elem--allow-pos-integer-or-nil)
+          (:counter :set om-elem--allow-pos-integer-or-nil
+                    :shift om-elem--shift-pos-integer)
           (:tag :set om-elem--allow-item-tag))
     (keyword (:key :set om-elem--allow-oneline-string)
              (:value :set om-elem--allow-oneline-string))
@@ -786,7 +826,8 @@ and object containers and includes the 'plain-text' type.")
           (:path :set om-elem--allow-oneline-string)
           (:type :set om-elem--allow-link-type))
     (macro (:args :set om-elem--allow-string-list
-                  :cis om-elem--macro-update-value)
+                  :cis om-elem--macro-update-value
+                  :string-list t)
            (:key :set om-elem--allow-oneline-string
                  :cis om-elem--macro-update-value))
     (node-property (:key :set om-elem--allow-oneline-string)
@@ -804,18 +845,24 @@ and object containers and includes the 'plain-text' type.")
     (special-block (:type :set om-elem--allow-oneline-string))
     (src-block (:language :set om-elem--allow-oneline-string-or-nil)
                (:parameters :set om-elem--allow-from-plist
-                            :get om-elem--pull-to-plist)
-               (:preserve-indent :set om-elem--allow-boolean)
+                            :get om-elem--pull-to-plist
+                            :plist t)
+               (:preserve-indent :set om-elem--allow-boolean
+                                 :toggle t)
                (:switches :set om-elem--allow-from-string-list-space-delim
-                          :get om-elem--pull-to-string-list-space-delim)
+                          :get om-elem--pull-to-string-list-space-delim
+                          :string-list t)
                (:value :set om-elem--allow-string
                        :get s-trim-right))
     (statistics-cookie (:value :set om-elem--allow-statistics-cookie-value
                                :get om-elem--to-statistics-cookie))
     (strike-through)
-    (subscript (:use-brackets-p :set om-elem--allow-boolean))
-    (superscript (:use-brackets-p :set om-elem--allow-boolean))
-    (table (:tblfm :set om-elem--allow-string-list))
+    (subscript (:use-brackets-p :set om-elem--allow-boolean
+                                :toggle t))
+    (superscript (:use-brackets-p :set om-elem--allow-boolean
+                                  :toggle t))
+    (table (:tblfm :set om-elem--allow-string-list
+                   :string-list t))
     (table-cell)
     (table-row)
     (target (:value :set om-elem--allow-oneline-string))
@@ -841,7 +888,8 @@ and object containers and includes the 'plain-text' type.")
     (verse-block)))
 
 ;; add post-blank functions to all entries
-(let ((post-blank-funs '(:post-blank :set om-elem--allow-non-neg-integer)))
+(let ((post-blank-funs '(:post-blank :set om-elem--allow-non-neg-integer
+                                     :shift om-elem--shift-non-neg-integer)))
   (setq om-elem--type-alist
         (--map (-snoc it post-blank-funs) om-elem--type-alist)))
 
@@ -1324,12 +1372,8 @@ float-times, which assumes the :type property is valid."
 
 (defun om-elem--headline-shift-level (n headline)
   (om-elem--verify n integerp)
-  (cl-flet
-      ((shift-level
-        (cur-level)
-        (let ((new-level (+ n cur-level))) ; of cooooonfideeeeence...
-          (if (< 1 new-level) new-level 1)))) ; and pooooooweeeeer...
-    (om-elem--map-property :level #'shift-level headline)))
+  (om-elem--map-property* :level (om-elem--shift-pos-integer n it)
+                          headline))
 
 ;; item
 
@@ -2480,77 +2524,22 @@ a new value to which PROP will be set."
 (defun om-elem-toggle-property (prop elem)
   "Flip the value of property PROP in ELEM.
 This function only applies to properties that are booleans"
-  (om-elem--map-property-strict prop #'not elem))
+  (let* ((type (om-elem--get-type elem))
+         (flag (om-elem--get-strict-function :toggle type prop)))
+    (if flag
+        (om-elem--map-property-strict prop #'not elem)
+      (error "Not a toggle-able property"))))
 
 ;; shift
 
-(cl-defgeneric om-elem-shift-property (prop n elem)
+(defun om-elem-shift-property (prop n elem)
   "Shift property PROP by N (an integer) units within ELEM.
-This only applies the properties that are represented as integers.")
-
-(defun om-elem--shift-pos-integer (n x)
-  (om-elem--verify n integerp)
-  (when x
-    (let ((x* (+ x n)))
-      (if (< 0 x*) x* 1))))
-
-(defun om-elem--shift-non-neg-integer (n x)
-  (om-elem--verify n integerp)
-  (when x
-    (let ((x* (+ x n)))
-      (if (<= 0 x*) x* 0))))
-
-(cl-defmethod om-elem-shift-property ((prop (eql :post-blank)) n elem)
-  "Shift :post-blank of ELEM by N units up or down.
-N is a positive or negative integer. If the final value is less than
-zero, it will silently be reset to zero."
-  (om-elem--map-property-strict*
-   prop (om-elem--shift-non-neg-integer n it) elem))
-
-(cl-defmethod om-elem-shift-property ((prop (eql :counter)) n
-                                      (elem (head item)))
-  "Shift :counter of an item by N units up or down.
-N is a positive or negative integer. If the final value is less than
-one, it will silently be reset to one."
-  (om-elem--map-property-strict*
-   prop (om-elem--shift-pos-integer n it) elem))
-
-(cl-defmethod om-elem-shift-property ((prop (eql :priority)) n
-                                      (elem (head headline)))
-  "Shift :priority of a headline by N units up or down.
-N is a positive or negative integer. Final value will wrap around
-if if is numerically greater than `org-lowest-priority' or less than
-`org-highest-priority' (similar to how the interactive cycling works
-when editing a buffer."
-  (om-elem--verify n integerp)
-  ;; positive goes up (B -> A) and vice versa
-  (cl-flet
-      ((shift-priority
-        (priority)
-        (when priority
-          (let ((diff (1+ (- org-lowest-priority org-highest-priority)))
-                (offset (- priority org-highest-priority)))
-            (--> (- offset n)
-                 (mod it diff)
-                 (- it offset)
-                 (+ priority it))))))
-    (om-elem--map-property-strict prop #'shift-priority elem)))
-
-(cl-defmethod om-elem-shift-property ((prop (eql :pre-blank)) n
-                                      (elem (head headline)))
-  "Shift :pre-blank of a headline by N units up or down.
-N is a positive or negative integer. If the final value is less than
-zero, it will silently be reset to zero."
-  (om-elem--map-property-strict*
-   prop (om-elem--shift-non-neg-integer n it) elem))
-
-(cl-defmethod om-elem-shift-property ((prop (eql :level)) n
-                                      (elem (head headline)))
-  "Shift :level of a headline by N units up or down.
-N is a positive or negative integer. If the final value is less than
-one, it will silently be reset to one."
-  (om-elem--map-property-strict*
-   prop (om-elem--shift-pos-integer n it) elem))
+This only applies the properties that are represented as integers."
+  (let* ((type (om-elem--get-type elem))
+         (fun (om-elem--get-strict-function :shift type prop)))
+    (if fun
+        (om-elem--map-property-strict* prop (funcall fun n it) elem)
+      (error "Not a shiftable property"))))
 
 ;; insert
 
@@ -2558,8 +2547,13 @@ one, it will silently be reset to one."
   "Insert string MEMBER into list PROP at INDEX within ELEM.
 This only applies to properties that are represented as lists of 
 strings."
-  (om-elem--map-property-strict*
-   prop (om-elem--insert-at index member it) elem))
+  (let* ((type (om-elem--get-type elem))
+         (flag (om-elem--get-strict-function :string-list type prop)))
+    (if flag
+        (om-elem--map-property-strict*
+         prop (om-elem--insert-at index member it) elem)
+      (error "Property '%s' in elem of type '%s' is not a string-list"
+             prop type))))
 
 ;; remove
 
@@ -2567,7 +2561,12 @@ strings."
   "Remove string MEMBER from list PROP within ELEM.
 This only applies to properties that are represented as lists of 
 strings."
-  (om-elem--map-property-strict* prop (-remove-item member it) elem))
+  (let* ((type (om-elem--get-type elem))
+         (flag (om-elem--get-strict-function :string-list type prop)))
+    (if flag
+        (om-elem--map-property-strict* prop (-remove-item member it) elem)
+      (error "Property '%s' in elem of type '%s' is not a string-list"
+             prop type))))
 
 ;; plist-put
 
@@ -2575,7 +2574,11 @@ strings."
   "Insert KEY and VALUE pair into PROP within ELEM.
 KEY is a keyword and VALUE is a symbol. This only applies to 
 properties that are represented as plists."
-  (om-elem--map-property-strict* prop (plist-put it key value) elem))
+  (let* ((type (om-elem--get-type elem))
+         (flag (om-elem--get-strict-function :plist type prop)))
+    (if flag
+        (om-elem--map-property-strict* prop (plist-put it key value) elem)
+      (error "Not a plist property"))))
 
 ;; plist-remove
 
@@ -2583,7 +2586,11 @@ properties that are represented as plists."
   "Remove KEY and its value from PROP within ELEM.
 KEY is a keyword. This only applies to properties that are
 represented as plists."
-  (om-elem--map-property-strict* prop (om-elem--plist-remove key it) elem))
+  (let* ((type (om-elem--get-type elem))
+         (flag (om-elem--get-strict-function :plist type prop)))
+    (if flag
+        (om-elem--map-property-strict* prop (om-elem--plist-remove key it) elem)
+      (error "Not a plist property"))))
 
 ;;; generic
 
