@@ -2959,6 +2959,7 @@ Return a list of objects."
   (om-elem--headline-get-section headline))
 
 (defun om-elem-headline-get-drawer (name headline)
+  "Return the first drawer element in HEADLINE named NAME."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-get-drawer name headline))
 
@@ -2994,10 +2995,12 @@ Return a list of objects."
 ;; item
 
 (defun om-elem-item-get-paragraph (item)
+  "Return the paragraph immediately within ITEM or nil if none."
   (om-elem--verify item om-elem-is-item-p)
   (om-elem--item-get-paragraph item))
 
 (defun om-elem-item-get-sublist (item)
+  "Return the plain-list immediately within ITEM or nil if none."
   (om-elem--verify item om-elem-is-item-p)
   (om-elem--item-get-sublist item))
 
@@ -3030,29 +3033,35 @@ zero-indexed."
   (om-elem--table-get-cell row column table))
 
 (defun om-elem-table-delete-row (index table)
+  "Delete the row at INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
   (om-elem--table-delete-row index table))
 
 (defun om-elem-table-delete-column (index table)
+  "Delete the column at INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
   (om-elem--table-delete-column index table))
 
 (defun om-elem-table-insert-column (index column table)
+  "Insert COLUMN at INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
   (unless (-all? #'om-elem-is-table-cell-p column)
     (error "All members of column must be table cells"))
   (om-elem--table-insert-column index column table))
 
 (defun om-elem-table-insert-column! (index column table)
+  "Insert COLUMN at INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
   (let ((column (-map #'om-elem-build-table-cell column)))
     (om-elem--table-insert-column index column table)))
 
 (defun om-elem-table-insert-row (index row table)
+  "Insert ROW at INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
   (om-elem--table-insert-row index row table))
 
 (defun om-elem-table-insert-row! (index row table)
+  "Insert ROW at INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
   (let ((row (if (eq row 'hline) (om-elem-build-table-row-hline)
                (-map #'om-elem-build-table-cell row))))
@@ -3063,36 +3072,46 @@ zero-indexed."
 ;; headline
 
 (defun om-elem-headline-indent-subtree (index headline)
+  "Indent the subheadline and its contents at INDEX within HEADLINE."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-indent-subtree index headline))
 
 (defun om-elem-headline-indent-subheadline (index headline)
+  "Indent the subheadline without moving its contents at INDEX within HEADLINE."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-indent-subheadline index headline))
 
 (defun om-elem-headline-unindent-subheadline (index child-index headline)
+  "Unindent subheadline at CHILD-INDEX in the subheadline at INDEX in HEADLINE.
+This will not move the contents under the headline at CHILD-INDEX."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-unindent-subheadline index child-index headline))
 
 (defun om-elem-headline-unindent-subtree (index headline)
+  "Unindent all subheadlines under the subheadline at INDEX in HEADLINE."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-unindent-subtree index headline))
 
 ;; plain-list
 
 (defun om-elem-plain-list-indent-item-tree (index plain-list)
+  "Indent the subitem at INDEX in PLAIN-LIST and move items below it."
   (om-elem--verify plain-list om-elem-is-plain-list-p)
   (om-elem--plain-list-indent-item-tree index plain-list))
 
 (defun om-elem-plain-list-indent-item (index plain-list)
+  "Indent the subitem at INDEX in PLAIN-LIST without moving items below it."
   (om-elem--verify plain-list om-elem-is-plain-list-p)
   (om-elem--plain-list-indent-item index plain-list))
 
 (defun om-elem-plain-list-unindent-item (index child-index plain-list)
+  "Unindent subitem at CHILD-INDEX in the subitem at INDEX in PLAIN-LIST.
+This will not move the contents under the item at CHILD-INDEX."
   (om-elem--verify plain-list om-elem-is-plain-list-p)
   (om-elem--plain-list-unindent-item index child-index plain-list))
 
 (defun om-elem-plain-list-unindent-items (index plain-list)
+  "Unindent all items under the item at INDEX in PLAIN-LIST."
   (om-elem--verify plain-list om-elem-is-plain-list-p)
   (om-elem--plain-list-unindent-items index plain-list))
 

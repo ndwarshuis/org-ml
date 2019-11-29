@@ -389,7 +389,7 @@
     => ""))
 
 (def-example-group "Printing functions"
-  "print shit"
+  "Functions to nicely print elements"
 
   (defexamples om-elem-to-string
     (om-elem-to-string
@@ -646,7 +646,7 @@
     )
 
   (def-example-group "Greater Elements"
-    "Build shit"
+    "Build greater elements"
 
     (defexamples om-elem-build-center-block
       (->> (om-elem-build-paragraph "text")
