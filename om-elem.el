@@ -1873,6 +1873,36 @@ Optionally provide ELEMS as contents."
 
 ;;; shortcut builders
 
+(om-elem--defun om-elem-build-planning! (&key closed deadline
+                                              scheduled post-blank)
+  "Build a planning element using shorthand arguments.
+CLOSED, DEADLINE, and SCHEDULED are lists with the following structure:
+
+'(year minute day [hour] [min]
+  [&warning type value unit])
+  [&repeater type value unit])'
+
+In terms of arguments supplied to `om-elem-build-timestamp', the above
+list is equivalent to '(append TIME WARNING REPEATER)' The order of
+warning and repeater does not matter."
+  (cl-flet
+      ((partition-arg
+        (arg)
+        (when arg
+          (let* ((part (-partition-before-pred
+                        (lambda (it) (memq it '(&warning &repeater)))
+                        arg))
+                 (time (car part)) ; brake-master-cylinder
+                 (warning (alist-get '&warning part))
+                 (repeater (alist-get '&repeater part)))
+            (om-elem-build-timestamp 'inactive time
+                                     :repeater repeater
+                                     :warning warning)))))
+    (om-elem-build-planning :closed (partition-arg closed)
+                            :deadline (partition-arg deadline)
+                            :scheduled (partition-arg scheduled)
+                            :post-blank post-blank)))
+
 (om-elem--defun om-elem-build-headline! (&key (level 1) title-text
                                               todo-keyword tags
                                               pre-blank priority
