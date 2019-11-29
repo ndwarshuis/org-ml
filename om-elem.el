@@ -354,12 +354,17 @@ and object containers and includes the 'plain-text' type.")
 
 ;;; INTERNAL TYPE FUNCTIONS
 
-(defvaralias 'om-elem-elements 'org-element-all-elements)
 (defvaralias 'om-elem-object-containers 'org-element-object-containers)
 (defvaralias 'om-elem-recursive-objects 'org-element-recursive-objects)
-(defvaralias 'om-elem-greater-elements 'org-element-greater-elements)
 
-(defconst om-elem-objects (cons 'plain-text org-element-all-objects)
+(defconst om-elem-elements
+  (cons 'org-data org-element-all-elements))
+
+(defconst om-elem-greater-elements
+  (cons 'org-data org-element-greater-elements))
+
+(defconst om-elem-objects
+  (cons 'plain-text org-element-all-objects)
   "List of all object types including 'plain-text'.")
 
 (defconst om-elem-elements-and-objects
@@ -3353,7 +3358,14 @@ the section at the top of the org buffer."
                (body `(,call (point))))
           (eval `(defun ,name () ,doc ,body)))))
 
-(defalias 'om-elem-parse-this-buffer 'org-element-parse-buffer)
+(defun om-elem-parse-this-buffer ()
+  "Return org-data document tree for the current buffer.
+Contrary to the org-element specification, the org-data element
+returned from this function will have :begin and :end properties."
+  (let* ((c (om-elem--get-contents (org-element-parse-buffer)))
+         (b (if c (om-elem--get-property :begin (-first-item c)) 1))
+         (e (if c (om-elem--get-property :end (-last-item c)) 1)))
+    (om-elem--construct 'org-data `(:begin ,b :end ,e) c)))
 
 ;;; side effects
 
@@ -3423,49 +3435,41 @@ holds the element returned from IN-FORM."
   (declare (indent 1))
   `(om-elem-update (lambda () ,form) elem))
 
-(defun om-elem-update-object-at (point fun &optional type)
-  (om-elem-update fun (om-elem-parse-object-at point type)))
+;; generate all update functions for corresponding parse functions
+;; since all take function args, also generate anaphoric forms
+(--each '(object element table-row item headline subtree section)
+  (let* ((update-at
+          (intern (format "om-elem-update-%s-at" it)))
+         (update-this
+          (intern (format "om-elem-update-this-%s" it)))
+         (update-at-doc
+          (-as-> (list "Update %1$s under POINT using FUN."
+                       "FUN takes an %1$s and returns a modified %1$s")
+                 fmt
+                 (s-join "\n" fmt)
+                 (format fmt it)))
+         (update-this-doc
+          (-as-> (list "Update %1$s under current point using FUN."
+                       "FUN takes an %1$s and returns a modified %1$s")
+                 fmt
+                 (s-join "\n" fmt)
+                 (format fmt it)))
+         (call (intern (format "om-elem-parse-%s-at" it)))
+         (update-at-body `(om-elem-update fun (,call point)))
+         (update-this-body `(,update-at (point) fun)))
+    (eval `(defun ,update-at (point fun)
+             ,update-at-doc
+             ,update-at-body))
+    (om-elem--gen-anaphoric-form update-at)
+    (eval `(defun ,update-this (fun)
+             ,update-this-doc
+             ,update-this-body))
+    (om-elem--gen-anaphoric-form update-this)))
 
-(defun om-elem-update-element-at (point fun &optional type)
-  (om-elem-update fun (om-elem-parse-element-at point type)))
+(defun om-elem-update-this-buffer (fun)
+  (om-elem-update fun (om-elem-parse-this-buffer)))
 
-(defun om-elem-update-item-at (point fun)
-  (om-elem-update fun (om-elem-parse-headline-at point)))
-
-(defun om-elem-update-table-row-at (point fun)
-  (om-elem-update fun (om-elem-parse-headline-at point)))
-
-(defun om-elem-update-headline-at (point fun)
-  (om-elem-update fun (om-elem-parse-headline-at point)))
-
-(defun om-elem-update-subtree-at (point fun)
-  (om-elem-update fun (om-elem-parse-subtree-at point)))
-
-(defun om-elem-update-section-at (point fun)
-  (om-elem-update fun (om-elem-parse-subtree-at point)))
-
-;; TODO just make a function to create these from the point versions
-
-(defun om-elem-update-this-object (fun &optional type)
-  (om-elem-update-object-at (point) fun type))
-
-(defun om-elem-update-this-element (fun &optional type)
-  (om-elem-update-element-at (point) fun type))
-
-(defun om-elem-update-this-item (fun)
-  (om-elem-update-item-at (point) fun))
-
-(defun om-elem-update-this-table-row (fun)
-  (om-elem-update-table-row-at (point) fun))
-
-(defun om-elem-update-this-headline (fun)
-  (om-elem-update-headline-at (point) fun))
-
-(defun om-elem-update-this-subtree (fun)
-  (om-elem-update-subtree-at (point) fun))
-
-(defun om-elem-update-this-section (fun)
-  (om-elem-update-section-at (point) fun))
+(om-elem--gen-anaphoric-form 'om-elem-update-this-buffer)
 
 ;; fold
 (defun om-elem--flag-elem-contents (flag elem)
