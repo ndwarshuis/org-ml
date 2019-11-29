@@ -2543,28 +2543,31 @@ This only applies the properties that are represented as integers."
 
 ;; insert
 
-(defun om-elem-insert-into-property (prop index member elem)
-  "Insert string MEMBER into list PROP at INDEX within ELEM.
-This only applies to properties that are represented as lists of 
-strings."
-  (let* ((type (om-elem--get-type elem))
-         (flag (om-elem--get-strict-function :string-list type prop)))
-    (if flag
-        (om-elem--map-property-strict*
-         prop (om-elem--insert-at index member it) elem)
-      (error "Property '%s' in elem of type '%s' is not a string-list"
-             prop type))))
+(defun om-elem-insert-into-property (prop index string elem)
+  "Insert STRING into PROP at INDEX within ELEM if it is not already there.
+This only applies to properties that are represented as lists of strings."
+  (cl-flet
+      ((insert-at-maybe
+        (string-list)
+        (if (member string string-list) string-list
+          (om-elem--insert-at index string string-list))))
+    (let* ((type (om-elem--get-type elem))
+           (flag (om-elem--get-strict-function :string-list type prop)))
+      (if flag
+          (om-elem--map-property-strict prop #'insert-at-maybe elem)
+        (error "Property '%s' in elem of type '%s' is not a string-list"
+               prop type)))))
 
 ;; remove
 
-(defun om-elem-remove-from-property (prop member elem)
-  "Remove string MEMBER from list PROP within ELEM.
+(defun om-elem-remove-from-property (prop string elem)
+  "Remove string STRING from list PROP within ELEM.
 This only applies to properties that are represented as lists of 
 strings."
   (let* ((type (om-elem--get-type elem))
          (flag (om-elem--get-strict-function :string-list type prop)))
     (if flag
-        (om-elem--map-property-strict* prop (-remove-item member it) elem)
+        (om-elem--map-property-strict* prop (-remove-item string it) elem)
       (error "Property '%s' in elem of type '%s' is not a string-list"
              prop type))))
 
