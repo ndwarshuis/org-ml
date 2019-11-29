@@ -1555,17 +1555,37 @@ Optionally provide PARAMETERS."
   (->> (om-elem--build-object 'target post-blank)
        (om-elem--set-property-strict :value value)))
 
-(om-elem--defun om-elem-build-timestamp (type start &key end
-                                              repeater
-                                              warning
+(om-elem--defun om-elem-build-timestamp (type year-start month-start
+                                              day-start &key
+                                              hour-start minute-start
+                                              year-end month-end
+                                              day-end hour-end
+                                              minute-end warning-type
+                                              warning-unit
+                                              warning-value
+                                              repeater-type
+                                              repeater-unit
+                                              repeater-value
                                               post-blank)
-  "Build a timestamp..."
+  "Build a timestamp."
   (->> (om-elem--build-object 'timestamp post-blank)
-       (om-elem--timestamp-set-start-time-nocheck start)
-       (om-elem--timestamp-set-end-time-nocheck end)
-       (om-elem--timestamp-set-type type)
-       (om-elem--timestamp-set-warning warning)
-       (om-elem--timestamp-set-repeater repeater)
+       (om-elem--set-properties-strict
+        (list :year-start year-start
+              :month-start month-start
+              :day-start day-start
+              :hour-start hour-start
+              :minute-start minute-start
+              :year-end (or year-end year-start)
+              :month-end (or month-end month-start)
+              :day-end (or day-end day-start)
+              :hour-end hour-end
+              :minute-end minute-end
+              :repeater-type repeater-type
+              :repeater-unit repeater-unit
+              :repeater-value repeater-value
+              :warning-type warning-type
+              :warning-unit warning-unit
+              :warning-value warning-value))
        (om-elem--set-property-nil :raw-value)))
 
 (om-elem--defun om-elem-build-diary-sexp-timestamp (string &key post-blank)
@@ -1870,6 +1890,19 @@ Optionally provide ELEMS as contents."
        (om-elem--set-property-nil :value)))
 
 ;;; shortcut builders
+
+(om-elem--defun om-elem-build-timestamp! (type start &key end
+                                               repeater
+                                               warning
+                                               post-blank)
+  "Build a timestamp..."
+  (->> (om-elem--build-object 'timestamp post-blank)
+       (om-elem--timestamp-set-start-time-nocheck start)
+       (om-elem--timestamp-set-end-time-nocheck end)
+       (om-elem--timestamp-set-type type)
+       (om-elem--timestamp-set-warning warning)
+       (om-elem--timestamp-set-repeater repeater)
+       (om-elem--set-property-nil :raw-value)))
 
 (om-elem--defun om-elem-build-clock! (start &key end post-blank)
   (let ((ts (om-elem-build-timestamp 'inactive start :end end)))

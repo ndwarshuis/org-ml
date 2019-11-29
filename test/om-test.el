@@ -66,7 +66,7 @@
 
 (ert-deftest om-elem--timestamp/valid-props ()
   (om-elem--compare-object-props
-   (om-elem-build-timestamp 'inactive '(2019 1 1))
+   (om-elem-build-timestamp! 'inactive '(2019 1 1))
    ;; TODO the timestamp parser does not add properties for warnings
    ;; or repeaters if they are not given, this appears to be a bug
    "[2019-01-01 Tue +1d -1d]"))
@@ -137,7 +137,7 @@
 
 (ert-deftest om-elem--clock/valid-props ()
   (om-elem--compare-element-props
-   (om-elem-build-clock (om-elem-build-timestamp 'inactive '(2019 1 1)))
+   (om-elem-build-clock (om-elem-build-timestamp! 'inactive '(2019 1 1)))
    "CLOCK: [2019-01-01 Tue]"))
 
 (ert-deftest om-elem--comment/valid-props ()
@@ -188,7 +188,7 @@
 
 (ert-deftest om-elem--planning/valid-props ()
   (should-have-equal-properties
-   (om-elem-build-planning :closed (om-elem-build-timestamp 'inactive '(2019 1 1)))
+   (om-elem-build-planning :closed (om-elem-build-timestamp! 'inactive '(2019 1 1)))
    (->> (om-elem--from-string "* dummy\nCLOSED: [2019-01-01 Tue]")
         (om-elem--get-nested-contents '(0 0)))))
 
