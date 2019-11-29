@@ -962,6 +962,14 @@ and object containers and includes the 'plain-text' type.")
 
 (om-elem--gen-anaphoric-form #'om-elem--map-property-strict)
 
+(defun om-elem--map-properties-strict (plist elem)
+  (cond
+   ((not plist) elem)
+   ((om-elem--is-plist-p plist)
+    (->> (om-elem--map-property-strict (nth 0 plist) (nth 1 plist) elem)
+         (om-elem--map-properties-strict (-drop 2 plist))))
+   (t (error "Not a plist: %s" plist))))
+
 ;;; INTERNAL PROPERTY FUNCTIONS
 
 ;;; generic
@@ -1262,10 +1270,10 @@ float-times, which assumes the :type property is valid."
   "Set the end TIME of TIMESTAMP."
   (if time
       (-> (om-elem--time-format-props time 'end)
-          (om-elem-set-properties timestamp))
+          (om-elem--set-properties timestamp))
     (-> (om-elem--timestamp-get-start-time timestamp)
         (om-elem--time-format-props 'end)
-        (om-elem-set-properties timestamp))))
+        (om-elem--set-properties timestamp))))
 
 (defun om-elem--timestamp-set-end-time (time timestamp)
   (let ((ts* (om-elem--timestamp-set-end-time-nocheck time timestamp)))
@@ -1318,12 +1326,12 @@ float-times, which assumes the :type property is valid."
 (defun om-elem--timestamp-set-warning (warning timestamp)
   (let ((types '(all first)))
     (-> (om-elem--decorator-format warning 'warning types)
-        (om-elem-set-properties timestamp))))
+        (om-elem--set-properties timestamp))))
 
 (defun om-elem--timestamp-set-repeater (repeater timestamp)
   (let ((types '(catch-up restart cumulative)))
     (-> (om-elem--decorator-format repeater 'repeater types)
-        (om-elem-set-properties timestamp))))
+        (om-elem--set-properties timestamp))))
 
 (defun om-elem--timestamp-shift-start (n unit timestamp)
   (let ((time* (->> (om-elem--timestamp-get-start-time timestamp)
@@ -2665,20 +2673,20 @@ and properties that may be used with this function."
 
 ;;; generic
 
-;; TODO what to do with these?
-(defun om-elem-match-map-properties (plist elem)
+;; TODO do these even work?
+(defun om-elem-map-properties (plist elem)
   (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--map-properties plist elem))
+  (om-elem--map-properties-strict plist elem))
 
-(defmacro om-elem-match-map-properties* (plist elem)
-  `(om-elem--map-properties ,plist ,elem))
+(defmacro om-elem-map-properties* (plist elem)
+  `(om-elem--map-properties-strict ,plist ,elem))
 
 (defun om-elem-set-properties (plist elem)
   "Set all properties in ELEM to the values corresponding to PLIST.
-PLIST is a list of property-value pairs that correspond to the
+PLIST is a list of property-value pairs that corresponds to the
 property list in ELEM."
   (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--set-properties plist elem))
+  (om-elem--set-properties-strict plist elem))
 
 ;;; objects
 ;;
@@ -3023,13 +3031,13 @@ Return a list of objects."
             (om-elem--get-property :scheduled))
        t))
 
-(defun om-elem-set-planning (planning-plist headline)
-  (om-elem--verify headline om-elem-is-headline-p)
-  (let ((keys (om--plist-get-keys planning-plist)))
-    (--> (om--plist-get-vals planning-plist)
-         (--map (-some->> it (om-elem-build-timestamp 'inactive)) it)
-         (-interleave keys it)
-         (om-elem-set-properties it headline))))
+;; (defun om-elem-set-planning (planning-plist headline)
+;;   (om-elem--verify headline om-elem-is-headline-p)
+;;   (let ((keys (om--plist-get-keys planning-plist)))
+;;     (--> (om--plist-get-vals planning-plist)
+;;          (--map (-some->> it (om-elem-build-timestamp 'inactive)) it)
+;;          (-interleave keys it)
+;;          (om-elem-set-properties it headline))))
 
 ;; item
 
