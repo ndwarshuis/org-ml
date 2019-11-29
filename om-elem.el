@@ -1427,30 +1427,16 @@ float-times, which assumes the :type property is valid."
 
 ;; planning
 
-(defun om-elem--planning-set-timestamp-time (prop time planning)
+(defun om-elem--planning-set-timestamp-time (prop time warning
+                                                  repeater planning)
+  (unless (memq prop '(:closed :deadline :scheduled))
+    (error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
   (if (not time) (om-elem--set-property prop nil planning)
-    (let* ((part (-partition-before-pred
-                  (lambda (it) (memq it '(&warning &repeater)))
-                  time))
-           (time (car part))
-           (warning (alist-get '&warning part))
-           (repeater (alist-get '&repeater part))
-           (ts (om-elem-build-timestamp 'inactive time
-                                        :warning warning
-                                        :repeater repeater)))
-      (om-elem--set-property prop ts planning))))
+    (let ((ts (om-elem-build-timestamp 'inactive time
+                                       :warning warning
+                                       :repeater repeater)))
+      (om-elem--set-property-strict prop ts planning))))
 
-(defun om-elem--planning-map-property (prop fun planning)
-  (om-elem--property-map prop fun planning))
-
-(defun om-elem--planning-set-closed (time planning)
-  (om-elem--planning-set-timestamp-time :closed time planning))
-
-(defun om-elem--planning-set-deadline (time planning)
-  (om-elem--planning-set-timestamp-time :deadline time planning))
-
-(defun om-elem--planning-set-scheduled (time planning)
-  (om-elem--planning-set-timestamp-time :scheduled time planning))
 
 ;;; BUILDER FUNCTIONS
 
@@ -2911,7 +2897,36 @@ cannot contain any warnings or repeaters."
 
 ;; planning
 
-;; TODO add planning public functions
+(om-elem--defun om-elem-planning-set-closed (time &key warning
+                                                  repeater planning)
+  "Set the closed timestamp of PLANNING.
+TIME, WARNING, and REPEATER are the same as those described in
+`om-elem-build-timestamp'."
+  (om-elem--planning-set-timestamp-time :closed time warning repeater
+                                        planning))
+
+(om-elem--defun om-elem-planning-set-deadline (time &key warning
+                                                    repeater planning)
+  "Set the deadline timestamp of PLANNING.
+TIME, WARNING, and REPEATER are the same as those described in
+`om-elem-build-timestamp'."
+  (om-elem--planning-set-timestamp-time :deadline time warning
+                                        repeater planning))
+
+(om-elem--defun om-elem-planning-set-scheduled (time &key warning
+                                                     repeater planning)
+  "Set the scheduled timestamp of PLANNING.
+TIME, WARNING, and REPEATER are the same as those described in
+`om-elem-build-timestamp'."
+  (om-elem--planning-set-timestamp-time :scheduled time warning
+                                        repeater planning))
+
+;; (defun om-elem-planning-map-timestamp (prop fun planning)
+;;   (-if-let ((ts (om-elem--get-property-strict prop elem)))
+;;       (om-elem--set-property-strict prop (funcall fun ts) planning)
+;;     planning))
+
+;; (om-elem--gen-anaphoric-form 'om-elem-planning-map-timestamp)
 
 ;;; PUBLIC CONTENT FUNCTIONS
 
