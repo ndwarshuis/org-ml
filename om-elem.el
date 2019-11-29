@@ -1882,9 +1882,10 @@ CLOSED, DEADLINE, and SCHEDULED are lists with the following structure:
   [&warning type value unit])
   [&repeater type value unit])'
 
-In terms of arguments supplied to `om-elem-build-timestamp', the above
-list is equivalent to '(append TIME WARNING REPEATER)' The order of
-warning and repeater does not matter."
+In terms of arguments supplied to `om-elem-build-timestamp', the first
+five members correspond to the list supplied as TIME, and the
+type/value/unit correspond to the lists supplied to WARNING and
+REPEATER. The order of warning and repeater does not matter."
   (cl-flet
       ((partition-arg
         (arg)
