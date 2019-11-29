@@ -814,6 +814,315 @@
   (def-example-subgroup "Generic"
     nil
 
+    (defexamples-content om-elem-set-property
+      "Set property PROP to VALUE in ELEM."
+
+      (:content "#+CALL: ktulu()")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :call "cthulhu")
+           (om-elem-set-property :inside-header '(:cache no))
+           (om-elem-set-property :arguments '("x=4"))
+           (om-elem-set-property :end-header '(:exports results))
+           (om-elem-to-trimmed-string))
+      => "#+CALL: cthulhu[:cache no](x=4) :exports results"
+
+      :begin-hidden
+      (:content "CLOCK: [2019-01-01 Tue]")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property
+            :value (om-elem-build-timestamp
+                    'inactive '(2019 1 1) :end '(2019 1 2)))
+           (om-elem-to-trimmed-string))
+      => "CLOCK: [2019-01-01 Tue]--[2019-01-02 Wed] => 24:00"
+
+      (:content "~learn to~")
+      (->> (om-elem-parse-this-object)
+           (om-elem-set-property :value "why?")
+           (om-elem-to-trimmed-string))
+      => "~why?~"
+
+      (:content "# not here")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :value "still not here")
+           (om-elem-to-trimmed-string))
+      => "# still not here"
+
+      (:content "#+BEGIN_COMMENT"
+                "not here"
+                "#+END_COMMENT")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :value "still not here")
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_COMMENT"
+                  "still not here"
+                  "#+END_COMMENT")
+
+      ;; TODO add diary-sexp
+
+      (:content ":LOGBOOK:"
+                ":END:")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :drawer-name "BOOKOFSOULS")
+           (om-elem-to-trimmed-string))
+      => (:result ":BOOKOFSOULS:"
+                  ":END:")
+
+      (:content "#+BEGIN: blockhead"
+                "#+END:")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :block-name "blockfoot")
+           (om-elem-set-property :arguments '(:cache no))
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN: blockfoot :cache no"
+                  "#+END:")
+
+      (:content "\\pi")
+      (->> (om-elem-parse-this-object)
+           (om-elem-set-property :name "gamma")
+           (om-elem-set-property :use-brackets-p t)
+           (om-elem-to-trimmed-string))
+      => "\\gamma{}"
+
+      ;; TODO test preserve indentation...
+      (:content "#+BEGIN_EXAMPLE"
+                "#+END_EXAMPLE")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :switches '("-n"))
+           (om-elem-set-property :value "example.com")
+           (om-elem-to-trimmed-string))
+      => (:content "#+BEGIN_EXAMPLE -n"
+                   "example.com"
+                   "#+END_EXAMPLE")
+
+      (:content "#+BEGIN_EXPORT latex"
+                "#+END_EXPORT")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :type "domestic")
+           (om-elem-set-property :value "bullets, bombs, and bigotry")
+           (om-elem-to-trimmed-string))
+      => (:content "#+BEGIN_EXPORT domestic"
+                   "bullets, bombs, and bigotry"
+                   "#+END_EXPORT")
+
+      (:content "@@back-end:value@@")
+      (->> (om-elem-parse-this-object)
+           (om-elem-set-property :back-end "latex")
+           (om-elem-set-property :value "new-value")
+           (om-elem-to-trimmed-string))
+      => "@@latex:new-value@@"
+
+      (:content ": fixed")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :value "unfixed")
+           (om-elem-to-trimmed-string))
+      => ": unfixed"
+
+      (:content "[fn:whitelabel] society")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :label "blacklabel")
+           (om-elem-to-trimmed-string))
+      => "[fn:blacklabel] society"
+
+      ;; TODO test footnote section
+      (:content "* dummy"
+                "stuff")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :archivedp t)
+           (om-elem-set-property :commentedp t)
+           (om-elem-set-property :level 2)
+           (om-elem-set-property :pre-blank 1)
+           (om-elem-set-property :priority ?A)
+           (om-elem-set-property :tags '("tmsu"))
+           (om-elem-set-property :title '("smartie"))
+           (om-elem-set-property :todo-keyword "TODO")
+           (om-elem-to-trimmed-string))
+      => (:result "** TODO COMMENT [#A] smartie                                   :tmsu:ARCHIVE:"
+                  ""
+                  "stuff")
+
+      (:content "call_kthulu()")
+      (->> (om-elem-parse-this-object)
+           (om-elem-set-property :call "cthulhu")
+           (om-elem-set-property :inside-header '(:cache no))
+           (om-elem-set-property :arguments '("x=4"))
+           (om-elem-set-property :end-header '(:exports results))
+           (om-elem-to-trimmed-string))
+      => "call_cthulhu[:cache no](x=4)[:exports results]"
+
+      (:content "src_emacs{(print 'yeah-boi)}")
+      (->> (om-elem-parse-this-object)
+           (om-elem-set-property :language "python")
+           (om-elem-set-property :parameters '(:cache no))
+           (om-elem-set-property :value "print \"yeah boi\"")
+           (om-elem-to-trimmed-string))
+      => "src_python[:cache no]{print \"yeah boi\"}"
+      :end-hidden
+
+      (:content "- thing")
+      (->> (om-elem-parse-this-item)
+           (om-elem-set-property :bullet 1)
+           (om-elem-set-property :checkbox 'on)
+           (om-elem-set-property :counter 2)
+           (om-elem-set-property :tag '("tmsu"))
+           (om-elem-to-trimmed-string))
+      => "1. [@2] [X] tmsu :: thing"
+
+      :begin-hidden
+      (:content "#+KEY: VAL")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :key "kee")
+           (om-elem-set-property :value "vahl")
+           (om-elem-to-trimmed-string))
+      => "#+kee: vahl"
+
+      ;; this is stupid, who would ever do this?
+      (:content "\begin{env}"
+                "body"
+                "\end{env}")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :value "\begin{vne}\nbody\end{vne}")
+           (om-elem-to-trimmed-string))
+      => (:content "\begin{vne}"
+                   "body"
+                   "\end{vne}")
+
+      ;; TODO this is also stupid...
+      (:content "$2+2=4$")
+      (->> (om-elem-parse-this-object)
+           (om-elem-set-property :value "$2+2=5$")
+           (om-elem-to-trimmed-string))
+      => "$2+2=5$"
+
+      (:content "https://example.com")
+      (->> (om-elem-parse-this-object)
+           (om-elem-set-property :path "/dev/null")
+           (om-elem-set-property :type "file")
+           (om-elem-set-property :format 'bracket)
+           (om-elem-to-trimmed-string))
+      => "[[file:/dev/null]]"
+
+      (:content "{{{economics}}}")
+      (->> (om-elem-parse-this-object)
+           (om-elem-set-property :key "freakonomics")
+           (om-elem-set-property :args '("x=4" "y=2"))
+           (om-elem-to-trimmed-string))
+      => "{{{freakonomics(x=4,y=2)}}}"
+
+      (:content "* dummy"
+                ":PROPERTIES:"
+                ":KEY: VAL"
+                ":END:")
+      ;; TODO need public function
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-node-properties)
+           (-first-item)
+           (om-elem-set-property :key "kee")
+           (om-elem-set-property :value "vahl")
+           (om-elem-to-trimmed-string))
+      => ":kee:      vahl"
+
+      (:content "* dummy"
+                "CLOSED: [2019-01-01 Tue]")
+      ;; TODO need public function
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-planning)
+           (om-elem-set-property
+            :closed (om-elem-build-timestamp 'inactive '(2019 1 2)))
+           (om-elem-to-trimmed-string))
+      => "CLOSED: [2019-01-02 Wed]"
+
+      (:content "#+BEGIN_special"
+                "#+END_special")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :type "talent")
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_talent"
+                  "#+END_talent")
+
+      (:content "#+BEGIN_SRC"
+                "something amorphous"
+                "#+END_SRC")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :language "emacs")
+           (om-elem-set-property :value "(print 'hi)")
+           (om-elem-set-property :parameters '(:cache no))
+           (om-elem-set-property :switches '("-n"))
+           ;; TODO test preserver indent
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_SRC emacs -n :cache no"
+                  "  (print 'hi)"
+                  "#+END_SRC")
+
+      (:content "* dummy [50%]")
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-statistics-cookie)
+           (om-elem-set-property :value '(0 5))
+           (om-elem-to-trimmed-string))
+      => "[0/5]"
+
+      (:content "sub_woofer")
+      (->> (om-elem-parse-object-at 5)
+           (om-elem-set-property :use-brackets-p t)
+           (om-elem-to-trimmed-string))
+      => "_{woofer}"
+
+      (:content "super^woofer")
+      (->> (om-elem-parse-object-at 7)
+           (om-elem-set-property :use-brackets-p t)
+           (om-elem-to-trimmed-string))
+      => "^{woofer}"
+
+      (:content "| a |")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-property :tblfm '("x=$2"))
+           (om-elem-to-trimmed-string))
+      => (:result "| a |"
+                  "#+TBLFM: x=$2")
+
+      (:content "<<found>>")
+      (->> (om-elem-parse-this-object)
+           (om-elem-set-property :value "lost")
+           (om-elem-to-trimmed-string))
+      => "<<lost>>"
+
+      (:content "[2019-01-01 Tue]")
+      (->> (om-elem-parse-this-object)
+           (om-elem-set-property :year-start 2020)
+           (om-elem-set-property :month-start 2)
+           (om-elem-set-property :day-start 2)
+           (om-elem-set-property :hour-start 12)
+           (om-elem-set-property :minute-start 0)
+           (om-elem-set-property :year-end 2020)
+           (om-elem-set-property :month-end 2)
+           (om-elem-set-property :day-end 3)
+           (om-elem-set-property :hour-end 12)
+           (om-elem-set-property :minute-end 0)
+           (om-elem-set-property :type 'active-range)
+           (om-elem-set-property :warning-type 'all)
+           (om-elem-set-property :warning-unit 'day)
+           (om-elem-set-property :warning-value 1)
+           (om-elem-set-property :repeater-type 'cumulate)
+           (om-elem-set-property :repeater-unit 'day)
+           (om-elem-set-property :repeater-value 1)
+           (om-elem-to-trimmed-string))
+      => "<2020-02-02 Sun 12:00 +1d -1d>--<2020-02-03 Mon 12:00 +1d -1d>"
+
+      (:content "=I am not a crook=")
+      (->> (om-elem-parse-this-object)
+           (om-elem-set-property :value "You totally are")
+           (om-elem-to-trimmed-string))
+      => "=You totally are="
+      :end-hidden
+
+      ;; TODO add post-blank
+
+      (:content "* not valuable")
+      (:comment "Throw error when setting a property that doesn't exist")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-set-property :value "wtf")
+           (om-elem-to-trimmed-string))
+      !!> error)
+
     (defexamples-content om-elem-get-property
       nil
 
@@ -1174,315 +1483,6 @@
       (:comment "Throw error when requesting a property that doesn't exist")
       (->> (om-elem-parse-this-headline)
            (om-elem-get-property :value))
-      !!> error)
-
-    (defexamples-content om-elem-set-property
-      nil
-
-      (:content "#+CALL: ktulu()")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :call "cthulhu")
-           (om-elem-set-property :inside-header '(:cache no))
-           (om-elem-set-property :arguments '("x=4"))
-           (om-elem-set-property :end-header '(:exports results))
-           (om-elem-to-trimmed-string))
-      => "#+CALL: cthulhu[:cache no](x=4) :exports results"
-
-      :begin-hidden
-      (:content "CLOCK: [2019-01-01 Tue]")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property
-            :value (om-elem-build-timestamp
-                    'inactive '(2019 1 1) :end '(2019 1 2)))
-           (om-elem-to-trimmed-string))
-      => "CLOCK: [2019-01-01 Tue]--[2019-01-02 Wed] => 24:00"
-
-      (:content "~learn to~")
-      (->> (om-elem-parse-this-object)
-           (om-elem-set-property :value "why?")
-           (om-elem-to-trimmed-string))
-      => "~why?~"
-
-      (:content "# not here")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :value "still not here")
-           (om-elem-to-trimmed-string))
-      => "# still not here"
-
-      (:content "#+BEGIN_COMMENT"
-                "not here"
-                "#+END_COMMENT")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :value "still not here")
-           (om-elem-to-trimmed-string))
-      => (:result "#+BEGIN_COMMENT"
-                  "still not here"
-                  "#+END_COMMENT")
-
-      ;; TODO add diary-sexp
-
-      (:content ":LOGBOOK:"
-                ":END:")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :drawer-name "BOOKOFSOULS")
-           (om-elem-to-trimmed-string))
-      => (:result ":BOOKOFSOULS:"
-                  ":END:")
-
-      (:content "#+BEGIN: blockhead"
-                "#+END:")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :block-name "blockfoot")
-           (om-elem-set-property :arguments '(:cache no))
-           (om-elem-to-trimmed-string))
-      => (:result "#+BEGIN: blockfoot :cache no"
-                  "#+END:")
-
-      (:content "\\pi")
-      (->> (om-elem-parse-this-object)
-           (om-elem-set-property :name "gamma")
-           (om-elem-set-property :use-brackets-p t)
-           (om-elem-to-trimmed-string))
-      => "\\gamma{}"
-
-      ;; TODO test preserve indentation...
-      (:content "#+BEGIN_EXAMPLE"
-                "#+END_EXAMPLE")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :switches '("-n"))
-           (om-elem-set-property :value "example.com")
-           (om-elem-to-trimmed-string))
-      => (:content "#+BEGIN_EXAMPLE -n"
-                   "example.com"
-                   "#+END_EXAMPLE")
-
-      (:content "#+BEGIN_EXPORT latex"
-                "#+END_EXPORT")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :type "domestic")
-           (om-elem-set-property :value "bullets, bombs, and bigotry")
-           (om-elem-to-trimmed-string))
-      => (:content "#+BEGIN_EXPORT domestic"
-                   "bullets, bombs, and bigotry"
-                   "#+END_EXPORT")
-
-      (:content "@@back-end:value@@")
-      (->> (om-elem-parse-this-object)
-           (om-elem-set-property :back-end "latex")
-           (om-elem-set-property :value "new-value")
-           (om-elem-to-trimmed-string))
-      => "@@latex:new-value@@"
-
-      (:content ": fixed")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :value "unfixed")
-           (om-elem-to-trimmed-string))
-      => ": unfixed"
-
-      (:content "[fn:whitelabel] society")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :label "blacklabel")
-           (om-elem-to-trimmed-string))
-      => "[fn:blacklabel] society"
-
-      ;; TODO test footnote section
-      (:content "* dummy"
-                "stuff")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :archivedp t)
-           (om-elem-set-property :commentedp t)
-           (om-elem-set-property :level 2)
-           (om-elem-set-property :pre-blank 1)
-           (om-elem-set-property :priority ?A)
-           (om-elem-set-property :tags '("tmsu"))
-           (om-elem-set-property :title '("smartie"))
-           (om-elem-set-property :todo-keyword "TODO")
-           (om-elem-to-trimmed-string))
-      => (:result "** TODO COMMENT [#A] smartie                                   :tmsu:ARCHIVE:"
-                  ""
-                  "stuff")
-
-      (:content "call_kthulu()")
-      (->> (om-elem-parse-this-object)
-           (om-elem-set-property :call "cthulhu")
-           (om-elem-set-property :inside-header '(:cache no))
-           (om-elem-set-property :arguments '("x=4"))
-           (om-elem-set-property :end-header '(:exports results))
-           (om-elem-to-trimmed-string))
-      => "call_cthulhu[:cache no](x=4)[:exports results]"
-
-      (:content "src_emacs{(print 'yeah-boi)}")
-      (->> (om-elem-parse-this-object)
-           (om-elem-set-property :language "python")
-           (om-elem-set-property :parameters '(:cache no))
-           (om-elem-set-property :value "print \"yeah boi\"")
-           (om-elem-to-trimmed-string))
-      => "src_python[:cache no]{print \"yeah boi\"}"
-      :end-hidden
-
-      (:content "- thing")
-      (->> (om-elem-parse-this-item)
-           (om-elem-set-property :bullet 1)
-           (om-elem-set-property :checkbox 'on)
-           (om-elem-set-property :counter 2)
-           (om-elem-set-property :tag '("tmsu"))
-           (om-elem-to-trimmed-string))
-      => "1. [@2] [X] tmsu :: thing"
-
-      :begin-hidden
-      (:content "#+KEY: VAL")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :key "kee")
-           (om-elem-set-property :value "vahl")
-           (om-elem-to-trimmed-string))
-      => "#+kee: vahl"
-
-      ;; this is stupid, who would ever do this?
-      (:content "\begin{env}"
-                "body"
-                "\end{env}")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :value "\begin{vne}\nbody\end{vne}")
-           (om-elem-to-trimmed-string))
-      => (:content "\begin{vne}"
-                   "body"
-                   "\end{vne}")
-
-      ;; TODO this is also stupid...
-      (:content "$2+2=4$")
-      (->> (om-elem-parse-this-object)
-           (om-elem-set-property :value "$2+2=5$")
-           (om-elem-to-trimmed-string))
-      => "$2+2=5$"
-
-      (:content "https://example.com")
-      (->> (om-elem-parse-this-object)
-           (om-elem-set-property :path "/dev/null")
-           (om-elem-set-property :type "file")
-           (om-elem-set-property :format 'bracket)
-           (om-elem-to-trimmed-string))
-      => "[[file:/dev/null]]"
-
-      (:content "{{{economics}}}")
-      (->> (om-elem-parse-this-object)
-           (om-elem-set-property :key "freakonomics")
-           (om-elem-set-property :args '("x=4" "y=2"))
-           (om-elem-to-trimmed-string))
-      => "{{{freakonomics(x=4,y=2)}}}"
-
-      (:content "* dummy"
-                ":PROPERTIES:"
-                ":KEY: VAL"
-                ":END:")
-      ;; TODO need public function
-      (->> (om-elem-parse-this-headline)
-           (om-elem--headline-get-node-properties)
-           (-first-item)
-           (om-elem-set-property :key "kee")
-           (om-elem-set-property :value "vahl")
-           (om-elem-to-trimmed-string))
-      => ":kee:      vahl"
-
-      (:content "* dummy"
-                "CLOSED: [2019-01-01 Tue]")
-      ;; TODO need public function
-      (->> (om-elem-parse-this-headline)
-           (om-elem--headline-get-planning)
-           (om-elem-set-property
-            :closed (om-elem-build-timestamp 'inactive '(2019 1 2)))
-           (om-elem-to-trimmed-string))
-      => "CLOSED: [2019-01-02 Wed]"
-
-      (:content "#+BEGIN_special"
-                "#+END_special")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :type "talent")
-           (om-elem-to-trimmed-string))
-      => (:result "#+BEGIN_talent"
-                  "#+END_talent")
-
-      (:content "#+BEGIN_SRC"
-                "something amorphous"
-                "#+END_SRC")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :language "emacs")
-           (om-elem-set-property :value "(print 'hi)")
-           (om-elem-set-property :parameters '(:cache no))
-           (om-elem-set-property :switches '("-n"))
-           ;; TODO test preserver indent
-           (om-elem-to-trimmed-string))
-      => (:result "#+BEGIN_SRC emacs -n :cache no"
-                  "  (print 'hi)"
-                  "#+END_SRC")
-
-      (:content "* dummy [50%]")
-      (->> (om-elem-parse-this-headline)
-           (om-elem--headline-get-statistics-cookie)
-           (om-elem-set-property :value '(0 5))
-           (om-elem-to-trimmed-string))
-      => "[0/5]"
-
-      (:content "sub_woofer")
-      (->> (om-elem-parse-object-at 5)
-           (om-elem-set-property :use-brackets-p t)
-           (om-elem-to-trimmed-string))
-      => "_{woofer}"
-
-      (:content "super^woofer")
-      (->> (om-elem-parse-object-at 7)
-           (om-elem-set-property :use-brackets-p t)
-           (om-elem-to-trimmed-string))
-      => "^{woofer}"
-
-      (:content "| a |")
-      (->> (om-elem-parse-this-element)
-           (om-elem-set-property :tblfm '("x=$2"))
-           (om-elem-to-trimmed-string))
-      => (:result "| a |"
-                  "#+TBLFM: x=$2")
-
-      (:content "<<found>>")
-      (->> (om-elem-parse-this-object)
-           (om-elem-set-property :value "lost")
-           (om-elem-to-trimmed-string))
-      => "<<lost>>"
-
-      (:content "[2019-01-01 Tue]")
-      (->> (om-elem-parse-this-object)
-           (om-elem-set-property :year-start 2020)
-           (om-elem-set-property :month-start 2)
-           (om-elem-set-property :day-start 2)
-           (om-elem-set-property :hour-start 12)
-           (om-elem-set-property :minute-start 0)
-           (om-elem-set-property :year-end 2020)
-           (om-elem-set-property :month-end 2)
-           (om-elem-set-property :day-end 3)
-           (om-elem-set-property :hour-end 12)
-           (om-elem-set-property :minute-end 0)
-           (om-elem-set-property :type 'active-range)
-           (om-elem-set-property :warning-type 'all)
-           (om-elem-set-property :warning-unit 'day)
-           (om-elem-set-property :warning-value 1)
-           (om-elem-set-property :repeater-type 'cumulate)
-           (om-elem-set-property :repeater-unit 'day)
-           (om-elem-set-property :repeater-value 1)
-           (om-elem-to-trimmed-string))
-      => "<2020-02-02 Sun 12:00 +1d -1d>--<2020-02-03 Mon 12:00 +1d -1d>"
-
-      (:content "=I am not a crook=")
-      (->> (om-elem-parse-this-object)
-           (om-elem-set-property :value "You totally are")
-           (om-elem-to-trimmed-string))
-      => "=You totally are="
-      :end-hidden
-
-      ;; TODO add post-blank
-
-      (:content "* not valuable")
-      (:comment "Throw error when setting a property that doesn't exist")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-set-property :value "wtf")
-           (om-elem-to-trimmed-string))
       !!> error)
 
     (defexamples-content om-elem-map-property

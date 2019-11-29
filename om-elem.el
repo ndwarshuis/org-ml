@@ -2495,26 +2495,56 @@ zero-indexed."
 
 ;;; PUBLIC PROPERTY FUNCTIONS
 
+(defun om-elem--append-documentation (fun string)
+  (--> (documentation fun)
+       (concat it "\n" string)
+       (function-put fun 'function-documentation it)))
+
+(defun om-elem--get-type-alist-operation (op)
+  (->> om-elem--type-alist
+       (--map (cons (car it) (--filter (plist-get (cdr it) op) (cdr it))))
+       (-filter #'cdr)))
+
+(defun om-elem--format-alist-operations (ops)
+  (->> ops
+       (--map (cons (car it) (-map #'car (cdr it))))
+       (--map (format "\n%s\n%s"
+                      (car it)
+                      (s-join "\n" (--map (format "- %S" it) (cdr it)))))
+       (s-join "\n")))
+
 ;;; polymorphic
-
-;; get
-
-(defun om-elem-get-property (prop elem)
-  "Return the value or property PROP in ELEM."
-  (om-elem--get-property-strict prop elem))
 
 ;; set
 
 (defun om-elem-set-property (prop value elem)
-  "Set property PROP to VALUE in ELEM."
+  "Set property PROP to VALUE in ELEM.
+
+The following list of elements and properties are supported:"
   (om-elem--set-property-strict prop value elem))
+
+(->> (om-elem--get-type-alist-operation :set)
+     (om-elem--format-alist-operations)
+     (om-elem--append-documentation 'om-elem-set-property))
+
+;; get
+
+(defun om-elem-get-property (prop elem)
+  "Return the value or property PROP in ELEM.
+
+See `om-elem-set-property' for a list of supported elements and
+properties that may be used with this function."
+  (om-elem--get-property-strict prop elem))
 
 ;; map
 
 (defun om-elem-map-property (prop fun elem)
   "Apply function FUN to the value of property PROP in ELEM.
 FUN takes one argument (the current value of PROP) and returns
-a new value to which PROP will be set."
+a new value to which PROP will be set.
+
+See `om-elem-set-property' for a list of supported elements and
+properties that may be used with this function."
   (om-elem--map-property-strict prop fun elem))
 
 (om-elem--gen-anaphoric-form #'om-elem-map-property)
@@ -2523,29 +2553,46 @@ a new value to which PROP will be set."
 
 (defun om-elem-toggle-property (prop elem)
   "Flip the value of property PROP in ELEM.
-This function only applies to properties that are booleans"
+This function only applies to properties that are booleans.
+
+The following elements and properties are supported:"
   (let* ((type (om-elem--get-type elem))
          (flag (om-elem--get-strict-function :toggle type prop)))
     (if flag
         (om-elem--map-property-strict prop #'not elem)
       (error "Not a toggle-able property"))))
 
+(->> (om-elem--get-type-alist-operation :toggle)
+     (om-elem--format-alist-operations)
+     (om-elem--append-documentation 'om-elem-toggle-property))
+
 ;; shift
 
 (defun om-elem-shift-property (prop n elem)
   "Shift property PROP by N (an integer) units within ELEM.
-This only applies the properties that are represented as integers."
+This only applies the properties that are represented as integers.
+
+The following elements and properties are supported:"
   (let* ((type (om-elem--get-type elem))
          (fun (om-elem--get-strict-function :shift type prop)))
     (if fun
         (om-elem--map-property-strict* prop (funcall fun n it) elem)
       (error "Not a shiftable property"))))
 
+(->> (om-elem--get-type-alist-operation :shift)
+     (--map (cons (car it) (--remove (eq :post-blank (car it)) (cdr it))))
+     (-filter #'cdr)
+     (om-elem--format-alist-operations)
+     (concat "\nall elements\n- :post-blank\n")
+     (om-elem--append-documentation 'om-elem-shift-property))
+
 ;; insert
 
 (defun om-elem-insert-into-property (prop index string elem)
   "Insert STRING into PROP at INDEX within ELEM if it is not already there.
-This only applies to properties that are represented as lists of strings."
+This only applies to properties that are represented as lists of strings.
+
+The following elements and properties are supported:"
   (cl-flet
       ((insert-at-maybe
         (string-list)
@@ -2558,12 +2605,19 @@ This only applies to properties that are represented as lists of strings."
         (error "Property '%s' in elem of type '%s' is not a string-list"
                prop type)))))
 
+(->> (om-elem--get-type-alist-operation :string-list)
+     (om-elem--format-alist-operations)
+     (om-elem--append-documentation 'om-elem-insert-into-property))
+
 ;; remove
 
 (defun om-elem-remove-from-property (prop string elem)
   "Remove string STRING from list PROP within ELEM.
 This only applies to properties that are represented as lists of 
-strings."
+strings.
+
+See `om-elem-insert-into-property' for a list of supported elements
+and properties that may be used with this function."
   (let* ((type (om-elem--get-type elem))
          (flag (om-elem--get-strict-function :string-list type prop)))
     (if flag
@@ -2576,19 +2630,28 @@ strings."
 (defun om-elem-plist-put-property (prop key value elem)
   "Insert KEY and VALUE pair into PROP within ELEM.
 KEY is a keyword and VALUE is a symbol. This only applies to 
-properties that are represented as plists."
+properties that are represented as plists.
+
+The following elements and properties are supported:."
   (let* ((type (om-elem--get-type elem))
          (flag (om-elem--get-strict-function :plist type prop)))
     (if flag
         (om-elem--map-property-strict* prop (plist-put it key value) elem)
       (error "Not a plist property"))))
 
+(->> (om-elem--get-type-alist-operation :plist)
+     (om-elem--format-alist-operations)
+     (om-elem--append-documentation 'om-elem-plist-put-property))
+
 ;; plist-remove
 
 (defun om-elem-plist-remove-property (prop key elem)
   "Remove KEY and its value from PROP within ELEM.
 KEY is a keyword. This only applies to properties that are
-represented as plists."
+represented as plists.
+
+See `om-elem-plist-put-property' for a list of supported elements
+and properties that may be used with this function."
   (let* ((type (om-elem--get-type elem))
          (flag (om-elem--get-strict-function :plist type prop)))
     (if flag
