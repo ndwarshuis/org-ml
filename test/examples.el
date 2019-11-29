@@ -1472,12 +1472,12 @@
            (om-elem-get-property :value))
       !!> error)
 
-    (defexamples-content om-elem-map-property
+    (defexamples-content om-elem-match-map-property
       nil
 
       (:content "#+CALL: ktulu()")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-property :call #'s-upcase)
+           (om-elem-match-map-property :call #'s-upcase)
            (om-elem-to-trimmed-string))
       => "#+CALL: KTULU()"
 
@@ -1487,13 +1487,13 @@
 
       (:content "~learn to~")
       (->> (om-elem-parse-this-object)
-           (om-elem-map-property :value #'s-upcase)
+           (om-elem-match-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "~LEARN TO~"
 
       (:content "# not here")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-property :value #'s-upcase)
+           (om-elem-match-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "# NOT HERE"
 
@@ -1501,7 +1501,7 @@
                 "not here"
                 "#+END_COMMENT")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-property :value #'s-upcase)
+           (om-elem-match-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_COMMENT"
                   "NOT HERE"
@@ -1512,7 +1512,7 @@
       (:content ":LOGBOOK:"
                 ":END:")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-property :drawer-name #'s-capitalize)
+           (om-elem-match-map-property :drawer-name #'s-capitalize)
            (om-elem-to-trimmed-string))
       => (:result ":Logbook:"
                   ":END:")
@@ -1520,7 +1520,7 @@
       (:content "#+BEGIN: blockhead"
                 "#+END:")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-property :block-name #'s-upcase)
+           (om-elem-match-map-property :block-name #'s-upcase)
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN: BLOCKHEAD"
                   "#+END:")
@@ -1533,7 +1533,7 @@
                 "example.com"
                 "#+END_EXAMPLE")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-property* :value (concat "https://" it))
+           (om-elem-match-map-property* :value (concat "https://" it))
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_EXAMPLE"
                   "https://example.com"
@@ -1545,8 +1545,8 @@
                 "bullets, bombs, and bigotry"
                 "#+END_EXPORT")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-property :type #'s-upcase)
-           (om-elem-map-property :value #'s-upcase)
+           (om-elem-match-map-property :type #'s-upcase)
+           (om-elem-match-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_EXPORT DOMESTIC"
                    "BULLETS, BOMBS, AND BIGOTRY"
@@ -1554,20 +1554,20 @@
 
       (:content "@@back-end:value@@")
       (->> (om-elem-parse-this-object)
-           (om-elem-map-property :back-end #'s-upcase)
-           (om-elem-map-property :value #'s-upcase)
+           (om-elem-match-map-property :back-end #'s-upcase)
+           (om-elem-match-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "@@BACK-END:VALUE@@"
 
       (:content ": fixed")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-property :value #'s-upcase)
+           (om-elem-match-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => ": FIXED"
 
       (:content "[fn:blacklabel] society")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-property :label #'s-upcase)
+           (om-elem-match-map-property :label #'s-upcase)
            (om-elem-to-trimmed-string))
       => "[fn:BLACKLABEL] society"
 
@@ -1575,7 +1575,7 @@
 
       (:content "call_ktulu()")
       (->> (om-elem-parse-this-object)
-           (om-elem-map-property :call #'s-upcase)
+           (om-elem-match-map-property :call #'s-upcase)
            (om-elem-to-trimmed-string))
       => "call_KTULU()"
 
@@ -1583,14 +1583,14 @@
 
       (:content "- tag :: thing")
       (->> (om-elem-parse-this-item)
-           (om-elem-map-property :tag (lambda (it) (-map #'s-upcase it)))
+           (om-elem-match-map-property :tag (lambda (it) (-map #'s-upcase it)))
            (om-elem-to-trimmed-string))
       => "- TAG :: thing"
 
       (:content "#+KEY: VAL")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-property :key (-partial #'s-prepend "OM_"))
-           (om-elem-map-property :value (-partial #'s-prepend "OM_"))
+           (om-elem-match-map-property :key (-partial #'s-prepend "OM_"))
+           (om-elem-match-map-property :value (-partial #'s-prepend "OM_"))
            (om-elem-to-trimmed-string))
       => "#+OM_KEY: OM_VAL"
 
@@ -1600,7 +1600,7 @@
 
       (:content "{{{economics}}}")
       (->> (om-elem-parse-this-object)
-           (om-elem-map-property :key #'s-upcase)
+           (om-elem-match-map-property :key #'s-upcase)
            (om-elem-to-trimmed-string))
       => "{{{ECONOMICS}}}"
 
@@ -1612,8 +1612,8 @@
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-node-properties)
            (-first-item)
-           (om-elem-map-property :key (-partial #'s-prepend "OM_"))
-           (om-elem-map-property :value (-partial #'s-prepend "OM_"))
+           (om-elem-match-map-property :key (-partial #'s-prepend "OM_"))
+           (om-elem-match-map-property :value (-partial #'s-prepend "OM_"))
            (om-elem-to-trimmed-string))
       => ":OM_KEY:   OM_VAL"
 
@@ -1622,7 +1622,7 @@
       (:content "#+BEGIN_special"
                 "#+END_special")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-property :type #'s-upcase)
+           (om-elem-match-map-property :type #'s-upcase)
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_SPECIAL"
                   "#+END_SPECIAL")
@@ -1633,13 +1633,13 @@
 
       (:content "<<found>>")
       (->> (om-elem-parse-this-object)
-           (om-elem-map-property :value #'s-upcase)
+           (om-elem-match-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "<<FOUND>>"
 
       (:content "=I am not a crook=")
       (->> (om-elem-parse-this-object)
-           (om-elem-map-property :value #'s-upcase)
+           (om-elem-match-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "=I AM NOT A CROOK="
       :end-hidden
@@ -1647,12 +1647,12 @@
       (:content "~code~")
       (:comment "Throw error if property doesn't exist")
       (->> (om-elem-parse-this-object)
-           (om-elem-map-property :title #'s-upcase)
+           (om-elem-match-map-property :title #'s-upcase)
            (om-elem-to-trimmed-string))
       !!> error
       (:comment "Throw error if function doesn't return proper type")
       (->> (om-elem-parse-this-object)
-           (om-elem-map-property* :value (if it 1 0))
+           (om-elem-match-map-property* :value (if it 1 0))
            (om-elem-to-trimmed-string))
       !!> error)
 
@@ -1792,30 +1792,30 @@
                   "stuff")
       :end-hidden)
 
-    (defexamples-content om-elem-insert-into-property
+    (defexamples-content om-elem-match-insert-into-property
       nil
 
       (:content "#+CALL: ktulu(y=1)")
       (->> (om-elem-parse-this-element)
-           (om-elem-insert-into-property :arguments 0 "x=4")
+           (om-elem-match-insert-into-property :arguments 0 "x=4")
            (om-elem-to-trimmed-string))
       => "#+CALL: ktulu(x=4,y=1)"
 
       (:comment "Do nothing if the string is already in the list")
       (->> (om-elem-parse-this-element)
-           (om-elem-insert-into-property :arguments 0 "y=1")
+           (om-elem-match-insert-into-property :arguments 0 "y=1")
            (om-elem-to-trimmed-string))
       => "#+CALL: ktulu(y=1)"
 
       (:comment "Throw error when inserting into a property that is not a list of strings")
       (->> (om-elem-parse-this-element)
-           (om-elem-insert-into-property :end-header 0 "html")
+           (om-elem-match-insert-into-property :end-header 0 "html")
            (om-elem-to-trimmed-string))
       !!> error
 
       (:content "* headline       :tag1:")
       (->> (om-elem-parse-this-headline)
-           (om-elem-insert-into-property :tags 0 "tag0")
+           (om-elem-match-insert-into-property :tags 0 "tag0")
            (om-elem-to-trimmed-string))
       => "* headline                                                        :tag0:tag1:"
 
@@ -1824,7 +1824,7 @@
       (:content "#+BEGIN_EXAMPLE -n"
                 "#+END_EXAMPLE")
       (->> (om-elem-parse-this-element)
-           (om-elem-insert-into-property :switches -1 "-r")
+           (om-elem-match-insert-into-property :switches -1 "-r")
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_EXAMPLE -n -r"
                   "#+END_EXAMPLE")
@@ -1832,20 +1832,20 @@
 
       (:content "call_ktulu(y=1)")
       (->> (om-elem-parse-this-object)
-           (om-elem-insert-into-property :arguments 0 "x=4")
+           (om-elem-match-insert-into-property :arguments 0 "x=4")
            (om-elem-to-trimmed-string))
       => "call_ktulu(x=4,y=1)"
 
       (:content "{{{economics(x=4)}}}")
       (->> (om-elem-parse-this-object)
-           (om-elem-insert-into-property :args 0 "z=2")
+           (om-elem-match-insert-into-property :args 0 "z=2")
            (om-elem-to-trimmed-string))
       => "{{{economics(z=2,x=4)}}}"
       
       (:content "#+BEGIN_SRC emacs-lisp -n"
                 "#+END_SRC")
       (->> (om-elem-parse-this-element)
-           (om-elem-insert-into-property :switches -1 "-r")
+           (om-elem-match-insert-into-property :switches -1 "-r")
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_SRC emacs-lisp -n -r"
                   "#+END_SRC")
@@ -1853,7 +1853,7 @@
       (:content "| a |"
                 "#+TBLFM: x=$2")
       (->> (om-elem-parse-this-element)
-           (om-elem-insert-into-property :tblfm -1 "y=$3")
+           (om-elem-match-insert-into-property :tblfm -1 "y=$3")
            (om-elem-to-trimmed-string))
       => (:result "| a |"
                   "#+TBLFM: y=$3"
@@ -2451,7 +2451,7 @@
     ;;             "section stuff")
     ;;   (:comment "Find the headline from the section element")
     ;;   (--> (om-elem-parse-this-subtree)
-    ;;        (om-elem-find-first it 'section)
+    ;;        (om-elem-match-first it 'section)
     ;;        (om-elem-parent-get-headline it)
     ;;        (om-elem-to-trimmed-string it))
     ;;   => "* headline 1\nsection stuff"
@@ -2571,7 +2571,7 @@
     ;;             "** two"
     ;;             "*** three")
     ;;   (--> (om-elem-parse-this-subtree)
-    ;;        (om-elem-find-first it 'headline)
+    ;;        (om-elem-match-first it 'headline)
     ;;        (om-elem-headline-get-path it)
     ;;        (om-elem-to-trimmed-string it))
     ;;   => '("one"))
@@ -3006,7 +3006,7 @@
 (def-example-group "Element matching functions"
   "match shit"
 
-  (defexamples-content om-elem-find
+  (defexamples-content om-elem-match
     "docstring"
 
     (:content "* headline one"
@@ -3017,7 +3017,7 @@
     (:comment "Use a symbol to match a type, in this case all "
               "headlines.")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(headline))
+         (om-elem-match '(headline))
          (--map (om-elem-to-trimmed-string it)))
     => '("** TODO headline two"
          "** COMMENT headline three"
@@ -3027,15 +3027,15 @@
               "integers count from the end. Out of range integers "
               "return nil")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(1))
+         (om-elem-match '(1))
          (--map (om-elem-to-trimmed-string it)))
     => '("** COMMENT headline three")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(-1))
+         (om-elem-match '(-1))
          (--map (om-elem-to-trimmed-string it)))
     => '("** headline four")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(3))
+         (om-elem-match '(3))
          (--map (om-elem-to-trimmed-string it)))
     => nil
 
@@ -3043,25 +3043,25 @@
               "integer to match a range of indices. Allowed "
               "operators are <, >, <=, and and >=.")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '((> 0)))
+         (om-elem-match '((> 0)))
          (--map (om-elem-to-trimmed-string it)))
     => '("** COMMENT headline three" "** headline four")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '((>= 1)))
+         (om-elem-match '((>= 1)))
          (--map (om-elem-to-trimmed-string it)))
     => '("** COMMENT headline three" "** headline four")
 
     (:comment "Use a plist to match based on an elements properties.")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '((:todo-keyword "TODO")))
+         (om-elem-match '((:todo-keyword "TODO")))
          (--map (om-elem-to-trimmed-string it)))
     => '("** TODO headline two")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '((:todo-keyword nil)))
+         (om-elem-match '((:todo-keyword nil)))
          (--map (om-elem-to-trimmed-string it)))
     => '("** COMMENT headline three" "** headline four")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '((:todo-keyword "DONE")))
+         (om-elem-match '((:todo-keyword "DONE")))
          (--map (om-elem-to-trimmed-string it)))
     => nil
 
@@ -3075,30 +3075,30 @@
     (:comment "Specify multiple levels of matching using multiple "
               "queries.")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(section paragraph bold))
+         (om-elem-match '(section paragraph bold))
          (--map (om-elem-to-trimmed-string it)))
     => '("*text1*" "*text2*")
 
     (:comment "Use the keyword :any as a wildcard to match any "
               "element at a particular level.")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(:any :any bold))
+         (om-elem-match '(:any :any bold))
          (--map (om-elem-to-trimmed-string it)))
     => '("*text1*" "*text2*")
     ;; TODO not sure why an empty string comes out here
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(section paragraph :any))
+         (om-elem-match '(section paragraph :any))
          (--map (om-elem-to-trimmed-string it)))
     => '("this is" "*text1*" "of" "*text2*" "")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(:any bold))
+         (om-elem-match '(:any bold))
          (--map (om-elem-to-trimmed-string it)))
     => nil
 
     (:comment "Use the keyword :many to match one or more levels "
               "of any element.")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(:many bold))
+         (om-elem-match '(:many bold))
          (--map (om-elem-to-trimmed-string it)))
     => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
 
@@ -3107,13 +3107,13 @@
               "that have already matched.")
     ;; TODO add predicate???
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find '(headline :many! headline))
+         (om-elem-match '(headline :many! headline))
          (--map (om-elem-to-trimmed-string it)))
     => '("*** headline three
 and here is even more *text4* and *text5*
 **** headline 4"))
   
-  (defexamples-content om-elem-find-first
+  (defexamples-content om-elem-match-first
     nil
     (:content
      "* headline one"
@@ -3122,11 +3122,11 @@ and here is even more *text4* and *text5*
      "** headline four")
     (:comment "Find the first subheadline")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find-first '(headline))
+         (om-elem-match-first '(headline))
          (om-elem-to-trimmed-string))
     => "** TODO headline two")
 
-  (defexamples-content om-elem-find-last
+  (defexamples-content om-elem-match-last
     nil
     (:content "* headline one"
                "** TODO headline two"
@@ -3134,11 +3134,11 @@ and here is even more *text4* and *text5*
                "** headline four")
     (:comment "Find the last subheadline")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-find-last '(headline))
+         (om-elem-match-last '(headline))
          (om-elem-to-trimmed-string))
     => "** headline four")
 
-  (defexamples-content om-elem-delete
+  (defexamples-content om-elem-match-delete
     nil
     (:content "* headline one"
                "** headline two"
@@ -3146,26 +3146,26 @@ and here is even more *text4* and *text5*
                "** headline four")
     (:comment "Selectively delete headlines")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-delete '(headline))
+         (om-elem-match-delete '(headline))
          (om-elem-to-trimmed-string))
     => "* headline one"
     (->> (om-elem-parse-this-subtree)
-         (om-elem-delete-first '(headline))
+         (om-elem-match-delete-first '(headline))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** headline three"
                 "** headline four")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-delete-last '(headline))
+         (om-elem-match-delete-last '(headline))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** headline two"
                 "** headline three"))
 
   ;; TODO add extract
-  (defexamples-content om-elem-extract nil)
+  (defexamples-content om-elem-match-extract nil)
 
-  (defexamples-content om-elem-map
+  (defexamples-content om-elem-match-map
     nil
 
     (:content "* headline one"
@@ -3175,21 +3175,21 @@ and here is even more *text4* and *text5*
 
     (:comment "Selectively mark headlines as DONE")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-map '(headline) (lambda (it) (om-elem-set-property :todo-keyword "DONE" it)))
+         (om-elem-match-map '(headline) (lambda (it) (om-elem-set-property :todo-keyword "DONE" it)))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** DONE headline two"
                 "** DONE headline three"
                 "** DONE headline four")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-map-first* '(headline) (om-elem-set-property :todo-keyword "DONE" it))
+         (om-elem-match-map-first* '(headline) (om-elem-set-property :todo-keyword "DONE" it))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** DONE headline two"
                 "** headline three"
                 "** headline four")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-map-last '(headline) (-partial #'om-elem-set-property :todo-keyword "DONE"))
+         (om-elem-match-map-last '(headline) (-partial #'om-elem-set-property :todo-keyword "DONE"))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** TODO headline two"
@@ -3197,25 +3197,25 @@ and here is even more *text4* and *text5*
                 "** DONE headline four"))
   
   ;; TODO add mapcat
-  (defexamples-content om-elem-mapcat nil)
+  (defexamples-content om-elem-match-mapcat nil)
 
   ;; TODO add replace
-  (defexamples-content om-elem-replace nil)
+  (defexamples-content om-elem-match-replace nil)
 
   ;; TOOD add insert-before
-  (defexamples-content om-elem-insert-before nil)
+  (defexamples-content om-elem-match-insert-before nil)
 
   ;; TOOD add insert-after
-  (defexamples-content om-elem-insert-after nil)
+  (defexamples-content om-elem-match-insert-after nil)
 
   ;; TOOD add insert-within
-  (defexamples-content om-elem-insert-within nil)
+  (defexamples-content om-elem-match-insert-within nil)
 
   ;; TOOD add splice-before
-  (defexamples-content om-elem-splice-before nil)
+  (defexamples-content om-elem-match-splice-before nil)
 
   ;; TOOD add splice-after
-  (defexamples-content om-elem-splice-after nil)
+  (defexamples-content om-elem-match-splice-after nil)
 
   ;; TOOD add splice-within
-  (defexamples-content om-elem-splice-within nil))
+  (defexamples-content om-elem-match-splice-within nil))

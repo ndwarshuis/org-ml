@@ -979,7 +979,7 @@ and object containers and includes the 'plain-text' type.")
 
 ;; (defun om-elem--get-parent-item (elem)
 ;;   "Return the parent item element for ELEM."
-;;   (om-elem-find-parent elem :many 'item))
+;;   (om-elem-match-parent elem :many 'item))
 
 (defun om-elem--set-property (prop value elem)
   "Set property PROP in element ELEM to VALUE."
@@ -2073,7 +2073,7 @@ nested element to return."
 
 (defun om-elem-headline-map-node-property (key fun headline)
   (om-elem--verify key stringp headline om-elem-is-headline-p)
-  (om-elem-map-first*
+  (om-elem-match-map-first*
    `(section property-drawer (:and node-property (:key ,key)))
     (om-elem--node-property-map-value fun it) headline))
 
@@ -2538,7 +2538,7 @@ properties that may be used with this function."
 
 ;; map
 
-(defun om-elem-map-property (prop fun elem)
+(defun om-elem-match-map-property (prop fun elem)
   "Apply function FUN to the value of property PROP in ELEM.
 FUN takes one argument (the current value of PROP) and returns
 a new value to which PROP will be set.
@@ -2547,7 +2547,7 @@ See `om-elem-set-property' for a list of supported elements and
 properties that may be used with this function."
   (om-elem--map-property-strict prop fun elem))
 
-(om-elem--gen-anaphoric-form #'om-elem-map-property)
+(om-elem--gen-anaphoric-form #'om-elem-match-map-property)
 
 ;; toggle
 
@@ -2588,7 +2588,7 @@ The following elements and properties are supported:"
 
 ;; insert
 
-(defun om-elem-insert-into-property (prop index string elem)
+(defun om-elem-match-insert-into-property (prop index string elem)
   "Insert STRING into PROP at INDEX within ELEM if it is not already there.
 This only applies to properties that are represented as lists of strings.
 
@@ -2607,7 +2607,7 @@ The following elements and properties are supported:"
 
 (->> (om-elem--get-type-alist-operation :string-list)
      (om-elem--format-alist-operations)
-     (om-elem--append-documentation 'om-elem-insert-into-property))
+     (om-elem--append-documentation 'om-elem-match-insert-into-property))
 
 ;; remove
 
@@ -2616,7 +2616,7 @@ The following elements and properties are supported:"
 This only applies to properties that are represented as lists of 
 strings.
 
-See `om-elem-insert-into-property' for a list of supported elements
+See `om-elem-match-insert-into-property' for a list of supported elements
 and properties that may be used with this function."
   (let* ((type (om-elem--get-type elem))
          (flag (om-elem--get-strict-function :string-list type prop)))
@@ -2661,11 +2661,11 @@ and properties that may be used with this function."
 ;;; generic
 
 ;; TODO what to do with these?
-(defun om-elem-map-properties (plist elem)
+(defun om-elem-match-map-properties (plist elem)
   (om-elem--verify elem om-elem--is-element-or-object-p)
   (om-elem--map-properties plist elem))
 
-(defmacro om-elem-map-properties* (plist elem)
+(defmacro om-elem-match-map-properties* (plist elem)
   `(om-elem--map-properties ,plist ,elem))
 
 (defun om-elem-set-properties (plist elem)
@@ -2904,7 +2904,7 @@ both timestamp halves."
   (om-elem--headline-set-title! text stats headline))
 
 (defun om-elem-headline-update-item-statistics (headline)
-  (let ((items (om-elem-find '(section plain-list item) headline))
+  (let ((items (om-elem-match '(section plain-list item) headline))
         (done (length (-filter #'om-elem-item-is-checked-p items)))
         (total (length items)))
     (om-elem--headline-set-statistics-cookie-fraction done total headline)))
@@ -3002,7 +3002,7 @@ Return a list of objects."
 
 (defun om-elem-remove-formatting (types elem)
   "Remove all recursive formatting TYPES from ELEM."
-  (om-elem-map* `(:many! (:or ,@types))
+  (om-elem-match-map* `(:many! (:or ,@types))
                 (om-elem-unwrap-deep types it) elem))
 
 (defun om-elem-remove-all-formatting (elem)
@@ -3088,12 +3088,12 @@ TYPE is '-', '+', or 'ordered'."
   (om-elem--verify plain-list om-elem-is-plain-list-p)
   (cond
    ((memq type '(+ -))
-    (om-elem-map* '(item) (om-elem--set-property-strict :bullet type it) plain-list))
+    (om-elem-match-map* '(item) (om-elem--set-property-strict :bullet type it) plain-list))
    ((eq type 'ordered)
     ;; NOTE the org-interpreter seems to use the correct, ordered
     ;; numbers if any number is set here. This behavior may not be
     ;; reliable.
-    (om-elem-map* '(item) (om-elem--set-property-strict :bullet 1 it) plain-list))
+    (om-elem-match-map* '(item) (om-elem--set-property-strict :bullet 1 it) plain-list))
    (t (error "Invalid type: %s" type))))
 
 ;; table
@@ -3398,7 +3398,7 @@ the section at the top of the org buffer."
 
 ;; write
 
-(defun om-elem-insert (point elem)
+(defun om-elem-match-insert (point elem)
   "Convert ELEM to a string and insert at POINT in the current buffer.
 Return ELEM."
   (om-elem--verify point integerp
@@ -3408,8 +3408,8 @@ Return ELEM."
     (insert (om-elem-to-string elem)))
   elem)
 
-(defun om-elem-insert-tail (point elem)
-  "Like `om-elem-insert' but insert ELEM at POINT and move to the end of inserted string."
+(defun om-elem-match-insert-tail (point elem)
+  "Like `om-elem-match-insert' but insert ELEM at POINT and move to the end of inserted string."
   (om-elem--verify point integerp
                    elem om-elem--is-element-or-object-p)
   (let ((s (om-elem-to-string elem)))
@@ -3451,7 +3451,7 @@ old element in the current buffer."
     ;; hacky way to add overlays to undo tree
     (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
     (delete-region begin end)
-    (->> (funcall fun elem) (om-elem-insert begin))
+    (->> (funcall fun elem) (om-elem-match-insert begin))
     nil))
 
 (defmacro om-elem-update* (form elem)
@@ -3631,11 +3631,11 @@ original contents to be modified."
        (--filter (all-props-match? it plist) contents)))
     (_ (error "Invalid query: %s" query))))
 
-(defun om-elem-find (queries elem)
+(defun om-elem-match (queries elem)
   "Find all objects in ELEM that match QUERIES.
 
 This will return a list of all successful matches. See
-`om-elem-find-first' and `om-elem-find-last' to limit the return to
+`om-elem-match-first' and `om-elem-match-last' to limit the return to
 one match.
 
 QUERIES consists of one or more criteria that is used to match
@@ -3689,41 +3689,41 @@ assuming that the ELEM has only one section."
            (let ((found (om-elem-filter-query q contents))
                  (q* (list :many! q)))
              (->> (-difference contents found)
-                  (--mapcat (om-elem-find q* it))
+                  (--mapcat (om-elem-match q* it))
                   (append found))))
           (`(:many! . ,_)
            (error "Query with :many! must have one target"))
           (`(:many . (,q . nil))
            (let ((found (om-elem-filter-query q contents))
                  (q* (list :many q)))
-             (->> (--mapcat (om-elem-find q* it) contents)
+             (->> (--mapcat (om-elem-match q* it) contents)
                   (append found))))
           (`(:many . ,_)
            (error "Query with :many must have one target"))
           (`(:any . ,(and (pred and) qs))
-           (--mapcat (om-elem-find qs it) contents))
+           (--mapcat (om-elem-match qs it) contents))
           (`(:any . nil)
            contents)
           (`(,q . nil)
            (om-elem-filter-query q contents))
           (`(,q . ,qs)
            (->> (om-elem-filter-query q contents)
-                (--mapcat (om-elem-find qs it))))
+                (--mapcat (om-elem-match qs it))))
           (_ (error "Invalid query")))))))
 
-(defun om-elem-find-first (queries elem )
+(defun om-elem-match-first (queries elem )
   "Find first object in ELEM matching QUERIES.
-The rules for QUERIES are the same as `om-elem-find'"
-  (-first-item (om-elem-find queries elem)))
+The rules for QUERIES are the same as `om-elem-match'"
+  (-first-item (om-elem-match queries elem)))
 
-(defun om-elem-find-last (queries elem)
+(defun om-elem-match-last (queries elem)
   "Find last object in ELEM matching QUERIES.
-The rules for QUERIES are the same as `om-elem-find'"
-  (-last-item (om-elem-find queries elem)))
+The rules for QUERIES are the same as `om-elem-match'"
+  (-last-item (om-elem-match queries elem)))
 
 ;; find-parent
 
-(defun om-elem-find-parent-query (parent query)
+(defun om-elem-match-parent-query (parent query)
   (pcase query
     ;; type
     ((and (pred symbolp) type)
@@ -3745,7 +3745,7 @@ The rules for QUERIES are the same as `om-elem-find'"
        (and (all-props-match? parent query) parent)))
     (_ (error "Invalid query: %s" query))))
 
-(defun om-elem-find-parent (elem &rest queries)
+(defun om-elem-match-parent (elem &rest queries)
   ;; TODO validate elem (should be any valid element or object)
   (unless elem (error "No element given"))
   ;; the non-nil is required for cases where we may get
@@ -3755,19 +3755,19 @@ The rules for QUERIES are the same as `om-elem-find'"
       (let ((parent (om-elem--get-parent elem)))
         (pcase queries
           (`(:many . (,q . nil))
-           (or (om-elem-find-parent-query parent q)
-               (om-elem-find-parent parent q)))
+           (or (om-elem-match-parent-query parent q)
+               (om-elem-match-parent parent q)))
           (`(:many . ,_)
            (error "Query with :many must have one target"))
           (`(:any . ,(and (pred and) qs))
-           (om-elem-find-parent parent q))
+           (om-elem-match-parent parent q))
           (`(:any . nil)
            (error "Query with :any must have at least one target"))
           (`(,q . nil)
-           (om-elem-find-parent-query parent q))
+           (om-elem-match-parent-query parent q))
           (`(,q . ,qs)
-           (-> (om-elem-find-parent-query parent q)
-               (om-elem-find-parent qs)))
+           (-> (om-elem-match-parent-query parent q)
+               (om-elem-match-parent qs)))
           (_ (error "Invalid query")))))))
 
 ;; delete
@@ -3777,60 +3777,60 @@ The rules for QUERIES are the same as `om-elem-find'"
   (om-elem--modify-contents
    elem (--remove (member it targets) it)))
 
-(defun om-elem-delete (queries elem)
+(defun om-elem-match-delete (queries elem)
   "Remove matching targets from contents of ELEM.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--delete-targets elem targets)
     elem))
 
-(defun om-elem-delete-first (queries elem)
+(defun om-elem-match-delete-first (queries elem)
   "Remove first matching target from contents of ELEM.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--delete-targets elem (-take 1 targets))
     elem))
 
-(defun om-elem-delete-last (queries elem)
+(defun om-elem-match-delete-last (queries elem)
   "Remove last matching target from contents of ELEM.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--delete-targets elem (-take-last 1 targets))
     elem))
 
 ;; extract
 
-(defun om-elem-extract (queries elem)
+(defun om-elem-match-extract (queries elem)
   "Remove matching targets from contents of ELEM.
 Return cons cell where the car is a list of all removed targets
 and the cdr is the modified ELEM with targets removed.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (cons targets (om-elem--delete-targets elem targets))
     elem))
 
-(defun om-elem-extract-first (queries elem)
+(defun om-elem-match-extract-first (queries elem)
   "Remove first matching target from contents of ELEM.
 Return cons cell where the car is the removed target and the cdr is
 the modified ELEM with targets removed.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (let ((target (-take 1 targets)))
         (cons (car target) (om-elem--delete-targets elem target)))
     elem))
 
-(defun om-elem-extract-last (queries elem)
+(defun om-elem-match-extract-last (queries elem)
   "Remove last matching target from contents of ELEM.
 Return cons cell where the car is the removed target and the cdr is
 the modified ELEM with targets removed.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (let ((target (-take 1 targets)))
         (cons (car target) (om-elem--delete-targets elem target)))
     elem))
@@ -3842,47 +3842,47 @@ QUERIES follows the same rules as `om-elem-find'."
   (om-elem--modify-contents
    elem (--map-when (member it targets) (funcall fun it) it)))
 
-(defun om-elem-map (queries fun elem)
+(defun om-elem-match-map (queries fun elem)
   "Apply FUN to targets matching QUERIES in the contents of ELEM.
 FUN is a function that takes a single argument (the target element or
 object) and returns a new element or object which will replace the
 original.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--map-targets elem fun targets)
     elem))
 
-(defun om-elem-map-first (queries fun elem)
+(defun om-elem-match-map-first (queries fun elem)
   "Apply FUN to first target matching QUERIES in the contents of ELEM.
 FUN is a function that takes a single argument (the target element or
 object) and returns a new element or object which will replace the
 original.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--map-targets elem fun (-take 1 targets))
     elem))
 
-(defun om-elem-map-last (queries fun elem)
+(defun om-elem-match-map-last (queries fun elem)
   "Apply FUN to last target matching QUERIES in the contents of ELEM.
 FUN is a function that takes a single argument (the target element or
 object) and returns a new element or object which will replace the
 original.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--map-targets elem fun (-take-last 1 targets))
     elem))
 
-;; (defmacro om-elem-map* (elem form &rest queries)
-;;   `(om-elem-map ,elem (lambda (it) ,form) ,@queries))
+;; (defmacro om-elem-match-map* (elem form &rest queries)
+;;   `(om-elem-match-map ,elem (lambda (it) ,form) ,@queries))
 
-;; (defmacro om-elem-map-first* (elem form &rest queries)
-;;   `(om-elem-map-first ,elem (lambda (it) ,form) ,@queries))
+;; (defmacro om-elem-match-map-first* (elem form &rest queries)
+;;   `(om-elem-match-map-first ,elem (lambda (it) ,form) ,@queries))
 
-;; (defmacro om-elem-map-last* (elem form &rest queries)
-;;   `(om-elem-map-last ,elem (lambda (it) ,form) ,@queries))
+;; (defmacro om-elem-match-map-last* (elem form &rest queries)
+;;   `(om-elem-match-map-last ,elem (lambda (it) ,form) ,@queries))
 
 ;; mapcat
 
@@ -3893,46 +3893,46 @@ QUERIES follows the same rules as `om-elem-find'."
                       (funcall fun it) (list it))
                   it)))
 
-(defun om-elem-mapcat (queries fun elem)
+(defun om-elem-match-mapcat (queries fun elem)
   "Apply FUN over ELEM and return modified ELEM.
 FUN takes an element/object as its only argument and returns
 a list of elements/objects. Targets within ELEM are found that match
 QUERIES, FUN is applied to each target, and the resulting list is
-spliced in place of the original target (as opposed to `om-elem-map'
+spliced in place of the original target (as opposed to `om-elem-match-map'
 which replaces the original target with a modified target).
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--mapcat-targets elem fun targets)
     elem))
 
-(defun om-elem-mapcat-first (queries fun elem)
-  "Like `om-elem-mapcat' but only apply FUN to first match in ELEM.
+(defun om-elem-match-mapcat-first (queries fun elem)
+  "Like `om-elem-match-mapcat' but only apply FUN to first match in ELEM.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--mapcat-targets elem fun (-take 1 targets))
     elem))
 
-(defun om-elem-mapcat-last (queries fun elem)
-  "Like `om-elem-mapcat' but only apply FUN to last match in ELEM.
+(defun om-elem-match-mapcat-last (queries fun elem)
+  "Like `om-elem-match-mapcat' but only apply FUN to last match in ELEM.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--mapcat-targets elem fun (-take-last 1 targets))
     elem))
 
-;; (defmacro om-elem-mapcat* (elem form &rest queries)
+;; (defmacro om-elem-match-mapcat* (elem form &rest queries)
 ;;   "Anaphoric form of `om-elem-mmapcat'."
-;;   `(om-elem-mapcat ,elem (lambda (it) ,form) ,@queries))
+;;   `(om-elem-match-mapcat ,elem (lambda (it) ,form) ,@queries))
 
-;; (defmacro om-elem-mapcat-first* (elem form &rest queries)
+;; (defmacro om-elem-match-mapcat-first* (elem form &rest queries)
 ;;   "Anaphoric form of `om-elem-mmapcat-first'."
-;;   `(om-elem-mapcat-first ,elem (lambda (it) ,form) ,@queries))
+;;   `(om-elem-match-mapcat-first ,elem (lambda (it) ,form) ,@queries))
 
-;; (defmacro om-elem-mapcat-last* (elem form &rest queries)
+;; (defmacro om-elem-match-mapcat-last* (elem form &rest queries)
 ;;   "Anaphoric form of `om-elem-mmapcat-last'."
-;;   `(om-elem-mapcat-last ,elem (lambda (it) ,form) ,@queries))
+;;   `(om-elem-match-mapcat-last ,elem (lambda (it) ,form) ,@queries))
 
 ;; replace
 
@@ -3941,27 +3941,27 @@ QUERIES follows the same rules as `om-elem-find'."
   (om-elem--modify-contents
    elem (--map-when (member it targets) rep it)))
 
-(defun om-elem-replace (queries rep elem)
+(defun om-elem-match-replace (queries rep elem)
   "Replace matching targets in ELEM with REP.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--replace-targets elem rep targets)
     elem))
 
-(defun om-elem-replace-first (queries rep elem)
+(defun om-elem-match-replace-first (queries rep elem)
   "Replace first matching target in ELEM with REP.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--replace-targets elem rep (-take 1 targets))
     elem))
 
-(defun om-elem-replace-last (queries rep elem)
+(defun om-elem-match-replace-last (queries rep elem)
   "Replace last matching target in ELEM with REP.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--replace-targets elem rep (-take-last 1 targets))
     elem))
 
@@ -3972,11 +3972,11 @@ QUERIES follows the same rules as `om-elem-find'."
   (om-elem--modify-contents
    elem (--mapcat (if (member it targets) (list elem* it) (list it)) it)))
 
-(defun om-elem-insert-before (queries elem* elem)
+(defun om-elem-match-insert-before (queries elem* elem)
   "Insert ELEM* before every target matched by QUERIES in ELEM.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--insert-targets-before elem elem* targets)
     elem))
 
@@ -3987,11 +3987,11 @@ QUERIES follows the same rules as `om-elem-find'."
   (om-elem--modify-contents
    elem (--mapcat (if (member it targets) (list it elem*) (list it)) it)))
 
-(defun om-elem-insert-after (queries elem* elem)
+(defun om-elem-match-insert-after (queries elem* elem)
   "Insert ELEM* after every target matched by QUERIES in ELEM.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--insert-targets-after elem elem* targets)
     elem))
 
@@ -4021,15 +4021,15 @@ front."
    elem (if (not (member elem targets)) it
           (om-elem--insert-in it elem* index))))
 
-(defun om-elem-insert-within (queries index elem* elem)
+(defun om-elem-match-insert-within (queries index elem* elem)
   "Insert new element ELEM* into the contents of ELEM at INDEX.
 Will insert into any target matched by QUERIES. If QUERIES is not
 supplied, ELEM* will be inserted directly into the toplevel contents
 of ELEM.
 
-QUERIES follows the same rules as `om-elem-find'."
+QUERIES follows the same rules as `om-elem-match'."
   (if (-non-nil queries)
-      (-if-let (targets (om-elem-find queries elem))
+      (-if-let (targets (om-elem-match queries elem))
           (om-elem--insert-within-targets elem elem* index targets)
         elem)
     (om-elem--insert-in elem elem* index)))
@@ -4041,27 +4041,27 @@ QUERIES follows the same rules as `om-elem-find'."
   (om-elem--modify-contents
    elem (--mapcat (if (member it targets) elems* (list it)) it)))
 
-(defun om-elem-splice (queries elem* elem)
+(defun om-elem-match-splice (queries elem* elem)
   "Splice matching targets in ELEM with ELEMS*.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--splice-targets elem elems* targets)
     elem))
 
-(defun om-elem-splice-first (queries elem* elem)
+(defun om-elem-match-splice-first (queries elem* elem)
   "Splice first matching target in ELEM with ELEMS*.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--splice-targets elem elems* (-take 1 targets))
     elem))
 
-(defun om-elem-splice-last (queries elem* elem)
+(defun om-elem-match-splice-last (queries elem* elem)
   "Splice last matching target in ELEM with ELEMS*.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--splice-targets elem elems* (-take-last 1 targets))
     elem))
 
@@ -4075,11 +4075,11 @@ QUERIES follows the same rules as `om-elem-find'."
                     (list it))
                   it)))
 
-(defun om-elem-splice-before (queries elem* elem)
+(defun om-elem-match-splice-before (queries elem* elem)
   "Splice ELEMS* before every target matched by QUERIES in ELEM.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--splice-targets-before elem elems* targets)
     elem))
 
@@ -4090,11 +4090,11 @@ QUERIES follows the same rules as `om-elem-find'."
   (om-elem--modify-contents
    elem (--mapcat (if (member it targets) (cons it elems*) (list it)) it)))
 
-(defun om-elem-splice-after (queries elem* elem)
+(defun om-elem-match-splice-after (queries elem* elem)
   "Splice ELEMS* after every target matched by QUERIES in ELEM.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-if-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match queries elem))
       (om-elem--splice-targets-after elem elems* targets)
     elem))
 
@@ -4117,23 +4117,23 @@ QUERIES follows the same rules as `om-elem-find'."
    elem (if (not (member elem targets)) it
             (om-elem--splice-at elems* index contents))))
 
-(defun om-elem-splice-within (queries index elem* elem)
+(defun om-elem-match-splice-within (queries index elem* elem)
   "Insert list of ELEMS* into the contents of ELEM at INDEX.
 Will insert into any target matched by QUERIES. If QUERIES is not
 supplied, ELEM* will be inserted directly into the toplevel contents
 of ELEM.
 
-QUERIES follows the same rules as `om-elem-find'."
+QUERIES follows the same rules as `om-elem-match'."
   (if (-non-nil queries)
-      (-if-let (targets (om-elem-find queries elem))
+      (-if-let (targets (om-elem-match queries elem))
           (om-elem--splice-within-targets elem elem* index targets)
         elem)
     (om-elem--splice-at elem elems* index)))
 
-;; (defun om-elem-delete-in-place (elem query &rest queries)
+;; (defun om-elem-match-delete-in-place (elem query &rest queries)
 ;;   (let ((begin (om-elem--get-property :begin elem))
 ;;         (end (om-elem--get-property :end elem))
-;;         (new-text (-> (apply #'om-elem-delete elem query queries)
+;;         (new-text (-> (apply #'om-elem-match-delete elem query queries)
 ;;                       (org-element-interpret-data)
 ;;                       (s-trim))))
 ;;     (delete-region begin end)
@@ -4161,24 +4161,24 @@ Has no effect on 'plain-text' elements."
 
 ;; side-effects
 
-(defun om-elem-find-do (queries fun elem)
-  "Like `om-elem-map' but for side effects only.
+(defun om-elem-match-do (queries fun elem)
+  "Like `om-elem-match-map' but for side effects only.
 FUN is function that side effects and takes on argument, the matches
 from ELEM using QUERIES. This function itself returns nil.
 
-QUERIES follows the same rules as `om-elem-find'."
-  (-when-let (targets (om-elem-find queries elem))
+QUERIES follows the same rules as `om-elem-match'."
+  (-when-let (targets (om-elem-match queries elem))
       (--each (funcall fun it) targets)))
 
 ;; anaphoric forms
 
-(--each '(om-elem-map
-          om-elem-find-do
-          om-elem-map-first
-          om-elem-map-last
-          om-elem-mapcat
-          om-elem-mapcat-first
-          om-elem-mapcat-last)
+(--each '(om-elem-match-map
+          om-elem-match-do
+          om-elem-match-map-first
+          om-elem-match-map-last
+          om-elem-match-mapcat
+          om-elem-match-mapcat-first
+          om-elem-match-mapcat-last)
   (let ((fun-name (intern (format "%s*" it)))
         (doc-string (format "Anaphoric form of `%s'" it))
         (body `(backquote (,it ,',queries (lambda (it) ,',form ) ,',elem))))
