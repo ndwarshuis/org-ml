@@ -555,10 +555,10 @@
            (om-elem-to-trimmed-string)) => "#+CALL: name() :key val")
 
     (defexamples om-elem-build-clock
-      (->> (om-elem-build-clock '(2019 1 1 0 0))
+      (->> (om-elem-build-clock (om-elem-build-timestamp 'inactive '(2019 1 1 0 0)))
            (om-elem-to-trimmed-string))
       => "CLOCK: [2019-01-01 Tue 00:00]"
-      (->> (om-elem-build-clock '(2019 1 1 0 0) :end '(2019 1 1 1 0))
+      (->> (om-elem-build-clock (om-elem-build-timestamp 'inactive '(2019 1 1 0 0) :end '(2019 1 1 1 0)))
            (om-elem-to-trimmed-string))
       => "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00] =>  1:00")
 

@@ -1662,13 +1662,11 @@ STRING is a lisp form as a string."
               :inside-header inside-header
               :end-header end-header))))
 
-(om-elem--defun om-elem-build-clock (start &key end post-blank)
+(om-elem--defun om-elem-build-clock (timestamp &key post-blank)
   "Build a clock element with TIME1.
 Optionally supply TIME2 to create a closed clock."
-  (let ((ts (om-elem-build-timestamp 'inactive start :end end)))
-    (->> (om-elem--build-element 'clock post-blank)
-         (om-elem--set-property-strict :value ts)
-         (om-elem--set-property-nil :status))))
+  (->> (om-elem--build-element 'clock post-blank)
+       (om-elem--set-property-strict :value timestamp)))
 
 (om-elem--defun om-elem-build-comment (value &key post-blank)
   "Build a comment element with VALUE."
@@ -1872,6 +1870,10 @@ Optionally provide ELEMS as contents."
        (om-elem--set-property-nil :value)))
 
 ;;; shortcut builders
+
+(om-elem--defun om-elem-build-clock! (start &key end post-blank)
+  (let ((ts (om-elem-build-timestamp 'inactive start :end end)))
+    (om-elem-build-clock ts :post-blank post-blank)))
 
 (om-elem--defun om-elem-build-planning! (&key closed deadline
                                               scheduled post-blank)

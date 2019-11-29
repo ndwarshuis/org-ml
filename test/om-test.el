@@ -137,7 +137,8 @@
 
 (ert-deftest om-elem--clock/valid-props ()
   (om-elem--compare-element-props
-   (om-elem-build-clock '(2019 1 1)) "CLOCK: [2019-01-01 Tue]"))
+   (om-elem-build-clock (om-elem-build-timestamp 'inactive '(2019 1 1)))
+   "CLOCK: [2019-01-01 Tue]"))
 
 (ert-deftest om-elem--comment/valid-props ()
   (om-elem--compare-element-props
