@@ -2455,97 +2455,32 @@ zero-indexed."
 
 ;; get
 
-(cl-defgeneric om-elem-get-property (prop elem))
-
-(-> om-elem--type-alist
-    (reverse)
-    (--each 
-        (let ((type (car it))
-              (props (cdr it)))
-          (-> (--remove (eq (car it) :post-blank) props)
-              (--each
-                (let* ((prop (car it))
-                       (arglist `((prop (eql ,prop))
-                                  (elem (head ,type))))
-                       (doc-string "TODO add docstring")
-                       (body '(om-elem--get-property-strict
-                               prop elem)))
-                  (eval `(cl-defmethod om-elem-get-property
-                           ,arglist ,doc-string ,body))))))))
-
-(cl-defmethod om-elem-get-property ((prop (eql :post-blank)) elem)
+(defun om-elem-get-property (prop elem)
+  "Return the value or property PROP in ELEM."
   (om-elem--get-property-strict prop elem))
 
 ;; set
 
-(cl-defgeneric om-elem-set-property (prop value elem))
-
-(-> om-elem--type-alist
-    (reverse)
-    (--each 
-        (let ((type (car it))
-              (props (cdr it)))
-          (-> (--remove (eq (car it) :post-blank) props)
-              (--each
-                (let* ((prop (car it))
-                       (arglist `((prop (eql ,prop)) value
-                                  (elem (head ,type))))
-                       (doc-string "TODO add docstring")
-                       (body '(om-elem--set-property-strict
-                               prop value elem)))
-                  (eval `(cl-defmethod om-elem-set-property
-                           ,arglist ,doc-string ,body))))))))
-
-(cl-defmethod om-elem-set-property ((prop (eql :post-blank)) value elem)
+(defun om-elem-set-property (prop value elem)
+  "Set property PROP to VALUE in ELEM."
   (om-elem--set-property-strict prop value elem))
 
 ;; map
 
-(cl-defgeneric om-elem-map-property (prop fun elem))
+(defun om-elem-map-property (prop fun elem)
+  "Apply function FUN to the value of property PROP in ELEM.
+FUN takes one argument (the current value of PROP) and returns
+a new value to which PROP will be set."
+  (om-elem--map-property-strict prop fun elem))
 
-(-> om-elem--type-alist
-    (reverse)
-    (--each 
-        (let ((type (car it))
-              (props (cdr it)))
-          (-> (--remove (eq (car it) :post-blank) props)
-              (--each
-                (let* ((prop (car it))
-                       (arglist `((prop (eql ,prop)) fun
-                                  (elem (head ,type))))
-                       (doc-string "TODO add docstring")
-                       (body '(om-elem--map-property-strict
-                               prop fun elem)))
-                  (eval `(cl-defmethod om-elem-map-property
-                           ,arglist ,doc-string ,body))))))))
-
-(cl-defmethod om-elem-set-property ((prop (eql :post-blank)) value elem)
-  (om-elem--map-property-strict prop value elem))
-
-(defmacro om-elem-map-property* (prop form elem)
-  `(om-elem-map-property ,prop (lambda (it) ,form) ,elem))
+(om-elem--gen-anaphoric-form #'om-elem-map-property)
 
 ;; toggle
 
-(cl-defgeneric om-elem-toggle-property (prop elem))
-
-(-> om-elem--type-alist
-    (reverse)
-    (--each 
-        (let ((type (car it))
-              (props (cdr it)))
-          (-> (--filter (eq 'om-elem--allow-boolean
-                            (om-elem--get-setter-function type (car it)))
-                        props)
-              (--each
-                  (let* ((prop (car it))
-                         (arglist `((prop (eql ,prop))
-                                    (elem (head ,type))))
-                         (doc-string "TODO add docstring")
-                         (body '(om-elem--map-property-strict
-                                 prop #'not elem)))
-                    (eval `(cl-defmethod om-elem-toggle-property
-                             ,arglist ,doc-string ,body))))))))
+(defun om-elem-toggle-property (prop elem)
+  "Flip the value of property PROP in ELEM.
+This function only applies to properties that are booleans"
+  (om-elem--map-property-strict prop #'not elem))
 
 ;; shift
 
@@ -2619,118 +2554,40 @@ one, it will silently be reset to one."
 
 ;; insert
 
-(cl-defgeneric om-elem-insert-into-property (prop index member elem)
+(defun om-elem-insert-into-property (prop index member elem)
   "Insert string MEMBER into list PROP at INDEX within ELEM.
 This only applies to properties that are represented as lists of 
-strings.")
-
-(-> om-elem--type-alist
-    (reverse)
-    (--each 
-        (let ((type (car it))
-              (props (cdr it)))
-          (-> (--filter (memq (om-elem--get-setter-function type (car it))
-                              '(om-elem--allow-string-list
-                                om-elem--allow-headline-tags
-                                om-elem--allow-from-string-list-space-delim
-                                om-elem--allow-from-string-list-comma-delim))
-                        props)
-              (--each
-                  (let* ((prop (car it))
-                         (arglist `((prop (eql ,prop)) index member
-                                    (elem (head ,type))))
-                         (doc-string "TODO add docstring")
-                         (body
-                          '((om-elem--map-property-strict*
-                             prop (om-elem--insert-at index member it) elem))))
-                    (eval `(cl-defmethod om-elem-insert-into-property
-                             ,arglist ,doc-string ,@body))))))))
+strings."
+  (om-elem--map-property-strict*
+   prop (om-elem--insert-at index member it) elem))
 
 ;; remove
 
-(cl-defgeneric om-elem-remove-from-property (prop member elem)
+(defun om-elem-remove-from-property (prop member elem)
   "Remove string MEMBER from list PROP within ELEM.
 This only applies to properties that are represented as lists of 
-strings.")
-
-(-> om-elem--type-alist
-    (reverse)
-    (--each 
-        (let ((type (car it))
-              (props (cdr it)))
-          (-> (--filter (memq (om-elem--get-setter-function type (car it))
-                              '(om-elem--allow-string-list
-                                om-elem--allow-headline-tags
-                                om-elem--allow-from-string-list-space-delim
-                                om-elem--allow-from-string-list-comma-delim))
-                        props)
-              (--each
-                  (let* ((prop (car it))
-                         (arglist `((prop (eql ,prop)) member
-                                    (elem (head ,type))))
-                         (doc-string "TODO add docstring")
-                         (body
-                          '((om-elem--map-property-strict*
-                             prop (-remove-item member it) elem))))
-                    (eval `(cl-defmethod om-elem-remove-from-property
-                             ,arglist ,doc-string ,@body))))))))
+strings."
+  (om-elem--map-property-strict* prop (-remove-item member it) elem))
 
 ;; plist-put
 
-(cl-defgeneric om-elem-plist-put-property (prop key value elem)
+(defun om-elem-plist-put-property (prop key value elem)
   "Insert KEY and VALUE pair into PROP within ELEM.
 KEY is a keyword and VALUE is a symbol. This only applies to 
-properties that are represented as plists.")
-
-(-> om-elem--type-alist
-    (reverse)
-    (--each 
-        (let ((type (car it))
-              (props (cdr it)))
-          (-> (--filter (eq (om-elem--get-setter-function type (car it))
-                            'om-elem--allow-from-plist)
-                        props)
-              (--each
-                  (let* ((prop (car it))
-                         (arglist `((prop (eql ,prop)) key value
-                                    (elem (head ,type))))
-                         (doc-string "TODO add docstring")
-                         (body
-                          '((om-elem--verify key keywordp)
-                            (om-elem--map-property-strict*
-                             prop (plist-put it key value) elem))))
-                    (eval `(cl-defmethod om-elem-plist-put-property
-                             ,arglist ,doc-string ,@body))))))))
+properties that are represented as plists."
+  (om-elem--map-property-strict* prop (plist-put it key value) elem))
 
 ;; plist-remove
 
-(cl-defgeneric om-elem-plist-remove-property (prop key elem)
+(defun om-elem-plist-remove-property (prop key elem)
   "Remove KEY and its value from PROP within ELEM.
 KEY is a keyword. This only applies to properties that are
-represented as plists.")
-
-(-> om-elem--type-alist
-    (reverse)
-    (--each 
-        (let ((type (car it))
-              (props (cdr it)))
-          (-> (--filter (eq (om-elem--get-setter-function type (car it))
-                            'om-elem--allow-from-plist)
-                        props)
-              (--each
-                  (let* ((prop (car it))
-                         (arglist `((prop (eql ,prop)) key
-                                    (elem (head ,type))))
-                         (doc-string "TODO add docstring")
-                         (body
-                          '((om-elem--verify key keywordp)
-                            (om-elem--map-property-strict*
-                             prop (om-elem--plist-remove key it) elem))))
-                    (eval `(cl-defmethod om-elem-plist-remove-property
-                             ,arglist ,doc-string ,@body))))))))
+represented as plists."
+  (om-elem--map-property-strict* prop (om-elem--plist-remove key it) elem))
 
 ;;; generic
 
+;; TODO what to do with these?
 (defun om-elem-map-properties (plist elem)
   (om-elem--verify elem om-elem--is-element-or-object-p)
   (om-elem--map-properties plist elem))
