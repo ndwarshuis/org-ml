@@ -1723,7 +1723,7 @@ STRING is a lisp form as a string."
        (om-elem--set-property-nil :raw-value)))
 
 (om-elem--defun om-elem-build-clock! (start &key end post-blank)
-  (let ((ts (om-elem-build-timestamp 'inactive start :end end)))
+  (let ((ts (om-elem-build-timestamp! 'inactive start :end end)))
     (om-elem-build-clock ts :post-blank post-blank)))
 
 (om-elem--defun om-elem-build-planning! (&key closed deadline
@@ -1749,9 +1749,9 @@ REPEATER. The order of warning and repeater does not matter."
                  (time (car part)) ; brake-master-cylinder
                  (warning (alist-get '&warning part))
                  (repeater (alist-get '&repeater part)))
-            (om-elem-build-timestamp 'inactive time
-                                     :repeater repeater
-                                     :warning warning)))))
+            (om-elem-build-timestamp! 'inactive time
+                                      :repeater repeater
+                                      :warning warning)))))
     (om-elem-build-planning :closed (partition-arg closed)
                             :deadline (partition-arg deadline)
                             :scheduled (partition-arg scheduled)
@@ -1769,7 +1769,7 @@ REPEATER. The order of warning and repeater does not matter."
   "Build a headline..."
   (let* ((planning (-some->>
                     planning
-                    (apply #'om-elem-build-planning)))
+                    (apply #'om-elem-build-planning!)))
          (property-drawer (-some->>
                            properties
                            (apply #'om-elem-build-property-drawer!)))
