@@ -1792,30 +1792,30 @@
                   "stuff")
       :end-hidden)
 
-    (defexamples-content om-elem-match-insert-into-property
+    (defexamples-content om-elem-insert-into-property
       nil
 
       (:content "#+CALL: ktulu(y=1)")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-insert-into-property :arguments 0 "x=4")
+           (om-elem-insert-into-property :arguments 0 "x=4")
            (om-elem-to-trimmed-string))
       => "#+CALL: ktulu(x=4,y=1)"
 
       (:comment "Do nothing if the string is already in the list")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-insert-into-property :arguments 0 "y=1")
+           (om-elem-insert-into-property :arguments 0 "y=1")
            (om-elem-to-trimmed-string))
       => "#+CALL: ktulu(y=1)"
 
       (:comment "Throw error when inserting into a property that is not a list of strings")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-insert-into-property :end-header 0 "html")
+           (om-elem-insert-into-property :end-header 0 "html")
            (om-elem-to-trimmed-string))
       !!> error
 
       (:content "* headline       :tag1:")
       (->> (om-elem-parse-this-headline)
-           (om-elem-match-insert-into-property :tags 0 "tag0")
+           (om-elem-insert-into-property :tags 0 "tag0")
            (om-elem-to-trimmed-string))
       => "* headline                                                        :tag0:tag1:"
 
@@ -1824,7 +1824,7 @@
       (:content "#+BEGIN_EXAMPLE -n"
                 "#+END_EXAMPLE")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-insert-into-property :switches -1 "-r")
+           (om-elem-insert-into-property :switches -1 "-r")
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_EXAMPLE -n -r"
                   "#+END_EXAMPLE")
@@ -1832,20 +1832,20 @@
 
       (:content "call_ktulu(y=1)")
       (->> (om-elem-parse-this-object)
-           (om-elem-match-insert-into-property :arguments 0 "x=4")
+           (om-elem-insert-into-property :arguments 0 "x=4")
            (om-elem-to-trimmed-string))
       => "call_ktulu(x=4,y=1)"
 
       (:content "{{{economics(x=4)}}}")
       (->> (om-elem-parse-this-object)
-           (om-elem-match-insert-into-property :args 0 "z=2")
+           (om-elem-insert-into-property :args 0 "z=2")
            (om-elem-to-trimmed-string))
       => "{{{economics(z=2,x=4)}}}"
       
       (:content "#+BEGIN_SRC emacs-lisp -n"
                 "#+END_SRC")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-insert-into-property :switches -1 "-r")
+           (om-elem-insert-into-property :switches -1 "-r")
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_SRC emacs-lisp -n -r"
                   "#+END_SRC")
@@ -1853,7 +1853,7 @@
       (:content "| a |"
                 "#+TBLFM: x=$2")
       (->> (om-elem-parse-this-element)
-           (om-elem-match-insert-into-property :tblfm -1 "y=$3")
+           (om-elem-insert-into-property :tblfm -1 "y=$3")
            (om-elem-to-trimmed-string))
       => (:result "| a |"
                   "#+TBLFM: y=$3"

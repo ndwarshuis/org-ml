@@ -2472,7 +2472,7 @@ The following elements and properties are supported:"
 
 ;; insert
 
-(defun om-elem-match-insert-into-property (prop index string elem)
+(defun om-elem-insert-into-property (prop index string elem)
   "Insert STRING into PROP at INDEX within ELEM if it is not already there.
 This only applies to properties that are represented as lists of strings.
 
@@ -2491,7 +2491,7 @@ The following elements and properties are supported:"
 
 (->> (om-elem--get-type-alist-operation :string-list)
      (om-elem--format-alist-operations)
-     (om-elem--append-documentation 'om-elem-match-insert-into-property))
+     (om-elem--append-documentation 'om-elem-insert-into-property))
 
 ;; remove
 
@@ -2500,7 +2500,7 @@ The following elements and properties are supported:"
 This only applies to properties that are represented as lists of 
 strings.
 
-See `om-elem-match-insert-into-property' for a list of supported elements
+See `om-elem-insert-into-property' for a list of supported elements
 and properties that may be used with this function."
   (let* ((type (om-elem--get-type elem))
          (flag (om-elem--get-strict-function :string-list type prop)))
@@ -2570,30 +2570,30 @@ property list in ELEM."
 
 ;; timestamp
 
-(defun om-elem-timestamp-get-start-timestamp (timestamp)
-  "Return the start of TIMESTAMP as a timestamp element.
-If not a range, this will simply return TIMESTAMP unmodified."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-get-start-timestamp timestamp))
+;; (defun om-elem-timestamp-get-start-timestamp (timestamp)
+;;   "Return the start of TIMESTAMP as a timestamp element.
+;; If not a range, this will simply return TIMESTAMP unmodified."
+;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
+;;   (om-elem--timestamp-get-start-timestamp timestamp))
 
-(defun om-elem-timestamp-get-end-timestamp (timestamp)
-  "Return the end of TIMESTAMP as a timestamp element.
-If not a range, return nil."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (and (om-elem--timestamp-is-ranged-fast-p timestamp)
-       (om-elem--timestamp-get-end-timestamp timestamp)))
+;; (defun om-elem-timestamp-get-end-timestamp (timestamp)
+;;   "Return the end of TIMESTAMP as a timestamp element.
+;; If not a range, return nil."
+;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
+;;   (and (om-elem--timestamp-is-ranged-fast-p timestamp)
+;;        (om-elem--timestamp-get-end-timestamp timestamp)))
 
 (defun om-elem-timestamp-get-start-time (timestamp)
   "Return the time list of TIMESTAMP or start time if a range.
 The return value will be a list as specified by the TIME argument in
-`om-elem-build-timestamp'."
+`om-elem-build-timestamp!'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-get-start-time timestamp))
 
 (defun om-elem-timestamp-get-end-time (timestamp)
   "Return the end time list of TIMESTAMP end or nil if not a range.
 The return value will be a list as specified by the TIME argument in
-`om-elem-build-timestamp'."
+`om-elem-build-timestamp!'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (and (om-elem--timestamp-is-ranged-fast-p timestamp)
        (om-elem--timestamp-get-end-time timestamp)))
@@ -2606,19 +2606,19 @@ a negative integer."
   (om-elem--timestamp-get-range timestamp))
 
 (defun om-elem-timestamp-is-active-p (timestamp)
-  "Return t if TIMESTAMP elem is active."
+  "Return t if TIMESTAMP is active."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (or (om-elem--property-is-eq-p :type 'active timestamp)
       (om-elem--property-is-eq-p :type 'active-range timestamp)))
 
-(defun om-elem-timestamp-is-inactive-p (timestamp)
-  "Return t if TIMESTAMP elem is inactive."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (or (om-elem--property-is-eq-p :type 'inactive timestamp)
-      (om-elem--property-is-eq-p :type 'inactive-range timestamp)))
+;; (defun om-elem-timestamp-is-inactive-p (timestamp)
+;;   "Return t if TIMESTAMP elem is inactive."
+;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
+;;   (or (om-elem--property-is-eq-p :type 'inactive timestamp)
+;;       (om-elem--property-is-eq-p :type 'inactive-range timestamp)))
 
 (defun om-elem-timestamp-is-ranged-p (timestamp)
-  "Return t if TIMESTAMP elem is ranged."
+  "Return t if TIMESTAMP is ranged."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (or (om-elem--property-is-eq-p :type 'active-range timestamp)
       (om-elem--property-is-eq-p :type 'inactive-range timestamp)))
@@ -2665,64 +2665,45 @@ a negative integer."
 (defun om-elem-timestamp-set-start-time (time timestamp)
   "Set start time of TIMESTAMP element to TIME.
 TIME is a list analogous to the same argument specified in
-`om-elem-build-timestamp'."
+`om-elem-build-timestamp!'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-set-start-time time timestamp))
 
 (defun om-elem-timestamp-set-end-time (time timestamp)
   "Set end time of TIMESTAMP element to TIME.
 TIME is a list analogous to the same argument specified in
-`om-elem-build-timestamp'."
+`om-elem-build-timestamp!'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-set-end-time time timestamp))
 
 (defun om-elem-timestamp-set-single-time (time timestamp)
   "Set start time of TIMESTAMP to TIME, and remove the end time.
 TIME is a list analogous to the same argument specified in
-`om-elem-build-timestamp'."
+`om-elem-build-timestamp!'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-set-single-time time timestamp))
 
 (defun om-elem-timestamp-set-double-time (time1 time2 timestamp)
   "Set start and end time of TIMESTAMP to TIME1 and TIME2 respectively.
 TIME1 and TIME2 are lists analogous to the TIME argument specified in
-`om-elem-build-timestamp'."
+`om-elem-build-timestamp!'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-set-double-time time1 time2 timestamp))
+
+(defun om-elem-timestamp-set-range (range timestamp)
+  "Set the RANGE of TIMESTAMP.
+If TIMESTAMP is ranged, keep start time the same and adjust the end
+time. If not, make a new end time. The units for RANGE are in minutes
+if TIMESTAMP is in long format and days if TIMESTAMP is in short
+format."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (om-elem--timestamp-set-range range timestamp))
 
 (defun om-elem-timestamp-set-type (type timestamp)
   "Set type of TIMESTAMP element to TYPE.
 TYPE can be either 'active' or 'inactive'."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-set-type type timestamp))
-
-(defun om-elem-timestamp-shift-start (n unit timestamp)
-  "Shift TIMESTAMP start time by N UNITS.
-
-N is a positive or negative integer and UNIT is one of 'minute',
-'hour', 'day', 'month', or 'year'. Overflows will wrap around
-transparently; for instance, supplying 'minute' for UNIT and 90 for N
-will increase the hour property by 1 and the minute property by 30.
-
-If TIMESTAMP is not range, the output will be a ranged timestamp with
-the shifted start time and the end time as that of TIMESTAMP. If this
-behavior is not desired, use `om-elem-timestamp-shift'."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-shift-start n unit timestamp))
-
-(defun om-elem-timestamp-shift-end (n unit timestamp)
-  "Shift TIMESTAMP end time by N UNITS.
-
-N is a positive or negative integer and UNIT is one of 'minute',
-'hour', 'day', 'month', or 'year'. Overflows will wrap around
-transparently; for instance, supplying 'minute' for UNIT and 90 for N
-will increase the hour property by 1 and the minute property by 30.
-
-If TIMESTAMP is not range, the output will be a ranged timestamp with
-the shifted end time and the start time as that of TIMESTAMP. If this
-behavior is not desired, use `om-elem-timestamp-shift'."
-  (om-elem--verify timestamp om-elem-is-timestamp-p)
-  (om-elem--timestamp-shift-end n unit timestamp))
 
 (defun om-elem-timestamp-shift (n unit timestamp)
   "Shift TIMESTAMP time by N UNITS.
@@ -2738,6 +2719,28 @@ transparently; for instance, supplying 'minute' for UNIT and 90 for N
 will increase the hour property by 1 and the minute property by 30."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (om-elem--timestamp-shift-range n unit timestamp))
+
+(defun om-elem-timestamp-shift-start (n unit timestamp)
+  "Shift TIMESTAMP start time by N UNITS.
+
+N and UNIT behave the same as those in `om-elem-timestamp-shift'.
+
+If TIMESTAMP is not range, the output will be a ranged timestamp with
+the shifted start time and the end time as that of TIMESTAMP. If this
+behavior is not desired, use `om-elem-timestamp-shift'."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (om-elem--timestamp-shift-start n unit timestamp))
+
+(defun om-elem-timestamp-shift-end (n unit timestamp)
+  "Shift TIMESTAMP end time by N UNITS.
+
+N and UNIT behave the same as those in `om-elem-timestamp-shift'.
+
+If TIMESTAMP is not range, the output will be a ranged timestamp with
+the shifted end time and the start time as that of TIMESTAMP. If this
+behavior is not desired, use `om-elem-timestamp-shift'."
+  (om-elem--verify timestamp om-elem-is-timestamp-p)
+  (om-elem--timestamp-shift-end n unit timestamp))
 
 (defun om-elem-timestamp-toggle-active (timestamp)
   "Toggle the active/inactive type of TIMESTAMP element."
@@ -3327,7 +3330,7 @@ returned from this function will have :begin and :end properties."
 
 ;; write
 
-(defun om-elem-match-insert (point elem)
+(defun om-elem-insert (point elem)
   "Convert ELEM to a string and insert at POINT in the current buffer.
 Return ELEM."
   (om-elem--verify point integerp
@@ -3337,8 +3340,8 @@ Return ELEM."
     (insert (om-elem-to-string elem)))
   elem)
 
-(defun om-elem-match-insert-tail (point elem)
-  "Like `om-elem-match-insert' but insert ELEM at POINT and move to the end of inserted string."
+(defun om-elem-insert-tail (point elem)
+  "Like `om-elem-insert' but insert ELEM at POINT and move to the end of inserted string."
   (om-elem--verify point integerp
                    elem om-elem--is-element-or-object-p)
   (let ((s (om-elem-to-string elem)))
@@ -3380,7 +3383,7 @@ old element in the current buffer."
     ;; hacky way to add overlays to undo tree
     (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
     (delete-region begin end)
-    (->> (funcall fun elem) (om-elem-match-insert begin))
+    (->> (funcall fun elem) (om-elem-insert begin))
     nil))
 
 (defmacro om-elem-update* (form elem)
