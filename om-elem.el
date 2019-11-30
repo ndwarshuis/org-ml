@@ -1220,7 +1220,8 @@ FUN is a predicate function that takes one argument."
   (nreverse (-slice (decode-time unixtime) 1 6)))
 
 (defun om-elem--unixtime-to-time-short (unixtime)
-  (-take 3 (om-elem--unixtime-to-time-long unixtime)))
+  (append (-take 3 (om-elem--unixtime-to-time-long unixtime))
+          '(nil nil)))
 
 (defun om-elem--time-shift (n unit time)
   (cl-flet*
@@ -1397,15 +1398,18 @@ float-times, which assumes the :type property is valid."
 (defun om-elem--timestamp-set-double-time (time1 time2 timestamp)
   (->> (om-elem--timestamp-set-start-time-nocheck time1 timestamp)
        (om-elem--timestamp-set-end-time-nocheck time2)
-       (om-elem--timestamp-set-type-ranged nil)))
+       (om-elem--timestamp-update-type-ranged)))
 
 (defun om-elem--timestamp-set-range (range timestamp)
-  (let ((t2 (+ (om-elem--timestamp-get-start-unixtime timestamp) range))
-        (timestamp*
-         (if (om-elem--timestamp-end-is-long-p timestamp)
-             (om-elem--timestamp-set-end-unixtime-long t2 timestamp)
-           (om-elem--timestamp-set-end-unixtime-short t2 timestamp))))
-    (om-elem--timestamp-set-type-ranged (< 0 range) timestamp)))
+  (let* ((start (om-elem--timestamp-get-start-time timestamp))
+         (long? (om-elem--time-is-long-p start))
+         (range (* range (if long? 60 86400)))
+         (t2 (--> (om-elem--time-to-unixtime start)
+                  (+ it range)
+                  (if long? (om-elem--unixtime-to-time-long it)
+                    (om-elem--unixtime-to-time-short it)))))
+    (->> (om-elem--timestamp-set-end-time-nocheck t2 timestamp)
+         (om-elem--timestamp-set-type-ranged (/= 0 range)))))
 
 (defun om-elem--timestamp-update-type-ranged (timestamp)
   (-> (om-elem--timestamp-is-ranged-p timestamp)
