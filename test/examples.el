@@ -25,8 +25,8 @@
 ;; (require 'om)
 (require 's)
 
-(def-example-group "Element parsers"
-  "parse shit"
+(def-example-group "Buffer Parsing"
+  "Parse buffer contents to element and object trees"
 
   (defexamples-content om-elem-parse-object-at
     nil
@@ -400,8 +400,8 @@
          (om-elem-to-trimmed-string))
     => ""))
 
-(def-example-group "Printing functions"
-  "Functions to nicely print elements"
+(def-example-group "String Conversion"
+  "Convert elements to strings"
 
   (defexamples om-elem-to-string
     (om-elem-to-string
@@ -431,17 +431,19 @@
 
   )
 
-(def-example-group "Builder Functions"
-  "Functions that build elements and objects"
+(def-example-group "Building"
+  "Functions that build new elements and objects"
 
-  (def-example-subgroup "Object Builders"
-    "build objects"
+  (def-example-subgroup "Objects"
+    nil
 
     (defexamples om-elem-build-code
       (->> (om-elem-build-code "text")
            (om-elem-to-trimmed-string)) => "~text~")
 
-    ;; TODO add entity
+    (defexamples om-elem-build-entity
+      (->> (om-elem-build-entity "gamma")
+           (om-elem-to-trimmed-string)) => "\\gamma")
 
     (defexamples om-elem-build-inline-babel-call
       (->> (om-elem-build-inline-babel-call "name")
@@ -489,8 +491,8 @@
       (->> (om-elem-build-verbatim "text")
            (om-elem-to-trimmed-string)) => "=text="))
 
-  (def-example-subgroup "Recursive Object Builders"
-    "build recursive objects"
+  (def-example-subgroup "Recursive Objects"
+    nil
 
     (defexamples om-elem-build-bold
       (->> (om-elem-build-bold "text")
@@ -542,7 +544,7 @@
            (om-elem-to-trimmed-string)) => "_text_"))
 
   (def-example-subgroup "Elements"
-    "build elements"
+    nil
 
     (defexamples om-elem-build-babel-call
       (->> (om-elem-build-babel-call "name")
@@ -743,9 +745,15 @@
       (->> (om-elem-build-table-cell "cell")
            (om-elem-build-table-row)
            (om-elem-build-table)
-           (om-elem-to-trimmed-string)) => "| cell |")))
+           (om-elem-to-trimmed-string)) => "| cell |")
 
-(def-example-group "Type Predicate functions"
+    (def-example-subgroup "Miscellaneous Builders"
+      nil)
+
+    (def-example-subgroup "Shorthand Builders"
+      nil)))
+
+(def-example-group "Type Predicates"
   "Testing types of elements"
 
   ;; (defexamples-content om-elem-contains-point-p
@@ -795,8 +803,8 @@
   ;;   => nil)
   )
 
-(def-example-group "Property functions"
-  "Functions to get, set, and map properties."
+(def-example-group "Property Manipulation"
+  "Set, get, and map properties of elements and objects."
 
   (def-example-subgroup "Generic"
     nil
@@ -2451,8 +2459,8 @@
       => "[2019-01-01 Tue]--[2019-01-02 Wed]"))
   ))
 
-(def-example-group "Content Modification Functions"
-  "Manipulate the contents of containers"
+(def-example-group "Content Manipulation"
+  "Set, get and map the contents of containers"
 
   (def-example-subgroup "Generic"
     nil
@@ -3015,8 +3023,8 @@
                   "| c | d |"
                   "| x | y |"))))
 
-(def-example-group "Element matching functions"
-  "match shit"
+(def-example-group "Parse Tree Matching"
+  "Use pattern-matching to perform operations on objects and elements in trees."
 
   (defexamples-content om-elem-match
     "docstring"
@@ -3231,3 +3239,17 @@ and here is even more *text4* and *text5*
 
   ;; TOOD add splice-within
   (defexamples-content om-elem-match-splice-within nil))
+
+(def-example-group "Buffer Side Effects"
+  "Insert and update elements and objects into buffers"
+
+  (def-example-subgroup "Insert"
+    nil)
+
+  (def-example-subgroup "Update"
+    nil)
+
+  (def-example-subgroup "Misc"
+    nil)
+
+  )
