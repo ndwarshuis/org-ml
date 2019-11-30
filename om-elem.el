@@ -812,7 +812,7 @@ and object containers and includes the 'plain-text' type.")
       (center-block)
       (clock (:value :set om-elem--filter-clock-timestamp
                      :cis om-elem--update-clock-duration
-                     :type-desc "an unranged inactive timestamp with no warning or repeater"
+                     :type-desc "an unranged, inactive timestamp with no warning or repeater"
                      :require t)
              (:status)
              (:duration))
@@ -875,7 +875,7 @@ and object containers and includes the 'plain-text' type.")
                        :type-desc "a string list"
                        :string-list t)
                 (:title :set om-elem--filter-headline-title
-                        :type-desc "secondary string")
+                        :type-desc "a secondary string")
                 (:todo-keyword ,@ol-str-nil) ; TODO restrict this?
                 (:raw-value)
                 (:todo-type))
@@ -893,15 +893,15 @@ and object containers and includes the 'plain-text' type.")
       (italic)
       (item (:bullet :set om-elem--encode-item-bullets
                      :get om-elem--decode-item-bullets
-                     :type-desc ("positive integer (for '1.'),"
+                     :type-desc ("a positive integer (for '1.'),"
                                  "a positive integer in a list"
                                  "(for '1)'), a '-', or a '+'")
                      :require '-)
             (:checkbox :set om-elem--filter-item-checkbox
-                       :type-desc "nil or the symbols 'on', 'off' or 'trans'")
+                       :type-desc "nil or the symbols 'on', 'off', or 'trans'")
             (:counter ,@pos-int-nil :shift om-elem--shift-pos-integer)
             (:tag :set om-elem--filter-item-tag
-                  :type-desc "secondary string")
+                  :type-desc "a secondary string")
             (:structure))
       (keyword (:key ,@ol-str :require t)
                (:value ,@ol-str :require t))
@@ -913,10 +913,13 @@ and object containers and includes the 'plain-text' type.")
       (line-break)
       (link (:path ,@ol-str :require t)
             (:format :set om-elem--filter-link-format
-                     :type-desc "symbol from 'plain', 'bracket' or 'angle'")
+                     :type-desc "the symbol 'plain', 'bracket' or 'angle'")
             (:type :set om-elem--filter-link-type
                    ;; TODO make this desc better
-                   :type-desc "oneline string"
+                   :type-desc ("a oneline string from `org-link-types'"
+                               "or \"coderef\", \"custom-id\","
+                               "\"file\", \"id\", \"radio\", or"
+                               "\"fuzzy\"")
                    ;; TODO is fuzzy a good default?
                    :require "fuzzy")
             (:raw-link) ; update contents through this?
@@ -951,9 +954,11 @@ and object containers and includes the 'plain-text' type.")
       (statistics-cookie (:value
                           :set om-elem--encode-statistics-cookie-value
                           :get om-elem--decode-statistics-cookie-value
-                          :type-desc ("a one- ('[N%]') or two-cell"
-                                      "('[N1/N2]') list of non-neg"
-                                      "integers")
+                          :type-desc ("a list of non-neg integers"
+                                      "like (PERC) or (NUM DEN)"
+                                      "which make [NUM/DEN] and"
+                                      ;; TODO this is formatted weirdly
+                                      "[PERC %] respectively")
                           :require t))
       (strike-through)
       (subscript (:use-brackets-p ,@bool))
@@ -1655,13 +1660,13 @@ float-times, which assumes the :type property is valid."
                            (unless d
                              (error "No type-desc: %s %s" type p))
                            (->> (if (listp d) (s-join " " d) d)
-                                (format "- %s: %s" p d))))
+                                (format "- %s: %s" p))))
                   (s-join "\n"))))
             (concat
              ;; TODO use a/an here
              (format "Build a %s %s" type class) end
              "\n\nThe following properties are settable:\n"
-             prop "\n- POST-BLANK")))
+             prop "\n- POST-BLANK: a non-negative integer")))
          (builder
           (let ((a `(',type post-blank)))
             (cond
