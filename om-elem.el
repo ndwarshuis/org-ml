@@ -764,244 +764,236 @@ and object containers and includes the 'plain-text' type.")
            (+ priority it)))))
 
 (defconst om-elem--type-alist
-  '((babel-call (:call :set om-elem--filter-oneline-string
-                       :require t)
-                (:inside-header :set om-elem--encode-plist
-                                :get om-elem--decode-plist
-                                :plist t)
-                (:arguments :set om-elem--encode-string-list-comma-delim
-                            :get om-elem--decode-string-list-comma-delim
-                            :string-list t)
-                (:end-header :set om-elem--encode-plist
-                             :get om-elem--decode-plist
-                             :plist t)
-                (:value))
-    (bold)
-    (center-block)
-    (clock (:value :set om-elem--filter-clock-timestamp
-                   :cis om-elem--update-clock-duration
-                   :require t)
-           (:status)
-           (:duration))
-    (code (:value :set om-elem--filter-oneline-string
-                  :require t))
-    (comment (:value :set om-elem--filter-oneline-string
-                     ;; TODO this isn't actually required?
-                     :require t))
-    (comment-block (:value :set om-elem--filter-oneline-string
-                           :get s-trim-right
-                           ;; TODO is this actually required?
-                           :require t))
-    (drawer (:drawer-name :set om-elem--filter-oneline-string
+  (let ((bool (list :set 'om-elem--filter-boolean
+                    :type-desc "nil or t"
+                    :toggle t))
+        (pos-int (list :set 'om-elem--filter-pos-integer
+                       :type-desc "a positive integer"))
+        (pos-int-nil (list :set 'om-elem--filter-pos-integer-or-nil
+                           :type-desc "a positive integer or nil"))
+        (nn-int (list :set 'om-elem--filter-non-neg-integer
+                      :type-desc "a non-negative integer"))
+        (nn-int-nil (list :set 'om-elem--filter-non-neg-integer-or-nil
+                               :type-desc "a non-negative integer or nil"))
+        (str (list :set 'om-elem--filter-string
+                   :type-desc "a string"))
+        (str-nil (list :set 'om-elem--filter-string-or-nil
+                       :type-desc "a string or nil"))
+        (ol-str (list :set 'om-elem--filter-oneline-string
+                      :type-desc "a oneline string"))
+        (ol-str-nil (list :set 'om-elem--filter-oneline-string-or-nil
+                          :type-desc "a oneline string or nil"))
+        (plist (list :set 'om-elem--encode-plist
+                     :get 'om-elem--decode-plist
+                     :plist t
+                     :type-desc "a plist"))
+        (slist (list :set 'om-elem--filter-string-list
+                     :string-list t
+                     :type-desc "a list of oneline strings"))
+        (slist-com (list :set 'om-elem--encode-string-list-comma-delim
+                         :get 'om-elem--decode-string-list-comma-delim
+                         :string-list t
+                         :type-desc "a list of oneline strings"))
+        (slist-spc (list :set 'om-elem--encode-string-list-space-delim
+                         :get 'om-elem--decode-string-list-space-delim
+                         :string-list t
+                         :type-desc "a list of oneline strings"))
+        (planning (list :set 'om-elem--filter-planning-timestamp
+                        :type-desc "a zero-range, inactive timestamp object"))
+        (ts-unit (list :set 'om-elem--filter-timestamp-unit
+                       :type-desc '("nil or a symbol from 'year' 'month'"
+                                    "'week' 'day', or 'hour'"))))
+    `((babel-call (:call ,@ol-str :require t)
+                  (:inside-header ,@plist)
+                  (:arguments ,@slist-com)
+                  (:end-header ,@plist)
+                  (:value))
+      (bold)
+      (center-block)
+      (clock (:value :set om-elem--filter-clock-timestamp
+                     :cis om-elem--update-clock-duration
+                     :type-desc "an unranged inactive timestamp with no warning or repeater"
+                     :require t)
+             (:status)
+             (:duration))
+      (code (:value ,@ol-str :require t))
+      (comment (:value ,@ol-str :require t)) ; TODO this isn't actually required?
+      (comment-block (:value ,@ol-str :get s-trim-right :require t)) ; TODO is this actually required?
+      (drawer (:drawer-name ,@ol-str :require t))
+      (diary-sexp (:value :set om-elem--encode-diary-sexp-value
+                          :get om-elem--decode-diary-sexp-value
+                          :type-desc "a list form"
+                          ;; TODO is this actually required?
                           :require t))
-    (diary-sexp (:value :set om-elem--encode-diary-sexp-value
-                        :get om-elem--decode-diary-sexp-value
-                        ;; TODO is this actually required?
-                        :require t))
-    (dynamic-block (:arguments :set om-elem--encode-plist
-                               :get om-elem--decode-plist
-                               :plist t)
-                   (:block-name :set om-elem--filter-oneline-string
-                                :require t))
-    (entity (:name :set om-elem--filter-entity-name
-                   :require t)
-            (:use-brackets-p :set om-elem--filter-boolean
-                             :toggle t)
-            ;; TODO what do these do?
-            (:latex)
-            (:latex-math-p)
-            (:html)
-            (:ascii)
-            (:latin1)
-            (:utf-8))
-    (example-block (:preserve-indent :set om-elem--filter-boolean
-                                     :toggle t)
-                   (:switches :set om-elem--encode-string-list-space-delim
-                              :get om-elem--decode-string-list-space-delim
-                              :string-list t)
-                   ;; TODO is this required?
-                   (:value :set om-elem--filter-string
-                           :get s-trim-right
-                           :require t)
-                   ;; TODO how many of these are tied to switches?
-                   (:number-lines)
-                   (:retain-labels)
-                   (:use-labels)
-                   (:label-fmt))
-    (export-block (:type :set om-elem--filter-oneline-string
-                         :require t)
-                  (:value :set om-elem--filter-string
-                          :require t))
-    (export-snippet (:back-end :set om-elem--filter-oneline-string
-                               :require t)
-                    (:value :set om-elem--filter-string
-                            :require t))
-    (fixed-width (:value :set om-elem--filter-oneline-string
-                         :get s-trim-right
-                         :require t))
-    (footnote-definition (:label :set om-elem--filter-oneline-string-or-nil
+      (dynamic-block (:arguments ,@plist)
+                     (:block-name ,@ol-str :require t))
+      (entity (:name :set om-elem--filter-entity-name
+                     :type-desc "a string that makes `org-entity-get' return non-nil"
+                     :require t)
+              (:use-brackets-p ,@bool)
+              ;; TODO what do these do?
+              (:latex)
+              (:latex-math-p)
+              (:html)
+              (:ascii)
+              (:latin1)
+              (:utf-8))
+      (example-block (:preserve-indent ,@bool)
+                     (:switches ,@slist-spc)
+                     ;; TODO is this required?
+                     (:value ,@str :get s-trim-right :require t)
+                     ;; TODO how many of these are tied to switches?
+                     (:number-lines)
+                     (:retain-labels)
+                     (:use-labels)
+                     (:label-fmt))
+      (export-block (:type ,@ol-str :require t)
+                    (:value ,@str :require t))
+      (export-snippet (:back-end ,@ol-str :require t)
+                      (:value ,@str :require t))
+      (fixed-width (:value ,@ol-str :get s-trim-right :require t))
+      (footnote-definition (:label ,@ol-str-nil :require t))
+      (footnote-reference (:label ,@ol-str-nil)
+                          (:type))
+      (headline (:archivedp ,@bool :cis om-elem--update-headline-tags)
+                (:commentedp ,@bool)
+                (:footnote-section-p ,@bool)
+                (:level ,@pos-int
+                        :shift om-elem--shift-pos-integer
+                        :require 1)
+                (:pre-blank ,@nn-int
+                            :shift om-elem--shift-non-neg-integer
+                            :require 0)
+                (:priority :set om-elem--filter-headline-priority
+                           :shift om-elem--shift-headline-priority
+                           :type-desc ("an integer between (inclusive)"
+                                       "`org-highest-priority' and"
+                                       "`org-lowest-priority'"))
+                (:tags :set om-elem--filter-headline-tags
+                       :get om-elem--decode-headline-tags
+                       :cis om-elem--update-headline-tags
+                       :type-desc "a string list"
+                       :string-list t)
+                (:title :set om-elem--filter-headline-title
+                        :type-desc "secondary string")
+                (:todo-keyword ,@ol-str-nil) ; TODO restrict this?
+                (:raw-value)
+                (:todo-type))
+      (horizontal-rule)
+      (inline-babel-call (:call ,@ol-str :require t)
+                         (:inside-header ,@plist)
+                         (:arguments ,@slist-com)
+                         (:end-header ,@plist)
+                         (:value))
+      (inline-src-block (:language ,@ol-str :require t)
+                        (:parameters ,@plist)
+                        ;; TODO should this be required?
+                        (:value ,@ol-str :require t))
+      ;; (inlinetask)
+      (italic)
+      (item (:bullet :set om-elem--encode-item-bullets
+                     :get om-elem--decode-item-bullets
+                     :type-desc ("positive integer (for '1.'),"
+                                 "a positive integer in a list"
+                                 "(for '1)'), a '-', or a '+'")
+                     :require '-)
+            (:checkbox :set om-elem--filter-item-checkbox
+                       :type-desc "nil or the symbols 'on', 'off' or 'trans'")
+            (:counter ,@pos-int-nil :shift om-elem--shift-pos-integer)
+            (:tag :set om-elem--filter-item-tag
+                  :type-desc "secondary string")
+            (:structure))
+      (keyword (:key ,@ol-str :require t)
+               (:value ,@ol-str :require t))
+      (latex-environment (:value :set om-elem--encode-latex-environment-value
+                                 :get om-elem--decode-latex-environment-value
+                                 :type-desc "list of strings like (ENV BODY) or (ENV)"
                                  :require t))
-    (footnote-reference (:label :set om-elem--filter-oneline-string-or-nil)
-                        (:type))
-    (headline (:archivedp :set om-elem--filter-boolean
-                          :cis om-elem--update-headline-tags
-                          :toggle t)
-              (:commentedp :set om-elem--filter-boolean
-                           :toggle t)
-              (:footnote-section-p :set om-elem--filter-boolean
-                                   :toggle t)
-              (:level :set om-elem--filter-pos-integer
-                      :shift om-elem--shift-pos-integer
-                      :require 1)
-              (:pre-blank :set om-elem--filter-non-neg-integer
-                          :shift om-elem--shift-non-neg-integer
-                          :require 0)
-              (:priority :set om-elem--filter-headline-priority
-                         :shift om-elem--shift-headline-priority)
-              (:tags :set om-elem--filter-headline-tags
-                     :get om-elem--decode-headline-tags
-                     :cis om-elem--update-headline-tags
-                     :string-list t)
-              (:title :set om-elem--filter-headline-title)
-              (:todo-keyword :set om-elem--filter-oneline-string-or-nil) ; TODO restrict this?
-              (:raw-value)
-              (:todo-type))
-    (horizontal-rule)
-    (inline-babel-call (:call :set om-elem--filter-oneline-string
-                              :require t)
-                       (:inside-header :set om-elem--encode-plist
-                                       :get om-elem--decode-plist
-                                       :plist t)
-                       (:arguments :set om-elem--encode-string-list-comma-delim
-                                   :get om-elem--decode-string-list-comma-delim
-                                   :string-list t)
-                       (:end-header :set om-elem--encode-plist
-                                    :get om-elem--decode-plist
-                                    :plist t)
-                       (:value))
-    (inline-src-block (:language :set om-elem--filter-oneline-string
-                                 :require t)
-                      (:parameters :set om-elem--encode-plist
-                                   :get om-elem--decode-plist
-                                   :plist t)
-                      ;; TODO should this be required?
-                      (:value :set om-elem--filter-oneline-string
-                              :require t))
-    ;; (inlinetask)
-    (italic)
-    (item (:bullet :set om-elem--encode-item-bullets
-                   :get om-elem--decode-item-bullets
-                   :require '-)
-          (:checkbox :set om-elem--filter-item-checkbox)
-          (:counter :set om-elem--filter-pos-integer-or-nil
-                    :shift om-elem--shift-pos-integer)
-          (:tag :set om-elem--filter-item-tag)
-          (:structure))
-    (keyword (:key :set om-elem--filter-oneline-string
-                   :require t)
-             (:value :set om-elem--filter-oneline-string
-                     :require t))
-    (latex-environment (:value :set om-elem--encode-latex-environment-value
-                               :get om-elem--decode-latex-environment-value
-                               :require t))
-    (latex-fragment (:value :set om-elem--filter-string
-                            :require t))
-    (line-break)
-    (link (:path :set om-elem--filter-oneline-string
-                 :require t)
-          (:format :set om-elem--filter-link-format)
-          (:type :set om-elem--filter-link-type
-                 ;; TODO is fuzzy a good default?
-                 :require "fuzzy")
-          (:raw-link) ; update contents through this?
-          (:application)
-          (:search-option))
-    (macro (:args :set om-elem--filter-string-list
-                  :cis om-elem--update-macro-value
-                  :string-list t)
-           (:key :set om-elem--filter-oneline-string
-                 :cis om-elem--update-macro-value
-                 :require t)
-           (:value))
-    (node-property (:key :set om-elem--filter-oneline-string
-                         :require t)
-                   (:value :set om-elem--filter-oneline-string
-                           :require t))
-    (paragraph)
-    (plain-list (:structure)
-                (:type))
-    (plain-text)
-    (planning (:closed :set om-elem--filter-planning-timestamp)
-              (:deadline :set om-elem--filter-planning-timestamp)
-              (:scheduled :set om-elem--filter-planning-timestamp))
-    (property-drawer)
-    (quote-block)
-    (radio-target (:value))
-    (section)
-    (special-block (:type :set om-elem--filter-oneline-string
+      (latex-fragment (:value ,@str :require t))
+      (line-break)
+      (link (:path ,@ol-str :require t)
+            (:format :set om-elem--filter-link-format
+                     :type-desc "symbol from 'plain', 'bracket' or 'angle'")
+            (:type :set om-elem--filter-link-type
+                   ;; TODO make this desc better
+                   :type-desc "oneline string"
+                   ;; TODO is fuzzy a good default?
+                   :require "fuzzy")
+            (:raw-link) ; update contents through this?
+            (:application)
+            (:search-option))
+      (macro (:args ,@slist :cis om-elem--update-macro-value)
+             (:key ,@ol-str :cis om-elem--update-macro-value :require t)
+             (:value))
+      (node-property (:key ,@ol-str :require t)
+                     (:value ,@ol-str :require t))
+      (paragraph)
+      (plain-list (:structure)
+                  (:type))
+      (plain-text)
+      (planning (:closed ,@planning)
+                (:deadline ,@planning)
+                (:scheduled ,@planning))
+      (property-drawer)
+      (quote-block)
+      (radio-target (:value))
+      (section)
+      (special-block (:type ,@ol-str :require t))
+      (src-block (:value ,@str :get s-trim-right :require t) ; TODO should this actually be required? nil should = ""
+                 (:language ,@str-nil)
+                 (:parameters ,@plist)
+                 (:preserve-indent ,@bool)
+                 (:switches ,@slist-spc)
+                 (:number-lines)
+                 (:retain-labels)
+                 (:use-labels)
+                 (:label-fmt))
+      (statistics-cookie (:value
+                          :set om-elem--encode-statistics-cookie-value
+                          :get om-elem--decode-statistics-cookie-value
+                          :type-desc ("a one- ('[N%]') or two-cell"
+                                      "('[N1/N2]') list of non-neg"
+                                      "integers")
                           :require t))
-    (src-block (:value :set om-elem--filter-string 
-                       :get s-trim-right
-                       ;; TODO should this actually be required? nil should = ""
-                       :require t)
-               (:language :set om-elem--filter-oneline-string-or-nil)
-               (:parameters :set om-elem--encode-plist
-                            :get om-elem--decode-plist
-                            :plist t)
-               (:preserve-indent :set om-elem--filter-boolean
-                                 :toggle t)
-               (:switches :set om-elem--encode-string-list-space-delim
-                          :get om-elem--decode-string-list-space-delim
-                          :string-list t)
-               (:number-lines)
-               (:retain-labels)
-               (:use-labels)
-               (:label-fmt))
-    (statistics-cookie (:value :set om-elem--encode-statistics-cookie-value
-                               :get om-elem--decode-statistics-cookie-value
-                               :require t))
-    (strike-through)
-    (subscript (:use-brackets-p :set om-elem--filter-boolean
-                                :toggle t))
-    (superscript (:use-brackets-p :set om-elem--filter-boolean
-                                  :toggle t))
-    (table (:tblfm :set om-elem--filter-string-list
-                   :string-list t)
-           (:type :const 'org)
-           (:value))
-    (table-cell)
-    (table-row (:type :const 'standard))
-    (target (:value :set om-elem--filter-oneline-string
-                    :require t))
-    (timestamp (:type :set om-elem--filter-timestamp-type
-                      :require t)
-               (:year-start :set om-elem--filter-pos-integer
-                            :require t)
-               (:month-start :set om-elem--filter-pos-integer
-                             :require t)
-               (:day-start :set om-elem--filter-pos-integer
-                           :require t)
-               (:year-end :set om-elem--filter-pos-integer
-                          :require t)
-               (:month-end :set om-elem--filter-pos-integer
-                           :require t)
-               (:day-end :set om-elem--filter-pos-integer
-                         :require t)
-               (:hour-start :set om-elem--filter-non-neg-integer-or-nil)
-               (:minute-start :set om-elem--filter-non-neg-integer-or-nil)
-               (:hour-end :set om-elem--filter-non-neg-integer-or-nil)
-               (:minute-end :set om-elem--filter-non-neg-integer-or-nil)
-               (:repeater-type :set om-elem--filter-timestamp-repeater-type)
-               (:repeater-unit :set om-elem--filter-timestamp-unit)
-               (:repeater-value :set om-elem--filter-pos-integer-or-nil)
-               (:warning-type :set om-elem--filter-timestamp-warning-type)
-               (:warning-unit :set om-elem--filter-timestamp-unit)
-               (:warning-value :set om-elem--filter-pos-integer-or-nil)
-               (:raw-value))
-    (underline)
-    (verbatim (:value :set om-elem--filter-oneline-string
-                      :require t))
-    (verse-block)))
+      (strike-through)
+      (subscript (:use-brackets-p ,@bool))
+      (superscript (:use-brackets-p ,@bool))
+      (table (:tblfm ,@slist)
+             (:type :const 'org)
+             (:value))
+      (table-cell)
+      (table-row (:type :const 'standard))
+      (target (:value ,@ol-str :require t))
+      (timestamp (:type :set om-elem--filter-timestamp-type
+                        :type-desc ("a symbol from 'inactive',"
+                                    "'active', 'inactive-ranged', or"
+                                    "'active-ranged'")
+                        :require t)
+                 (:year-start ,@pos-int :require t)
+                 (:month-start ,@pos-int :require t)
+                 (:day-start ,@pos-int :require t)
+                 (:year-end ,@pos-int :require t)
+                 (:month-end ,@pos-int :require t)
+                 (:day-end ,@pos-int :require t)
+                 (:hour-start ,@nn-int-nil)
+                 (:minute-start ,@nn-int-nil)
+                 (:hour-end ,@nn-int-nil)
+                 (:minute-end ,@nn-int-nil)
+                 (:repeater-type :set om-elem--filter-timestamp-repeater-type
+                                 :type-desc ("nil or a symbol from"
+                                             "'catch-up', 'restart',"
+                                             "or 'cumulate'"))
+                 (:repeater-unit ,@ts-unit)
+                 (:repeater-value ,@pos-int-nil)
+                 (:warning-type :set om-elem--filter-timestamp-warning-type
+                                :type-desc ("nil or a symbol from"
+                                            "'all' or 'first'"))
+                 (:warning-unit ,@ts-unit)
+                 (:warning-value ,@pos-int-nil)
+                 (:raw-value))
+      (underline)
+      (verbatim (:value ,@ol-str :require t))
+      (verse-block))))
 
 ;; add post-blank functions to all entries
 (let ((post-blank-funs '(:post-blank :set om-elem--filter-non-neg-integer
@@ -1645,6 +1637,31 @@ float-times, which assumes the :type property is valid."
            (if (= 2 (length it))
                `(om-elem--set-property-strict ,@it)
              `(om-elem--set-properties-strict (list ,@it)))))
+         (doc
+          (let ((class (if element? "element" "object"))
+                (end (if (not rest-arg) "."
+                       (->> (symbol-name rest-arg)
+                            (s-upcase)
+                            (format " with %s as contents."))))
+                (post-blank (if element? "newlines" "spaces"))
+                (prop
+                 (-some->>
+                  (append (alist-get 'req props) (alist-get 'key props))
+                  (--map (let ((p (->> (car it)
+                                       (symbol-name)
+                                       (s-chop-prefix ":")
+                                       (s-upcase)))
+                               (d (plist-get (cdr it) :type-desc)))
+                           (unless d
+                             (error "No type-desc: %s %s" type p))
+                           (->> (if (listp d) (s-join " " d) d)
+                                (format "- %s: %s" p d))))
+                  (s-join "\n"))))
+            (concat
+             ;; TODO use a/an here
+             (format "Build a %s %s" type class) end
+             "\n\nThe following properties are settable:\n"
+             prop "\n- POST-BLANK")))
          (builder
           (let ((a `(',type post-blank)))
             (cond
@@ -1660,7 +1677,7 @@ float-times, which assumes the :type property is valid."
                    `(->> ,@(-non-nil (list builder const-props
                                            nil-props strict-props)))
                  builder)))
-    (eval `(om-elem--defun ,name ,args ,body))))
+    (eval `(om-elem--defun ,name ,args ,doc ,body))))
 
 ;; misc builders
 
