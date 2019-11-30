@@ -89,6 +89,36 @@ More information and a full list of elements, objects and their
 compatible properties can be found in [the org-element API
 documentation](https://orgmode.org/worg/dev/org-element-api.html).
 
+# Conventions
+
+### Threading
+
+Each function that operates on an element/object will take the
+element/object as its right-most argument. This allows convenient
+function chaining using `dash.el`'s right-threading operator (`->>`).
+The examples below almost exclusively demonstrate this pattern.
+Additionally, the right-argument convention also allows convenient
+partial application using `-partial` from `dash.el`.
+
+### Higher-order functions
+
+Higher-order functions (functions that take other functions as
+arguments) have two forms. The first takes a (usually unary) function
+and applies it:
+
+``` emacs-lisp
+(om-elem-map-property :value (lambda (s) (concat "foo" s)) elem)
+(om-elem-map-property :value (-partial concat "foo") elem)
+```
+
+This can equivalently be written using an anaphoric form where the
+original function name is appended with `*`. The symbol `it`
+carries the value of the unary argument (unless otherwise specified):
+
+``` emacs-lisp
+(om-elem-map-property* :value (concat "foo" it) elem)
+```
+
 # Function Summary
 
 [[ function-list ]]
