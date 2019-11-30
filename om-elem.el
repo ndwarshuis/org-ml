@@ -3244,7 +3244,7 @@ for plain-list elements vs item elements."
 This function will return every element available in `om-elem-elements'
 with the exception of 'section', 'item', and 'table-row'. To
 specifically parse these, use the functions `om-elem-parse-section-at',
-`om-elem-parse-table-row-at', and `om-elem-parse-table-row-at'."
+`om-elem-parse-item-at', and `om-elem-parse-table-row-at'."
   (om-elem--parse-element-at point))
 
 (defun om-elem-parse-table-row-at (point)
