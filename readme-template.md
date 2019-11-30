@@ -31,9 +31,9 @@ in nature (`org-insert-headine`, `outline-next-heading`, etc) as they
 depend on the mutable state of Emacs buffers. In general, functional
 code is
 ([arguably](https://en.wikipedia.org/wiki/Functional_programming#Comparison_to_imperative_programming))
-more robust, readable, testable, and intuitive, especially in
-use-cases such as this where an abstract data structure is being
-transformed and queried.
+more robust, readable, and testable, especially in use-cases such as
+this where a stateless abstract data structure is being transformed
+and queried.
 
 The `org-element.el` provides a minimal API for handling this
 parse-tree in a functional manner, but lacks many of the higher-level
@@ -61,7 +61,7 @@ properties:
 (type (:prop1 value1 :prop2 value2 ...))
 ```
 
-The branches (also called containers) with the leaves come in three
+The branches with the leaves come in three
 broad types:
 - Recursive objects: objects that contain other objects
 - Object Containers: elements that contain other objects
