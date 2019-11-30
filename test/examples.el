@@ -653,14 +653,29 @@
                                                      "|------|")))
 
   (def-example-subgroup "Object Containers"
-    "build object containers"
-    ;; TODO add paragraph
-    ;; TODO add table-row
-    ;; TODO add verse-block
-    )
+    nil
 
-  (def-example-group "Greater Elements"
-    "Build greater elements"
+    (defexamples om-elem-build-paragraph
+      (->> (om-elem-build-paragraph "text")
+           (om-elem-to-trimmed-string))
+      => "text")
+
+    (defexamples om-elem-build-table-row
+      (->> (om-elem-build-table-cell "a")
+           (om-elem-build-table-row)
+           (om-elem-to-trimmed-string))
+      => "| a |")
+
+    (defexamples om-elem-build-verse-block
+      ;; TODO why should I need to use newlines here?
+      (->> (om-elem-build-verse-block "text\n")
+           (om-elem-to-trimmed-string))
+      => (:result "#+BEGIN_VERSE"
+                  "text"
+                  "#+END_VERSE")))
+
+  (def-example-subgroup "Greater Elements"
+    nil
 
     (defexamples om-elem-build-center-block
       (->> (om-elem-build-paragraph "text")
@@ -2242,42 +2257,35 @@
   (def-example-subgroup "Timestamp"
     nil
 
-    ;; TODO add get start/end for timestamp and unixtime
-    (defexamples-content om-elem-timestamp-get-start-timestamp
+    (defexamples-content om-elem-timestamp-get-start-time
       nil
       (:content "[2019-01-01 Tue]")
       (->> (om-elem-parse-this-object)
-           (om-elem-timestamp-get-start-timestamp)
-           (om-elem-to-trimmed-string))
-      => "[2019-01-01 Tue]"
+           (om-elem-timestamp-get-start-time))
+      => '(2019 1 1 nil nil)
       (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
       (->> (om-elem-parse-this-object)
-           (om-elem-timestamp-get-start-timestamp)
-           (om-elem-to-trimmed-string))
-      => "[2019-01-01 Tue]"
+           (om-elem-timestamp-get-start-time))
+      => '(2019 1 1 nil nil)
       (:content "[2019-01-01 Tue 00:00-12:00]")
       (->> (om-elem-parse-this-object)
-           (om-elem-timestamp-get-start-timestamp)
-           (om-elem-to-trimmed-string))
-      => "[2019-01-01 Tue 00:00]")
+           (om-elem-timestamp-get-start-time))
+      => '(2019 1 1 0 0))
 
-    (defexamples-content om-elem-timestamp-get-end-timestamp
+    (defexamples-content om-elem-timestamp-get-end-time
       nil
       (:content "[2019-01-01 Tue]")
       (->> (om-elem-parse-this-object)
-           (om-elem-timestamp-get-end-timestamp)
-           (om-elem-to-trimmed-string))
-      => ""
+           (om-elem-timestamp-get-end-time))
+      => nil
       (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
       (->> (om-elem-parse-this-object)
-           (om-elem-timestamp-get-end-timestamp)
-           (om-elem-to-trimmed-string))
-      => "[2019-01-02 Wed]"
+           (om-elem-timestamp-get-end-time))
+      => '(2019 1 2 nil nil)
       (:content "[2019-01-01 Tue 00:00-12:00]")
       (->> (om-elem-parse-this-object)
-           (om-elem-timestamp-get-end-timestamp)
-           (om-elem-to-trimmed-string))
-      => "[2019-01-01 Tue 12:00]")
+           (om-elem-timestamp-get-end-time))
+      => '(2019 1 1 12 0))
 
     (defexamples-content om-elem-timestamp-is-active-p
       nil
@@ -2288,17 +2296,6 @@
       (:content "[2019-01-01 Tue]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-is-active-p))
-      => nil)
-
-    (defexamples-content om-elem-timestamp-is-inactive-p
-      nil
-      (:content "[2019-01-01 Tue]")
-      (->> (om-elem-parse-this-object)
-           (om-elem-timestamp-is-inactive-p))
-      => t
-      (:content "<2019-01-01 Tue>")
-      (->> (om-elem-parse-this-object)
-           (om-elem-timestamp-is-inactive-p))
       => nil)
 
     (defexamples-content om-elem-timestamp-is-ranged-p
@@ -2316,7 +2313,6 @@
            (om-elem-timestamp-is-ranged-p))
       => nil)
 
-    ;; TODO add set unixtime and range
     (defexamples-content om-elem-timestamp-set-start-time
       nil
       (:content "[2019-01-02 Wed]")
@@ -2343,6 +2339,57 @@
       (:comment "Remove the end time")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-set-end-time nil)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue]")
+
+    (defexamples-content om-elem-timestamp-set-single-time
+      nil
+      (:content "[2019-01-01 Tue]")
+      (:comment "Don't make a range")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-set-single-time '(2019 1 2))
+           (om-elem-to-trimmed-string))
+      => "[2019-01-02 Wed]"
+      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:comment "Output is not a range despite input being ranged")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-set-single-time '(2019 1 3))
+           (om-elem-to-trimmed-string))
+      => "[2019-01-03 Thu]")
+
+    (defexamples-content om-elem-timestamp-set-double-time
+      nil
+      (:content "[2019-01-01 Tue]")
+      (:comment "Make a range")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-set-double-time '(2019 1 2) '(2019 1 3))
+           (om-elem-to-trimmed-string))
+      => "[2019-01-02 Wed]--[2019-01-03 Thu]"
+      (:content "[2019-01-01 Tue]--[2019-01-03 Wed]")
+      (:comment "Output is not a range despite input being ranged")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-set-double-time '(2019 1 4) '(2019 1 5))
+           (om-elem-to-trimmed-string))
+      => "[2019-01-04 Fri]--[2019-01-05 Sat]")
+
+    (defexamples-content om-elem-timestamp-set-range
+      nil
+      (:content "[2019-01-01 Tue]")
+      (:comment "Use days as the unit for short format")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-set-range 1)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      (:content "[2019-01-01 Tue 00:00]")
+      (:comment "Use minutes as the unit for long format")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-set-range 3)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-01 Tue 00:00]--[2019-01-01 Tue 00:03]"
+      (:content "[2019-01-01 Tue]--[2019-01-03 Wed]")
+      (:comment "Set range to 0 to remove end time")
+      (->> (om-elem-parse-this-object)
+           (om-elem-timestamp-set-range 0)
            (om-elem-to-trimmed-string))
       => "[2019-01-01 Tue]")
 
