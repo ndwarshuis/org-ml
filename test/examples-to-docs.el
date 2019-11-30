@@ -157,14 +157,14 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
 
 (defmacro def-example-subgroup (group desc &rest examples)
   `(progn
-     (add-to-list 'functions ,(concat "#### " group))
+     (add-to-list 'functions ,(concat "### " group))
      (when ,desc
        (add-to-list 'functions ,desc))
      ,@examples))
 
 (defmacro def-example-group (group desc &rest examples)
   `(progn
-     (add-to-list 'functions ,(concat "### " group))
+     (add-to-list 'functions ,(concat "## " group))
      (when ,desc
        (add-to-list 'functions ,desc))
      ,@examples))
@@ -191,7 +191,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
 
 (defun function-to-md (function)
   (if (stringp function)
-      (concat "\n" (s-replace "### " "## " function) "\n")
+      (concat "\n" (s-replace "### " "### " function) "\n")
     (-let [(command-name signature docstring examples) function]
       (unless docstring
         (error "No docstring supplied for %s" command-name))
