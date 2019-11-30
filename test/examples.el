@@ -771,52 +771,112 @@
 (def-example-group "Type Predicates"
   "Testing types of elements"
 
-  ;; (defexamples-content om-elem-contains-point-p
-  ;;   nil
-  ;;   (:content "* headline 1"
-  ;;             "* headline 2")
-  ;;   (:comment "The headline is parsed from 'point-min'")
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-contains-point-p (point-min)))
-  ;;   => t
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-contains-point-p (point-max)))
-  ;;   => nil)
+  (defexamples-content om-elem-is-type-p
+    nil
+    (:content "*ziltoid*")
+    (->> (om-elem-parse-this-object)
+         (om-elem-is-type-p 'bold))
+    => t
+    (->> (om-elem-parse-this-object)
+         (om-elem-is-type-p 'italic))
+    => nil)
 
-  ;; (defexamples-content om-elem-contents-contains-point-p
-  ;;   nil
-  ;;   (:content "* this is a dummy"
-  ;;             "filled with nonsense")
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-contents-contains-point-p (point-min)))
-  ;;   => nil
-  ;;   (->> (om-elem-parse-this-headline)
-  ;;        (om-elem-contents-contains-point-p (point-max)))
-  ;;   => t)
+  (defexamples-content om-elem-is-any-type-p
+    nil
+    (:content "*ziltoid*")
+    (->> (om-elem-parse-this-object)
+         (om-elem-is-any-type-p '(bold)))
+    => t
+    (->> (om-elem-parse-this-object)
+         (om-elem-is-any-type-p '(bold italic)))
+    => t
+    (->> (om-elem-parse-this-object)
+         (om-elem-is-any-type-p '(italic)))
+    => nil)
 
-  ;; (defexamples-content om-elem-is-type-p
-  ;;   nil
-  ;;   (:content "*ziltoid*")
-  ;;   (->> (om-elem-parse-this-object)
-  ;;        (om-elem-is-type-p 'bold))
-  ;;   => t
-  ;;   (->> (om-elem-parse-this-object)
-  ;;        (om-elem-is-type-p 'italic))
-  ;;   => nil)
+  (defexamples-content om-elem-is-element-p
+    nil
+    (:content "*ziltoid*")
+    (:comment "Parsing this text as an element gives a paragraph")
+    (->> (om-elem-parse-this-element)
+         (om-elem-is-element-p))
+    => t
+    (:comment "Parsing the same text as an object gives a bold object")
+    (->> (om-elem-parse-this-object)
+         (om-elem-is-element-p))
+    => nil)
 
-  ;; (defexamples-content om-elem-is-any-type-p
-  ;;   nil
-  ;;   (:content "*ziltoid*")
-  ;;   (->> (om-elem-parse-this-object)
-  ;;        (om-elem-is-any-type-p '(bold)))
-  ;;   => t
-  ;;   (->> (om-elem-parse-this-object)
-  ;;        (om-elem-is-any-type-p '(bold italic)))
-  ;;   => t
-  ;;   (->> (om-elem-parse-this-object)
-  ;;        (om-elem-is-any-type-p '(italic)))
-  ;;   => nil)
-  )
+  (defexamples-content om-elem-is-container-p
+    nil
+    (:content "*ziltoid*")
+    (:comment "Parsing this as an element gives a paragraph type (an object container).")
+    (->> (om-elem-parse-this-element)
+         (om-elem-is-container-p))
+    => t
+    (:comment "Parsing this as an object gives a bold type (also an object container).")
+    (->> (om-elem-parse-this-object)
+         (om-elem-is-container-p))
+    => t
+    (:content "~ziltoid~")
+    (:comment "Parsing this as an object gives a code type (not a container).")
+    (->> (om-elem-parse-this-object)
+         (om-elem-is-container-p))
+    => nil
+    (:content "# ziltoid")
+    (:comment "Parsing this as an element gives a comment type (not a container).")
+    (->> (om-elem-parse-this-element)
+         (om-elem-is-container-p))
+    => nil
+    (:content "* I'm so great")
+    (:comment "Parsing this as an element gives a table (a greater element).")
+    (->> (om-elem-parse-this-element)
+         (om-elem-is-container-p))
+    => t)
+
+  (defexamples-content om-elem-is-object-container-p
+    nil
+    (:content "*ziltoid*")
+    (:comment "Parsing this as an element gives a paragraph type (an object container).")
+    (->> (om-elem-parse-this-element)
+         (om-elem-is-object-container-p))
+    => t
+    (:comment "Parsing this as an object gives a bold type (also an object container).")
+    (->> (om-elem-parse-this-object)
+         (om-elem-is-object-container-p))
+    => t
+    (:content "~ziltoid~")
+    (:comment "Parsing this as an object gives a code type (not a container).")
+    (->> (om-elem-parse-this-object)
+         (om-elem-is-object-container-p))
+    => nil
+    (:content "# ziltoid")
+    (:comment "Parsing this as an element gives a comment type (not a container).")
+    (->> (om-elem-parse-this-element)
+         (om-elem-is-object-container-p))
+    => nil
+    (:content "* I'm so great")
+    (:comment "Parsing this as an element gives a table (a greater element).")
+    (->> (om-elem-parse-this-element)
+         (om-elem-is-object-container-p))
+    => nil)
+
+  (defexamples-content om-elem-is-greater-element-p
+    nil
+    (:content "* I'm so great")
+    (:comment "Parsing this as an element gives a table (a greater element).")
+    (->> (om-elem-parse-this-element)
+         (om-elem-is-greater-element-p))
+    => t
+    (:content "*ziltoid*")
+    (:comment "Parsing this as an element gives a paragraph type (not a greater element).")
+    (->> (om-elem-parse-this-element)
+         (om-elem-is-greater-element-p))
+    => nil
+    (:content "# ziltoid")
+    (:comment "Parsing this as an element gives a comment type (not a container).")
+    (->> (om-elem-parse-this-element)
+         (om-elem-is-greater-element-p))
+    => nil))
 
 (def-example-group "Property Manipulation"
   "Set, get, and map properties of elements and objects."
@@ -3297,6 +3357,4 @@ and here is even more *text4* and *text5*
     nil)
 
   (def-example-subgroup "Misc"
-    nil)
-
-  )
+    nil))

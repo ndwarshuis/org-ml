@@ -2377,6 +2377,40 @@ zero-indexed."
 
 ;;; PUBLIC TYPE FUNCTIONS
 
+(defun om-elem-is-type-p (type elem)
+  "Return t if the type of ELEM is TYPE (a symbol)."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--is-type-p type elem))
+
+(defun om-elem-is-any-type-p (types elem)
+  "Return t if the type of ELEM is in TYPES (a list of symbols)."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--is-any-type-p types elem))
+
+(defun om-elem-is-element-p (elem)
+  "Return t if ELEM is an element type."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--is-any-type-p om-elem-elements elem))
+
+(defun om-elem-is-container-p (elem)
+  "Return t if ELEM is a container.
+Containers are elements or objects that may contain other elements
+or objects."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--is-any-type-p om-elem-containers elem))
+
+(defun om-elem-is-object-container-p (elem)
+  "Return t if ELEM is an object container.
+Object containers are elements or objects that may contain objects."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--is-any-type-p om-elem-object-containers elem))
+
+(defun om-elem-is-greater-element-p (elem)
+  "Return t if ELEM is a greater element.
+Greater elements are elements that may contain other elements."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--is-any-type-p om-elem-greater-elements elem))
+
 ;;; PUBLIC PROPERTY FUNCTIONS
 
 (defun om-elem--append-documentation (fun string)
