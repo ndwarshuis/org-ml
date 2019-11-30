@@ -175,10 +175,10 @@
   (om-elem--compare-element-props
    (om-elem-build-keyword "key" "val") "#+KEY: val"))
 
-;; (ert-deftest om-elem--latex-environment/valid-props ()
-;;   (om-elem--compare-element-props
-;;    (om-elem-build-latex-environment "gloves" "text")
-;;    "\\begin{env}\nvalue\n\\end{env}"))
+(ert-deftest om-elem--latex-environment/valid-props ()
+  (om-elem--compare-element-props
+   (om-elem-build-latex-environment '("gloves" "text"))
+   "\\begin{env}\nvalue\n\\end{env}"))
 
 (ert-deftest om-elem--node-property/valid-props ()
   (should-have-equal-properties

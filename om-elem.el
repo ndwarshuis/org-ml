@@ -465,7 +465,7 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--oneline-string-or-null-p (s)
   (or (null s) (om-elem--oneline-string-p s)))
 
-;; filters
+;; filters (general)
 
 (defun om-elem--filter (value prop elem msg pred)
   (declare (indent 4))
@@ -515,6 +515,8 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--filter-symbols (v p eo syms)
   (om-elem--filter v p eo (format "symbol from %S" syms)
     (lambda (x) (memq x syms))))
+
+;; filters (type specific)
 
 (defun om-elem--filter-link-format (v p eo)
   (om-elem--filter-symbols v p eo '(nil plain angle bracket)))
@@ -571,7 +573,21 @@ and object containers and includes the 'plain-text' type.")
     (lambda (x)
       (--all? (om-elem--is-any-type-p om-elem--headline-title-restrictions it) x))))
 
-;; encode/decode
+(defun om-elem--filter-timestamp-type (v p eo)
+  (om-elem--filter-symbols v p eo '(inactive inactive-range active
+                                            active-range diary)))
+
+(defun om-elem--filter-timestamp-repeater-type (v p eo)
+  (om-elem--filter-symbols v p eo '(nil catch-up restart cumulate)))
+
+(defun om-elem--filter-timestamp-warning-type (v p eo)
+  (om-elem--filter-symbols v p eo '(nil all first)))
+
+(defun om-elem--filter-timestamp-unit (v p eo)
+  (om-elem--filter-symbols v p eo '(nil year month week day hour)))
+
+
+;; encode/decode (general)
 
 (defun om-elem--encode-string-list-delim (v p eo delim)
   (-some->> (om-elem--filter-string-list v p eo) (s-join delim)))
@@ -598,6 +614,30 @@ and object containers and includes the 'plain-text' type.")
 
 (defun om-elem--decode-plist (v)
   (-map #'intern (om-elem--decode-string-list-space-delim v)))
+
+;; encode/decode (type specific)
+
+(defun om-elem--encode-latex-environment-value (v p eo)
+  (let ((msg ))
+    (-let (((env body) v))
+      (cond
+       ((and (om-elem--oneline-string-p env) (stringp body))
+        (format "\\begin{%1$s}\n%2$s\n\\end{%1$s}" env body))
+       ((and (om-elem--oneline-string-p env) (null body))
+        (format "\\begin{%1$s}\n\\end{%1$s}" env))
+       (t
+        (let ((fmt
+               (s-join
+                " "
+                (list "Latex environment value must be a list of strings"
+                      "like (ENV BODY) or (ENV) where ENV is"
+                      "a oneline string and BODY is a string. Got %S"))))
+          (error fmt v))))))) 
+
+(defun om-elem--decode-latex-environment-value (v)
+  ;; TODO ensure that the output is correct?
+  (let ((m (car (s-match-strings-all "\\\\begin{\\(.+\\)}\n\\(.*\\)\n?\\\\end{\\(.+\\)}" v))))
+    (list (nth 1 m) (nth 2 m))))
 
 ;; NOTE org mode 9.1.9 will crash when given an alphabetic symbol
 (defun om-elem--encode-item-bullets (bullet p eo)
@@ -667,19 +707,6 @@ and object containers and includes the 'plain-text' type.")
          (car)
          (cdr)
          (-map #'string-to-number)))))
-
-(defun om-elem--filter-timestamp-type (v p eo)
-  (om-elem--filter-symbols v p eo '(inactive inactive-range active
-                                            active-range diary)))
-
-(defun om-elem--filter-timestamp-repeater-type (v p eo)
-  (om-elem--filter-symbols v p eo '(nil catch-up restart cumulate)))
-
-(defun om-elem--filter-timestamp-warning-type (v p eo)
-  (om-elem--filter-symbols v p eo '(nil all first)))
-
-(defun om-elem--filter-timestamp-unit (v p eo)
-  (om-elem--filter-symbols v p eo '(nil year month week day hour)))
 
 (defun om-elem--encode-diary-sexp-value (v p eo)
   (->> (om-elem--filter v p eo "list form" #'listp) (format "%%%%%S")))
@@ -874,7 +901,8 @@ and object containers and includes the 'plain-text' type.")
                    :require t)
              (:value :set om-elem--filter-oneline-string
                      :require t))
-    (latex-environment (:value :set om-elem--filter-string
+    (latex-environment (:value :set om-elem--encode-latex-environment-value
+                               :get om-elem--decode-latex-environment-value
                                :require t))
     (latex-fragment (:value :set om-elem--filter-string
                             :require t))
@@ -1502,10 +1530,6 @@ float-times, which assumes the :type property is valid."
 
 ;; latex environment
 
-(defun om-elem--latex-environment-set-value (env body latex-environment)
-  (om-elem--verify env stringp body stringp)
-  (let ((v (format "\\begin{%1$s}\n%2$s\n\\end{%1$s}" env body)))
-    (om-elem--set-property :value v latex-environment)))
 
 ;; planning
 
