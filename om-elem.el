@@ -1284,7 +1284,7 @@ FUN is a predicate function that takes one argument."
                     (--map (intern (format ":%s-%s" dtype it))))))
     (if (not dec) (om-elem--init-properties props)
       (-let (((type value unit) dec))
-        (unless (memq type '(all first))
+        (unless (memq type valid-types)
           (error "Invalid %s type: %s" dtype type))
         (unless (integerp value)
           (error "Invalid %s value: %s" dtype value))
@@ -1441,7 +1441,7 @@ float-times, which assumes the :type property is valid."
         (om-elem--set-properties timestamp))))
 
 (defun om-elem--timestamp-set-repeater (repeater timestamp)
-  (let ((types '(catch-up restart cumulative)))
+  (let ((types '(catch-up restart cumulate)))
     (-> (om-elem--decorator-format repeater 'repeater types)
         (om-elem--set-properties timestamp))))
 
