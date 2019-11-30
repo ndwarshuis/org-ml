@@ -451,11 +451,11 @@ and object containers and includes the 'plain-text' type.")
 
 ;; filters
 
-(defun om-elem--allow-type (type elem)
+(defun om-elem--filter-type (type elem)
   "Return ELEM if it is TYPE or nil otherwise."
   (and (om-elem--is-type-p type elem) elem))
 
-(defun om-elem--allow-types (types elem)
+(defun om-elem--filter-types (types elem)
   "Return ELEM if it is one of TYPES or nil otherwise."
   (and (om-elem--is-any-type-p types elem) elem))
 
@@ -467,99 +467,140 @@ and object containers and includes the 'plain-text' type.")
 
 ;; filters
 
-(defun om-elem--allow (value prop elem msg pred)
+(defun om-elem--filter (value prop elem msg pred)
   (declare (indent 4))
   (if (funcall pred value) value
     (error
      "Property '%s' in element/object of type '%s' must be a %s. Got '%S'"
      prop (om-elem--get-type elem) msg value)))
 
-(defun om-elem--allow-string (v p eo)
-  (om-elem--allow v p eo "string" #'stringp))
+(defun om-elem--filter-string (v p eo)
+  (om-elem--filter v p eo "string" #'stringp))
 
-(defun om-elem--allow-string-or-nil (v p eo)
-  (om-elem--allow v p eo "string or nil" #'string-or-null-p))
+(defun om-elem--filter-string-or-nil (v p eo)
+  (om-elem--filter v p eo "string or nil" #'string-or-null-p))
 
-(defun om-elem--allow-oneline-string (v p eo)
-  (om-elem--allow v p eo "oneline string" #'om-elem--oneline-string-p))
+(defun om-elem--filter-oneline-string (v p eo)
+  (om-elem--filter v p eo "oneline string" #'om-elem--oneline-string-p))
 
-(defun om-elem--allow-oneline-string-or-nil (v p eo)
-  (om-elem--allow v p eo "oneline string or nil"
+(defun om-elem--filter-oneline-string-or-nil (v p eo)
+  (om-elem--filter v p eo "oneline string or nil"
     #'om-elem--oneline-string-or-null-p))
 
-(defun om-elem--allow-boolean (v p eo)
-  (om-elem--allow v p eo "t or nil" #'booleanp))
+(defun om-elem--filter-boolean (v p eo)
+  (om-elem--filter v p eo "t or nil" #'booleanp))
 
-(defun om-elem--allow-non-neg-integer (v p eo)
-  (om-elem--allow v p eo "non-negative integer"
+(defun om-elem--filter-non-neg-integer (v p eo)
+  (om-elem--filter v p eo "non-negative integer"
     (lambda (x) (and (integerp x) (<= 0 x)))))
 
-(defun om-elem--allow-non-neg-integer-or-nil (v p eo)
-  (om-elem--allow v p eo "non-negative integer or nil"
+(defun om-elem--filter-non-neg-integer-or-nil (v p eo)
+  (om-elem--filter v p eo "non-negative integer or nil"
     (lambda (x) (or (null x) (and (integerp x) (<= 0 x))))))
 
-(defun om-elem--allow-pos-integer (v p eo)
-  (om-elem--allow v p eo "positive integer"
+(defun om-elem--filter-pos-integer (v p eo)
+  (om-elem--filter v p eo "positive integer"
     (lambda (x) (and (integerp x) (<= 0 x)))))
 
-(defun om-elem--allow-pos-integer-or-nil (v p eo)
-  (om-elem--allow v p eo "positive integer or nil"
+(defun om-elem--filter-pos-integer-or-nil (v p eo)
+  (om-elem--filter v p eo "positive integer or nil"
     (lambda (x) (or (null x) (and (integerp x) (<= 0 x))))))
 
-(defun om-elem--allow-string-list (v p eo)
-  (om-elem--allow v p eo "list of oneline strings"
+(defun om-elem--filter-string-list (v p eo)
+  (om-elem--filter v p eo "list of oneline strings"
     (lambda (x)
       (or (null x)
           (and (listp x) (-all? #'om-elem--oneline-string-p x))))))
 
-;; converters
-
-(defun om-elem--allow-from-string-list-delim (v p eo delim)
-  (-some->> (om-elem--allow-string-list v p eo) (s-join delim)))
-
-(defun om-elem--pull-to-string-list-delim (v delim)
-  (and v (s-split delim v)))
-
-(defun om-elem--allow-from-string-list-space-delim (v p eo)
-  (om-elem--allow-from-string-list-delim v p eo " "))
-
-(defun om-elem--pull-to-string-list-space-delim (v)
-  (om-elem--pull-to-string-list-delim v " "))
-
-(defun om-elem--allow-from-string-list-comma-delim (v p eo)
-  (om-elem--allow-from-string-list-delim v p eo ","))
-
-(defun om-elem--pull-to-string-list-comma-delim (v)
-  (om-elem--pull-to-string-list-delim v ","))
-
-(defun om-elem--allow-from-plist (v p eo)
-  (-some->> (om-elem--allow v p eo "plist" #'om-elem--is-plist-p)
-            (--map (format "%S" it))
-            (s-join " ")))
-
-(defun om-elem--pull-to-plist (v)
-  (-map #'intern (om-elem--pull-to-string-list-space-delim v)))
-
-(defun om-elem--allow-symbols (v p eo syms)
-  (om-elem--allow v p eo (format "symbol from %S" syms)
+(defun om-elem--filter-symbols (v p eo syms)
+  (om-elem--filter v p eo (format "symbol from %S" syms)
     (lambda (x) (memq x syms))))
 
-(defun om-elem--allow-link-format (v p eo)
-  (om-elem--allow-symbols v p eo '(nil plain angle bracket)))
+(defun om-elem--filter-link-format (v p eo)
+  (om-elem--filter-symbols v p eo '(nil plain angle bracket)))
 
-(defun om-elem--allow-link-type (v p eo)
+(defun om-elem--filter-link-type (v p eo)
   (let* ((builtin '("coderef" "custom-id" "file" "id" "radio" "fuzzy"))
          (msg (format "string from built-in types %S or `org-link-types'"
                       builtin)))
-    (om-elem--allow v p eo msg
+    (om-elem--filter v p eo msg
       ;; TODO allow nil here for fuzzy?
       (lambda (type) (member type (append builtin (org-link-types)))))))
 
-(defun om-elem--allow-item-checkbox-symbols (v p eo)
-  (om-elem--allow-symbols v p eo '(nil on off trans)))
+(defun om-elem--filter-item-checkbox (v p eo)
+  (om-elem--filter-symbols v p eo '(nil on off trans)))
+
+(defun om-elem--filter-item-tag (v p eo)
+  (om-elem--filter v p eo "secondary-string that follows `om-elem--item-tag-restrictions'"
+    (lambda (x)
+      (--all? (om-elem--is-any-type-p om-elem--item-tag-restrictions it) x))))
+
+(defun om-elem--filter-clock-timestamp (v p eo)
+  (om-elem--filter v p eo "(ranged) inactive timestamp with no warning/repeater"
+    (lambda (ts)
+      (and (om-elem--is-type-p 'timestamp ts)
+           (om-elem--property-is-predicate-p*
+            :type (memq it '(inactive inactive-range)) ts)
+           (om-elem--property-is-nil-p :repeater-type ts)))))
+
+(defun om-elem--filter-planning-timestamp (v p eo)
+  (om-elem--filter v p eo "an zero-range, inactive timestamp object"
+    (lambda (ts)
+      (or (null ts)
+          (and (om-elem--is-type-p 'timestamp ts)
+               (om-elem--property-is-eq-p :type 'inactive ts))))))
+
+(defun om-elem--filter-entity-name (v p eo)
+  (om-elem--filter v p eo "string that makes `org-entity-get' return non-nil"
+    (lambda (n) (org-entity-get n))))
+
+(defun om-elem--filter-headline-tags (v p eo)
+  (om-elem--filter v p eo "list of oneline strings without `org-archive-tag'"
+    (lambda (x) (and (-all? #'om-elem--oneline-string-p x) 
+                (not (member org-archive-tag x))))))
+
+(defun om-elem--filter-headline-priority (v p eo)
+  (om-elem--filter v p eo "integer between `org-lowest-priority' and `org-highest-priority'"
+    (lambda (x)
+      (or (null x)
+          (and (integerp x)
+               (>= org-lowest-priority x org-highest-priority))))))
+
+(defun om-elem--filter-headline-title (v p eo)
+  (om-elem--filter v p eo "secondary-string that follows `om-elem--headline-title-restrictions'"
+    (lambda (x)
+      (--all? (om-elem--is-any-type-p om-elem--headline-title-restrictions it) x))))
+
+;; encode/decode
+
+(defun om-elem--encode-string-list-delim (v p eo delim)
+  (-some->> (om-elem--filter-string-list v p eo) (s-join delim)))
+
+(defun om-elem--decode-string-list-delim (v delim)
+  (and v (s-split delim v)))
+
+(defun om-elem--encode-string-list-space-delim (v p eo)
+  (om-elem--encode-string-list-delim v p eo " "))
+
+(defun om-elem--decode-string-list-space-delim (v)
+  (om-elem--decode-string-list-delim v " "))
+
+(defun om-elem--encode-string-list-comma-delim (v p eo)
+  (om-elem--encode-string-list-delim v p eo ","))
+
+(defun om-elem--decode-string-list-comma-delim (v)
+  (om-elem--decode-string-list-delim v ","))
+
+(defun om-elem--encode-plist (v p eo)
+  (-some->> (om-elem--filter v p eo "plist" #'om-elem--is-plist-p)
+            (--map (format "%S" it))
+            (s-join " ")))
+
+(defun om-elem--decode-plist (v)
+  (-map #'intern (om-elem--decode-string-list-space-delim v)))
 
 ;; NOTE org mode 9.1.9 will crash when given an alphabetic symbol
-(defun om-elem--allow-item-bullets (bullet p eo)
+(defun om-elem--encode-item-bullets (bullet p eo)
   (if (memq bullet '(- +)) (format "%s " bullet)
     (-if-let (c (->> (if (listp bullet) (car bullet) bullet)
                      (om-elem--item-validate-counter)))
@@ -567,7 +608,7 @@ and object containers and includes the 'plain-text' type.")
       ;; TODO need better message
       (error "Invalid bullet: %s" bullet))))
 
-(defun om-elem--to-item-bullets (bullet)
+(defun om-elem--decode-item-bullets (bullet)
   ;; TODO refactor this
   (if (s-matches? "^\\(-\\|+\\)" bullet)
       (intern (s-left 1 bullet))
@@ -590,54 +631,13 @@ and object containers and includes the 'plain-text' type.")
        ((s-matches? "^[a-zA-Z0-9]+)" bullet) (list n))
        (t (error "Invalid bullet found: %s" bullet))))))
 
-(defun om-elem--allow-item-tag (v p eo)
-  (om-elem--allow v p eo "secondary-string that follows `om-elem--item-tag-restrictions'"
-    (lambda (x)
-      (--all? (om-elem--is-any-type-p om-elem--item-tag-restrictions it) x))))
-
-(defun om-elem--to-item-tag (v)
+(defun om-elem--decode-item-tag (v)
   (om-elem--build-secondary-string v))
 
-(defun om-elem--allow-clock-timestamp (v p eo)
-  (om-elem--allow v p eo "(ranged) inactive timestamp with no warning/repeater"
-    (lambda (ts)
-      (and (om-elem--is-type-p 'timestamp ts)
-           (om-elem--property-is-predicate-p*
-            :type (memq it '(inactive inactive-range)) ts)
-           (om-elem--property-is-nil-p :repeater-type ts)))))
-
-(defun om-elem--allow-planning-timestamp (v p eo)
-  (om-elem--allow v p eo "an zero-range, inactive timestamp object"
-    (lambda (ts)
-      (or (null ts)
-          (and (om-elem--is-type-p 'timestamp ts)
-               (om-elem--property-is-eq-p :type 'inactive ts))))))
-
-(defun om-elem--allow-entity-name (v p eo)
-  (om-elem--allow v p eo "string that makes `org-entity-get' return non-nil"
-    (lambda (n) (org-entity-get n))))
-
-(defun om-elem--allow-headline-tags (v p eo)
-  (om-elem--allow v p eo "list of oneline strings without `org-archive-tag'"
-    (lambda (x) (and (-all? #'om-elem--oneline-string-p x) 
-                (not (member org-archive-tag x))))))
-
-(defun om-elem--to-headline-tags (v)
+(defun om-elem--decode-headline-tags (v)
   (remove org-archive-tag v))
 
-(defun om-elem--allow-headline-priority (v p eo)
-  (om-elem--allow v p eo "integer between `org-lowest-priority' and `org-highest-priority'"
-    (lambda (x)
-      (or (null x)
-          (and (integerp x)
-               (>= org-lowest-priority x org-highest-priority))))))
-
-(defun om-elem--allow-headline-title (v p eo)
-  (om-elem--allow v p eo "secondary-string that follows `om-elem--headline-title-restrictions'"
-    (lambda (x)
-      (--all? (om-elem--is-any-type-p om-elem--headline-title-restrictions it) x))))
-
-(defun om-elem--allow-statistics-cookie-value (v p eo)
+(defun om-elem--encode-statistics-cookie-value (v p eo)
   ;; TODO need better error messages
   (cl-flet
       ((mk-stat
@@ -656,7 +656,7 @@ and object containers and includes the 'plain-text' type.")
           (_ (error "Invalid stat-cookie value: %S" v)))))
     (format "[%s]" (mk-stat v))))
 
-(defun om-elem--to-statistics-cookie (v)
+(defun om-elem--decode-statistics-cookie-value (v)
   (cond
    ((equal "[%]" v) '(nil))
    ((equal "[/]" v) '(nil nil))
@@ -668,34 +668,34 @@ and object containers and includes the 'plain-text' type.")
          (cdr)
          (-map #'string-to-number)))))
 
-(defun om-elem--allow-timestamp-type (v p eo)
-  (om-elem--allow-symbols v p eo '(inactive inactive-range active
+(defun om-elem--filter-timestamp-type (v p eo)
+  (om-elem--filter-symbols v p eo '(inactive inactive-range active
                                             active-range diary)))
 
-(defun om-elem--allow-timestamp-repeater-type (v p eo)
-  (om-elem--allow-symbols v p eo '(nil catch-up restart cumulate)))
+(defun om-elem--filter-timestamp-repeater-type (v p eo)
+  (om-elem--filter-symbols v p eo '(nil catch-up restart cumulate)))
 
-(defun om-elem--allow-timestamp-warning-type (v p eo)
-  (om-elem--allow-symbols v p eo '(nil all first)))
+(defun om-elem--filter-timestamp-warning-type (v p eo)
+  (om-elem--filter-symbols v p eo '(nil all first)))
 
-(defun om-elem--allow-timestamp-unit (v p eo)
-  (om-elem--allow-symbols v p eo '(nil year month week day hour)))
+(defun om-elem--filter-timestamp-unit (v p eo)
+  (om-elem--filter-symbols v p eo '(nil year month week day hour)))
 
-(defun om-elem--allow-diary-sexp-value (v p eo)
-  (->> (om-elem--allow v p eo "list form" #'listp) (format "%%%%%S")))
+(defun om-elem--encode-diary-sexp-value (v p eo)
+  (->> (om-elem--filter v p eo "list form" #'listp) (format "%%%%%S")))
 
-(defun om-elem--pull-diary-sexp-value (v p eo)
+(defun om-elem--decode-diary-sexp-value (v p eo)
   (->> (s-chop-prefix "%%" v) (read)))
 
-;; updaters
+;; cis-update functions
 
-(defun om-elem--macro-update-value (macro)
+(defun om-elem--update-macro-value (macro)
   (let* ((k (om-elem--get-property :key macro))
          (as (om-elem--get-property :args macro))
          (v (if as (format "%s(%s)" k (s-join "," as)) k)))
     (om-elem--set-property :value (format "{{{%s}}}" v) macro)))
 
-(defun om-elem--clock-update-duration (clock)
+(defun om-elem--update-clock-duration (clock)
   (let* ((ts (om-elem--get-property :value clock))
          (plist
           (if (om-elem--timestamp-is-ranged-fast-p ts)
@@ -706,7 +706,7 @@ and object containers and includes the 'plain-text' type.")
             '(:duration nil :status closed))))
     (om-elem--set-properties plist clock)))
 
-(defun om-elem--headline-update-tags (headline)
+(defun om-elem--update-headline-tags (headline)
   (cl-flet
       ((add-archive-tag-maybe
         (tags)
@@ -737,164 +737,246 @@ and object containers and includes the 'plain-text' type.")
            (+ priority it)))))
 
 (defconst om-elem--type-alist
-  '((babel-call (:call :set om-elem--allow-oneline-string)
-                (:inside-header :set om-elem--allow-from-plist
-                                :get om-elem--pull-to-plist
+  '((babel-call (:call :set om-elem--filter-oneline-string
+                       :require t)
+                (:inside-header :set om-elem--encode-plist
+                                :get om-elem--decode-plist
                                 :plist t)
-                (:arguments :set om-elem--allow-from-string-list-comma-delim
-                            :get om-elem--pull-to-string-list-comma-delim
+                (:arguments :set om-elem--encode-string-list-comma-delim
+                            :get om-elem--decode-string-list-comma-delim
                             :string-list t)
-                (:end-header :set om-elem--allow-from-plist
-                             :get om-elem--pull-to-plist
-                             :plist t))
+                (:end-header :set om-elem--encode-plist
+                             :get om-elem--decode-plist
+                             :plist t)
+                (:value))
     (bold)
     (center-block)
-    (clock (:value :set om-elem--allow-clock-timestamp
-                   :cis om-elem--clock-update-duration))
-    (code (:value :set om-elem--allow-oneline-string))
-    (comment (:value :set om-elem--allow-oneline-string))
-    (comment-block (:value :set om-elem--allow-oneline-string
-                           :get s-trim-right))
-    (drawer (:drawer-name :set om-elem--allow-oneline-string))
-    (diary-sexp (:value :set om-elem--allow-diary-sexp-value
-                        :get om-elem--pull-diary-sexp-value))
-    (dynamic-block (:arguments :set om-elem--allow-from-plist
-                               :get om-elem--pull-to-plist
+    (clock (:value :set om-elem--filter-clock-timestamp
+                   :cis om-elem--update-clock-duration
+                   :require t)
+           (:status)
+           (:duration))
+    (code (:value :set om-elem--filter-oneline-string
+                  :require t))
+    (comment (:value :set om-elem--filter-oneline-string
+                     ;; TODO this isn't actually required?
+                     :require t))
+    (comment-block (:value :set om-elem--filter-oneline-string
+                           :get s-trim-right
+                           ;; TODO is this actually required?
+                           :require t))
+    (drawer (:drawer-name :set om-elem--filter-oneline-string
+                          :require t))
+    (diary-sexp (:value :set om-elem--encode-diary-sexp-value
+                        :get om-elem--decode-diary-sexp-value
+                        ;; TODO is this actually required?
+                        :require t))
+    (dynamic-block (:arguments :set om-elem--encode-plist
+                               :get om-elem--decode-plist
                                :plist t)
-                   (:block-name :set om-elem--allow-oneline-string))
-    (entity (:name :set om-elem--allow-entity-name)
-            (:use-brackets-p :set om-elem--allow-boolean
-                             :toggle t))
-    (example-block (:preserve-indent :set om-elem--allow-boolean
+                   (:block-name :set om-elem--filter-oneline-string
+                                :require t))
+    (entity (:name :set om-elem--filter-entity-name
+                   :require t)
+            (:use-brackets-p :set om-elem--filter-boolean
+                             :toggle t)
+            ;; TODO what do these do?
+            (:latex)
+            (:latex-math-p)
+            (:html)
+            (:ascii)
+            (:latin1)
+            (:utf-8))
+    (example-block (:preserve-indent :set om-elem--filter-boolean
                                      :toggle t)
-                   (:switches :set om-elem--allow-from-string-list-space-delim
-                              :get om-elem--pull-to-string-list-space-delim
+                   (:switches :set om-elem--encode-string-list-space-delim
+                              :get om-elem--decode-string-list-space-delim
                               :string-list t)
-                   (:value :set om-elem--allow-string
-                           :get s-trim-right))
-    (export-block (:type :set om-elem--allow-oneline-string)
-                  (:value :set om-elem--allow-string))
-    (export-snippet (:back-end :set om-elem--allow-oneline-string)
-                    (:value :set om-elem--allow-string))
-    (fixed-width (:value :set om-elem--allow-oneline-string
-                         :get s-trim-right))
-    (footnote-definition (:label :set om-elem--allow-oneline-string-or-nil))
-    (footnote-reference (:label :set om-elem--allow-oneline-string-or-nil))
-    (headline (:archivedp :set om-elem--allow-boolean
-                          :cis om-elem--headline-update-tags
+                   ;; TODO is this required?
+                   (:value :set om-elem--filter-string
+                           :get s-trim-right
+                           :require t)
+                   ;; TODO how many of these are tied to switches?
+                   (:number-lines)
+                   (:retain-labels)
+                   (:use-labels)
+                   (:label-fmt))
+    (export-block (:type :set om-elem--filter-oneline-string
+                         :require t)
+                  (:value :set om-elem--filter-string
+                          :require t))
+    (export-snippet (:back-end :set om-elem--filter-oneline-string
+                               :require t)
+                    (:value :set om-elem--filter-string
+                            :require t))
+    (fixed-width (:value :set om-elem--filter-oneline-string
+                         :get s-trim-right
+                         :require t))
+    (footnote-definition (:label :set om-elem--filter-oneline-string-or-nil
+                                 :require t))
+    (footnote-reference (:label :set om-elem--filter-oneline-string-or-nil)
+                        (:type))
+    (headline (:archivedp :set om-elem--filter-boolean
+                          :cis om-elem--update-headline-tags
                           :toggle t)
-              (:commentedp :set om-elem--allow-boolean
+              (:commentedp :set om-elem--filter-boolean
                            :toggle t)
-              (:footnote-section-p :set om-elem--allow-boolean
+              (:footnote-section-p :set om-elem--filter-boolean
                                    :toggle t)
-              (:level :set om-elem--allow-pos-integer
-                      :shift om-elem--shift-pos-integer)
-              (:pre-blank :set om-elem--allow-non-neg-integer
-                          :shift om-elem--shift-non-neg-integer)
-              (:priority :set om-elem--allow-headline-priority
+              (:level :set om-elem--filter-pos-integer
+                      :shift om-elem--shift-pos-integer
+                      :require 1)
+              (:pre-blank :set om-elem--filter-non-neg-integer
+                          :shift om-elem--shift-non-neg-integer
+                          :require 0)
+              (:priority :set om-elem--filter-headline-priority
                          :shift om-elem--shift-headline-priority)
-              (:tags :set om-elem--allow-headline-tags
-                     :get om-elem--to-headline-tags
-                     :cis om-elem--headline-update-tags
+              (:tags :set om-elem--filter-headline-tags
+                     :get om-elem--decode-headline-tags
+                     :cis om-elem--update-headline-tags
                      :string-list t)
-              (:title :set om-elem--allow-headline-title)
-              (:todo-keyword :set om-elem--allow-oneline-string-or-nil)) ; TODO restrict this?
+              (:title :set om-elem--filter-headline-title)
+              (:todo-keyword :set om-elem--filter-oneline-string-or-nil) ; TODO restrict this?
+              (:raw-value)
+              (:todo-type))
     (horizontal-rule)
-    (inline-babel-call (:call :set om-elem--allow-oneline-string)
-                       (:inside-header :set om-elem--allow-from-plist
-                                       :get om-elem--pull-to-plist
+    (inline-babel-call (:call :set om-elem--filter-oneline-string
+                              :require t)
+                       (:inside-header :set om-elem--encode-plist
+                                       :get om-elem--decode-plist
                                        :plist t)
-                       (:arguments :set om-elem--allow-from-string-list-comma-delim
-                                   :get om-elem--pull-to-string-list-comma-delim
+                       (:arguments :set om-elem--encode-string-list-comma-delim
+                                   :get om-elem--decode-string-list-comma-delim
                                    :string-list t)
-                       (:end-header :set om-elem--allow-from-plist
-                                    :get om-elem--pull-to-plist
-                                    :plist t))
-    (inline-src-block (:language :set om-elem--allow-oneline-string)
-                      (:parameters :set om-elem--allow-from-plist
-                                   :get om-elem--pull-to-plist
+                       (:end-header :set om-elem--encode-plist
+                                    :get om-elem--decode-plist
+                                    :plist t)
+                       (:value))
+    (inline-src-block (:language :set om-elem--filter-oneline-string
+                                 :require t)
+                      (:parameters :set om-elem--encode-plist
+                                   :get om-elem--decode-plist
                                    :plist t)
-                      (:value :set om-elem--allow-oneline-string))
+                      ;; TODO should this be required?
+                      (:value :set om-elem--filter-oneline-string
+                              :require t))
     ;; (inlinetask)
     (italic)
-    (item (:bullet :set om-elem--allow-item-bullets
-                   :get om-elem--to-item-bullets)
-          (:checkbox :set om-elem--allow-item-checkbox-symbols)
-          (:counter :set om-elem--allow-pos-integer-or-nil
+    (item (:bullet :set om-elem--encode-item-bullets
+                   :get om-elem--decode-item-bullets
+                   :require '-)
+          (:checkbox :set om-elem--filter-item-checkbox)
+          (:counter :set om-elem--filter-pos-integer-or-nil
                     :shift om-elem--shift-pos-integer)
-          (:tag :set om-elem--allow-item-tag))
-    (keyword (:key :set om-elem--allow-oneline-string)
-             (:value :set om-elem--allow-oneline-string))
-    (latex-environment (:value :set om-elem--allow-string))
-    (latex-fragment (:value :set om-elem--allow-string))
+          (:tag :set om-elem--filter-item-tag)
+          (:structure))
+    (keyword (:key :set om-elem--filter-oneline-string
+                   :require t)
+             (:value :set om-elem--filter-oneline-string
+                     :require t))
+    (latex-environment (:value :set om-elem--filter-string
+                               :require t))
+    (latex-fragment (:value :set om-elem--filter-string
+                            :require t))
     (line-break)
-    (link (:format :set om-elem--allow-link-format)
-          (:path :set om-elem--allow-oneline-string)
-          (:type :set om-elem--allow-link-type))
-    (macro (:args :set om-elem--allow-string-list
-                  :cis om-elem--macro-update-value
+    (link (:path :set om-elem--filter-oneline-string
+                 :require t)
+          (:format :set om-elem--filter-link-format)
+          (:type :set om-elem--filter-link-type
+                 ;; TODO is fuzzy a good default?
+                 :require "fuzzy")
+          (:raw-link) ; update contents through this?
+          (:application)
+          (:search-option))
+    (macro (:args :set om-elem--filter-string-list
+                  :cis om-elem--update-macro-value
                   :string-list t)
-           (:key :set om-elem--allow-oneline-string
-                 :cis om-elem--macro-update-value))
-    (node-property (:key :set om-elem--allow-oneline-string)
-                   (:value :set om-elem--allow-oneline-string))
+           (:key :set om-elem--filter-oneline-string
+                 :cis om-elem--update-macro-value
+                 :require t)
+           (:value))
+    (node-property (:key :set om-elem--filter-oneline-string
+                         :require t)
+                   (:value :set om-elem--filter-oneline-string
+                           :require t))
     (paragraph)
-    (plain-list)
+    (plain-list (:structure)
+                (:type))
     (plain-text)
-    (planning (:closed :set om-elem--allow-planning-timestamp)
-              (:deadline :set om-elem--allow-planning-timestamp)
-              (:scheduled :set om-elem--allow-planning-timestamp))
+    (planning (:closed :set om-elem--filter-planning-timestamp)
+              (:deadline :set om-elem--filter-planning-timestamp)
+              (:scheduled :set om-elem--filter-planning-timestamp))
     (property-drawer)
     (quote-block)
-    (radio-target)
+    (radio-target (:value))
     (section)
-    (special-block (:type :set om-elem--allow-oneline-string))
-    (src-block (:language :set om-elem--allow-oneline-string-or-nil)
-               (:parameters :set om-elem--allow-from-plist
-                            :get om-elem--pull-to-plist
+    (special-block (:type :set om-elem--filter-oneline-string
+                          :require t))
+    (src-block (:value :set om-elem--filter-string 
+                       :get s-trim-right
+                       ;; TODO should this actually be required? nil should = ""
+                       :require t)
+               (:language :set om-elem--filter-oneline-string-or-nil)
+               (:parameters :set om-elem--encode-plist
+                            :get om-elem--decode-plist
                             :plist t)
-               (:preserve-indent :set om-elem--allow-boolean
+               (:preserve-indent :set om-elem--filter-boolean
                                  :toggle t)
-               (:switches :set om-elem--allow-from-string-list-space-delim
-                          :get om-elem--pull-to-string-list-space-delim
+               (:switches :set om-elem--encode-string-list-space-delim
+                          :get om-elem--decode-string-list-space-delim
                           :string-list t)
-               (:value :set om-elem--allow-string
-                       :get s-trim-right))
-    (statistics-cookie (:value :set om-elem--allow-statistics-cookie-value
-                               :get om-elem--to-statistics-cookie))
+               (:number-lines)
+               (:retain-labels)
+               (:use-labels)
+               (:label-fmt))
+    (statistics-cookie (:value :set om-elem--encode-statistics-cookie-value
+                               :get om-elem--decode-statistics-cookie-value
+                               :require t))
     (strike-through)
-    (subscript (:use-brackets-p :set om-elem--allow-boolean
+    (subscript (:use-brackets-p :set om-elem--filter-boolean
                                 :toggle t))
-    (superscript (:use-brackets-p :set om-elem--allow-boolean
+    (superscript (:use-brackets-p :set om-elem--filter-boolean
                                   :toggle t))
-    (table (:tblfm :set om-elem--allow-string-list
-                   :string-list t))
+    (table (:tblfm :set om-elem--filter-string-list
+                   :string-list t)
+           (:type :const 'org)
+           (:value))
     (table-cell)
-    (table-row)
-    (target (:value :set om-elem--allow-oneline-string))
-    (timestamp (:year-start :set om-elem--allow-pos-integer)
-               (:month-start :set om-elem--allow-pos-integer)
-               (:day-start :set om-elem--allow-pos-integer)
-               (:hour-start :set om-elem--allow-non-neg-integer-or-nil)
-               (:minute-start :set om-elem--allow-non-neg-integer-or-nil)
-               (:year-end :set om-elem--allow-pos-integer)
-               (:month-end :set om-elem--allow-pos-integer)
-               (:day-end :set om-elem--allow-pos-integer)
-               (:hour-end :set om-elem--allow-non-neg-integer-or-nil)
-               (:minute-end :set om-elem--allow-non-neg-integer-or-nil)
-               (:type :set om-elem--allow-timestamp-type)
-               (:repeater-type :set om-elem--allow-timestamp-repeater-type)
-               (:repeater-unit :set om-elem--allow-timestamp-unit)
-               (:repeater-value :set om-elem--allow-pos-integer)
-               (:warning-type :set om-elem--allow-timestamp-warning-type)
-               (:warning-unit :set om-elem--allow-timestamp-unit)
-               (:warning-value :set om-elem--allow-pos-integer))
+    (table-row (:type :const 'standard))
+    (target (:value :set om-elem--filter-oneline-string
+                    :require t))
+    (timestamp (:type :set om-elem--filter-timestamp-type
+                      :require t)
+               (:year-start :set om-elem--filter-pos-integer
+                            :require t)
+               (:month-start :set om-elem--filter-pos-integer
+                             :require t)
+               (:day-start :set om-elem--filter-pos-integer
+                           :require t)
+               (:year-end :set om-elem--filter-pos-integer
+                          :require t)
+               (:month-end :set om-elem--filter-pos-integer
+                           :require t)
+               (:day-end :set om-elem--filter-pos-integer
+                         :require t)
+               (:hour-start :set om-elem--filter-non-neg-integer-or-nil)
+               (:minute-start :set om-elem--filter-non-neg-integer-or-nil)
+               (:hour-end :set om-elem--filter-non-neg-integer-or-nil)
+               (:minute-end :set om-elem--filter-non-neg-integer-or-nil)
+               (:repeater-type :set om-elem--filter-timestamp-repeater-type)
+               (:repeater-unit :set om-elem--filter-timestamp-unit)
+               (:repeater-value :set om-elem--filter-pos-integer-or-nil)
+               (:warning-type :set om-elem--filter-timestamp-warning-type)
+               (:warning-unit :set om-elem--filter-timestamp-unit)
+               (:warning-value :set om-elem--filter-pos-integer-or-nil)
+               (:raw-value))
     (underline)
-    (verbatim (:value :set om-elem--allow-oneline-string))
+    (verbatim (:value :set om-elem--filter-oneline-string
+                      :require t))
     (verse-block)))
 
 ;; add post-blank functions to all entries
-(let ((post-blank-funs '(:post-blank :set om-elem--allow-non-neg-integer
+(let ((post-blank-funs '(:post-blank :set om-elem--filter-non-neg-integer
                                      :shift om-elem--shift-non-neg-integer)))
   (setq om-elem--type-alist
         (--map (-snoc it post-blank-funs) om-elem--type-alist)))
@@ -1365,11 +1447,10 @@ float-times, which assumes the :type property is valid."
 
 ;; clock
 
-(defun om-elem--clock-map-timestamp (fun clock)
-  (->> (om-elem--map-property :value fun clock)
-       (om-elem--clock-update-duration)))
+;; (defun om-elem--clock-map-timestamp (fun clock)
+;;   (->> (om-elem--map-property :value fun clock)))
 
-(om-elem--gen-anaphoric-form #'om-elem--clock-map-timestamp)
+;; (om-elem--gen-anaphoric-form #'om-elem--clock-map-timestamp)
 
 ;; headline
 
@@ -1483,110 +1564,470 @@ float-times, which assumes the :type property is valid."
        (om-elem--build type post-blank)
        (om-elem--set-contents-by-type type elems)))
 
+;; define all builders using this automated monstrosity
+
+(defun om-elem--kwd-to-sym (keyword)
+  (->> (symbol-name keyword) (s-chop-prefix ":") (intern)))
+
+(--each om-elem--type-alist
+  (let* ((type (car it))
+         (element? (memq type om-elem-elements))
+         (name (intern (format "om-elem-build-%s" type)))
+         (props (->> (cdr it)
+                     (--remove (eq :post-blank (car it)))
+                     (-non-nil)))
+         (props (->> props
+                     (--group-by
+                      (-let (((&plist :require :set :const) (cdr it)))
+                        (cond
+                         (const 'const)
+                         ((not set) 'null)
+                         ((eq require t) 'req)
+                         (t 'key))))))
+         (pos-args (->> (alist-get 'req props)
+                        (--map (om-elem--kwd-to-sym (car it)))))
+         (kw-args (->> (alist-get 'key props)
+                       (--map
+                        (let ((prop (om-elem--kwd-to-sym (car it)))
+                              (default (plist-get (cdr it) :require)))
+                          (if default `(,prop ,default) prop)))))
+         (rest-arg (cond
+                    ((memq type om-elem-greater-elements) 'elems)
+                    ((memq type om-elem-object-containers) 'objs)))
+         (args
+          (let ((a `(,@pos-args &key ,@kw-args post-blank)))
+            (if rest-arg `(,@a &rest ,rest-arg) a)))
+         (const-props
+          (-some--> (alist-get 'const props)
+                    (--mapcat
+                     (let ((p (car it))
+                           (c (plist-get (cdr it) :const)))
+                       (list p c))
+                     it)
+                    (if (= 2 (length it))
+                        `(om-elem--set-property ,@it)
+                      `(om-elem--set-properties (list ,@it)))))
+         (nil-props
+          (-some--> (alist-get 'null props)
+                    (-map #'car it)
+                    (if (= 1 (length it))
+                        `(om-elem--set-property-nil ,@it)
+                      `(om-elem--set-properties-nil (list ,@it)))))
+         (strict-props
+          (-some--> 
+           (append (alist-get 'key props) (alist-get 'req props))
+           (-map #'car it)
+           (--mapcat (list it (om-elem--kwd-to-sym it)) it)
+           (if (= 2 (length it))
+               `(om-elem--set-property-strict ,@it)
+             `(om-elem--set-properties-strict (list ,@it)))))
+         (builder
+          (let ((a `(',type post-blank)))
+            (cond
+             ((and element? rest-arg)
+              `(om-elem--build-container-element ,@a ,rest-arg))
+             (element?
+              `(om-elem--build-element ,@a))
+             (rest-arg
+              `(om-elem--build-recursive-object ,@a ,rest-arg))
+             (t
+              `(om-elem--build-object ,@a)))))
+         (body (if (or strict-props nil-props const-props)
+                   `(->> ,@(-non-nil (list builder const-props
+                                           nil-props strict-props)))
+                 builder)))
+    (eval `(om-elem--defun ,name ,args ,body))))
+
 ;; objects
 
-(om-elem--defun om-elem-build-code (value &key post-blank)
-  "Build a code object from VALUE."
-  (->> (om-elem--build-object 'code post-blank)
-       (om-elem--set-property-strict :value value)))
+;; (om-elem--defun om-elem-build-code (value &key post-blank)
+;;   "Build a code object from VALUE."
+;;   (->> (om-elem--build-object 'code post-blank)
+;;        (om-elem--set-property-strict :value value)))
 
-(om-elem--defun om-elem-build-entity (name &key use-brackets-p post-blank)
-  "Build a entity object from NAME."
-  (let ((init '(:html :ascii :latex :latex-math-p :latin1 :utf-8)))
-    (->> (om-elem--build-object 'entity post-blank)
-         (om-elem--set-properties-strict
-          (list :use-brackets-p use-brackets-p
-                :name name))
-         (om-elem--set-properties-nil init))))
+;; (om-elem--defun om-elem-build-entity (name &key use-brackets-p post-blank)
+;;   "Build a entity object from NAME."
+;;   (let ((init '(:html :ascii :latex :latex-math-p :latin1 :utf-8)))
+;;     (->> (om-elem--build-object 'entity post-blank)
+;;          (om-elem--set-properties-strict
+;;           (list :use-brackets-p use-brackets-p
+;;                 :name name))
+;;          (om-elem--set-properties-nil init))))
 
-(om-elem--defun om-elem-build-export-snippet (back-end value &key post-blank)
-  "Build an export-block element with BACK-END and TYPE."
-  (->> (om-elem--build-object 'export-snippet post-blank)
-       (om-elem--set-properties-strict (list :back-end back-end
-                                             :value value))))
+;; (om-elem--defun om-elem-build-export-snippet (back-end value &key post-blank)
+;;   "Build an export-block element with BACK-END and TYPE."
+;;   (->> (om-elem--build-object 'export-snippet post-blank)
+;;        (om-elem--set-properties-strict (list :back-end back-end
+;;                                              :value value))))
 
-(om-elem--defun om-elem-build-inline-babel-call (call &key post-blank
-                                                      arguments
-                                                      inside-header
-                                                      end-header)
-  "Build an inline-babel-call element for NAME.
-Optionally provide ARGS, inside header args INSIDE, and end header
-args END."
-  (->>
-   (om-elem--build-object 'inline-babel-call post-blank)
-   (om-elem--set-property-nil :value)
-   (om-elem--set-properties-strict (list :call call
-                                         :arguments arguments
-                                         :inside-header inside-header
-                                         :end-header end-header))))
+;; (om-elem--defun om-elem-build-inline-babel-call (call &key post-blank
+;;                                                       arguments
+;;                                                       inside-header
+;;                                                       end-header)
+;;   "Build an inline-babel-call element for NAME.
+;; Optionally provide ARGS, inside header args INSIDE, and end header
+;; args END."
+;;   (->>
+;;    (om-elem--build-object 'inline-babel-call post-blank)
+;;    (om-elem--set-property-nil :value)
+;;    (om-elem--set-properties-strict (list :call call
+;;                                          :arguments arguments
+;;                                          :inside-header inside-header
+;;                                          :end-header end-header))))
 
-(om-elem--defun om-elem-build-inline-src-block (language value
-                                                         &key
-                                                         parameters
-                                                         post-blank)
-  "Build an inline-src-block object with LANGUAGE and VALUE.
-Optionally provide PARAMETERS."
-  (->> (om-elem--build-object 'inline-src-block post-blank)
-       (om-elem--set-properties-strict (list :value value
-                                             :language language
-                                             :parameters parameters))))
+;; (om-elem--defun om-elem-build-inline-src-block (language value
+;;                                                          &key
+;;                                                          parameters
+;;                                                          post-blank)
+;;   "Build an inline-src-block object with LANGUAGE and VALUE.
+;; Optionally provide PARAMETERS."
+;;   (->> (om-elem--build-object 'inline-src-block post-blank)
+;;        (om-elem--set-properties-strict (list :value value
+;;                                              :language language
+;;                                              :parameters parameters))))
 
-(om-elem--defun om-elem-build-latex-fragment (value &key post-blank)
-  "Build a latex fragment object"
-  (->> (om-elem--build-object 'latex-fragment post-blank)
-       (om-elem--set-property-strict :value value)))
+;; (om-elem--defun om-elem-build-latex-fragment (value &key post-blank)
+;;   "Build a latex fragment object"
+;;   (->> (om-elem--build-object 'latex-fragment post-blank)
+;;        (om-elem--set-property-strict :value value)))
 
-(om-elem--defun om-elem-build-line-break (&key post-blank)
-  "Build a line-break object."
-  (om-elem--build-object 'line-break post-blank))
+;; (om-elem--defun om-elem-build-line-break (&key post-blank)
+;;   "Build a line-break object."
+;;   (om-elem--build-object 'line-break post-blank))
 
-(om-elem--defun om-elem-build-macro (key &key args post-blank)
-  "Build a macro object with KEY and optional ARGS."
-  (->> (om-elem--build-object 'macro post-blank)
-       (om-elem--set-properties-strict `(:key ,key :args ,args))))
+;; (om-elem--defun om-elem-build-macro (key &key args post-blank)
+;;   "Build a macro object with KEY and optional ARGS."
+;;   (->> (om-elem--build-object 'macro post-blank)
+;;        (om-elem--set-properties-strict `(:key ,key :args ,args))))
 
-(om-elem--defun om-elem-build-statistics-cookie (value &key post-blank)
-  "Build a statistics cookie object with NUMBER and DENOMINATOR."
-  (->> (om-elem--build-object 'statistics-cookie post-blank)
-       (om-elem--set-property-strict :value value)))
+;; (om-elem--defun om-elem-build-statistics-cookie (value &key post-blank)
+;;   "Build a statistics cookie object with NUMBER and DENOMINATOR."
+;;   (->> (om-elem--build-object 'statistics-cookie post-blank)
+;;        (om-elem--set-property-strict :value value)))
 
-(om-elem--defun om-elem-build-target (value &key post-blank)
-  "Build a target object with VALUE."
-  (->> (om-elem--build-object 'target post-blank)
-       (om-elem--set-property-strict :value value)))
+;; (om-elem--defun om-elem-build-target (value &key post-blank)
+;;   "Build a target object with VALUE."
+;;   (->> (om-elem--build-object 'target post-blank)
+;;        (om-elem--set-property-strict :value value)))
 
-(om-elem--defun om-elem-build-timestamp (type year-start month-start
-                                              day-start &key
-                                              hour-start minute-start
-                                              year-end month-end
-                                              day-end hour-end
-                                              minute-end warning-type
-                                              warning-unit
-                                              warning-value
-                                              repeater-type
-                                              repeater-unit
-                                              repeater-value
-                                              post-blank)
-  "Build a timestamp."
-  (->> (om-elem--build-object 'timestamp post-blank)
-       (om-elem--set-properties-strict
-        (list :year-start year-start
-              :month-start month-start
-              :day-start day-start
-              :hour-start hour-start
-              :minute-start minute-start
-              :year-end (or year-end year-start)
-              :month-end (or month-end month-start)
-              :day-end (or day-end day-start)
-              :hour-end hour-end
-              :minute-end minute-end
-              :repeater-type repeater-type
-              :repeater-unit repeater-unit
-              :repeater-value repeater-value
-              :warning-type warning-type
-              :warning-unit warning-unit
-              :warning-value warning-value))
-       (om-elem--set-property-nil :raw-value)))
+;; (om-elem--defun om-elem-build-timestamp (type year-start month-start
+;;                                               day-start &key
+;;                                               hour-start minute-start
+;;                                               year-end month-end
+;;                                               day-end hour-end
+;;                                               minute-end warning-type
+;;                                               warning-unit
+;;                                               warning-value
+;;                                               repeater-type
+;;                                               repeater-unit
+;;                                               repeater-value
+;;                                               post-blank)
+;;   "Build a timestamp."
+;;   (->> (om-elem--build-object 'timestamp post-blank)
+;;        (om-elem--set-properties-strict
+;;         (list :year-start year-start
+;;               :month-start month-start
+;;               :day-start day-start
+;;               :hour-start hour-start
+;;               :minute-start minute-start
+;;               :year-end (or year-end year-start)
+;;               :month-end (or month-end month-start)
+;;               :day-end (or day-end day-start)
+;;               :hour-end hour-end
+;;               :minute-end minute-end
+;;               :repeater-type repeater-type
+;;               :repeater-unit repeater-unit
+;;               :repeater-value repeater-value
+;;               :warning-type warning-type
+;;               :warning-unit warning-unit
+;;               :warning-value warning-value))
+;;        (om-elem--set-property-nil :raw-value)))
+
+;; (om-elem--defun om-elem-build-verbatim (value &key post-blank)
+;;   "Build a verbatim object with VALUE."
+;;   (->> (om-elem--build-object 'verbatim post-blank)
+;;        (om-elem--set-property-strict :value value)))
+
+;; ;; recursive objects
+
+;; (om-elem--defun om-elem-build-bold (&key post-blank &rest objs)
+;;   "Build a bold object containing OBJS."
+;;   (om-elem--build-recursive-object 'bold post-blank objs))
+
+;; (om-elem--defun om-elem-build-footnote-reference (&key label
+;;                                                        post-blank
+;;                                                        &rest objs)
+;;   "Build a footnote reference object to TARGET."
+;;   (->>
+;;    (om-elem--build-recursive-object 'footnote-reference post-blank objs)
+;;    (om-elem--set-property-strict :label label)
+;;    (om-elem--set-property-nil :type)))
+
+;; (om-elem--defun om-elem-build-italic (&key post-blank &rest objs)
+;;   "Build an italic object from STRING."
+;;   (om-elem--build-recursive-object 'italic post-blank objs))
+
+;; ;; TODO not sure if "fuzzy" is a good default
+;; (om-elem--defun om-elem-build-link (path &key (type "fuzzy")
+;;                                          format post-blank
+;;                                          &rest objs)
+;;   "Build a link object from TARGET with OBJS as the description."
+;;   (let ((init '(:raw-link :application :search-option)))
+;;     (->> (om-elem--build-recursive-object 'link post-blank objs)
+;;          (om-elem--set-properties-strict (list :path path
+;;                                                :type type
+;;                                                :format format))
+;;          (om-elem--set-properties-nil init))))
+
+;; (om-elem--defun om-elem-build-radio-target (&key post-blank &rest objs)
+;;   "Build a radio target object from STRING."
+;;   (->> (om-elem--build-recursive-object 'radio-target post-blank objs)
+;;        (om-elem--set-property-nil :value)))
+
+;; (om-elem--defun om-elem-build-strike-through (&key post-blank &rest objs)
+;;   "Build a strike-through object from STRING."
+;;   (om-elem--build-recursive-object 'strike-through post-blank objs))
+
+;; (om-elem--defun om-elem-build-superscript (&key use-brackets-p
+;;                                                 post-blank
+;;                                                 &rest objs)
+;;   "Build a superscript object from STRING."
+;;   (->> (om-elem--build-recursive-object 'superscript post-blank objs)
+;;        (om-elem--set-property-strict :use-brackets-p use-brackets-p)))
+
+;; (om-elem--defun om-elem-build-subscript (&key use-brackets-p
+;;                                               post-blank
+;;                                               &rest objs)
+;;   "Build a subscript object from STRING."
+;;   (->> (om-elem--build-recursive-object 'subscript post-blank objs)
+;;        (om-elem--set-property-strict :use-brackets-p use-brackets-p)))
+
+;; (om-elem--defun om-elem-build-table-cell (&key post-blank &rest objs)
+;;   "Build a table cell object containing TEXT."
+;;   (om-elem--build-recursive-object 'table-cell post-blank objs))
+
+;; (om-elem--defun om-elem-build-underline (&key post-blank &rest objs)
+;;   "Build an underline object from STRING."
+;;   (om-elem--build-recursive-object 'underline post-blank objs))
+
+;; ;; elements
+
+;; (om-elem--defun om-elem-build-babel-call (call &key arguments
+;;                                                inside-header
+;;                                                end-header post-blank)
+;;   "Build a babel-call element for NAME."
+;;   (->> (om-elem--build-element 'babel-call post-blank)
+;;        (om-elem--set-property-nil :value)
+;;        (om-elem--set-properties-strict
+;;         (list :call call
+;;               :arguments arguments
+;;               :inside-header inside-header
+;;               :end-header end-header))))
+
+;; (om-elem--defun om-elem-build-clock (timestamp &key post-blank)
+;;   "Build a clock element with TIME1.
+;; Optionally supply TIME2 to create a closed clock."
+;;   (->> (om-elem--build-element 'clock post-blank)
+;;        (om-elem--set-property-strict :value timestamp)))
+
+;; (om-elem--defun om-elem-build-comment (value &key post-blank)
+;;   "Build a comment element with VALUE."
+;;   (->> (om-elem--build-element 'comment post-blank)
+;;        (om-elem--set-property-strict :value value)))
+
+;; (om-elem--defun om-elem-build-comment-block (value &key post-blank)
+;;   "Build a comment block element from VALUE."
+;;   (->> (om-elem--build-element 'comment-block post-blank)
+;;        (om-elem--set-property-strict :value value)))
+
+;; (om-elem--defun om-elem-build-diary-sexp (string &key post-blank)
+;;   "Build a diary sexp element from VALUE.
+;; VALUE is the part inside the '%%(value)' part of the sexp."
+;;   (->> (om-elem--build-element 'diary-sexp post-blank)
+;;        (om-elem--set-property-strict :value string)))
+
+;; (om-elem--defun om-elem-build-example-block (value &key switches
+;;                                                    preserve-indent
+;;                                                    post-blank)
+;;   "Build a example block element from STRING."
+;;   (let ((init '(:number-lines :retain-labels :use-labels :label-fmt)))
+;;     (->> (om-elem--build-element 'example-block post-blank)
+;;          (om-elem--set-properties-strict
+;;           (list :value (org-element-normalize-string value)
+;;                 :switches switches
+;;                 :preserve-indent preserve-indent))
+;;          (om-elem--set-properties-nil init))))
+
+;; (om-elem--defun om-elem-build-export-block (type value &key post-blank)
+;;   "Build an export-block element with TYPE and VALUE."
+;;   (->> (om-elem--build-element 'export-block post-blank)
+;;        (om-elem--set-properties-strict `(:value ,value :type ,type))))
+
+;; (om-elem--defun om-elem-build-fixed-width (value &key post-blank)
+;;   "Build a fixed-width element from STRING."
+;;   (->> (om-elem--build-element 'fixed-width post-blank)
+;;        (om-elem--set-property-strict :value value)))
+
+;; (om-elem--defun om-elem-build-horizontal-rule (&key post-blank)
+;;   "Build a horizontal-rule element."
+;;   (om-elem--build-element 'horizontal-rule post-blank))
+
+;; (om-elem--defun om-elem-build-keyword (key value &key post-blank)
+;;   "Build keyword element with keyword KEY and value VAL."
+;;   (->> (om-elem--build-element 'keyword post-blank)
+;;        (om-elem--set-properties-strict `(:key ,key :value ,value))))
+
+;; ;; TODO this interface is stoopid
+;; (om-elem--defun om-elem-build-latex-environment (env body &key post-blank)
+;;   "Build a latex-environment element with environment ENV and TEXT."
+;;   (->> (om-elem--build-element 'latex-environment post-blank)
+;;        (om-elem--latex-environment-set-value env body)))
+
+;; (om-elem--defun om-elem-build-node-property (key value &key post-blank)
+;;   "Build a node property object with KEY and VAL."
+;;   (->> (om-elem--build-element 'node-property post-blank)
+;;        (om-elem--set-properties-strict `(:key ,key :value ,value))))
+
+;; (om-elem--defun om-elem-build-planning (&key closed scheduled deadline
+;;                                              post-blank)
+;;   "Build planning element with TYPE and TIME."
+;;   (->> (om-elem--build-element 'planning post-blank)
+;;        (om-elem--set-properties-strict (list :closed closed
+;;                                              :deadline deadline
+;;                                              :scheduled scheduled))))
+
+;; (om-elem--defun om-elem-build-src-block (value &key language switches
+;;                                                parameters
+;;                                                preserve-indent
+;;                                                post-blank)
+;;   (let ((init (list :preserve-indent :number-lines :retain-labels
+;;                     :use-labels :label-fmt)))
+;;     (->>
+;;      (om-elem--build-element 'src-block post-blank)
+;;      (om-elem--set-properties-strict
+;;       (list :value value
+;;             :preserve-indent preserve-indent
+;;             :language language
+;;             :switches switches
+;;             :parameters parameters))
+;;      (om-elem--set-properties-nil init))))
+
+;; ;; container elements
+
+;; (om-elem--defun om-elem-build-paragraph (&key post-blank &rest objs)
+;;   "Build a paragraph container element with OBJECTS as contents."
+;;   (om-elem--build-container-element 'paragraph post-blank objs))
+
+;; (om-elem--defun om-elem-build-table-row (&key post-blank &rest objs)
+;;   "Build a table-row container element with OBJECTS as contents."
+;;   (->> (om-elem--build-container-element 'table-row post-blank objs)
+;;        (om-elem--set-property :type 'standard)))
+
+;; (om-elem--defun om-elem-build-verse-block (&key post-blank &rest objs)
+;;   "Build a verse-block container element with OBJECTS as contents."
+;;   (om-elem--build-container-element 'verse-block post-blank objs))
+
+;; ;; greater elements
+
+;; (om-elem--defun om-elem-build-center-block (&key post-blank &rest elems)
+;;   "Build a center block greater element with ELEMS as contents."
+;;   (om-elem--build-container-element 'center-block post-blank elems))
+
+;; (om-elem--defun om-elem-build-drawer (drawer-name &key post-blank
+;;                                                   &rest elems)
+;;   "Create drawer greater element with NAME and ELEMS as contents."
+;;   (->> (om-elem--build-container-element 'drawer post-blank elems)
+;;        (om-elem--set-property-strict :drawer-name drawer-name)))
+
+;; (om-elem--defun om-elem-build-dynamic-block (block-name
+;;                                              &key post-blank arguments
+;;                                              &rest elems)
+;;   "Build a dynamic block greater element called NAME with PARAMS.
+;; PARAMS is s list of cons cells for each key/val pair. Optionally
+;; provide ELEMS as contents."
+;;   (->> (om-elem--build-container-element 'dynamic-block post-blank elems)
+;;        (om-elem--set-properties-strict (list :block-name block-name
+;;                                            :arguments arguments))))
+
+;; (om-elem--defun om-elem-build-footnote-definition (label
+;;                                                    &key post-blank
+;;                                                    &rest elems)
+;;   "Build a footnote-definition greater element for LABEL.
+;; Optionally provide ELEMS as contents."
+;;   (->>
+;;    (om-elem--build-container-element 'footnote-definition post-blank elems)
+;;    (om-elem--set-property-strict :label label)))
+
+;; (om-elem--defun om-elem-build-headline (&key title (level 1)
+;;                                              (pre-blank 0) todo-keyword
+;;                                              tags priority
+;;                                              footnote-section-p
+;;                                              commentedp archivedp
+;;                                              post-blank
+;;                                              &rest elems)
+;;   "Build a headline."
+;;   (->> (om-elem--build-container-element 'headline post-blank elems)
+;;        (om-elem--set-properties-strict
+;;         (list :pre-blank pre-blank
+;;               :todo-keyword todo-keyword
+;;               :title title
+;;               :level level
+;;               :priority priority
+;;               :tags tags
+;;               :footnote-section-p footnote-section-p
+;;               :commentedp commentedp
+;;               :archivedp archivedp))
+;;        (om-elem--set-properties-nil '(:todo-type :raw-value))))
+
+;; ;; TODO add inline text
+
+;; (om-elem--defun om-elem-build-item (&key (bullet '-) checkbox tag
+;;                                          counter post-blank
+;;                                          &rest elems)
+;;   "Build a plain-list greater element with ELEMS as contents."
+;;   (->> (om-elem--build-container-element 'item post-blank elems)
+;;        (om-elem--set-properties-strict (list :bullet bullet
+;;                                              :checkbox checkbox
+;;                                              :tag tag
+;;                                              :counter counter))
+;;        (om-elem--set-property-nil :structure)))
+
+;; (om-elem--defun om-elem-build-plain-list (&key post-blank &rest items)
+;;   "Build a plain-list greater element with ELEMS as contents."
+;;    (->> (om-elem--build-container-element 'plain-list post-blank items)
+;;         (om-elem--set-properties-nil '(:structure :type))))
+
+;; (om-elem--defun om-elem-build-property-drawer (&key post-blank &rest
+;;                                                     node-properties)
+;;   "Build a property-drawer greater element containing NODE-PROPERTIES."
+;;   (om-elem--build-container-element 'property-drawer post-blank
+;;                                     node-properties))
+
+;; (om-elem--defun om-elem-build-quote-block (&key post-blank &rest elems)
+;;   "Build a quote-block greater element with ELEMS as contents."
+;;   (om-elem--build-container-element 'quote-block post-blank elems))
+
+;; (om-elem--defun om-elem-build-section (&key post-blank &rest elems)
+;;   "Build a section grater element with ELEMS as contents."
+;;   (om-elem--build-container-element 'section post-blank elems))
+
+;; (om-elem--defun om-elem-build-special-block (type &key post-blank
+;;                                                   &rest elems)
+;;   "Build a special block greater element with ELEMS as contents."
+;;   (->>
+;;    (om-elem--build-container-element 'special-block post-blank elems)
+;;    (om-elem--set-property-strict :type type)))
+
+;; (om-elem--defun om-elem-build-table (&key tblfm post-blank &rest
+;;                                           table-rows)
+;;   "Build a section grater element containing TABLE-ROWS."
+;;   ;; TODO this only deals with org tables for now
+;;   (->> (om-elem--build-container-element 'table post-blank table-rows)
+;;        (om-elem--set-property-strict :tblfm tblfm)
+;;        (om-elem--set-property :type 'org)
+;;        (om-elem--set-property-nil :value)))
+
+;; misc builders
 
 (om-elem--defun om-elem-build-diary-sexp-timestamp (string &key post-blank)
   "Build a diary-sexp timestamp element from STRING.
@@ -1600,294 +2041,10 @@ STRING is a lisp form as a string."
          (om-elem--set-property :type 'diary)
          (om-elem--timestamp-set-diary-sexp string)
          (om-elem--init-properties init))))
-        
-(om-elem--defun om-elem-build-verbatim (value &key post-blank)
-  "Build a verbatim object with VALUE."
-  (->> (om-elem--build-object 'verbatim post-blank)
-       (om-elem--set-property-strict :value value)))
-
-;; recursive objects
-
-(om-elem--defun om-elem-build-bold (&key post-blank &rest objs)
-  "Build a bold object containing OBJS."
-  (om-elem--build-recursive-object 'bold post-blank objs))
-
-(om-elem--defun om-elem-build-footnote-reference (&key label
-                                                       post-blank
-                                                       &rest objs)
-  "Build a footnote reference object to TARGET."
-  (->>
-   (om-elem--build-recursive-object 'footnote-reference post-blank objs)
-   (om-elem--set-property-strict :label label)
-   (om-elem--set-property-nil :type)))
-
-(om-elem--defun om-elem-build-italic (&key post-blank &rest objs)
-  "Build an italic object from STRING."
-  (om-elem--build-recursive-object 'italic post-blank objs))
-
-;; TODO not sure if "fuzzy" is a good default
-(om-elem--defun om-elem-build-link (path &key (type "fuzzy")
-                                         format post-blank
-                                         &rest objs)
-  "Build a link object from TARGET with OBJS as the description."
-  (let ((init '(:raw-link :application :search-option)))
-    (->> (om-elem--build-recursive-object 'link post-blank objs)
-         (om-elem--set-properties-strict (list :path path
-                                               :type type
-                                               :format format))
-         (om-elem--set-properties-nil init))))
-
-(om-elem--defun om-elem-build-radio-target (&key post-blank &rest objs)
-  "Build a radio target object from STRING."
-  (->> (om-elem--build-recursive-object 'radio-target post-blank objs)
-       (om-elem--set-property-nil :value)))
-
-(om-elem--defun om-elem-build-strike-through (&key post-blank &rest objs)
-  "Build a strike-through object from STRING."
-  (om-elem--build-recursive-object 'strike-through post-blank objs))
-
-(om-elem--defun om-elem-build-superscript (&key use-brackets-p
-                                                post-blank
-                                                &rest objs)
-  "Build a superscript object from STRING."
-  (->> (om-elem--build-recursive-object 'superscript post-blank objs)
-       (om-elem--set-property-strict :use-brackets-p use-brackets-p)))
-
-(om-elem--defun om-elem-build-subscript (&key use-brackets-p
-                                              post-blank
-                                              &rest objs)
-  "Build a subscript object from STRING."
-  (->> (om-elem--build-recursive-object 'subscript post-blank objs)
-       (om-elem--set-property-strict :use-brackets-p use-brackets-p)))
-
-(om-elem--defun om-elem-build-table-cell (&key post-blank &rest objs)
-  "Build a table cell object containing TEXT."
-  (om-elem--build-recursive-object 'table-cell post-blank objs))
-
-(om-elem--defun om-elem-build-underline (&key post-blank &rest objs)
-  "Build an underline object from STRING."
-  (om-elem--build-recursive-object 'underline post-blank objs))
-
-;; elements
-
-(om-elem--defun om-elem-build-babel-call (call &key arguments
-                                               inside-header
-                                               end-header post-blank)
-  "Build a babel-call element for NAME."
-  (->> (om-elem--build-element 'babel-call post-blank)
-       (om-elem--set-property-nil :value)
-       (om-elem--set-properties-strict
-        (list :call call
-              :arguments arguments
-              :inside-header inside-header
-              :end-header end-header))))
-
-(om-elem--defun om-elem-build-clock (timestamp &key post-blank)
-  "Build a clock element with TIME1.
-Optionally supply TIME2 to create a closed clock."
-  (->> (om-elem--build-element 'clock post-blank)
-       (om-elem--set-property-strict :value timestamp)))
-
-(om-elem--defun om-elem-build-comment (value &key post-blank)
-  "Build a comment element with VALUE."
-  (->> (om-elem--build-element 'comment post-blank)
-       (om-elem--set-property-strict :value value)))
-
-(om-elem--defun om-elem-build-comment-block (value &key post-blank)
-  "Build a comment block element from VALUE."
-  (->> (om-elem--build-element 'comment-block post-blank)
-       (om-elem--set-property-strict :value value)))
-
-(om-elem--defun om-elem-build-diary-sexp (string &key post-blank)
-  "Build a diary sexp element from VALUE.
-VALUE is the part inside the '%%(value)' part of the sexp."
-  (->> (om-elem--build-element 'diary-sexp post-blank)
-       (om-elem--set-property-strict :value string)))
-
-(om-elem--defun om-elem-build-example-block (value &key switches
-                                                   preserve-indent
-                                                   post-blank)
-  "Build a example block element from STRING."
-  (let ((init '(:number-lines :retain-labels :use-labels :label-fmt)))
-    (->> (om-elem--build-element 'example-block post-blank)
-         (om-elem--set-properties-strict
-          (list :value (org-element-normalize-string value)
-                :switches switches
-                :preserve-indent preserve-indent))
-         (om-elem--set-properties-nil init))))
-
-(om-elem--defun om-elem-build-export-block (type value &key post-blank)
-  "Build an export-block element with TYPE and VALUE."
-  (->> (om-elem--build-element 'export-block post-blank)
-       (om-elem--set-properties-strict `(:value ,value :type ,type))))
-
-(om-elem--defun om-elem-build-fixed-width (value &key post-blank)
-  "Build a fixed-width element from STRING."
-  (->> (om-elem--build-element 'fixed-width post-blank)
-       (om-elem--set-property-strict :value value)))
-
-(om-elem--defun om-elem-build-horizontal-rule (&key post-blank)
-  "Build a horizontal-rule element."
-  (om-elem--build-element 'horizontal-rule post-blank))
-
-(om-elem--defun om-elem-build-keyword (key value &key post-blank)
-  "Build keyword element with keyword KEY and value VAL."
-  (->> (om-elem--build-element 'keyword post-blank)
-       (om-elem--set-properties-strict `(:key ,key :value ,value))))
-
-;; TODO this interface is stoopid
-(om-elem--defun om-elem-build-latex-environment (env body &key post-blank)
-  "Build a latex-environment element with environment ENV and TEXT."
-  (->> (om-elem--build-element 'latex-environment post-blank)
-       (om-elem--latex-environment-set-value env body)))
-
-(om-elem--defun om-elem-build-node-property (key value &key post-blank)
-  "Build a node property object with KEY and VAL."
-  (->> (om-elem--build-element 'node-property post-blank)
-       (om-elem--set-properties-strict `(:key ,key :value ,value))))
-
-(om-elem--defun om-elem-build-planning (&key closed scheduled deadline
-                                             post-blank)
-  "Build planning element with TYPE and TIME."
-  (->> (om-elem--build-element 'planning post-blank)
-       (om-elem--set-properties-strict (list :closed closed
-                                             :deadline deadline
-                                             :scheduled scheduled))))
-
-(om-elem--defun om-elem-build-src-block (value &key language switches
-                                               parameters
-                                               preserve-indent
-                                               post-blank)
-  (let ((init (list :preserve-indent :number-lines :retain-labels
-                    :use-labels :label-fmt)))
-    (->>
-     (om-elem--build-element 'src-block post-blank)
-     (om-elem--set-properties-strict
-      (list :value value
-            :preserve-indent preserve-indent
-            :language language
-            :switches switches
-            :parameters parameters))
-     (om-elem--set-properties-nil init))))
-
-;; container elements
-
-(om-elem--defun om-elem-build-paragraph (&key post-blank &rest objs)
-  "Build a paragraph container element with OBJECTS as contents."
-  (om-elem--build-container-element 'paragraph post-blank objs))
-
-(om-elem--defun om-elem-build-table-row (&key post-blank &rest objs)
-  "Build a table-row container element with OBJECTS as contents."
-  (->> (om-elem--build-container-element 'table-row post-blank objs)
-       (om-elem--set-property :type 'standard)))
 
 (om-elem--defun om-elem-build-table-row-hline (&key post-blank)
   (->> (om-elem--build-container-element 'table-row post-blank nil)
        (om-elem--set-property :type 'rule)))
-
-(om-elem--defun om-elem-build-verse-block (&key post-blank &rest objs)
-  "Build a verse-block container element with OBJECTS as contents."
-  (om-elem--build-container-element 'verse-block post-blank objs))
-
-;; greater elements
-
-(om-elem--defun om-elem-build-center-block (&key post-blank &rest elems)
-  "Build a center block greater element with ELEMS as contents."
-  (om-elem--build-container-element 'center-block post-blank elems))
-
-(om-elem--defun om-elem-build-drawer (drawer-name &key post-blank
-                                                  &rest elems)
-  "Create drawer greater element with NAME and ELEMS as contents."
-  (->> (om-elem--build-container-element 'drawer post-blank elems)
-       (om-elem--set-property-strict :drawer-name drawer-name)))
-
-(om-elem--defun om-elem-build-dynamic-block (block-name
-                                             &key post-blank arguments
-                                             &rest elems)
-  "Build a dynamic block greater element called NAME with PARAMS.
-PARAMS is s list of cons cells for each key/val pair. Optionally
-provide ELEMS as contents."
-  (->> (om-elem--build-container-element 'dynamic-block post-blank elems)
-       (om-elem--set-properties-strict (list :block-name block-name
-                                           :arguments arguments))))
-
-(om-elem--defun om-elem-build-footnote-definition (label
-                                                   &key post-blank
-                                                   &rest elems)
-  "Build a footnote-definition greater element for LABEL.
-Optionally provide ELEMS as contents."
-  (->>
-   (om-elem--build-container-element 'footnote-definition post-blank elems)
-   (om-elem--set-property-strict :label label)))
-
-(om-elem--defun om-elem-build-headline (&key title (level 1)
-                                             (pre-blank 0) todo-keyword
-                                             tags priority
-                                             footnote-section-p
-                                             commentedp archivedp
-                                             post-blank
-                                             &rest elems)
-  "Build a headline."
-  (->> (om-elem--build-container-element 'headline post-blank elems)
-       (om-elem--set-properties-strict
-        (list :pre-blank pre-blank
-              :todo-keyword todo-keyword
-              :title title
-              :level level
-              :priority priority
-              :tags tags
-              :footnote-section-p footnote-section-p
-              :commentedp commentedp
-              :archivedp archivedp))
-       (om-elem--set-properties-nil '(:todo-type :raw-value))))
-
-;; TODO add inline text
-
-(om-elem--defun om-elem-build-item (&key (bullet '-) checkbox tag
-                                         counter post-blank
-                                         &rest elems)
-  "Build a plain-list greater element with ELEMS as contents."
-  (->> (om-elem--build-container-element 'item post-blank elems)
-       (om-elem--set-properties-strict (list :bullet bullet
-                                             :checkbox checkbox
-                                             :tag tag
-                                             :counter counter))
-       (om-elem--set-property-nil :structure)))
-
-(om-elem--defun om-elem-build-plain-list (&key post-blank &rest items)
-  "Build a plain-list greater element with ELEMS as contents."
-   (->> (om-elem--build-container-element 'plain-list post-blank items)
-        (om-elem--set-properties-nil '(:structure :type))))
-
-(om-elem--defun om-elem-build-property-drawer (&key post-blank &rest
-                                                    node-properties)
-  "Build a property-drawer greater element containing NODE-PROPERTIES."
-  (om-elem--build-container-element 'property-drawer post-blank
-                                    node-properties))
-
-(om-elem--defun om-elem-build-quote-block (&key post-blank &rest elems)
-  "Build a quote-block greater element with ELEMS as contents."
-  (om-elem--build-container-element 'quote-block post-blank elems))
-
-(om-elem--defun om-elem-build-section (&key post-blank &rest elems)
-  "Build a section grater element with ELEMS as contents."
-  (om-elem--build-container-element 'section post-blank elems))
-
-(om-elem--defun om-elem-build-special-block (type &key post-blank
-                                                  &rest elems)
-  "Build a special block greater element with ELEMS as contents."
-  (->>
-   (om-elem--build-container-element 'special-block post-blank elems)
-   (om-elem--set-property-strict :type type)))
-
-(om-elem--defun om-elem-build-table (&key tblfm post-blank &rest
-                                          table-rows)
-  "Build a section grater element containing TABLE-ROWS."
-  ;; TODO this only deals with org tables for now
-  (->> (om-elem--build-container-element 'table post-blank table-rows)
-       (om-elem--set-property-strict :tblfm tblfm)
-       (om-elem--set-property :type 'org)
-       (om-elem--set-property-nil :value)))
 
 ;;; shortcut builders
 
@@ -2088,7 +2245,7 @@ nested element to return."
 (defun om-elem--headline-get-statistics-cookie (headline)
   (->> (om-elem--get-property :title headline)
        (-last-item)
-       (om-elem--allow-type 'statistics-cookie)))
+       (om-elem--filter-type 'statistics-cookie)))
 
 (defun om-elem--headline-get-drawer (name headline)
   "Return first drawer with NAME in HEADLINE element or nil if none."
@@ -3316,7 +3473,7 @@ This will not move the contents under the item at CHILD-INDEX."
   "Elements that require contents of \"\" to correctly print empty.
 This is a workaround for a bug.")
 
-(defun om-elem--allow-non-zero-length (elem)
+(defun om-elem--filter-non-zero-length (elem)
   (unless (and (om-elem--is-empty-p elem)
                (or (om-elem--is-any-type-p om-elem--rm-if-empty elem)
                    (and (om-elem--is-type-p 'table-row elem)
@@ -3326,7 +3483,7 @@ This is a workaround for a bug.")
 (defun om-elem--clean (elem)
   (->> elem
        (om-elem--map-contents* (-non-nil (-map #'om-elem--clean it)))
-       (om-elem--allow-non-zero-length)))
+       (om-elem--filter-non-zero-length)))
 
 (defun om-elem--blank (elem)
   (if (om-elem--is-empty-p elem)
@@ -3382,8 +3539,8 @@ not of that type. TYPE is a symbol from `om-elem-objects'."
                                                  nil nil nil nil)))
         (--> (car tree)
              (om-elem--get-nested-contents nesting it)
-             (om-elem--allow-types org-element-all-objects it)
-             (if type (om-elem--allow-type type it) it))))))
+             (om-elem--filter-types org-element-all-objects it)
+             (if type (om-elem--filter-type type it) it))))))
 
 (defun om-elem--parse-element-at (point &optional type)
   "Return element immediately under POINT.
@@ -3415,7 +3572,7 @@ for plain-list elements vs item elements."
                            (plain-list (if (eq type 'item) '(0 0) '(0)))
                            (t '(0)))))
           (--> (om-elem--get-nested-contents nesting tree)
-               (if type (om-elem--allow-type type it) it)))))))
+               (if type (om-elem--filter-type type it) it)))))))
 
 (defun om-elem-parse-element-at (point)
   "Return element under POINT or nil if not on an element.

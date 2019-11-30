@@ -604,11 +604,11 @@
       (->> (om-elem-build-keyword "FILETAGS" "tmsu")
            (om-elem-to-trimmed-string)) => "#+FILETAGS: tmsu")
 
-    (defexamples om-elem-build-latex-environment
-      (->> (om-elem-build-latex-environment "env" "text")
-           (om-elem-to-trimmed-string)) => (:result "\\begin{env}"
-                                                    "text"
-                                                    "\\end{env}"))
+    ;; (defexamples om-elem-build-latex-environment
+    ;;   (->> (om-elem-build-latex-environment "env" "text")
+    ;;        (om-elem-to-trimmed-string)) => (:result "\\begin{env}"
+    ;;                                                 "text"
+    ;;                                                 "\\end{env}"))
 
     (defexamples om-elem-build-node-property
       (->> (om-elem-build-node-property "key" "val")
