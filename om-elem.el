@@ -1786,6 +1786,7 @@ represented like ':KEY: VAL'."
                                               properties
                                               statistics-cookie
                                               section-contents
+                                              &rest
                                               subheadlines)
   "Build a headline..."
   (let* ((planning (-some->>
@@ -1816,7 +1817,9 @@ represented like ':KEY: VAL'."
   "Build an item..."
   (let ((paragraph* (-some->> paragraph (om-elem-build-paragraph!)))
         (tag (-some->> tag (om-elem--build-secondary-string))))
-    (->> (append (list paragraph* subitems))
+    (->> (apply #'om-elem-build-plain-list subitems)
+         (list)
+         (append (list paragraph*))
          (-non-nil)
          (apply #'om-elem-build-item
                 :post-blank post-blank

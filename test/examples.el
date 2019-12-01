@@ -824,7 +824,7 @@
               :properties '((key val))
               :section-contents (list (om-elem-build-paragraph! "section text"))
               ;; TODO make levels make sense
-              :subheadlines (list (om-elem-build-headline! :level 2 :title-text "subhead")))
+              (om-elem-build-headline! :level 2 :title-text "subhead"))
              (om-elem-to-trimmed-string))
         => (:result "* really impressive title"
                     ":PROPERTIES:"
@@ -834,6 +834,16 @@
                     "** subhead")
         )
 
+      (defexamples om-elem-build-item!
+        (->> (om-elem-build-item!
+              ;; TODO (x) should make x)
+              :bullet '(1)
+              :tag "complicated *tag*"
+              :paragraph "petulant /frenzy/"
+              (om-elem-build-item! :bullet '- :paragraph "below"))
+             (om-elem-to-trimmed-string))
+        => (:result "1. complicated *tag* :: petulant /frenzy/"
+                    "   - below"))
 
       )))
 
