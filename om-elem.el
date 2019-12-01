@@ -235,14 +235,20 @@ Optionally supply DOCSTRING to override the generic docstring."
     (if (< blanks 0) (-slice list 0 (1- length))
       (append list (-repeat blanks pad)))))
 
-(defun om--plist-get-keys (plist)
+(defun om-elem--plist-get-keys (plist)
   (-slice plist 0 nil 2))
 
-(defun om--plist-get-vals (plist)
+(defun om-elem--plist-get-vals (plist)
   (-slice plist 1 nil 2))
 
 (defun om--plist-non-nil (plist)
   (->> (-partition 2 plist) (-filter #'cadr) (apply #'append)))
+
+(defun om-elem--plist-map-values (fun plist)
+  (let ((keys (om-elem--plist-get-keys plist)))
+    (->> (om-elem--plist-get-vals plist)
+         (--map (funcall fun it))
+         (-interleave keys))))
 
 (defun om-elem--is-plist-p (obj)
   "Return t if OBJ is a plist."
@@ -1077,6 +1083,10 @@ and object containers and includes the 'plain-text' type.")
     (->> (om-elem--map-property-strict (nth 0 plist) (nth 1 plist) elem)
          (om-elem--map-properties-strict (-drop 2 plist))))
    (t (error "Not a plist: %s" plist))))
+
+;; (defmacro om-elem--map-properties-strict* (plist elem)
+;;   (let ((plist (om-elem--plist-map-values (lambda (form) `(lambda (it) ,form)) plist)))
+;;     `(om-elem--map-properties-strict ,plist ,elem)))
 
 ;;; INTERNAL PROPERTY FUNCTIONS
 
@@ -2525,21 +2535,34 @@ Greater elements are elements that may contain other elements."
 (defun om-elem-set-property (prop value elem)
   "Set property PROP to VALUE in ELEM.
 
-The following list of elements and properties are supported:"
+See builder functions for a list of properties and their rules for
+each type."
   (om-elem--set-property-strict prop value elem))
 
-(->> (om-elem--get-type-alist-operation :set)
-     (om-elem--format-alist-operations)
-     (om-elem--append-documentation 'om-elem-set-property))
+;; (->> (om-elem--get-type-alist-operation :set)
+;;      (om-elem--format-alist-operations)
+;;      (om-elem--append-documentation 'om-elem-set-property))
+
+(defun om-elem-set-properties (plist elem)
+  "Set all properties in ELEM to the values corresponding to PLIST.
+PLIST is a list of property-value pairs that corresponds to the
+property list in ELEM.
+
+See builder functions for a list of properties and their rules for
+each type."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--set-properties-strict plist elem))
 
 ;; get
 
 (defun om-elem-get-property (prop elem)
   "Return the value or property PROP in ELEM.
 
-See `om-elem-set-property' for a list of supported elements and
-properties that may be used with this function."
+See builder functions for a list of properties and their rules for
+each type."
   (om-elem--get-property-strict prop elem))
+
+;; TODO add plural version of this...
 
 ;; map
 
@@ -2548,11 +2571,28 @@ properties that may be used with this function."
 FUN takes one argument (the current value of PROP) and returns
 a new value to which PROP will be set.
 
-See `om-elem-set-property' for a list of supported elements and
-properties that may be used with this function."
+See builder functions for a list of properties and their rules for
+each type."
   (om-elem--map-property-strict prop fun elem))
 
 (om-elem--gen-anaphoric-form #'om-elem-map-property)
+
+(defun om-elem-map-properties (plist elem)
+  "Alter the values of properties in place within ELEM.
+PLIST is a property list where the keys are properties in ELEM and
+its values are functions to be mapped to these properties.
+
+See builder functions for a list of properties and their rules for
+each type."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--map-properties-strict plist elem))
+
+(defmacro om-elem-map-properties* (plist elem)
+  "Anaphoric form of `om-elem-map-properties'.
+PLIST is a property list where the keys are properties in ELEM and
+its values are forms to be mapped to these properties."
+  `(let ((plist* (om-elem--plist-map-values (lambda (form) `(lambda (it) ,form)) ',plist)))
+    (om-elem--map-properties-strict plist* ,elem)))
 
 ;; toggle
 
@@ -2666,19 +2706,7 @@ and properties that may be used with this function."
 ;;; generic
 
 ;; TODO do these even work?
-(defun om-elem-map-properties (plist elem)
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--map-properties-strict plist elem))
 
-(defmacro om-elem-map-properties* (plist elem)
-  `(om-elem--map-properties-strict ,plist ,elem))
-
-(defun om-elem-set-properties (plist elem)
-  "Set all properties in ELEM to the values corresponding to PLIST.
-PLIST is a list of property-value pairs that corresponds to the
-property list in ELEM."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--set-properties-strict plist elem))
 
 ;;; objects
 ;;
@@ -3105,8 +3133,8 @@ Return a list of objects."
 
 ;; (defun om-elem-set-planning (planning-plist headline)
 ;;   (om-elem--verify headline om-elem-is-headline-p)
-;;   (let ((keys (om--plist-get-keys planning-plist)))
-;;     (--> (om--plist-get-vals planning-plist)
+;;   (let ((keys (om-elem--plist-get-keys planning-plist)))
+;;     (--> (om-elem--plist-get-vals planning-plist)
 ;;          (--map (-some->> it (om-elem-build-timestamp 'inactive)) it)
 ;;          (-interleave keys it)
 ;;          (om-elem-set-properties it headline))))
