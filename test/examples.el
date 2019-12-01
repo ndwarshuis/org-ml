@@ -477,13 +477,18 @@
       (->> (om-elem-build-target "text")
            (om-elem-to-trimmed-string)) => "<<text>>")
 
-    (defexamples om-elem-build-timestamp!
-      (->> (om-elem-build-timestamp! 'inactive '(2019 1 15))
-           (om-elem-to-trimmed-string)) => "[2019-01-15 Tue]"
-      (->> (om-elem-build-timestamp! 'inactive '(2019 1 15 12 30))
-           (om-elem-to-trimmed-string)) => "[2019-01-15 Tue 12:30]"
-      (->> (om-elem-build-timestamp! 'inactive '(2019 1 15) :end '(2020 1 1))
-           (om-elem-to-trimmed-string)) => "[2019-01-15 Tue]--[2020-01-01 Wed]")
+    (defexamples om-elem-build-timestamp
+      (->> (om-elem-build-timestamp 'inactive 2019 1 15 2019 1 15)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-15 Tue]"
+      (->> (om-elem-build-timestamp 'active-range 2019 1 15 2019 1 16)
+           (om-elem-to-trimmed-string))
+    => "<2019-01-15 Tue>--<2019-01-16 Wed>"
+    (->> (om-elem-build-timestamp
+          'inactive 2019 1 15 2019 1 15 :warning-type 'all
+          :warning-unit 'day :warning-value 1)
+           (om-elem-to-trimmed-string))
+      => "[2019-01-15 Tue -1d]")
 
     (defexamples om-elem-build-verbatim
       (->> (om-elem-build-verbatim "text")
@@ -761,7 +766,19 @@
            (om-elem-to-trimmed-string)) => "| cell |")
 
     (def-example-subgroup "Miscellaneous Builders"
-      nil)
+      nil
+
+      (defexamples om-elem-build-timestamp-diary-sexp
+        (->> (om-elem-build-timestamp-diary-sexp '(diary-float t 4 2))
+             (om-elem-to-string))
+        => "<%%(diary-float t 4 2)>")
+
+      (defexamples om-elem-build-table-row-hline
+        ;; TODO this example is pretty dumb
+        (->> (om-elem-build-table-row-hline)
+             (om-elem-to-trimmed-string))
+        => "|-")
+      )
 
     (def-example-subgroup "Shorthand Builders"
       "Build elements and objects with more convenient/shorter syntax."
@@ -845,7 +862,27 @@
         => (:result "1. complicated *tag* :: petulant /frenzy/"
                     "   - below"))
 
-      )))
+      (defexamples om-elem-build-paragraph!
+        (->> (om-elem-build-paragraph! "stuff /with/ *formatting*" :post-blank 2)
+             (om-elem-to-string))
+        => (:result "stuff /with/ *formatting*"
+                    ""
+                    ""
+                    "")
+        (->> (om-elem-build-paragraph! "* stuff /with/ *formatting*")
+             (om-elem-to-string))
+        !!> error)
+
+      (defexamples om-elem-build-table!
+        (->> (om-elem-build-table! '("R" "A") '("G" "E"))
+             (om-elem-to-trimmed-string))
+        => (:result "| R | A |"
+                    "| G | E |")
+        (->> (om-elem-build-table! '("L" "O") 'hline '("V" "E"))
+             (om-elem-to-trimmed-string))
+        => (:result "| L | O |"
+                    "|---+---|"
+                    "| V | E |")))))
 
 (def-example-group "Type Predicates"
   "Testing types of elements"
