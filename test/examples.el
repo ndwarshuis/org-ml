@@ -819,11 +819,12 @@
                                       :statistics-cookie '(0 9000))
              (om-elem-to-trimmed-string))
         => "* really impressive title [0/9000]"
-        (->> (om-elem-build-headline! :title-text "really impressive title"
-                                      :properties '((key val))
-                                      :section-contents (list (om-elem-build-paragraph! "section text"))
-                                      ;; TODO make levels make sense
-                                      :subheadlines (list (om-elem-build-headline! :level 2 :title-text "subhead")))
+        (->> (om-elem-build-headline!
+              :title-text "really impressive title"
+              :properties '((key val))
+              :section-contents (list (om-elem-build-paragraph! "section text"))
+              ;; TODO make levels make sense
+              :subheadlines (list (om-elem-build-headline! :level 2 :title-text "subhead")))
              (om-elem-to-trimmed-string))
         => (:result "* really impressive title"
                     ":PROPERTIES:"
