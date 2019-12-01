@@ -1723,7 +1723,25 @@ STRING is a lisp form as a string."
                                                repeater
                                                warning
                                                post-blank)
-  "Build a timestamp..."
+  "Build a timestamp object.
+
+TYPE is one if 'active' or 'inactive' (the range suffix will be added
+if an end time is supplied).
+
+START specifies the start time and is a list of integers in one of 
+the following forms:
+- (year month day): short form
+- (year month day nil nil) short form
+- (year month day hour minute) long form
+
+END (if supplied) will add the ending time, and follows the same 
+formatting rules as START.
+
+REPEATER and WARNING are lists formatted as (TYPE VALUE UNIT) where
+the three members correspond to the :repeater/warning-type, -value,
+and -unit properties in `om-elem-build-timestamp'.
+
+Building a diary sexp timestamp is not possible with this function."
   (->> (om-elem--build-object 'timestamp post-blank)
        (om-elem--timestamp-set-start-time-nocheck start)
        (om-elem--timestamp-set-end-time-nocheck end)
@@ -1733,20 +1751,25 @@ STRING is a lisp form as a string."
        (om-elem--set-property-nil :raw-value)))
 
 (om-elem--defun om-elem-build-clock! (start &key end post-blank)
+  "Build a clock object.
+
+START and END follow the same rules as their respective arguments in
+`om-elem-build-timestamp!'."
   (let ((ts (om-elem-build-timestamp! 'inactive start :end end)))
     (om-elem-build-clock ts :post-blank post-blank)))
 
 (om-elem--defun om-elem-build-planning! (&key closed deadline
                                               scheduled post-blank)
   "Build a planning element using shorthand arguments.
-CLOSED, DEADLINE, and SCHEDULED are lists with the following structure:
+CLOSED, DEADLINE, and SCHEDULED are lists with the following structure
+(brackets denote optional members):
 
 '(year minute day [hour] [min]
   [&warning type value unit])
   [&repeater type value unit])'
 
-In terms of arguments supplied to `om-elem-build-timestamp', the first
-five members correspond to the list supplied as TIME, and the
+In terms of arguments supplied to `om-elem-build-timestamp!', the
+first five members correspond to the list supplied as TIME, and the
 type/value/unit correspond to the lists supplied to WARNING and
 REPEATER. The order of warning and repeater does not matter."
   (cl-flet
@@ -1769,9 +1792,11 @@ REPEATER. The order of warning and repeater does not matter."
 
 (om-elem--defun om-elem-build-property-drawer! (&key post-blank &rest
                                                      keyvals)
-  "Create a property drawer org-element object from KEYVALS.
-KEYVALS is a list of cons cells like (KEY . VAL) which will be
-represented like ':KEY: VAL'."
+  "Create a property drawer element.
+
+Each member in KEYVALS is a list of symbols like (key val), where each
+list will generate a node property in the property drawer like ':Key:
+Val'."
   (->> keyvals
        (--map (let ((key (symbol-name (car it)))
                     (val (symbol-name (cadr it))))
@@ -1788,7 +1813,27 @@ represented like ':KEY: VAL'."
                                               section-contents
                                               &rest
                                               subheadlines)
-  "Build a headline..."
+  "Build a headline element.
+
+TITLE-TEXT is a oneline string for the title of the headline.
+
+PLANNING is a list like ('planning-type' 'args' ...) where
+'planning-type' is one of :closed, :deadline, or :scheduled, and
+'args' are the args supplied to any of the planning types in
+`om-elem-build-planning!'. Up to all three planning types can be used
+in the same list like (:closed args :deadline args :scheduled).
+
+STATISTICS-COOKIE is a list following the same format as 
+`om-elem-build-statistics-cookie'.
+
+SECTION-CONTENTS is a list of elements that will go in the headline
+section.
+
+SUBHEADLINES contains zero or more headlines that will go under the
+created headline.
+
+All arguments not mentioned here follow the same rules as
+`om-elem-build-headline'"
   (let* ((planning (-some->>
                     planning
                     (apply #'om-elem-build-planning!)))
@@ -1814,9 +1859,19 @@ represented like ':KEY: VAL'."
 (om-elem--defun om-elem-build-item! (&key post-blank bullet checkbox
                                           tag paragraph counter
                                           &rest subitems)
-  "Build an item..."
+  "Build an item element.
+
+TAG is a string representing the tag.
+
+PARAGRAPH is a string that will be the initial text in the item.
+
+SUBITEMS contains the items that will go under this item.
+
+All other arguments follow the same rules as `om-elem-build-item'."
   (let ((paragraph* (-some->> paragraph (om-elem-build-paragraph!)))
         (tag (-some->> tag (om-elem--build-secondary-string))))
+    ;; TODO this restricts all subitems to plain lists...there are
+    ;; other things we can put into lists
     (->> (apply #'om-elem-build-plain-list subitems)
          (list)
          (append (list paragraph*))
@@ -1828,14 +1883,26 @@ represented like ':KEY: VAL'."
                 :counter counter
                 :tag tag))))
 
-(defun om-elem-build-paragraph! (string)
+(om-elem--defun om-elem-build-paragraph! (string &key post-blank)
+  "Build a paragraph element.
+
+STRING is the text to be parsed into a paragraph. It must contain valid
+formatting (eg, text that will be formatted into objects)."
+  ;; TODO this can be simplified?
   (let ((p (->> (om-elem--from-string string)
                 (om-elem--get-nested-contents '(0)))))
-    (if (om-elem--is-type-p 'paragraph p) p
+    (if (om-elem--is-type-p 'paragraph p)
+        (om-elem--set-property-strict :post-blank (or post-blank 0) p)
       (error "String could not be parsed to a paragraph: %s" string))))
 
+(om-elem--defun om-elem-build-table! (&key tblfm post-blank &rest row-lists)
+  "Build a table element.
 
-(om-elem--defun om-elem-build-table! (&key tblfm post-blank &rest rows)
+ROW-LISTS is a list of lists where each member is a string to be put
+in a table cell or the symbol 'hline' which represents a horizontal
+line.
+
+All other arguments follow the same rules as `om-elem-build-table'."
   (cl-flet
       ((convert
         (r)
