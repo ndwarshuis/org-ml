@@ -1913,7 +1913,7 @@ All other arguments follow the same rules as `om-elem-build-table'."
                (apply #'om-elem-build-table-row)))
          ((eq r 'hline) (om-elem-build-table-row-hline))
          (t (error "Unknown table row %s" r)))))
-    (->> (-map #'convert rows)
+    (->> (-map #'convert row-lists)
          (apply #'om-elem-build-table
                 :tblfm tblfm
                 :post-blank post-blank))))
