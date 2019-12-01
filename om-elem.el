@@ -1560,7 +1560,7 @@ float-times, which assumes the :type property is valid."
 ;; build helpers
 
 (defconst om-elem--object-properties
-  '(:begin :end :post-blank :parent)
+  '(:begin :end :parent)
   "Minimum properties for objects.")
 
 (defconst om-elem--recursive-object-properties
