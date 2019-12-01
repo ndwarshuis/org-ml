@@ -159,6 +159,7 @@
          let-forms
          (macroexp-progn `(,body))))))
 
+;; TODO catch duplicate keys
 (defmacro om-elem--defun (name args &rest body)
   "Define NAME as a function.
 
@@ -585,7 +586,6 @@ and object containers and includes the 'plain-text' type.")
 
 (defun om-elem--filter-timestamp-unit (v p eo)
   (om-elem--filter-symbols v p eo '(nil year month week day hour)))
-
 
 ;; encode/decode (general)
 
@@ -1475,9 +1475,9 @@ float-times, which assumes the :type property is valid."
 
 ;; timestamp (diary sexp)
 
-(defun om-elem--timestamp-set-diary-sexp (string timestamp)
-  (om-elem--verify string stringp)
-  (om-elem--set-property :raw-value (format "<%%%%%s>" string)))
+(defun om-elem--timestamp-set-diary-sexp (form timestamp)
+  (om-elem--verify form listp)
+  (om-elem--set-property :raw-value (format "<%%%%%S>" form) timestamp))
 
 ;;; elements
 
@@ -1700,20 +1700,20 @@ float-times, which assumes the :type property is valid."
 
 ;; misc builders
 
-(om-elem--defun om-elem-build-diary-sexp-timestamp (string &key post-blank)
+(om-elem--defun om-elem-build-timestamp-diary-sexp (form &key post-blank)
   "Build a diary-sexp timestamp element from STRING.
 STRING is a lisp form as a string."
-  (om-elem--verify string stringp)
-  (let ((init :repeater-type :repeater-unit :repeater-value
-               :warning-type :warning-unit :warning-value :year-start
-               :month-start :day-start :hour-start :minute-start
-               :year-end :month-end :day-end :hour-end :minute-end))
-    (->> (om-elem--build-object 'timestamp post-blank)
-         (om-elem--set-property :type 'diary)
-         (om-elem--timestamp-set-diary-sexp string)
-         (om-elem--init-properties init))))
+  (->> (om-elem--build-object 'timestamp post-blank)
+       (om-elem--set-property :type 'diary)
+       (om-elem--timestamp-set-diary-sexp form)
+       (om-elem--set-properties-nil
+        (list :repeater-type :repeater-unit :repeater-value
+              :warning-type :warning-unit :warning-value :year-start
+              :month-start :day-start :hour-start :minute-start
+              :year-end :month-end :day-end :hour-end :minute-end))))
 
 (om-elem--defun om-elem-build-table-row-hline (&key post-blank)
+  "Build a table-row element with the 'rule' type."
   (->> (om-elem--build-container-element 'table-row post-blank nil)
        (om-elem--set-property :type 'rule)))
 
