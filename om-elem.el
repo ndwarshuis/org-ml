@@ -2980,11 +2980,17 @@ same as that described in `om-elem-build-planning!'."
   (let ((ts (om-elem--planning-list-to-timestamp planning-list)))
     (om-elem--set-property-strict prop ts planning)))
 
+;; TODO this is a bit redundant...
 (defun om-elem-planning-map-timestamp (prop fun planning)
   "Modify timestamp matching PROP in place in PLANNING using FUN.
 
 PROP is one of :closed, :deadline, or :scheduled. FUN must return a
-timestamp conforming to that described in `om-elem-build-planning'."
+timestamp conforming to that described in `om-elem-build-planning'.
+
+The only difference between using this function and using 
+`om-elem-map-property' is that the former will silently no-op if PROP
+is nil. The latter will throw an error unless FUN is able to handle
+nil values."
   (om-elem--verify planning om-elem-is-planning-p)
   (unless (memq prop '(:closed :deadline :scheduled))
     (error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
