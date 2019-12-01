@@ -427,9 +427,7 @@
        (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
        "text"))
     => "*text*"
-    (om-elem-to-trimmed-string nil) => "")
-
-  )
+    (om-elem-to-trimmed-string nil) => ""))
 
 (def-example-group "Building"
   "Functions that build new elements and objects"
@@ -766,7 +764,77 @@
       nil)
 
     (def-example-subgroup "Shorthand Builders"
-      nil)))
+      "Build elements and objects with more convenient/shorter syntax."
+
+      (defexamples om-elem-build-timestamp!
+        (->> (om-elem-build-timestamp! 'inactive '(2019 1 1))
+             (om-elem-to-string))
+        => "[2019-01-01 Tue]"
+        (->> (om-elem-build-timestamp! 'inactive '(2019 1 1 12 0)
+                                       :warning '(all 1 day)
+                                       :repeater '(cumulate 1 month))
+             (om-elem-to-string))
+        => "[2019-01-01 Tue 12:00 +1m -1d]"
+        (->> (om-elem-build-timestamp! 'inactive '(2019 1 1)
+                                       :end '(2019 1 2))
+             (om-elem-to-string))
+        => "[2019-01-01 Tue]--[2019-01-02 Wed]")
+
+      (defexamples om-elem-build-clock!
+        (->> (om-elem-build-clock! '(2019 1 1))
+             (om-elem-to-trimmed-string))
+        => "CLOCK: [2019-01-01 Tue]"
+        (->> (om-elem-build-clock! '(2019 1 1 12 0))
+             (om-elem-to-trimmed-string))
+        => "CLOCK: [2019-01-01 Tue 12:00]"
+        (->> (om-elem-build-clock! '(2019 1 1 12 0) :end '(2019 1 1 13 0))
+             (om-elem-to-trimmed-string))
+        ;; TODO why does this make two individual timestamps?
+        => "CLOCK: [2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00] =>  1:00")
+
+      (defexamples om-elem-build-planning!
+        (->> (om-elem-build-planning! :closed '(2019 1 1))
+             (om-elem-to-trimmed-string))
+        => "CLOSED: [2019-01-01 Tue]"
+        (->> (om-elem-build-planning! :closed '(2019 1 1)
+                                      :scheduled '(2018 1 1))
+             (om-elem-to-trimmed-string))
+        => "SCHEDULED: [2018-01-01 Mon] CLOSED: [2019-01-01 Tue]"
+        (->> (om-elem-build-planning! :closed '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
+             (om-elem-to-trimmed-string))
+        => "CLOSED: [2019-01-01 Tue +1m -1d]")
+
+      (defexamples om-elem-build-property-drawer!
+        (->> (om-elem-build-property-drawer! '(key val))
+             (om-elem-to-trimmed-string))
+        => (:result ":PROPERTIES:"
+                    ":key:      val"
+                    ":END:"))
+
+      (defexamples om-elem-build-headline!
+        (->> (om-elem-build-headline! :title-text "really impressive title")
+             (om-elem-to-trimmed-string))
+        => "* really impressive title"
+        (->> (om-elem-build-headline! :title-text "really impressive title"
+                                      :statistics-cookie '(0 9000))
+             (om-elem-to-trimmed-string))
+        => "* really impressive title [0/9000]"
+        (->> (om-elem-build-headline! :title-text "really impressive title"
+                                      :properties '((key val))
+                                      :section-contents (list (om-elem-build-paragraph! "section text"))
+                                      ;; TODO make levels make sense
+                                      :subheadlines (list (om-elem-build-headline! :level 2 :title-text "subhead")))
+             (om-elem-to-trimmed-string))
+        => (:result "* really impressive title"
+                    ":PROPERTIES:"
+                    ":key:      val"
+                    ":END:"
+                    "section text"
+                    "** subhead")
+        )
+
+
+      )))
 
 (def-example-group "Type Predicates"
   "Testing types of elements"
