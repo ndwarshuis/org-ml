@@ -777,8 +777,7 @@
         ;; TODO this example is pretty dumb
         (->> (om-elem-build-table-row-hline)
              (om-elem-to-trimmed-string))
-        => "|-")
-      )
+        => "|-"))
 
     (def-example-subgroup "Shorthand Builders"
       "Build elements and objects with more convenient/shorter syntax."
@@ -1308,6 +1307,18 @@
            (om-elem-set-property :value "wtf")
            (om-elem-to-trimmed-string))
       !!> error)
+
+    (defexamples-content om-elem-set-properties
+      nil
+      
+      (:content "- thing")
+      (->> (om-elem-parse-this-item)
+           (om-elem-set-properties (list :bullet 1
+                                         :checkbox 'on
+                                         :counter 2
+                                         :tag '("tmsu")))
+           (om-elem-to-trimmed-string))
+      => "1. [@2] [X] tmsu :: thing")
 
     (defexamples-content om-elem-get-property
       nil
@@ -1854,6 +1865,26 @@
            (om-elem-map-property* :value (if it 1 0))
            (om-elem-to-trimmed-string))
       !!> error)
+
+    (defexamples-content om-elem-map-properties
+      nil
+
+      (:content "#+KEY: VAL")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-properties
+            (list :key (-partial #'s-prepend "OM_")
+                  :value (-partial #'s-prepend "OM_")))
+           (om-elem-to-trimmed-string))
+      => "#+OM_KEY: OM_VAL"
+
+      ;; TODO spice this up...
+      ;; TODO this makes the document parser puke for some reason
+      ;; (->> (om-elem-parse-this-element)
+      ;;      (om-elem-map-properties*
+      ;;       (:key (s-prepend "OM_" it) :value (s-prepend "OM_" it)))
+      ;;      (om-elem-to-trimmed-string))
+      ;; => "#+OM_KEY: OM_VAL"
+      )
 
     (defexamples-content om-elem-toggle-property
       nil
@@ -2679,8 +2710,7 @@
            (om-elem-timestamp-toggle-active)
            (om-elem-timestamp-toggle-active)
            (om-elem-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]"))
-  ))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"))))
 
 (def-example-group "Content Manipulation"
   "Set, get and map the contents of containers"
