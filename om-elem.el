@@ -1554,15 +1554,14 @@ float-times, which assumes the :type property is valid."
 
 ;; planning
 
-(defun om-elem--planning-set-timestamp-time (prop time warning
-                                                  repeater planning)
-  (unless (memq prop '(:closed :deadline :scheduled))
-    (error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
-  (if (not time) (om-elem--set-property prop nil planning)
-    (let ((ts (om-elem-build-timestamp 'inactive time
-                                       :warning warning
-                                       :repeater repeater)))
-      (om-elem--set-property-strict prop ts planning))))
+(defun om-elem--planning-list-to-timestamp (planning-list)
+  (when planning-list
+    (let* ((p (-partition-before-pred
+               (lambda (it) (memq it '(&warning &repeater)))
+               planning-list)))
+      (om-elem-build-timestamp! 'inactive (car p)
+                                :warning (alist-get '&warning p)
+                                :repeater (alist-get '&repeater p)))))
 
 
 ;;; BUILDER FUNCTIONS
@@ -1782,23 +1781,11 @@ In terms of arguments supplied to `om-elem-build-timestamp!', the
 first five members correspond to the list supplied as TIME, and the
 type/value/unit correspond to the lists supplied to WARNING and
 REPEATER. The order of warning and repeater does not matter."
-  (cl-flet
-      ((partition-arg
-        (arg)
-        (when arg
-          (let* ((part (-partition-before-pred
-                        (lambda (it) (memq it '(&warning &repeater)))
-                        arg))
-                 (time (car part)) ; brake-master-cylinder
-                 (warning (alist-get '&warning part))
-                 (repeater (alist-get '&repeater part)))
-            (om-elem-build-timestamp! 'inactive time
-                                      :repeater repeater
-                                      :warning warning)))))
-    (om-elem-build-planning :closed (partition-arg closed)
-                            :deadline (partition-arg deadline)
-                            :scheduled (partition-arg scheduled)
-                            :post-blank post-blank)))
+  (om-elem-build-planning
+   :closed (om-elem--planning-list-to-timestamp closed)
+   :deadline (om-elem--planning-list-to-timestamp deadline)
+   :scheduled (om-elem--planning-list-to-timestamp scheduled)
+   :post-blank post-blank))
 
 (om-elem--defun om-elem-build-property-drawer! (&key post-blank &rest
                                                      keyvals)
@@ -2982,36 +2969,30 @@ cannot contain any warnings or repeaters."
 
 ;; planning
 
-(om-elem--defun om-elem-planning-set-closed (time &key warning
-                                                  repeater planning)
-  "Set the closed timestamp of PLANNING.
-TIME, WARNING, and REPEATER are the same as those described in
-`om-elem-build-timestamp'."
-  (om-elem--planning-set-timestamp-time :closed time warning repeater
-                                        planning))
+(defun om-elem-planning-set-timestamp (prop planning-list planning)
+  "Set the timestamp of PLANNING matching PROP.
 
-(om-elem--defun om-elem-planning-set-deadline (time &key warning
-                                                    repeater planning)
-  "Set the deadline timestamp of PLANNING.
-TIME, WARNING, and REPEATER are the same as those described in
-`om-elem-build-timestamp'."
-  (om-elem--planning-set-timestamp-time :deadline time warning
-                                        repeater planning))
+PROP is one of :closed, :deadline, or :scheduled. PLANNING-LIST is the
+same as that described in `om-elem-build-planning!'."
+  (om-elem--verify planning om-elem-is-planning-p)
+  (unless (memq prop '(:closed :deadline :scheduled))
+    (error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
+  (let ((ts (om-elem--planning-list-to-timestamp planning-list)))
+    (om-elem--set-property-strict prop ts planning)))
 
-(om-elem--defun om-elem-planning-set-scheduled (time &key warning
-                                                     repeater planning)
-  "Set the scheduled timestamp of PLANNING.
-TIME, WARNING, and REPEATER are the same as those described in
-`om-elem-build-timestamp'."
-  (om-elem--planning-set-timestamp-time :scheduled time warning
-                                        repeater planning))
+(defun om-elem-planning-map-timestamp (prop fun planning)
+  "Modify timestamp matching PROP in place in PLANNING using FUN.
 
-;; (defun om-elem-planning-map-timestamp (prop fun planning)
-;;   (-if-let ((ts (om-elem--get-property-strict prop elem)))
-;;       (om-elem--set-property-strict prop (funcall fun ts) planning)
-;;     planning))
+PROP is one of :closed, :deadline, or :scheduled. FUN must return a
+timestamp conforming to that described in `om-elem-build-planning'."
+  (om-elem--verify planning om-elem-is-planning-p)
+  (unless (memq prop '(:closed :deadline :scheduled))
+    (error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
+  (-if-let (ts (om-elem--get-property-strict prop planning))
+      (om-elem--set-property-strict prop (funcall fun ts) planning)
+    planning))
 
-;; (om-elem--gen-anaphoric-form 'om-elem-planning-map-timestamp)
+(om-elem--gen-anaphoric-form 'om-elem-planning-map-timestamp)
 
 ;;; PUBLIC CONTENT FUNCTIONS
 

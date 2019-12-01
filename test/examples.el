@@ -2309,7 +2309,7 @@
     ;;        (om-elem-property-is-predicate-p*
     ;;         :title (s-contains? "dummy" (car it))))
     ;;   => t)
-
+    )
 
   (def-example-subgroup "Clock"
     nil
@@ -2455,6 +2455,57 @@
            (om-elem-to-trimmed-string))
       => "- one")
     )
+
+  (def-example-subgroup "Planning"
+    nil
+
+    (defexamples-content om-elem-planning-set-timestamp
+      nil
+      (:content "* dummy"
+                "CLOSED: [2019-01-01 Tue]")
+      (:comment "Change an existing timestamp in planning")
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-planning)
+           (om-elem-planning-set-timestamp
+            :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
+           (om-elem-to-trimmed-string))
+      => "CLOSED: [2019-01-02 Wed +2m -1d]"
+      (:comment "Add a new timestamp and remove another")
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-planning)
+           (om-elem-planning-set-timestamp
+            :deadline '(2112 1 1))
+           (om-elem-planning-set-timestamp
+            :closed nil)
+           (om-elem-to-trimmed-string))
+      => "DEADLINE: [2112-01-01 Fri]")
+    ;; TODO add planning mapper
+
+    (defexamples-content om-elem-planning-map-timestamp
+      nil
+      (:content "* dummy"
+                "CLOSED: [2019-01-01 Tue]")
+      (:comment "Apply mapping function if timestamp exists")
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-planning)
+           (om-elem-planning-map-timestamp*
+            :closed (om-elem-timestamp-shift 1 'day it))
+           (om-elem-to-trimmed-string))
+      => "CLOSED: [2019-01-02 Wed]"
+      (:comment "Do nothing if timestamp does not exist")
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-planning)
+           (om-elem-planning-map-timestamp*
+            :deadline (om-elem-timestamp-shift 1 'day it))
+           (om-elem-to-trimmed-string))
+      => "CLOSED: [2019-01-01 Tue]"
+      (:comment "Throw error if new timestamp is not allowed")
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-planning)
+           (om-elem-planning-map-timestamp
+            :closed #'om-elem-timestamp-toggle-active)
+           (om-elem-to-trimmed-string))
+      !!> error))
 
   (def-example-subgroup "Statistics Cookie"
     nil
@@ -2710,7 +2761,7 @@
            (om-elem-timestamp-toggle-active)
            (om-elem-timestamp-toggle-active)
            (om-elem-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]"))))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]")))
 
 (def-example-group "Content Manipulation"
   "Set, get and map the contents of containers"
