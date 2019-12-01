@@ -1082,7 +1082,11 @@ and object containers and includes the 'plain-text' type.")
 
 ;;; generic
 
-(defalias 'om-elem--get-property 'org-element-property)
+;; (defalias 'om-elem--get-property 'org-element-property)
+(defun om-elem--get-property (prop elem)
+  (if (and (stringp elem) (eq prop :post-blank))
+      (length (car (s-match "[ ]*$" elem)))
+    (org-element-property prop elem)))
 
 (defun om-elem--get-properties (elem)
   "Return the properties list of ELEM."
@@ -1105,7 +1109,10 @@ and object containers and includes the 'plain-text' type.")
 (defun om-elem--set-property (prop value elem)
   "Set property PROP in element ELEM to VALUE."
   ;; TODO validate that prop exists in elem first?
-  (if (stringp elem) (org-add-props elem nil prop value)
+  (if (stringp elem)
+      (if (eq prop :post-blank)
+          (->> (s-trim-right elem) (s-append (s-repeat value " ")))
+        (org-add-props elem nil prop value))
     (om-elem--construct
      (om-elem--get-type elem)
      (plist-put (om-elem--get-properties elem) prop value)
@@ -1488,11 +1495,14 @@ float-times, which assumes the :type property is valid."
        (alist-get 'headline)
        (cons 'plain-text)))
 
-(defun om-elem--headline-set-title! (string stats headline)
-  (let* ((ss (om-elem--build-secondary-string string))
-         (title (if (not stats) ss
-                  (-snoc ss (om-elem-build-statistics-cookie)))))
-    (om-elem--headline-set-title title headline)))
+(defun om-elem--headline-set-title! (string stat-ckie headline)
+  (let* ((ss (om-elem--build-secondary-string string)))
+    (if (not stat-ckie)
+        (om-elem--set-property-strict :title ss headline)
+      (let ((ss* (om-elem--map-last*
+                  (om-elem--set-property :post-blank 1 it) ss))
+            (sc (om-elem-build-statistics-cookie stat-ckie)))
+        (om-elem--set-property-strict :title (-snoc ss* sc) headline)))))
 
 (defun om-elem--headline-shift-level (n headline)
   (om-elem--verify n integerp)
@@ -1757,6 +1767,17 @@ REPEATER. The order of warning and repeater does not matter."
                             :scheduled (partition-arg scheduled)
                             :post-blank post-blank)))
 
+(om-elem--defun om-elem-build-property-drawer! (&key post-blank &rest
+                                                     keyvals)
+  "Create a property drawer org-element object from KEYVALS.
+KEYVALS is a list of cons cells like (KEY . VAL) which will be
+represented like ':KEY: VAL'."
+  (->> keyvals
+       (--map (let ((key (symbol-name (car it)))
+                    (val (symbol-name (cadr it))))
+                (om-elem-build-node-property key val)))
+       (apply #'om-elem-build-property-drawer :post-blank post-blank)))
+
 (om-elem--defun om-elem-build-headline! (&key (level 1) title-text
                                               todo-keyword tags
                                               pre-blank priority
@@ -1777,15 +1798,17 @@ REPEATER. The order of warning and repeater does not matter."
                    (append `(,planning) `(,property-drawer) section-contents)
                    (-non-nil)
                    (apply #'om-elem-build-section)))
+         ;; TODO need to ensure the all subheadlines are level + 1
          (elems (-non-nil (append (list section) subheadlines))))
     (->> (apply #'om-elem-build-headline
+                :level level
                 :post-blank post-blank
                 :pre-blank pre-blank
                 :priority priority
                 :commentedp commentedp
                 :archivedp archivedp
                 elems)
-         (om-elem--headline-set-title! text statistics-cookie))))
+         (om-elem--headline-set-title! title-text statistics-cookie))))
 
 (om-elem--defun om-elem-build-item! (&key post-blank bullet checkbox
                                           tag paragraph counter
@@ -1808,12 +1831,6 @@ REPEATER. The order of warning and repeater does not matter."
     (if (om-elem--is-type-p 'paragraph p) p
       (error "String could not be parsed to a paragraph: %s" string))))
 
-(om-elem--defun om-elem-build-property-drawer! (&key post-blank &rest keyvals)
-  "Create a property drawer org-element object from KEYVALS.
-KEYVALS is a list of cons cells like (KEY . VAL) which will be
-represented like ':KEY: VAL'."
-  (->> (--map (om-elem-build-node-property (car it) (cdr it)) keyvals)
-       (apply #'om-elem-build-property-drawer :post-blank post-blank)))
 
 (om-elem--defun om-elem-build-table! (&key tblfm post-blank &rest rows)
   (cl-flet
