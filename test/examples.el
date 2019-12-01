@@ -2479,7 +2479,6 @@
             :closed nil)
            (om-elem-to-trimmed-string))
       => "DEADLINE: [2112-01-01 Fri]")
-    ;; TODO add planning mapper
 
     (defexamples-content om-elem-planning-map-timestamp
       nil
