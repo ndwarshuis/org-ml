@@ -2165,7 +2165,6 @@ nested element to return."
 
 ;; table
 
-
 (defun om-elem--table-pad-or-truncate (length list)
   (let ((pad (om-elem-build-table-cell "")))
     (om-elem--pad-or-truncate length pad list)))
@@ -2253,6 +2252,15 @@ zero-indexed."
                (let ((width (om-elem--table-get-width table)))
                  (om-elem--table-pad-or-truncate width row)))))
     (om-elem--map-contents* (om-elem--replace-at index (apply #'om-elem-build-table-row row) it) table)))
+
+(defun om-elem--table-replace-cell (row-index column-index cell table)
+  (let ((row (->> (om-elem--table-get-row row-index table)
+                  (om-elem--map-contents*
+                   (om-elem--replace-at column-index cell it)))))
+    (om-elem--table-replace-row row-index row table)))
+
+(defun om-elem--table-clear-cell (row-index column-index table)
+  (om-elem--table-replace-cell row-index column-index table))
 
 ;; TODO make replace/clear cell
 
@@ -3171,6 +3179,29 @@ Hlines do not count toward row indices, and all indices are
 zero-indexed."
   (om-elem--verify table om-elem-is-table-p)
   (om-elem--table-get-cell row column table))
+
+(defun om-elem-table-replace-cell (row-index column-index cell table)
+  "Replace a cell in TABLE with CELL (a table-cell element).
+ROW-INDEX and COLUMN-INDEX are zero-indexed integers pointing to the
+position of the cell to be replaced."
+  (om-elem--verify table om-elem-is-table-p)
+  (om-elem--table-replace-cell row-index column-index cell table))
+
+(defun om-elem-table-replace-cell! (row-index column-index cell-text
+                                              table)
+  "Replace a cell in TABLE with CELL-TEXT.
+CELL-TEXT is a string which will replace the contents of the cell at
+ROW-INDEX and COLUMN-INDEX (zero-indexed integers)."
+  (om-elem--verify table om-elem-is-table-p)
+  (let ((cell (om-elem-build-table-cell cell-text)))
+    (om-elem--table-replace-cell row-index column-index cell table)))
+
+(defun om-elem-table-clear-cell (row-index column-index table)
+  "Clear a cell in TABLE.
+ROW-INDEX and COLUMN-INDEX are zero-indexed integers pointing to the
+position of the cell to be replaced."
+  (om-elem--verify table om-elem-is-table-p)
+  (om-elem--table-clear-cell row-index column-index table))
 
 (defun om-elem-table-delete-row (index table)
   "Delete the row at INDEX in TABLE."
