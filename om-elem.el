@@ -2214,9 +2214,11 @@ nested element to return."
 
 (defun om-elem--table-insert-row (index row table)
   (om-elem--verify index integerp)
+  ;; (print (om-elem-to-string row))
   (let ((row (if (om-elem--property-is-eq-p :type 'rule row) row
                (let ((width (om-elem--table-get-width table)))
                  (om-elem--table-pad-or-truncate width row)))))
+    ;; (print (om-elem-to-string row))
     (om-elem--map-contents* (om-elem--insert-at index (apply #'om-elem-build-table-row row) it) table)))
 
 (defun om-elem--table-get-column (column table)
@@ -2250,8 +2252,9 @@ zero-indexed."
   (om-elem--verify index integerp)
   (let ((row (if (om-elem--property-is-eq-p :type 'rule row) row
                (let ((width (om-elem--table-get-width table)))
-                 (om-elem--table-pad-or-truncate width row)))))
-    (om-elem--map-contents* (om-elem--replace-at index (apply #'om-elem-build-table-row row) it) table)))
+                 (om-elem--map-contents*
+                  (om-elem--table-pad-or-truncate width it) row)))))
+    (om-elem--map-contents* (om-elem--replace-at index row it) table)))
 
 (defun om-elem--table-replace-cell (row-index column-index cell table)
   (let ((row (->> (om-elem--table-get-row row-index table)
@@ -2266,7 +2269,7 @@ zero-indexed."
 
 (defun om-elem--table-clear-row (index table)
   ;; this assumes the blank cell will be padded with other blank cells
-  (om-elem--table-replace-row index (list (om-elem-build-table-cell "")) table))
+  (om-elem--table-replace-row index (om-elem-build-table-row (om-elem-build-table-cell " ")) table))
 
 (defun om-elem--table-clear-column (index table)
   ;; this assumes the blank cell will be padded with other blank cells
@@ -3173,12 +3176,12 @@ TYPE is '-', '+', or 'ordered'."
 
 ;; table
 
-(defun om-elem-table-get-cell (row column table)
-  "Return table-cell element at ROW and COLUMN indices in TABLE element.
-Hlines do not count toward row indices, and all indices are
+(defun om-elem-table-get-cell (row-index column-index table)
+  "Return table-cell at ROW-INDEX and COLUMN-INDEX in TABLE element.
+H-lines do not count toward row indices, and all indices are
 zero-indexed."
   (om-elem--verify table om-elem-is-table-p)
-  (om-elem--table-get-cell row column table))
+  (om-elem--table-get-cell row-index column-index table))
 
 (defun om-elem-table-replace-cell (row-index column-index cell table)
   "Replace a cell in TABLE with CELL (a table-cell element).
@@ -3187,6 +3190,7 @@ position of the cell to be replaced."
   (om-elem--verify table om-elem-is-table-p)
   (om-elem--table-replace-cell row-index column-index cell table))
 
+;; TOTO use shortcut table-cell builder
 (defun om-elem-table-replace-cell! (row-index column-index cell-text
                                               table)
   "Replace a cell in TABLE with CELL-TEXT.
@@ -3201,42 +3205,88 @@ ROW-INDEX and COLUMN-INDEX (zero-indexed integers)."
 ROW-INDEX and COLUMN-INDEX are zero-indexed integers pointing to the
 position of the cell to be replaced."
   (om-elem--verify table om-elem-is-table-p)
-  (om-elem--table-clear-cell row-index column-index table))
+  (let ((cell (om-elem-build-table-cell " ")))
+    (om-elem--table-replace-cell row-index column-index cell table)))
 
-(defun om-elem-table-delete-row (index table)
-  "Delete the row at INDEX in TABLE."
+(defun om-elem-table-delete-row (row-index table)
+  "Delete the row at ROW-INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
-  (om-elem--table-delete-row index table))
+  (om-elem--table-delete-row row-index table))
 
-(defun om-elem-table-delete-column (index table)
-  "Delete the column at INDEX in TABLE."
+(defun om-elem-table-delete-column (column-index table)
+  "Delete the column at COLUMN-INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
-  (om-elem--table-delete-column index table))
+  (om-elem--table-delete-column column-index table))
 
-(defun om-elem-table-insert-column (index column table)
-  "Insert COLUMN at INDEX in TABLE."
+(defun om-elem-table-insert-column (column-index column-cells table)
+  "Insert COLUMN-CELLS at COLUMN-INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
-  (unless (-all? #'om-elem-is-table-cell-p column)
+  (unless (-all? #'om-elem-is-table-cell-p column-cells)
     (error "All members of column must be table cells"))
-  (om-elem--table-insert-column index column table))
+  (om-elem--table-insert-column column-index column-cells table))
 
-(defun om-elem-table-insert-column! (index column table)
-  "Insert COLUMN at INDEX in TABLE."
+(defun om-elem-table-insert-column! (column-index column-text table)
+  "Insert COLUMN-TEXT at COLUMN-INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
-  (let ((column (-map #'om-elem-build-table-cell column)))
-    (om-elem--table-insert-column index column table)))
+  ;; TOOD use shorthand cell builder
+  (let ((column (-map #'om-elem-build-table-cell column-text)))
+    (om-elem--table-insert-column column-index column table)))
 
-(defun om-elem-table-insert-row (index row table)
-  "Insert ROW at INDEX in TABLE."
+(defun om-elem-table-clear-column (column-index table)
+  "Clear the column at COLUMN-INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
-  (om-elem--table-insert-row index row table))
+  (om-elem--table-clear-column column-index table))
 
-(defun om-elem-table-insert-row! (index row table)
-  "Insert ROW at INDEX in TABLE."
+(defun om-elem-table-insert-row (row-index row table)
+  "Insert ROW at ROW-INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
-  (let ((row (if (eq row 'hline) (om-elem-build-table-row-hline)
-               (-map #'om-elem-build-table-cell row))))
-    (om-elem--table-insert-row index row table)))
+  (om-elem--table-insert-row row-index row table))
+
+(defun om-elem-table-insert-row! (row-index row-text table)
+  "Insert ROW-TEXT at ROW-INDEX in TABLE."
+  (om-elem--verify table om-elem-is-table-p)
+  ;; TODO use shorthand row builder
+  (let ((row (if (eq row-text 'hline) (om-elem-build-table-row-hline)
+               (-map #'om-elem-build-table-cell row-text))))
+    (om-elem--table-insert-row row-index row table)))
+
+(defun om-elem-table-clear-row (row-index table)
+  "Clear the row at ROW-INDEX in TABLE."
+  (om-elem--verify table om-elem-is-table-p)
+  (om-elem--table-clear-row row-index table))
+
+(defun om-elem-table-replace-column (column-index column-cells table)
+  "Replace column at COLUMN-INDEX in TABLE with COLUMN-CELLS.
+COLUMN-INDEX is the index of the column (starting at zero) and
+COLUMN-CELLS is a list of table-cell objects."
+  (om-elem--verify table om-elem-is-table-p)
+  (om-elem--table-replace-column column-index column-cells table))
+
+(defun om-elem-table-replace-column! (column-index column-text table)
+  "Replace column at COLUMN-INDEX in TABLE with COLUMN-TEXT.
+COLUMN-INDEX is the index of the column (starting at zero) and
+COLUMN-TEXT is a list of text to be made into table-cell objects."
+  (om-elem--verify table om-elem-is-table-p)
+  ;; TODO use shorthand cell builder here
+  (let ((column-cells (-map #'om-elem-build-table-cell column-text)))
+    (om-elem--table-replace-column column-index column-cells table)))
+
+(defun om-elem-table-replace-row (row-index row-cells table)
+  "Replace row at ROW-INDEX in TABLE with ROW-CELLS.
+ROW-INDEX is the index of the row (starting at zero) and
+ROW-CELLS is a list of table-cell objects."
+  (om-elem--verify table om-elem-is-table-p)
+  (om-elem--table-replace-row row-index row-cells table))
+
+(defun om-elem-table-replace-row! (row-index row-text table)
+  "Replace row at ROW-INDEX in TABLE with ROW-TEXT.
+ROW-INDEX is the index of the row (starting at zero) and
+ROW-TEXT is a list of text to be made into table-cell objects."
+  (om-elem--verify table om-elem-is-table-p)
+  ;; TODO use shorthand row builder here
+  (let ((row-cells (->> (-map #'om-elem-build-table-cell row-text)
+                        (apply #'om-elem-build-table-row))))
+    (om-elem--table-replace-row row-index row-cells table)))
 
 ;; PUBLIC INDENTATION FUNCTIONS
 

@@ -2387,7 +2387,7 @@
            (om-elem-headline-has-tag-p "tmsu"))
       => t)
 
-    (defexamples-content om-elem--headline-get-statistics-cookie
+    (defexamples-content om-elem-headline-get-statistics-cookie
       nil
       (:content "* statistically significant [10/10]")
       (->> (om-elem-parse-this-headline)
@@ -2520,7 +2520,7 @@
 
   (def-example-subgroup "Statistics Cookie"
     nil
-    (defexamples-content om-elem-statistics-cookie-is-complete
+    (defexamples-content om-elem-statistics-cookie-is-complete-p
       nil
       (:content "* statistically significant [10/10]")
       (->> (om-elem-parse-this-headline)
@@ -3192,20 +3192,78 @@
            (car))
       => "1"
       (->> (om-elem-parse-this-element)
-           (om-elem-table-get-cell 1 0)
+           (om-elem-table-get-cell 1 1)
            (om-elem--get-contents)
            (car))
-      => "a"
+      => "b"
       (->> (om-elem-parse-this-element)
-           (om-elem-table-get-cell 0 2)
+           (om-elem-table-get-cell -1 -1)
            (om-elem--get-contents)
            (car))
-      => "3"
+      => "c"
+      :begin-hidden
       (->> (om-elem-parse-this-element)
            (om-elem-table-get-cell 0 3)
            (om-elem--get-contents)
            (car))
-      !!> error)
+      !!> error
+      :end-hidden)
+
+    (defexamples-content om-elem-table-replace-cell
+      nil
+      (:content "| 1 | 2 |"
+                "|---+---|"
+                "| a | b |")
+      (->> (om-elem-parse-this-element)
+           (om-elem-table-replace-cell
+            0 0 (om-elem-build-table-cell "2"))
+           (om-elem-to-trimmed-string))
+      => (:result "| 2 | 2 |"
+                  "|---+---|"
+                  "| a | b |")
+      (->> (om-elem-parse-this-element)
+           (om-elem-table-replace-cell
+            -1 -1 (om-elem-build-table-cell "B"))
+           (om-elem-to-trimmed-string))
+      => (:result "| 1 | 2 |"
+                  "|---+---|"
+                  "| a | B |"))
+
+    (defexamples-content om-elem-table-replace-cell!
+      nil
+      (:content "| 1 | 2 |"
+                "|---+---|"
+                "| a | b |")
+      (->> (om-elem-parse-this-element)
+           (om-elem-table-replace-cell! 0 0 "2")
+           (om-elem-to-trimmed-string))
+      => (:result "| 2 | 2 |"
+                  "|---+---|"
+                  "| a | b |")
+      (->> (om-elem-parse-this-element)
+           (om-elem-table-replace-cell! -1 -1 "B")
+           (om-elem-to-trimmed-string))
+      => (:result "| 1 | 2 |"
+                  "|---+---|"
+                  "| a | B |"))
+
+    (defexamples-content om-elem-table-clear-cell
+      nil
+      (:content "| 1 | 2 |"
+                "|---+---|"
+                "| a | b |")
+      (->> (om-elem-parse-this-element)
+           (om-elem-table-clear-cell 0 0)
+           (om-elem-to-trimmed-string))
+      => (:result "|   | 2 |"
+                  "|---+---|"
+                  "| a | b |")
+      (->> (om-elem-parse-this-element)
+           (om-elem-table-clear-cell -1 -1)
+           (om-elem-to-trimmed-string))
+      => (:result "| 1 | 2 |"
+                  "|---+---|"
+                  "| a |   |"))
 
     (defexamples-content om-elem-table-delete-column
       nil
@@ -3230,6 +3288,126 @@
       => (:result "| a |"
                   "|---|"
                   "| c |"))
+
+    (defexamples-content om-elem-table-replace-column
+      nil
+      (:content "| a | b |"
+                "|---+---|"
+                "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-replace-column
+            0 (list
+               (om-elem-build-table-cell "A")
+               (om-elem-build-table-cell "B")))
+           (om-elem-to-trimmed-string))
+      => (:result "| A | b |"
+                  "|---+---|"
+                  "| B | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-replace-column
+            -1 (list
+               (om-elem-build-table-cell "A")
+               (om-elem-build-table-cell "B")))
+           (om-elem-to-trimmed-string))
+      => (:result "| a | A |"
+                  "|---+---|"
+                  "| c | B |"))
+
+    (defexamples-content om-elem-table-replace-column!
+      nil
+      (:content "| a | b |"
+                "|---+---|"
+                "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-replace-column! 0 '("A" "B"))
+           (om-elem-to-trimmed-string))
+      => (:result "| A | b |"
+                  "|---+---|"
+                  "| B | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-replace-column! -1 '("A" "B"))
+           (om-elem-to-trimmed-string))
+      => (:result "| a | A |"
+                  "|---+---|"
+                  "| c | B |"))
+
+    (defexamples-content om-elem-table-clear-column
+      nil
+      (:content "| a | b |"
+                "|---+---|"
+                "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-clear-column 0)
+           (om-elem-to-trimmed-string))
+      => (:result "|   | b |"
+                  "|---+---|"
+                  "|   | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-clear-column -1)
+           (om-elem-to-trimmed-string))
+      => (:result "| a |   |"
+                  "|---+---|"
+                  "| c |   |"))
+
+    (defexamples-content om-elem-table-replace-row
+      nil
+      (:content "| a | b |"
+                "|---+---|"
+                "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-replace-row
+            0 (om-elem-build-table-row
+               (om-elem-build-table-cell "A")
+               (om-elem-build-table-cell "B")))
+           (om-elem-to-trimmed-string))
+      => (:result "| A | B |"
+                  "|---+---|"
+                  "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-replace-row
+            -1 (om-elem-build-table-row
+               (om-elem-build-table-cell "A")
+               (om-elem-build-table-cell "B")))
+           (om-elem-to-trimmed-string))
+      => (:result "| a | b |"
+                  "|---+---|"
+                  "| A | B |"))
+
+    (defexamples-content om-elem-table-replace-row!
+      nil
+      (:content "| a | b |"
+                "|---+---|"
+                "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-replace-row! 0 '("A" "B"))
+           (om-elem-to-trimmed-string))
+      => (:result "| A | B |"
+                  "|---+---|"
+                  "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-replace-row! -1 '("A" "B"))
+           (om-elem-to-trimmed-string))
+      => (:result "| a | b |"
+                  "|---+---|"
+                  "| A | B |"))
+
+    (defexamples-content om-elem-table-clear-row
+      nil
+      (:content "| a | b |"
+                "|---+---|"
+                "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-clear-row 0)
+           (om-elem-to-trimmed-string))
+      => (:result "|   |   |"
+                  "|---+---|"
+                  "| c | d |")
+      (->> (om-elem-parse-element-at 1)
+           (om-elem-table-clear-row -1)
+           (om-elem-to-trimmed-string))
+      => (:result "| a | b |"
+                  "|---+---|"
+                  "|   |   |"))
 
     (defexamples-content om-elem-table-delete-row
       nil
