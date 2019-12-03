@@ -1892,6 +1892,27 @@ formatting (eg, text that will be formatted into objects)."
         (om-elem--set-property-strict :post-blank (or post-blank 0) p)
       (error "String could not be parsed to a paragraph: %s" string))))
 
+(om-elem--defun om-elem-build-table-cell! (string &key post-blank)
+  "Build a table-cell object.
+
+STRING is the text to be contained in the table cell. It must contain
+valid formatting."
+  (-if-let (ss (om-elem--build-secondary-string string))
+      (apply #'om-elem-build-table-cell :post-blank post-blank ss)
+    (error "Could not create valid secondary string from '%s'" string)))
+
+(om-elem--defun om-elem-build-table-row! (string-list &key post-blank)
+  "Build a table-row object.
+
+STRING-LIST is a list of strings to be contained in the table-cells
+within the table-row, or it is the symbol 'hline' for an H-Line-typed
+table-row. If list of strings, each string follows the same rules as
+described in `om-elem-build-table-cell!'."
+  (if (eq string-list 'hline)
+      (om-elem-build-table-row-hline post-blank)
+    (->> (-map #'om-elem-build-table-cell! string-list)
+         (apply #'om-elem-build-table-row :post-blank post-blank))))
+
 (om-elem--defun om-elem-build-table! (&key tblfm post-blank &rest row-lists)
   "Build a table element.
 
