@@ -105,11 +105,11 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
   ;; remove extra signature for cl-defun functions
   ;; TODO this is hacky but it works
   (let ((doc (documentation cmd)))
+    (unless doc (error "No docstring set for %s" cmd))
     (if (not (s-matches? "(fn .*)" doc)) doc
       (->> (s-lines doc) (-drop-last 2) (s-join "\n")))))
 
 (defmacro defexamples (cmd &rest examples)
-  ;; (print cmd)
   `(add-to-list 'functions
                 (list
                  ',cmd
@@ -118,7 +118,6 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
                  (-map 'example-to-string (-partition 3 ',examples)))))
 
 (defmacro defexamples-content (cmd docstring &rest args)
-  ;; (print cmd)
   `(cl-flet
        ((formatted-string?
          (list)
