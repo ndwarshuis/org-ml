@@ -1909,7 +1909,7 @@ within the table-row, or it is the symbol 'hline' for an H-Line-typed
 table-row. If list of strings, each string follows the same rules as
 described in `om-elem-build-table-cell!'."
   (if (eq string-list 'hline)
-      (om-elem-build-table-row-hline post-blank)
+      (om-elem-build-table-row-hline :post-blank post-blank)
     (->> (-map #'om-elem-build-table-cell! string-list)
          (apply #'om-elem-build-table-row :post-blank post-blank))))
 
@@ -1921,20 +1921,10 @@ in a table cell or the symbol 'hline' which represents a horizontal
 line.
 
 All other arguments follow the same rules as `om-elem-build-table'."
-  (cl-flet
-      ((convert
-        (r)
-        (cond
-         ((listp r)
-          (->> r
-               (-map #'om-elem-build-table-cell)
-               (apply #'om-elem-build-table-row)))
-         ((eq r 'hline) (om-elem-build-table-row-hline))
-         (t (error "Unknown table row %s" r)))))
-    (->> (-map #'convert row-lists)
-         (apply #'om-elem-build-table
-                :tblfm tblfm
-                :post-blank post-blank))))
+  (->> (--map (om-elem-build-table-row! it) row-lists)
+       (apply #'om-elem-build-table
+              :tblfm tblfm
+              :post-blank post-blank)))
 
 ;;; INTERNAL CONTENT FUNCTIONS
 ;; operations on contents of containers
