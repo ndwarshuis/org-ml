@@ -3482,7 +3482,7 @@
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-insert-row
             1
-            (list
+            (om-elem-build-table-row
              (om-elem-build-table-cell "x")
              (om-elem-build-table-cell "y")))
            (om-elem-to-trimmed-string))
@@ -3493,7 +3493,7 @@
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-insert-row
             2
-            (list
+            (om-elem-build-table-row
              (om-elem-build-table-cell "x")
              (om-elem-build-table-cell "y")))
            (om-elem-to-trimmed-string))
@@ -3504,7 +3504,7 @@
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-insert-row
             -1
-            (list
+            (om-elem-build-table-row
              (om-elem-build-table-cell "x")
              (om-elem-build-table-cell "y")))
            (om-elem-to-trimmed-string))

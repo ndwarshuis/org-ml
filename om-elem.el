@@ -2235,12 +2235,12 @@ nested element to return."
 
 (defun om-elem--table-insert-row (index row table)
   (om-elem--verify index integerp)
-  ;; (print (om-elem-to-string row))
   (let ((row (if (om-elem--property-is-eq-p :type 'rule row) row
                (let ((width (om-elem--table-get-width table)))
-                 (om-elem--table-pad-or-truncate width row)))))
-    ;; (print (om-elem-to-string row))
-    (om-elem--map-contents* (om-elem--insert-at index (apply #'om-elem-build-table-row row) it) table)))
+                 (om-elem--map-contents*
+                  (om-elem--table-pad-or-truncate width it)
+                  row)))))
+    (om-elem--map-contents* (om-elem--insert-at index row it) table)))
 
 (defun om-elem--table-get-column (column table)
   (-some->> (om-elem--get-contents table)
@@ -2285,8 +2285,6 @@ zero-indexed."
 
 (defun om-elem--table-clear-cell (row-index column-index table)
   (om-elem--table-replace-cell row-index column-index table))
-
-;; TODO make replace/clear cell
 
 (defun om-elem--table-clear-row (index table)
   ;; this assumes the blank cell will be padded with other blank cells
@@ -3211,14 +3209,13 @@ position of the cell to be replaced."
   (om-elem--verify table om-elem-is-table-p)
   (om-elem--table-replace-cell row-index column-index cell table))
 
-;; TOTO use shortcut table-cell builder
 (defun om-elem-table-replace-cell! (row-index column-index cell-text
                                               table)
   "Replace a cell in TABLE with CELL-TEXT.
 CELL-TEXT is a string which will replace the contents of the cell at
 ROW-INDEX and COLUMN-INDEX (zero-indexed integers)."
   (om-elem--verify table om-elem-is-table-p)
-  (let ((cell (om-elem-build-table-cell cell-text)))
+  (let ((cell (om-elem-build-table-cell! cell-text)))
     (om-elem--table-replace-cell row-index column-index cell table)))
 
 (defun om-elem-table-clear-cell (row-index column-index table)
@@ -3249,8 +3246,7 @@ position of the cell to be replaced."
 (defun om-elem-table-insert-column! (column-index column-text table)
   "Insert COLUMN-TEXT at COLUMN-INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
-  ;; TOOD use shorthand cell builder
-  (let ((column (-map #'om-elem-build-table-cell column-text)))
+  (let ((column (-map #'om-elem-build-table-cell! column-text)))
     (om-elem--table-insert-column column-index column table)))
 
 (defun om-elem-table-clear-column (column-index table)
@@ -3266,9 +3262,7 @@ position of the cell to be replaced."
 (defun om-elem-table-insert-row! (row-index row-text table)
   "Insert ROW-TEXT at ROW-INDEX in TABLE."
   (om-elem--verify table om-elem-is-table-p)
-  ;; TODO use shorthand row builder
-  (let ((row (if (eq row-text 'hline) (om-elem-build-table-row-hline)
-               (-map #'om-elem-build-table-cell row-text))))
+  (let ((row (om-elem-build-table-row! row-text)))
     (om-elem--table-insert-row row-index row table)))
 
 (defun om-elem-table-clear-row (row-index table)
@@ -3288,8 +3282,7 @@ COLUMN-CELLS is a list of table-cell objects."
 COLUMN-INDEX is the index of the column (starting at zero) and
 COLUMN-TEXT is a list of text to be made into table-cell objects."
   (om-elem--verify table om-elem-is-table-p)
-  ;; TODO use shorthand cell builder here
-  (let ((column-cells (-map #'om-elem-build-table-cell column-text)))
+  (let ((column-cells (-map #'om-elem-build-table-cell! column-text)))
     (om-elem--table-replace-column column-index column-cells table)))
 
 (defun om-elem-table-replace-row (row-index row-cells table)
@@ -3304,9 +3297,7 @@ ROW-CELLS is a list of table-cell objects."
 ROW-INDEX is the index of the row (starting at zero) and
 ROW-TEXT is a list of text to be made into table-cell objects."
   (om-elem--verify table om-elem-is-table-p)
-  ;; TODO use shorthand row builder here
-  (let ((row-cells (->> (-map #'om-elem-build-table-cell row-text)
-                        (apply #'om-elem-build-table-row))))
+  (let ((row-cells (om-elem-build-table-row! row-text)))
     (om-elem--table-replace-row row-index row-cells table)))
 
 ;; PUBLIC INDENTATION FUNCTIONS
