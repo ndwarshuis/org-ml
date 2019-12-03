@@ -2387,6 +2387,18 @@
            (om-elem-headline-has-tag-p "tmsu"))
       => t)
 
+    (defexamples-content om-elem--headline-get-statistics-cookie
+      nil
+      (:content "* statistically significant [10/10]")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-get-statistics-cookie)
+           (om-elem-to-string))
+      => "[10/10]"
+      (:content "* not statistically significant")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-get-statistics-cookie))
+      => nil)
+
     ;; TODO add the shortcut version title setter
 
     )
@@ -2508,7 +2520,7 @@
 
   (def-example-subgroup "Statistics Cookie"
     nil
-    (defexamples-content om-elem--statistics-cookie-is-complete
+    (defexamples-content om-elem-statistics-cookie-is-complete
       nil
       (:content "* statistically significant [10/10]")
       (->> (om-elem-parse-this-headline)
