@@ -2508,8 +2508,32 @@
 
   (def-example-subgroup "Statistics Cookie"
     nil
-    ;; TODO add predicate for complete/empty
-    )
+    (defexamples-content om-elem--statistics-cookie-is-complete
+      nil
+      (:content "* statistically significant [10/10]")
+      (->> (om-elem-parse-this-headline)
+           ;; TODO make public
+           (om-elem-headline-get-statistics-cookie)
+           (om-elem-statistics-cookie-is-complete-p))
+      => t
+      (:content "* statistically significant [1/10]")
+      (->> (om-elem-parse-this-headline)
+           ;; TODO make public
+           (om-elem-headline-get-statistics-cookie)
+           (om-elem-statistics-cookie-is-complete-p))
+      => nil
+      (:content "* statistically significant [100%]")
+      (->> (om-elem-parse-this-headline)
+           ;; TODO make public
+           (om-elem-headline-get-statistics-cookie)
+           (om-elem-statistics-cookie-is-complete-p))
+      => t
+      (:content "* statistically significant [33%]")
+      (->> (om-elem-parse-this-headline)
+           ;; TODO make public
+           (om-elem-headline-get-statistics-cookie)
+           (om-elem-statistics-cookie-is-complete-p))
+      => nil))
 
   (def-example-subgroup "Timestamp"
     nil

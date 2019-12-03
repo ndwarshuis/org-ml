@@ -1199,7 +1199,7 @@ FUN is a predicate function that takes one argument."
 ;;
 ;; statistics-cookie
 
-(defun om-elem--statistics-cookie-is-complete (statistics-cookie)
+(defun om-elem--statistics-cookie-is-complete-p (statistics-cookie)
   (let ((val (om-elem--get-property :value statistics-cookie)))
     (or (-some->>
          (s-match "\\([[:digit:]]+\\)%" val)
@@ -2699,10 +2699,16 @@ and properties that may be used with this function."
 ;;
 ;; statistics-cookie
 
+;; TODO make a test for this?
+(defun om-elem-headline-get-statistics-cookie (headline)
+  "Return the statistics cookie object from HEADLINE if it exists."
+  (om-elem--verify headline om-elem-is-headline-p)
+  (om-elem--headline-get-statistics-cookie headline))
+
 (defun om-elem-statistics-cookie-is-complete-p (statistics-cookie)
   "Return t is STATISTICS-COOKIE element is complete."
   (om-elem--verify statistics-cookie om-elem-is-statistics-cookie-p)
-  (om-elem--statistics-cookie-is-complete statistics-cookie))
+  (om-elem--statistics-cookie-is-complete-p statistics-cookie))
 
 ;; timestamp
 
