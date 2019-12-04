@@ -1953,6 +1953,7 @@ nested element to return."
 
 (defun om-elem--map-contents (fun elem)
   (let ((contents (om-elem--get-contents elem)))
+    ;; TODO check the types of contents after they are mapped?
     (om-elem--set-contents (funcall fun contents) elem)))
 
 (om-elem--gen-anaphoric-form #'om-elem--map-contents)
@@ -3030,76 +3031,104 @@ nil values."
 
 ;; generic
 
-(defun om-elem-contains-point-p (point elem)
-  "Return t if integer POINT is within the beginning and end of ELEM."
-  (<= (om-elem--get-property :begin elem) point
-      (om-elem--get-property :end elem)))
+(defun om-elem-get-contents (elem)
+  "Return the contents of ELEM as a list."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--get-contents elem))
 
-(defun om-elem-contents-contains-point-p (point elem)
-  "Return t if integer POINT is within the beginning and end of ELEM's contents."
-  (<= (om-elem--get-property :contents-begin elem) point
-      (om-elem--get-property :contents-end elem)))
+(defun om-elem-set-contents (contents elem)
+  "Set the contents of ELEM to CONTENTS.
+CONTENTS is a list of elements or objects; the types permitted in this
+list depend on the type of ELEM."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (let ((type (om-elem--get-type elem)))
+    (om-elem--set-contents-by-type type contents elem)))
 
-(defun om-elem--wrap (type args)
-  (-> (format "om-elem-build-%s" type) (intern) (apply args)))
+(defun om-elem-map-contents (fun elem)
+  "Apply FUN to the contents of ELEM. 
+FUN is a function that takes the current contents as a list and
+returns a modified contents as a list."
+  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--map-contents fun elem))
 
-(defun om-elem-wrap-object (type &rest args)
-  "Call build function of TYPE to wrap objects contained in ARGS.
-ARGS is actually a list if keywords and objects that will be
-passed to the builder function. For example with TYPE of 'bold'
-and ARGS of ':post-blank 2 \"foo\"', the function `om-elem-build-bold'
-will be called with keyword argument ':postblank 2' and \"foo\" in
-the rest args slot."
-  (if (memq type (append org-element-recursive-objects
-                         org-element-object-containers))
-      (om-elem--wrap type args)
-    (error "Invalid type: %s" type)))
+(defun om-elem-is-empty-p (elem)
+  "Return t if ELEM is empty.
+This will throw an error if ELEM is not a container type."
+  ;; TODO use private predicate here...
+  (om-elem--verify elem om-elem-is-container-p)
+  (om-elem--is-empty-p elem))
 
-(defun om-elem-wrap-element (type &rest args)
-  (if (memq type org-element-greater-elements)
-      (om-elem--wrap type args)
-    (error "Invalid type: %s" type)))
+;; (defun om-elem-contains-point-p (point elem)
+;;   "Return t if integer POINT is within the beginning and end of ELEM."
+;;   (<= (om-elem--get-property :begin elem) point
+;;       (om-elem--get-property :end elem)))
 
-;; TODO is this a meaningful distinction?
-(defun om-elem-unwrap (obj)
-  "Remove the contents of recursive/container object or greater element OBJ."
-  (if (om-elem-plain-list-p obj) (list obj)
-    (let* ((contents (om-elem--get-contents obj))
-           (post-blank (om-elem--get-property :post-blank obj))
-           (first (-drop-last 1 contents))
-           (last* (->> (-last-item contents)
-                       (om-elem-set-post-blank post-blank)
-                       (list))))
-      (append first last*))))
+;; (defun om-elem-contents-contains-point-p (point elem)
+;;   "Return t if integer POINT is within the beginning and end of ELEM's contents."
+;;   (<= (om-elem--get-property :contents-begin elem) point
+;;       (om-elem--get-property :contents-end elem)))
 
-(defun om-elem-unwrap-deep (types obj)
-  "Remove the contents of all objects of type in TYPES from OBJ.
-Return a list of objects."
-  (cond
-   ((om-elem--is-any-type-p types obj) 
-    (let* ((contents (om-elem--get-contents obj))
-           (post-blank (om-elem--get-property :post-blank obj))
-           (first (-drop-last 1 contents))
-           (last* (->> (-last-item contents)
-                       (om-elem-set-post-blank post-blank)
-                       (list))))
-      (--mapcat (om-elem-unwrap-deep types it) (append first last*))))
-   ((om-elem--is-plain-text-p obj) (list obj))
-   (t (list obj))))
+;; (defun om-elem--wrap (type args)
+;;   (-> (format "om-elem-build-%s" type) (intern) (apply args)))
 
-(defun om-elem-remove-formatting (types elem)
-  "Remove all recursive formatting TYPES from ELEM."
-  (om-elem-match-map* `(:many! (:or ,@types))
-                (om-elem-unwrap-deep types it) elem))
+;; (defun om-elem-wrap-object (type &rest args)
+;;   "Call build function of TYPE to wrap objects contained in ARGS.
+;; ARGS is actually a list if keywords and objects that will be
+;; passed to the builder function. For example with TYPE of 'bold'
+;; and ARGS of ':post-blank 2 \"foo\"', the function `om-elem-build-bold'
+;; will be called with keyword argument ':postblank 2' and \"foo\" in
+;; the rest args slot."
+;;   (if (memq type (append org-element-recursive-objects
+;;                          org-element-object-containers))
+;;       (om-elem--wrap type args)
+;;     (error "Invalid type: %s" type)))
 
-(defun om-elem-remove-all-formatting (elem)
-  "Remove all recursive formatting from ELEM."
-  (om-elem-remove-formatting org-element-all-objects elem))
+;; (defun om-elem-wrap-element (type &rest args)
+;;   (if (memq type org-element-greater-elements)
+;;       (om-elem--wrap type args)
+;;     (error "Invalid type: %s" type)))
+
+;; ;; TODO is this a meaningful distinction?
+;; (defun om-elem-unwrap (obj)
+;;   "Remove the contents of recursive/container object or greater element OBJ."
+;;   (if (om-elem-plain-list-p obj) (list obj)
+;;     (let* ((contents (om-elem--get-contents obj))
+;;            (post-blank (om-elem--get-property :post-blank obj))
+;;            (first (-drop-last 1 contents))
+;;            (last* (->> (-last-item contents)
+;;                        (om-elem-set-post-blank post-blank)
+;;                        (list))))
+;;       (append first last*))))
+
+;; (defun om-elem-unwrap-deep (types obj)
+;;   "Remove the contents of all objects of type in TYPES from OBJ.
+;; Return a list of objects."
+;;   (cond
+;;    ((om-elem--is-any-type-p types obj) 
+;;     (let* ((contents (om-elem--get-contents obj))
+;;            (post-blank (om-elem--get-property :post-blank obj))
+;;            (first (-drop-last 1 contents))
+;;            (last* (->> (-last-item contents)
+;;                        (om-elem-set-post-blank post-blank)
+;;                        (list))))
+;;       (--mapcat (om-elem-unwrap-deep types it) (append first last*))))
+;;    ((om-elem--is-plain-text-p obj) (list obj))
+;;    (t (list obj))))
+
+;; (defun om-elem-remove-formatting (types elem)
+;;   "Remove all recursive formatting TYPES from ELEM."
+;;   (om-elem-match-map* `(:many! (:or ,@types))
+;;                 (om-elem-unwrap-deep types it) elem))
+
+;; (defun om-elem-remove-all-formatting (elem)
+;;   "Remove all recursive formatting from ELEM."
+;;   (om-elem-remove-formatting org-element-all-objects elem))
 
 ;; objects
 ;;
 ;; link
 
+;; TODO add shortcut function for this
 (defun om-elem-link-set-description (desc link)
   (om-elem--verify link om-elem-is-link-p)
   (om-elem--set-contents-by-type 'link desc link))
