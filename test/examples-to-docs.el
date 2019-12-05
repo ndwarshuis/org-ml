@@ -156,16 +156,20 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
 
 (defmacro def-example-subgroup (group desc &rest examples)
   `(progn
-     (add-to-list 'functions ,(concat "### " group))
+     ;; (add-to-list 'functions ,(concat "### " group))
+     (setq functions (cons ,(concat "### " group) functions))
      (when ,desc
-       (add-to-list 'functions ,desc))
+       ;; (add-to-list 'functions ,desc))
+       (setq functions (cons ,desc functions)))
      ,@examples))
 
 (defmacro def-example-group (group desc &rest examples)
   `(progn
-     (add-to-list 'functions ,(concat "## " group))
+     ;; (add-to-list 'functions ,(concat "## " group))
+     (setq functions (cons ,(concat "## " group) functions))
      (when ,desc
-       (add-to-list 'functions ,desc))
+       ;; (add-to-list 'functions ,desc))
+       (setq functions (cons ,desc functions)))
      ,@examples))
 
 (defun quote-and-downcase (string)
