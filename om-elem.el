@@ -3033,14 +3033,16 @@ nil values."
 
 (defun om-elem-get-contents (elem)
   "Return the contents of ELEM as a list."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
+  ;; TODO use private predicate here...
+  (om-elem--verify elem om-elem-is-container-p)
   (om-elem--get-contents elem))
 
 (defun om-elem-set-contents (contents elem)
   "Set the contents of ELEM to CONTENTS.
 CONTENTS is a list of elements or objects; the types permitted in this
 list depend on the type of ELEM."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
+  ;; TODO use private predicate here...
+  (om-elem--verify elem om-elem-is-container-p)
   (let ((type (om-elem--get-type elem)))
     (om-elem--set-contents-by-type type contents elem)))
 
@@ -3048,8 +3050,11 @@ list depend on the type of ELEM."
   "Apply FUN to the contents of ELEM. 
 FUN is a function that takes the current contents as a list and
 returns a modified contents as a list."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
+  ;; TODO use private predicate here...
+  (om-elem--verify elem om-elem-is-container-p)
   (om-elem--map-contents fun elem))
+
+(om-elem--gen-anaphoric-form #'om-elem-map-contents)
 
 (defun om-elem-is-empty-p (elem)
   "Return t if ELEM is empty.

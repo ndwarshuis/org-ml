@@ -2804,32 +2804,200 @@
   (def-example-subgroup "Generic"
     nil
 
-    ;; (defexamples-content om-elem-parent-get-headline
-    ;;   nil
-    ;;   (:content "* headline 1"
-    ;;             "section stuff")
-    ;;   (:comment "Find the headline from the section element")
-    ;;   (--> (om-elem-parse-this-subtree)
-    ;;        (om-elem-match-first it 'section)
-    ;;        (om-elem-parent-get-headline it)
-    ;;        (om-elem-to-trimmed-string it))
-    ;;   => "* headline 1\nsection stuff"
-    ;;   (:comment "The toplevel headline has no headline parent, so return nil")
-    ;;   (-> (om-elem-parse-this-subtree)
-    ;;       (om-elem-parent-get-headline))
-    ;;   => "")
+    (defexamples-content om-elem-get-contents
+      nil
+
+      (:content "/this/ is a *paragraph*")
+      (:comment "Return objects for object containers")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      => '(italic plain-text bold)
+
+      (:content "* headline"
+                "stuff"
+                "** subheadline")
+      (:comment "Return elements for greater elements")
+      (->> (om-elem-parse-this-subtree)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      => '(section headline)
+
+      (:content "#+CALL: ktulu()")
+      (:comment "Throw error when attempting to get contents of a non-container")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      !!> error
+
+      :begin-hidden
+
+      (:content "| a | b |")
+      (->> (om-elem-parse-this-table-row)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      => '(table-cell table-cell)
+
+      (:content "#+BEGIN_VERSE"
+                "verse /666/"
+                "#+END_VERSE")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      ;; plain-text for the newline at the end...I think
+      => '(plain-text italic plain-text)
+
+      (:content "#+BEGIN_CENTER"
+                "paragraph thing"
+                "#+END_CENTER")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      => '(paragraph)
+
+      (:content ":LOGBOOK:"
+                "- log entry"
+                "CLOCK: [2019-01-01 Tue]"
+                ":END:")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      => '(plain-list clock)
+
+      (:content "[fn:1] bigfoot")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      => '(paragraph)
+
+      (:content "- item"
+                "  - subitem")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      => '(item)
+      (->> (om-elem-parse-this-item)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      => '(paragraph plain-list)
+
+      (:content "* dummy"
+                ":PROPERTIES:"
+                ":ONE: one"
+                ":TWO: two"
+                ":END:")
+      (->> (om-elem-parse-this-headline)
+           (om-elem--headline-get-properties-drawer)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      => '(node-property node-property) 
+
+      (:content "#+BEGIN_QUOTE"
+                "no pity for the majority"
+                "#+END_QUOTE")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      => '(paragraph)
+
+      (:content "* dummy"
+                "stuff")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-get-section)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      => '(paragraph)
+
+      (:content "| a |"
+                "| b |")
+      (->> (om-elem-parse-this-element)
+           (om-elem-get-contents)
+           (-map #'om-elem-get-type))
+      => '(table-row table-row)
+
+      :end-hidden)
+
+    (defexamples-content om-elem-set-contents
+      nil
+
+      (:content "/this/ is a *paragraph*")
+      (:comment "Set contents for object containers")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-contents (list "this is lame"))
+           (om-elem-to-trimmed-string))
+      => "this is lame"
+
+      (:content "* headline"
+                "stuff"
+                "** subheadline")
+      (:comment "Set contents for greater elements")
+      (->> (om-elem-parse-this-subtree)
+           (om-elem-set-contents (list (om-elem-build-headline! :title-text "only me" :level 2)))
+           (om-elem-to-trimmed-string))
+      => (:result "* headline"
+                  "** only me")
+
+      (:content "#+CALL: ktulu()")
+      (:comment "Throw error when attempting to get contents of a non-container")
+      (->> (om-elem-parse-this-element)
+           (om-elem-set-contents "nil by mouth")
+           (om-elem-to-trimmed-string))
+      !!> error
+
+      :begin-hidden
+
+      ;; TODO add hidden tests
+
+      :end-hidden)
+
+    (defexamples-content om-elem-map-contents
+      nil
+
+      (:content "/this/ is a *paragraph*")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-contents
+            (lambda (objs) (append objs (list " ...yeah"))))
+           (om-elem-to-trimmed-string))
+      => "/this/ is a *paragraph* ...yeah"
+
+      (:content "* headline"
+                "** subheadline")
+      (->> (om-elem-parse-this-subtree)
+           (om-elem-map-contents* (--map (om-elem-shift-property :level 1 it) it))
+           (om-elem-to-trimmed-string))
+      => (:result "* headline"
+                  "*** subheadline")
+
+      (:content "#+CALL: ktulu()")
+      (:comment "Throw error when attempting to map contents of a non-container")
+      (->> (om-elem-parse-this-element)
+           (om-elem-map-contents #'ignore)
+           (om-elem-to-trimmed-string))
+      !!> error
+
+      :begin-hidden
+
+      ;; TODO add hidden tests
+
+      :end-hidden)
+
     
-    ;; (defexamples-content om-elem-is-empty-p
-    ;;   nil
-    ;;   (:content "* dummy\nfilled with useless knowledge")
-    ;;   (->> (om-elem-parse-this-headline)
-    ;;        (om-elem-is-empty-p))
-    ;;   => nil
-    ;;   (:content "* dummy")
-    ;;   (->> (om-elem-parse-this-headline)
-    ;;        (om-elem-is-empty-p))
-    ;;   => t)
-    )
+    (defexamples-content om-elem-is-empty-p
+      nil
+      (:content "* dummy"
+                "filled with useless knowledge")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-is-empty-p))
+      => nil
+      (:content "* dummy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-is-empty-p))
+      => t
+      (:content "#+CALL: ktulu()")
+      (:comment "Throw error when attempting to determine if non-container is empty")
+      (->> (om-elem-parse-this-element)
+           (om-elem-is-empty-p))
+      !!> error))
 
   (def-example-subgroup "Headline"
     nil
