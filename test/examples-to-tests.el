@@ -31,6 +31,9 @@
            expected)))
     (cond ((eq sym '=>)
            `(should (equal ,actual ,expected)))
+          ;; this will only work with defexamples-content
+          ((eq sym '$>)
+           `(should (equal (progn ,actual (s-trim (buffer-string))) ,expected)))
           ((eq sym '~>)
            `(should (approx-equal ,actual ,expected)))
           ((eq sym '!!>)
@@ -55,7 +58,7 @@
                     (--map (apply #'example-to-should it)))))
           `(with-temp-buffer
              (org-mode)
-             (insert ,contents)
+             (when ,contents (insert ,contents))
              (goto-char (point-min))
              ,@tests))))
     (let ((body

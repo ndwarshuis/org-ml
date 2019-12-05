@@ -60,6 +60,8 @@
            (cond
             ((eq sym '=>) (format-expected sym expected))
             ((eq sym '~>) (format-expected sym expected))
+            ((eq sym '$>) (concat " ;; Output these buffer contents\n"
+                                  (format-expected sym expected)))
             ((eq sym '!!>) (format "Error"))
             (t (error "Invalid test case: %s" `(,actual ,sym ,expected))))))
     (--> comment
