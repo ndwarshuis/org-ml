@@ -2959,9 +2959,9 @@ cannot contain any warnings or repeaters."
   (om-elem--headline-set-title! text stats headline))
 
 (defun om-elem-headline-update-item-statistics (headline)
-  (let ((items (om-elem-match '(section plain-list item) headline))
-        (done (length (-filter #'om-elem-item-is-checked-p items)))
-        (total (length items)))
+  (let* ((items (om-elem-match '(section plain-list item) headline))
+         (done (length (-filter #'om-elem-item-is-checked-p items)))
+         (total (length items)))
     (om-elem--headline-set-statistics-cookie-fraction done total headline)))
 
 (defun om-elem-headline-update-todo-statistics (headline)
@@ -3650,8 +3650,8 @@ old element in the current buffer."
 IN-FORM and PROC-FORM are forms corresponding to 'in-fun' and 
 'proc-fun'. The latter has the variable 'it' available to it, which
 holds the element returned from IN-FORM."
-  (declare (indent 1))
-  `(om-elem-update (lambda () ,form) elem))
+  (declare (indent 0))
+  `(om-elem-update (lambda (it) ,form) ,elem))
 
 ;; generate all update functions for corresponding parse functions
 ;; since all take function args, also generate anaphoric forms
