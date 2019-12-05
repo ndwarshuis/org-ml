@@ -3142,41 +3142,51 @@ This will throw an error if ELEM is not a container type."
 ;;
 ;; headline
 
-(defun om-elem-headline-get-subheadlines (headline)
-  "Return list of subheadlines for HEADLINE element or nil if none."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-get-subheadlines headline))
+;; (defun om-elem-headline-get-subheadlines (headline)
+;;   "Return list of subheadlines for HEADLINE element or nil if none."
+;;   (om-elem--verify headline om-elem-is-headline-p)
+;;   (om-elem--headline-get-subheadlines headline))
 
-(defun om-elem-headline-get-section (headline)
-  "Return section for headline HEADLINE element or nil if none."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-get-section headline))
+;; (defun om-elem-headline-get-section (headline)
+;;   "Return section for headline HEADLINE element or nil if none."
+;;   (om-elem--verify headline om-elem-is-headline-p)
+;;   (om-elem--headline-get-section headline))
 
-(defun om-elem-headline-get-drawer (name headline)
-  "Return the first drawer element in HEADLINE named NAME."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (om-elem--headline-get-drawer name headline))
+;; (defun om-elem-headline-get-drawer (name headline)
+;;   "Return the first drawer element in HEADLINE named NAME."
+;;   (om-elem--verify headline om-elem-is-headline-p)
+;;   (om-elem--headline-get-drawer name headline))
 
-(defun om-elem-headline-is-closed-p (headline)
-  "Return t if HEADLINE element is closed."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (and (->> (om-elem--headline-get-planning headline)
-            (om-elem--get-property :closed))
-       t))
+;; (defun om-elem-headline-is-closed-p (headline)
+;;   "Return t if HEADLINE element is closed."
+;;   (om-elem--verify headline om-elem-is-headline-p)
+;;   (and (->> (om-elem--headline-get-planning headline)
+;;             (om-elem--get-property :closed))
+;;        t))
 
-(defun om-elem-headline-is-deadlined-p (headline)
-  "Return t if HEADLINE element has a deadline."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (and (->> (om-elem--headline-get-planning headline)
-            (om-elem--get-property :deadline))
-       t))
+;; (defun om-elem-headline-is-deadlined-p (headline)
+;;   "Return t if HEADLINE element has a deadline."
+;;   (om-elem--verify headline om-elem-is-headline-p)
+;;   (and (->> (om-elem--headline-get-planning headline)
+;;             (om-elem--get-property :deadline))
+;;        t))
 
-(defun om-elem-headline-is-scheduled-p (headline)
-  "Return t if HEADLINE element is scheduled."
-  (om-elem--verify headline om-elem-is-headline-p)
-  (and (->> (om-elem--headline-get-planning headline)
-            (om-elem--get-property :scheduled))
-       t))
+;; (defun om-elem-headline-is-scheduled-p (headline)
+;;   "Return t if HEADLINE element is scheduled."
+;;   (om-elem--verify headline om-elem-is-headline-p)
+;;   (and (->> (om-elem--headline-get-planning headline)
+;;             (om-elem--get-property :scheduled))
+;;        t))
+
+;; (defun om-elem-headline-set-section (section headline)
+;;   "Set the section of HEADLINE to SECTION."
+;;   (om-elem--verify headline om-elem-is-headline-p)
+;;   (om-elem--headline-set-section section headline))
+
+;; (defun om-elem-headline-set-planning (planning headline)
+;;   "Set the planning of HEADLINE to PLANNING."
+;;   (om-elem--verify headline om-elem-is-headline-p)
+;;   (om-elem--headline-set-planning section headline))
 
 ;; (defun om-elem-set-planning (planning-plist headline)
 ;;   (om-elem--verify headline om-elem-is-headline-p)
@@ -3188,15 +3198,15 @@ This will throw an error if ELEM is not a container type."
 
 ;; item
 
-(defun om-elem-item-get-paragraph (item)
-  "Return the paragraph immediately within ITEM or nil if none."
-  (om-elem--verify item om-elem-is-item-p)
-  (om-elem--item-get-paragraph item))
+;; (defun om-elem-item-get-paragraph (item)
+;;   "Return the paragraph immediately within ITEM or nil if none."
+;;   (om-elem--verify item om-elem-is-item-p)
+;;   (om-elem--item-get-paragraph item))
 
-(defun om-elem-item-get-sublist (item)
-  "Return the plain-list immediately within ITEM or nil if none."
-  (om-elem--verify item om-elem-is-item-p)
-  (om-elem--item-get-sublist item))
+;; (defun om-elem-item-get-sublist (item)
+;;   "Return the plain-list immediately within ITEM or nil if none."
+;;   (om-elem--verify item om-elem-is-item-p)
+;;   (om-elem--item-get-sublist item))
 
 ;; plain-list
 

@@ -2900,13 +2900,13 @@
            (-map #'om-elem-get-type))
       => '(paragraph)
 
-      (:content "* dummy"
-                "stuff")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-get-section)
-           (om-elem-get-contents)
-           (-map #'om-elem-get-type))
-      => '(paragraph)
+      ;; (:content "* dummy"
+      ;;           "stuff")
+      ;; (->> (om-elem-parse-this-headline)
+      ;;      (om-elem-headline-get-section)
+      ;;      (om-elem-get-contents)
+      ;;      (-map #'om-elem-get-type))
+      ;; => '(paragraph)
 
       (:content "| a |"
                 "| b |")
@@ -3002,95 +3002,95 @@
   (def-example-subgroup "Headline"
     nil
 
-    (defexamples-content om-elem-headline-is-scheduled-p
-      nil
-      (:content "* lazy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-is-scheduled-p))
-      => nil
-      (:content "* proactive"
-                "SCHEDULED: [2019-01-01 Tue]")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-is-scheduled-p))
-      => t)
+    ;; (defexamples-content om-elem-headline-is-scheduled-p
+    ;;   nil
+    ;;   (:content "* lazy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-is-scheduled-p))
+    ;;   => nil
+    ;;   (:content "* proactive"
+    ;;             "SCHEDULED: [2019-01-01 Tue]")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-is-scheduled-p))
+    ;;   => t)
 
-    (defexamples-content om-elem-headline-is-deadlined-p
-      nil
-      (:content "* lazy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-is-deadlined-p))
-      => nil
-      (:content "* proactive"
-                "DEADLINE: [2019-01-01 Tue]")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-is-deadlined-p))
-      => t)
+    ;; (defexamples-content om-elem-headline-is-deadlined-p
+    ;;   nil
+    ;;   (:content "* lazy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-is-deadlined-p))
+    ;;   => nil
+    ;;   (:content "* proactive"
+    ;;             "DEADLINE: [2019-01-01 Tue]")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-is-deadlined-p))
+    ;;   => t)
     
-    (defexamples-content om-elem-headline-is-closed-p
-      nil
-      (:content "* lazy")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-is-closed-p))
-      => nil
-      (:content "* proactive"
-                "CLOSED: [2019-01-01 Tue]")
-      (->> (om-elem-parse-this-headline)
-           (om-elem-headline-is-closed-p))
-      => t)
+    ;; (defexamples-content om-elem-headline-is-closed-p
+    ;;   nil
+    ;;   (:content "* lazy")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-is-closed-p))
+    ;;   => nil
+    ;;   (:content "* proactive"
+    ;;             "CLOSED: [2019-01-01 Tue]")
+    ;;   (->> (om-elem-parse-this-headline)
+    ;;        (om-elem-headline-is-closed-p))
+    ;;   => t)
 
-    (defexamples-content om-elem-headline-get-subheadlines
-      nil
-      (:content "* headline 1"
-                "sectional stuff"
-                "** headline 2"
-                "** headline 3")
-      (->> (om-elem-parse-this-subtree)
-           (om-elem-headline-get-subheadlines)
-           (-map #'om-elem-to-trimmed-string))
-      => '("** headline 2" "** headline 3")
-      (:content "* headline 1"
-                "sectional stuff")
-      (->> (om-elem-parse-this-subtree)
-           (om-elem-headline-get-subheadlines)
-           (-map #'om-elem-to-trimmed-string))
-      => nil)
+    ;; (defexamples-content om-elem-headline-get-subheadlines
+    ;;   nil
+    ;;   (:content "* headline 1"
+    ;;             "sectional stuff"
+    ;;             "** headline 2"
+    ;;             "** headline 3")
+    ;;   (->> (om-elem-parse-this-subtree)
+    ;;        (om-elem-headline-get-subheadlines)
+    ;;        (-map #'om-elem-to-trimmed-string))
+    ;;   => '("** headline 2" "** headline 3")
+    ;;   (:content "* headline 1"
+    ;;             "sectional stuff")
+    ;;   (->> (om-elem-parse-this-subtree)
+    ;;        (om-elem-headline-get-subheadlines)
+    ;;        (-map #'om-elem-to-trimmed-string))
+    ;;   => nil)
 
-    (defexamples-content om-elem-headline-get-section
-      nil
-      (:content "* headline 1"
-                "sectional stuff"
-                "** headline 2"
-                "** headline 3")
-      (->> (om-elem-parse-this-subtree)
-           (om-elem-headline-get-section)
-           (om-elem-to-trimmed-string))
-      => "sectional stuff"
-      (:content "* headline 1"
-                "** headline 2"
-                "** headline 3")
-      (->> (om-elem-parse-this-subtree)
-           (om-elem-headline-get-section)
-           (om-elem-to-trimmed-string))
-      => "")
+    ;; (defexamples-content om-elem-headline-get-section
+    ;;   nil
+    ;;   (:content "* headline 1"
+    ;;             "sectional stuff"
+    ;;             "** headline 2"
+    ;;             "** headline 3")
+    ;;   (->> (om-elem-parse-this-subtree)
+    ;;        (om-elem-headline-get-section)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "sectional stuff"
+    ;;   (:content "* headline 1"
+    ;;             "** headline 2"
+    ;;             "** headline 3")
+    ;;   (->> (om-elem-parse-this-subtree)
+    ;;        (om-elem-headline-get-section)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "")
 
-    (defexamples-content om-elem-headline-get-drawer
-      nil
-      (:content "* headline 1"
-                ":LOGBOOK:"
-                "- random note"
-                ":END:"
-                "rest of the section"
-                "** headline 2")
-      (->> (om-elem-parse-this-subtree)
-           (om-elem-headline-get-drawer "LOGBOOK")
-           (om-elem-to-trimmed-string))
-      => (:result ":LOGBOOK:"
-                  "- random note"
-                  ":END:")
-      (->> (om-elem-parse-this-subtree)
-           (om-elem-headline-get-drawer "OTHER")
-           (om-elem-to-trimmed-string))
-      => "")
+    ;; (defexamples-content om-elem-headline-get-drawer
+    ;;   nil
+    ;;   (:content "* headline 1"
+    ;;             ":LOGBOOK:"
+    ;;             "- random note"
+    ;;             ":END:"
+    ;;             "rest of the section"
+    ;;             "** headline 2")
+    ;;   (->> (om-elem-parse-this-subtree)
+    ;;        (om-elem-headline-get-drawer "LOGBOOK")
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => (:result ":LOGBOOK:"
+    ;;               "- random note"
+    ;;               ":END:")
+    ;;   (->> (om-elem-parse-this-subtree)
+    ;;        (om-elem-headline-get-drawer "OTHER")
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "")
 
     ;; (defexamples-content om-elem-headline-get-path
     ;;   nil
@@ -3171,8 +3171,8 @@
                   "** four"
                   "** four")))
 
-  (def-example-subgroup "Item"
-    nil
+  ;; (def-example-subgroup "Item"
+  ;;   nil
 
     ;; (defexamples-content om-elem-item-get-level
     ;;   nil
@@ -3182,46 +3182,46 @@
     ;;   (->> (om-elem-parse-this-item)
     ;;        (om-elem-)))
 
-    (defexamples-content om-elem-item-get-sublist
-      nil
-      (:content "- one"
-                "  - two"
-                "  - three"
-                "- four")
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-get-sublist)
-           (om-elem-to-trimmed-string))
-      => (:result "- two"
-                  "- three")
-      (:content "- one"
-                "- two")
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-get-sublist)
-           (om-elem-to-trimmed-string))
-      => "")
+    ;; (defexamples-content om-elem-item-get-sublist
+    ;;   nil
+    ;;   (:content "- one"
+    ;;             "  - two"
+    ;;             "  - three"
+    ;;             "- four")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-get-sublist)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => (:result "- two"
+    ;;               "- three")
+    ;;   (:content "- one"
+    ;;             "- two")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-get-sublist)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "")
 
-    (defexamples-content om-elem-item-get-paragraph
-      nil
-      (:content "- one")
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-get-paragraph)
-           (om-elem-to-trimmed-string))
-      => "one"
-      (:content "- [ ] one")
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-get-paragraph)
-           (om-elem-to-trimmed-string))
-      => "one"
-      (:content "- tmsu :: one")
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-get-paragraph)
-           (om-elem-to-trimmed-string))
-      => "one"
-      (:content "- tmsu ::")
-      (->> (om-elem-parse-this-item)
-           (om-elem-item-get-paragraph)
-           (om-elem-to-trimmed-string))
-      => ""))
+    ;; (defexamples-content om-elem-item-get-paragraph
+    ;;   nil
+    ;;   (:content "- one")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-get-paragraph)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "one"
+    ;;   (:content "- [ ] one")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-get-paragraph)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "one"
+    ;;   (:content "- tmsu :: one")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-get-paragraph)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => "one"
+    ;;   (:content "- tmsu ::")
+    ;;   (->> (om-elem-parse-this-item)
+    ;;        (om-elem-item-get-paragraph)
+    ;;        (om-elem-to-trimmed-string))
+    ;;   => ""))
 
   (def-example-subgroup "Plain List"
     nil
@@ -3929,10 +3929,49 @@ and here is even more *text4* and *text5*
   "Insert and update elements and objects into buffers"
 
   (def-example-subgroup "Insert"
-    nil)
+    nil
+
+    (defexamples-content om-elem-insert
+      nil
+      (:content "* one"
+                "")
+      (->> (om-elem-build-headline! :title-text "two")
+           (om-elem-insert (point-max)))
+      $> (:result "* one"
+                  "* two")
+
+      (:content "a *game* or a /boy/")
+      (->> (om-elem-build-paragraph! "we don't care if you're")
+           (om-elem-insert (point-min)))
+      $> (:result "we don't care if you're"
+                  "a *game* or a /boy/")))
 
   (def-example-subgroup "Update"
-    nil)
+    nil
+
+    (defexamples-content om-elem-update
+      nil
+      
+      (:content "* TODO win grammy")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-update
+            (lambda (hl) (om-elem-set-property :todo-keyword "DONE" hl))))
+      $> "* DONE win grammy"
+
+      (:content "* win grammy"
+                "- [ ] write punk song"
+                "- [ ] get new vocalist"
+                "- [ ] sell 2 singles")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-update*
+             (om-elem-match-map '(:many item) #'om-elem-item-toggle-checkbox it)))
+                  ;; (om-elem-headline-update-item-statistics))))
+      $> (:result "* win grammy"
+                  "- [X] write punk song"
+                  "- [X] get new vocalist"
+                  "- [X] sell 2 singles")
+      )
+    )
 
   (def-example-subgroup "Misc"
     nil))
