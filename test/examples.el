@@ -3988,7 +3988,75 @@ and here is even more *text4* and *text5*
                   "- [X] get new vocalist"
                   "- [X] sell 2 singles")
       )
-    )
+
+    (defexamples-content om-elem-update-object-at
+      nil
+      (:content "[[http://example.com][desc]]")
+      (om-elem-update-object-at* (point)
+        (om-elem-set-property :path "//buymoreram.com" it))
+      $> "[[http://buymoreram.com][desc]]")
+
+    (defexamples-content om-elem-update-element-at
+      nil
+      (:content "#+CALL: ktulu()")
+      (om-elem-update-element-at* (point)
+        (om-elem-set-properties 
+         (list :call "cthulhu"
+               :inside-header '(:cache no)
+               :arguments '("x=4")
+               :end-header '(:results html))
+         it))
+      $> "#+CALL: cthulhu[:cache no](x=4) :results html")
+
+    (defexamples-content om-elem-update-table-row-at
+      nil
+      (:content "| a | b |")
+      (om-elem-update-table-row-at* (point)
+        (om-elem-map-contents* (cons (om-elem-build-table-cell! "0") it) it))
+      $> "| 0 | a | b |")
+
+    (defexamples-content om-elem-update-item-at
+      nil
+      (:content "- [ ] thing")
+      (om-elem-update-item-at* (point)
+        (om-elem-item-toggle-checkbox it))
+      $> "- [X] thing")
+
+    (defexamples-content om-elem-update-headline-at
+      nil
+      (:content "* TODO might get done")
+      (om-elem-update-headline-at* (point)
+        (om-elem-set-property :todo-keyword "DONE" it))
+      $> "* DONE might get done")
+
+    (defexamples-content om-elem-update-subtree-at
+      nil
+      (:content "* one"
+                "** two"
+                "** three")
+      (om-elem-update-subtree-at* (point)
+        (om-elem-headline-indent-subheadline 1 it))
+      $> (:result "* one"
+                  "** two"
+                  "*** three"))
+
+    (defexamples-content om-elem-update-this-object
+      nil)
+
+    (defexamples-content om-elem-update-this-element
+      nil)
+      
+    (defexamples-content om-elem-update-this-table-row
+      nil)
+
+    (defexamples-content om-elem-update-this-item
+      nil)
+
+    (defexamples-content om-elem-update-this-headline
+      nil)
+
+    (defexamples-content om-elem-update-this-subtree
+      nil))
 
   (def-example-subgroup "Misc"
     nil))
