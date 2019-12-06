@@ -3614,7 +3614,7 @@ Return ELEM."
   elem)
 
 (defun om-elem-insert-tail (point elem)
-  "Like `om-elem-insert' but insert ELEM at POINT and move to the end of inserted string."
+  "Like `om-elem-insert' but insert ELEM at POINT and move to end of insertion."
   (om-elem--verify point integerp
                    elem om-elem--is-element-or-object-p)
   (let ((s (om-elem-to-string elem)))
