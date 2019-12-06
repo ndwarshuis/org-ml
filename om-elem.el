@@ -3710,6 +3710,7 @@ holds the element returned from IN-FORM."
 (om-elem--gen-anaphoric-form 'om-elem-update-this-buffer)
 
 ;; fold
+;; TODO this will fold items improperly
 (defun om-elem--flag-elem-contents (flag elem)
   (om-elem--verify flag booleanp
                    elem om-elem--is-element-or-object-p)

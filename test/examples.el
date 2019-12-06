@@ -4059,4 +4059,12 @@ and here is even more *text4* and *text5*
       nil))
 
   (def-example-subgroup "Misc"
-    nil))
+    nil
+
+    (defexamples-content om-elem-fold-contents
+      nil)
+
+    (defexamples-content om-elem-unfold-contents
+      nil)
+
+    ))
