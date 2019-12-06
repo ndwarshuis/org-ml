@@ -1,201 +1,712 @@
+# om.el
 
-### Printing functions
+A functional API for org-mode inspired by
+[@magnars](https://github.com/magnars)'s
+[dash.el](https://github.com/magnars/dash.el) and
+[s.el](https://github.com/magnars/s.el) ibraries.
 
+# Installation
 
-print shit
+This package is not yet in MELPA. To install, clone this repository
+somewhere into your load path:
 
-* [om-elem-to-string](#om-elem-to-string-elem) `(elem)`
-* [om-elem-to-trimmed-string](#om-elem-to-trimmed-string-elem) `(elem)`
+```
+git clone https://github.com/ndwarshuis/om.el
+```
 
-### Object Builders
+Then require in your emacs config:
 
+```
+(require 'om.el)
+```
 
-build shit
+# Motivation
 
-* [om-elem-build-code](#om-elem-build-code-value-key-post-blank) `(value &key post-blank)`
-* [om-elem-build-inline-babel-call](#om-elem-build-inline-babel-call-call-key-post-blank-arguments-inside-header-end-header) `(call &key post-blank arguments inside-header end-header)`
-* [om-elem-build-inline-src-block](#om-elem-build-inline-src-block-language-value-key-parameters-post-blank) `(language value &key parameters post-blank)`
-* [om-elem-build-line-break](#om-elem-build-line-break-key-post-blank) `(&key post-blank)`
-* [om-elem-build-statistics-cookie](#om-elem-build-statistics-cookie-optional-num-dem-key-post-blank) `(&optional num dem &key post-blank)`
-* [om-elem-build-target](#om-elem-build-target-value-key-post-blank) `(value &key post-blank)`
-* [om-elem-build-timestamp](#om-elem-build-timestamp-type-time1-optional-time2-key-post-blank-repeater-type-repeater-unit-repeater-value-warning-type-warning-unit-warning-value) `(type time1 &optional time2 &key post-blank repeater-type repeater-unit repeater-value warning-type warning-unit warning-value)`
-* [om-elem-build-verbatim](#om-elem-build-verbatim-value-key-post-blank) `(value &key post-blank)`
+Org-mode comes with a powerful, built-in parse-tree generator
+specified in `org-element.el`. The generated parse-tree is simply a
+heavily-nested list which can be easily manipulated using (mostly
+pure) functional code. This contrasts the majority of functions
+normally used to interface with org-mode files, which are imperative
+in nature (`org-insert-headine`, `outline-next-heading`, etc) as they
+depend on the mutable state of Emacs buffers. In general, functional
+code is
+([arguably](https://en.wikipedia.org/wiki/Functional_programming#Comparison_to_imperative_programming))
+more robust, readable, and testable, especially in use-cases such as
+this where a stateless abstract data structure is being transformed
+and queried.
 
-### Recursive Object Builders
+The `org-element.el` provides a minimal API for handling this
+parse-tree in a functional manner, but lacks many of the higher-level
+functions necessary for intuitive, large-scale use. The `om.el`
+package is designed to provide this API. Furthermore, it is highly
+compatible with the `dash.el` package, which is a generalized
+functional library for emacs-lisp.
 
-* [om-elem-build-bold](#om-elem-build-bold-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-elem-build-footnote-reference](#om-elem-build-footnote-reference-key-post-blank-label-1-rest-objs) `(&key post-blank (label 1) &rest objs)`
-* [om-elem-build-italic](#om-elem-build-italic-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-elem-build-link](#om-elem-build-link-path-key-post-blank-type-fuzzy-rest-objs) `(path &key post-blank (type fuzzy) &rest objs)`
-* [om-elem-build-radio-target](#om-elem-build-radio-target-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-elem-build-strike-through](#om-elem-build-strike-through-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-elem-build-superscript](#om-elem-build-superscript-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-elem-build-subscript](#om-elem-build-subscript-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-elem-build-table-cell](#om-elem-build-table-cell-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-elem-build-underline](#om-elem-build-underline-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
+# Org-Element Overview
 
-### Element Builders
+Parsing a buffer with the function `org-element-parse-buffer` will
+yield a parse-tree composed of leaves and branches.
 
-* [om-elem-build-babel-call](#om-elem-build-babel-call-call-key-post-blank-arguments-inside-header-end-header) `(call &key post-blank arguments inside-header end-header)`
-* [om-elem-build-clock](#om-elem-build-clock-time1-optional-time2-key-post-blank) `(time1 &optional time2 &key post-blank)`
-* [om-elem-build-comment](#om-elem-build-comment-value-key-post-blank) `(value &key post-blank)`
-* [om-elem-build-comment-block](#om-elem-build-comment-block-value-key-post-blank) `(value &key post-blank)`
-* [om-elem-build-diary-sexp](#om-elem-build-diary-sexp-value-key-post-blank) `(value &key post-blank)`
-* [om-elem-build-example-block](#om-elem-build-example-block-value-key-post-blank-switches-preserve-indent) `(value &key post-blank switches preserve-indent)`
-* [om-elem-build-export-block](#om-elem-build-export-block-type-value-key-post-blank) `(type value &key post-blank)`
-* [om-elem-build-fixed-width](#om-elem-build-fixed-width-value-key-post-blank) `(value &key post-blank)`
-* [om-elem-build-horizontal-rule](#om-elem-build-horizontal-rule-key-post-blank) `(&key post-blank)`
-* [om-elem-build-keyword](#om-elem-build-keyword-key-value-key-post-blank) `(key value &key post-blank)`
-* [om-elem-build-latex-environment](#om-elem-build-latex-environment-env-text-key-post-blank) `(env text &key post-blank)`
-* [om-elem-build-node-property](#om-elem-build-node-property-key-value-key-post-blank) `(key value &key post-blank)`
-* [om-elem-build-planning](#om-elem-build-planning-key-closed-scheduled-deadline-post-blank) `(&key closed scheduled deadline post-blank)`
-* [om-elem-build-src-block](#om-elem-build-src-block-value-key-language-switches-parameters-preserve-indent-post-blank) `(value &key language switches parameters preserve-indent post-blank)`
-* [om-elem-build-table-row-hline](#om-elem-build-table-row-hline-key-post-blank) `(&key post-blank)`
+The leaves can be one of two broad categories:
+- Objects: roughly correspond to raw, possibly-formatted text
+  (plain-text, timestamp, code, etc)
+- Elements: more complex structures, some of which may have objects in
+  their properties (clock, planning, src-blocks, etc)
 
-### Container Element Builders
+Each leaf is represented by a list where the first member is the type
+and the second member is a plist describing the element or object's
+properties:
 
+``` emacs-lisp
+(type (:prop1 value1 :prop2 value2 ...))
+```
 
-### Greater Element Builders
+The branches with the leaves come in three
+broad types:
+- Recursive objects: objects that contain other objects
+- Object Containers: elements that contain other objects
+- Greater elements: elements that contain other elements
 
+Branches of the tree have almost the same list structure as leaves; in
+addition to the type and plist, each child is appended at the end:
+  
+``` emacs-lisp
+(type (:prop1 value1 :prop2 value2) child1 child2 ...)
+```
 
-Build shit
+In summary, this implies the following hierarchy of types that
+can validly fit into each other in the buffer parse-tree:
+- Greater Elements
+  - Greater Elements
+  - Elements
+  - Object Containers
+    - Objects
+    - Recursive Objects
+      - Recursive Objects
+      - Objects
+      
+More information and a full list of elements, objects and their
+compatible properties can be found in [the org-element API
+documentation](https://orgmode.org/worg/dev/org-element-api.html).
 
-* [om-elem-build-center-block](#om-elem-build-center-block-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
-* [om-elem-build-drawer](#om-elem-build-drawer-drawer-name-key-post-blank-rest-elems) `(drawer-name &key post-blank &rest elems)`
-* [om-elem-build-footnote-definition](#om-elem-build-footnote-definition-label-key-post-blank-rest-elems) `(label &key post-blank &rest elems)`
-* [om-elem-build-headline](#om-elem-build-headline-key-title-level-1-post-blank-pre-blank-todo-keyword-tags-priority-footnote-section-p-commentedp-archivedp-rest-elems) `(&key title (level 1) post-blank pre-blank todo-keyword tags priority footnote-section-p commentedp archivedp &rest elems)`
-* [om-elem-build-item](#om-elem-build-item-key-pre-blank-0-post-blank-bullet-quote---checkbox-tag-counter-rest-elems) `(&key (pre-blank 0) post-blank (bullet '-) checkbox tag counter &rest elems)`
-* [om-elem-build-plain-list](#om-elem-build-plain-list-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
-* [om-elem-build-property-drawer](#om-elem-build-property-drawer-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
-* [om-elem-build-quote-block](#om-elem-build-quote-block-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
-* [om-elem-build-section](#om-elem-build-section-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
-* [om-elem-build-table](#om-elem-build-table-key-tblfm-post-blank-rest-elems) `(&key tblfm post-blank &rest elems)`
+# Conventions
 
-### Element matching functions
+### Threading
 
+Each function that operates on an element/object will take the
+element/object as its right-most argument. This allows convenient
+function chaining using `dash.el`'s right-threading operator (`->>`).
+The examples below almost exclusively demonstrate this pattern.
+Additionally, the right-argument convention also allows convenient
+partial application using `-partial` from `dash.el`.
 
-match shit
+### Higher-order functions
 
-* [om-elem-find](#om-elem-find-queries-elem) `(queries elem)`
-* [om-elem-find-first](#om-elem-find-first-queries-elem) `(queries elem)`
-* [om-elem-find-last](#om-elem-find-last-queries-elem) `(queries elem)`
-* [om-elem-delete](#om-elem-delete-queries-elem) `(queries elem)`
-* [om-elem-extract](#om-elem-extract-queries-elem) `(queries elem)`
-* [om-elem-map](#om-elem-map-queries-fun-elem) `(queries fun elem)`
-* [om-elem-mapcat](#om-elem-mapcat-queries-fun-elem) `(queries fun elem)`
-* [om-elem-replace](#om-elem-replace-queries-rep-elem) `(queries rep elem)`
-* [om-elem-insert-before](#om-elem-insert-before-queries-elem-elem) `(queries elem* elem)`
-* [om-elem-insert-after](#om-elem-insert-after-queries-elem-elem) `(queries elem* elem)`
-* [om-elem-insert-within](#om-elem-insert-within-queries-index-elem-elem) `(queries index elem* elem)`
-* [om-elem-splice-before](#om-elem-splice-before-queries-elem-elem) `(queries elem* elem)`
-* [om-elem-splice-after](#om-elem-splice-after-queries-elem-elem) `(queries elem* elem)`
-* [om-elem-splice-within](#om-elem-splice-within-queries-index-elem-elem) `(queries index elem* elem)`
+Higher-order functions (functions that take other functions as
+arguments) have two forms. The first takes a (usually unary) function
+and applies it:
 
-### Element get functions
+``` emacs-lisp
+(om-elem-map-property :value (lambda (s) (concat "foo" s)) elem)
+(om-elem-map-property :value (-partial concat "foo") elem)
+```
 
+This can equivalently be written using an anaphoric form where the
+original function name is appended with `*`. The symbol `it`
+carries the value of the unary argument (unless otherwise specified):
 
-get shit
+``` emacs-lisp
+(om-elem-map-property* :value (concat "foo" it) elem)
+```
 
-* [om-elem-headline-get-subheadlines](#om-elem-headline-get-subheadlines-headline) `(headline)`
-* [om-elem-headline-get-section](#om-elem-headline-get-section-headline) `(headline)`
-* [om-elem-headline-get-drawer](#om-elem-headline-get-drawer-name-headline) `(name headline)`
-* [om-elem-item-get-sublist](#om-elem-item-get-sublist-item) `(item)`
-* [om-elem-item-get-paragraph](#om-elem-item-get-paragraph-item) `(item)`
-* [om-elem-table-get-cell](#om-elem-table-get-cell-row-column-table) `(row column table)`
-* [om-elem-timestamp-get-start](#om-elem-timestamp-get-start-timestamp) `(timestamp)`
-* [om-elem-timestamp-get-end](#om-elem-timestamp-get-end-timestamp) `(timestamp)`
-
-### Element predicate functions
-
-
-pred shit
-
-* [om-elem-is-empty-p](#om-elem-is-empty-p-elem) `(elem)`
-* [om-elem-property-is-nil-p](#om-elem-property-is-nil-p-prop-elem) `(prop elem)`
-* [om-elem-property-is-non-nil-p](#om-elem-property-is-non-nil-p-prop-elem) `(prop elem)`
-* [om-elem-property-is-eq-p](#om-elem-property-is-eq-p-prop-val-elem) `(prop val elem)`
-* [om-elem-property-is-equal-p](#om-elem-property-is-equal-p-prop-val-elem) `(prop val elem)`
-* [om-elem-property-is-predicate-p](#om-elem-property-is-predicate-p-prop-fun-elem) `(prop fun elem)`
-* [om-elem-contains-point-p](#om-elem-contains-point-p-point-elem) `(point elem)`
-* [om-elem-contents-contains-point-p](#om-elem-contents-contains-point-p-point-elem) `(point elem)`
-* [om-elem-is-type-p](#om-elem-is-type-p-type-elem) `(type elem)`
-* [om-elem-is-any-type-p](#om-elem-is-any-type-p-types-elem) `(types elem)`
-* [om-elem-clock-is-running-p](#om-elem-clock-is-running-p-clock) `(clock)`
-* [om-elem-headline-is-done-p](#om-elem-headline-is-done-p-headline) `(headline)`
-* [om-elem-headline-is-scheduled-p](#om-elem-headline-is-scheduled-p-headline) `(headline)`
-* [om-elem-headline-is-deadlined-p](#om-elem-headline-is-deadlined-p-headline) `(headline)`
-* [om-elem-headline-is-closed-p](#om-elem-headline-is-closed-p-headline) `(headline)`
-* [om-elem-headline-is-archived-p](#om-elem-headline-is-archived-p-headline) `(headline)`
-* [om-elem-headline-is-commented-p](#om-elem-headline-is-commented-p-headline) `(headline)`
-* [om-elem-headline-has-tag-p](#om-elem-headline-has-tag-p-tag-headline) `(tag headline)`
-* [om-elem-item-is-unchecked-p](#om-elem-item-is-unchecked-p-item) `(item)`
-* [om-elem-item-is-checked-p](#om-elem-item-is-checked-p-item) `(item)`
-* [om-elem-item-is-trans-p](#om-elem-item-is-trans-p-item) `(item)`
-* [om-elem-timestamp-is-active-p](#om-elem-timestamp-is-active-p-timestamp) `(timestamp)`
-* [om-elem-timestamp-is-inactive-p](#om-elem-timestamp-is-inactive-p-timestamp) `(timestamp)`
-* [om-elem-timestamp-is-ranged-p](#om-elem-timestamp-is-ranged-p-timestamp) `(timestamp)`
-
-### Element setter functions
+# Function Summary
 
 
-set shit
-
-* [om-elem-headline-set-todo](#om-elem-headline-set-todo-todo-headline) `(todo headline)`
-* [om-elem-headline-set-archived](#om-elem-headline-set-archived-flag-headline) `(flag headline)`
-* [om-elem-headline-set-commented](#om-elem-headline-set-commented-flag-headline) `(flag headline)`
-* [om-elem-headline-set-priority](#om-elem-headline-set-priority-priority-headline) `(priority headline)`
-* [om-elem-headline-set-title](#om-elem-headline-set-title-title-headline) `(title headline)`
-* [om-elem-item-set-checkbox](#om-elem-item-set-checkbox-state-item) `(state item)`
-* [om-elem-item-set-bullet](#om-elem-item-set-bullet-bullet-item) `(bullet item)`
-* [om-elem-item-set-tag](#om-elem-item-set-tag-tag-item) `(tag item)`
-* [om-elem-plain-list-set-type](#om-elem-plain-list-set-type-type-plain-list) `(type plain-list)`
-* [om-elem-node-property-set-key](#om-elem-node-property-set-key-key-node-property) `(key node-property)`
-* [om-elem-node-property-set-value](#om-elem-node-property-set-value-value-node-property) `(value node-property)`
-* [om-elem-link-set-path](#om-elem-link-set-path-path-link) `(path link)`
-* [om-elem-link-set-type](#om-elem-link-set-type-type-link) `(type link)`
-* [om-elem-timestamp-set-time](#om-elem-timestamp-set-time-time-timestamp) `(time timestamp)`
-* [om-elem-timestamp-set-time-end](#om-elem-timestamp-set-time-end-time-timestamp) `(time timestamp)`
-* [om-elem-timestamp-set-type](#om-elem-timestamp-set-type-type-timestamp) `(type timestamp)`
-
-### Element shifter functions
+## Buffer Parsing
 
 
-shift shit
+Parse buffer contents to element and object trees
 
-* [om-elem-shift-property](#om-elem-shift-property-prop-n-elem) `(prop n elem)`
-* [om-elem-headline-shift-priority](#om-elem-headline-shift-priority-shift-headline) `(shift headline)`
-* [om-elem-timestamp-shift-time-start](#om-elem-timestamp-shift-time-start-unit-value-timestamp) `(unit value timestamp)`
-* [om-elem-timestamp-shift-time-end](#om-elem-timestamp-shift-time-end-unit-value-timestamp) `(unit value timestamp)`
-* [om-elem-timestamp-shift-time](#om-elem-timestamp-shift-time-unit-value-timestamp) `(unit value timestamp)`
-
-### Element toggle functions.
-
-
-Toggle shit
-
-* [om-elem-toggle-property](#om-elem-toggle-property-prop-elem) `(prop elem)`
-* [om-elem-headline-toggle-commented](#om-elem-headline-toggle-commented-headline) `(headline)`
-* [om-elem-item-toggle-checkbox](#om-elem-item-toggle-checkbox-item) `(item)`
-* [om-elem-timestamp-toggle-active](#om-elem-timestamp-toggle-active-timestamp) `(timestamp)`
-
-### Element parsers
-
-
-parse shit
-
-* [om-elem-parse-object-at](#om-elem-parse-object-at-point-optional-type) `(point &optional type)`
-* [om-elem-parse-element-at](#om-elem-parse-element-at-point-optional-type) `(point &optional type)`
+* [om-elem-parse-object-at](#om-elem-parse-object-at-point) `(point)`
+* [om-elem-parse-element-at](#om-elem-parse-element-at-point) `(point)`
 * [om-elem-parse-headline-at](#om-elem-parse-headline-at-point) `(point)`
 * [om-elem-parse-subtree-at](#om-elem-parse-subtree-at-point) `(point)`
 * [om-elem-parse-item-at](#om-elem-parse-item-at-point) `(point)`
 * [om-elem-parse-table-row-at](#om-elem-parse-table-row-at-point) `(point)`
 * [om-elem-parse-section-at](#om-elem-parse-section-at-point) `(point)`
 
+## String Conversion
 
-## Printing functions
+
+Convert elements to strings
+
+* [om-elem-to-string](#om-elem-to-string-elem) `(elem)`
+* [om-elem-to-trimmed-string](#om-elem-to-trimmed-string-elem) `(elem)`
+
+## Building
 
 
-print shit
+Functions that build new elements and objects
+
+
+### Objects
+
+* [om-elem-build-code](#om-elem-build-code-value-key-post-blank) `(value &key post-blank)`
+* [om-elem-build-entity](#om-elem-build-entity-name-key-use-brackets-p-post-blank) `(name &key use-brackets-p post-blank)`
+* [om-elem-build-inline-babel-call](#om-elem-build-inline-babel-call-call-key-inside-header-arguments-end-header-post-blank) `(call &key inside-header arguments end-header post-blank)`
+* [om-elem-build-inline-src-block](#om-elem-build-inline-src-block-language-value-key-parameters-post-blank) `(language value &key parameters post-blank)`
+* [om-elem-build-line-break](#om-elem-build-line-break-key-post-blank) `(&key post-blank)`
+* [om-elem-build-statistics-cookie](#om-elem-build-statistics-cookie-value-key-post-blank) `(value &key post-blank)`
+* [om-elem-build-target](#om-elem-build-target-value-key-post-blank) `(value &key post-blank)`
+* [om-elem-build-timestamp](#om-elem-build-timestamp-type-year-start-month-start-day-start-year-end-month-end-day-end-key-hour-start-minute-start-hour-end-minute-end-repeater-type-repeater-unit-repeater-value-warning-type-warning-unit-warning-value-post-blank) `(type year-start month-start day-start year-end month-end day-end &key hour-start minute-start hour-end minute-end repeater-type repeater-unit repeater-value warning-type warning-unit warning-value post-blank)`
+* [om-elem-build-verbatim](#om-elem-build-verbatim-value-key-post-blank) `(value &key post-blank)`
+
+### Recursive Objects
+
+* [om-elem-build-bold](#om-elem-build-bold-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
+* [om-elem-build-footnote-reference](#om-elem-build-footnote-reference-key-label-post-blank-rest-objs) `(&key label post-blank &rest objs)`
+* [om-elem-build-italic](#om-elem-build-italic-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
+* [om-elem-build-link](#om-elem-build-link-path-key-format-type-fuzzy-post-blank-rest-objs) `(path &key format (type fuzzy) post-blank &rest objs)`
+* [om-elem-build-radio-target](#om-elem-build-radio-target-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
+* [om-elem-build-strike-through](#om-elem-build-strike-through-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
+* [om-elem-build-superscript](#om-elem-build-superscript-key-use-brackets-p-post-blank-rest-objs) `(&key use-brackets-p post-blank &rest objs)`
+* [om-elem-build-subscript](#om-elem-build-subscript-key-use-brackets-p-post-blank-rest-objs) `(&key use-brackets-p post-blank &rest objs)`
+* [om-elem-build-table-cell](#om-elem-build-table-cell-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
+* [om-elem-build-underline](#om-elem-build-underline-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
+
+### Elements
+
+* [om-elem-build-babel-call](#om-elem-build-babel-call-call-key-inside-header-arguments-end-header-post-blank) `(call &key inside-header arguments end-header post-blank)`
+* [om-elem-build-clock](#om-elem-build-clock-value-key-post-blank) `(value &key post-blank)`
+* [om-elem-build-comment](#om-elem-build-comment-value-key-post-blank) `(value &key post-blank)`
+* [om-elem-build-comment-block](#om-elem-build-comment-block-value-key-post-blank) `(value &key post-blank)`
+* [om-elem-build-diary-sexp](#om-elem-build-diary-sexp-value-key-post-blank) `(value &key post-blank)`
+* [om-elem-build-example-block](#om-elem-build-example-block-value-key-preserve-indent-switches-post-blank) `(value &key preserve-indent switches post-blank)`
+* [om-elem-build-export-block](#om-elem-build-export-block-type-value-key-post-blank) `(type value &key post-blank)`
+* [om-elem-build-fixed-width](#om-elem-build-fixed-width-value-key-post-blank) `(value &key post-blank)`
+* [om-elem-build-horizontal-rule](#om-elem-build-horizontal-rule-key-post-blank) `(&key post-blank)`
+* [om-elem-build-keyword](#om-elem-build-keyword-key-value-key-post-blank) `(key value &key post-blank)`
+* [om-elem-build-latex-environment](#om-elem-build-latex-environment-value-key-post-blank) `(value &key post-blank)`
+* [om-elem-build-node-property](#om-elem-build-node-property-key-value-key-post-blank) `(key value &key post-blank)`
+* [om-elem-build-planning](#om-elem-build-planning-key-closed-deadline-scheduled-post-blank) `(&key closed deadline scheduled post-blank)`
+* [om-elem-build-src-block](#om-elem-build-src-block-value-key-language-parameters-preserve-indent-switches-post-blank) `(value &key language parameters preserve-indent switches post-blank)`
+* [om-elem-build-table-row-hline](#om-elem-build-table-row-hline-key-post-blank) `(&key post-blank)`
+
+### Object Containers
+
+* [om-elem-build-paragraph](#om-elem-build-paragraph-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
+* [om-elem-build-table-row](#om-elem-build-table-row-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
+* [om-elem-build-verse-block](#om-elem-build-verse-block-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
+
+### Greater Elements
+
+* [om-elem-build-center-block](#om-elem-build-center-block-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
+* [om-elem-build-drawer](#om-elem-build-drawer-drawer-name-key-post-blank-rest-elems) `(drawer-name &key post-blank &rest elems)`
+* [om-elem-build-footnote-definition](#om-elem-build-footnote-definition-label-key-post-blank-rest-elems) `(label &key post-blank &rest elems)`
+* [om-elem-build-headline](#om-elem-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-elems) `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest elems)`
+* [om-elem-build-item](#om-elem-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-elems) `(&key (bullet '-) checkbox counter tag post-blank &rest elems)`
+* [om-elem-build-plain-list](#om-elem-build-plain-list-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
+* [om-elem-build-property-drawer](#om-elem-build-property-drawer-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
+* [om-elem-build-quote-block](#om-elem-build-quote-block-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
+* [om-elem-build-section](#om-elem-build-section-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
+* [om-elem-build-table](#om-elem-build-table-key-tblfm-post-blank-rest-elems) `(&key tblfm post-blank &rest elems)`
+
+### Miscellaneous Builders
+
+* [om-elem-build-timestamp-diary-sexp](#om-elem-build-timestamp-diary-sexp-form-key-post-blank) `(form &key post-blank)`
+* [om-elem-build-table-row-hline](#om-elem-build-table-row-hline-key-post-blank) `(&key post-blank)`
+
+### Shorthand Builders
+
+
+Build elements and objects with more convenient/shorter syntax.
+
+* [om-elem-build-timestamp!](#om-elem-build-timestamp-type-start-key-end-repeater-warning-post-blank) `(type start &key end repeater warning post-blank)`
+* [om-elem-build-clock!](#om-elem-build-clock-start-key-end-post-blank) `(start &key end post-blank)`
+* [om-elem-build-planning!](#om-elem-build-planning-key-closed-deadline-scheduled-post-blank) `(&key closed deadline scheduled post-blank)`
+* [om-elem-build-property-drawer!](#om-elem-build-property-drawer-key-post-blank-rest-keyvals) `(&key post-blank &rest keyvals)`
+* [om-elem-build-headline!](#om-elem-build-headline-key-level-1-title-text-todo-keyword-tags-pre-blank-priority-commentedp-archivedp-post-blank-planning-properties-statistics-cookie-section-contents-rest-subheadlines) `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning properties statistics-cookie section-contents &rest subheadlines)`
+* [om-elem-build-item!](#om-elem-build-item-key-post-blank-bullet-checkbox-tag-paragraph-counter-rest-subitems) `(&key post-blank bullet checkbox tag paragraph counter &rest subitems)`
+* [om-elem-build-paragraph!](#om-elem-build-paragraph-string-key-post-blank) `(string &key post-blank)`
+* [om-elem-build-table!](#om-elem-build-table-key-tblfm-post-blank-rest-row-lists) `(&key tblfm post-blank &rest row-lists)`
+
+## Type Predicates
+
+
+Testing types of elements
+
+* [om-elem-is-type-p](#om-elem-is-type-p-type-elem) `(type elem)`
+* [om-elem-is-any-type-p](#om-elem-is-any-type-p-types-elem) `(types elem)`
+* [om-elem-is-element-p](#om-elem-is-element-p-elem) `(elem)`
+* [om-elem-is-container-p](#om-elem-is-container-p-elem) `(elem)`
+* [om-elem-is-object-container-p](#om-elem-is-object-container-p-elem) `(elem)`
+* [om-elem-is-greater-element-p](#om-elem-is-greater-element-p-elem) `(elem)`
+
+## Property Manipulation
+
+
+Set, get, and map properties of elements and objects.
+
+
+### Generic
+
+* [om-elem-set-property](#om-elem-set-property-prop-value-elem) `(prop value elem)`
+* [om-elem-set-properties](#om-elem-set-properties-plist-elem) `(plist elem)`
+* [om-elem-get-property](#om-elem-get-property-prop-elem) `(prop elem)`
+* [om-elem-map-property](#om-elem-map-property-prop-fun-elem) `(prop fun elem)`
+* [om-elem-map-properties](#om-elem-map-properties-plist-elem) `(plist elem)`
+* [om-elem-toggle-property](#om-elem-toggle-property-prop-elem) `(prop elem)`
+* [om-elem-shift-property](#om-elem-shift-property-prop-n-elem) `(prop n elem)`
+* [om-elem-insert-into-property](#om-elem-insert-into-property-prop-index-string-elem) `(prop index string elem)`
+* [om-elem-remove-from-property](#om-elem-remove-from-property-prop-string-elem) `(prop string elem)`
+* [om-elem-plist-put-property](#om-elem-plist-put-property-prop-key-value-elem) `(prop key value elem)`
+* [om-elem-plist-remove-property](#om-elem-plist-remove-property-prop-key-elem) `(prop key elem)`
+
+### Clock
+
+* [om-elem-clock-is-running-p](#om-elem-clock-is-running-p-clock) `(clock)`
+* [om-elem-clock-map-timestamp](#om-elem-clock-map-timestamp-fun-clock) `(fun clock)`
+
+### Headline
+
+* [om-elem-headline-is-done-p](#om-elem-headline-is-done-p-headline) `(headline)`
+* [om-elem-headline-is-archived-p](#om-elem-headline-is-archived-p-headline) `(headline)`
+* [om-elem-headline-is-commented-p](#om-elem-headline-is-commented-p-headline) `(headline)`
+* [om-elem-headline-has-tag-p](#om-elem-headline-has-tag-p-tag-headline) `(tag headline)`
+* [om-elem-headline-get-statistics-cookie](#om-elem-headline-get-statistics-cookie-headline) `(headline)`
+
+### Item
+
+* [om-elem-item-is-unchecked-p](#om-elem-item-is-unchecked-p-item) `(item)`
+* [om-elem-item-is-checked-p](#om-elem-item-is-checked-p-item) `(item)`
+* [om-elem-item-is-trans-p](#om-elem-item-is-trans-p-item) `(item)`
+* [om-elem-item-toggle-checkbox](#om-elem-item-toggle-checkbox-item) `(item)`
+
+### Planning
+
+* [om-elem-planning-set-timestamp](#om-elem-planning-set-timestamp-prop-planning-list-planning) `(prop planning-list planning)`
+* [om-elem-planning-map-timestamp](#om-elem-planning-map-timestamp-prop-fun-planning) `(prop fun planning)`
+
+### Statistics Cookie
+
+* [om-elem-statistics-cookie-is-complete-p](#om-elem-statistics-cookie-is-complete-p-statistics-cookie) `(statistics-cookie)`
+
+### Timestamp
+
+* [om-elem-timestamp-get-start-time](#om-elem-timestamp-get-start-time-timestamp) `(timestamp)`
+* [om-elem-timestamp-get-end-time](#om-elem-timestamp-get-end-time-timestamp) `(timestamp)`
+* [om-elem-timestamp-is-active-p](#om-elem-timestamp-is-active-p-timestamp) `(timestamp)`
+* [om-elem-timestamp-is-ranged-p](#om-elem-timestamp-is-ranged-p-timestamp) `(timestamp)`
+* [om-elem-timestamp-set-start-time](#om-elem-timestamp-set-start-time-time-timestamp) `(time timestamp)`
+* [om-elem-timestamp-set-end-time](#om-elem-timestamp-set-end-time-time-timestamp) `(time timestamp)`
+* [om-elem-timestamp-set-single-time](#om-elem-timestamp-set-single-time-time-timestamp) `(time timestamp)`
+* [om-elem-timestamp-set-double-time](#om-elem-timestamp-set-double-time-time1-time2-timestamp) `(time1 time2 timestamp)`
+* [om-elem-timestamp-set-range](#om-elem-timestamp-set-range-range-timestamp) `(range timestamp)`
+* [om-elem-timestamp-set-type](#om-elem-timestamp-set-type-type-timestamp) `(type timestamp)`
+* [om-elem-timestamp-shift](#om-elem-timestamp-shift-n-unit-timestamp) `(n unit timestamp)`
+* [om-elem-timestamp-shift-start](#om-elem-timestamp-shift-start-n-unit-timestamp) `(n unit timestamp)`
+* [om-elem-timestamp-shift-end](#om-elem-timestamp-shift-end-n-unit-timestamp) `(n unit timestamp)`
+* [om-elem-timestamp-toggle-active](#om-elem-timestamp-toggle-active-timestamp) `(timestamp)`
+
+## Content Manipulation
+
+
+Set, get and map the contents of containers
+
+
+### Generic
+
+* [om-elem-get-contents](#om-elem-get-contents-elem) `(elem)`
+* [om-elem-set-contents](#om-elem-set-contents-contents-elem) `(contents elem)`
+* [om-elem-map-contents](#om-elem-map-contents-fun-elem) `(fun elem)`
+* [om-elem-is-empty-p](#om-elem-is-empty-p-elem) `(elem)`
+
+### Headline
+
+* [om-elem-headline-update-item-statistics](#om-elem-headline-update-item-statistics-headline) `(headline)`
+* [om-elem-headline-update-todo-statistics](#om-elem-headline-update-todo-statistics-headline) `(headline)`
+* [om-elem-headline-indent-subheadline](#om-elem-headline-indent-subheadline-index-headline) `(index headline)`
+* [om-elem-headline-indent-subtree](#om-elem-headline-indent-subtree-index-headline) `(index headline)`
+* [om-elem-headline-unindent-subheadline](#om-elem-headline-unindent-subheadline-index-child-index-headline) `(index child-index headline)`
+* [om-elem-headline-unindent-subtree](#om-elem-headline-unindent-subtree-index-headline) `(index headline)`
+
+### Plain List
+
+* [om-elem-plain-list-set-type](#om-elem-plain-list-set-type-type-plain-list) `(type plain-list)`
+* [om-elem-plain-list-indent-item](#om-elem-plain-list-indent-item-index-plain-list) `(index plain-list)`
+* [om-elem-plain-list-indent-item-tree](#om-elem-plain-list-indent-item-tree-index-plain-list) `(index plain-list)`
+* [om-elem-plain-list-unindent-item](#om-elem-plain-list-unindent-item-index-child-index-plain-list) `(index child-index plain-list)`
+* [om-elem-plain-list-unindent-items](#om-elem-plain-list-unindent-items-index-plain-list) `(index plain-list)`
+
+### Table
+
+* [om-elem-table-get-cell](#om-elem-table-get-cell-row-index-column-index-table) `(row-index column-index table)`
+* [om-elem-table-replace-cell](#om-elem-table-replace-cell-row-index-column-index-cell-table) `(row-index column-index cell table)`
+* [om-elem-table-replace-cell!](#om-elem-table-replace-cell-row-index-column-index-cell-text-table) `(row-index column-index cell-text table)`
+* [om-elem-table-clear-cell](#om-elem-table-clear-cell-row-index-column-index-table) `(row-index column-index table)`
+* [om-elem-table-delete-column](#om-elem-table-delete-column-column-index-table) `(column-index table)`
+* [om-elem-table-replace-column](#om-elem-table-replace-column-column-index-column-cells-table) `(column-index column-cells table)`
+* [om-elem-table-replace-column!](#om-elem-table-replace-column-column-index-column-text-table) `(column-index column-text table)`
+* [om-elem-table-clear-column](#om-elem-table-clear-column-column-index-table) `(column-index table)`
+* [om-elem-table-replace-row](#om-elem-table-replace-row-row-index-row-cells-table) `(row-index row-cells table)`
+* [om-elem-table-replace-row!](#om-elem-table-replace-row-row-index-row-text-table) `(row-index row-text table)`
+* [om-elem-table-clear-row](#om-elem-table-clear-row-row-index-table) `(row-index table)`
+* [om-elem-table-delete-row](#om-elem-table-delete-row-row-index-table) `(row-index table)`
+* [om-elem-table-insert-column](#om-elem-table-insert-column-column-index-column-cells-table) `(column-index column-cells table)`
+* [om-elem-table-insert-column!](#om-elem-table-insert-column-column-index-column-text-table) `(column-index column-text table)`
+* [om-elem-table-insert-row](#om-elem-table-insert-row-row-index-row-table) `(row-index row table)`
+* [om-elem-table-insert-row!](#om-elem-table-insert-row-row-index-row-text-table) `(row-index row-text table)`
+
+## Parse Tree Matching
+
+
+Use pattern-matching to perform operations on objects and elements in trees.
+
+* [om-elem-match](#om-elem-match-queries-elem) `(queries elem)`
+* [om-elem-match-first](#om-elem-match-first-queries-elem) `(queries elem)`
+* [om-elem-match-last](#om-elem-match-last-queries-elem) `(queries elem)`
+* [om-elem-match-delete](#om-elem-match-delete-queries-elem) `(queries elem)`
+* [om-elem-match-extract](#om-elem-match-extract-queries-elem) `(queries elem)`
+* [om-elem-match-map](#om-elem-match-map-queries-fun-elem) `(queries fun elem)`
+* [om-elem-match-mapcat](#om-elem-match-mapcat-queries-fun-elem) `(queries fun elem)`
+* [om-elem-match-replace](#om-elem-match-replace-queries-rep-elem) `(queries rep elem)`
+* [om-elem-match-insert-before](#om-elem-match-insert-before-queries-elem-elem) `(queries elem* elem)`
+* [om-elem-match-insert-after](#om-elem-match-insert-after-queries-elem-elem) `(queries elem* elem)`
+* [om-elem-match-insert-within](#om-elem-match-insert-within-queries-index-elem-elem) `(queries index elem* elem)`
+* [om-elem-match-splice-before](#om-elem-match-splice-before-queries-elem-elem) `(queries elem* elem)`
+* [om-elem-match-splice-after](#om-elem-match-splice-after-queries-elem-elem) `(queries elem* elem)`
+* [om-elem-match-splice-within](#om-elem-match-splice-within-queries-index-elem-elem) `(queries index elem* elem)`
+
+## Buffer Side Effects
+
+
+Insert and update elements and objects into buffers
+
+
+### Insert
+
+* [om-elem-insert](#om-elem-insert-point-elem) `(point elem)`
+* [om-elem-insert-tail](#om-elem-insert-tail-point-elem) `(point elem)`
+
+### Update
+
+* [om-elem-update](#om-elem-update-fun-elem) `(fun elem)`
+* [om-elem-update-object-at](#om-elem-update-object-at-point-fun) `(point fun)`
+* [om-elem-update-element-at](#om-elem-update-element-at-point-fun) `(point fun)`
+* [om-elem-update-table-row-at](#om-elem-update-table-row-at-point-fun) `(point fun)`
+* [om-elem-update-item-at](#om-elem-update-item-at-point-fun) `(point fun)`
+* [om-elem-update-headline-at](#om-elem-update-headline-at-point-fun) `(point fun)`
+* [om-elem-update-subtree-at](#om-elem-update-subtree-at-point-fun) `(point fun)`
+* [om-elem-update-this-object](#om-elem-update-this-object-fun) `(fun)`
+* [om-elem-update-this-element](#om-elem-update-this-element-fun) `(fun)`
+* [om-elem-update-this-table-row](#om-elem-update-this-table-row-fun) `(fun)`
+* [om-elem-update-this-item](#om-elem-update-this-item-fun) `(fun)`
+* [om-elem-update-this-headline](#om-elem-update-this-headline-fun) `(fun)`
+* [om-elem-update-this-subtree](#om-elem-update-this-subtree-fun) `(fun)`
+
+### Misc
+
+* [om-elem-fold-contents](#om-elem-fold-contents-elem) `(elem)`
+* [om-elem-unfold-contents](#om-elem-unfold-contents-elem) `(elem)`
+
+# Function Examples
+
+
+## Buffer Parsing
+
+
+Parse buffer contents to element and object trees
+
+#### om-elem-parse-object-at `(point)`
+
+Return the object tree under `point` or nil if not on an object.
+
+If `type` is supplied, only return nil if the object under point is
+not of that type. `type` is a symbol from `om-elem-objects`.
+
+```el
+;; Given the following contents:
+; *text*
+
+(->> (om-elem-parse-object-at 1)
+     (om-elem-get-type))
+ ;; => 'bold
+
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+(->> (om-elem-parse-object-at 1)
+     (om-elem-get-type))
+ ;; => 'timestamp
+
+;; Given the following contents:
+; - notme
+
+;; Return nil when parsing an element
+(om-elem-parse-object-at
+ 1)
+ ;; => nil
+
+```
+
+#### om-elem-parse-element-at `(point)`
+
+Return element under `point` or nil if not on an element.
+
+This function will return every element available in `om-elem-elements`
+with the exception of 'section', 'item', and 'table-row'. To
+specifically parse these, use the functions `om-elem-parse-section-at',
+`om-elem-parse-item-at`, and [`om-elem-parse-table-row-at`](#om-elem-parse-table-row-at-point).
+
+```el
+;; Given the following contents:
+; #+CALL: ktulu()
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-get-type))
+ ;; => 'babel-call
+
+;; Given the following contents:
+; - plain-list
+
+;; Give the plain-list, not the item for this function
+(->> (om-elem-parse-element-at 1)
+     (om-elem-get-type))
+ ;; => 'plain-list
+
+;; Given the following contents:
+; | R | A |
+; | G | E |
+
+;; Return a table, not the table-row for this function
+(->> (om-elem-parse-element-at 1)
+     (om-elem-get-type))
+ ;; => 'table
+
+```
+
+#### om-elem-parse-headline-at `(point)`
+
+Return headline tree under `point` or nil if not on a headline.
+`point` does not need to be on the headline itself. Only the headline
+and its section will be returned. To include subheadlines, use
+`om-elem-parse-headline-subtree-at`.
+
+```el
+;; Given the following contents:
+; * headline
+
+;; Return the headline itself
+(->> (om-elem-parse-headline-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => "* headline"
+
+;; Given the following contents:
+; * headline
+; section crap
+
+;; Return headline and section
+(->> (om-elem-parse-headline-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => "* headline
+ ;      section crap"
+
+;; Return headline when point is in the section
+(->> (om-elem-parse-headline-at 12)
+     (om-elem-to-trimmed-string))
+ ;; => "* headline
+ ;      section crap"
+
+;; Given the following contents:
+; * headline
+; section crap
+; ** not parsed
+
+;; Don't parse any subheadlines
+(->> (om-elem-parse-headline-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => "* headline
+ ;      section crap"
+
+;; Given the following contents:
+; nothing nowhere
+
+;; Return nil if not under a headline
+(->> (om-elem-parse-headline-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => ""
+
+```
+
+#### om-elem-parse-subtree-at `(point)`
+
+Return headline tree under `point` or nil if not on a headline.
+`point` does not need to be on the headline itself. Unlike
+[`om-elem-parse-headline-at`](#om-elem-parse-headline-at-point), the returned tree will include
+subheadlines.
+
+```el
+;; Given the following contents:
+; * headline
+
+;; Return the headline itself
+(->> (om-elem-parse-subtree-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => "* headline"
+
+;; Given the following contents:
+; * headline
+; section crap
+
+;; Return headline and section
+(->> (om-elem-parse-subtree-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => "* headline
+ ;      section crap"
+
+;; Return headline when point is in the section
+(->> (om-elem-parse-subtree-at 12)
+     (om-elem-to-trimmed-string))
+ ;; => "* headline
+ ;      section crap"
+
+;; Given the following contents:
+; * headline
+; section crap
+; ** parsed
+
+;; Return all the subheadlines
+(->> (om-elem-parse-subtree-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => "* headline
+ ;      section crap
+ ;      ** parsed"
+
+;; Given the following contents:
+; nothing nowhere
+
+;; Return nil if not under a headline
+(->> (om-elem-parse-subtree-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => ""
+
+```
+
+#### om-elem-parse-item-at `(point)`
+
+Return item element under `point` or nil if not on an item.
+This will return the item even if `point` is not at the beginning of
+the line.
+
+```el
+;; Given the following contents:
+; - item
+
+;; Return the item itself
+(->> (om-elem-parse-item-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => "- item"
+
+;; Also return the item when not at beginning of line
+(->> (om-elem-parse-item-at 5)
+     (om-elem-to-trimmed-string))
+ ;; => "- item"
+
+;; Given the following contents:
+; - item
+;   - item 2
+
+;; Return item and its subitems
+(->> (om-elem-parse-item-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => "- item
+ ;        - item 2"
+
+;; Given the following contents:
+; * not item
+
+;; Return nil if not an item
+(->> (om-elem-parse-item-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => ""
+
+```
+
+#### om-elem-parse-table-row-at `(point)`
+
+Return table-row element under `point` or nil if not on a table-row.
+
+```el
+;; Given the following contents:
+; | bow | stroke |
+
+;; Return the row itself
+(->> (om-elem-parse-table-row-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => "| bow | stroke |"
+
+;; Also return the row when not at beginning of line
+(->> (om-elem-parse-table-row-at 5)
+     (om-elem-to-trimmed-string))
+ ;; => "| bow | stroke |"
+
+;; Given the following contents:
+; - bow and arrow choke
+
+;; Return nil if not a table-row
+(->> (om-elem-parse-table-row-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => ""
+
+```
+
+#### om-elem-parse-section-at `(point)`
+
+Return tree of the section under `point` or nil if not on a section.
+If `point` is on or within a headline, return the section under that
+headline. If `point` is before the first headline (if any), return
+the section at the top of the org buffer.
+
+```el
+;; Given the following contents:
+; over headline
+; * headline
+; under headline
+
+;; Return the section above the headline
+(->> (om-elem-parse-section-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => "over headline"
+
+;; Return the section under headline
+(->> (om-elem-parse-section-at 25)
+     (om-elem-to-trimmed-string))
+ ;; => "under headline"
+
+;; Given the following contents:
+; * headline
+; ** subheadline
+
+;; Return nil if no section under headline
+(->> (om-elem-parse-section-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => ""
+
+;; Given the following contents:
+; 
+
+;; Return nil if no section at all
+(->> (om-elem-parse-section-at 1)
+     (om-elem-to-trimmed-string))
+ ;; => ""
+
+```
+
+
+## String Conversion
+
+
+Convert elements to strings
 
 #### om-elem-to-string `(elem)`
 
@@ -211,7 +722,7 @@ Return `elem` as an interpreted string without text properties.
  ;; => "*text*   "
 
 (om-elem-to-string nil)
- ;; => nil
+ ;; => ""
 
 ```
 
@@ -229,19 +740,26 @@ Like [`om-elem-to-string`](#om-elem-to-string-elem) but strip whitespace when re
  ;; => "*text*"
 
 (om-elem-to-trimmed-string nil)
- ;; => nil
+ ;; => ""
 
 ```
 
 
-## Object Builders
+## Building
 
 
-build shit
+Functions that build new elements and objects
+
+
+### Objects
 
 #### om-elem-build-code `(value &key post-blank)`
 
-Build a code object from `value`.
+Build a code object.
+
+The following properties are settable:
+- `value`: a oneline string
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-code "text")
@@ -250,50 +768,80 @@ Build a code object from `value`.
 
 ```
 
-#### om-elem-build-inline-babel-call `(call &key post-blank arguments inside-header end-header)`
+#### om-elem-build-entity `(name &key use-brackets-p post-blank)`
 
-Build an inline-babel-call element for `name`.
-Optionally provide `args`, inside header args `inside`, and end header
-args `end`.
+Build a entity object.
+
+The following properties are settable:
+- `name`: a string that makes `org-entity-get` return non-nil
+- `use-brackets-p`: nil or t
+- `post-blank`: a non-negative integer
+
+```el
+(->> (om-elem-build-entity "gamma")
+     (om-elem-to-trimmed-string))
+ ;; => "\\gamma"
+
+```
+
+#### om-elem-build-inline-babel-call `(call &key inside-header arguments end-header post-blank)`
+
+Build a inline-babel-call object.
+
+The following properties are settable:
+- `call`: a oneline string
+- `inside-header`: a plist
+- `arguments`: a list of oneline strings
+- `end-header`: a plist
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-inline-babel-call "name")
      (om-elem-to-trimmed-string))
  ;; => "call_name()"
 
-(->> (om-elem-build-inline-babel-call "name" :arguments "args")
+(->> (om-elem-build-inline-babel-call "name" :arguments '("n=4"))
      (om-elem-to-trimmed-string))
- ;; => "call_name(args)"
+ ;; => "call_name(n=4)"
 
-(->> (om-elem-build-inline-babel-call "name" :inside-header "in")
+(->> (om-elem-build-inline-babel-call "name" :inside-header '(:key val))
      (om-elem-to-trimmed-string))
- ;; => "call_name[in]()"
+ ;; => "call_name[:key val]()"
 
-(->> (om-elem-build-inline-babel-call "name" :end-header "end")
+(->> (om-elem-build-inline-babel-call "name" :end-header '(:key val))
      (om-elem-to-trimmed-string))
- ;; => "call_name()[end]"
+ ;; => "call_name()[:key val]"
 
 ```
 
 #### om-elem-build-inline-src-block `(language value &key parameters post-blank)`
 
-Build an inline-src-block object with `language` and `value`.
-Optionally provide `parameters`.
+Build a inline-src-block object.
+
+The following properties are settable:
+- `language`: a oneline string
+- `value`: a oneline string
+- `parameters`: a plist
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-inline-src-block "lang" "value")
      (om-elem-to-trimmed-string))
  ;; => "src_lang{value}"
 
-(->> (om-elem-build-inline-src-block "lang" "value" :parameters "params")
+(->> (om-elem-build-inline-src-block "lang" "value" :parameters '(:key val))
      (om-elem-to-trimmed-string))
- ;; => "src_lang[params]{value}"
+ ;; => "src_lang[:key val]{value}"
 
 ```
 
 #### om-elem-build-line-break `(&key post-blank)`
 
 Build a line-break object.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-line-break)
@@ -302,24 +850,40 @@ Build a line-break object.
 
 ```
 
-#### om-elem-build-statistics-cookie `(&optional num dem &key post-blank)`
+#### om-elem-build-statistics-cookie `(value &key post-blank)`
 
-Build a statistics cookie object with `num` and `dem`.
+Build a statistics-cookie object.
+
+The following properties are settable:
+- `value`: a list of non-neg integers like (`perc`) or (`num` `den`) which make [`num`/`den`] and [`perc` %] respectively
+- `post-blank`: a non-negative integer
 
 ```el
-(->> (om-elem-build-statistics-cookie 50)
+(->> (om-elem-build-statistics-cookie '(nil))
+     (om-elem-to-trimmed-string))
+ ;; => "[%]"
+
+(->> (om-elem-build-statistics-cookie '(50))
      (om-elem-to-trimmed-string))
  ;; => "[50%]"
 
-(->> (om-elem-build-statistics-cookie 1 3)
+(->> (om-elem-build-statistics-cookie '(1 3))
      (om-elem-to-trimmed-string))
  ;; => "[1/3]"
+
+(->> (om-elem-build-statistics-cookie '(nil nil))
+     (om-elem-to-trimmed-string))
+ ;; => "[/]"
 
 ```
 
 #### om-elem-build-target `(value &key post-blank)`
 
-Build a target object with `value`.
+Build a target object.
+
+The following properties are settable:
+- `value`: a oneline string
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-target "text")
@@ -328,36 +892,57 @@ Build a target object with `value`.
 
 ```
 
-#### om-elem-build-timestamp `(type time1 &optional time2 &key post-blank repeater-type repeater-unit repeater-value warning-type warning-unit warning-value)`
+#### om-elem-build-timestamp `(type year-start month-start day-start year-end month-end day-end &key hour-start minute-start hour-end minute-end repeater-type repeater-unit repeater-value warning-type warning-unit warning-value post-blank)`
 
-Build a timestamp object with `type`, `time1`, and optionally `time2`.
-`type` is either 'inactive' or 'active', `time1` and `time2` are lists of
-digits specifying the time formatted like '(year month day)' or
-'(year month day hour minute)'. Supplying `time2` will create a
-timestamp range.
+Build a timestamp object.
+
+The following properties are settable:
+- `type`: a symbol from 'inactive', 'active', 'inactive-ranged', or 'active-ranged'
+- `year-start`: a positive integer
+- `month-start`: a positive integer
+- `day-start`: a positive integer
+- `year-end`: a positive integer
+- `month-end`: a positive integer
+- `day-end`: a positive integer
+- `hour-start`: a non-negative integer or nil
+- `minute-start`: a non-negative integer or nil
+- `hour-end`: a non-negative integer or nil
+- `minute-end`: a non-negative integer or nil
+- `repeater-type`: nil or a symbol from 'catch-up', 'restart', or 'cumulate'
+- `repeater-unit`: nil or a symbol from 'year' 'month' 'week' 'day', or 'hour'
+- `repeater-value`: a positive integer or nil
+- `warning-type`: nil or a symbol from 'all' or 'first'
+- `warning-unit`: nil or a symbol from 'year' 'month' 'week' 'day', or 'hour'
+- `warning-value`: a positive integer or nil
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-timestamp 'inactive
-			      '(2019 1 15))
+			      2019 1 15 2019 1 15)
      (om-elem-to-trimmed-string))
  ;; => "[2019-01-15 Tue]"
 
-(->> (om-elem-build-timestamp 'inactive
-			      '(2019 1 15 12 30))
+(->> (om-elem-build-timestamp 'active-range
+			      2019 1 15 2019 1 16)
      (om-elem-to-trimmed-string))
- ;; => "[2019-01-15 Tue 12:30]"
+ ;; => "<2019-01-15 Tue>--<2019-01-16 Wed>"
 
 (->> (om-elem-build-timestamp 'inactive
-			      '(2019 1 15)
-			      '(2020 1 1))
+			      2019 1 15 2019 1 15 :warning-type 'all
+			      :warning-unit 'day
+			      :warning-value 1)
      (om-elem-to-trimmed-string))
- ;; => "[2019-01-15 Tue]--[2020-01-01 Wed]"
+ ;; => "[2019-01-15 Tue -1d]"
 
 ```
 
 #### om-elem-build-verbatim `(value &key post-blank)`
 
-Build a verbatim object with `value`.
+Build a verbatim object.
+
+The following properties are settable:
+- `value`: a oneline string
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-verbatim "text")
@@ -367,11 +952,15 @@ Build a verbatim object with `value`.
 ```
 
 
-## Recursive Object Builders
+### Recursive Objects
 
 #### om-elem-build-bold `(&key post-blank &rest objs)`
 
-Build a bold object containing `objs`.
+Build a bold object with `objs` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-bold "text")
@@ -380,15 +969,18 @@ Build a bold object containing `objs`.
 
 ```
 
-#### om-elem-build-footnote-reference `(&key post-blank (label 1) &rest objs)`
+#### om-elem-build-footnote-reference `(&key label post-blank &rest objs)`
 
-Build a footnote reference object to `target`.
-Optionally make the reference inline by setting `inline` to t.
+Build a footnote-reference object with `objs` as contents.
+
+The following properties are settable:
+- `label`: a oneline string or nil
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-footnote-reference)
      (om-elem-to-trimmed-string))
- ;; => "[fn:1]"
+ ;; => "[fn:]"
 
 (->> (om-elem-build-footnote-reference :label "label")
      (om-elem-to-trimmed-string))
@@ -402,7 +994,11 @@ Optionally make the reference inline by setting `inline` to t.
 
 #### om-elem-build-italic `(&key post-blank &rest objs)`
 
-Build an italic object from `string`.
+Build a italic object with `objs` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-italic "text")
@@ -411,9 +1007,15 @@ Build an italic object from `string`.
 
 ```
 
-#### om-elem-build-link `(path &key post-blank (type fuzzy) &rest objs)`
+#### om-elem-build-link `(path &key format (type fuzzy) post-blank &rest objs)`
 
-Build a link object from `target` with `objs` as the description.
+Build a link object with `objs` as contents.
+
+The following properties are settable:
+- `path`: a oneline string
+- `format`: the symbol 'plain', 'bracket' or 'angle'
+- `type`: a oneline string from `org-link-types` or "coderef", "custom-id", "file", "id", "radio", or "fuzzy"
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-link "target")
@@ -432,7 +1034,11 @@ Build a link object from `target` with `objs` as the description.
 
 #### om-elem-build-radio-target `(&key post-blank &rest objs)`
 
-Build a radio target object from `string`.
+Build a radio-target object with `objs` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-radio-target "text")
@@ -443,7 +1049,11 @@ Build a radio target object from `string`.
 
 #### om-elem-build-strike-through `(&key post-blank &rest objs)`
 
-Build a strike-through object from `string`.
+Build a strike-through object with `objs` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-strike-through "text")
@@ -452,9 +1062,13 @@ Build a strike-through object from `string`.
 
 ```
 
-#### om-elem-build-superscript `(&key post-blank &rest objs)`
+#### om-elem-build-superscript `(&key use-brackets-p post-blank &rest objs)`
 
-Build a superscript object from `string`.
+Build a superscript object with `objs` as contents.
+
+The following properties are settable:
+- `use-brackets-p`: nil or t
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-superscript "text")
@@ -463,9 +1077,13 @@ Build a superscript object from `string`.
 
 ```
 
-#### om-elem-build-subscript `(&key post-blank &rest objs)`
+#### om-elem-build-subscript `(&key use-brackets-p post-blank &rest objs)`
 
-Build a subscript object from `string`.
+Build a subscript object with `objs` as contents.
+
+The following properties are settable:
+- `use-brackets-p`: nil or t
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-subscript "text")
@@ -476,7 +1094,11 @@ Build a subscript object from `string`.
 
 #### om-elem-build-table-cell `(&key post-blank &rest objs)`
 
-Build a table cell object containing `text`.
+Build a table-cell object with `objs` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-table-cell "text")
@@ -488,7 +1110,11 @@ Build a table cell object containing `text`.
 
 #### om-elem-build-underline `(&key post-blank &rest objs)`
 
-Build an underline object from `string`.
+Build a underline object with `objs` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-underline "text")
@@ -498,45 +1124,55 @@ Build an underline object from `string`.
 ```
 
 
-## Element Builders
+### Elements
 
-#### om-elem-build-babel-call `(call &key post-blank arguments inside-header end-header)`
+#### om-elem-build-babel-call `(call &key inside-header arguments end-header post-blank)`
 
-Build a babel-call element for `name`.
-Optionally provide `args`, inside header args `inside`, and end header
-args `end`.
+Build a babel-call element.
+
+The following properties are settable:
+- `call`: a oneline string
+- `inside-header`: a plist
+- `arguments`: a list of oneline strings
+- `end-header`: a plist
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-babel-call "name")
      (om-elem-to-trimmed-string))
  ;; => "#+CALL: name()"
 
-(->> (om-elem-build-babel-call "name" :arguments "args")
+(->> (om-elem-build-babel-call "name" :arguments '("arg=x"))
      (om-elem-to-trimmed-string))
- ;; => "#+CALL: name(args)"
+ ;; => "#+CALL: name(arg=x)"
 
-(->> (om-elem-build-babel-call "name" :inside-header "inside")
+(->> (om-elem-build-babel-call "name" :inside-header '(:key val))
      (om-elem-to-trimmed-string))
- ;; => "#+CALL: name[inside]()"
+ ;; => "#+CALL: name[:key val]()"
 
-(->> (om-elem-build-babel-call "name" :end-header "end")
+(->> (om-elem-build-babel-call "name" :end-header '(:key val))
      (om-elem-to-trimmed-string))
- ;; => "#+CALL: name() end"
+ ;; => "#+CALL: name() :key val"
 
 ```
 
-#### om-elem-build-clock `(time1 &optional time2 &key post-blank)`
+#### om-elem-build-clock `(value &key post-blank)`
 
-Build a clock element with `time1`.
-Optionally supply `time2` to create a closed clock.
+Build a clock element.
+
+The following properties are settable:
+- `value`: an unranged, inactive timestamp with no warning or repeater
+- `post-blank`: a non-negative integer
 
 ```el
-(->> (om-elem-build-clock '(2019 1 1 0 0))
+(->> (om-elem-build-clock (om-elem-build-timestamp! 'inactive
+						    '(2019 1 1 0 0)))
      (om-elem-to-trimmed-string))
  ;; => "CLOCK: [2019-01-01 Tue 00:00]"
 
-(->> (om-elem-build-clock '(2019 1 1 0 0)
-			  '(2019 1 1 1 0))
+(->> (om-elem-build-clock (om-elem-build-timestamp! 'inactive
+						    '(2019 1 1 0 0)
+						    :end '(2019 1 1 1 0)))
      (om-elem-to-trimmed-string))
  ;; => "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00] =>  1:00"
 
@@ -544,7 +1180,11 @@ Optionally supply `time2` to create a closed clock.
 
 #### om-elem-build-comment `(value &key post-blank)`
 
-Build a comment element with `value`.
+Build a comment element.
+
+The following properties are settable:
+- `value`: a oneline string
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-comment "text")
@@ -555,65 +1195,87 @@ Build a comment element with `value`.
 
 #### om-elem-build-comment-block `(value &key post-blank)`
 
-Build a comment block element from `value`.
+Build a comment-block element.
+
+The following properties are settable:
+- `value`: a oneline string
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-comment-block "text")
      (om-elem-to-trimmed-string))
  ;; => "#+BEGIN_COMMENT
- ;;    text
- ;;    #+END_COMMENT"
+ ;      text
+ ;      #+END_COMMENT"
 
 ```
 
 #### om-elem-build-diary-sexp `(value &key post-blank)`
 
-Build a diary sexp element from `value`.
-`value` is the part inside the '%%(value)' part of the sexp.
+Build a diary-sexp element.
+
+The following properties are settable:
+- `value`: a list form
+- `post-blank`: a non-negative integer
 
 ```el
-(->> (om-elem-build-diary-sexp "text")
+(->> (om-elem-build-diary-sexp '(text))
      (om-elem-to-trimmed-string))
  ;; => "%%(text)"
 
 ```
 
-#### om-elem-build-example-block `(value &key post-blank switches preserve-indent)`
+#### om-elem-build-example-block `(value &key preserve-indent switches post-blank)`
 
-Build a example block element from `string`.
+Build a example-block element.
+
+The following properties are settable:
+- `value`: a string
+- `preserve-indent`: nil or t
+- `switches`: a list of oneline strings
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-example-block "text")
      (om-elem-to-trimmed-string))
  ;; => "#+BEGIN_EXAMPLE
- ;;    text
- ;;    #+END_EXAMPLE"
+ ;      text
+ ;      #+END_EXAMPLE"
 
-(->> (om-elem-build-example-block "text" :switches "switches")
+(->> (om-elem-build-example-block "text" :switches '("switches"))
      (om-elem-to-trimmed-string))
  ;; => "#+BEGIN_EXAMPLE switches
- ;;    text
- ;;    #+END_EXAMPLE"
+ ;      text
+ ;      #+END_EXAMPLE"
 
 ```
 
 #### om-elem-build-export-block `(type value &key post-blank)`
 
-Build an export-block element with `type` and `value`.
+Build a export-block element.
+
+The following properties are settable:
+- `type`: a oneline string
+- `value`: a string
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-export-block "type" "value
 ")
      (om-elem-to-trimmed-string))
  ;; => "#+BEGIN_EXPORT type
- ;;    value
- ;;    #+END_EXPORT"
+ ;      value
+ ;      #+END_EXPORT"
 
 ```
 
 #### om-elem-build-fixed-width `(value &key post-blank)`
 
-Build a fixed-width element from `string`.
+Build a fixed-width element.
+
+The following properties are settable:
+- `value`: a oneline string
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-fixed-width "text")
@@ -626,6 +1288,10 @@ Build a fixed-width element from `string`.
 
 Build a horizontal-rule element.
 
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
+
 ```el
 (->> (om-elem-build-horizontal-rule)
      (om-elem-to-trimmed-string))
@@ -635,7 +1301,12 @@ Build a horizontal-rule element.
 
 #### om-elem-build-keyword `(key value &key post-blank)`
 
-Build keyword element with keyword `key` and value `val`.
+Build a keyword element.
+
+The following properties are settable:
+- `key`: a oneline string
+- `value`: a oneline string
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-keyword "FILETAGS" "tmsu")
@@ -644,22 +1315,31 @@ Build keyword element with keyword `key` and value `val`.
 
 ```
 
-#### om-elem-build-latex-environment `(env text &key post-blank)`
+#### om-elem-build-latex-environment `(value &key post-blank)`
 
-Build a latex-environment element with environment `env` and `text`.
+Build a latex-environment element.
+
+The following properties are settable:
+- `value`: list of strings like (`env` `body`) or (`env`)
+- `post-blank`: a non-negative integer
 
 ```el
-(->> (om-elem-build-latex-environment "env" "text")
+(->> (om-elem-build-latex-environment '("env" "text"))
      (om-elem-to-trimmed-string))
  ;; => "\\begin{env}
- ;;    text
- ;;    \\end{env}"
+ ;      text
+ ;      \\end{env}"
 
 ```
 
 #### om-elem-build-node-property `(key value &key post-blank)`
 
-Build a node property object with `key` and `val`.
+Build a node-property element.
+
+The following properties are settable:
+- `key`: a oneline string
+- `value`: a oneline string
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-node-property "key" "val")
@@ -668,110 +1348,184 @@ Build a node property object with `key` and `val`.
 
 ```
 
-#### om-elem-build-planning `(&key closed scheduled deadline post-blank)`
+#### om-elem-build-planning `(&key closed deadline scheduled post-blank)`
 
-Build planning element with `type` and `time`.
+Build a planning element.
+
+The following properties are settable:
+- `closed`: a zero-range, inactive timestamp object
+- `deadline`: a zero-range, inactive timestamp object
+- `scheduled`: a zero-range, inactive timestamp object
+- `post-blank`: a non-negative integer
 
 ```el
-(->> (om-elem-build-planning :closed '(2019 1 1))
+(->> (om-elem-build-planning :closed (om-elem-build-timestamp! 'inactive
+							       '(2019 1 1)))
      (om-elem-to-trimmed-string))
  ;; => "CLOSED: [2019-01-01 Tue]"
 
-(->> (om-elem-build-planning :scheduled '(2019 1 1))
+(->> (om-elem-build-planning :scheduled (om-elem-build-timestamp! 'inactive
+								  '(2019 1 1)))
      (om-elem-to-trimmed-string))
  ;; => "SCHEDULED: [2019-01-01 Tue]"
 
-(->> (om-elem-build-planning :deadline '(2019 1 1))
+(->> (om-elem-build-planning :deadline (om-elem-build-timestamp! 'inactive
+								 '(2019 1 1)))
      (om-elem-to-trimmed-string))
  ;; => "DEADLINE: [2019-01-01 Tue]"
 
 ```
 
-#### om-elem-build-src-block `(value &key language switches parameters preserve-indent post-blank)`
+#### om-elem-build-src-block `(value &key language parameters preserve-indent switches post-blank)`
 
+Build a src-block element.
 
+The following properties are settable:
+- `value`: a string
+- `language`: a string or nil
+- `parameters`: a plist
+- `preserve-indent`: nil or t
+- `switches`: a list of oneline strings
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-src-block "body")
      (om-elem-to-trimmed-string))
  ;; => "#+BEGIN_SRC
- ;;      body
- ;;    #+END_SRC"
+ ;        body
+ ;      #+END_SRC"
 
 (->> (om-elem-build-src-block "body" :language "emacs-lisp")
      (om-elem-to-trimmed-string))
  ;; => "#+BEGIN_SRC emacs-lisp
- ;;      body
- ;;    #+END_SRC"
+ ;        body
+ ;      #+END_SRC"
 
-(->> (om-elem-build-src-block "body" :switches "switches")
+(->> (om-elem-build-src-block "body" :switches '("-n 20" "-r"))
      (om-elem-to-trimmed-string))
- ;; => "#+BEGIN_SRC switches
- ;;      body
- ;;    #+END_SRC"
+ ;; => "#+BEGIN_SRC -n 20 -r
+ ;        body
+ ;      #+END_SRC"
 
-(->> (om-elem-build-src-block "body" :parameters "params")
+(->> (om-elem-build-src-block "body" :parameters '(:key val))
      (om-elem-to-trimmed-string))
- ;; => "#+BEGIN_SRC params
- ;;      body
- ;;    #+END_SRC"
+ ;; => "#+BEGIN_SRC :key val
+ ;        body
+ ;      #+END_SRC"
 
 ```
 
 #### om-elem-build-table-row-hline `(&key post-blank)`
 
-
+Build a table-row element with the 'rule' type.
 
 ```el
 (->> (om-elem-build-table (om-elem-build-table-row (om-elem-build-table-cell "text"))
 			  (om-elem-build-table-row-hline))
      (om-elem-to-trimmed-string))
  ;; => "| text |
- ;;    |------|"
+ ;      |------|"
 
 ```
 
 
-## Container Element Builders
+### Object Containers
+
+#### om-elem-build-paragraph `(&key post-blank &rest objs)`
+
+Build a paragraph element with `objs` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
+
+```el
+(->> (om-elem-build-paragraph "text")
+     (om-elem-to-trimmed-string))
+ ;; => "text"
+
+```
+
+#### om-elem-build-table-row `(&key post-blank &rest objs)`
+
+Build a table-row element with `objs` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
+
+```el
+(->> (om-elem-build-table-cell "a")
+     (om-elem-build-table-row)
+     (om-elem-to-trimmed-string))
+ ;; => "| a |"
+
+```
+
+#### om-elem-build-verse-block `(&key post-blank &rest objs)`
+
+Build a verse-block element with `objs` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
+
+```el
+(->> (om-elem-build-verse-block "text
+")
+     (om-elem-to-trimmed-string))
+ ;; => "#+BEGIN_VERSE
+ ;      text
+ ;      #+END_VERSE"
+
+```
 
 
-## Greater Element Builders
-
-
-Build shit
+### Greater Elements
 
 #### om-elem-build-center-block `(&key post-blank &rest elems)`
 
-Build a center block greater element with `elems` as contents.
+Build a center-block element with `elems` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-paragraph "text")
      (om-elem-build-center-block)
      (om-elem-to-trimmed-string))
  ;; => "#+BEGIN_CENTER
- ;;    text
- ;;    #+END_CENTER"
+ ;      text
+ ;      #+END_CENTER"
 
 ```
 
 #### om-elem-build-drawer `(drawer-name &key post-blank &rest elems)`
 
-Create drawer greater element with `name` and `elems` as contents.
+Build a drawer element with `elems` as contents.
+
+The following properties are settable:
+- `drawer-name`: a oneline string
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-paragraph "text")
      (om-elem-build-drawer "NAME")
      (om-elem-to-trimmed-string))
  ;; => ":NAME:
- ;;    text
- ;;    :END:"
+ ;      text
+ ;      :END:"
 
 ```
 
 #### om-elem-build-footnote-definition `(label &key post-blank &rest elems)`
 
-Build a footnote-definition greater element for `label`.
-Optionally provide `elems` as contents.
+Build a footnote-definition element with `elems` as contents.
+
+The following properties are settable:
+- `label`: a oneline string or nil
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-paragraph "footnote contents")
@@ -781,44 +1535,68 @@ Optionally provide `elems` as contents.
 
 ```
 
-#### om-elem-build-headline `(&key title (level 1) post-blank pre-blank todo-keyword tags priority footnote-section-p commentedp archivedp &rest elems)`
+#### om-elem-build-headline `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest elems)`
 
-Build a headline.
+Build a headline element with `elems` as contents.
+
+The following properties are settable:
+- `archivedp`: nil or t
+- `commentedp`: nil or t
+- `footnote-section-p`: nil or t
+- `level`: a positive integer
+- `pre-blank`: a non-negative integer
+- `priority`: an integer between (inclusive) `org-highest-priority` and `org-lowest-priority`
+- `tags`: a string list
+- `title`: a secondary string
+- `todo-keyword`: a oneline string or nil
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-headline)
      (om-elem-to-trimmed-string))
  ;; => "*"
 
-(->> (om-elem-build-headline :title "dummy")
+(->> (om-elem-build-headline :title '("dummy"))
      (om-elem-to-trimmed-string))
  ;; => "* dummy"
 
-(->> (om-elem-build-headline :title "dummy" :level 3)
+(->> (om-elem-build-headline :title '("dummy")
+			      :level 3)
      (om-elem-to-trimmed-string))
  ;; => "*** dummy"
 
-(->> (om-elem-build-headline :title "dummy" :todo-keyword "DONE")
+(->> (om-elem-build-headline :title '("dummy")
+			      :todo-keyword "DONE")
      (om-elem-to-trimmed-string))
  ;; => "* DONE dummy"
 
-(->> (om-elem-build-headline :title "dummy" :priority 65)
+(->> (om-elem-build-headline :title '("dummy")
+			      :priority 65)
      (om-elem-to-trimmed-string))
  ;; => "* [#A] dummy"
 
-(->> (om-elem-build-headline :title "dummy" :footnote-section-p t)
+(->> (om-elem-build-headline :title '("dummy")
+			      :footnote-section-p t)
      (om-elem-to-trimmed-string))
  ;; => "* Footnotes"
 
-(->> (om-elem-build-headline :title "dummy" :commentedp t)
+(->> (om-elem-build-headline :title '("dummy")
+			      :commentedp t)
      (om-elem-to-trimmed-string))
  ;; => "* COMMENT dummy"
 
 ```
 
-#### om-elem-build-item `(&key (pre-blank 0) post-blank (bullet '-) checkbox tag counter &rest elems)`
+#### om-elem-build-item `(&key (bullet '-) checkbox counter tag post-blank &rest elems)`
 
-Build a plain-list greater element with `elems` as contents.
+Build a item element with `elems` as contents.
+
+The following properties are settable:
+- `bullet`: a positive integer (for '1.'), a positive integer in a list (for '1)'), a '-', or a '+'
+- `checkbox`: nil or the symbols 'on', 'off', or 'trans'
+- `counter`: a positive integer or nil
+- `tag`: a secondary string
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-paragraph "item contents")
@@ -837,7 +1615,7 @@ Build a plain-list greater element with `elems` as contents.
  ;; => "- [X] item contents"
 
 (->> (om-elem-build-paragraph "item contents")
-     (om-elem-build-item :tag "tmsu")
+     (om-elem-build-item :tag '("tmsu"))
      (om-elem-to-trimmed-string))
  ;; => "- tmsu :: item contents"
 
@@ -850,7 +1628,11 @@ Build a plain-list greater element with `elems` as contents.
 
 #### om-elem-build-plain-list `(&key post-blank &rest elems)`
 
-Build a plain-list greater element with `elems` as contents.
+Build a plain-list element with `elems` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-paragraph "item contents")
@@ -863,35 +1645,47 @@ Build a plain-list greater element with `elems` as contents.
 
 #### om-elem-build-property-drawer `(&key post-blank &rest elems)`
 
-Build a property-drawer greater element with `elems` as contents.
+Build a property-drawer element with `elems` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-node-property "key" "val")
      (om-elem-build-property-drawer)
      (om-elem-to-trimmed-string))
  ;; => ":PROPERTIES:
- ;;    :key:      val
- ;;    :END:"
+ ;      :key:      val
+ ;      :END:"
 
 ```
 
 #### om-elem-build-quote-block `(&key post-blank &rest elems)`
 
-Build a quote-block greater element with `elems` as contents.
+Build a quote-block element with `elems` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-paragraph "quoted stuff")
      (om-elem-build-quote-block)
      (om-elem-to-trimmed-string))
  ;; => "#+BEGIN_QUOTE
- ;;    quoted stuff
- ;;    #+END_QUOTE"
+ ;      quoted stuff
+ ;      #+END_QUOTE"
 
 ```
 
 #### om-elem-build-section `(&key post-blank &rest elems)`
 
-Build a section grater element with `elems` as contents.
+Build a section element with `elems` as contents.
+
+The following properties are settable:
+
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-paragraph "text")
@@ -903,7 +1697,11 @@ Build a section grater element with `elems` as contents.
 
 #### om-elem-build-table `(&key tblfm post-blank &rest elems)`
 
-Build a section grater element with `elems` as contents.
+Build a table element with `elems` as contents.
+
+The following properties are settable:
+- `tblfm`: a list of oneline strings
+- `post-blank`: a non-negative integer
 
 ```el
 (->> (om-elem-build-table-cell "cell")
@@ -915,756 +1713,276 @@ Build a section grater element with `elems` as contents.
 ```
 
 
-## Element matching functions
+### Miscellaneous Builders
 
+#### om-elem-build-timestamp-diary-sexp `(form &key post-blank)`
 
-match shit
-
-#### om-elem-find `(queries elem)`
-
-docstring
+Build a diary-sexp timestamp element from `string`.
+`string` is a lisp form as a string.
 
 ```el
-;; Given the following contents:
-; * headline one
-; ** TODO headline two
-; ** COMMENT headline three
-; ** headline four
-
-;; Use a symbol to match a type, in this case all  headlines.
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '(headline))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => '("** TODO headline two" "** COMMENT headline three" "** headline four")
-
-;; Use integers specify the index to return. Negative  integers count from the end. Out of range integers  return nil
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '(1))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => '("** COMMENT headline three")
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '(-1))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => '("** headline four")
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '(3))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => nil
-
-;; Use a two-membered list with an operator and an  integer to match a range of indices. Allowed  operators are <, >, <=, and and >=.
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '((> 0)))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => '("** COMMENT headline three" "** headline four")
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '((>= 1)))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => '("** COMMENT headline three" "** headline four")
-
-;; Use a plist to match based on an elements properties.
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '((:todo-keyword "TODO")))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => '("** TODO headline two")
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '((:todo-keyword nil)))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => '("** COMMENT headline three" "** headline four")
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '((:todo-keyword "DONE")))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => nil
-
-;; Given the following contents:
-; * headline one
-; this is *text1* of *text2*
-; ** headline two
-; here is more *text3*
-; *** headline three
-; and here is even more *text4* and *text5*
-; **** headline 4
-
-;; Specify multiple levels of matching using multiple  queries.
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '(section paragraph bold))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => '("*text1*" "*text2*")
-
-;; Use the keyword :any as a wildcard to match any  element at a particular level.
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '(:any :any bold))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => '("*text1*" "*text2*")
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '(section paragraph :any))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => '("this is" "*text1*" "of" "*text2*" "")
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '(:any bold))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => nil
-
-;; Use the keyword :many to match one or more levels  of any element.
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '(:many bold))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
-
-;; Use the keyword :many! to match one or more levels,  except unlike :many do not match within any elements  that have already matched.
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find '(headline :many! headline))
-     (--map (om-elem-to-trimmed-string it)))
- ;; => '("*** headline three
- ;;    and here is even more *text4* and *text5*
- ;;    **** headline 4")
+(->> (om-elem-build-timestamp-diary-sexp '(diary-float t 4 2))
+     (om-elem-to-string))
+ ;; => "<%%(diary-float t 4 2)>"
 
 ```
 
-#### om-elem-find-first `(queries elem)`
+#### om-elem-build-table-row-hline `(&key post-blank)`
 
-Find first object in `elem` matching `queries`.
-The rules for `queries` are the same as [`om-elem-find`](#om-elem-find-queries-elem)
+Build a table-row element with the 'rule' type.
 
 ```el
-;; Given the following contents:
-; * headline one
-; ** TODO headline two
-; ** COMMENT headline three
-; ** headline four
-
-;; Find the first subheadline
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find-first '(headline))
+(->> (om-elem-build-table-row-hline)
      (om-elem-to-trimmed-string))
- ;; => "** TODO headline two"
+ ;; => "|-"
 
 ```
 
-#### om-elem-find-last `(queries elem)`
 
-Find last object in `elem` matching `queries`.
-The rules for `queries` are the same as [`om-elem-find`](#om-elem-find-queries-elem)
+### Shorthand Builders
 
-```el
-;; Given the following contents:
-; * headline one
-; ** TODO headline two
-; ** COMMENT headline three
-; ** headline four
 
-;; Find the last subheadline
-(->> (om-elem-parse-this-subtree)
-     (om-elem-find-last '(headline))
-     (om-elem-to-trimmed-string))
- ;; => "** headline four"
+Build elements and objects with more convenient/shorter syntax.
 
-```
+#### om-elem-build-timestamp! `(type start &key end repeater warning post-blank)`
 
-#### om-elem-delete `(queries elem)`
+Build a timestamp object.
 
-Remove matching targets from contents of `elem`.
+`type` is one if 'active' or 'inactive' (the range suffix will be added
+if an end time is supplied).
 
-`queries` follows the same rules as [`om-elem-find`](#om-elem-find-queries-elem).
+`start` specifies the start time and is a list of integers in one of 
+the following forms:
+- (year month day): short form
+- (year month day nil nil) short form
+- (year month day hour minute) long form
 
-```el
-;; Given the following contents:
-; * headline one
-; ** headline two
-; ** headline three
-; ** headline four
+`end` (if supplied) will add the ending time, and follows the same 
+formatting rules as `start`.
 
-;; Selectively delete headlines
-(->> (om-elem-parse-this-subtree)
-     (om-elem-delete '(headline))
-     (om-elem-to-trimmed-string))
- ;; => "* headline one"
+`repeater` and `warning` are lists formatted as (`type` `value` `unit`) where
+the three members correspond to the :repeater/warning-type, -value,
+and -unit properties in [`om-elem-build-timestamp`](#om-elem-build-timestamp-type-year-start-month-start-day-start-year-end-month-end-day-end-key-hour-start-minute-start-hour-end-minute-end-repeater-type-repeater-unit-repeater-value-warning-type-warning-unit-warning-value-post-blank).
 
-(->> (om-elem-parse-this-subtree)
-     (om-elem-delete-first '(headline))
-     (om-elem-to-trimmed-string))
- ;; => "* headline one
- ;;    ** headline three
- ;;    ** headline four"
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-delete-last '(headline))
-     (om-elem-to-trimmed-string))
- ;; => "* headline one
- ;;    ** headline two
- ;;    ** headline three"
-
-```
-
-#### om-elem-extract `(queries elem)`
-
-Remove matching targets from contents of `elem`.
-Return cons cell where the car is a list of all removed targets
-and the cdr is the modified `elem` with targets removed.
-
-`queries` follows the same rules as [`om-elem-find`](#om-elem-find-queries-elem).
+Building a diary sexp timestamp is not possible with this function.
 
 ```el
-
-```
-
-#### om-elem-map `(queries fun elem)`
-
-Apply `fun` to targets matching `queries` in the contents of `elem`.
-`fun` is a function that takes a single argument (the target element or
-object) and returns a new element or object which will replace the
-original.
-
-`queries` follows the same rules as [`om-elem-find`](#om-elem-find-queries-elem).
-
-```el
-;; Given the following contents:
-; * headline one
-; ** TODO headline two
-; ** headline three
-; ** headline four
-
-;; Selectively mark headlines as DONE
-(->> (om-elem-parse-this-subtree)
-     (om-elem-map '(headline)
-		  (lambda (it)
-		    (om-elem-headline-set-todo "DONE" it)))
-     (om-elem-to-trimmed-string))
- ;; => "* headline one
- ;;    ** DONE headline two
- ;;    ** DONE headline three
- ;;    ** DONE headline four"
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-map-first* '(headline)
-			 (om-elem-headline-set-todo "DONE" it))
-     (om-elem-to-trimmed-string))
- ;; => "* headline one
- ;;    ** DONE headline two
- ;;    ** headline three
- ;;    ** headline four"
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-map-last '(headline)
-		       (-partial (function om-elem-headline-set-todo)
-				 "DONE"))
-     (om-elem-to-trimmed-string))
- ;; => "* headline one
- ;;    ** TODO headline two
- ;;    ** headline three
- ;;    ** DONE headline four"
-
-```
-
-#### om-elem-mapcat `(queries fun elem)`
-
-Apply `fun` over `elem` and return modified `elem`.
-`fun` takes an element/object as its only argument and returns
-a list of elements/objects. Targets within `elem` are found that match
-`queries`, `fun` is applied to each target, and the resulting list is
-spliced in place of the original target (as opposed to [`om-elem-map`](#om-elem-map-queries-fun-elem)
-which replaces the original target with a modified target).
-
-`queries` follows the same rules as [`om-elem-find`](#om-elem-find-queries-elem).
-
-```el
-
-```
-
-#### om-elem-replace `(queries rep elem)`
-
-Replace matching targets in `elem` with `rep`.
-
-`queries` follows the same rules as [`om-elem-find`](#om-elem-find-queries-elem).
-
-```el
-
-```
-
-#### om-elem-insert-before `(queries elem* elem)`
-
-Insert `elem`* before every target matched by `queries` in `elem`.
-
-`queries` follows the same rules as [`om-elem-find`](#om-elem-find-queries-elem).
-
-```el
-
-```
-
-#### om-elem-insert-after `(queries elem* elem)`
-
-Insert `elem`* after every target matched by `queries` in `elem`.
-
-`queries` follows the same rules as [`om-elem-find`](#om-elem-find-queries-elem).
-
-```el
-
-```
-
-#### om-elem-insert-within `(queries index elem* elem)`
-
-Insert new element `elem`* into the contents of `elem` at `index`.
-Will insert into any target matched by `queries`. If `queries` is not
-supplied, `elem`* will be inserted directly into the toplevel contents
-of `elem`.
-
-`queries` follows the same rules as [`om-elem-find`](#om-elem-find-queries-elem).
-
-```el
-
-```
-
-#### om-elem-splice-before `(queries elem* elem)`
-
-Splice `elems`* before every target matched by `queries` in `elem`.
-
-`queries` follows the same rules as [`om-elem-find`](#om-elem-find-queries-elem).
-
-```el
-
-```
-
-#### om-elem-splice-after `(queries elem* elem)`
-
-Splice `elems`* after every target matched by `queries` in `elem`.
-
-`queries` follows the same rules as [`om-elem-find`](#om-elem-find-queries-elem).
-
-```el
-
-```
-
-#### om-elem-splice-within `(queries index elem* elem)`
-
-Insert list of `elems`* into the contents of `elem` at `index`.
-Will insert into any target matched by `queries`. If `queries` is not
-supplied, `elem`* will be inserted directly into the toplevel contents
-of `elem`.
-
-`queries` follows the same rules as [`om-elem-find`](#om-elem-find-queries-elem).
-
-```el
-
-```
-
-
-## Element get functions
-
-
-get shit
-
-#### om-elem-headline-get-subheadlines `(headline)`
-
-Return list of subheadlines for `headline` element or nil if none.
-
-```el
-;; Given the following contents:
-; * headline 1
-; sectional stuff
-; ** headline 2
-; ** headline 3
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-headline-get-subheadlines)
-     (-map (function om-elem-to-trimmed-string)))
- ;; => '("** headline 2" "** headline 3")
-
-;; Given the following contents:
-; * headline 1
-; sectional stuff
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-headline-get-subheadlines)
-     (-map (function om-elem-to-trimmed-string)))
- ;; => nil
-
-```
-
-#### om-elem-headline-get-section `(headline)`
-
-Return section for headline `headline` element or nil if none.
-
-```el
-;; Given the following contents:
-; * headline 1
-; sectional stuff
-; ** headline 2
-; ** headline 3
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-headline-get-section)
-     (om-elem-to-trimmed-string))
- ;; => "sectional stuff"
-
-;; Given the following contents:
-; * headline 1
-; ** headline 2
-; ** headline 3
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-headline-get-section)
-     (om-elem-to-trimmed-string))
- ;; => nil
-
-```
-
-#### om-elem-headline-get-drawer `(name headline)`
-
-Return first drawer with `name` in `headline` element or nil if none.
-
-```el
-;; Given the following contents:
-; * headline 1
-; :LOGBOOK:
-; - random note
-; :END:
-; rest of the section
-; ** headline 2
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-headline-get-drawer "LOGBOOK")
-     (om-elem-to-trimmed-string))
- ;; => ":LOGBOOK:
- ;;    - random note
- ;;    :END:"
-
-(->> (om-elem-parse-this-subtree)
-     (om-elem-headline-get-drawer "OTHER")
-     (om-elem-to-trimmed-string))
- ;; => nil
-
-```
-
-#### om-elem-item-get-sublist `(item)`
-
-Return plain-list under `item` element or nil if none.
-
-```el
-;; Given the following contents:
-; - one
-;   - two
-;   - three
-; - four
-
-(->> (om-elem-parse-this-item)
-     (om-elem-item-get-sublist)
-     (om-elem-to-trimmed-string))
- ;; => "- two
- ;;    - three"
-
-;; Given the following contents:
-; - one
-; - two
-
-(->> (om-elem-parse-this-item)
-     (om-elem-item-get-sublist)
-     (om-elem-to-trimmed-string))
- ;; => nil
-
-```
-
-#### om-elem-item-get-paragraph `(item)`
-
-Return paragraph under `item` element or nil if none.
-
-```el
-;; Given the following contents:
-; - one
-
-(->> (om-elem-parse-this-item)
-     (om-elem-item-get-paragraph)
-     (om-elem-to-trimmed-string))
- ;; => "one"
-
-;; Given the following contents:
-; - [ ] one
-
-(->> (om-elem-parse-this-item)
-     (om-elem-item-get-paragraph)
-     (om-elem-to-trimmed-string))
- ;; => "one"
-
-;; Given the following contents:
-; - tmsu :: one
-
-(->> (om-elem-parse-this-item)
-     (om-elem-item-get-paragraph)
-     (om-elem-to-trimmed-string))
- ;; => "one"
-
-;; Given the following contents:
-; - tmsu ::
-
-(->> (om-elem-parse-this-item)
-     (om-elem-item-get-paragraph)
-     (om-elem-to-trimmed-string))
- ;; => nil
-
-```
-
-#### om-elem-table-get-cell `(row column table)`
-
-Return table-cell element at `row` and `column` indices in `table` element.
-Hlines do not count toward row indices, and all indices are
-zero-indexed.
-
-```el
-;; Given the following contents:
-; | 1 | 2 | 3 |
-; |---+---+---|
-; | a | b | c |
-
-(->> (om-elem-parse-this-element)
-     (om-elem-table-get-cell 0 0)
-     (om-elem-contents)
-     (car))
- ;; => "1"
-
-(->> (om-elem-parse-this-element)
-     (om-elem-table-get-cell 1 0)
-     (om-elem-contents)
-     (car))
- ;; => "a"
-
-(->> (om-elem-parse-this-element)
-     (om-elem-table-get-cell 0 2)
-     (om-elem-contents)
-     (car))
- ;; => "3"
-
-(->> (om-elem-parse-this-element)
-     (om-elem-table-get-cell 0 3)
-     (om-elem-contents)
-     (car))
- ;; => nil
-
-```
-
-#### om-elem-timestamp-get-start `(timestamp)`
-
-Return the start of `timestamp` element.
-
-```el
-;; Given the following contents:
-; [2019-01-01 Tue]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-get-start)
-     (om-elem-to-trimmed-string))
+(->> (om-elem-build-timestamp! 'inactive
+			       '(2019 1 1))
+     (om-elem-to-string))
  ;; => "[2019-01-01 Tue]"
 
-;; Given the following contents:
-; [2019-01-01 Tue]--[2019-01-02 Wed]
+(->> (om-elem-build-timestamp! 'inactive
+			       '(2019 1 1 12 0)
+			       :warning '(all 1 day)
+			       :repeater '(cumulate 1 month))
+     (om-elem-to-string))
+ ;; => "[2019-01-01 Tue 12:00 +1m -1d]"
 
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-get-start)
+(->> (om-elem-build-timestamp! 'inactive
+			       '(2019 1 1)
+			       :end '(2019 1 2))
+     (om-elem-to-string))
+ ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+```
+
+#### om-elem-build-clock! `(start &key end post-blank)`
+
+Build a clock object.
+
+`start` and `end` follow the same rules as their respective arguments in
+[`om-elem-build-timestamp!`](#om-elem-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+
+```el
+(->> (om-elem-build-clock! '(2019 1 1))
      (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue]"
+ ;; => "CLOCK: [2019-01-01 Tue]"
 
-;; Given the following contents:
-; [2019-01-01 Tue 00:00-12:00]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-get-start)
+(->> (om-elem-build-clock! '(2019 1 1 12 0))
      (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue 00:00]"
+ ;; => "CLOCK: [2019-01-01 Tue 12:00]"
 
-```
-
-#### om-elem-timestamp-get-end `(timestamp)`
-
-Return the end of `timestamp` element or nil if not present.
-
-```el
-;; Given the following contents:
-; [2019-01-01 Tue]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-get-end)
+(->> (om-elem-build-clock! '(2019 1 1 12 0)
+			   :end '(2019 1 1 13 0))
      (om-elem-to-trimmed-string))
- ;; => nil
+ ;; => "CLOCK: [2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00] =>  1:00"
 
-;; Given the following contents:
-; [2019-01-01 Tue]--[2019-01-02 Wed]
+```
 
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-get-end)
+#### om-elem-build-planning! `(&key closed deadline scheduled post-blank)`
+
+Build a planning element using shorthand arguments.
+`closed`, `deadline`, and `scheduled` are lists with the following structure
+(brackets denote optional members):
+
+'(year minute day [hour] [min]
+    [&warning type value unit])
+    [&repeater type value unit])'
+
+In terms of arguments supplied to [`om-elem-build-timestamp!`](#om-elem-build-timestamp-type-start-key-end-repeater-warning-post-blank), the
+first five members correspond to the list supplied as `time`, and the
+type/value/unit correspond to the lists supplied to `warning` and
+`repeater`. The order of warning and repeater does not matter.
+
+```el
+(->> (om-elem-build-planning! :closed '(2019 1 1))
      (om-elem-to-trimmed-string))
- ;; => "[2019-01-02 Wed]"
+ ;; => "CLOSED: [2019-01-01 Tue]"
 
-;; Given the following contents:
-; [2019-01-01 Tue 00:00-12:00]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-get-end)
+(->> (om-elem-build-planning! :closed '(2019 1 1)
+			       :scheduled '(2018 1 1))
      (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue 12:00]"
+ ;; => "SCHEDULED: [2018-01-01 Mon] CLOSED: [2019-01-01 Tue]"
+
+(->> (om-elem-build-planning! :closed '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
+     (om-elem-to-trimmed-string))
+ ;; => "CLOSED: [2019-01-01 Tue +1m -1d]"
 
 ```
 
+#### om-elem-build-property-drawer! `(&key post-blank &rest keyvals)`
 
-## Element predicate functions
+Create a property drawer element.
 
-
-pred shit
-
-#### om-elem-is-empty-p `(elem)`
-
-Return t if `elem` has no contents.
+Each member in `keyvals` is a list of symbols like (key val), where each
+list will generate a node property in the property drawer like ':Key:
+Val'.
 
 ```el
-;; Given the following contents:
-; * dummy
-filled with useless knowledge
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-is-empty-p))
- ;; => nil
-
-;; Given the following contents:
-; * dummy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-is-empty-p))
- ;; => t
+(->> (om-elem-build-property-drawer! '(key val))
+     (om-elem-to-trimmed-string))
+ ;; => ":PROPERTIES:
+ ;      :key:      val
+ ;      :END:"
 
 ```
 
-#### om-elem-property-is-nil-p `(prop elem)`
+#### om-elem-build-headline! `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning properties statistics-cookie section-contents &rest subheadlines)`
 
-Return t if `prop` in `elem` is nil.
+Build a headline element.
+
+`title-text` is a oneline string for the title of the headline.
+
+`planning` is a list like ('planning-type' 'args' ...) where
+'planning-type' is one of :closed, :deadline, or :scheduled, and
+'args' are the args supplied to any of the planning types in
+[`om-elem-build-planning!`](#om-elem-build-planning-key-closed-deadline-scheduled-post-blank). Up to all three planning types can be used
+in the same list like (:closed args :deadline args :scheduled).
+
+`statistics-cookie` is a list following the same format as 
+[`om-elem-build-statistics-cookie`](#om-elem-build-statistics-cookie-value-key-post-blank).
+
+`section-contents` is a list of elements that will go in the headline
+section.
+
+`subheadlines` contains zero or more headlines that will go under the
+created headline.
+
+All arguments not mentioned here follow the same rules as
+[`om-elem-build-headline`](#om-elem-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-elems)
 
 ```el
-;; Given the following contents:
-; * TODO dummy
+(->> (om-elem-build-headline! :title-text "really impressive title")
+     (om-elem-to-trimmed-string))
+ ;; => "* really impressive title"
 
-(->> (om-elem-parse-this-headline)
-     (om-elem-property-is-nil-p :todo-keyword))
- ;; => nil
+(->> (om-elem-build-headline! :title-text "really impressive title" :statistics-cookie '(0 9000))
+     (om-elem-to-trimmed-string))
+ ;; => "* really impressive title [0/9000]"
 
-(->> (om-elem-parse-this-headline)
-     (om-elem-property-is-nil-p :commentedp))
- ;; => t
+(->> (om-elem-build-headline! :title-text "really impressive title" :properties '((key val))
+			       :section-contents (list (om-elem-build-paragraph! "section text"))
+			       (om-elem-build-headline! :level 2 :title-text "subhead"))
+     (om-elem-to-trimmed-string))
+ ;; => "* really impressive title
+ ;      :PROPERTIES:
+ ;      :key:      val
+ ;      :END:
+ ;      section text
+ ;      ** subhead"
 
 ```
 
-#### om-elem-property-is-non-nil-p `(prop elem)`
+#### om-elem-build-item! `(&key post-blank bullet checkbox tag paragraph counter &rest subitems)`
 
-Return t if `prop` in `elem` is not nil.
+Build an item element.
+
+`tag` is a string representing the tag.
+
+`paragraph` is a string that will be the initial text in the item.
+
+`subitems` contains the items that will go under this item.
+
+All other arguments follow the same rules as [`om-elem-build-item`](#om-elem-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-elems).
 
 ```el
-;; Given the following contents:
-; * TODO dummy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-property-is-non-nil-p :todo-keyword))
- ;; => t
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-property-is-non-nil-p :commentedp))
- ;; => nil
+(->> (om-elem-build-item! :bullet '(1)
+			   :tag "complicated *tag*" :paragraph "petulant /frenzy/" (om-elem-build-item! :bullet '-
+													 :paragraph "below"))
+     (om-elem-to-trimmed-string))
+ ;; => "1. complicated *tag* :: petulant /frenzy/
+ ;         - below"
 
 ```
 
-#### om-elem-property-is-eq-p `(prop val elem)`
+#### om-elem-build-paragraph! `(string &key post-blank)`
 
-Return t if `prop` in `elem` is `eq` to `val`.
+Build a paragraph element.
+
+`string` is the text to be parsed into a paragraph. It must contain valid
+formatting (eg, text that will be formatted into objects).
 
 ```el
-;; Given the following contents:
-; * [#A] dummy
+(->> (om-elem-build-paragraph! "stuff /with/ *formatting*" :post-blank 2)
+     (om-elem-to-string))
+ ;; => "stuff /with/ *formatting*
+ ;      
+ ;      
+ ;      "
 
-(->> (om-elem-parse-this-headline)
-     (om-elem-property-is-eq-p :priority 65))
- ;; => t
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-property-is-eq-p :priority 66))
- ;; => nil
+(->> (om-elem-build-paragraph! "* stuff /with/ *formatting*")
+     (om-elem-to-string))
+Error
 
 ```
 
-#### om-elem-property-is-equal-p `(prop val elem)`
+#### om-elem-build-table! `(&key tblfm post-blank &rest row-lists)`
 
-Return t if `prop` in `elem` is `equal` to `val`.
+Build a table element.
+
+`row-lists` is a list of lists where each member is a string to be put
+in a table cell or the symbol 'hline' which represents a horizontal
+line.
+
+All other arguments follow the same rules as [`om-elem-build-table`](#om-elem-build-table-key-tblfm-post-blank-rest-elems).
 
 ```el
-;; Given the following contents:
-; * TODO dummy
+(->> (om-elem-build-table! '("R" "A")
+			   '("G" "E"))
+     (om-elem-to-trimmed-string))
+ ;; => "| R | A |
+ ;      | G | E |"
 
-(->> (om-elem-parse-this-headline)
-     (om-elem-property-is-equal-p :todo-keyword "TODO"))
- ;; => t
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-property-is-equal-p :todo-keyword "DONE"))
- ;; => nil
-
-```
-
-#### om-elem-property-is-predicate-p `(prop fun elem)`
-
-Return t if `fun` applied to the value of `prop` in `elem` results not nil.
-`fun` is a predicate function that takes one argument.
-
-```el
-;; Given the following contents:
-; * this is a dummy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-property-is-predicate-p* :title (s-contains? "dummy" (car it))))
- ;; => t
+(->> (om-elem-build-table! '("L" "O")
+			   'hline
+			   '("V" "E"))
+     (om-elem-to-trimmed-string))
+ ;; => "| L | O |
+ ;      |---+---|
+ ;      | V | E |"
 
 ```
 
-#### om-elem-contains-point-p `(point elem)`
 
-Return t if integer `point` is within the beginning and end of `elem`.
+## Type Predicates
 
-```el
-;; Given the following contents:
-; * headline 1
-; * headline 2
 
-;; The headline is parsed from 'point-min'
-(->> (om-elem-parse-this-headline)
-     (om-elem-contains-point-p (point-min)))
- ;; => t
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-contains-point-p (point-max)))
- ;; => nil
-
-```
-
-#### om-elem-contents-contains-point-p `(point elem)`
-
-Return t if integer `point` is within the beginning and end of `elem``s contents.
-
-```el
-;; Given the following contents:
-; * this is a dummy
-; filled with nonsense
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-contents-contains-point-p (point-min)))
- ;; => nil
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-contents-contains-point-p (point-max)))
- ;; => t
-
-```
+Testing types of elements
 
 #### om-elem-is-type-p `(type elem)`
 
-Return t if `elem``s type is `eq` to `type` (a symbol).
+Return t if the type of `elem` is `type` (a symbol).
 
 ```el
 ;; Given the following contents:
@@ -1682,7 +2000,7 @@ Return t if `elem``s type is `eq` to `type` (a symbol).
 
 #### om-elem-is-any-type-p `(types elem)`
 
-Return t if `elem``s type is any in `types` (a list of symbols).
+Return t if the type of `elem` is in `types` (a list of symbols).
 
 ```el
 ;; Given the following contents:
@@ -1701,6 +2019,650 @@ Return t if `elem``s type is any in `types` (a list of symbols).
  ;; => nil
 
 ```
+
+#### om-elem-is-element-p `(elem)`
+
+Return t if `elem` is an element type.
+
+```el
+;; Given the following contents:
+; *ziltoid*
+
+;; Parsing this text as an element gives a paragraph
+(->> (om-elem-parse-this-element)
+     (om-elem-is-element-p))
+ ;; => t
+
+;; Parsing the same text as an object gives a bold object
+(->> (om-elem-parse-this-object)
+     (om-elem-is-element-p))
+ ;; => nil
+
+```
+
+#### om-elem-is-container-p `(elem)`
+
+Return t if `elem` is a container.
+Containers are elements or objects that may contain other elements
+or objects.
+
+```el
+;; Given the following contents:
+; *ziltoid*
+
+;; Parsing this as an element gives a paragraph type (an object container).
+(->> (om-elem-parse-this-element)
+     (om-elem-is-container-p))
+ ;; => t
+
+;; Parsing this as an object gives a bold type (also an object container).
+(->> (om-elem-parse-this-object)
+     (om-elem-is-container-p))
+ ;; => t
+
+;; Given the following contents:
+; ~ziltoid~
+
+;; Parsing this as an object gives a code type (not a container).
+(->> (om-elem-parse-this-object)
+     (om-elem-is-container-p))
+ ;; => nil
+
+;; Given the following contents:
+; # ziltoid
+
+;; Parsing this as an element gives a comment type (not a container).
+(->> (om-elem-parse-this-element)
+     (om-elem-is-container-p))
+ ;; => nil
+
+;; Given the following contents:
+; * I'm so great
+
+;; Parsing this as an element gives a table (a greater element).
+(->> (om-elem-parse-this-element)
+     (om-elem-is-container-p))
+ ;; => t
+
+```
+
+#### om-elem-is-object-container-p `(elem)`
+
+Return t if `elem` is an object container.
+Object containers are elements or objects that may contain objects.
+
+```el
+;; Given the following contents:
+; *ziltoid*
+
+;; Parsing this as an element gives a paragraph type (an object container).
+(->> (om-elem-parse-this-element)
+     (om-elem-is-object-container-p))
+ ;; => t
+
+;; Parsing this as an object gives a bold type (also an object container).
+(->> (om-elem-parse-this-object)
+     (om-elem-is-object-container-p))
+ ;; => t
+
+;; Given the following contents:
+; ~ziltoid~
+
+;; Parsing this as an object gives a code type (not a container).
+(->> (om-elem-parse-this-object)
+     (om-elem-is-object-container-p))
+ ;; => nil
+
+;; Given the following contents:
+; # ziltoid
+
+;; Parsing this as an element gives a comment type (not a container).
+(->> (om-elem-parse-this-element)
+     (om-elem-is-object-container-p))
+ ;; => nil
+
+;; Given the following contents:
+; * I'm so great
+
+;; Parsing this as an element gives a table (a greater element).
+(->> (om-elem-parse-this-element)
+     (om-elem-is-object-container-p))
+ ;; => nil
+
+```
+
+#### om-elem-is-greater-element-p `(elem)`
+
+Return t if `elem` is a greater element.
+Greater elements are elements that may contain other elements.
+
+```el
+;; Given the following contents:
+; * I'm so great
+
+;; Parsing this as an element gives a table (a greater element).
+(->> (om-elem-parse-this-element)
+     (om-elem-is-greater-element-p))
+ ;; => t
+
+;; Given the following contents:
+; *ziltoid*
+
+;; Parsing this as an element gives a paragraph type (not a greater element).
+(->> (om-elem-parse-this-element)
+     (om-elem-is-greater-element-p))
+ ;; => nil
+
+;; Given the following contents:
+; # ziltoid
+
+;; Parsing this as an element gives a comment type (not a container).
+(->> (om-elem-parse-this-element)
+     (om-elem-is-greater-element-p))
+ ;; => nil
+
+```
+
+
+## Property Manipulation
+
+
+Set, get, and map properties of elements and objects.
+
+
+### Generic
+
+#### om-elem-set-property `(prop value elem)`
+
+Set property `prop` to `value` in `elem`.
+
+```el
+;; Given the following contents:
+; #+CALL: ktulu()
+
+(->> (om-elem-parse-this-element)
+     (om-elem-set-property :call "cthulhu")
+     (om-elem-set-property :inside-header '(:cache no))
+     (om-elem-set-property :arguments '("x=4"))
+     (om-elem-set-property :end-header '(:exports results))
+     (om-elem-to-trimmed-string))
+ ;; => "#+CALL: cthulhu[:cache no](x=4) :exports results"
+
+;; Given the following contents:
+; - thing
+
+(->> (om-elem-parse-this-item)
+     (om-elem-set-property :bullet 1)
+     (om-elem-set-property :checkbox 'on)
+     (om-elem-set-property :counter 2)
+     (om-elem-set-property :tag '("tmsu"))
+     (om-elem-to-trimmed-string))
+ ;; => "1. [@2] [X] tmsu :: thing"
+
+;; Given the following contents:
+; * not valuable
+
+;; Throw error when setting a property that doesn't exist
+(->> (om-elem-parse-this-headline)
+     (om-elem-set-property :value "wtf")
+     (om-elem-to-trimmed-string))
+Error
+
+```
+
+#### om-elem-set-properties `(plist elem)`
+
+Set all properties in `elem` to the values corresponding to `plist`.
+`plist` is a list of property-value pairs that corresponds to the
+property list in `elem`.
+
+See builder functions for a list of properties and their rules for
+each type.
+
+```el
+;; Given the following contents:
+; - thing
+
+(->> (om-elem-parse-this-item)
+     (om-elem-set-properties (list :bullet 1 :checkbox 'on
+				    :counter 2 :tag '("tmsu")))
+     (om-elem-to-trimmed-string))
+ ;; => "1. [@2] [X] tmsu :: thing"
+
+```
+
+#### om-elem-get-property `(prop elem)`
+
+Return the value or property `prop` in `elem`.
+
+See builder functions for a list of properties and their rules for
+each type.
+
+```el
+;; Given the following contents:
+; #+CALL: ktulu[:cache no](x=4) :exports results
+
+(->> (om-elem-parse-this-element)
+     (om-elem-get-property :call))
+ ;; => "ktulu"
+
+(->> (om-elem-parse-this-element)
+     (om-elem-get-property :inside-header))
+ ;; => '(:cache no)
+
+(->> (om-elem-parse-this-element)
+     (om-elem-get-property :arguments))
+ ;; => '("x=4")
+
+(->> (om-elem-parse-this-element)
+     (om-elem-get-property :end-header))
+ ;; => '(:exports results)
+
+;; Given the following contents:
+; [[file:/dev/null]]
+
+(->> (om-elem-parse-this-object)
+     (om-elem-get-property :path))
+ ;; => "/dev/null"
+
+(->> (om-elem-parse-this-object)
+     (om-elem-get-property :type))
+ ;; => "file"
+
+(->> (om-elem-parse-this-object)
+     (om-elem-get-property :format))
+ ;; => 'bracket
+
+;; Given the following contents:
+; * not arguable
+
+;; Throw error when requesting a property that doesn't exist
+(->> (om-elem-parse-this-headline)
+     (om-elem-get-property :value))
+Error
+
+```
+
+#### om-elem-map-property `(prop fun elem)`
+
+Apply function `fun` to the value of property `prop` in `elem`.
+`fun` takes one argument (the current value of `prop`) and returns
+a new value to which `prop` will be set.
+
+See builder functions for a list of properties and their rules for
+each type.
+
+```el
+;; Given the following contents:
+; #+CALL: ktulu()
+
+(->> (om-elem-parse-this-element)
+     (om-elem-map-property :call (function s-upcase))
+     (om-elem-to-trimmed-string))
+ ;; => "#+CALL: KTULU()"
+
+;; Given the following contents:
+; #+BEGIN_EXAMPLE
+; example.com
+; #+END_EXAMPLE
+
+(->> (om-elem-parse-this-element)
+     (om-elem-map-property* :value (concat "https://" it))
+     (om-elem-to-trimmed-string))
+ ;; => "#+BEGIN_EXAMPLE
+ ;      https://example.com
+ ;      #+END_EXAMPLE"
+
+;; Given the following contents:
+; ~code~
+
+;; Throw error if property doesn't exist
+(->> (om-elem-parse-this-object)
+     (om-elem-map-property :title (function s-upcase))
+     (om-elem-to-trimmed-string))
+Error
+
+;; Throw error if function doesn't return proper type
+(->> (om-elem-parse-this-object)
+     (om-elem-map-property* :value (if it 1 0))
+     (om-elem-to-trimmed-string))
+Error
+
+```
+
+#### om-elem-map-properties `(plist elem)`
+
+Alter the values of properties in place within `elem`.
+`plist` is a property list where the keys are properties in `elem` and
+its values are functions to be mapped to these properties.
+
+See builder functions for a list of properties and their rules for
+each type.
+
+```el
+;; Given the following contents:
+; #+KEY: VAL
+
+(->> (om-elem-parse-this-element)
+     (om-elem-map-properties (list :key (-partial (function s-prepend)
+						  "OM_")
+				    :value (-partial (function s-prepend)
+						     "OM_")))
+     (om-elem-to-trimmed-string))
+ ;; => "#+OM_KEY: OM_VAL"
+
+```
+
+#### om-elem-toggle-property `(prop elem)`
+
+Flip the value of property `prop` in `elem`.
+This function only applies to properties that are booleans.
+
+The following elements and properties are supported:
+
+entity
+- :use-brackets-p
+
+example-block
+- :preserve-indent
+
+headline
+- :archivedp
+- :commentedp
+- :footnote-section-p
+
+src-block
+- :preserve-indent
+
+subscript
+- :use-brackets-p
+
+superscript
+- :use-brackets-p
+
+```el
+;; Given the following contents:
+; \pi
+
+(->> (om-elem-parse-this-object)
+     (om-elem-toggle-property :use-brackets-p)
+     (om-elem-to-trimmed-string))
+ ;; => "\\pi{}"
+
+;; Given the following contents:
+; * headline
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-toggle-property :archivedp)
+     (om-elem-to-trimmed-string))
+ ;; => "* headline                                                          :ARCHIVE:"
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-toggle-property :commentedp)
+     (om-elem-to-trimmed-string))
+ ;; => "* COMMENT headline"
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-toggle-property :footnote-section-p)
+     (om-elem-to-trimmed-string))
+ ;; => "* Footnotes"
+
+;; Given the following contents:
+; - [ ] nope
+
+;; Throw an error when trying to toggle a non-boolean property
+(->> (om-elem-parse-this-item)
+     (om-elem-toggle-property :checkbox)
+     (om-elem-to-trimmed-string))
+Error
+
+```
+
+#### om-elem-shift-property `(prop n elem)`
+
+Shift property `prop` by `n` (an integer) units within `elem`.
+This only applies the properties that are represented as integers.
+
+The following elements and properties are supported:
+
+all elements
+- :post-blank
+
+headline
+- :level
+- :pre-blank
+- :priority
+
+item
+- :counter
+
+```el
+;; Given the following contents:
+; * no priorities
+
+;; Do nothing if there is nothing to shift.
+(->> (om-elem-parse-this-headline)
+     (om-elem-shift-property :priority 1)
+     (om-elem-to-trimmed-string))
+ ;; => "* no priorities"
+
+;; Given the following contents:
+; * [#A] priorities
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-shift-property :priority -1)
+     (om-elem-to-trimmed-string))
+ ;; => "* [#B] priorities"
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-shift-property :priority -2)
+     (om-elem-to-trimmed-string))
+ ;; => "* [#C] priorities"
+
+;; Wrap priority around when crossing the min or max
+(->> (om-elem-parse-this-headline)
+     (om-elem-shift-property :priority 1)
+     (om-elem-to-trimmed-string))
+ ;; => "* [#C] priorities"
+
+;; Given the following contents:
+; * TODO or not todo
+
+;; Throw error when shifting an unshiftable property
+(->> (om-elem-parse-this-headline)
+     (om-elem-shift-property :todo-keyword 1)
+     (om-elem-to-string))
+Error
+
+```
+
+#### om-elem-insert-into-property `(prop index string elem)`
+
+Insert `string` into `prop` at `index` within `elem` if it is not already there.
+This only applies to properties that are represented as lists of strings.
+
+The following elements and properties are supported:
+
+babel-call
+- :arguments
+
+example-block
+- :switches
+
+headline
+- :tags
+
+inline-babel-call
+- :arguments
+
+macro
+- :args
+
+src-block
+- :switches
+
+table
+- :tblfm
+
+```el
+;; Given the following contents:
+; #+CALL: ktulu(y=1)
+
+(->> (om-elem-parse-this-element)
+     (om-elem-insert-into-property :arguments 0 "x=4")
+     (om-elem-to-trimmed-string))
+ ;; => "#+CALL: ktulu(x=4,y=1)"
+
+;; Do nothing if the string is already in the list
+(->> (om-elem-parse-this-element)
+     (om-elem-insert-into-property :arguments 0 "y=1")
+     (om-elem-to-trimmed-string))
+ ;; => "#+CALL: ktulu(y=1)"
+
+;; Throw error when inserting into a property that is not a list of strings
+(->> (om-elem-parse-this-element)
+     (om-elem-insert-into-property :end-header 0 "html")
+     (om-elem-to-trimmed-string))
+Error
+
+;; Given the following contents:
+; * headline       :tag1:
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-insert-into-property :tags 0 "tag0")
+     (om-elem-to-trimmed-string))
+ ;; => "* headline                                                        :tag0:tag1:"
+
+```
+
+#### om-elem-remove-from-property `(prop string elem)`
+
+Remove string `string` from list `prop` within `elem`.
+This only applies to properties that are represented as lists of 
+strings.
+
+See [`om-elem-insert-into-property`](#om-elem-insert-into-property-prop-index-string-elem) for a list of supported elements
+and properties that may be used with this function.
+
+```el
+;; Given the following contents:
+; #+CALL: ktulu(y=1)
+
+(->> (om-elem-parse-this-element)
+     (om-elem-remove-from-property :arguments "y=1")
+     (om-elem-to-trimmed-string))
+ ;; => "#+CALL: ktulu()"
+
+;; Do nothing if the string does not exist
+(->> (om-elem-parse-this-element)
+     (om-elem-remove-from-property :arguments "d=666")
+     (om-elem-to-trimmed-string))
+ ;; => "#+CALL: ktulu(y=1)"
+
+;; Throw error when removing from property that is not a string list
+(->> (om-elem-parse-this-element)
+     (om-elem-remove-from-property :end-header ":results")
+     (om-elem-to-trimmed-string))
+Error
+
+;; Given the following contents:
+; * headline       :tag1:
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-remove-from-property :tags "tag1")
+     (om-elem-to-trimmed-string))
+ ;; => "* headline"
+
+```
+
+#### om-elem-plist-put-property `(prop key value elem)`
+
+Insert `key` and `value` pair into `prop` within `elem`.
+`key` is a keyword and `value` is a symbol. This only applies to 
+properties that are represented as plists.
+
+The following elements and properties are supported:.
+
+babel-call
+- :inside-header
+- :end-header
+
+dynamic-block
+- :arguments
+
+inline-babel-call
+- :inside-header
+- :end-header
+
+inline-src-block
+- :parameters
+
+src-block
+- :parameters
+
+```el
+;; Given the following contents:
+; #+CALL: ktulu[:cache no]()
+
+(->> (om-elem-parse-this-element)
+     (om-elem-plist-put-property :end-header :results 'html)
+     (om-elem-to-trimmed-string))
+ ;; => "#+CALL: ktulu[:cache no]() :results html"
+
+;; Change the value of key if it already is present
+(->> (om-elem-parse-this-element)
+     (om-elem-plist-put-property :inside-header :cache 'yes)
+     (om-elem-to-trimmed-string))
+ ;; => "#+CALL: ktulu[:cache yes]()"
+
+;; Do nothing if the key and value already exist
+(->> (om-elem-parse-this-element)
+     (om-elem-plist-put-property :inside-header :cache 'no)
+     (om-elem-to-trimmed-string))
+ ;; => "#+CALL: ktulu[:cache no]()"
+
+;; Throw error if setting property that isn't a plist
+(->> (om-elem-parse-this-element)
+     (om-elem-plist-put-property :arguments :cache 'no)
+     (om-elem-to-trimmed-string))
+Error
+
+```
+
+#### om-elem-plist-remove-property `(prop key elem)`
+
+Remove `key` and its value from `prop` within `elem`.
+`key` is a keyword. This only applies to properties that are
+represented as plists.
+
+See [`om-elem-plist-put-property`](#om-elem-plist-put-property-prop-key-value-elem) for a list of supported elements
+and properties that may be used with this function.
+
+```el
+;; Given the following contents:
+; #+CALL: ktulu() :results html
+
+(->> (om-elem-parse-this-element)
+     (om-elem-plist-remove-property :end-header :results)
+     (om-elem-to-trimmed-string))
+ ;; => "#+CALL: ktulu()"
+
+;; Do nothing if the key is not present
+(->> (om-elem-parse-this-element)
+     (om-elem-plist-remove-property :inside-header :cache)
+     (om-elem-to-trimmed-string))
+ ;; => "#+CALL: ktulu() :results html"
+
+;; Throw error if trying to remove key from non-plist property
+(->> (om-elem-parse-this-element)
+     (om-elem-plist-remove-property :arguments :cache)
+     (om-elem-to-trimmed-string))
+Error
+
+```
+
+
+### Clock
 
 #### om-elem-clock-is-running-p `(clock)`
 
@@ -1723,6 +2685,28 @@ Return t if `clock` element is running (eg is open).
 
 ```
 
+#### om-elem-clock-map-timestamp `(fun clock)`
+
+Apply `fun` to timestamp in `clock`.
+`fun` is a function that takes the current timestamp and returns
+a modified timestamp. The returned timestamp must be inactive and
+cannot contain any warnings or repeaters.
+
+```el
+;; Given the following contents:
+; CLOCK: [2019-01-01 Tue 00:00]
+
+(->> (om-elem-parse-this-element)
+     (om-elem-clock-map-timestamp* (om-elem-timestamp-shift 1 'day
+							    it))
+     (om-elem-to-trimmed-string))
+ ;; => "CLOCK: [2019-01-02 Wed 00:00]"
+
+```
+
+
+### Headline
+
 #### om-elem-headline-is-done-p `(headline)`
 
 Return t if `headline` element has a `done` todo keyword.
@@ -1740,72 +2724,6 @@ Return t if `headline` element has a `done` todo keyword.
 
 (->> (om-elem-parse-this-headline)
      (om-elem-headline-is-done-p))
- ;; => t
-
-```
-
-#### om-elem-headline-is-scheduled-p `(headline)`
-
-Return t if `headline` element is scheduled.
-
-```el
-;; Given the following contents:
-; * lazy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-is-scheduled-p))
- ;; => nil
-
-;; Given the following contents:
-; * proactive
-; SCHEDULED: [2019-01-01 Tue]
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-is-scheduled-p))
- ;; => t
-
-```
-
-#### om-elem-headline-is-deadlined-p `(headline)`
-
-Return t if `headline` element has a deadline.
-
-```el
-;; Given the following contents:
-; * lazy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-is-deadlined-p))
- ;; => nil
-
-;; Given the following contents:
-; * proactive
-; DEADLINE: [2019-01-01 Tue]
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-is-deadlined-p))
- ;; => t
-
-```
-
-#### om-elem-headline-is-closed-p `(headline)`
-
-Return t if `headline` element is closed.
-
-```el
-;; Given the following contents:
-; * lazy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-is-closed-p))
- ;; => nil
-
-;; Given the following contents:
-; * proactive
-; CLOSED: [2019-01-01 Tue]
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-is-closed-p))
  ;; => t
 
 ```
@@ -1873,6 +2791,31 @@ Return t if `headline` element is tagged with `tag`.
 
 ```
 
+#### om-elem-headline-get-statistics-cookie `(headline)`
+
+Return the statistics cookie object from `headline` if it exists.
+
+```el
+;; Given the following contents:
+; * statistically significant [10/10]
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-headline-get-statistics-cookie)
+     (om-elem-to-string))
+ ;; => "[10/10]"
+
+;; Given the following contents:
+; * not statistically significant
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-headline-get-statistics-cookie))
+ ;; => nil
+
+```
+
+
+### Item
+
 #### om-elem-item-is-unchecked-p `(item)`
 
 Return t if `item` element is unchecked.
@@ -1885,7 +2828,7 @@ Return t if `item` element is unchecked.
 ; - [-] four
 
 (->> (om-elem-parse-this-element)
-     (om-elem-contents)
+     (om-elem--get-contents)
      (-map (function om-elem-item-is-unchecked-p)))
  ;; => '(nil t nil nil)
 
@@ -1903,7 +2846,7 @@ Return t if `item` element is checked.
 ; - [-] four
 
 (->> (om-elem-parse-this-element)
-     (om-elem-contents)
+     (om-elem--get-contents)
      (-map (function om-elem-item-is-checked-p)))
  ;; => '(nil nil t nil)
 
@@ -1921,733 +2864,9 @@ Return t if `item` element is transitional.
 ; - [-] four
 
 (->> (om-elem-parse-this-element)
-     (om-elem-contents)
+     (om-elem--get-contents)
      (-map (function om-elem-item-is-trans-p)))
  ;; => '(nil nil nil t)
-
-```
-
-#### om-elem-timestamp-is-active-p `(timestamp)`
-
-Return t if `timestamp` elem is active.
-
-```el
-;; Given the following contents:
-; <2019-01-01 Tue>
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-is-active-p))
- ;; => t
-
-;; Given the following contents:
-; [2019-01-01 Tue]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-is-active-p))
- ;; => nil
-
-```
-
-#### om-elem-timestamp-is-inactive-p `(timestamp)`
-
-Return t if `timestamp` elem is inactive.
-
-```el
-;; Given the following contents:
-; [2019-01-01 Tue]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-is-inactive-p))
- ;; => t
-
-;; Given the following contents:
-; <2019-01-01 Tue>
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-is-inactive-p))
- ;; => nil
-
-```
-
-#### om-elem-timestamp-is-ranged-p `(timestamp)`
-
-Return t if `timestamp` elem is ranged.
-
-```el
-;; Given the following contents:
-; [2019-01-01 Tue]--[2019-01-02 Wed]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-is-ranged-p))
- ;; => t
-
-;; Given the following contents:
-; [2019-01-01 Tue 00:00-12:00]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-is-ranged-p))
- ;; => t
-
-;; Given the following contents:
-; [2019-01-01 Tue]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-is-ranged-p))
- ;; => nil
-
-```
-
-
-## Element setter functions
-
-
-set shit
-
-#### om-elem-headline-set-todo `(todo headline)`
-
-Set the todo keyword of `headline` element to `todo`.
-
-```el
-;; Given the following contents:
-; * TODO dummy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-set-todo "DONE")
-     (om-elem-to-trimmed-string))
- ;; => "* DONE dummy"
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-set-todo nil)
-     (om-elem-to-trimmed-string))
- ;; => "* dummy"
-
-```
-
-#### om-elem-headline-set-archived `(flag headline)`
-
-Set the archived flag of `headline` element to `flag`.
-
-```el
-;; Given the following contents:
-; * dummy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-set-archived t)
-     (om-elem-to-trimmed-string))
- ;; => "* dummy                                                             :ARCHIVE:"
-
-;; Given the following contents:
-; * dummy                                                             :ARCHIVE:
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-set-archived nil)
-     (om-elem-to-trimmed-string))
- ;; => "* dummy"
-
-```
-
-#### om-elem-headline-set-commented `(flag headline)`
-
-Set the commented flag of `headline` element to `flag`.
-
-```el
-;; Given the following contents:
-; * dummy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-set-commented t)
-     (om-elem-to-trimmed-string))
- ;; => "* COMMENT dummy"
-
-;; Given the following contents:
-; * COMMENT dummy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-set-commented nil)
-     (om-elem-to-trimmed-string))
- ;; => "* dummy"
-
-```
-
-#### om-elem-headline-set-priority `(priority headline)`
-
-Set the priority of `headline` element to `priority`.
-
-```el
-;; Given the following contents:
-; * dummy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-set-priority 65)
-     (om-elem-to-trimmed-string))
- ;; => "* [#A] dummy"
-
-;; Given the following contents:
-; * [#A] dummy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-set-priority nil)
-     (om-elem-to-trimmed-string))
- ;; => "* dummy"
-
-```
-
-#### om-elem-headline-set-title `(title headline)`
-
-Set the title of `headline` element to `title`.
-
-```el
-;; Given the following contents:
-; * dummy
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-set-title "portishead")
-     (om-elem-to-trimmed-string))
- ;; => "* portishead"
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-set-title nil)
-     (om-elem-to-trimmed-string))
- ;; => "*"
-
-```
-
-#### om-elem-item-set-checkbox `(state item)`
-
-Set the checkbox of `item` element to `state`.
-`state` is one of 'on', 'off', 'trans'. Setting to nil removes the
-checkbox.
-
-```el
-;; Given the following contents:
-; - [ ] one
-
-(->> (om-elem-parse-this-item)
-     (om-elem-item-set-checkbox 'on)
-     (om-elem-to-trimmed-string))
- ;; => "- [X] one"
-
-(->> (om-elem-parse-this-item)
-     (om-elem-item-set-checkbox nil)
-     (om-elem-to-trimmed-string))
- ;; => "- one"
-
-```
-
-#### om-elem-item-set-bullet `(bullet item)`
-
-Set the bullet of `item` element to `bullet`.
-`bullet` is either '-' or '+' or an integer greater than zero.
-Note that `org-element-item-interpreter` currently does not interpret
-'+' bullets properly and will render these as '-'.
-
-```el
-;; Given the following contents:
-; - one
-
-(->> (om-elem-parse-this-item)
-     (om-elem-item-set-bullet 1)
-     (om-elem-to-trimmed-string))
- ;; => "1. one"
-
-;; This is actually correct due to a bug
-(->> (om-elem-parse-this-item)
-     (om-elem-item-set-bullet '+)
-     (om-elem-to-trimmed-string))
- ;; => "- one"
-
-;; Given the following contents:
-; 1. one
-
-(->> (om-elem-parse-this-item)
-     (om-elem-item-set-bullet '-)
-     (om-elem-to-trimmed-string))
- ;; => "- one"
-
-```
-
-#### om-elem-item-set-tag `(tag item)`
-
-Set the tag of `item` element to `tag` where `tag` is a string or nil.
-
-```el
-;; Given the following contents:
-; - one
-
-(->> (om-elem-parse-this-item)
-     (om-elem-item-set-tag "tmsu")
-     (om-elem-to-trimmed-string))
- ;; => "- tmsu :: one"
-
-;; Given the following contents:
-; - tmsu :: one
-
-(->> (om-elem-parse-this-item)
-     (om-elem-item-set-tag nil)
-     (om-elem-to-trimmed-string))
- ;; => "- one"
-
-```
-
-#### om-elem-plain-list-set-type `(type plain-list)`
-
-Set the type of `plain-list` greater element to `type`.
-`type` is '-', '+', or 'ordered'.
-
-```el
-;; Given the following contents:
-; - [ ] one
-; - [X] two
-
-(->> (om-elem-parse-this-element)
-     (om-elem-plain-list-set-type 'ordered)
-     (om-elem-to-trimmed-string))
- ;; => "1. [ ] one
- ;;    2. [X] two"
-
-;; Given the following contents:
-; 1. [ ] one
-; 2. [X] two
-
-(->> (om-elem-parse-this-element)
-     (om-elem-plain-list-set-type '-)
-     (om-elem-to-trimmed-string))
- ;; => "- [ ] one
- ;;    - [X] two"
-
-```
-
-#### om-elem-node-property-set-key `(key node-property)`
-
-Set the key of `node-property` element to `key` (a string).
-
-```el
-;; Given the following contents:
-; * dummy
-; :PROPERTIES:
-; :key:      value
-; :END:
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-map* '(section property-drawer node-property)
-		   (om-elem-node-property-set-key "lock" it))
-     (om-elem-to-trimmed-string))
- ;; => "* dummy
- ;;    :PROPERTIES:
- ;;    :lock:     value
- ;;    :END:"
-
-```
-
-#### om-elem-node-property-set-value `(value node-property)`
-
-Set the value of `node-property` element to `value` (a string).
-
-```el
-;; Given the following contents:
-; * dummy
-; :PROPERTIES:
-; :key:      value
-; :END:
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-map* '(section property-drawer node-property)
-		   (om-elem-node-property-set-value "lock" it))
-     (om-elem-to-trimmed-string))
- ;; => "* dummy
- ;;    :PROPERTIES:
- ;;    :key:      lock
- ;;    :END:"
-
-```
-
-#### om-elem-link-set-path `(path link)`
-
-Set the path of `link` element to `path` (a string).
-
-```el
-;; Given the following contents:
-; [[eldorado][gold]]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-link-set-path "404")
-     (om-elem-to-trimmed-string))
- ;; => "[[404][gold]]"
-
-;; Given the following contents:
-; [[file:eldorado][gold]]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-link-set-path "404")
-     (om-elem-to-trimmed-string))
- ;; => "[[file:404][gold]]"
-
-```
-
-#### om-elem-link-set-type `(type link)`
-
-Set the type of `link` element to `type` (a symbol).
-Setting `type` to nil will result in a 'fuzzy' type link.
-
-```el
-;; Given the following contents:
-; [[eldorado]]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-link-set-type 'file)
-     (om-elem-to-trimmed-string))
- ;; => "[[file:eldorado]]"
-
-;; Given the following contents:
-; [[file:eldorado]]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-link-set-type nil)
-     (om-elem-to-trimmed-string))
- ;; => "[[eldorado]]"
-
-(->> (om-elem-parse-this-object)
-     (om-elem-link-set-type 'fuzzy)
-     (om-elem-to-trimmed-string))
- ;; => "[[eldorado]]"
-
-```
-
-#### om-elem-timestamp-set-time `(time timestamp)`
-
-Set start time of `timestamp` element to `time`.
-`time` is a list like '(year month day)' or '(year month day hour min)'.
-
-```el
-;; Given the following contents:
-; [2019-01-01 Tue]
-
-;; Set a different time.
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-set-time '(2019 1 2))
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-02 Wed]"
-
-;; Set a different time with different precision.
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-set-time '(2019 1 1 10 0))
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue 10:00]"
-
-```
-
-#### om-elem-timestamp-set-time-end `(time timestamp)`
-
-Set end time of `timestamp` element to `time`.
-`time` is a list like '(year month day)' or '(year month day hour min)'.
-This will also change the type to (un)ranged as appropriate.
-
-```el
-;; Given the following contents:
-; [2019-01-01 Tue]
-
-;; Add the end time
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-set-time-end '(2019 1 2))
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-
-;; Given the following contents:
-; [2019-01-01 Tue]--[2019-01-02 Wed]
-
-;; Remove the end time
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-set-time-end nil)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue]"
-
-```
-
-#### om-elem-timestamp-set-type `(type timestamp)`
-
-Set type of `timestamp` element to `type`.
-`type` can be either 'active' or 'inactive'.
-
-```el
-;; Given the following contents:
-; [2019-01-01 Tue]
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-set-type 'active)
-     (om-elem-to-trimmed-string))
- ;; => "<2019-01-01 Tue>"
-
-```
-
-
-## Element shifter functions
-
-
-shift shit
-
-#### om-elem-shift-property `(prop n elem)`
-
-Shift `prop` of `elem` by `n` where `n` is a positive or negative integer.
-
-```el
-;; Given the following contents:
-; [2019-01-01 Tue]
-
-;; Shift up
-(->> (om-elem-parse-this-object)
-     (om-elem-shift-property :year-start 1)
-     (om-elem-to-trimmed-string))
- ;; => "[2020-01-01 Wed]"
-
-;; Shift down
-(->> (om-elem-parse-this-object)
-     (om-elem-shift-property :year-start -1)
-     (om-elem-to-trimmed-string))
- ;; => "[2018-01-01 Mon]"
-
-;; Do nothing
-(->> (om-elem-parse-this-object)
-     (om-elem-shift-property :year-start 0)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue]"
-
-```
-
-#### om-elem-headline-shift-priority `(shift headline)`
-
-Shift the priority property of `headline` element by `shift`.
-`shift` is a positive or negative integer.
-
-```el
-;; Given the following contents:
-; * headline
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-shift-priority 1)
-     (om-elem-to-trimmed-string))
- ;; => "* headline"
-
-;; Given the following contents:
-; * [#A] headline
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-shift-priority -1)
-     (om-elem-to-trimmed-string))
- ;; => "* [#B] headline"
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-shift-priority -2)
-     (om-elem-to-trimmed-string))
- ;; => "* [#C] headline"
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-shift-priority 1)
-     (om-elem-to-trimmed-string))
- ;; => "* [#C] headline"
-
-```
-
-#### om-elem-timestamp-shift-time-start `(unit value timestamp)`
-
-Shift the `unit` of `timestamp` element start time by `value`.
-`value` is a positive or negative integer and `unit` is one of 'minute',
-'hour', 'day', 'month', or 'year'. Value will wrap around larger units
-as needed; for instance, supplying 'minute' for `unit` and 60 for `value`
-will increase the hour property by 1.
-
-```el
-;; Given the following contents:
-; [2019-01-01 Tue 12:00]
-
-;; Change each unit, and wrap around to the next unit as needed.
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-start 'minute
-					 30)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue 12:30]"
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-start 'minute
-					 60)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue 13:00]"
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-start 'hour
-					 1)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue 13:00]"
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-start 'day
-					 1)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-02 Wed 12:00]"
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-start 'day
-					 31)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-02-01 Fri 12:00]"
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-start 'month
-					 1)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-02-01 Fri 12:00]"
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-start 'month
-					 13)
-     (om-elem-to-trimmed-string))
- ;; => "[2020-02-01 Sat 12:00]"
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-start 'year
-					 1)
-     (om-elem-to-trimmed-string))
- ;; => "[2020-01-01 Wed 12:00]"
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-start 'year
-					 0)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue 12:00]"
-
-;; Given the following contents:
-; [2019-01-01 Tue]
-
-;; Do nothing to hour and minute
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-start 'minute
-					 30)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue]"
-
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-start 'hour
-					 30)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue]"
-
-;; Given the following contents:
-; [2019-01-01 Tue]--[2019-01-03 Thu]
-
-;; Change only the start if a range
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-start 'day
-					 1)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-02 Wed]--[2019-01-03 Thu]"
-
-```
-
-#### om-elem-timestamp-shift-time-end `(unit value timestamp)`
-
-Shift the `unit` of `timestamp` element end time by `value`.
-The behavior is analogous to [`om-elem-timestamp-shift-time-start`](#om-elem-timestamp-shift-time-start-unit-value-timestamp),
-except that the timestamp will be unchanged if no ending time is
-present.
-
-```el
-;; Given the following contents:
-; [2019-01-01 Tue]
-
-;; Do nothing if not a range.
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-end 'day
-				       1)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue]"
-
-;; Given the following contents:
-; [2019-01-01 Tue]--[2019-01-02 Wed]
-
-;; Move only the second time if a range.
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time-end 'day
-				       1)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-01 Tue]--[2019-01-03 Thu]"
-
-```
-
-#### om-elem-timestamp-shift-time `(unit value timestamp)`
-
-Shift the `unit` of `timestamp` element start and end time by `value`.
-The behavior is analogous to [`om-elem-timestamp-shift-time-start`](#om-elem-timestamp-shift-time-start-unit-value-timestamp) for
-both timestamp halves.
-
-```el
-;; Given the following contents:
-; [2019-01-01 Tue 12:00]
-
-;; Not a range, only change the start time.
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time 'year
-				   1)
-     (om-elem-to-trimmed-string))
- ;; => "[2020-01-01 Wed 12:00]"
-
-;; Given the following contents:
-; [2019-01-01 Tue]--[2019-01-03 Thu]
-
-;; Change both start and end if a range
-(->> (om-elem-parse-this-object)
-     (om-elem-timestamp-shift-time 'day
-				   1)
-     (om-elem-to-trimmed-string))
- ;; => "[2019-01-02 Wed]--[2019-01-04 Fri]"
-
-```
-
-
-## Element toggle functions.
-
-
-Toggle shit
-
-#### om-elem-toggle-property `(prop elem)`
-
-Toggle the state of `prop` in `elem`.
-
-```el
-;; Given the following contents:
-; * headline
-
-;; Flip the property
-(->> (om-elem-parse-this-headline)
-     (om-elem-toggle-property :commentedp)
-     (om-elem-to-trimmed-string))
- ;; => "* COMMENT headline"
-
-;; Flip the property twice (do nothing)
-(->> (om-elem-parse-this-headline)
-     (om-elem-toggle-property :commentedp)
-     (om-elem-toggle-property :commentedp)
-     (om-elem-to-trimmed-string))
- ;; => "* headline"
-
-```
-
-#### om-elem-headline-toggle-commented `(headline)`
-
-Toggle the commented/uncommented state of `headline` element.
-
-```el
-;; Given the following contents:
-; * headline
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-toggle-commented)
-     (om-elem-to-trimmed-string))
- ;; => "* COMMENT headline"
-
-(->> (om-elem-parse-this-headline)
-     (om-elem-headline-toggle-commented)
-     (om-elem-headline-toggle-commented)
-     (om-elem-to-trimmed-string))
- ;; => "* headline"
 
 ```
 
@@ -2688,6 +2907,537 @@ Toggle the checked/unchecked state of `item` element.
 
 ```
 
+
+### Planning
+
+#### om-elem-planning-set-timestamp `(prop planning-list planning)`
+
+Set the timestamp of `planning` matching `prop`.
+
+`prop` is one of :closed, :deadline, or :scheduled. `planning-list` is the
+same as that described in [`om-elem-build-planning!`](#om-elem-build-planning-key-closed-deadline-scheduled-post-blank).
+
+```el
+;; Given the following contents:
+; * dummy
+; CLOSED: [2019-01-01 Tue]
+
+;; Change an existing timestamp in planning
+(->> (om-elem-parse-this-headline)
+     (om-elem--headline-get-planning)
+     (om-elem-planning-set-timestamp :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
+     (om-elem-to-trimmed-string))
+ ;; => "CLOSED: [2019-01-02 Wed +2m -1d]"
+
+;; Add a new timestamp and remove another
+(->> (om-elem-parse-this-headline)
+     (om-elem--headline-get-planning)
+     (om-elem-planning-set-timestamp :deadline '(2112 1 1))
+     (om-elem-planning-set-timestamp :closed nil)
+     (om-elem-to-trimmed-string))
+ ;; => "DEADLINE: [2112-01-01 Fri]"
+
+```
+
+#### om-elem-planning-map-timestamp `(prop fun planning)`
+
+Modify timestamp matching `prop` in place in `planning` using `fun`.
+
+`prop` is one of :closed, :deadline, or :scheduled. `fun` must return a
+timestamp conforming to that described in [`om-elem-build-planning`](#om-elem-build-planning-key-closed-deadline-scheduled-post-blank).
+
+The only difference between using this function and using 
+[`om-elem-map-property`](#om-elem-map-property-prop-fun-elem) is that the former will silently no-op if `prop`
+is nil. The latter will throw an error unless `fun` is able to handle
+nil values.
+
+```el
+;; Given the following contents:
+; * dummy
+; CLOSED: [2019-01-01 Tue]
+
+;; Apply mapping function if timestamp exists
+(->> (om-elem-parse-this-headline)
+     (om-elem--headline-get-planning)
+     (om-elem-planning-map-timestamp* :closed (om-elem-timestamp-shift 1 'day
+								       it))
+     (om-elem-to-trimmed-string))
+ ;; => "CLOSED: [2019-01-02 Wed]"
+
+;; Do nothing if timestamp does not exist
+(->> (om-elem-parse-this-headline)
+     (om-elem--headline-get-planning)
+     (om-elem-planning-map-timestamp* :deadline (om-elem-timestamp-shift 1 'day
+									 it))
+     (om-elem-to-trimmed-string))
+ ;; => "CLOSED: [2019-01-01 Tue]"
+
+;; Throw error if new timestamp is not allowed
+(->> (om-elem-parse-this-headline)
+     (om-elem--headline-get-planning)
+     (om-elem-planning-map-timestamp :closed (function om-elem-timestamp-toggle-active))
+     (om-elem-to-trimmed-string))
+Error
+
+```
+
+
+### Statistics Cookie
+
+#### om-elem-statistics-cookie-is-complete-p `(statistics-cookie)`
+
+Return t is `statistics-cookie` element is complete.
+
+```el
+;; Given the following contents:
+; * statistically significant [10/10]
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-headline-get-statistics-cookie)
+     (om-elem-statistics-cookie-is-complete-p))
+ ;; => t
+
+;; Given the following contents:
+; * statistically significant [1/10]
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-headline-get-statistics-cookie)
+     (om-elem-statistics-cookie-is-complete-p))
+ ;; => nil
+
+;; Given the following contents:
+; * statistically significant [100%]
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-headline-get-statistics-cookie)
+     (om-elem-statistics-cookie-is-complete-p))
+ ;; => t
+
+;; Given the following contents:
+; * statistically significant [33%]
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-headline-get-statistics-cookie)
+     (om-elem-statistics-cookie-is-complete-p))
+ ;; => nil
+
+```
+
+
+### Timestamp
+
+#### om-elem-timestamp-get-start-time `(timestamp)`
+
+Return the time list of `timestamp` or start time if a range.
+The return value will be a list as specified by the `time` argument in
+[`om-elem-build-timestamp!`](#om-elem-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-get-start-time))
+ ;; => '(2019 1 1 nil nil)
+
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-02 Wed]
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-get-start-time))
+ ;; => '(2019 1 1 nil nil)
+
+;; Given the following contents:
+; [2019-01-01 Tue 00:00-12:00]
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-get-start-time))
+ ;; => '(2019 1 1 0 0)
+
+```
+
+#### om-elem-timestamp-get-end-time `(timestamp)`
+
+Return the end time list of `timestamp` end or nil if not a range.
+The return value will be a list as specified by the `time` argument in
+[`om-elem-build-timestamp!`](#om-elem-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-get-end-time))
+ ;; => nil
+
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-02 Wed]
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-get-end-time))
+ ;; => '(2019 1 2 nil nil)
+
+;; Given the following contents:
+; [2019-01-01 Tue 00:00-12:00]
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-get-end-time))
+ ;; => '(2019 1 1 12 0)
+
+```
+
+#### om-elem-timestamp-is-active-p `(timestamp)`
+
+Return t if `timestamp` is active.
+
+```el
+;; Given the following contents:
+; <2019-01-01 Tue>
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-is-active-p))
+ ;; => t
+
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-is-active-p))
+ ;; => nil
+
+```
+
+#### om-elem-timestamp-is-ranged-p `(timestamp)`
+
+Return t if `timestamp` is ranged.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-02 Wed]
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-is-ranged-p))
+ ;; => t
+
+;; Given the following contents:
+; [2019-01-01 Tue 00:00-12:00]
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-is-ranged-p))
+ ;; => t
+
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-is-ranged-p))
+ ;; => nil
+
+```
+
+#### om-elem-timestamp-set-start-time `(time timestamp)`
+
+Set start time of `timestamp` element to `time`.
+`time` is a list analogous to the same argument specified in
+[`om-elem-build-timestamp!`](#om-elem-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+
+```el
+;; Given the following contents:
+; [2019-01-02 Wed]
+
+;; If not a range this will turn into a range by moving only the start time.
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-set-start-time '(2019 1 1))
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+;; Set a different time with different precision.
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-set-start-time '(2019 1 1 10 0))
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 10:00]--[2019-01-02 Wed]"
+
+```
+
+#### om-elem-timestamp-set-end-time `(time timestamp)`
+
+Set end time of `timestamp` element to `time`.
+`time` is a list analogous to the same argument specified in
+[`om-elem-build-timestamp!`](#om-elem-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+;; Add the end time
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-set-end-time '(2019 1 2))
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-02 Wed]
+
+;; Remove the end time
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-set-end-time nil)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]"
+
+```
+
+#### om-elem-timestamp-set-single-time `(time timestamp)`
+
+Set start time of `timestamp` to `time`, and remove the end time.
+`time` is a list analogous to the same argument specified in
+[`om-elem-build-timestamp!`](#om-elem-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+;; Don't make a range
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-set-single-time '(2019 1 2))
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-02 Wed]"
+
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-02 Wed]
+
+;; Output is not a range despite input being ranged
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-set-single-time '(2019 1 3))
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-03 Thu]"
+
+```
+
+#### om-elem-timestamp-set-double-time `(time1 time2 timestamp)`
+
+Set start and end time of `timestamp` to `time1` and `time2` respectively.
+`time1` and `time2` are lists analogous to the `time` argument specified in
+[`om-elem-build-timestamp!`](#om-elem-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+;; Make a range
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-set-double-time '(2019 1 2)
+					'(2019 1 3))
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-02 Wed]--[2019-01-03 Thu]"
+
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-03 Wed]
+
+;; Output is not a range despite input being ranged
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-set-double-time '(2019 1 4)
+					'(2019 1 5))
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-04 Fri]--[2019-01-05 Sat]"
+
+```
+
+#### om-elem-timestamp-set-range `(range timestamp)`
+
+Set the `range` of `timestamp`.
+If `timestamp` is ranged, keep start time the same and adjust the end
+time. If not, make a new end time. The units for `range` are in minutes
+if `timestamp` is in long format and days if `timestamp` is in short
+format.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+;; Use days as the unit for short format
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-set-range 1)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 00:00]
+
+;; Use minutes as the unit for long format
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-set-range 3)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 00:00]--[2019-01-01 Tue 00:03]"
+
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-03 Wed]
+
+;; Set range to 0 to remove end time
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-set-range 0)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]"
+
+```
+
+#### om-elem-timestamp-set-type `(type timestamp)`
+
+Set type of `timestamp` element to `type`.
+`type` can be either 'active' or 'inactive'.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-set-type 'active)
+     (om-elem-to-trimmed-string))
+ ;; => "<2019-01-01 Tue>"
+
+```
+
+#### om-elem-timestamp-shift `(n unit timestamp)`
+
+Shift `timestamp` time by `n` `units`.
+
+This function will move the start and end times together; therefore
+ranged inputs will always output ranged timestamps and same for
+non-ranged. To move the start and end time independently, use
+[`om-elem-timestamp-shift-start`](#om-elem-timestamp-shift-start-n-unit-timestamp) or [`om-elem-timestamp-shift-end`](#om-elem-timestamp-shift-end-n-unit-timestamp).
+
+`n` is a positive or negative integer and `unit` is one of 'minute',
+'hour', 'day', 'month', or 'year'. Overflows will wrap around
+transparently; for instance, supplying 'minute' for `unit` and 90 for `n`
+will increase the hour property by 1 and the minute property by 30.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+;; Change each unit, and wrap around to the next unit as needed.
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift 30 'minute)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 12:30]"
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift 60 'minute)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 13:00]"
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift 1 'hour)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 13:00]"
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift 1 'day)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-02 Wed 12:00]"
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift 31 'day)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-02-01 Fri 12:00]"
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift 1 'month)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-02-01 Fri 12:00]"
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift 13 'month)
+     (om-elem-to-trimmed-string))
+ ;; => "[2020-02-01 Sat 12:00]"
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift 1 'year)
+     (om-elem-to-trimmed-string))
+ ;; => "[2020-01-01 Wed 12:00]"
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift 0 'year)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 12:00]"
+
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+;; Error when shifting hour/minute in short format
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift 30 'minute)
+     (om-elem-to-trimmed-string))
+Error
+
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift 30 'hour)
+     (om-elem-to-trimmed-string))
+Error
+
+```
+
+#### om-elem-timestamp-shift-start `(n unit timestamp)`
+
+Shift `timestamp` start time by `n` `units`.
+
+`n` and `unit` behave the same as those in [`om-elem-timestamp-shift`](#om-elem-timestamp-shift-n-unit-timestamp).
+
+If `timestamp` is not range, the output will be a ranged timestamp with
+the shifted start time and the end time as that of `timestamp`. If this
+behavior is not desired, use [`om-elem-timestamp-shift`](#om-elem-timestamp-shift-n-unit-timestamp).
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+;; If not a range, change start time and leave implicit end time.
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift-start -1 'year)
+     (om-elem-to-trimmed-string))
+ ;; => "[2018-01-01 Mon 12:00]--[2019-01-01 Tue 12:00]"
+
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-03 Thu]
+
+;; Change only start time if a range
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift-start 1 'day)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-02 Wed]--[2019-01-03 Thu]"
+
+```
+
+#### om-elem-timestamp-shift-end `(n unit timestamp)`
+
+Shift `timestamp` end time by `n` `units`.
+
+`n` and `unit` behave the same as those in [`om-elem-timestamp-shift`](#om-elem-timestamp-shift-n-unit-timestamp).
+
+If `timestamp` is not range, the output will be a ranged timestamp with
+the shifted end time and the start time as that of `timestamp`. If this
+behavior is not desired, use [`om-elem-timestamp-shift`](#om-elem-timestamp-shift-n-unit-timestamp).
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+;; Shift implicit end time if not a range.
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift-end 1 'day)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-02 Wed]
+
+;; Move only the second time if a range.
+(->> (om-elem-parse-this-object)
+     (om-elem-timestamp-shift-end 1 'day)
+     (om-elem-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]--[2019-01-03 Thu]"
+
+```
+
 #### om-elem-timestamp-toggle-active `(timestamp)`
 
 Toggle the active/inactive type of `timestamp` element.
@@ -2724,608 +3474,1614 @@ Toggle the active/inactive type of `timestamp` element.
 ```
 
 
-## Element parsers
+## Content Manipulation
 
 
-parse shit
+Set, get and map the contents of containers
 
-#### om-elem-parse-object-at `(point &optional type)`
 
-Return the object tree under `point` or nil if not on an object.
+### Generic
 
-If `type` is supplied, only return nil if the object under point is
-not of that type. `type` is a symbol from `org-element-all-objects`.
+#### om-elem-get-contents `(elem)`
+
+Return the contents of `elem` as a list.
 
 ```el
 ;; Given the following contents:
-; *text*
+; /this/ is a *paragraph*
 
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'bold
-
-;; Given the following contents:
-; ~text~
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'code
+;; Return objects for object containers
+(->> (om-elem-parse-this-element)
+     (om-elem-get-contents)
+     (-map (function om-elem-get-type)))
+ ;; => '(italic plain-text bold)
 
 ;; Given the following contents:
-; [fn:1:text]
+; * headline
+; stuff
+; ** subheadline
 
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'footnote-reference
-
-;; Given the following contents:
-; call_name()
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'inline-babel-call
+;; Return elements for greater elements
+(->> (om-elem-parse-this-subtree)
+     (om-elem-get-contents)
+     (-map (function om-elem-get-type)))
+ ;; => '(section headline)
 
 ;; Given the following contents:
-; src_emacs{}
+; #+CALL: ktulu()
 
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'inline-src-block
-
-;; Given the following contents:
-; /text/
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'italic
-
-;; Given the following contents:
-; \\
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'line-break
-
-;; Given the following contents:
-; [[path][desc]]
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'link
-
-;; Given the following contents:
-; {{{macro}}}
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'macro
-
-;; Given the following contents:
-; <<<text>>>
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'radio-target
-
-;; Given the following contents:
-; [1/2]
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'statistics-cookie
-
-;; Given the following contents:
-; +text+
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'strike-through
-
-;; Given the following contents:
-; a_b
-
-(->> (om-elem-parse-object-at 3)
-     (om-elem-type))
- ;; => 'subscript
-
-;; Given the following contents:
-; a^b
-
-(->> (om-elem-parse-object-at 3)
-     (om-elem-type))
- ;; => 'superscript
-
-;; Given the following contents:
-; | a |
-
-(->> (om-elem-parse-object-at 2)
-     (om-elem-type))
- ;; => 'table-cell
-
-;; Given the following contents:
-; <<text>>
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'target
-
-;; Given the following contents:
-; [2019-01-01 Tue]
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'timestamp
-
-;; Given the following contents:
-; _text_
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'underline
-
-;; Given the following contents:
-; =text=
-
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => 'verbatim
-
-;; Given the following contents:
-; - notme
-
-;; Return nil when parsing an element
-(->> (om-elem-parse-object-at 1)
-     (om-elem-type))
- ;; => nil
+;; Throw error when attempting to get contents of a non-container
+(->> (om-elem-parse-this-element)
+     (om-elem-get-contents)
+     (-map (function om-elem-get-type)))
+Error
 
 ```
 
-#### om-elem-parse-element-at `(point &optional type)`
+#### om-elem-set-contents `(contents elem)`
 
-Return element immediately under `point`.
-For a list of all possible return types refer to
-`org-element-all-elements`; this will return everything in this list
-except 'section' which is ambiguous when referring to a single point.
-(see [`om-elem-parse-section-at`](#om-elem-parse-section-at-point)).
-
-If `type` is supplied, only return nil if the object under point is
-not of that type. `type` is a symbol from `org-element-all-elements`.
-Furthermore, setting `type` to 'table-row' will prefer table-row
-elements over table elements and likewise when setting `type` to 'item'
-for plain-list elements vs item elements.
+Set the contents of `elem` to `contents`.
+`contents` is a list of elements or objects; the types permitted in this
+list depend on the type of `elem`.
 
 ```el
 ;; Given the following contents:
-; #+CALL: of_ktulu()
+; /this/ is a *paragraph*
 
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'babel-call
-
-;; Given the following contents:
-; #+BEGIN_CENTER
-; #+END_CENTER
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'center-block
-
-;; Given the following contents:
-; CLOCK: [2019-01-01 Tue]
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'clock
-
-;; Given the following contents:
-; # oops I looked
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'comment
-
-;; Given the following contents:
-; #+BEGIN_COMMENT
-; oops I looked again
-; #+END_COMMENT
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'comment-block
-
-;; Given the following contents:
-; %%(diary of a madman)
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'diary-sexp
-
-;; Given the following contents:
-; :DRAWER:
-; - underwear
-; - savings account
-; :END:
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'drawer
-
-;; Given the following contents:
-; #+BEGIN countdown
-; #+END
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'dynamic-block
-
-;; Given the following contents:
-; #+BEGIN_EXAMPLE
-; #+END_EXAMPLE
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'example-block
-
-;; Given the following contents:
-; #+BEGIN_EXPORT latex
-; #+END_EXPORT
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'export-block
-
-;; Given the following contents:
-; : mini mini mini
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'fixed-width
-
-;; Given the following contents:
-; [fn:1]
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'footnote-definition
-
-;; Given the following contents:
-; * murder, young girl killed
-; * desperate shooting at echo's hill
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'headline
-
-;; Given the following contents:
-; -----
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'horizontal-rule
-
-;; Given the following contents:
-; - item
-
-;; Explicitly ask for item instead of plain-list
-(->> (om-elem-parse-element-at 1 'item)
-     (om-elem-type))
- ;; => 'item
-
-;; Given the following contents:
-; #+QUOTE: unquote
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'keyword
+;; Set contents for object containers
+(->> (om-elem-parse-this-element)
+     (om-elem-set-contents (list "this is lame"))
+     (om-elem-to-trimmed-string))
+ ;; => "this is lame"
 
 ;; Given the following contents:
 ; * headline
-; :PROPERTIES:
-; :key: val
-; :END:
+; stuff
+; ** subheadline
 
-(->> (om-elem-parse-element-at 25)
-     (om-elem-type))
- ;; => 'node-property
-
-;; Given the following contents:
-; Just for the record
-; The weather today is slightly sarcastic with a good chance of
-; A. Indifference and B. disinterest in what the critics say
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'paragraph
+;; Set contents for greater elements
+(->> (om-elem-parse-this-subtree)
+     (om-elem-set-contents (list (om-elem-build-headline! :title-text "only me" :level 2)))
+     (om-elem-to-trimmed-string))
+ ;; => "* headline
+ ;      ** only me"
 
 ;; Given the following contents:
-; - plain-list
+; #+CALL: ktulu()
 
-;; Give the plain-list since we didn't explicitly ask for item
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'plain-list
-
-;; Given the following contents:
-; * deadhead
-; DEADLINE: [2019-01-01 Tue]
-
-(->> (om-elem-parse-element-at 12)
-     (om-elem-type))
- ;; => 'planning
-
-;; Given the following contents:
-; * headline
-; :PROPERTIES:
-; :END:
-
-(->> (om-elem-parse-element-at 12)
-     (om-elem-type))
- ;; => 'property-drawer
-
-;; Given the following contents:
-; #+BEGIN_QUOTE
-; Oh glorious cheeseburger, we bow to thee
-; The secrets of the universe are between the buns
-; #+END_QUOTE
-
-(->> (om-elem-parse-element-at 12)
-     (om-elem-type))
- ;; => 'quote-block
-
-;; Given the following contents:
-; #+begin_dot dot.png
-; #+end_dot
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'special-block
-
-;; Given the following contents:
-; #+BEGIN_SRC emacs
-; (launch-missiles)
-; #+END_SRC
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'src-block
-
-;; Given the following contents:
-; | R | A |
-; | G | E |
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'table
-
-(->> (om-elem-parse-element-at 1 'table-row)
-     (om-elem-type))
- ;; => 'table-row
-
-;; Given the following contents:
-; #+BEGIN_VERSE
-; #+END_VERSE
-
-(->> (om-elem-parse-element-at 1)
-     (om-elem-type))
- ;; => 'verse-block
+;; Throw error when attempting to get contents of a non-container
+(->> (om-elem-parse-this-element)
+     (om-elem-set-contents "nil by mouth")
+     (om-elem-to-trimmed-string))
+Error
 
 ```
 
-#### om-elem-parse-headline-at `(point)`
+#### om-elem-map-contents `(fun elem)`
 
-Return element tree of the headline under `point` or nil if none.
-`point` does not need to be on the headline itself. Only the headline
-and its section will be returned (no subheadlines).
-
-```el
-;; Given the following contents:
-; * headline
-
-;; Return the headline itself
-(->> (om-elem-parse-headline-at 1)
-     (om-elem-to-trimmed-string))
- ;; => "* headline"
-
-;; Given the following contents:
-; * headline
-; section crap
-
-;; Return headline and section
-(->> (om-elem-parse-headline-at 1)
-     (om-elem-to-trimmed-string))
- ;; => "* headline
- ;;    section crap"
-
-;; Return headline when point is in the section
-(->> (om-elem-parse-headline-at 12)
-     (om-elem-to-trimmed-string))
- ;; => "* headline
- ;;    section crap"
-
-;; Given the following contents:
-; * headline
-; section crap
-; ** not parsed
-
-;; Don't parse any subheadlines
-(->> (om-elem-parse-headline-at 1)
-     (om-elem-to-trimmed-string))
- ;; => "* headline
- ;;    section crap"
-
-;; Given the following contents:
-; nothing nowhere
-
-;; Return nil if not under a headline
-(->> (om-elem-parse-headline-at 1)
-     (om-elem-to-trimmed-string))
- ;; => nil
-
-```
-
-#### om-elem-parse-subtree-at `(point)`
-
-Return element tree of the headline under `point` or nil if none.
-`point` does not need to be on the headline itself. Unlike
-[`om-elem-parse-headline-at`](#om-elem-parse-headline-at-point), the returned tree will include
-subheadlines.
+Apply `fun` to the contents of `elem`. 
+`fun` is a function that takes the current contents as a list and
+returns a modified contents as a list.
 
 ```el
 ;; Given the following contents:
-; * headline
+; /this/ is a *paragraph*
 
-;; Return the headline itself
-(->> (om-elem-parse-subtree-at 1)
+(->> (om-elem-parse-this-element)
+     (om-elem-map-contents (lambda (objs)
+			     (append objs (list " ...yeah"))))
      (om-elem-to-trimmed-string))
- ;; => "* headline"
-
-;; Given the following contents:
-; * headline
-; section crap
-
-;; Return headline and section
-(->> (om-elem-parse-subtree-at 1)
-     (om-elem-to-trimmed-string))
- ;; => "* headline
- ;;    section crap"
-
-;; Return headline when point is in the section
-(->> (om-elem-parse-subtree-at 12)
-     (om-elem-to-trimmed-string))
- ;; => "* headline
- ;;    section crap"
-
-;; Given the following contents:
-; * headline
-; section crap
-; ** parsed
-
-;; Return all the subheadlines
-(->> (om-elem-parse-subtree-at 1)
-     (om-elem-to-trimmed-string))
- ;; => "* headline
- ;;    section crap
- ;;    ** parsed"
-
-;; Given the following contents:
-; nothing nowhere
-
-;; Return nil if not under a headline
-(->> (om-elem-parse-subtree-at 1)
-     (om-elem-to-trimmed-string))
- ;; => nil
-
-```
-
-#### om-elem-parse-item-at `(point)`
-
-Return item element under `point` or nil if not found.
-Unlike [`om-elem-parse-element-at`](#om-elem-parse-element-at-point-optional-type), this will return then item even if
-`point` is not at the beginning of the line.
-
-```el
-;; Given the following contents:
-; - item
-
-;; Return the item itself
-(->> (om-elem-parse-item-at 1)
-     (om-elem-to-trimmed-string))
- ;; => "- item"
-
-;; Also return the item when not at beginning of line
-(->> (om-elem-parse-item-at 5)
-     (om-elem-to-trimmed-string))
- ;; => "- item"
-
-;; Given the following contents:
-; - item
-;   - item 2
-
-;; Return item and its subitems
-(->> (om-elem-parse-item-at 1)
-     (om-elem-to-trimmed-string))
- ;; => "- item
- ;;      - item 2"
-
-;; Given the following contents:
-; * not item
-
-;; Return nil if not an item
-(->> (om-elem-parse-item-at 1)
-     (om-elem-to-trimmed-string))
- ;; => nil
-
-```
-
-#### om-elem-parse-table-row-at `(point)`
-
-Return table-row element under `point` or nil if not found.
-
-```el
-;; Given the following contents:
-; | bow | stroke |
-
-;; Return the row itself
-(->> (om-elem-parse-table-row-at 1)
-     (om-elem-to-trimmed-string))
- ;; => "| bow | stroke |"
-
-;; Also return the row when not at beginning of line
-(->> (om-elem-parse-table-row-at 5)
-     (om-elem-to-trimmed-string))
- ;; => "| bow | stroke |"
-
-;; Given the following contents:
-; - bow and arrow choke
-
-;; Return nil if not a table-row
-(->> (om-elem-parse-table-row-at 1)
-     (om-elem-to-trimmed-string))
- ;; => nil
-
-```
-
-#### om-elem-parse-section-at `(point)`
-
-Return tree of the current section under `point`.
-If `point` is on or within a headline, return the section under that
-headline. If `point` is before the first headline (if any), return
-the section at the top of the org buffer.
-
-```el
-;; Given the following contents:
-; over headline
-; * headline
-; under headline
-
-;; Return the section above the headline
-(->> (om-elem-parse-section-at 1)
-     (om-elem-to-trimmed-string))
- ;; => "over headline"
-
-;; Return the section under headline
-(->> (om-elem-parse-section-at 25)
-     (om-elem-to-trimmed-string))
- ;; => "under headline"
+ ;; => "/this/ is a *paragraph* ...yeah"
 
 ;; Given the following contents:
 ; * headline
 ; ** subheadline
 
-;; Return nil if no section under headline
-(->> (om-elem-parse-section-at 1)
+(->> (om-elem-parse-this-subtree)
+     (om-elem-map-contents* (--map (om-elem-shift-property :level 1 it)
+				   it))
      (om-elem-to-trimmed-string))
+ ;; => "* headline
+ ;      *** subheadline"
+
+;; Given the following contents:
+; #+CALL: ktulu()
+
+;; Throw error when attempting to map contents of a non-container
+(->> (om-elem-parse-this-element)
+     (om-elem-map-contents (function ignore))
+     (om-elem-to-trimmed-string))
+Error
+
+```
+
+#### om-elem-is-empty-p `(elem)`
+
+Return t if `elem` is empty.
+This will throw an error if `elem` is not a container type.
+
+```el
+;; Given the following contents:
+; * dummy
+; filled with useless knowledge
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-is-empty-p))
  ;; => nil
 
 ;; Given the following contents:
-; 
+; * dummy
 
-;; Return nil if no section at all
-(->> (om-elem-parse-section-at 1)
-     (om-elem-to-trimmed-string))
- ;; => nil
+(->> (om-elem-parse-this-headline)
+     (om-elem-is-empty-p))
+ ;; => t
+
+;; Given the following contents:
+; #+CALL: ktulu()
+
+;; Throw error when attempting to determine if non-container is empty
+(->> (om-elem-parse-this-element)
+     (om-elem-is-empty-p))
+Error
 
 ```
 
 
-0.0.1
+### Headline
+
+#### om-elem-headline-update-item-statistics `(headline)`
+
+Update the statistics cookie for `headline`.
+The percent/fraction will be computed as the number of checked items
+over the number of items with checkboxes (non-checkbox items will
+not be considered).
+
+```el
+;; Given the following contents:
+; * statistically significant [/]
+; - irrelevant data
+; - [ ] good data
+; - [X] bad data
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-headline-update-item-statistics)
+     (om-elem-to-trimmed-string))
+ ;; => "* statistically significant [1/2]
+ ;      - irrelevant data
+ ;      - [ ] good data
+ ;      - [X] bad data"
+
+;; Given the following contents:
+; * statistically significant [%]
+; - irrelevant data
+; - [ ] good data
+; - [X] bad data
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-headline-update-item-statistics)
+     (om-elem-to-trimmed-string))
+ ;; => "* statistically significant [50%]
+ ;      - irrelevant data
+ ;      - [ ] good data
+ ;      - [X] bad data"
+
+;; Given the following contents:
+; * statistically significant
+; - irrelevant data
+; - [ ] good data
+; - [X] bad data
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-headline-update-item-statistics)
+     (om-elem-to-trimmed-string))
+ ;; => "* statistically significant
+ ;      - irrelevant data
+ ;      - [ ] good data
+ ;      - [X] bad data"
+
+```
+
+#### om-elem-headline-update-todo-statistics `(headline)`
+
+Update the statistics cookie for `headline`.
+The percent/fraction will be computed as the number of done
+subheadlines over the number of todo subheadlines (eg non-todo
+subheadlines will not be counted).
+
+```el
+;; Given the following contents:
+; * statistically significant [/]
+; ** TODO good data
+; ** DONE bad data
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-headline-update-todo-statistics)
+     (om-elem-to-trimmed-string))
+ ;; => "* statistically significant [1/2]
+ ;      ** TODO good data
+ ;      ** DONE bad data"
+
+;; Given the following contents:
+; * statistically significant [%]
+; ** TODO good data
+; ** DONE bad data
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-headline-update-todo-statistics)
+     (om-elem-to-trimmed-string))
+ ;; => "* statistically significant [50%]
+ ;      ** TODO good data
+ ;      ** DONE bad data"
+
+;; Given the following contents:
+; * statistically significant
+; ** TODO good data
+; ** DONE bad data
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-headline-update-todo-statistics)
+     (om-elem-to-trimmed-string))
+ ;; => "* statistically significant
+ ;      ** TODO good data
+ ;      ** DONE bad data"
+
+```
+
+#### om-elem-headline-indent-subheadline `(index headline)`
+
+Indent the subheadline without moving its contents at `index` within `headline`.
+
+```el
+;; Given the following contents:
+; * one
+; ** two
+; ** three
+; *** four
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-headline-indent-subheadline 0)
+     (om-elem-to-trimmed-string))
+Error
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-headline-indent-subheadline 1)
+     (om-elem-to-trimmed-string))
+ ;; => "* one
+ ;      ** two
+ ;      *** three
+ ;      *** four"
+
+```
+
+#### om-elem-headline-indent-subtree `(index headline)`
+
+Indent the subheadline and its contents at `index` within `headline`.
+
+```el
+;; Given the following contents:
+; * one
+; ** two
+; ** three
+; *** four
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-headline-indent-subtree 1)
+     (om-elem-to-trimmed-string))
+ ;; => "* one
+ ;      ** two
+ ;      *** three
+ ;      **** four"
+
+```
+
+#### om-elem-headline-unindent-subheadline `(index child-index headline)`
+
+Unindent subheadline at `child-index` in the subheadline at `index` in `headline`.
+This will not move the contents under the headline at `child-index`.
+
+```el
+;; Given the following contents:
+; * one
+; ** two
+; ** three
+; *** four
+; *** four
+; *** four
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-headline-unindent-subheadline 1 1)
+     (om-elem-to-trimmed-string))
+ ;; => "* one
+ ;      ** two
+ ;      ** three
+ ;      *** four
+ ;      ** four
+ ;      *** four"
+
+```
+
+#### om-elem-headline-unindent-subtree `(index headline)`
+
+Unindent all subheadlines under the subheadline at `index` in `headline`.
+
+```el
+;; Given the following contents:
+; * one
+; ** two
+; ** three
+; *** four
+; *** four
+; *** four
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-headline-unindent-subtree 1)
+     (om-elem-to-trimmed-string))
+ ;; => "* one
+ ;      ** two
+ ;      ** three
+ ;      ** four
+ ;      ** four
+ ;      ** four"
+
+```
+
+
+### Plain List
+
+#### om-elem-plain-list-set-type `(type plain-list)`
+
+Set the type of `plain-list` greater element to `type`.
+`type` is '-', '+', or 'ordered'.
+
+```el
+;; Given the following contents:
+; - [ ] one
+; - [X] two
+
+(->> (om-elem-parse-this-element)
+     (om-elem-plain-list-set-type 'ordered)
+     (om-elem-to-trimmed-string))
+ ;; => "1. [ ] one
+ ;      2. [X] two"
+
+;; Given the following contents:
+; 1. [ ] one
+; 2. [X] two
+
+(->> (om-elem-parse-this-element)
+     (om-elem-plain-list-set-type '-)
+     (om-elem-to-trimmed-string))
+ ;; => "- [ ] one
+ ;      - [X] two"
+
+```
+
+#### om-elem-plain-list-indent-item `(index plain-list)`
+
+Indent the subitem at `index` in `plain-list` without moving items below it.
+
+```el
+;; Given the following contents:
+; - one
+; - two
+;   - three
+; - four
+
+;; It makes no sense to indent the first item
+(->> (om-elem-parse-element-at 1)
+     (om-elem-plain-list-indent-item 0)
+     (om-elem-to-trimmed-string))
+Error
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-plain-list-indent-item 1)
+     (om-elem-to-trimmed-string))
+ ;; => "- one
+ ;        - two
+ ;        - three
+ ;      - four"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-plain-list-indent-item 2)
+     (om-elem-to-trimmed-string))
+ ;; => "- one
+ ;      - two
+ ;        - three
+ ;        - four"
+
+```
+
+#### om-elem-plain-list-indent-item-tree `(index plain-list)`
+
+Indent the subitem at `index` in `plain-list` and move items below it.
+
+```el
+;; Given the following contents:
+; - one
+; - two
+;   - three
+; - four
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-plain-list-indent-item-tree 1)
+     (om-elem-to-trimmed-string))
+ ;; => "- one
+ ;        - two
+ ;          - three
+ ;      - four"
+
+```
+
+#### om-elem-plain-list-unindent-item `(index child-index plain-list)`
+
+Unindent subitem at `child-index` in the subitem at `index` in `plain-list`.
+This will not move the contents under the item at `child-index`.
+
+```el
+;; Given the following contents:
+; - one
+; - two
+;   - three
+;   - three
+;   - three
+; - four
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-plain-list-unindent-item 1 0)
+     (om-elem-to-trimmed-string))
+ ;; => "- one
+ ;      - two
+ ;      - three
+ ;        - three
+ ;        - three
+ ;      - four"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-plain-list-unindent-item 1 1)
+     (om-elem-to-trimmed-string))
+ ;; => "- one
+ ;      - two
+ ;        - three
+ ;      - three
+ ;        - three
+ ;      - four"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-plain-list-unindent-item 2 1)
+     (om-elem-to-trimmed-string))
+ ;; => "- one
+ ;      - two
+ ;        - three
+ ;        - three
+ ;        - three
+ ;      - four"
+
+```
+
+#### om-elem-plain-list-unindent-items `(index plain-list)`
+
+Unindent all items under the item at `index` in `plain-list`.
+
+```el
+;; Given the following contents:
+; - one
+; - two
+;   - three
+;   - three
+;   - three
+; - four
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-plain-list-unindent-items 1)
+     (om-elem-to-trimmed-string))
+ ;; => "- one
+ ;      - two
+ ;      - three
+ ;      - three
+ ;      - three
+ ;      - four"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-plain-list-unindent-items 2)
+     (om-elem-to-trimmed-string))
+ ;; => "- one
+ ;      - two
+ ;        - three
+ ;        - three
+ ;        - three
+ ;      - four"
+
+```
+
+
+### Table
+
+#### om-elem-table-get-cell `(row-index column-index table)`
+
+Return table-cell at `row-index` and `column-index` in `table` element.
+`h-`lines do not count toward row indices, and all indices are
+zero-indexed.
+
+```el
+;; Given the following contents:
+; | 1 | 2 | 3 |
+; |---+---+---|
+; | a | b | c |
+
+(->> (om-elem-parse-this-element)
+     (om-elem-table-get-cell 0 0)
+     (om-elem--get-contents)
+     (car))
+ ;; => "1"
+
+(->> (om-elem-parse-this-element)
+     (om-elem-table-get-cell 1 1)
+     (om-elem--get-contents)
+     (car))
+ ;; => "b"
+
+(->> (om-elem-parse-this-element)
+     (om-elem-table-get-cell -1 -1)
+     (om-elem--get-contents)
+     (car))
+ ;; => "c"
+
+```
+
+#### om-elem-table-replace-cell `(row-index column-index cell table)`
+
+Replace a cell in `table` with `cell` (a table-cell element).
+`row-index` and `column-index` are zero-indexed integers pointing to the
+position of the cell to be replaced.
+
+```el
+;; Given the following contents:
+; | 1 | 2 |
+; |---+---|
+; | a | b |
+
+(->> (om-elem-parse-this-element)
+     (om-elem-table-replace-cell 0 0 (om-elem-build-table-cell "2"))
+     (om-elem-to-trimmed-string))
+ ;; => "| 2 | 2 |
+ ;      |---+---|
+ ;      | a | b |"
+
+(->> (om-elem-parse-this-element)
+     (om-elem-table-replace-cell -1 -1 (om-elem-build-table-cell "B"))
+     (om-elem-to-trimmed-string))
+ ;; => "| 1 | 2 |
+ ;      |---+---|
+ ;      | a | B |"
+
+```
+
+#### om-elem-table-replace-cell! `(row-index column-index cell-text table)`
+
+Replace a cell in `table` with `cell-text`.
+`cell-text` is a string which will replace the contents of the cell at
+`row-index` and `column-index` (zero-indexed integers).
+
+```el
+;; Given the following contents:
+; | 1 | 2 |
+; |---+---|
+; | a | b |
+
+(->> (om-elem-parse-this-element)
+     (om-elem-table-replace-cell! 0 0 "2")
+     (om-elem-to-trimmed-string))
+ ;; => "| 2 | 2 |
+ ;      |---+---|
+ ;      | a | b |"
+
+(->> (om-elem-parse-this-element)
+     (om-elem-table-replace-cell! -1 -1 "B")
+     (om-elem-to-trimmed-string))
+ ;; => "| 1 | 2 |
+ ;      |---+---|
+ ;      | a | B |"
+
+```
+
+#### om-elem-table-clear-cell `(row-index column-index table)`
+
+Clear a cell in `table`.
+`row-index` and `column-index` are zero-indexed integers pointing to the
+position of the cell to be replaced.
+
+```el
+;; Given the following contents:
+; | 1 | 2 |
+; |---+---|
+; | a | b |
+
+(->> (om-elem-parse-this-element)
+     (om-elem-table-clear-cell 0 0)
+     (om-elem-to-trimmed-string))
+ ;; => "|   | 2 |
+ ;      |---+---|
+ ;      | a | b |"
+
+(->> (om-elem-parse-this-element)
+     (om-elem-table-clear-cell -1 -1)
+     (om-elem-to-trimmed-string))
+ ;; => "| 1 | 2 |
+ ;      |---+---|
+ ;      | a |   |"
+
+```
+
+#### om-elem-table-delete-column `(column-index table)`
+
+Delete the column at `column-index` in `table`.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-delete-column 0)
+     (om-elem-to-trimmed-string))
+ ;; => "| b |
+ ;      |---|
+ ;      | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-delete-column 1)
+     (om-elem-to-trimmed-string))
+ ;; => "| a |
+ ;      |---|
+ ;      | c |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-delete-column -1)
+     (om-elem-to-trimmed-string))
+ ;; => "| a |
+ ;      |---|
+ ;      | c |"
+
+```
+
+#### om-elem-table-replace-column `(column-index column-cells table)`
+
+Replace column at `column-index` in `table` with `column-cells`.
+`column-index` is the index of the column (starting at zero) and
+`column-cells` is a list of table-cell objects.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-replace-column 0 (list (om-elem-build-table-cell "A")
+					   (om-elem-build-table-cell "B")))
+     (om-elem-to-trimmed-string))
+ ;; => "| A | b |
+ ;      |---+---|
+ ;      | B | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-replace-column -1 (list (om-elem-build-table-cell "A")
+					    (om-elem-build-table-cell "B")))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | A |
+ ;      |---+---|
+ ;      | c | B |"
+
+```
+
+#### om-elem-table-replace-column! `(column-index column-text table)`
+
+Replace column at `column-index` in `table` with `column-text`.
+`column-index` is the index of the column (starting at zero) and
+`column-text` is a list of text to be made into table-cell objects.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-replace-column! 0 '("A" "B"))
+     (om-elem-to-trimmed-string))
+ ;; => "| A | b |
+ ;      |---+---|
+ ;      | B | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-replace-column! -1 '("A" "B"))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | A |
+ ;      |---+---|
+ ;      | c | B |"
+
+```
+
+#### om-elem-table-clear-column `(column-index table)`
+
+Clear the column at `column-index` in `table`.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-clear-column 0)
+     (om-elem-to-trimmed-string))
+ ;; => "|   | b |
+ ;      |---+---|
+ ;      |   | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-clear-column -1)
+     (om-elem-to-trimmed-string))
+ ;; => "| a |   |
+ ;      |---+---|
+ ;      | c |   |"
+
+```
+
+#### om-elem-table-replace-row `(row-index row-cells table)`
+
+Replace row at `row-index` in `table` with `row-cells`.
+`row-index` is the index of the row (starting at zero) and
+`row-cells` is a list of table-cell objects.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-replace-row 0 (om-elem-build-table-row (om-elem-build-table-cell "A")
+							   (om-elem-build-table-cell "B")))
+     (om-elem-to-trimmed-string))
+ ;; => "| A | B |
+ ;      |---+---|
+ ;      | c | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-replace-row -1 (om-elem-build-table-row (om-elem-build-table-cell "A")
+							    (om-elem-build-table-cell "B")))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b |
+ ;      |---+---|
+ ;      | A | B |"
+
+```
+
+#### om-elem-table-replace-row! `(row-index row-text table)`
+
+Replace row at `row-index` in `table` with `row-text`.
+`row-index` is the index of the row (starting at zero) and
+`row-text` is a list of text to be made into table-cell objects.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-replace-row! 0 '("A" "B"))
+     (om-elem-to-trimmed-string))
+ ;; => "| A | B |
+ ;      |---+---|
+ ;      | c | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-replace-row! -1 '("A" "B"))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b |
+ ;      |---+---|
+ ;      | A | B |"
+
+```
+
+#### om-elem-table-clear-row `(row-index table)`
+
+Clear the row at `row-index` in `table`.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-clear-row 0)
+     (om-elem-to-trimmed-string))
+ ;; => "|   |   |
+ ;      |---+---|
+ ;      | c | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-clear-row -1)
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b |
+ ;      |---+---|
+ ;      |   |   |"
+
+```
+
+#### om-elem-table-delete-row `(row-index table)`
+
+Delete the row at `row-index` in `table`.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-delete-row 0)
+     (om-elem-to-trimmed-string))
+ ;; => "|---+---|
+ ;      | c | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-delete-row 1)
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b |
+ ;      | c | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-delete-row -1)
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b |
+ ;      |---+---|"
+
+```
+
+#### om-elem-table-insert-column `(column-index column-cells table)`
+
+Insert `column-cells` at `column-index` in `table`.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-insert-column 1 (list (om-elem-build-table-cell "x")
+					  (om-elem-build-table-cell "y")))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | x | b |
+ ;      |---+---+---|
+ ;      | c | y | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-insert-column -1 (list (om-elem-build-table-cell "x")
+					   (om-elem-build-table-cell "y")))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b | x |
+ ;      |---+---+---|
+ ;      | c | d | y |"
+
+```
+
+#### om-elem-table-insert-column! `(column-index column-text table)`
+
+Insert `column-text` at `column-index` in `table`.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-insert-column! 1 '("x" "y"))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | x | b |
+ ;      |---+---+---|
+ ;      | c | y | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-insert-column! -1 '("x" "y"))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b | x |
+ ;      |---+---+---|
+ ;      | c | d | y |"
+
+```
+
+#### om-elem-table-insert-row `(row-index row table)`
+
+Insert `row` at `row-index` in `table`.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-insert-row 1 (om-elem-build-table-row (om-elem-build-table-cell "x")
+							  (om-elem-build-table-cell "y")))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b |
+ ;      | x | y |
+ ;      |---+---|
+ ;      | c | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-insert-row 2 (om-elem-build-table-row (om-elem-build-table-cell "x")
+							  (om-elem-build-table-cell "y")))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b |
+ ;      |---+---|
+ ;      | x | y |
+ ;      | c | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-insert-row -1 (om-elem-build-table-row (om-elem-build-table-cell "x")
+							   (om-elem-build-table-cell "y")))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b |
+ ;      |---+---|
+ ;      | c | d |
+ ;      | x | y |"
+
+```
+
+#### om-elem-table-insert-row! `(row-index row-text table)`
+
+Insert `row-text` at `row-index` in `table`.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-insert-row! 1 '("x" "y"))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b |
+ ;      | x | y |
+ ;      |---+---|
+ ;      | c | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-insert-row! 2 '("x" "y"))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b |
+ ;      |---+---|
+ ;      | x | y |
+ ;      | c | d |"
+
+(->> (om-elem-parse-element-at 1)
+     (om-elem-table-insert-row! -1 '("x" "y"))
+     (om-elem-to-trimmed-string))
+ ;; => "| a | b |
+ ;      |---+---|
+ ;      | c | d |
+ ;      | x | y |"
+
+```
+
+
+## Parse Tree Matching
+
+
+Use pattern-matching to perform operations on objects and elements in trees.
+
+#### om-elem-match `(queries elem)`
+
+docstring
+
+```el
+;; Given the following contents:
+; * headline one
+; ** TODO headline two
+; ** COMMENT headline three
+; ** headline four
+
+;; Use a symbol to match a type, in this case all headlines.
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '(headline))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => '("** TODO headline two" "** COMMENT headline three" "** headline four")
+
+;; Use integers specify the index to return. Negative integers count from the
+;; end. Out of range integers return nil
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '(1))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => '("** COMMENT headline three")
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '(-1))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => '("** headline four")
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '(3))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => nil
+
+;; Use a two-membered list with an operator and an integer to match a range of
+;; indices. Allowed operators are <, >, <=, and and >=.
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '((> 0)))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => '("** COMMENT headline three" "** headline four")
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '((>= 1)))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => '("** COMMENT headline three" "** headline four")
+
+;; Use a plist to match based on an elements properties.
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '((:todo-keyword "TODO")))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => '("** TODO headline two")
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '((:todo-keyword nil)))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => '("** COMMENT headline three" "** headline four")
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '((:todo-keyword "DONE")))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => nil
+
+;; Given the following contents:
+; * headline one
+; this is *text1* of *text2*
+; ** headline two
+; here is more *text3*
+; *** headline three
+; and here is even more *text4* and *text5*
+; **** headline 4
+
+;; Specify multiple levels of matching using multiple queries.
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '(section paragraph bold))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => '("*text1*" "*text2*")
+
+;; Use the keyword :any as a wildcard to match any element at a particular
+;; level.
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '(:any :any bold))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => '("*text1*" "*text2*")
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '(section paragraph :any))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => '("this is" "*text1*" "of" "*text2*" "")
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '(:any bold))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => nil
+
+;; Use the keyword :many to match one or more levels of any element.
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '(:many bold))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
+
+;; Use the keyword :many! to match one or more levels, except unlike :many do
+;; not match within any elements that have already matched.
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match '(headline :many! headline))
+     (--map (om-elem-to-trimmed-string it)))
+ ;; => '("*** headline three
+ ;     and here is even more *text4* and *text5*
+ ;     **** headline 4")
+
+```
+
+#### om-elem-match-first `(queries elem)`
+
+Find first object in `elem` matching `queries`.
+The rules for `queries` are the same as [`om-elem-match`](#om-elem-match-queries-elem)
+
+```el
+;; Given the following contents:
+; * headline one
+; ** TODO headline two
+; ** COMMENT headline three
+; ** headline four
+
+;; Find the first subheadline
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-first '(headline))
+     (om-elem-to-trimmed-string))
+ ;; => "** TODO headline two"
+
+```
+
+#### om-elem-match-last `(queries elem)`
+
+Find last object in `elem` matching `queries`.
+The rules for `queries` are the same as [`om-elem-match`](#om-elem-match-queries-elem)
+
+```el
+;; Given the following contents:
+; * headline one
+; ** TODO headline two
+; ** COMMENT headline three
+; ** headline four
+
+;; Find the last subheadline
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-last '(headline))
+     (om-elem-to-trimmed-string))
+ ;; => "** headline four"
+
+```
+
+#### om-elem-match-delete `(queries elem)`
+
+Remove matching targets from contents of `elem`.
+
+`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+
+```el
+;; Given the following contents:
+; * headline one
+; ** headline two
+; ** headline three
+; ** headline four
+
+;; Selectively delete headlines
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-delete '(headline))
+     (om-elem-to-trimmed-string))
+ ;; => "* headline one"
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-delete-first '(headline))
+     (om-elem-to-trimmed-string))
+ ;; => "* headline one
+ ;      ** headline three
+ ;      ** headline four"
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-delete-last '(headline))
+     (om-elem-to-trimmed-string))
+ ;; => "* headline one
+ ;      ** headline two
+ ;      ** headline three"
+
+```
+
+#### om-elem-match-extract `(queries elem)`
+
+Remove matching targets from contents of `elem`.
+Return cons cell where the car is a list of all removed targets
+and the cdr is the modified `elem` with targets removed.
+
+`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+
+```el
+no examples :(
+```
+
+#### om-elem-match-map `(queries fun elem)`
+
+Apply `fun` to targets matching `queries` in the contents of `elem`.
+`fun` is a function that takes a single argument (the target element or
+object) and returns a new element or object which will replace the
+original.
+
+`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+
+```el
+;; Given the following contents:
+; * headline one
+; ** TODO headline two
+; ** headline three
+; ** headline four
+
+;; Selectively mark headlines as DONE
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-map '(headline)
+			(lambda (it)
+			  (om-elem-set-property :todo-keyword "DONE" it)))
+     (om-elem-to-trimmed-string))
+ ;; => "* headline one
+ ;      ** DONE headline two
+ ;      ** DONE headline three
+ ;      ** DONE headline four"
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-map-first* '(headline)
+			       (om-elem-set-property :todo-keyword "DONE" it))
+     (om-elem-to-trimmed-string))
+ ;; => "* headline one
+ ;      ** DONE headline two
+ ;      ** headline three
+ ;      ** headline four"
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-map-last '(headline)
+			     (-partial (function om-elem-set-property)
+				       :todo-keyword "DONE"))
+     (om-elem-to-trimmed-string))
+ ;; => "* headline one
+ ;      ** TODO headline two
+ ;      ** headline three
+ ;      ** DONE headline four"
+
+```
+
+#### om-elem-match-mapcat `(queries fun elem)`
+
+Apply `fun` over `elem` and return modified `elem`.
+`fun` takes an element/object as its only argument and returns
+a list of elements/objects. Targets within `elem` are found that match
+`queries`, `fun` is applied to each target, and the resulting list is
+spliced in place of the original target (as opposed to [`om-elem-match-map`](#om-elem-match-map-queries-fun-elem)
+which replaces the original target with a modified target).
+
+`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+
+```el
+no examples :(
+```
+
+#### om-elem-match-replace `(queries rep elem)`
+
+Replace matching targets in `elem` with `rep`.
+
+`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+
+```el
+no examples :(
+```
+
+#### om-elem-match-insert-before `(queries elem* elem)`
+
+Insert `elem`* before every target matched by `queries` in `elem`.
+
+`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+
+```el
+no examples :(
+```
+
+#### om-elem-match-insert-after `(queries elem* elem)`
+
+Insert `elem`* after every target matched by `queries` in `elem`.
+
+`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+
+```el
+no examples :(
+```
+
+#### om-elem-match-insert-within `(queries index elem* elem)`
+
+Insert new element `elem`* into the contents of `elem` at `index`.
+Will insert into any target matched by `queries`. If `queries` is not
+supplied, `elem`* will be inserted directly into the toplevel contents
+of `elem`.
+
+`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+
+```el
+no examples :(
+```
+
+#### om-elem-match-splice-before `(queries elem* elem)`
+
+Splice `elems`* before every target matched by `queries` in `elem`.
+
+`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+
+```el
+no examples :(
+```
+
+#### om-elem-match-splice-after `(queries elem* elem)`
+
+Splice `elems`* after every target matched by `queries` in `elem`.
+
+`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+
+```el
+no examples :(
+```
+
+#### om-elem-match-splice-within `(queries index elem* elem)`
+
+Insert list of `elems`* into the contents of `elem` at `index`.
+Will insert into any target matched by `queries`. If `queries` is not
+supplied, `elem`* will be inserted directly into the toplevel contents
+of `elem`.
+
+`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+
+```el
+no examples :(
+```
+
+
+## Buffer Side Effects
+
+
+Insert and update elements and objects into buffers
+
+
+### Insert
+
+#### om-elem-insert `(point elem)`
+
+Convert `elem` to a string and insert at `point` in the current buffer.
+Return `elem`.
+
+```el
+;; Given the following contents:
+; * one
+; 
+
+(->> (om-elem-build-headline! :title-text "two")
+     (om-elem-insert (point-max)))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      * two"
+
+;; Given the following contents:
+; a *game* or a /boy/
+
+(->> (om-elem-build-paragraph! "we don't care if you're")
+     (om-elem-insert (point-min)))
+ ;; Output these buffer contents
+ ;; $> "we don't care if you're
+ ;      a *game* or a /boy/"
+
+```
+
+#### om-elem-insert-tail `(point elem)`
+
+Like [`om-elem-insert`](#om-elem-insert-point-elem) but insert `elem` at `point` and move to end of insertion.
+
+```el
+no examples :(
+```
+
+
+### Update
+
+#### om-elem-update `(fun elem)`
+
+Replace `elem` in the current buffer with a new one. 
+`fun` is a function that takes `elem` as its only argument and returns a
+modified `elem`. This modified element is then written in place of the
+old element in the current buffer.
+
+```el
+;; Given the following contents:
+; * TODO win grammy
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-update (lambda (hl)
+		       (om-elem-set-property :todo-keyword "DONE" hl))))
+ ;; Output these buffer contents
+ ;; $> "* DONE win grammy"
+
+;; Given the following contents:
+; * win grammy [0/0]
+; - [ ] write punk song
+; - [ ] get new vocalist
+; - [ ] sell 2 singles
+
+(->> (om-elem-parse-this-headline)
+     (om-elem-update* (->> (om-elem-match-map '(:many item)
+					      (function om-elem-item-toggle-checkbox)
+					      it)
+			   (om-elem-headline-update-item-statistics))))
+ ;; Output these buffer contents
+ ;; $> "* win grammy [3/3]
+ ;      - [X] write punk song
+ ;      - [X] get new vocalist
+ ;      - [X] sell 2 singles"
+
+```
+
+#### om-elem-update-object-at `(point fun)`
+
+Update object under `point` using `fun`.
+`fun` takes an object and returns a modified object
+
+```el
+;; Given the following contents:
+; [[http://example.com][desc]]
+
+(om-elem-update-object-at* (point)
+  (om-elem-set-property :path "//buymoreram.com" it))
+ ;; Output these buffer contents
+ ;; $> "[[http://buymoreram.com][desc]]"
+
+```
+
+#### om-elem-update-element-at `(point fun)`
+
+Update element under `point` using `fun`.
+`fun` takes an element and returns a modified element
+
+```el
+;; Given the following contents:
+; #+CALL: ktulu()
+
+(om-elem-update-element-at* (point)
+  (om-elem-set-properties (list :call "cthulhu" :inside-header '(:cache no)
+				 :arguments '("x=4")
+				 :end-header '(:results html))
+			  it))
+ ;; Output these buffer contents
+ ;; $> "#+CALL: cthulhu[:cache no](x=4) :results html"
+
+```
+
+#### om-elem-update-table-row-at `(point fun)`
+
+Update table-row under `point` using `fun`.
+`fun` takes an table-row and returns a modified table-row
+
+```el
+;; Given the following contents:
+; | a | b |
+
+(om-elem-update-table-row-at* (point)
+  (om-elem-map-contents* (cons (om-elem-build-table-cell! "0")
+			       it)
+			 it))
+ ;; Output these buffer contents
+ ;; $> "| 0 | a | b |"
+
+```
+
+#### om-elem-update-item-at `(point fun)`
+
+Update item under `point` using `fun`.
+`fun` takes an item and returns a modified item
+
+```el
+;; Given the following contents:
+; - [ ] thing
+
+(om-elem-update-item-at* (point)
+  (om-elem-item-toggle-checkbox it))
+ ;; Output these buffer contents
+ ;; $> "- [X] thing"
+
+```
+
+#### om-elem-update-headline-at `(point fun)`
+
+Update headline under `point` using `fun`.
+`fun` takes an headline and returns a modified headline
+
+```el
+;; Given the following contents:
+; * TODO might get done
+
+(om-elem-update-headline-at* (point)
+  (om-elem-set-property :todo-keyword "DONE" it))
+ ;; Output these buffer contents
+ ;; $> "* DONE might get done"
+
+```
+
+#### om-elem-update-subtree-at `(point fun)`
+
+Update subtree under `point` using `fun`.
+`fun` takes an subtree and returns a modified subtree
+
+```el
+;; Given the following contents:
+; * one
+; ** two
+; ** three
+
+(om-elem-update-subtree-at* (point)
+  (om-elem-headline-indent-subheadline 1 it))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      ** two
+ ;      *** three"
+
+```
+
+#### om-elem-update-this-object `(fun)`
+
+Update object under current point using `fun`.
+`fun` takes an object and returns a modified object
+
+```el
+no examples :(
+```
+
+#### om-elem-update-this-element `(fun)`
+
+Update element under current point using `fun`.
+`fun` takes an element and returns a modified element
+
+```el
+no examples :(
+```
+
+#### om-elem-update-this-table-row `(fun)`
+
+Update table-row under current point using `fun`.
+`fun` takes an table-row and returns a modified table-row
+
+```el
+no examples :(
+```
+
+#### om-elem-update-this-item `(fun)`
+
+Update item under current point using `fun`.
+`fun` takes an item and returns a modified item
+
+```el
+no examples :(
+```
+
+#### om-elem-update-this-headline `(fun)`
+
+Update headline under current point using `fun`.
+`fun` takes an headline and returns a modified headline
+
+```el
+no examples :(
+```
+
+#### om-elem-update-this-subtree `(fun)`
+
+Update subtree under current point using `fun`.
+`fun` takes an subtree and returns a modified subtree
+
+```el
+no examples :(
+```
+
+
+### Misc
+
+#### om-elem-fold-contents `(elem)`
+
+Fold the contents of `elem` if they exist.
+
+```el
+no examples :(
+```
+
+#### om-elem-unfold-contents `(elem)`
+
+Unfold the contents of `elem` if they exist.
+
+```el
+no examples :(
+```
+
+
+<!-- 0.0.1 -->
+
+# Acknowledgements
+
+- [@magnars](https://github.com/magnars):
+[dash.el](https://github.com/magnars/dash.el) and
+[s.el](https://github.com/magnars/s.el)
+- Devin Townsend: Puppetry
