@@ -31,6 +31,8 @@
 
 (defvar functions '())
 
+(defconst om-elem--fill-column 80)
+
 (defun om-get-package-version ()
   "Get version of om package."
   (with-current-buffer (find-file-noselect "om.el")
@@ -46,7 +48,9 @@
 (defun format-expected (sym expected)
   (let* ((s (s-lines (format "%S" expected)))
          (header (format " ;; %S %s" sym (car s)))
-         (rest (--map (s-prepend " ;;    " it) (-drop 1 s))))
+         (rest (--map (if (stringp expected) (s-prepend " ;      " it)
+                        (s-prepend " ;     " it))
+                      (-drop 1 s))))
     (s-join "\n" (cons header rest))))
 
 (defun example-to-string (example)
@@ -137,7 +141,16 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
               (format ";; Given the following contents:\n%s\n")))
         (format-comment
          (list)
-         (->> (car list) (-drop 1) (s-join " ") (format ";; %s"))))
+         (let ((comment (->> (car list)
+                             (-drop 1)
+                             (s-join " ")
+                             (format ";; %s"))))
+           (with-temp-buffer
+             (emacs-lisp-mode)
+             (insert comment)
+             (let ((fill-column om-elem--fill-column))
+               (fill-paragraph))
+             (buffer-string)))))
      (let* ((doc (or ,docstring (format-doc ',cmd)))
             (example
              (->> (filter-hidden ',args)
