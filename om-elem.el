@@ -213,7 +213,7 @@ TYPE is a symbol, PROPS is a plist, and CONTENTS is a list or nil."
        (om-elem--get-nested-contents '(0))
        (om-elem--get-contents)))
 
-(defun om-elem--gen-anaphoric-form (fun &optional docstring)
+(defun om-elem--gen-anaphoric-form (fun &optional docstring indent)
   "Generate the anaphoric form of FUN where FUN points to a function.
 Optionally supply DOCSTRING to override the generic docstring."
   (let* ((fun-name (intern (format "%s*" fun)))
@@ -225,8 +225,10 @@ Optionally supply DOCSTRING to override the generic docstring."
                                   "(lambda (it) ,form)"
                                 (format ",%s" it)))
                        (-map #'read)))
-         (body `(backquote (,fun ,@funargs))))
-    (eval `(defmacro ,fun-name ,arglist ,doc-string ,body))))
+         (call `(backquote (,fun ,@funargs)))
+         (body (if (not indent) (list call)
+                 (list `(declare (indent ,indent)) call))))
+    (eval `(defmacro ,fun-name ,arglist ,doc-string ,@body))))
 
 ;;; LIST OPERATIONS (EXTENDING DASH)
 
@@ -2331,6 +2333,8 @@ zero-indexed."
 
 ;; headline
 
+;; TODO throw error when index out of range
+
 (defun om-elem--headline-indent-subtree (index headline)
   (cl-flet
       ((append-indented
@@ -3690,13 +3694,15 @@ holds the element returned from IN-FORM."
          (update-at-body `(om-elem-update fun (,call point)))
          (update-this-body `(,update-at (point) fun)))
     (eval `(defun ,update-at (point fun)
+             (declare (indent 1))
              ,update-at-doc
              ,update-at-body))
-    (om-elem--gen-anaphoric-form update-at)
+    (om-elem--gen-anaphoric-form update-at nil 1)
     (eval `(defun ,update-this (fun)
+             (declare (indent 0))
              ,update-this-doc
              ,update-this-body))
-    (om-elem--gen-anaphoric-form update-this)))
+    (om-elem--gen-anaphoric-form update-this nil 0)))
 
 (defun om-elem-update-this-buffer (fun)
   (om-elem-update fun (om-elem-parse-this-buffer)))
