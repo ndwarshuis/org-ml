@@ -3002,6 +3002,70 @@
   (def-example-subgroup "Headline"
     nil
 
+    (defexamples-content om-elem-headline-update-item-statistics
+      nil
+      (:content "* statistically significant [/]"
+                "- [ ] good data"
+                "- [X] bad data")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-update-item-statistics)
+           (om-elem-to-trimmed-string))
+      => (:result "* statistically significant [1/2]"
+                  "- [ ] good data"
+                  "- [X] bad data")
+
+      (:content "* statistically significant [%]"
+                "- [ ] good data"
+                "- [X] bad data")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-update-item-statistics)
+           (om-elem-to-trimmed-string))
+      => (:result "* statistically significant [50%]"
+                  "- [ ] good data"
+                  "- [X] bad data")
+
+      (:content "* statistically significant"
+                "- [ ] good data"
+                "- [X] bad data")
+      (->> (om-elem-parse-this-headline)
+           (om-elem-headline-update-item-statistics)
+           (om-elem-to-trimmed-string))
+      => (:result "* statistically significant"
+                  "- [ ] good data"
+                  "- [X] bad data"))
+
+    (defexamples-content om-elem-headline-update-todo-statistics
+      nil
+      (:content "* statistically significant [/]"
+                "** TODO good data"
+                "** DONE bad data")
+      (->> (om-elem-parse-this-subtree)
+           (om-elem-headline-update-todo-statistics)
+           (om-elem-to-trimmed-string))
+      => (:result "* statistically significant [1/2]"
+                  "** TODO good data"
+                  "** DONE bad data")
+
+      (:content "* statistically significant [%]"
+                "** TODO good data"
+                "** DONE bad data")
+      (->> (om-elem-parse-this-subtree)
+           (om-elem-headline-update-todo-statistics)
+           (om-elem-to-trimmed-string))
+      => (:result "* statistically significant [50%]"
+                  "** TODO good data"
+                  "** DONE bad data")
+
+      (:content "* statistically significant"
+                "** TODO good data"
+                "** DONE bad data")
+      (->> (om-elem-parse-this-subtree)
+           (om-elem-headline-update-todo-statistics)
+           (om-elem-to-trimmed-string))
+      => (:result "* statistically significant"
+                  "** TODO good data"
+                  "** DONE bad data"))
+
     ;; (defexamples-content om-elem-headline-is-scheduled-p
     ;;   nil
     ;;   (:content "* lazy")
