@@ -2962,15 +2962,25 @@ cannot contain any warnings or repeaters."
   (om-elem--headline-set-title! text stats headline))
 
 (defun om-elem-headline-update-item-statistics (headline)
-  (let* ((items (->> (om-elem--headline-get-section headline)
-                     (om-elem--get-contents)
-                     (--filter (om-elem-is-type-p 'plain-list it))
-                     (-mapcat #'om-elem--get-contents)))
+  "Update the statistics cookie for HEADLINE.
+The percent/fraction will be computed as the number of checked items
+over the number of items with checkboxes (non-checkbox items will
+not be considered)."
+  (let* ((items
+          (->> (om-elem--headline-get-section headline)
+               (om-elem--get-contents)
+               (--filter (om-elem-is-type-p 'plain-list it))
+               (-mapcat #'om-elem--get-contents)
+               (--remove (om-elem--property-is-nil-p :checkbox it))))
          (done (length (-filter #'om-elem-item-is-checked-p items)))
          (total (length items)))
     (om-elem--headline-set-statistics-cookie-fraction done total headline)))
 
 (defun om-elem-headline-update-todo-statistics (headline)
+  "Update the statistics cookie for HEADLINE.
+The percent/fraction will be computed as the number of done
+subheadlines over the number of todo subheadlines (eg non-todo
+subheadlines will not be counted)."
   (let* ((subtodo (->> (om-elem--headline-get-subheadlines headline)
                        (--filter (om-elem--get-property :todo-keyword it))))
          (done (length (-filter #'om-elem-headline-is-done-p subtodo)))
