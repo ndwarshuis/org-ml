@@ -167,7 +167,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
        (add-to-list 'functions (list ',cmd
                                      (docs--signature ',cmd)
                                      doc
-                                     example)))))
+                                     (or example '("no examples :(")))))))
 
 (defmacro def-example-subgroup (group desc &rest examples)
   `(progn

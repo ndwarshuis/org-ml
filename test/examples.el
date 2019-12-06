@@ -4065,6 +4065,4 @@ and here is even more *text4* and *text5*
       nil)
 
     (defexamples-content om-elem-unfold-contents
-      nil)
-
-    ))
+      nil)))
