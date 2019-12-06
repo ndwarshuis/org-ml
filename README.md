@@ -115,6 +115,22 @@ This can equivalently be written using an anaphoric form where the
 original function name is appended with `*`. The symbol `it`
 carries the value of the unary argument (unless otherwise specified):
 
+### Side effect functions
+
+The majority of side-effectual functions are named like
+`om-elem-OPERATION-THING-at` where `OPERATION` is some operation to be
+performed on `THING` in the current buffer. All these functions take
+`point` as one of their arguments to denote where in the buffer to
+perform `OPERATION`.
+
+All of these functions have current-point convenience analogues that
+are named as `om-elem-OPERATION-this-THING` where `OPERATION` and
+`THING` carry the same meaning, but `OPERATION` is done at the current
+point and `point` is not an argument to the function.
+
+For the sake of brevity, only the former form of these functions are
+given in the examples below.
+
 ``` emacs-lisp
 (om-elem-map-property* :value (concat "foo" it) elem)
 ```
@@ -397,12 +413,6 @@ Insert and update elements and objects into buffers
 * [om-elem-update-item-at](#om-elem-update-item-at-point-fun) `(point fun)`
 * [om-elem-update-headline-at](#om-elem-update-headline-at-point-fun) `(point fun)`
 * [om-elem-update-subtree-at](#om-elem-update-subtree-at-point-fun) `(point fun)`
-* [om-elem-update-this-object](#om-elem-update-this-object-fun) `(fun)`
-* [om-elem-update-this-element](#om-elem-update-this-element-fun) `(fun)`
-* [om-elem-update-this-table-row](#om-elem-update-this-table-row-fun) `(fun)`
-* [om-elem-update-this-item](#om-elem-update-this-item-fun) `(fun)`
-* [om-elem-update-this-headline](#om-elem-update-this-headline-fun) `(fun)`
-* [om-elem-update-this-subtree](#om-elem-update-this-subtree-fun) `(fun)`
 
 ### Misc
 
@@ -3691,6 +3701,7 @@ subheadlines will not be counted).
 ```el
 ;; Given the following contents:
 ; * statistically significant [/]
+; ** irrelevant data
 ; ** TODO good data
 ; ** DONE bad data
 
@@ -3698,11 +3709,13 @@ subheadlines will not be counted).
      (om-elem-headline-update-todo-statistics)
      (om-elem-to-trimmed-string))
  ;; => "* statistically significant [1/2]
+ ;      ** irrelevant data
  ;      ** TODO good data
  ;      ** DONE bad data"
 
 ;; Given the following contents:
 ; * statistically significant [%]
+; ** irrelevant data
 ; ** TODO good data
 ; ** DONE bad data
 
@@ -3710,11 +3723,13 @@ subheadlines will not be counted).
      (om-elem-headline-update-todo-statistics)
      (om-elem-to-trimmed-string))
  ;; => "* statistically significant [50%]
+ ;      ** irrelevant data
  ;      ** TODO good data
  ;      ** DONE bad data"
 
 ;; Given the following contents:
 ; * statistically significant
+; ** irrelevant data
 ; ** TODO good data
 ; ** DONE bad data
 
@@ -3722,6 +3737,7 @@ subheadlines will not be counted).
      (om-elem-headline-update-todo-statistics)
      (om-elem-to-trimmed-string))
  ;; => "* statistically significant
+ ;      ** irrelevant data
  ;      ** TODO good data
  ;      ** DONE bad data"
 
@@ -5001,60 +5017,6 @@ Update subtree under `point` using `fun`.
  ;      ** two
  ;      *** three"
 
-```
-
-#### om-elem-update-this-object `(fun)`
-
-Update object under current point using `fun`.
-`fun` takes an object and returns a modified object
-
-```el
-no examples :(
-```
-
-#### om-elem-update-this-element `(fun)`
-
-Update element under current point using `fun`.
-`fun` takes an element and returns a modified element
-
-```el
-no examples :(
-```
-
-#### om-elem-update-this-table-row `(fun)`
-
-Update table-row under current point using `fun`.
-`fun` takes an table-row and returns a modified table-row
-
-```el
-no examples :(
-```
-
-#### om-elem-update-this-item `(fun)`
-
-Update item under current point using `fun`.
-`fun` takes an item and returns a modified item
-
-```el
-no examples :(
-```
-
-#### om-elem-update-this-headline `(fun)`
-
-Update headline under current point using `fun`.
-`fun` takes an headline and returns a modified headline
-
-```el
-no examples :(
-```
-
-#### om-elem-update-this-subtree `(fun)`
-
-Update subtree under current point using `fun`.
-`fun` takes an subtree and returns a modified subtree
-
-```el
-no examples :(
 ```
 
 

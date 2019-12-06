@@ -4114,25 +4114,27 @@ and here is even more *text4* and *text5*
         (om-elem-headline-indent-subheadline 1 it))
       $> (:result "* one"
                   "** two"
-                  "*** three"))
+                  "*** three")))
 
-    (defexamples-content om-elem-update-this-object
-      nil)
+  ;; TODO should probably still test these
 
-    (defexamples-content om-elem-update-this-element
-      nil)
+    ;; (defexamples-content om-elem-update-this-object
+    ;;   nil)
+
+    ;; (defexamples-content om-elem-update-this-element
+    ;;   nil)
       
-    (defexamples-content om-elem-update-this-table-row
-      nil)
+    ;; (defexamples-content om-elem-update-this-table-row
+    ;;   nil)
 
-    (defexamples-content om-elem-update-this-item
-      nil)
+    ;; (defexamples-content om-elem-update-this-item
+    ;;   nil)
 
-    (defexamples-content om-elem-update-this-headline
-      nil)
+    ;; (defexamples-content om-elem-update-this-headline
+    ;;   nil)
 
-    (defexamples-content om-elem-update-this-subtree
-      nil))
+    ;; (defexamples-content om-elem-update-this-subtree
+    ;;   nil))
 
   (def-example-subgroup "Misc"
     nil

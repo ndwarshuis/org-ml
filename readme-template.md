@@ -115,6 +115,22 @@ This can equivalently be written using an anaphoric form where the
 original function name is appended with `*`. The symbol `it`
 carries the value of the unary argument (unless otherwise specified):
 
+### Side effect functions
+
+The majority of side-effectual functions are named like
+`om-elem-OPERATION-THING-at` where `OPERATION` is some operation to be
+performed on `THING` in the current buffer. All these functions take
+`point` as one of their arguments to denote where in the buffer to
+perform `OPERATION`.
+
+All of these functions have current-point convenience analogues that
+are named as `om-elem-OPERATION-this-THING` where `OPERATION` and
+`THING` carry the same meaning, but `OPERATION` is done at the current
+point and `point` is not an argument to the function.
+
+For the sake of brevity, only the former form of these functions are
+given in the examples below.
+
 ``` emacs-lisp
 (om-elem-map-property* :value (concat "foo" it) elem)
 ```
