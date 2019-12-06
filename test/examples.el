@@ -3944,7 +3944,24 @@ and here is even more *text4* and *text5*
       (->> (om-elem-build-paragraph! "we don't care if you're")
            (om-elem-insert (point-min)))
       $> (:result "we don't care if you're"
-                  "a *game* or a /boy/")))
+                  "a *game* or a /boy/"))
+
+    (defexamples-content om-elem-insert-tail
+      nil
+      :begin-hidden
+      (:content "* one"
+                "")
+      (->> (om-elem-build-headline! :title-text "two")
+           (om-elem-insert-tail (point-max)))
+      $> (:result "* one"
+                  "* two")
+
+      (:content "a *game* or a /boy/")
+      (->> (om-elem-build-paragraph! "we don't care if you're")
+           (om-elem-insert-tail (point-min)))
+      $> (:result "we don't care if you're"
+                  "a *game* or a /boy/")
+      :end-hidden))
 
   (def-example-subgroup "Update"
     nil
