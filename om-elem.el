@@ -2143,18 +2143,16 @@ nested element to return."
    headline))
 
 (defun om-elem--headline-set-statistics-cookie-fraction (done total headline)
-  (om-elem--verify headline om-elem-is-headline-p)
-  (let* ((format (->>
-                  (om-elem--headline-get-statistics-cookie headline)
-                  (om-elem--statistics-cookie-get-format)))
-         (value (if (eq 'fraction format) `(,done ,total)
-                  (-> (float done)
-                      (/ total)
-                      (* 100)
-                      (round)
-                      (list)))))
-    (om-elem--headline-set-statistics-cookie value headline)))
-
+  (-if-let (cookie (om-elem--headline-get-statistics-cookie headline))
+      (let* ((format (om-elem--statistics-cookie-get-format cookie))
+             (value (if (eq 'fraction format) `(,done ,total)
+                      (-> (float done)
+                          (/ total)
+                          (* 100)
+                          (round)
+                          (list)))))
+        (om-elem--headline-set-statistics-cookie value headline))
+    headline))
 
 ;; item
 
@@ -2973,12 +2971,11 @@ cannot contain any warnings or repeaters."
     (om-elem--headline-set-statistics-cookie-fraction done total headline)))
 
 (defun om-elem-headline-update-todo-statistics (headline)
-  ;; TODO make this private
-  (let ((subtodo (->> (om-elem-headline--get-subheadlines headline)
-                      (--filter (om-elem--get-property :todo-keyword it)))
-        (done (length (-filter #'om-elem-headline-is-done-p subtodo)))
-        (total (length subtodo)))
-    (om-elem--headline-set-statistics-cookie-fraction done total headline))))
+  (let* ((subtodo (->> (om-elem--headline-get-subheadlines headline)
+                       (--filter (om-elem--get-property :todo-keyword it))))
+         (done (length (-filter #'om-elem-headline-is-done-p subtodo)))
+         (total (length subtodo)))
+    (om-elem--headline-set-statistics-cookie-fraction done total headline)))
 
 ;; item
 
