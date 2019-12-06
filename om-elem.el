@@ -1213,10 +1213,11 @@ FUN is a predicate function that takes one argument."
          (apply #'=)))))
 
 (defun om-elem--statistics-cookie-get-format (statistics-cookie)
-  (cond ((s-contains? "/" it) 'fraction)
-        ((s-contains? "%" it) 'percent)
-        (t (error "Unparsable statistics cookie value: %s"
-                  (om-elem--get-property :value)))))
+  (let ((value (om-elem--get-property :value statistics-cookie)))
+    (cond ((s-contains? "/" value) 'fraction)
+          ((s-contains? "%" value) 'percent)
+          (t (error "Unparsable statistics cookie value: %s"
+                    (om-elem--get-property :value))))))
 
 ;; timestamp (auxiliary functions)
 
@@ -2131,7 +2132,7 @@ nested element to return."
    (let ((last? (om-elem--is-type-p 'statistics-cookie (-last-item it))))
      (cond
       ((and last? value)
-       (om-elem--map-last* (om-elem--statistics-cookie-set-value value) it))
+       (om-elem--map-last* (om-elem--set-property-strict :value value it) it))
       ((and last? (not value))
        (-drop-last 1 it))
       (value 
@@ -2144,13 +2145,13 @@ nested element to return."
   (let* ((format (->>
                   (om-elem--headline-get-statistics-cookie headline)
                   (om-elem--statistics-cookie-get-format)))
-         (value (if (eq 'percent format) `(done total)
+         (value (if (eq 'fraction format) `(,done ,total)
                   (-> (float done)
                       (/ total)
                       (* 100)
                       (round)
                       (list)))))
-    (om-elem--headline-set-statistics-cookie value)))
+    (om-elem--headline-set-statistics-cookie value headline)))
 
 
 ;; item
@@ -2959,7 +2960,10 @@ cannot contain any warnings or repeaters."
   (om-elem--headline-set-title! text stats headline))
 
 (defun om-elem-headline-update-item-statistics (headline)
-  (let* ((items (om-elem-match '(section plain-list item) headline))
+  (let* ((items (->> (om-elem--headline-get-section headline)
+                     (om-elem--get-contents)
+                     (--filter (om-elem-is-type-p 'plain-list it))
+                     (-mapcat #'om-elem--get-contents)))
          (done (length (-filter #'om-elem-item-is-checked-p items)))
          (total (length items)))
     (om-elem--headline-set-statistics-cookie-fraction done total headline)))

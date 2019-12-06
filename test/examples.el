@@ -3958,15 +3958,15 @@ and here is even more *text4* and *text5*
             (lambda (hl) (om-elem-set-property :todo-keyword "DONE" hl))))
       $> "* DONE win grammy"
 
-      (:content "* win grammy"
+      (:content "* win grammy [0/0]"
                 "- [ ] write punk song"
                 "- [ ] get new vocalist"
                 "- [ ] sell 2 singles")
       (->> (om-elem-parse-this-headline)
            (om-elem-update*
-             (om-elem-match-map '(:many item) #'om-elem-item-toggle-checkbox it)))
-                  ;; (om-elem-headline-update-item-statistics))))
-      $> (:result "* win grammy"
+             (->> (om-elem-match-map '(:many item) #'om-elem-item-toggle-checkbox it)
+                  (om-elem-headline-update-item-statistics))))
+      $> (:result "* win grammy [3/3]"
                   "- [X] write punk song"
                   "- [X] get new vocalist"
                   "- [X] sell 2 singles")
