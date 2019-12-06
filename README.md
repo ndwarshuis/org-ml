@@ -115,6 +115,10 @@ This can equivalently be written using an anaphoric form where the
 original function name is appended with `*`. The symbol `it`
 carries the value of the unary argument (unless otherwise specified):
 
+``` emacs-lisp
+(om-elem-map-property* :value (concat "foo" it) elem)
+```
+
 ### Side effect functions
 
 The majority of side-effectual functions are named like
@@ -130,10 +134,6 @@ point and `point` is not an argument to the function.
 
 For the sake of brevity, only the former form of these functions are
 given in the examples below.
-
-``` emacs-lisp
-(om-elem-map-property* :value (concat "foo" it) elem)
-```
 
 # Function Summary
 
