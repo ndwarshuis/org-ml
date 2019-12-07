@@ -378,20 +378,18 @@ Set, get and map the contents of containers
 
 Use pattern-matching to perform operations on objects and elements in trees.
 
-* [om-elem-match](#om-elem-match-queries-elem) `(queries elem)`
-* [om-elem-match-first](#om-elem-match-first-queries-elem) `(queries elem)`
-* [om-elem-match-last](#om-elem-match-last-queries-elem) `(queries elem)`
-* [om-elem-match-delete](#om-elem-match-delete-queries-elem) `(queries elem)`
-* [om-elem-match-extract](#om-elem-match-extract-queries-elem) `(queries elem)`
-* [om-elem-match-map](#om-elem-match-map-queries-fun-elem) `(queries fun elem)`
-* [om-elem-match-mapcat](#om-elem-match-mapcat-queries-fun-elem) `(queries fun elem)`
-* [om-elem-match-replace](#om-elem-match-replace-queries-rep-elem) `(queries rep elem)`
-* [om-elem-match-insert-before](#om-elem-match-insert-before-queries-elem-elem) `(queries elem* elem)`
-* [om-elem-match-insert-after](#om-elem-match-insert-after-queries-elem-elem) `(queries elem* elem)`
-* [om-elem-match-insert-within](#om-elem-match-insert-within-queries-index-elem-elem) `(queries index elem* elem)`
-* [om-elem-match-splice-before](#om-elem-match-splice-before-queries-elem-elem) `(queries elem* elem)`
-* [om-elem-match-splice-after](#om-elem-match-splice-after-queries-elem-elem) `(queries elem* elem)`
-* [om-elem-match-splice-within](#om-elem-match-splice-within-queries-index-elem-elem) `(queries index elem* elem)`
+* [om-elem-match](#om-elem-match-pattern-elem) `(pattern elem)`
+* [om-elem-match-delete](#om-elem-match-delete-patterns-elem) `(patterns elem)`
+* [om-elem-match-extract](#om-elem-match-extract-patterns-elem) `(patterns elem)`
+* [om-elem-match-map](#om-elem-match-map-patterns-fun-elem) `(patterns fun elem)`
+* [om-elem-match-mapcat](#om-elem-match-mapcat-patterns-fun-elem) `(patterns fun elem)`
+* [om-elem-match-replace](#om-elem-match-replace-patterns-rep-elem) `(patterns rep elem)`
+* [om-elem-match-insert-before](#om-elem-match-insert-before-patterns-elem-elem) `(patterns elem* elem)`
+* [om-elem-match-insert-after](#om-elem-match-insert-after-patterns-elem-elem) `(patterns elem* elem)`
+* [om-elem-match-insert-within](#om-elem-match-insert-within-patterns-index-elem-elem) `(patterns index elem* elem)`
+* [om-elem-match-splice-before](#om-elem-match-splice-before-patterns-elems-elem) `(patterns elems* elem)`
+* [om-elem-match-splice-after](#om-elem-match-splice-after-patterns-elems-elem) `(patterns elems* elem)`
+* [om-elem-match-splice-within](#om-elem-match-splice-within-patterns-index-elems-elem) `(patterns index elems* elem)`
 
 ## Buffer Side Effects
 
@@ -4494,7 +4492,7 @@ Insert `row-text` at `row-index` in `table`.
 
 Use pattern-matching to perform operations on objects and elements in trees.
 
-#### om-elem-match `(queries elem)`
+#### om-elem-match `(pattern elem)`
 
 docstring
 
@@ -4603,14 +4601,6 @@ docstring
  ;     and here is even more *text4* and *text5*
  ;     **** headline 4")
 
-```
-
-#### om-elem-match-first `(queries elem)`
-
-Find first object in `elem` matching `queries`.
-The rules for `queries` are the same as [`om-elem-match`](#om-elem-match-queries-elem)
-
-```el
 ;; Given the following contents:
 ; * headline one
 ; ** TODO headline two
@@ -4619,18 +4609,11 @@ The rules for `queries` are the same as [`om-elem-match`](#om-elem-match-queries
 
 ;; Find the first subheadline
 (->> (om-elem-parse-this-subtree)
-     (om-elem-match-first '(headline))
+     (om-elem-match '(:first headline))
+     (car)
      (om-elem-to-trimmed-string))
  ;; => "** TODO headline two"
 
-```
-
-#### om-elem-match-last `(queries elem)`
-
-Find last object in `elem` matching `queries`.
-The rules for `queries` are the same as [`om-elem-match`](#om-elem-match-queries-elem)
-
-```el
 ;; Given the following contents:
 ; * headline one
 ; ** TODO headline two
@@ -4639,17 +4622,18 @@ The rules for `queries` are the same as [`om-elem-match`](#om-elem-match-queries
 
 ;; Find the last subheadline
 (->> (om-elem-parse-this-subtree)
-     (om-elem-match-last '(headline))
+     (om-elem-match '(:last headline))
+     (car)
      (om-elem-to-trimmed-string))
  ;; => "** headline four"
 
 ```
 
-#### om-elem-match-delete `(queries elem)`
+#### om-elem-match-delete `(patterns elem)`
 
 Remove matching targets from contents of `elem`.
 
-`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
@@ -4665,14 +4649,14 @@ Remove matching targets from contents of `elem`.
  ;; => "* headline one"
 
 (->> (om-elem-parse-this-subtree)
-     (om-elem-match-delete-first '(headline))
+     (om-elem-match-delete '(:first headline))
      (om-elem-to-trimmed-string))
  ;; => "* headline one
  ;      ** headline three
  ;      ** headline four"
 
 (->> (om-elem-parse-this-subtree)
-     (om-elem-match-delete-last '(headline))
+     (om-elem-match-delete '(:last headline))
      (om-elem-to-trimmed-string))
  ;; => "* headline one
  ;      ** headline two
@@ -4680,26 +4664,36 @@ Remove matching targets from contents of `elem`.
 
 ```
 
-#### om-elem-match-extract `(queries elem)`
+#### om-elem-match-extract `(patterns elem)`
 
 Remove matching targets from contents of `elem`.
 Return cons cell where the car is a list of all removed targets
 and the cdr is the modified `elem` with targets removed.
 
-`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
-no examples :(
+;; Given the following contents:
+; pull me /under/
+
+(--> (om-elem-parse-this-element)
+     (om-elem-match-extract '(:many italic)
+			    it)
+     (cons (-map (function om-elem-to-trimmed-string)
+		 (car it))
+	   (om-elem-to-trimmed-string (cdr it))))
+ ;; => '(("/under/") . "pull me")
+
 ```
 
-#### om-elem-match-map `(queries fun elem)`
+#### om-elem-match-map `(patterns fun elem)`
 
-Apply `fun` to targets matching `queries` in the contents of `elem`.
+Apply `fun` to targets matching `patterns` in the contents of `elem`.
 `fun` is a function that takes a single argument (the target element or
 object) and returns a new element or object which will replace the
 original.
 
-`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
@@ -4711,8 +4705,8 @@ original.
 ;; Selectively mark headlines as DONE
 (->> (om-elem-parse-this-subtree)
      (om-elem-match-map '(headline)
-			(lambda (it)
-			  (om-elem-set-property :todo-keyword "DONE" it)))
+       (lambda (it)
+	 (om-elem-set-property :todo-keyword "DONE" it)))
      (om-elem-to-trimmed-string))
  ;; => "* headline one
  ;      ** DONE headline two
@@ -4720,8 +4714,8 @@ original.
  ;      ** DONE headline four"
 
 (->> (om-elem-parse-this-subtree)
-     (om-elem-match-map-first* '(headline)
-			       (om-elem-set-property :todo-keyword "DONE" it))
+     (om-elem-match-map* '(:first headline)
+       (om-elem-set-property :todo-keyword "DONE" it))
      (om-elem-to-trimmed-string))
  ;; => "* headline one
  ;      ** DONE headline two
@@ -4729,9 +4723,9 @@ original.
  ;      ** headline four"
 
 (->> (om-elem-parse-this-subtree)
-     (om-elem-match-map-last '(headline)
-			     (-partial (function om-elem-set-property)
-				       :todo-keyword "DONE"))
+     (om-elem-match-map '(:last headline)
+       (-partial (function om-elem-set-property)
+		 :todo-keyword "DONE"))
      (om-elem-to-trimmed-string))
  ;; => "* headline one
  ;      ** TODO headline two
@@ -4740,95 +4734,210 @@ original.
 
 ```
 
-#### om-elem-match-mapcat `(queries fun elem)`
+#### om-elem-match-mapcat `(patterns fun elem)`
 
 Apply `fun` over `elem` and return modified `elem`.
 `fun` takes an element/object as its only argument and returns
 a list of elements/objects. Targets within `elem` are found that match
-`queries`, `fun` is applied to each target, and the resulting list is
-spliced in place of the original target (as opposed to [`om-elem-match-map`](#om-elem-match-map-queries-fun-elem)
+`patterns`, `fun` is applied to each target, and the resulting list is
+spliced in place of the original target (as opposed to [`om-elem-match-map`](#om-elem-match-map-patterns-fun-elem)
 which replaces the original target with a modified target).
 
-`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
-no examples :(
+;; Given the following contents:
+; * one
+; ** two
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-mapcat* '(:first headline)
+       (list (om-elem-build-headline! :title-text "1.5" :level 2)
+	     it))
+     (om-elem-to-trimmed-string))
+ ;; => "* one
+ ;      ** 1.5
+ ;      ** two"
+
 ```
 
-#### om-elem-match-replace `(queries rep elem)`
+#### om-elem-match-replace `(patterns rep elem)`
 
 Replace matching targets in `elem` with `rep`.
 
-`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
-no examples :(
+;; Given the following contents:
+; *1* 2 *3* 4 *5* 6 *7* 8 *9* 10
+
+(->> (om-elem-parse-this-element)
+     (om-elem-match-replace '(:many bold)
+       (om-elem-build-bold :post-blank 1 "0"))
+     (om-elem-to-trimmed-string))
+ ;; => "*0* 2 *0* 4 *0* 6 *0* 8 *0* 10"
+
 ```
 
-#### om-elem-match-insert-before `(queries elem* elem)`
+#### om-elem-match-insert-before `(patterns elem* elem)`
 
-Insert `elem`* before every target matched by `queries` in `elem`.
+Insert `elem`* before every target matched by `patterns` in `elem`.
 
-`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
-no examples :(
+;; Given the following contents:
+; * one
+; ** two
+; ** three
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-insert-before '(headline)
+       (om-elem-build-headline! :title-text "new" :level 2))
+     (om-elem-to-trimmed-string))
+ ;; => "* one
+ ;      ** new
+ ;      ** two
+ ;      ** new
+ ;      ** three"
+
 ```
 
-#### om-elem-match-insert-after `(queries elem* elem)`
+#### om-elem-match-insert-after `(patterns elem* elem)`
 
-Insert `elem`* after every target matched by `queries` in `elem`.
+Insert `elem`* after every target matched by `patterns` in `elem`.
 
-`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
-no examples :(
+;; Given the following contents:
+; * one
+; ** two
+; ** three
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-insert-after '(headline)
+       (om-elem-build-headline! :title-text "new" :level 2))
+     (om-elem-to-trimmed-string))
+ ;; => "* one
+ ;      ** two
+ ;      ** new
+ ;      ** three
+ ;      ** new"
+
 ```
 
-#### om-elem-match-insert-within `(queries index elem* elem)`
+#### om-elem-match-insert-within `(patterns index elem* elem)`
 
 Insert new element `elem`* into the contents of `elem` at `index`.
-Will insert into any target matched by `queries`. If `queries` is not
+Will insert into any target matched by `patterns`. If `patterns` is not
 supplied, `elem`* will be inserted directly into the toplevel contents
 of `elem`.
 
-`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
-no examples :(
+;; Given the following contents:
+; * one
+; ** two
+; ** three
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-insert-within '(headline)
+	 0 (om-elem-build-headline! :title-text "new" :level 3))
+     (om-elem-to-trimmed-string))
+ ;; => "* one
+ ;      ** two
+ ;      *** new
+ ;      ** three
+ ;      *** new"
+
+;; The nil pattern denotes top-level element
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-insert-within nil 1 (om-elem-build-headline! :title-text "new" :level 2))
+     (om-elem-to-trimmed-string))
+ ;; => "* one
+ ;      ** two
+ ;      ** new
+ ;      ** three"
+
 ```
 
-#### om-elem-match-splice-before `(queries elem* elem)`
+#### om-elem-match-splice-before `(patterns elems* elem)`
 
-Splice `elems`* before every target matched by `queries` in `elem`.
+Splice `elems`* before every target matched by `patterns` in `elem`.
 
-`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
-no examples :(
+;; Given the following contents:
+; * one
+; ** two
+; ** three
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-splice-before '(0)
+       (list (om-elem-build-headline! :title-text "new0" :level 2)
+	     (om-elem-build-headline! :title-text "new1" :level 2)))
+     (om-elem-to-trimmed-string))
+ ;; => "* one
+ ;      ** new0
+ ;      ** new1
+ ;      ** two
+ ;      ** three"
+
 ```
 
-#### om-elem-match-splice-after `(queries elem* elem)`
+#### om-elem-match-splice-after `(patterns elems* elem)`
 
-Splice `elems`* after every target matched by `queries` in `elem`.
+Splice `elems`* after every target matched by `patterns` in `elem`.
 
-`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
-no examples :(
+;; Given the following contents:
+; * one
+; ** two
+; ** three
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-splice-after '(0)
+       (list (om-elem-build-headline! :title-text "new0" :level 2)
+	     (om-elem-build-headline! :title-text "new1" :level 2)))
+     (om-elem-to-trimmed-string))
+ ;; => "* one
+ ;      ** two
+ ;      ** new0
+ ;      ** new1
+ ;      ** three"
+
 ```
 
-#### om-elem-match-splice-within `(queries index elem* elem)`
+#### om-elem-match-splice-within `(patterns index elems* elem)`
 
 Insert list of `elems`* into the contents of `elem` at `index`.
-Will insert into any target matched by `queries`. If `queries` is not
+Will insert into any target matched by `patterns`. If `patterns` is not
 supplied, `elem`* will be inserted directly into the toplevel contents
 of `elem`.
 
-`queries` follows the same rules as [`om-elem-match`](#om-elem-match-queries-elem).
+`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
-no examples :(
+;; Given the following contents:
+; * one
+; ** two
+; ** three
+
+(->> (om-elem-parse-this-subtree)
+     (om-elem-match-splice-within nil 1 (list (om-elem-build-headline! :title-text "new0" :level 2)
+					      (om-elem-build-headline! :title-text "new1" :level 2)))
+     (om-elem-to-trimmed-string))
+ ;; => "* one
+ ;      ** two
+ ;      ** new0
+ ;      ** new1
+ ;      ** three"
+
 ```
 
 
@@ -4903,8 +5012,8 @@ old element in the current buffer.
 
 (->> (om-elem-parse-this-headline)
      (om-elem-update* (->> (om-elem-match-map '(:many item)
-					      (function om-elem-item-toggle-checkbox)
-					      it)
+			     (function om-elem-item-toggle-checkbox)
+			     it)
 			   (om-elem-headline-update-item-statistics))))
  ;; Output these buffer contents
  ;; $> "* win grammy [3/3]
