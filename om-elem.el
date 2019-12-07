@@ -3765,6 +3765,7 @@ This is meant to be used as input for functions such as
 FORM is a form that returns a list of elements or objects as the
 new contents, and the variable 'it' is available to represent the
 original contents to be modified."
+  (declare (indent 1))
   `(cl-labels
        ((rec
          (elem)
@@ -4007,129 +4008,100 @@ assuming that the ELEM has only one section."
 
 (defun om-elem--delete-targets (elem targets)
   "Delete TARGETS in the contents of ELEM."
-  (om-elem--modify-contents
-   elem (--remove (member it targets) it)))
+  (om-elem--modify-contents elem
+    (--remove (member it targets) it)))
 
-(defun om-elem-match-delete (queries elem)
+(defun om-elem-match-delete (patterns elem)
   "Remove matching targets from contents of ELEM.
 
-QUERIES follows the same rules as `om-elem-match'."
-  (-if-let (targets (om-elem-match queries elem))
+PATTERNS follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match patterns elem))
       (om-elem--delete-targets elem targets)
     elem))
 
 ;; extract
 
-(defun om-elem-match-extract (queries elem)
+(defun om-elem-match-extract (patterns elem)
   "Remove matching targets from contents of ELEM.
 Return cons cell where the car is a list of all removed targets
 and the cdr is the modified ELEM with targets removed.
 
-QUERIES follows the same rules as `om-elem-match'."
-  (-if-let (targets (om-elem-match queries elem))
+PATTERNS follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match patterns elem))
       (cons targets (om-elem--delete-targets elem targets))
     elem))
 
 ;; map
 
-(defun om-elem--map-targets (elem fun targets)
-  "Apply FUN to TARGETS in the contents of ELEM."
-  (om-elem--modify-contents
-   elem (--map-when (member it targets) (funcall fun it) it)))
-
-(defun om-elem-match-map (queries fun elem)
-  "Apply FUN to targets matching QUERIES in the contents of ELEM.
+(defun om-elem-match-map (patterns fun elem)
+  "Apply FUN to targets matching PATTERNS in the contents of ELEM.
 FUN is a function that takes a single argument (the target element or
 object) and returns a new element or object which will replace the
 original.
 
-QUERIES follows the same rules as `om-elem-match'."
+PATTERNS follows the same rules as `om-elem-match'."
   (declare (indent 1))
-  (-if-let (targets (om-elem-match queries elem))
-      (om-elem--map-targets elem fun targets)
+  (-if-let (targets (om-elem-match patterns elem))
+      (om-elem--modify-contents elem
+        (--map-when (member it targets) (funcall fun it) it))
     elem))
 
 (om-elem--gen-anaphoric-form 'om-elem-match-map nil 1)
 
 ;; mapcat
 
-(defun om-elem--mapcat-targets (elem fun targets)
-  "Apply FUN to TARGETS in the contents of ELEM."
-  (om-elem--modify-contents
-   elem (--mapcat (if (member it targets)
-                      (funcall fun it) (list it))
-                  it)))
-
-(defun om-elem-match-mapcat (queries fun elem)
+(defun om-elem-match-mapcat (patterns fun elem)
   "Apply FUN over ELEM and return modified ELEM.
 FUN takes an element/object as its only argument and returns
 a list of elements/objects. Targets within ELEM are found that match
-QUERIES, FUN is applied to each target, and the resulting list is
+PATTERNS, FUN is applied to each target, and the resulting list is
 spliced in place of the original target (as opposed to `om-elem-match-map'
 which replaces the original target with a modified target).
 
-QUERIES follows the same rules as `om-elem-match'."
-  (-if-let (targets (om-elem-match queries elem))
-      (om-elem--mapcat-targets elem fun targets)
+PATTERNS follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match patterns elem))
+      (om-elem--modify-contents elem
+        (--mapcat (if (member it targets)
+                      (funcall fun it) (list it))
+                  it))
     elem))
 
 (om-elem--gen-anaphoric-form 'om-elem-match-mapcat nil 1)
 
 ;; replace
 
-(defun om-elem--replace-targets (elem rep targets)
-  "Replace TARGETS with REP in the contents of ELEM."
-  (om-elem--modify-contents
-   elem (--map-when (member it targets) rep it)))
-
-(defun om-elem-match-replace (queries rep elem)
+(defun om-elem-match-replace (patterns rep elem)
   "Replace matching targets in ELEM with REP.
 
-QUERIES follows the same rules as `om-elem-match'."
-  (-if-let (targets (om-elem-match queries elem))
-      (om-elem--replace-targets elem rep targets)
+PATTERNS follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match patterns elem))
+      (om-elem--modify-contents elem
+        (--map-when (member it targets) rep it))
     elem))
 
 ;; insert-before
 
-(defun om-elem--insert-targets-before (elem elem* targets)
-  "Insert ELEM* before TARGETS in the contents of ELEM."
-  (om-elem--modify-contents
-   elem (--mapcat (if (member it targets) (list elem* it) (list it)) it)))
+(defun om-elem-match-insert-before (patterns elem* elem)
+  "Insert ELEM* before every target matched by PATTERNS in ELEM.
 
-(defun om-elem-match-insert-before (queries elem* elem)
-  "Insert ELEM* before every target matched by QUERIES in ELEM.
-
-QUERIES follows the same rules as `om-elem-match'."
-  (-if-let (targets (om-elem-match queries elem))
-      (om-elem--insert-targets-before elem elem* targets)
+PATTERNS follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match patterns elem))
+      (om-elem--modify-contents elem
+        (--mapcat (if (member it targets) (list elem* it) (list it)) it))
     elem))
 
-;; insert after
+;; insert-after
 
-(defun om-elem--insert-targets-after (elem elem* targets)
-  "Insert ELEM* after TARGETS in the contents of ELEM."
-  (om-elem--modify-contents
-   elem (--mapcat (if (member it targets) (list it elem*) (list it)) it)))
+(defun om-elem-match-insert-after (patterns elem* elem)
+  "Insert ELEM* after every target matched by PATTERNS in ELEM.
 
-(defun om-elem-match-insert-after (queries elem* elem)
-  "Insert ELEM* after every target matched by QUERIES in ELEM.
-
-QUERIES follows the same rules as `om-elem-match'."
-  (-if-let (targets (om-elem-match queries elem))
-      (om-elem--insert-targets-after elem elem* targets)
+PATTERNS follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match patterns elem))
+      (om-elem--modify-contents elem
+        (--mapcat (if (member it targets) (list it elem*) (list it)) it))
     elem))
 
 ;; insert-within
-
-(defun om-elem--insert-in (elem elem* index)
-  "Insert ELEM* into the contents of ELEM at INDEX."
-  (let* ((contents (om-elem--get-contents elem))
-         (i (om-elem--normalize-insert-index index contents)))
-      (om-elem--construct
-       (nth 0 elem)
-       (nth 1 elem)
-       (-insert-at index elem* contents))))
 
 (defun om-elem--normalize-insert-index (index list)
   "Return a positive integer from INDEX relative to front of LIST.
@@ -4140,71 +4112,64 @@ behind the last member of LIST and decreasing integers move toward the
 front."
   (if (<= 0 index) index (+ (length list) index 1)))
 
-(defun om-elem--insert-within-targets (elem elem* index targets)
-  "Insert ELEM* at INDEX within TARGETS in the contents of ELEM."
-  (om-elem--modify-contents
-   elem (if (not (member elem targets)) it
-          (om-elem--insert-in it elem* index))))
+(defun om-elem--insert-in (elem elem* index)
+  "Insert ELEM* into the contents of ELEM at INDEX."
+  (let* ((contents (om-elem--get-contents elem))
+         (i (om-elem--normalize-insert-index index contents)))
+      (om-elem--construct
+       (nth 0 elem)
+       (nth 1 elem)
+       (-insert-at index elem* contents))))
 
-(defun om-elem-match-insert-within (queries index elem* elem)
+(defun om-elem-match-insert-within (patterns index elem* elem)
   "Insert new element ELEM* into the contents of ELEM at INDEX.
-Will insert into any target matched by QUERIES. If QUERIES is not
+Will insert into any target matched by PATTERNS. If PATTERNS is not
 supplied, ELEM* will be inserted directly into the toplevel contents
 of ELEM.
 
-QUERIES follows the same rules as `om-elem-match'."
-  (if (-non-nil queries)
-      (-if-let (targets (om-elem-match queries elem))
-          (om-elem--insert-within-targets elem elem* index targets)
+PATTERNS follows the same rules as `om-elem-match'."
+  (if (-non-nil patterns)
+      (-if-let (targets (om-elem-match patterns elem))
+          (om-elem--modify-contents elem
+            (if (not (member elem targets)) it
+              (om-elem--insert-in it elem* index)))
         elem)
     (om-elem--insert-in elem elem* index)))
 
 ;; splice
 
-(defun om-elem--splice-targets (elem elems* targets)
-  "Splice TARGETS with ELEMS* in the contents of ELEM."
-  (om-elem--modify-contents
-   elem (--mapcat (if (member it targets) elems* (list it)) it)))
-
-(defun om-elem-match-splice (queries elem* elem)
+(defun om-elem-match-splice (patterns elem* elem)
   "Splice matching targets in ELEM with ELEMS*.
 
-QUERIES follows the same rules as `om-elem-match'."
-  (-if-let (targets (om-elem-match queries elem))
-      (om-elem--splice-targets elem elems* targets)
+PATTERNS follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match patterns elem))
+      (om-elem--modify-contents elem
+        (--mapcat (if (member it targets) elems* (list it)) it))
     elem))
 
 ;; splice-before
 
-(defun om-elem--splice-targets-before (elem elems* targets)
-  "Splice ELEMS* before TARGETS in the contents of ELEM."
-  (om-elem--modify-contents
-   elem (--mapcat (if (member it targets)
+(defun om-elem-match-splice-before (patterns elem* elem)
+  "Splice ELEMS* before every target matched by PATTERNS in ELEM.
+
+PATTERNS follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match patterns elem))
+      (om-elem--modify-contents elem
+        (--mapcat (if (member it targets)
                       (append elems* (list it))
                     (list it))
-                  it)))
-
-(defun om-elem-match-splice-before (queries elem* elem)
-  "Splice ELEMS* before every target matched by QUERIES in ELEM.
-
-QUERIES follows the same rules as `om-elem-match'."
-  (-if-let (targets (om-elem-match queries elem))
-      (om-elem--splice-targets-before elem elems* targets)
+                  it))
     elem))
 
 ;; splice-after
 
-(defun om-elem--splice-targets-after (elem elems* targets)
-  "Splice ELEMS* after TARGETS in the contents of ELEM."
-  (om-elem--modify-contents
-   elem (--mapcat (if (member it targets) (cons it elems*) (list it)) it)))
+(defun om-elem-match-splice-after (patterns elem* elem)
+  "Splice ELEMS* after every target matched by PATTERNS in ELEM.
 
-(defun om-elem-match-splice-after (queries elem* elem)
-  "Splice ELEMS* after every target matched by QUERIES in ELEM.
-
-QUERIES follows the same rules as `om-elem-match'."
-  (-if-let (targets (om-elem-match queries elem))
-      (om-elem--splice-targets-after elem elems* targets)
+PATTERNS follows the same rules as `om-elem-match'."
+  (-if-let (targets (om-elem-match patterns elem))
+      (om-elem--modify-contents elem
+        (--mapcat (if (member it targets) (cons it elems*) (list it)) it))
     elem))
 
 ;; splice-within
@@ -4220,22 +4185,18 @@ QUERIES follows the same rules as `om-elem-match'."
           (-insert-at 1 elems*)
           (apply #'append)))))
 
-(defun om-elem--splice-within-targets (elem elems* index targets)
-  "Insert ELEM* at INDEX within TARGETS in the contents of ELEM."
-  (om-elem--modify-contents
-   elem (if (not (member elem targets)) it
-            (om-elem--splice-at elems* index contents))))
-
-(defun om-elem-match-splice-within (queries index elem* elem)
+(defun om-elem-match-splice-within (patterns index elem* elem)
   "Insert list of ELEMS* into the contents of ELEM at INDEX.
-Will insert into any target matched by QUERIES. If QUERIES is not
+Will insert into any target matched by PATTERNS. If PATTERNS is not
 supplied, ELEM* will be inserted directly into the toplevel contents
 of ELEM.
 
-QUERIES follows the same rules as `om-elem-match'."
-  (if (-non-nil queries)
-      (-if-let (targets (om-elem-match queries elem))
-          (om-elem--splice-within-targets elem elem* index targets)
+PATTERNS follows the same rules as `om-elem-match'."
+  (if (-non-nil patterns)
+      (-if-let (targets (om-elem-match patterns elem))
+          (om-elem--modify-contents
+              elem (if (not (member elem targets)) it
+                     (om-elem--splice-at elems* index contents)))
         elem)
     (om-elem--splice-at elem elems* index)))
 
