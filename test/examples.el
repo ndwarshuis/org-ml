@@ -3889,30 +3889,27 @@
          (--map (om-elem-to-trimmed-string it)))
     => '("*** headline three
 and here is even more *text4* and *text5*
-**** headline 4"))
-  
-  (defexamples-content om-elem-match-first
-    nil
-    (:content
-     "* headline one"
-     "** TODO headline two"
-     "** COMMENT headline three"
-     "** headline four")
+**** headline 4")
+
+    (:content "* headline one"
+              "** TODO headline two"
+              "** COMMENT headline three"
+              "** headline four")
     (:comment "Find the first subheadline")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-match-first '(headline))
+         (om-elem-match '(:first headline))
+         (car)
          (om-elem-to-trimmed-string))
-    => "** TODO headline two")
-
-  (defexamples-content om-elem-match-last
-    nil
+    => "** TODO headline two"
+    
     (:content "* headline one"
                "** TODO headline two"
                "** COMMENT headline three"
                "** headline four")
     (:comment "Find the last subheadline")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-match-last '(headline))
+         (om-elem-match '(:last headline))
+         (car)
          (om-elem-to-trimmed-string))
     => "** headline four")
 
@@ -3928,13 +3925,13 @@ and here is even more *text4* and *text5*
          (om-elem-to-trimmed-string))
     => "* headline one"
     (->> (om-elem-parse-this-subtree)
-         (om-elem-match-delete-first '(headline))
+         (om-elem-match-delete '(:first headline))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** headline three"
                 "** headline four")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-match-delete-last '(headline))
+         (om-elem-match-delete '(:last headline))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** headline two"
@@ -3953,21 +3950,24 @@ and here is even more *text4* and *text5*
 
     (:comment "Selectively mark headlines as DONE")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-match-map '(headline) (lambda (it) (om-elem-set-property :todo-keyword "DONE" it)))
+         (om-elem-match-map '(headline)
+           (lambda (it) (om-elem-set-property :todo-keyword "DONE" it)))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** DONE headline two"
                 "** DONE headline three"
                 "** DONE headline four")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-match-map-first* '(headline) (om-elem-set-property :todo-keyword "DONE" it))
+         (om-elem-match-map* '(:first headline)
+           (om-elem-set-property :todo-keyword "DONE" it))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** DONE headline two"
                 "** headline three"
                 "** headline four")
     (->> (om-elem-parse-this-subtree)
-         (om-elem-match-map-last '(headline) (-partial #'om-elem-set-property :todo-keyword "DONE"))
+         (om-elem-match-map '(:last headline)
+           (-partial #'om-elem-set-property :todo-keyword "DONE"))
          (om-elem-to-trimmed-string))
     => (:result "* headline one"
                 "** TODO headline two"
