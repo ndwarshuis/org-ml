@@ -3937,8 +3937,14 @@ and here is even more *text4* and *text5*
                 "** headline two"
                 "** headline three"))
 
-  ;; TODO add extract
-  (defexamples-content om-elem-match-extract nil)
+  (defexamples-content om-elem-match-extract
+    nil
+    (:content "pull me /under/")
+    (--> (om-elem-parse-this-element)
+         (om-elem-match-extract '(:many italic) it)
+         (cons (-map #'om-elem-to-trimmed-string (car it))
+               (om-elem-to-trimmed-string (cdr it))))
+    => '(("/under/") . "pull me"))
 
   (defexamples-content om-elem-match-map
     nil
@@ -4010,7 +4016,6 @@ and here is even more *text4* and *text5*
                 "** two"
                 "** new"
                 "** three"))
-    
 
   (defexamples-content om-elem-match-insert-after
     nil
