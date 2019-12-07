@@ -3779,15 +3779,15 @@ original contents to be modified."
 
 ;; find
 
-(defun om-elem-filter-query (query contents)
-  (pcase query
-    ;; quote (may be accidentally in query
+(defun om-elem--match-filter (pattern contents)
+  (pcase pattern
+    ;; quote (may be accidentally in pattern
     (`(quote . ,_)
-     (error "'quote' not allowed in query"))
+     (error "'quote' not allowed in pattern"))
 
-    ;; function (may be accidentally in query
+    ;; function (may be accidentally in pattern
     (`(function . ,_)
-     (error "'function' not allowed in query"))
+     (error "'function' not allowed in pattern"))
     
     ;; index
     ((and (pred integerp) index)
@@ -3811,22 +3811,22 @@ original contents to be modified."
 
     ;; predicate
     ;; ((and (pred functionp) fun)
-    (`(:pred . (,q . nil))
-     (--filter (funcall q it) contents))
+    (`(:pred . (,p . nil))
+     (--filter (funcall p it) contents))
 
     ;; not
-    (`(:not . (,q . nil))
-     (->> (om-elem-filter-query q contents)
+    (`(:not . (,p . nil))
+     (->> (om-elem--match-filter p contents)
           (-difference contents)))
 
     ;; or
-    (`(:or . ,(and (pred and) q))
-     (->> (--mapcat (om-elem-filter-query it contents) q)
+    (`(:or . ,(and (pred and) p))
+     (->> (--mapcat (om-elem--match-filter it contents) p)
           (-distinct)))
 
     ;; and
-    (`(:and . ,(and (pred and) q))
-     (->> (--map (om-elem-filter-query it contents) q)
+    (`(:and . ,(and (pred and) p))
+     (->> (--map (om-elem--match-filter it contents) p)
           (-reduce #'-intersection)))
 
     ;; properties
@@ -3840,17 +3840,79 @@ original contents to be modified."
                 (-difference (-partition 2 props))
                 (not))))
        (--filter (all-props-match? it plist) contents)))
-    (_ (error "Invalid query: %s" query))))
+    (_ (error "Invalid pattern: %s" pattern))))
 
-(defun om-elem-match (queries elem)
-  "Find all objects in ELEM that match QUERIES.
+;; TODO this is inefficient
+(defun om-elem--match-pattern (reverse? count pattern elem)
+  (let ((contents (--> (om-elem--get-contents elem)
+                       (if reverse? (reverse it) it))))
+    (pcase pattern
+      (`(,(and p (guard (memq p '(:first :last :nth :slice)))) . ,_)
+       (error "Slicer detected: %s" p))
+      (`(:many! . (,p . nil))
+       (let ((found (om-elem--match-filter p contents)))
+         (->> (-difference contents found)
+              (--mapcat (om-elem--match-pattern reverse? count `(:many! ,p) it))
+              (append found))))
+      (`(:many! . ,_)
+       (error "Query with :many! must have one target"))
+      (`(:many . (,p . nil))
+       (let ((found (om-elem--match-filter p contents))
+             (p* (list :many p)))
+         (->> contents
+              (--mapcat (om-elem--match-pattern reverse? count p* it))
+              (append found))))
+      (`(:many . ,_)
+       (error "Query with :many must have one target"))
+      (`(:any . ,(and (pred and) ps))
+       (--mapcat (om-elem--match-pattern reverse? count ps it) contents))
+      (`(:any . nil)
+       contents)
+      (`(,p . nil)
+       (om-elem--match-filter p contents))
+      (`(,p . ,ps)
+       (->> (om-elem--match-filter p contents)
+            (--mapcat (om-elem--match-pattern reverse? count ps it))))
+      (_ (error "Invalid query")))))
 
-This will return a list of all successful matches. See
-`om-elem-match-first' and `om-elem-match-last' to limit the return to
-one match.
+;; TODO this is inefficient
+(defun om-elem--match-slicer (pattern elem)
+  (pcase pattern
+    (`(:first . ,ps)
+     (-take 1 (om-elem--match-pattern nil 1 ps elem)))
+    (`(:last . ,ps)
+     (-take 1 (om-elem--match-pattern t 1 ps elem)))
+    (`(:nth . (,(and (pred integerp) n) . ,ps))
+     (if (< n 0) (reverse (om-elem--match-pattern t (abs n) ps elem))
+       (list (nth n (om-elem--match-pattern nil (1+ n) ps elem)))))
+    (`(:slice
+       . (,(and (pred integerp) a)
+          . (,(and (pred integerp) b)
+             . ,ps)))
+     (let* ((sum (+ a b))
+            (asum (abs sum)))
+       (cond
+        ((or (< asum a) (< asum b))
+         (error "Both indices must be on the same side of zero"))
+        ((< (abs b) (abs a))
+         (error "Second index must be further from zero than first"))
+        (t
+         (let ((a* (if (< a 0) (1- (abs a)) a))
+               (b* (if (< b 0) (abs b) (1+ b) )))
+           (->>
+            (if (<= 0 sum) (om-elem--match-pattern nil b* ps elem)
+              (reverse (om-elem--match-pattern t b* ps elem)))
+            (-take b*)
+            (-drop a* matched)))))))
+    (_ (om-elem--match-pattern nil nil pattern elem))))
 
-QUERIES consists of one or more criteria that is used to match
-targets. The basic queries are:
+(defun om-elem-match (pattern elem)
+  "Find all objects in ELEM that match PATTERN.
+
+This will return a list of all successful matches.
+
+PATTERNS consists of one or more criteria that is used to match
+targets. The basic patterns are:
 FUN  - a predicate function that selects targets when true
 TYPE - a symbol corresponding to the type of the element to match
 INDEX - in integer corresponding to index of the element to match
@@ -3870,14 +3932,14 @@ after the initial list cell except :not, which only supports one (eg
 
 The first query given to the function call will match against ELEM's
 contents, and the next query will match the contents of the matched
-contents of ELEM, and so forth for all queries. In this way, each
+contents of ELEM, and so forth for all patterns. In this way, each
 query can be thought to match one 'level' of contents within ELEM.
 
-For example, if ELEM is a headline, the queries 'section paragraph'
+For example, if ELEM is a headline, the patterns 'section paragraph'
 would match the section immediately in ELEM's contents, and then match
 the paragraph(s) within the section.
 
-Special keywords can be supplied as queries that function as
+Special keywords can be supplied as patterns that function as
 wildcards for levels:
 :many - matches zero or more levels
 :many! - matches zero or more levels, but does not descend further
@@ -3890,34 +3952,7 @@ the keyword, where :any can be followed by at least one.
 In the example above, ':any paragraph' would return the same match,
 assuming that the ELEM has only one section."
   (om-elem--verify elem om-elem--is-element-or-object-p)
-  (when queries
-    (let ((contents (om-elem--get-contents elem)))
-      (pcase queries
-        (`(:many! . (,q . nil))
-         (let ((found (om-elem-filter-query q contents))
-               (q* (list :many! q)))
-           (->> (-difference contents found)
-                (--mapcat (om-elem-match q* it))
-                (append found))))
-        (`(:many! . ,_)
-         (error "Query with :many! must have one target"))
-        (`(:many . (,q . nil))
-         (let ((found (om-elem-filter-query q contents))
-               (q* (list :many q)))
-           (->> (--mapcat (om-elem-match q* it) contents)
-                (append found))))
-        (`(:many . ,_)
-         (error "Query with :many must have one target"))
-        (`(:any . ,(and (pred and) qs))
-         (--mapcat (om-elem-match qs it) contents))
-        (`(:any . nil)
-         contents)
-        (`(,q . nil)
-         (om-elem-filter-query q contents))
-        (`(,q . ,qs)
-         (->> (om-elem-filter-query q contents)
-              (--mapcat (om-elem-match qs it))))
-        (_ (error "Invalid query"))))))
+  (om-elem--match-slicer pattern elem))
 
 (defun om-elem-match-first (queries elem )
   "Find first object in ELEM matching QUERIES.
