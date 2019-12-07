@@ -3785,7 +3785,7 @@
   "Use pattern-matching to perform operations on objects and elements in trees."
 
   (defexamples-content om-elem-match
-    "docstring"
+    nil
 
     (:content "* headline one"
               "** TODO headline two"
