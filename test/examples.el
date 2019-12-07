@@ -4056,6 +4056,8 @@ and here is even more *text4* and *text5*
                 "** new"
                 "** three"))
 
+  ;; add splice
+
   (defexamples-content om-elem-match-splice-before
     nil
     (:content "* one"

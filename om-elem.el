@@ -3886,7 +3886,7 @@ original contents to be modified."
     (`(:nth . (,(and (pred integerp) n) . ,ps))
      (if (< n 0) (reverse (om-elem--match-pattern t (abs n) ps elem))
        (list (nth n (om-elem--match-pattern nil (1+ n) ps elem)))))
-    (`(:slice
+    (`(:sub
        . (,(and (pred integerp) a)
           . (,(and (pred integerp) b)
              . ,ps)))
@@ -3908,50 +3908,52 @@ original contents to be modified."
     (_ (om-elem--match-pattern nil nil pattern elem))))
 
 (defun om-elem-match (pattern elem)
-  "Find all objects in ELEM that match PATTERN.
+  "Return a list of all nodes matching PATTERN in ELEM.
 
-This will return a list of all successful matches.
+PATTERN is a list of form ([slicer [arg1] [arg2]] cond1 [cond2 ...]).
 
-PATTERNS consists of one or more criteria that is used to match
-targets. The basic patterns are:
-FUN  - a predicate function that selects targets when true
-TYPE - a symbol corresponding to the type of the element to match
-INDEX - in integer corresponding to index of the element to match
-PROPS - a plist that matches targets with the same property values
+'slicer' is an optional prefix to the pattern describing how many
+and which matches to return. If not given, all matches are
+returned. Possible values are:
 
-INDEX can be additionally qualified using comparison operators in a
-two-membered list such as '(< INDEX)' which will match an element with
-indices less than INDEX. Supported operators are '<', '>', '<=', and
-'>=', and their function intuitively follows their names.
+- :first - return the first match
+- :last - return the last match
+- :nth N - return the nth match where N is an integer denoting the
+  index to return (starting at 0). It may be a negative number to
+  start counting at the end of the match list, in which case -1 is the
+  last index
+- :sub A B - return a sublist between indices A and B. A and B follow
+  the same rules as :nth
 
-In addition, the above operators can be combined with boolean
-operators ':and', ':or', and ':not' using a list starting with the
-operators. For example, '(:or headline timestamp)' would match
-headline or timestamp types. Each operator supports multiple criteria
-after the initial list cell except :not, which only supports one (eg
-'(:not headline timestamp)' is invalid).
+'cond' denotes conditions that that match nodes in the parse
+tree. This first condition will select matches within the
+contents of ELEM, the next condition will select matches within
+the matches from the first condition, and so on. The types of
+conditions are:
 
-The first query given to the function call will match against ELEM's
-contents, and the next query will match the contents of the matched
-contents of ELEM, and so forth for all patterns. In this way, each
-query can be thought to match one 'level' of contents within ELEM.
+- PRED - match when PRED evaluates to t; PRED is a unary function that
+  takes the current node as its argument
+- TYPE - match when the node's type is `eq' to TYPE (a symbol)
+- INDEX - match when the node's index is `=' to INDEX (an integer).
+  The first index is zero. If INDEX is negative, start counting
+  backward from the end of contents where -1 is the last node
+- (OP INDEX) - match when (OP NODE-INDEX INDEX) returns t. OP is
+  one of '<', '>', '<=', or '>='
+- PLIST - match nodes with the same properties and values as PLIST
+- :many - match zero or more levels, must have at least one
+  sub-pattern after it
+- :many! - like :many but do not match within other matches
+- :any - always match exactly one node
 
-For example, if ELEM is a headline, the patterns 'section paragraph'
-would match the section immediately in ELEM's contents, and then match
-the paragraph(s) within the section.
+Additionally, conditions may be further refined using boolean forms:
 
-Special keywords can be supplied as patterns that function as
-wildcards for levels:
-:many - matches zero or more levels
-:many! - matches zero or more levels, but does not descend further
-         into a match
-:any - matches exactly one level
+- (:and c1 c2 [c3 ...]) - match when all conditions are true
+- (:or c1 c2 [c3 ...]) - match when at least one condition is true
+- (:not c) - match when condition is not true
 
-In the case of :many and :many!, only one additional query may follow
-the keyword, where :any can be followed by at least one.
-
-In the example above, ':any paragraph' would return the same match,
-assuming that the ELEM has only one section."
+The 'c' members in the forms above are one of any of the condition
+types except :many, :many!, and :any. Boolean forms may be
+nested within each other."
   (om-elem--verify elem om-elem--is-element-or-object-p)
   (om-elem--match-slicer pattern elem))
 
@@ -4012,7 +4014,7 @@ assuming that the ELEM has only one section."
     (--remove (member it targets) it)))
 
 (defun om-elem-match-delete (pattern elem)
-  "Remove matching targets from contents of ELEM.
+  "Remove nodes matching PATTERN from ELEM and return modified ELEM.
 
 PATTERN follows the same rules as `om-elem-match'."
   (-if-let (targets (om-elem-match pattern elem))
@@ -4022,9 +4024,9 @@ PATTERN follows the same rules as `om-elem-match'."
 ;; extract
 
 (defun om-elem-match-extract (pattern elem)
-  "Remove matching targets from contents of ELEM.
-Return cons cell where the car is a list of all removed targets
-and the cdr is the modified ELEM with targets removed.
+  "Remove nodes matching PATTERN from ELEM.
+Return cons cell where the car is a list of all removed nodes and
+the cdr is the modified ELEM.
 
 PATTERN follows the same rules as `om-elem-match'."
   (-if-let (targets (om-elem-match pattern elem))
@@ -4034,10 +4036,9 @@ PATTERN follows the same rules as `om-elem-match'."
 ;; map
 
 (defun om-elem-match-map (pattern fun elem)
-  "Apply FUN to targets matching PATTERN in the contents of ELEM.
-FUN is a function that takes a single argument (the target element or
-object) and returns a new element or object which will replace the
-original.
+  "Apply FUN to nodes matching PATTERN in ELEM.
+FUN is a unary function that takes a node and returns a new node
+which will replace the original.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
@@ -4051,12 +4052,9 @@ PATTERN follows the same rules as `om-elem-match'."
 ;; mapcat
 
 (defun om-elem-match-mapcat (pattern fun elem)
-  "Apply FUN over ELEM and return modified ELEM.
-FUN takes an element/object as its only argument and returns
-a list of elements/objects. Targets within ELEM are found that match
-PATTERN, FUN is applied to each target, and the resulting list is
-spliced in place of the original target (as opposed to `om-elem-match-map'
-which replaces the original target with a modified target).
+  "Apply FUN to nodes matching PATTERN in ELEM.
+FUN is a unary function that takes a node and returns a list of new
+nodes which will be spliced in place of the original node.
 
 PATTERN follows the same rules as `om-elem-match'."
   (-if-let (targets (om-elem-match pattern elem))
@@ -4070,20 +4068,22 @@ PATTERN follows the same rules as `om-elem-match'."
 
 ;; replace
 
-(defun om-elem-match-replace (pattern rep elem)
-  "Replace matching targets in ELEM with REP.
+(defun om-elem-match-replace (pattern elem* elem)
+  "Replace nodes matching PATTERN with ELEM* within ELEM.
+Return modified ELEM.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
   (-if-let (targets (om-elem-match pattern elem))
       (om-elem--modify-contents elem
-        (--map-when (member it targets) rep it))
+        (--map-when (member it targets) elem* it))
     elem))
 
 ;; insert-before
 
 (defun om-elem-match-insert-before (pattern elem* elem)
-  "Insert ELEM* before every target matched by PATTERN in ELEM.
+  "Insert ELEM* before every node matching PATTERN in ELEM.
+Return modified ELEM.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
@@ -4095,7 +4095,8 @@ PATTERN follows the same rules as `om-elem-match'."
 ;; insert-after
 
 (defun om-elem-match-insert-after (pattern elem* elem)
-  "Insert ELEM* after every target matched by PATTERN in ELEM.
+  "Insert ELEM* after every node matching PATTERN in ELEM.
+Return modified ELEM.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
@@ -4125,12 +4126,12 @@ front."
        (-insert-at index elem* contents))))
 
 (defun om-elem-match-insert-within (pattern index elem* elem)
-  "Insert new element ELEM* into the contents of ELEM at INDEX.
-Will insert into any target matched by PATTERN. If PATTERN is not
-supplied, ELEM* will be inserted directly into the toplevel contents
-of ELEM.
+  "Insert new ELEM* at INDEX into nodes matching PATTERN in ELEM.
+Return modified ELEM.
 
-PATTERN follows the same rules as `om-elem-match'."
+PATTERN follows the same rules as `om-elem-match' with the exception
+that PATTERN may be nil. In this case ELEM* will be inserted at INDEX
+in the immediate, top level contents of ELEM."
   (declare (indent 2))
   (if (-non-nil pattern)
       (-if-let (targets (om-elem-match pattern elem))
@@ -4142,8 +4143,9 @@ PATTERN follows the same rules as `om-elem-match'."
 
 ;; splice
 
-(defun om-elem-match-splice (pattern elem* elem)
-  "Splice matching targets in ELEM with ELEMS*.
+(defun om-elem-match-splice (pattern elems* elem)
+  "Splice nodes matching PATTERN in ELEM with ELEMS*.
+Return modified ELEM. ELEMS* is a list of nodes.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
@@ -4155,7 +4157,8 @@ PATTERN follows the same rules as `om-elem-match'."
 ;; splice-before
 
 (defun om-elem-match-splice-before (pattern elems* elem)
-  "Splice ELEMS* before every target matched by PATTERN in ELEM.
+  "Splice ELEMS* before every nodes matching PATTERN in ELEM.
+Return modified ELEM. ELEMS* is a list of nodes.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
@@ -4170,7 +4173,8 @@ PATTERN follows the same rules as `om-elem-match'."
 ;; splice-after
 
 (defun om-elem-match-splice-after (pattern elems* elem)
-  "Splice ELEMS* after every target matched by PATTERN in ELEM.
+  "Splice ELEMS* after every nodes matching PATTERN in ELEM.
+Return modified ELEM. ELEMS* is a list of nodes.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
@@ -4193,12 +4197,12 @@ PATTERN follows the same rules as `om-elem-match'."
           (apply #'append)))))
 
 (defun om-elem-match-splice-within (pattern index elems* elem)
-  "Insert list of ELEMS* into the contents of ELEM at INDEX.
-Will insert into any target matched by PATTERN. If PATTERN is not
-supplied, ELEM* will be inserted directly into the toplevel contents
-of ELEM.
+  "Splice new ELEMS* at INDEX into nodes matching PATTERN in ELEM.
+Return modified ELEM. ELEMS* is a list of nodes.
 
-PATTERN follows the same rules as `om-elem-match'."
+PATTERN follows the same rules as `om-elem-match' with the exception
+that PATTERN may be nil. In this case ELEMS* will be inserted at INDEX
+in the immediate, top level contents of ELEM."
   (declare (indent 2))
   (if (-non-nil pattern)
       (-if-let (targets (om-elem-match pattern elem))

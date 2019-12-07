@@ -383,7 +383,7 @@ Use pattern-matching to perform operations on objects and elements in trees.
 * [om-elem-match-extract](#om-elem-match-extract-pattern-elem) `(pattern elem)`
 * [om-elem-match-map](#om-elem-match-map-pattern-fun-elem) `(pattern fun elem)`
 * [om-elem-match-mapcat](#om-elem-match-mapcat-pattern-fun-elem) `(pattern fun elem)`
-* [om-elem-match-replace](#om-elem-match-replace-pattern-rep-elem) `(pattern rep elem)`
+* [om-elem-match-replace](#om-elem-match-replace-pattern-elem-elem) `(pattern elem* elem)`
 * [om-elem-match-insert-before](#om-elem-match-insert-before-pattern-elem-elem) `(pattern elem* elem)`
 * [om-elem-match-insert-after](#om-elem-match-insert-after-pattern-elem-elem) `(pattern elem* elem)`
 * [om-elem-match-insert-within](#om-elem-match-insert-within-pattern-index-elem-elem) `(pattern index elem* elem)`
@@ -4494,50 +4494,52 @@ Use pattern-matching to perform operations on objects and elements in trees.
 
 #### om-elem-match `(pattern elem)`
 
-Find all objects in `elem` that match `pattern`.
+Return a list of all nodes matching `pattern` in `elem`.
 
-This will return a list of all successful matches.
+`pattern` is a list of form ([slicer [arg1] [arg2]] cond1 [cond2 ...]).
 
-`patterns` consists of one or more criteria that is used to match
-targets. The basic patterns are:
-`fun`  - a predicate function that selects targets when true
-`type` - a symbol corresponding to the type of the element to match
-`index` - in integer corresponding to index of the element to match
-`props` - a plist that matches targets with the same property values
+'slicer' is an optional prefix to the pattern describing how many
+and which matches to return. If not given, all matches are
+returned. Possible values are:
 
-`index` can be additionally qualified using comparison operators in a
-two-membered list such as '(< `index`)` which will match an element with
-indices less than `index`. Supported operators are '<', '>', '<=', and
-'>=', and their function intuitively follows their names.
+- :first - return the first match
+- :last - return the last match
+- :nth `n` - return the nth match where `n` is an integer denoting the
+    index to return (starting at 0). It may be a negative number to
+    start counting at the end of the match list, in which case -1 is the
+    last index
+- :sub `a` `b` - return a sublist between indices `a` and `b`. `a` and `b` follow
+    the same rules as :nth
 
-In addition, the above operators can be combined with boolean
-operators ':and', ':or', and ':not' using a list starting with the
-operators. For example, '(:or headline timestamp)' would match
-headline or timestamp types. Each operator supports multiple criteria
-after the initial list cell except :not, which only supports one (eg
-'(:not headline timestamp)' is invalid).
+'cond' denotes conditions that that match nodes in the parse
+tree. This first condition will select matches within the
+contents of `elem`, the next condition will select matches within
+the matches from the first condition, and so on. The types of
+conditions are:
 
-The first query given to the function call will match against `elem``s
-contents, and the next query will match the contents of the matched
-contents of `elem`, and so forth for all patterns. In this way, each
-query can be thought to match one 'level' of contents within `elem`.
+- `pred` - match when `pred` evaluates to t; `pred` is a unary function that
+    takes the current node as its argument
+- `type` - match when the node's type is `eq` to `type` (a symbol)
+- `index` - match when the node's index is `=` to `index` (an integer).
+    The first index is zero. If `index` is negative, start counting
+    backward from the end of contents where -1 is the last node
+- (`op` `index`) - match when (`op` `node-index` `index`) returns t. `op` is
+    one of '<', '>', '<=', or '>='
+- `plist` - match nodes with the same properties and values as `plist`
+- :many - match zero or more levels, must have at least one
+    sub-pattern after it
+- :many! - like :many but do not match within other matches
+- :any - always match exactly one node
 
-For example, if `elem` is a headline, the patterns 'section paragraph'
-would match the section immediately in `elem``s contents, and then match
-the paragraph(s) within the section.
+Additionally, conditions may be further refined using boolean forms:
 
-Special keywords can be supplied as patterns that function as
-wildcards for levels:
-:many - matches zero or more levels
-:many! - matches zero or more levels, but does not descend further
-           into a match
-:any - matches exactly one level
+- (:and c1 c2 [c3 ...]) - match when all conditions are true
+- (:or c1 c2 [c3 ...]) - match when at least one condition is true
+- (:not c) - match when condition is not true
 
-In the case of :many and :many!, only one additional query may follow
-the keyword, where :any can be followed by at least one.
-
-In the example above, ':any paragraph' would return the same match,
-assuming that the `elem` has only one section.
+The 'c' members in the forms above are one of any of the condition
+types except :many, :many!, and :any. Boolean forms may be
+nested within each other.
 
 ```el
 ;; Given the following contents:
@@ -4674,7 +4676,7 @@ assuming that the `elem` has only one section.
 
 #### om-elem-match-delete `(pattern elem)`
 
-Remove matching targets from contents of `elem`.
+Remove nodes matching `pattern` from `elem` and return modified `elem`.
 
 `pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
@@ -4709,9 +4711,9 @@ Remove matching targets from contents of `elem`.
 
 #### om-elem-match-extract `(pattern elem)`
 
-Remove matching targets from contents of `elem`.
-Return cons cell where the car is a list of all removed targets
-and the cdr is the modified `elem` with targets removed.
+Remove nodes matching `pattern` from `elem`.
+Return cons cell where the car is a list of all removed nodes and
+the cdr is the modified `elem`.
 
 `pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
@@ -4731,10 +4733,9 @@ and the cdr is the modified `elem` with targets removed.
 
 #### om-elem-match-map `(pattern fun elem)`
 
-Apply `fun` to targets matching `pattern` in the contents of `elem`.
-`fun` is a function that takes a single argument (the target element or
-object) and returns a new element or object which will replace the
-original.
+Apply `fun` to nodes matching `pattern` in `elem`.
+`fun` is a unary function that takes a node and returns a new node
+which will replace the original.
 
 `pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
@@ -4779,12 +4780,9 @@ original.
 
 #### om-elem-match-mapcat `(pattern fun elem)`
 
-Apply `fun` over `elem` and return modified `elem`.
-`fun` takes an element/object as its only argument and returns
-a list of elements/objects. Targets within `elem` are found that match
-`pattern`, `fun` is applied to each target, and the resulting list is
-spliced in place of the original target (as opposed to [`om-elem-match-map`](#om-elem-match-map-pattern-fun-elem)
-which replaces the original target with a modified target).
+Apply `fun` to nodes matching `pattern` in `elem`.
+`fun` is a unary function that takes a node and returns a list of new
+nodes which will be spliced in place of the original node.
 
 `pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
@@ -4804,9 +4802,10 @@ which replaces the original target with a modified target).
 
 ```
 
-#### om-elem-match-replace `(pattern rep elem)`
+#### om-elem-match-replace `(pattern elem* elem)`
 
-Replace matching targets in `elem` with `rep`.
+Replace nodes matching `pattern` with `elem`* within `elem`.
+Return modified `elem`.
 
 `pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
@@ -4824,7 +4823,8 @@ Replace matching targets in `elem` with `rep`.
 
 #### om-elem-match-insert-before `(pattern elem* elem)`
 
-Insert `elem`* before every target matched by `pattern` in `elem`.
+Insert `elem`* before every node matching `pattern` in `elem`.
+Return modified `elem`.
 
 `pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
@@ -4848,7 +4848,8 @@ Insert `elem`* before every target matched by `pattern` in `elem`.
 
 #### om-elem-match-insert-after `(pattern elem* elem)`
 
-Insert `elem`* after every target matched by `pattern` in `elem`.
+Insert `elem`* after every node matching `pattern` in `elem`.
+Return modified `elem`.
 
 `pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
@@ -4872,12 +4873,12 @@ Insert `elem`* after every target matched by `pattern` in `elem`.
 
 #### om-elem-match-insert-within `(pattern index elem* elem)`
 
-Insert new element `elem`* into the contents of `elem` at `index`.
-Will insert into any target matched by `pattern`. If `pattern` is not
-supplied, `elem`* will be inserted directly into the toplevel contents
-of `elem`.
+Insert new `elem`* at `index` into nodes matching `pattern` in `elem`.
+Return modified `elem`.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem) with the exception
+that `pattern` may be nil. In this case `elem`* will be inserted at `index`
+in the immediate, top level contents of `elem`.
 
 ```el
 ;; Given the following contents:
@@ -4908,7 +4909,8 @@ of `elem`.
 
 #### om-elem-match-splice-before `(pattern elems* elem)`
 
-Splice `elems`* before every target matched by `pattern` in `elem`.
+Splice `elems`* before every nodes matching `pattern` in `elem`.
+Return modified `elem`. `elems`* is a list of nodes.
 
 `pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
@@ -4933,7 +4935,8 @@ Splice `elems`* before every target matched by `pattern` in `elem`.
 
 #### om-elem-match-splice-after `(pattern elems* elem)`
 
-Splice `elems`* after every target matched by `pattern` in `elem`.
+Splice `elems`* after every nodes matching `pattern` in `elem`.
+Return modified `elem`. `elems`* is a list of nodes.
 
 `pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
@@ -4958,12 +4961,12 @@ Splice `elems`* after every target matched by `pattern` in `elem`.
 
 #### om-elem-match-splice-within `(pattern index elems* elem)`
 
-Insert list of `elems`* into the contents of `elem` at `index`.
-Will insert into any target matched by `pattern`. If `pattern` is not
-supplied, `elem`* will be inserted directly into the toplevel contents
-of `elem`.
+Splice new `elems`* at `index` into nodes matching `pattern` in `elem`.
+Return modified `elem`. `elems`* is a list of nodes.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem) with the exception
+that `pattern` may be nil. In this case `elems`* will be inserted at `index`
+in the immediate, top level contents of `elem`.
 
 ```el
 ;; Given the following contents:
