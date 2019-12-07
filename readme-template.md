@@ -95,10 +95,10 @@ documentation](https://orgmode.org/worg/dev/org-element-api.html).
 
 Each function that operates on an element/object will take the
 element/object as its right-most argument. This allows convenient
-function chaining using `dash.el`'s right-threading operator (`->>`).
-The examples below almost exclusively demonstrate this pattern.
-Additionally, the right-argument convention also allows convenient
-partial application using `-partial` from `dash.el`.
+function chaining using `dash.el`'s right-threading operators (`->>`
+and `-some->>`). The examples below almost exclusively demonstrate
+this pattern. Additionally, the right-argument convention also allows
+convenient partial application using `-partial` from `dash.el`.
 
 ### Higher-order functions
 
@@ -121,7 +121,7 @@ carries the value of the unary argument (unless otherwise specified):
 
 ### Side effect functions
 
-The majority of side-effectual functions are named like
+All functions that read and write from buffers are named like
 `om-elem-OPERATION-THING-at` where `OPERATION` is some operation to be
 performed on `THING` in the current buffer. All these functions take
 `point` as one of their arguments to denote where in the buffer to
