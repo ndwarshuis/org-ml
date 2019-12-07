@@ -3,7 +3,7 @@
 A functional API for org-mode inspired by
 [@magnars](https://github.com/magnars)'s
 [dash.el](https://github.com/magnars/dash.el) and
-[s.el](https://github.com/magnars/s.el) ibraries.
+[s.el](https://github.com/magnars/s.el) libraries.
 
 # Installation
 
