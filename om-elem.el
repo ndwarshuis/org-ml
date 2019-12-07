@@ -4074,6 +4074,7 @@ PATTERNS follows the same rules as `om-elem-match'."
   "Replace matching targets in ELEM with REP.
 
 PATTERNS follows the same rules as `om-elem-match'."
+  (declare (indent 1))
   (-if-let (targets (om-elem-match patterns elem))
       (om-elem--modify-contents elem
         (--map-when (member it targets) rep it))
@@ -4085,6 +4086,7 @@ PATTERNS follows the same rules as `om-elem-match'."
   "Insert ELEM* before every target matched by PATTERNS in ELEM.
 
 PATTERNS follows the same rules as `om-elem-match'."
+  (declare (indent 1))
   (-if-let (targets (om-elem-match patterns elem))
       (om-elem--modify-contents elem
         (--mapcat (if (member it targets) (list elem* it) (list it)) it))
@@ -4096,6 +4098,7 @@ PATTERNS follows the same rules as `om-elem-match'."
   "Insert ELEM* after every target matched by PATTERNS in ELEM.
 
 PATTERNS follows the same rules as `om-elem-match'."
+  (declare (indent 1))
   (-if-let (targets (om-elem-match patterns elem))
       (om-elem--modify-contents elem
         (--mapcat (if (member it targets) (list it elem*) (list it)) it))
@@ -4128,6 +4131,7 @@ supplied, ELEM* will be inserted directly into the toplevel contents
 of ELEM.
 
 PATTERNS follows the same rules as `om-elem-match'."
+  (declare (indent 2))
   (if (-non-nil patterns)
       (-if-let (targets (om-elem-match patterns elem))
           (om-elem--modify-contents elem
@@ -4142,6 +4146,7 @@ PATTERNS follows the same rules as `om-elem-match'."
   "Splice matching targets in ELEM with ELEMS*.
 
 PATTERNS follows the same rules as `om-elem-match'."
+  (declare (indent 1))
   (-if-let (targets (om-elem-match patterns elem))
       (om-elem--modify-contents elem
         (--mapcat (if (member it targets) elems* (list it)) it))
@@ -4149,10 +4154,11 @@ PATTERNS follows the same rules as `om-elem-match'."
 
 ;; splice-before
 
-(defun om-elem-match-splice-before (patterns elem* elem)
+(defun om-elem-match-splice-before (patterns elems* elem)
   "Splice ELEMS* before every target matched by PATTERNS in ELEM.
 
 PATTERNS follows the same rules as `om-elem-match'."
+  (declare (indent 1))
   (-if-let (targets (om-elem-match patterns elem))
       (om-elem--modify-contents elem
         (--mapcat (if (member it targets)
@@ -4163,10 +4169,11 @@ PATTERNS follows the same rules as `om-elem-match'."
 
 ;; splice-after
 
-(defun om-elem-match-splice-after (patterns elem* elem)
+(defun om-elem-match-splice-after (patterns elems* elem)
   "Splice ELEMS* after every target matched by PATTERNS in ELEM.
 
 PATTERNS follows the same rules as `om-elem-match'."
+  (declare (indent 1))
   (-if-let (targets (om-elem-match patterns elem))
       (om-elem--modify-contents elem
         (--mapcat (if (member it targets) (cons it elems*) (list it)) it))
@@ -4177,21 +4184,22 @@ PATTERNS follows the same rules as `om-elem-match'."
 (defun om-elem--splice-at (elem elems* index)
   "Splice ELEMS* into the contents of ELEM at INDEX."
   (let* ((contents (om-elem--get-contents elem))
-         (i (om-elem--normalize-insert-index index it)))
+         (i (om-elem--normalize-insert-index index contents)))
     (om-elem--construct
      (nth 0 elem)
      (nth 1 elem)
-     (->> (split-at i contents)
+     (->> (-split-at i contents)
           (-insert-at 1 elems*)
           (apply #'append)))))
 
-(defun om-elem-match-splice-within (patterns index elem* elem)
+(defun om-elem-match-splice-within (patterns index elems* elem)
   "Insert list of ELEMS* into the contents of ELEM at INDEX.
 Will insert into any target matched by PATTERNS. If PATTERNS is not
 supplied, ELEM* will be inserted directly into the toplevel contents
 of ELEM.
 
 PATTERNS follows the same rules as `om-elem-match'."
+  (declare (indent 2))
   (if (-non-nil patterns)
       (-if-let (targets (om-elem-match patterns elem))
           (om-elem--modify-contents

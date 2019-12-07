@@ -3974,29 +3974,133 @@ and here is even more *text4* and *text5*
                 "** headline three"
                 "** DONE headline four"))
   
-  ;; TODO add mapcat
-  (defexamples-content om-elem-match-mapcat nil)
+  (defexamples-content om-elem-match-mapcat
+    nil
 
-  ;; TODO add replace
-  (defexamples-content om-elem-match-replace nil)
+    (:content "* one"
+              "** two")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-match-mapcat* '(:first headline)
+           (list (om-elem-build-headline! :title-text "1.5" :level 2) it))
+         (om-elem-to-trimmed-string))
+    => (:result "* one"
+                "** 1.5"
+                "** two"))
 
-  ;; TOOD add insert-before
-  (defexamples-content om-elem-match-insert-before nil)
+  (defexamples-content om-elem-match-replace
+    nil
+    (:content "*1* 2 *3* 4 *5* 6 *7* 8 *9* 10")
+    (->> (om-elem-parse-this-element)
+         (om-elem-match-replace '(:many bold)
+           (om-elem-build-bold :post-blank 1 "0"))
+         (om-elem-to-trimmed-string))
+    => "*0* 2 *0* 4 *0* 6 *0* 8 *0* 10")
 
-  ;; TOOD add insert-after
-  (defexamples-content om-elem-match-insert-after nil)
+  (defexamples-content om-elem-match-insert-before
+    nil
+    (:content "* one"
+              "** two"
+              "** three")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-match-insert-before '(headline)
+           (om-elem-build-headline! :title-text "new" :level 2))
+         (om-elem-to-trimmed-string))
+    => (:result "* one"
+                "** new"
+                "** two"
+                "** new"
+                "** three"))
+    
 
-  ;; TOOD add insert-within
-  (defexamples-content om-elem-match-insert-within nil)
+  (defexamples-content om-elem-match-insert-after
+    nil
+    (:content "* one"
+              "** two"
+              "** three")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-match-insert-after '(headline)
+           (om-elem-build-headline! :title-text "new" :level 2))
+         (om-elem-to-trimmed-string))
+    => (:result "* one"
+                "** two"
+                "** new"
+                "** three"
+                "** new"))
 
-  ;; TOOD add splice-before
-  (defexamples-content om-elem-match-splice-before nil)
+  (defexamples-content om-elem-match-insert-within
+    nil
+    (:content "* one"
+              "** two"
+              "** three")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-match-insert-within '(headline) 0
+           (om-elem-build-headline! :title-text "new" :level 3))
+         (om-elem-to-trimmed-string))
+    => (:result "* one"
+                "** two"
+                "*** new"
+                "** three"
+                "*** new")
+    (:comment "The nil pattern denotes top-level element")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-match-insert-within nil 1
+           (om-elem-build-headline! :title-text "new" :level 2))
+         (om-elem-to-trimmed-string))
+    => (:result "* one"
+                "** two"
+                "** new"
+                "** three"))
 
-  ;; TOOD add splice-after
-  (defexamples-content om-elem-match-splice-after nil)
+  (defexamples-content om-elem-match-splice-before
+    nil
+    (:content "* one"
+              "** two"
+              "** three")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-match-splice-before '(0)
+           (list
+            (om-elem-build-headline! :title-text "new0" :level 2)
+            (om-elem-build-headline! :title-text "new1" :level 2)))
+         (om-elem-to-trimmed-string))
+    => (:result "* one"
+                "** new0"
+                "** new1"
+                "** two"
+                "** three"))
 
-  ;; TOOD add splice-within
-  (defexamples-content om-elem-match-splice-within nil))
+  (defexamples-content om-elem-match-splice-after
+    nil
+    (:content "* one"
+              "** two"
+              "** three")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-match-splice-after '(0)
+           (list
+            (om-elem-build-headline! :title-text "new0" :level 2)
+            (om-elem-build-headline! :title-text "new1" :level 2)))
+         (om-elem-to-trimmed-string))
+    => (:result "* one"
+                "** two"
+                "** new0"
+                "** new1"
+                "** three"))
+
+  (defexamples-content om-elem-match-splice-within
+    nil
+    (:content "* one"
+              "** two"
+              "** three")
+    (->> (om-elem-parse-this-subtree)
+         (om-elem-match-splice-within nil 1
+           (list
+            (om-elem-build-headline! :title-text "new0" :level 2)
+            (om-elem-build-headline! :title-text "new1" :level 2)))
+         (om-elem-to-trimmed-string))
+    => (:result "* one"
+                "** two"
+                "** new0"
+                "** new1"
+                "** three")))
 
 (def-example-group "Buffer Side Effects"
   "Insert and update elements and objects into buffers"
