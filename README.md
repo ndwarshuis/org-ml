@@ -379,17 +379,17 @@ Set, get and map the contents of containers
 Use pattern-matching to perform operations on objects and elements in trees.
 
 * [om-elem-match](#om-elem-match-pattern-elem) `(pattern elem)`
-* [om-elem-match-delete](#om-elem-match-delete-patterns-elem) `(patterns elem)`
-* [om-elem-match-extract](#om-elem-match-extract-patterns-elem) `(patterns elem)`
-* [om-elem-match-map](#om-elem-match-map-patterns-fun-elem) `(patterns fun elem)`
-* [om-elem-match-mapcat](#om-elem-match-mapcat-patterns-fun-elem) `(patterns fun elem)`
-* [om-elem-match-replace](#om-elem-match-replace-patterns-rep-elem) `(patterns rep elem)`
-* [om-elem-match-insert-before](#om-elem-match-insert-before-patterns-elem-elem) `(patterns elem* elem)`
-* [om-elem-match-insert-after](#om-elem-match-insert-after-patterns-elem-elem) `(patterns elem* elem)`
-* [om-elem-match-insert-within](#om-elem-match-insert-within-patterns-index-elem-elem) `(patterns index elem* elem)`
-* [om-elem-match-splice-before](#om-elem-match-splice-before-patterns-elems-elem) `(patterns elems* elem)`
-* [om-elem-match-splice-after](#om-elem-match-splice-after-patterns-elems-elem) `(patterns elems* elem)`
-* [om-elem-match-splice-within](#om-elem-match-splice-within-patterns-index-elems-elem) `(patterns index elems* elem)`
+* [om-elem-match-delete](#om-elem-match-delete-pattern-elem) `(pattern elem)`
+* [om-elem-match-extract](#om-elem-match-extract-pattern-elem) `(pattern elem)`
+* [om-elem-match-map](#om-elem-match-map-pattern-fun-elem) `(pattern fun elem)`
+* [om-elem-match-mapcat](#om-elem-match-mapcat-pattern-fun-elem) `(pattern fun elem)`
+* [om-elem-match-replace](#om-elem-match-replace-pattern-rep-elem) `(pattern rep elem)`
+* [om-elem-match-insert-before](#om-elem-match-insert-before-pattern-elem-elem) `(pattern elem* elem)`
+* [om-elem-match-insert-after](#om-elem-match-insert-after-pattern-elem-elem) `(pattern elem* elem)`
+* [om-elem-match-insert-within](#om-elem-match-insert-within-pattern-index-elem-elem) `(pattern index elem* elem)`
+* [om-elem-match-splice-before](#om-elem-match-splice-before-pattern-elems-elem) `(pattern elems* elem)`
+* [om-elem-match-splice-after](#om-elem-match-splice-after-pattern-elems-elem) `(pattern elems* elem)`
+* [om-elem-match-splice-within](#om-elem-match-splice-within-pattern-index-elems-elem) `(pattern index elems* elem)`
 
 ## Buffer Side Effects
 
@@ -4494,7 +4494,50 @@ Use pattern-matching to perform operations on objects and elements in trees.
 
 #### om-elem-match `(pattern elem)`
 
-docstring
+Find all objects in `elem` that match `pattern`.
+
+This will return a list of all successful matches.
+
+`patterns` consists of one or more criteria that is used to match
+targets. The basic patterns are:
+`fun`  - a predicate function that selects targets when true
+`type` - a symbol corresponding to the type of the element to match
+`index` - in integer corresponding to index of the element to match
+`props` - a plist that matches targets with the same property values
+
+`index` can be additionally qualified using comparison operators in a
+two-membered list such as '(< `index`)` which will match an element with
+indices less than `index`. Supported operators are '<', '>', '<=', and
+'>=', and their function intuitively follows their names.
+
+In addition, the above operators can be combined with boolean
+operators ':and', ':or', and ':not' using a list starting with the
+operators. For example, '(:or headline timestamp)' would match
+headline or timestamp types. Each operator supports multiple criteria
+after the initial list cell except :not, which only supports one (eg
+'(:not headline timestamp)' is invalid).
+
+The first query given to the function call will match against `elem``s
+contents, and the next query will match the contents of the matched
+contents of `elem`, and so forth for all patterns. In this way, each
+query can be thought to match one 'level' of contents within `elem`.
+
+For example, if `elem` is a headline, the patterns 'section paragraph'
+would match the section immediately in `elem``s contents, and then match
+the paragraph(s) within the section.
+
+Special keywords can be supplied as patterns that function as
+wildcards for levels:
+:many - matches zero or more levels
+:many! - matches zero or more levels, but does not descend further
+           into a match
+:any - matches exactly one level
+
+In the case of :many and :many!, only one additional query may follow
+the keyword, where :any can be followed by at least one.
+
+In the example above, ':any paragraph' would return the same match,
+assuming that the `elem` has only one section.
 
 ```el
 ;; Given the following contents:
@@ -4629,11 +4672,11 @@ docstring
 
 ```
 
-#### om-elem-match-delete `(patterns elem)`
+#### om-elem-match-delete `(pattern elem)`
 
 Remove matching targets from contents of `elem`.
 
-`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
@@ -4664,13 +4707,13 @@ Remove matching targets from contents of `elem`.
 
 ```
 
-#### om-elem-match-extract `(patterns elem)`
+#### om-elem-match-extract `(pattern elem)`
 
 Remove matching targets from contents of `elem`.
 Return cons cell where the car is a list of all removed targets
 and the cdr is the modified `elem` with targets removed.
 
-`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
@@ -4686,14 +4729,14 @@ and the cdr is the modified `elem` with targets removed.
 
 ```
 
-#### om-elem-match-map `(patterns fun elem)`
+#### om-elem-match-map `(pattern fun elem)`
 
-Apply `fun` to targets matching `patterns` in the contents of `elem`.
+Apply `fun` to targets matching `pattern` in the contents of `elem`.
 `fun` is a function that takes a single argument (the target element or
 object) and returns a new element or object which will replace the
 original.
 
-`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
@@ -4734,16 +4777,16 @@ original.
 
 ```
 
-#### om-elem-match-mapcat `(patterns fun elem)`
+#### om-elem-match-mapcat `(pattern fun elem)`
 
 Apply `fun` over `elem` and return modified `elem`.
 `fun` takes an element/object as its only argument and returns
 a list of elements/objects. Targets within `elem` are found that match
-`patterns`, `fun` is applied to each target, and the resulting list is
-spliced in place of the original target (as opposed to [`om-elem-match-map`](#om-elem-match-map-patterns-fun-elem)
+`pattern`, `fun` is applied to each target, and the resulting list is
+spliced in place of the original target (as opposed to [`om-elem-match-map`](#om-elem-match-map-pattern-fun-elem)
 which replaces the original target with a modified target).
 
-`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
@@ -4761,11 +4804,11 @@ which replaces the original target with a modified target).
 
 ```
 
-#### om-elem-match-replace `(patterns rep elem)`
+#### om-elem-match-replace `(pattern rep elem)`
 
 Replace matching targets in `elem` with `rep`.
 
-`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
@@ -4779,11 +4822,11 @@ Replace matching targets in `elem` with `rep`.
 
 ```
 
-#### om-elem-match-insert-before `(patterns elem* elem)`
+#### om-elem-match-insert-before `(pattern elem* elem)`
 
-Insert `elem`* before every target matched by `patterns` in `elem`.
+Insert `elem`* before every target matched by `pattern` in `elem`.
 
-`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
@@ -4803,11 +4846,11 @@ Insert `elem`* before every target matched by `patterns` in `elem`.
 
 ```
 
-#### om-elem-match-insert-after `(patterns elem* elem)`
+#### om-elem-match-insert-after `(pattern elem* elem)`
 
-Insert `elem`* after every target matched by `patterns` in `elem`.
+Insert `elem`* after every target matched by `pattern` in `elem`.
 
-`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
@@ -4827,14 +4870,14 @@ Insert `elem`* after every target matched by `patterns` in `elem`.
 
 ```
 
-#### om-elem-match-insert-within `(patterns index elem* elem)`
+#### om-elem-match-insert-within `(pattern index elem* elem)`
 
 Insert new element `elem`* into the contents of `elem` at `index`.
-Will insert into any target matched by `patterns`. If `patterns` is not
+Will insert into any target matched by `pattern`. If `pattern` is not
 supplied, `elem`* will be inserted directly into the toplevel contents
 of `elem`.
 
-`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
@@ -4863,11 +4906,11 @@ of `elem`.
 
 ```
 
-#### om-elem-match-splice-before `(patterns elems* elem)`
+#### om-elem-match-splice-before `(pattern elems* elem)`
 
-Splice `elems`* before every target matched by `patterns` in `elem`.
+Splice `elems`* before every target matched by `pattern` in `elem`.
 
-`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
@@ -4888,11 +4931,11 @@ Splice `elems`* before every target matched by `patterns` in `elem`.
 
 ```
 
-#### om-elem-match-splice-after `(patterns elems* elem)`
+#### om-elem-match-splice-after `(pattern elems* elem)`
 
-Splice `elems`* after every target matched by `patterns` in `elem`.
+Splice `elems`* after every target matched by `pattern` in `elem`.
 
-`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
@@ -4913,14 +4956,14 @@ Splice `elems`* after every target matched by `patterns` in `elem`.
 
 ```
 
-#### om-elem-match-splice-within `(patterns index elems* elem)`
+#### om-elem-match-splice-within `(pattern index elems* elem)`
 
 Insert list of `elems`* into the contents of `elem` at `index`.
-Will insert into any target matched by `patterns`. If `patterns` is not
+Will insert into any target matched by `pattern`. If `pattern` is not
 supplied, `elem`* will be inserted directly into the toplevel contents
 of `elem`.
 
-`patterns` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
 
 ```el
 ;; Given the following contents:
