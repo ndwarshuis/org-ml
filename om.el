@@ -4,7 +4,7 @@
 
 ;; Author: Nathan Dwarshuis <natedwarshuis@gmail.com>
 ;; Keywords: org-mode, outlines
-;; Homepage: https://github.com/ndwarshuis/org-x
+;; Homepage: https://github.com/ndwarshuis/om.el
 ;; Package-Requires: ((emacs "26.1") (dash "2.15"))
 ;; Version: 0.0.1
 
