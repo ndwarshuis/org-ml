@@ -18,7 +18,6 @@ fi
 
 $EMACS -batch \
        -l om.el \
-       -l om-elem.el \
        -l test/examples-to-tests.el \
        -l test/examples.el \
        -l test/test-helper.el \

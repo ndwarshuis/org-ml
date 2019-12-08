@@ -19,10 +19,9 @@
 
 ;;; Code:
 
-;; (require 'om)
+(require 'om)
 (require 's)
 (require 'lispy)
-(require 'om-elem)
 (require 'dash)
 (require 'help-fns)
 (require 'package)
