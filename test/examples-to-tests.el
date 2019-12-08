@@ -66,7 +66,7 @@
                 (remove :begin-hidden)
                 (remove :end-hidden)
                 (-partition-before-pred
-                 (lambda (it) (eq (and (listp it) (car it)) :content)))
+                 (lambda (it) (eq (and (listp it) (car it)) :buffer)))
                 (-map #'make-test))))
       `(ert-deftest ,cmd () ,@body))))
 

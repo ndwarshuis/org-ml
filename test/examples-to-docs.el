@@ -127,7 +127,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
   `(cl-flet
        ((formatted-string?
          (list)
-         (memq (and (listp list) (car list)) '(:content :comment)))
+         (memq (and (listp list) (car list)) '(:buffer :comment)))
         (filter-hidden
          (args)
          (->> (--split-when (eq it :end-hidden) args)
@@ -158,7 +158,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
                   (--map (cond
                           ((eq :comment (car (car it)))
                            (format-comment it))
-                          ((eq :content (car (car it)))
+                          ((eq :buffer (car (car it)))
                            (format-content it))
                           (t (-some->>
                               (-partition 3 it)

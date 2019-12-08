@@ -27,238 +27,238 @@
 
   (defexamples-content om-elem-parse-object-at
     nil
-    (:content "*text*")
+    (:buffer "*text*")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'bold
 
     :begin-hidden
-    (:content "~text~")
+    (:buffer "~text~")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'code
     ;; TODO add entity
     ;; TODO add export snippet
-    (:content "[fn:1:text]")
+    (:buffer "[fn:1:text]")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'footnote-reference
-    (:content "call_name()")
+    (:buffer "call_name()")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'inline-babel-call
-    (:content "src_emacs{}")
+    (:buffer "src_emacs{}")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'inline-src-block
-    (:content "/text/")
+    (:buffer "/text/")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'italic
-    (:content "\\\\")
+    (:buffer "\\\\")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'line-break
     ;; TODO add latex frag
-    (:content "[[path][desc]]")
+    (:buffer "[[path][desc]]")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'link
-    (:content "{{{macro}}}")
+    (:buffer "{{{macro}}}")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'macro
-    (:content "<<<text>>>")
+    (:buffer "<<<text>>>")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'radio-target
-    (:content "[1/2]")
+    (:buffer "[1/2]")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'statistics-cookie
-    (:content "+text+")
+    (:buffer "+text+")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'strike-through
     ;; TODO this is confusing for docs
-    (:content "a_b")
+    (:buffer "a_b")
     (->> (om-elem-parse-object-at 3)
          (om-elem-get-type))
     => 'subscript
-    (:content "a^b")
+    (:buffer "a^b")
     (->> (om-elem-parse-object-at 3)
          (om-elem-get-type))
     => 'superscript
-    (:content "| a |")
+    (:buffer "| a |")
     (->> (om-elem-parse-object-at 2)
          (om-elem-get-type))
     => 'table-cell
-    (:content "<<text>>")
+    (:buffer "<<text>>")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'target
     :end-hidden
 
-    (:content "[2019-01-01 Tue]")
+    (:buffer "[2019-01-01 Tue]")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'timestamp
 
     :begin-hidden
-    (:content "_text_")
+    (:buffer "_text_")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'underline
-    (:content "=text=")
+    (:buffer "=text=")
     (->> (om-elem-parse-object-at 1)
          (om-elem-get-type))
     => 'verbatim
     :end-hidden
 
-    (:content "- notme")
+    (:buffer "- notme")
     (:comment "Return nil when parsing an element")
     (om-elem-parse-object-at 1)
     => nil)
 
   (defexamples-content om-elem-parse-element-at
     nil
-    (:content "#+CALL: ktulu()")
+    (:buffer "#+CALL: ktulu()")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'babel-call
 
     :begin-hidden
-    (:content "#+BEGIN_CENTER"
-              "#+END_CENTER")
+    (:buffer "#+BEGIN_CENTER"
+             "#+END_CENTER")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'center-block
-    (:content "CLOCK: [2019-01-01 Tue]")
+    (:buffer "CLOCK: [2019-01-01 Tue]")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'clock
-    (:content "# oops I looked")
+    (:buffer "# oops I looked")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'comment
-    (:content "#+BEGIN_COMMENT"
-              "oops I looked again"
-              "#+END_COMMENT")
+    (:buffer "#+BEGIN_COMMENT"
+             "oops I looked again"
+             "#+END_COMMENT")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'comment-block
-    (:content "%%(diary of a madman)")
+    (:buffer "%%(diary of a madman)")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'diary-sexp
-    (:content ":DRAWER:"
-              "- underwear"
-              "- savings account"
-              ":END:")
+    (:buffer ":DRAWER:"
+             "- underwear"
+             "- savings account"
+             ":END:")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'drawer
-    (:content "#+BEGIN countdown"
-              "#+END")
+    (:buffer "#+BEGIN countdown"
+             "#+END")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'dynamic-block
-    (:content "#+BEGIN_EXAMPLE"
-              "#+END_EXAMPLE")
+    (:buffer "#+BEGIN_EXAMPLE"
+             "#+END_EXAMPLE")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'example-block
-    (:content "#+BEGIN_EXPORT latex"
-              "#+END_EXPORT")
+    (:buffer "#+BEGIN_EXPORT latex"
+             "#+END_EXPORT")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'export-block
-    (:content ": mini mini mini")
+    (:buffer ": mini mini mini")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'fixed-width
-    (:content "[fn:1]")
+    (:buffer "[fn:1]")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'footnote-definition
-    (:content "* murder, young girl killed"
-              "* desperate shooting at echo's hill")
+    (:buffer "* murder, young girl killed"
+             "* desperate shooting at echo's hill")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'headline
-    (:content "-----")
+    (:buffer "-----")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'horizontal-rule
     ;; TODO add inlinetask
-    (:content "#+QUOTE: unquote")
+    (:buffer "#+QUOTE: unquote")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'keyword
     ;; TODO add latex env
-    (:content "* headline"
-              ":PROPERTIES:"
-              ":key: val"
-              ":END:")
+    (:buffer "* headline"
+             ":PROPERTIES:"
+             ":key: val"
+             ":END:")
     (->> (om-elem-parse-element-at 25)
          (om-elem-get-type))
     => 'node-property
-    (:content "Just for the record"
-              "The weather today is slightly sarcastic with a good chance of"
-              "A. Indifference and B. disinterest in what the critics say")
+    (:buffer "Just for the record"
+             "The weather today is slightly sarcastic with a good chance of"
+             "A. Indifference and B. disinterest in what the critics say")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'paragraph
     :end-hidden
     
-    (:content "- plain-list")
+    (:buffer "- plain-list")
     (:comment "Give the plain-list, not the item for this function")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'plain-list
 
     :begin-hidden
-    (:content "* deadhead"
-              "DEADLINE: [2019-01-01 Tue]")
+    (:buffer "* deadhead"
+             "DEADLINE: [2019-01-01 Tue]")
     (->> (om-elem-parse-element-at 12)
          (om-elem-get-type))
     => 'planning
-    (:content "* headline"
-              ":PROPERTIES:"
-              ":END:")
+    (:buffer "* headline"
+             ":PROPERTIES:"
+             ":END:")
     (->> (om-elem-parse-element-at 12)
          (om-elem-get-type))
     => 'property-drawer
-    (:content "#+BEGIN_QUOTE"
-              "Oh glorious cheeseburger, we bow to thee"
-              "The secrets of the universe are between the buns"
-              "#+END_QUOTE")
+    (:buffer "#+BEGIN_QUOTE"
+             "Oh glorious cheeseburger, we bow to thee"
+             "The secrets of the universe are between the buns"
+             "#+END_QUOTE")
     (->> (om-elem-parse-element-at 12)
          (om-elem-get-type))
     => 'quote-block
-    (:content "#+begin_dot dot.png"
-              "#+end_dot")
+    (:buffer "#+begin_dot dot.png"
+             "#+end_dot")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'special-block
-    (:content "#+BEGIN_SRC emacs"
-              "(launch-missiles)"
-              "#+END_SRC")
+    (:buffer "#+BEGIN_SRC emacs"
+             "(launch-missiles)"
+             "#+END_SRC")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'src-block
     :end-hidden
     
-    (:content "| R | A |"
-              "| G | E |")
+    (:buffer "| R | A |"
+             "| G | E |")
     (:comment "Return a table, not the table-row for this function")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'table
 
     :begin-hidden
-    (:content "#+BEGIN_VERSE"
-              "#+END_VERSE")
+    (:buffer "#+BEGIN_VERSE"
+             "#+END_VERSE")
     (->> (om-elem-parse-element-at 1)
          (om-elem-get-type))
     => 'verse-block
@@ -266,13 +266,13 @@
 
   (defexamples-content om-elem-parse-headline-at
     nil
-    (:content "* headline")
+    (:buffer "* headline")
     (:comment "Return the headline itself")
     (->> (om-elem-parse-headline-at 1)
          (om-elem-to-trimmed-string))
     => "* headline"
-    (:content "* headline"
-              "section crap")
+    (:buffer "* headline"
+             "section crap")
     (:comment "Return headline and section")
     (->> (om-elem-parse-headline-at 1)
          (om-elem-to-trimmed-string))
@@ -283,15 +283,15 @@
          (om-elem-to-trimmed-string))
     => (:result "* headline"
                 "section crap")
-    (:content "* headline"
-              "section crap"
-              "** not parsed")
+    (:buffer "* headline"
+             "section crap"
+             "** not parsed")
     (:comment "Don't parse any subheadlines")
     (->> (om-elem-parse-headline-at 1)
          (om-elem-to-trimmed-string))
     => (:result "* headline"
                 "section crap")
-    (:content "nothing nowhere")
+    (:buffer "nothing nowhere")
     (:comment "Return nil if not under a headline")
     (->> (om-elem-parse-headline-at 1)
          (om-elem-to-trimmed-string))
@@ -299,13 +299,13 @@
 
   (defexamples-content om-elem-parse-subtree-at
     nil
-    (:content "* headline")
+    (:buffer "* headline")
     (:comment "Return the headline itself")
     (->> (om-elem-parse-subtree-at 1)
          (om-elem-to-trimmed-string))
     => "* headline"
-    (:content "* headline"
-              "section crap")
+    (:buffer "* headline"
+             "section crap")
     (:comment "Return headline and section")
     (->> (om-elem-parse-subtree-at 1)
          (om-elem-to-trimmed-string))
@@ -316,16 +316,16 @@
          (om-elem-to-trimmed-string))
     => (:result "* headline"
                 "section crap")
-    (:content "* headline"
-              "section crap"
-              "** parsed")
+    (:buffer "* headline"
+             "section crap"
+             "** parsed")
     (:comment "Return all the subheadlines")
     (->> (om-elem-parse-subtree-at 1)
          (om-elem-to-trimmed-string))
     => (:result "* headline"
                 "section crap"
                 "** parsed")
-    (:content "nothing nowhere")
+    (:buffer "nothing nowhere")
     (:comment "Return nil if not under a headline")
     (->> (om-elem-parse-subtree-at 1)
          (om-elem-to-trimmed-string))
@@ -333,7 +333,7 @@
 
   (defexamples-content om-elem-parse-item-at
     nil
-    (:content "- item")
+    (:buffer "- item")
     (:comment "Return the item itself")
     (->> (om-elem-parse-item-at 1)
          (om-elem-to-trimmed-string))
@@ -342,14 +342,14 @@
     (->> (om-elem-parse-item-at 5)
          (om-elem-to-trimmed-string))
     => "- item"
-    (:content "- item"
-              "  - item 2")
+    (:buffer "- item"
+             "  - item 2")
     (:comment "Return item and its subitems")
     (->> (om-elem-parse-item-at 1)
          (om-elem-to-trimmed-string))
     => (:result "- item"
                 "  - item 2")
-    (:content "* not item")
+    (:buffer "* not item")
     (:comment "Return nil if not an item")
     (->> (om-elem-parse-item-at 1)
          (om-elem-to-trimmed-string))
@@ -357,7 +357,7 @@
 
   (defexamples-content om-elem-parse-table-row-at
     nil
-    (:content "| bow | stroke |")
+    (:buffer "| bow | stroke |")
     (:comment "Return the row itself")
     (->> (om-elem-parse-table-row-at 1)
          (om-elem-to-trimmed-string))
@@ -366,7 +366,7 @@
     (->> (om-elem-parse-table-row-at 5)
          (om-elem-to-trimmed-string))
     => "| bow | stroke |"
-    (:content "- bow and arrow choke")
+    (:buffer "- bow and arrow choke")
     (:comment "Return nil if not a table-row")
     (->> (om-elem-parse-table-row-at 1)
          (om-elem-to-trimmed-string))
@@ -374,9 +374,9 @@
   
   (defexamples-content om-elem-parse-section-at
     nil
-    (:content "over headline"
-              "* headline"
-              "under headline")
+    (:buffer "over headline"
+             "* headline"
+             "under headline")
     (:comment "Return the section above the headline")
     (->> (om-elem-parse-section-at 1)
          (om-elem-to-trimmed-string))
@@ -385,13 +385,13 @@
     (->> (om-elem-parse-section-at 25)
          (om-elem-to-trimmed-string))
     => "under headline"
-    (:content "* headline"
-              "** subheadline")
+    (:buffer "* headline"
+             "** subheadline")
     (:comment "Return nil if no section under headline")
     (->> (om-elem-parse-section-at 1)
          (om-elem-to-trimmed-string))
     => ""
-    (:content "")
+    (:buffer "")
     (:comment "Return nil if no section at all")
     (->> (om-elem-parse-section-at 1)
          (om-elem-to-trimmed-string))
@@ -480,10 +480,10 @@
       => "[2019-01-15 Tue]"
       (->> (om-elem-build-timestamp 'active-range 2019 1 15 2019 1 16)
            (om-elem-to-trimmed-string))
-    => "<2019-01-15 Tue>--<2019-01-16 Wed>"
-    (->> (om-elem-build-timestamp
-          'inactive 2019 1 15 2019 1 15 :warning-type 'all
-          :warning-unit 'day :warning-value 1)
+      => "<2019-01-15 Tue>--<2019-01-16 Wed>"
+      (->> (om-elem-build-timestamp
+            'inactive 2019 1 15 2019 1 15 :warning-type 'all
+            :warning-unit 'day :warning-value 1)
            (om-elem-to-trimmed-string))
       => "[2019-01-15 Tue -1d]")
 
@@ -571,8 +571,8 @@
     (defexamples om-elem-build-comment-block
       (->> (om-elem-build-comment-block "text")
            (om-elem-to-trimmed-string)) => (:result "#+BEGIN_COMMENT"
-                                                    "text"
-                                                    "#+END_COMMENT"))
+           "text"
+           "#+END_COMMENT"))
 
     (defexamples om-elem-build-diary-sexp
       (->> (om-elem-build-diary-sexp '(text))
@@ -581,18 +581,18 @@
     (defexamples om-elem-build-example-block
       (->> (om-elem-build-example-block "text")
            (om-elem-to-trimmed-string)) => (:result "#+BEGIN_EXAMPLE"
-                                                    "text"
-                                                    "#+END_EXAMPLE")
+           "text"
+           "#+END_EXAMPLE")
       (->> (om-elem-build-example-block "text" :switches '("switches"))
            (om-elem-to-trimmed-string)) => (:result "#+BEGIN_EXAMPLE switches"
-                                                    "text"
-                                                    "#+END_EXAMPLE"))
+           "text"
+           "#+END_EXAMPLE"))
 
     (defexamples om-elem-build-export-block
       (->> (om-elem-build-export-block "type" "value\n")
            (om-elem-to-trimmed-string)) => (:result "#+BEGIN_EXPORT type"
-                                                    "value"
-                                                    "#+END_EXPORT"))
+           "value"
+           "#+END_EXPORT"))
 
     (defexamples om-elem-build-fixed-width
       (->> (om-elem-build-fixed-width "text")
@@ -609,8 +609,8 @@
     (defexamples om-elem-build-latex-environment
       (->> (om-elem-build-latex-environment '("env" "text"))
            (om-elem-to-trimmed-string)) => (:result "\\begin{env}"
-                                                    "text"
-                                                    "\\end{env}"))
+           "text"
+           "\\end{env}"))
 
     (defexamples om-elem-build-node-property
       (->> (om-elem-build-node-property "key" "val")
@@ -627,22 +627,22 @@
     (defexamples om-elem-build-src-block
       (->> (om-elem-build-src-block "body")
            (om-elem-to-trimmed-string)) => (:result "#+BEGIN_SRC"
-                                                    "  body"
-                                                    "#+END_SRC")
+           "  body"
+           "#+END_SRC")
       (->> (om-elem-build-src-block "body" :language "emacs-lisp")
            (om-elem-to-trimmed-string)) => (:result "#+BEGIN_SRC emacs-lisp"
-                                                    "  body"
-                                                    "#+END_SRC")
+           "  body"
+           "#+END_SRC")
       ;; TODO pretty sure this makes no sense...
       (->> (om-elem-build-src-block "body" :switches '("-n 20" "-r"))
            (om-elem-to-trimmed-string)) => (:result "#+BEGIN_SRC -n 20 -r"
-                                                    "  body"
-                                                    "#+END_SRC")
+           "  body"
+           "#+END_SRC")
       ;; TODO and this...
       (->> (om-elem-build-src-block "body" :parameters '(:key val))
            (om-elem-to-trimmed-string)) => (:result "#+BEGIN_SRC :key val"
-                                                    "  body"
-                                                    "#+END_SRC"))
+           "  body"
+           "#+END_SRC"))
 
     (defexamples om-elem-build-table-row-hline
       (->>  (om-elem-build-table
@@ -650,7 +650,7 @@
               (om-elem-build-table-cell "text"))
              (om-elem-build-table-row-hline))
             (om-elem-to-trimmed-string)) => (:result "| text |"
-                                                     "|------|")))
+            "|------|")))
 
   (def-example-subgroup "Branch Elements with Child Objects"
     nil
@@ -681,15 +681,15 @@
       (->> (om-elem-build-paragraph "text")
            (om-elem-build-center-block)
            (om-elem-to-trimmed-string)) => (:result "#+BEGIN_CENTER"
-                                                    "text"
-                                                    "#+END_CENTER"))
+           "text"
+           "#+END_CENTER"))
 
     (defexamples om-elem-build-drawer
       (->> (om-elem-build-paragraph "text")
            (om-elem-build-drawer "NAME")
            (om-elem-to-trimmed-string)) => (:result ":NAME:"
-                                                    "text"
-                                                    ":END:"))
+           "text"
+           ":END:"))
 
     (defexamples om-elem-build-footnote-definition
       (->> (om-elem-build-paragraph "footnote contents")
@@ -741,15 +741,15 @@
       (->> (om-elem-build-node-property "key" "val")
            (om-elem-build-property-drawer)
            (om-elem-to-trimmed-string)) => (:result ":PROPERTIES:"
-                                                    ":key:      val"
-                                                    ":END:"))
+           ":key:      val"
+           ":END:"))
 
     (defexamples om-elem-build-quote-block
       (->> (om-elem-build-paragraph "quoted stuff")
            (om-elem-build-quote-block)
            (om-elem-to-trimmed-string)) => (:result "#+BEGIN_QUOTE"
-                                                    "quoted stuff"
-                                                    "#+END_QUOTE"))
+           "quoted stuff"
+           "#+END_QUOTE"))
 
     (defexamples om-elem-build-section
       (->> (om-elem-build-paragraph "text")
@@ -885,7 +885,7 @@
 
   (defexamples-content om-elem-is-type-p
     nil
-    (:content "*ziltoid*")
+    (:buffer "*ziltoid*")
     (->> (om-elem-parse-this-object)
          (om-elem-is-type-p 'bold))
     => t
@@ -895,7 +895,7 @@
 
   (defexamples-content om-elem-is-any-type-p
     nil
-    (:content "*ziltoid*")
+    (:buffer "*ziltoid*")
     (->> (om-elem-parse-this-object)
          (om-elem-is-any-type-p '(bold)))
     => t
@@ -908,7 +908,7 @@
 
   (defexamples-content om-elem-is-element-p
     nil
-    (:content "*ziltoid*")
+    (:buffer "*ziltoid*")
     (:comment "Parsing this text as an element gives a paragraph")
     (->> (om-elem-parse-this-element)
          (om-elem-is-element-p))
@@ -920,7 +920,7 @@
 
   (defexamples-content om-elem-is-branch-node-p
     nil
-    (:content "*ziltoid*")
+    (:buffer "*ziltoid*")
     (:comment "Parsing this as an element gives a paragraph type (an object container).")
     (->> (om-elem-parse-this-element)
          (om-elem-is-branch-node-p))
@@ -929,17 +929,17 @@
     (->> (om-elem-parse-this-object)
          (om-elem-is-branch-node-p))
     => t
-    (:content "~ziltoid~")
+    (:buffer "~ziltoid~")
     (:comment "Parsing this as an object gives a code type (not a container).")
     (->> (om-elem-parse-this-object)
          (om-elem-is-branch-node-p))
     => nil
-    (:content "# ziltoid")
+    (:buffer "# ziltoid")
     (:comment "Parsing this as an element gives a comment type (not a container).")
     (->> (om-elem-parse-this-element)
          (om-elem-is-branch-node-p))
     => nil
-    (:content "* I'm so great")
+    (:buffer "* I'm so great")
     (:comment "Parsing this as an element gives a table (a greater element).")
     (->> (om-elem-parse-this-element)
          (om-elem-is-branch-node-p))
@@ -947,7 +947,7 @@
 
   (defexamples-content om-elem-is-branch-node-with-child-objects-p
     nil
-    (:content "*ziltoid*")
+    (:buffer "*ziltoid*")
     (:comment "Parsing this as an element gives a paragraph type (an object container).")
     (->> (om-elem-parse-this-element)
          (om-elem-is-branch-node-with-child-objects-p))
@@ -956,17 +956,17 @@
     (->> (om-elem-parse-this-object)
          (om-elem-is-branch-node-with-child-objects-p))
     => t
-    (:content "~ziltoid~")
+    (:buffer "~ziltoid~")
     (:comment "Parsing this as an object gives a code type (not a container).")
     (->> (om-elem-parse-this-object)
          (om-elem-is-branch-node-with-child-objects-p))
     => nil
-    (:content "# ziltoid")
+    (:buffer "# ziltoid")
     (:comment "Parsing this as an element gives a comment type (not a container).")
     (->> (om-elem-parse-this-element)
          (om-elem-is-branch-node-with-child-objects-p))
     => nil
-    (:content "* I'm so great")
+    (:buffer "* I'm so great")
     (:comment "Parsing this as an element gives a table (a greater element).")
     (->> (om-elem-parse-this-element)
          (om-elem-is-branch-node-with-child-objects-p))
@@ -974,17 +974,17 @@
 
   (defexamples-content om-elem-is-branch-element-with-child-elements-p
     nil
-    (:content "* I'm so great")
+    (:buffer "* I'm so great")
     (:comment "Parsing this as an element gives a table (a greater element).")
     (->> (om-elem-parse-this-element)
          (om-elem-is-branch-element-with-child-elements-p))
     => t
-    (:content "*ziltoid*")
+    (:buffer "*ziltoid*")
     (:comment "Parsing this as an element gives a paragraph type (not a greater element).")
     (->> (om-elem-parse-this-element)
          (om-elem-is-branch-element-with-child-elements-p))
     => nil
-    (:content "# ziltoid")
+    (:buffer "# ziltoid")
     (:comment "Parsing this as an element gives a comment type (not a container).")
     (->> (om-elem-parse-this-element)
          (om-elem-is-branch-element-with-child-elements-p))
@@ -999,7 +999,7 @@
     (defexamples-content om-elem-set-property
       "Set property PROP to VALUE in ELEM."
 
-      (:content "#+CALL: ktulu()")
+      (:buffer "#+CALL: ktulu()")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :call "cthulhu")
            (om-elem-set-property :inside-header '(:cache no))
@@ -1009,7 +1009,7 @@
       => "#+CALL: cthulhu[:cache no](x=4) :exports results"
 
       :begin-hidden
-      (:content "CLOCK: [2019-01-01 Tue]")
+      (:buffer "CLOCK: [2019-01-01 Tue]")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property
             :value (om-elem-build-timestamp!
@@ -1017,21 +1017,21 @@
            (om-elem-to-trimmed-string))
       => "CLOCK: [2019-01-01 Tue]--[2019-01-02 Wed] => 24:00"
 
-      (:content "~learn to~")
+      (:buffer "~learn to~")
       (->> (om-elem-parse-this-object)
            (om-elem-set-property :value "why?")
            (om-elem-to-trimmed-string))
       => "~why?~"
 
-      (:content "# not here")
+      (:buffer "# not here")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :value "still not here")
            (om-elem-to-trimmed-string))
       => "# still not here"
 
-      (:content "#+BEGIN_COMMENT"
-                "not here"
-                "#+END_COMMENT")
+      (:buffer "#+BEGIN_COMMENT"
+               "not here"
+               "#+END_COMMENT")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :value "still not here")
            (om-elem-to-trimmed-string))
@@ -1041,16 +1041,16 @@
 
       ;; TODO add diary-sexp
 
-      (:content ":LOGBOOK:"
-                ":END:")
+      (:buffer ":LOGBOOK:"
+               ":END:")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :drawer-name "BOOKOFSOULS")
            (om-elem-to-trimmed-string))
       => (:result ":BOOKOFSOULS:"
                   ":END:")
 
-      (:content "#+BEGIN: blockhead"
-                "#+END:")
+      (:buffer "#+BEGIN: blockhead"
+               "#+END:")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :block-name "blockfoot")
            (om-elem-set-property :arguments '(:cache no))
@@ -1058,7 +1058,7 @@
       => (:result "#+BEGIN: blockfoot :cache no"
                   "#+END:")
 
-      (:content "\\pi")
+      (:buffer "\\pi")
       (->> (om-elem-parse-this-object)
            (om-elem-set-property :name "gamma")
            (om-elem-set-property :use-brackets-p t)
@@ -1066,48 +1066,48 @@
       => "\\gamma{}"
 
       ;; TODO test preserve indentation...
-      (:content "#+BEGIN_EXAMPLE"
-                "#+END_EXAMPLE")
+      (:buffer "#+BEGIN_EXAMPLE"
+               "#+END_EXAMPLE")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :switches '("-n"))
            (om-elem-set-property :value "example.com")
            (om-elem-to-trimmed-string))
-      => (:content "#+BEGIN_EXAMPLE -n"
-                   "example.com"
-                   "#+END_EXAMPLE")
+      => (:buffer "#+BEGIN_EXAMPLE -n"
+                  "example.com"
+                  "#+END_EXAMPLE")
 
-      (:content "#+BEGIN_EXPORT latex"
-                "#+END_EXPORT")
+      (:buffer "#+BEGIN_EXPORT latex"
+               "#+END_EXPORT")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :type "domestic")
            (om-elem-set-property :value "bullets, bombs, and bigotry")
            (om-elem-to-trimmed-string))
-      => (:content "#+BEGIN_EXPORT domestic"
-                   "bullets, bombs, and bigotry"
-                   "#+END_EXPORT")
+      => (:buffer "#+BEGIN_EXPORT domestic"
+                  "bullets, bombs, and bigotry"
+                  "#+END_EXPORT")
 
-      (:content "@@back-end:value@@")
+      (:buffer "@@back-end:value@@")
       (->> (om-elem-parse-this-object)
            (om-elem-set-property :back-end "latex")
            (om-elem-set-property :value "new-value")
            (om-elem-to-trimmed-string))
       => "@@latex:new-value@@"
 
-      (:content ": fixed")
+      (:buffer ": fixed")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :value "unfixed")
            (om-elem-to-trimmed-string))
       => ": unfixed"
 
-      (:content "[fn:whitelabel] society")
+      (:buffer "[fn:whitelabel] society")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :label "blacklabel")
            (om-elem-to-trimmed-string))
       => "[fn:blacklabel] society"
 
       ;; TODO test footnote section
-      (:content "* dummy"
-                "stuff")
+      (:buffer "* dummy"
+               "stuff")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :archivedp t)
            (om-elem-set-property :commentedp t)
@@ -1122,7 +1122,7 @@
                   ""
                   "stuff")
 
-      (:content "call_kthulu()")
+      (:buffer "call_kthulu()")
       (->> (om-elem-parse-this-object)
            (om-elem-set-property :call "cthulhu")
            (om-elem-set-property :inside-header '(:cache no))
@@ -1131,7 +1131,7 @@
            (om-elem-to-trimmed-string))
       => "call_cthulhu[:cache no](x=4)[:exports results]"
 
-      (:content "src_emacs{(print 'yeah-boi)}")
+      (:buffer "src_emacs{(print 'yeah-boi)}")
       (->> (om-elem-parse-this-object)
            (om-elem-set-property :language "python")
            (om-elem-set-property :parameters '(:cache no))
@@ -1140,7 +1140,7 @@
       => "src_python[:cache no]{print \"yeah boi\"}"
       :end-hidden
 
-      (:content "- thing")
+      (:buffer "- thing")
       (->> (om-elem-parse-this-item)
            (om-elem-set-property :bullet 1)
            (om-elem-set-property :checkbox 'on)
@@ -1150,7 +1150,7 @@
       => "1. [@2] [X] tmsu :: thing"
 
       :begin-hidden
-      (:content "#+KEY: VAL")
+      (:buffer "#+KEY: VAL")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :key "kee")
            (om-elem-set-property :value "vahl")
@@ -1158,24 +1158,24 @@
       => "#+kee: vahl"
 
       ;; this is stupid, who would ever do this?
-      (:content "\begin{env}"
-                "body"
-                "\end{env}")
+      (:buffer "\begin{env}"
+               "body"
+               "\end{env}")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :value "\begin{vne}\nbody\end{vne}")
            (om-elem-to-trimmed-string))
-      => (:content "\begin{vne}"
-                   "body"
-                   "\end{vne}")
+      => (:buffer "\begin{vne}"
+                  "body"
+                  "\end{vne}")
 
       ;; TODO this is also stupid...
-      (:content "$2+2=4$")
+      (:buffer "$2+2=4$")
       (->> (om-elem-parse-this-object)
            (om-elem-set-property :value "$2+2=5$")
            (om-elem-to-trimmed-string))
       => "$2+2=5$"
 
-      (:content "https://example.com")
+      (:buffer "https://example.com")
       (->> (om-elem-parse-this-object)
            (om-elem-set-property :path "/dev/null")
            (om-elem-set-property :type "file")
@@ -1183,17 +1183,17 @@
            (om-elem-to-trimmed-string))
       => "[[file:/dev/null]]"
 
-      (:content "{{{economics}}}")
+      (:buffer "{{{economics}}}")
       (->> (om-elem-parse-this-object)
            (om-elem-set-property :key "freakonomics")
            (om-elem-set-property :args '("x=4" "y=2"))
            (om-elem-to-trimmed-string))
       => "{{{freakonomics(x=4,y=2)}}}"
 
-      (:content "* dummy"
-                ":PROPERTIES:"
-                ":KEY: VAL"
-                ":END:")
+      (:buffer "* dummy"
+               ":PROPERTIES:"
+               ":KEY: VAL"
+               ":END:")
       ;; TODO need public function
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-node-properties)
@@ -1203,8 +1203,8 @@
            (om-elem-to-trimmed-string))
       => ":kee:      vahl"
 
-      (:content "* dummy"
-                "CLOSED: [2019-01-01 Tue]")
+      (:buffer "* dummy"
+               "CLOSED: [2019-01-01 Tue]")
       ;; TODO need public function
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-planning)
@@ -1213,17 +1213,17 @@
            (om-elem-to-trimmed-string))
       => "CLOSED: [2019-01-02 Wed]"
 
-      (:content "#+BEGIN_special"
-                "#+END_special")
+      (:buffer "#+BEGIN_special"
+               "#+END_special")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :type "talent")
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_talent"
                   "#+END_talent")
 
-      (:content "#+BEGIN_SRC"
-                "something amorphous"
-                "#+END_SRC")
+      (:buffer "#+BEGIN_SRC"
+               "something amorphous"
+               "#+END_SRC")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :language "emacs")
            (om-elem-set-property :value "(print 'hi)")
@@ -1235,39 +1235,39 @@
                   "  (print 'hi)"
                   "#+END_SRC")
 
-      (:content "* dummy [50%]")
+      (:buffer "* dummy [50%]")
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-statistics-cookie)
            (om-elem-set-property :value '(0 5))
            (om-elem-to-trimmed-string))
       => "[0/5]"
 
-      (:content "sub_woofer")
+      (:buffer "sub_woofer")
       (->> (om-elem-parse-object-at 5)
            (om-elem-set-property :use-brackets-p t)
            (om-elem-to-trimmed-string))
       => "_{woofer}"
 
-      (:content "super^woofer")
+      (:buffer "super^woofer")
       (->> (om-elem-parse-object-at 7)
            (om-elem-set-property :use-brackets-p t)
            (om-elem-to-trimmed-string))
       => "^{woofer}"
 
-      (:content "| a |")
+      (:buffer "| a |")
       (->> (om-elem-parse-this-element)
            (om-elem-set-property :tblfm '("x=$2"))
            (om-elem-to-trimmed-string))
       => (:result "| a |"
                   "#+TBLFM: x=$2")
 
-      (:content "<<found>>")
+      (:buffer "<<found>>")
       (->> (om-elem-parse-this-object)
            (om-elem-set-property :value "lost")
            (om-elem-to-trimmed-string))
       => "<<lost>>"
 
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (->> (om-elem-parse-this-object)
            (om-elem-set-property :year-start 2020)
            (om-elem-set-property :month-start 2)
@@ -1289,7 +1289,7 @@
            (om-elem-to-trimmed-string))
       => "<2020-02-02 Sun 12:00 +1d -1d>--<2020-02-03 Mon 12:00 +1d -1d>"
 
-      (:content "=I am not a crook=")
+      (:buffer "=I am not a crook=")
       (->> (om-elem-parse-this-object)
            (om-elem-set-property :value "You totally are")
            (om-elem-to-trimmed-string))
@@ -1298,7 +1298,7 @@
 
       ;; TODO add post-blank
 
-      (:content "* not valuable")
+      (:buffer "* not valuable")
       (:comment "Throw error when setting a property that doesn't exist")
       (->> (om-elem-parse-this-headline)
            (om-elem-set-property :value "wtf")
@@ -1308,7 +1308,7 @@
     (defexamples-content om-elem-set-properties
       nil
       
-      (:content "- thing")
+      (:buffer "- thing")
       (->> (om-elem-parse-this-item)
            (om-elem-set-properties (list :bullet 1
                                          :checkbox 'on
@@ -1320,7 +1320,7 @@
     (defexamples-content om-elem-get-property
       nil
 
-      (:content "#+CALL: ktulu[:cache no](x=4) :exports results")
+      (:buffer "#+CALL: ktulu[:cache no](x=4) :exports results")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :call))
       => "ktulu"
@@ -1335,39 +1335,39 @@
       => '(:exports results)
 
       :begin-hidden
-      (:content "CLOCK: [2019-01-01 Tue]")
+      (:buffer "CLOCK: [2019-01-01 Tue]")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :value)
            (om-elem-to-string))
       => "[2019-01-01 Tue]"
 
-      (:content "~learn to~")
+      (:buffer "~learn to~")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :value))
       => "learn to"
 
-      (:content "# not here")
+      (:buffer "# not here")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :value))
       => "not here"
 
-      (:content "#+BEGIN_COMMENT"
-                "not here"
-                "#+END_COMMENT")
+      (:buffer "#+BEGIN_COMMENT"
+               "not here"
+               "#+END_COMMENT")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :value))
       => "not here"
 
       ;; TODO add diary-sexp
 
-      (:content ":LOGBOOK:"
-                ":END:")
+      (:buffer ":LOGBOOK:"
+               ":END:")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :drawer-name))
       => "LOGBOOK"
 
-      (:content "#+BEGIN: blockhead :cache no"
-                  "#+END:")
+      (:buffer "#+BEGIN: blockhead :cache no"
+               "#+END:")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :block-name))
       => "blockhead"
@@ -1375,7 +1375,7 @@
            (om-elem-get-property :arguments))
       => '(:cache no)
 
-      (:content "\\pi{}")
+      (:buffer "\\pi{}")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :name))
       => "pi"
@@ -1384,9 +1384,9 @@
       => t
 
       ;; TODO test preserve indentation...
-      => (:content "#+BEGIN_EXAMPLE -n"
-                   "example.com"
-                   "#+END_EXAMPLE")
+      => (:buffer "#+BEGIN_EXAMPLE -n"
+                  "example.com"
+                  "#+END_EXAMPLE")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :switches))
       => '("-n")
@@ -1394,9 +1394,9 @@
            (om-elem-get-property :value))
       => "example.com"
 
-      (:content "#+BEGIN_EXPORT domestic"
-                "bullets, bombs, and bigotry"
-                "#+END_EXPORT")
+      (:buffer "#+BEGIN_EXPORT domestic"
+               "bullets, bombs, and bigotry"
+               "#+END_EXPORT")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :type))
       ;; TODO why capitalized?
@@ -1405,7 +1405,7 @@
            (om-elem-get-property :value))
       => "bullets, bombs, and bigotry\n"
 
-      (:content "@@back-end:value@@")
+      (:buffer "@@back-end:value@@")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :back-end))
       => "back-end"
@@ -1413,21 +1413,21 @@
            (om-elem-get-property :value))
       => "value"
 
-      (:content ": fixed")
+      (:buffer ": fixed")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :value))
       => "fixed"
 
-      (:content "[fn:blacklabel] society")
+      (:buffer "[fn:blacklabel] society")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :label))
       => "blacklabel"
 
       ;; TODO test footnote section
       ;; TODO the priority should be parsable after "COMMENT"
-      (:content "** TODO [#A] COMMENT dummy                                   :tmsu:ARCHIVE:"
-                ""
-                "stuff")
+      (:buffer "** TODO [#A] COMMENT dummy                                   :tmsu:ARCHIVE:"
+               ""
+               "stuff")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :archivedp))
       => '("ARCHIVE")
@@ -1453,7 +1453,7 @@
            (om-elem-get-property :todo-keyword))
       => "TODO"
 
-      (:content "call_ktulu[:cache no](x=4)[:exports results]")
+      (:buffer "call_ktulu[:cache no](x=4)[:exports results]")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :call))
       => "ktulu"
@@ -1467,7 +1467,7 @@
            (om-elem-get-property :end-header))
       => '(:exports results)
 
-      (:content "src_python[:cache no]{print \"yeah boi\"}")
+      (:buffer "src_python[:cache no]{print \"yeah boi\"}")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :language))
       => "python"
@@ -1478,7 +1478,7 @@
            (om-elem-get-property :value))
       => "print \"yeah boi\""
 
-      (:content "- [@2] [X] tmsu :: thing")
+      (:buffer "- [@2] [X] tmsu :: thing")
       (->> (om-elem-parse-this-item)
            (om-elem-get-property :bullet))
       => '-
@@ -1492,7 +1492,7 @@
            (om-elem-get-property :tag))
       => '("tmsu")
 
-      (:content "#+KEY: VAL")
+      (:buffer "#+KEY: VAL")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :key))
       => "KEY"
@@ -1501,23 +1501,23 @@
       => "VAL"
 
       ;; this is stupid, who would ever do this?
-      (:content "\begin{env}"
-                "body"
-                "\end{env}")
+      (:buffer "\begin{env}"
+               "body"
+               "\end{env}")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :value))
-      => (:content "\begin{env}"
-                   "body"
-                   "\end{env}")
+      => (:buffer "\begin{env}"
+                  "body"
+                  "\end{env}")
 
       ;; TODO this is also stupid...
-      (:content "$2+2=4$")
+      (:buffer "$2+2=4$")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :value))
       => "$2+2=4$"
       :end-hidden
 
-      (:content "[[file:/dev/null]]")
+      (:buffer "[[file:/dev/null]]")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :path))
       => "/dev/null"
@@ -1529,7 +1529,7 @@
       => 'bracket
       
       :begin-hidden
-      (:content "{{{economics(x=4,y=2)}}}")
+      (:buffer "{{{economics(x=4,y=2)}}}")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :key))
       => "economics"
@@ -1537,10 +1537,10 @@
            (om-elem-get-property :args))
       => '("x=4" "y=2")
 
-      (:content "* dummy"
-                ":PROPERTIES:"
-                ":KEY: VAL"
-                ":END:")
+      (:buffer "* dummy"
+               ":PROPERTIES:"
+               ":KEY: VAL"
+               ":END:")
       ;; TODO need public function
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-node-properties)
@@ -1553,8 +1553,8 @@
            (om-elem-get-property :value))
       => "VAL"
 
-      (:content "* dummy"
-                "CLOSED: [2019-01-01 Tue]")
+      (:buffer "* dummy"
+               "CLOSED: [2019-01-01 Tue]")
       ;; TODO need public function
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-planning)
@@ -1562,15 +1562,15 @@
            (om-elem-to-string))
       => "[2019-01-01 Tue]"
 
-      (:content "#+BEGIN_special"
-                "#+END_special")
+      (:buffer "#+BEGIN_special"
+               "#+END_special")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :type))
       => "special"
 
-      (:content "#+BEGIN_SRC emacs -n :cache no"
-                "  (print 'hi)"
-                "#+END_SRC")
+      (:buffer "#+BEGIN_SRC emacs -n :cache no"
+               "  (print 'hi)"
+               "#+END_SRC")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :language))
       => "emacs"
@@ -1585,34 +1585,34 @@
            (om-elem-get-property :switches))
       => '("-n")
 
-      (:content "* dummy [50%]")
+      (:buffer "* dummy [50%]")
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-statistics-cookie)
            (om-elem-get-property :value))
       => '(50)
 
-      (:content "sub_{woofer}")
+      (:buffer "sub_{woofer}")
       (->> (om-elem-parse-object-at 6)
            (om-elem-get-property :use-brackets-p))
       => 6
 
-      (:content "super_{woofer}")
+      (:buffer "super_{woofer}")
       (->> (om-elem-parse-object-at 8)
            (om-elem-get-property :use-brackets-p))
       => 8
 
-      (:content "| a |"
-                "#+TBLFM: x=$2")
+      (:buffer "| a |"
+               "#+TBLFM: x=$2")
       (->> (om-elem-parse-this-element)
            (om-elem-get-property :tblfm))
       => '("x=$2")
 
-      (:content "<<found>>")
+      (:buffer "<<found>>")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :value))
       => "found"
 
-      (:content "<2020-02-02 Sun 12:00 +1d -1d>--<2020-02-03 Mon 12:00 +1d -1d>")
+      (:buffer "<2020-02-02 Sun 12:00 +1d -1d>--<2020-02-03 Mon 12:00 +1d -1d>")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :year-start))
       => 2020
@@ -1665,7 +1665,7 @@
            (om-elem-get-property :repeater-value))
       => 1
 
-      (:content "=I am not a crook=")
+      (:buffer "=I am not a crook=")
       (->> (om-elem-parse-this-object)
            (om-elem-get-property :value))
       => "I am not a crook"
@@ -1673,7 +1673,7 @@
 
       ;; TODO add post-blank
 
-      (:content "* not arguable")
+      (:buffer "* not arguable")
       (:comment "Throw error when requesting a property that doesn't exist")
       (->> (om-elem-parse-this-headline)
            (om-elem-get-property :value))
@@ -1682,7 +1682,7 @@
     (defexamples-content om-elem-map-property
       nil
 
-      (:content "#+CALL: ktulu()")
+      (:buffer "#+CALL: ktulu()")
       (->> (om-elem-parse-this-element)
            (om-elem-map-property :call #'s-upcase)
            (om-elem-to-trimmed-string))
@@ -1692,21 +1692,21 @@
 
       ;; TODO add clock
 
-      (:content "~learn to~")
+      (:buffer "~learn to~")
       (->> (om-elem-parse-this-object)
            (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "~LEARN TO~"
 
-      (:content "# not here")
+      (:buffer "# not here")
       (->> (om-elem-parse-this-element)
            (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "# NOT HERE"
 
-      (:content "#+BEGIN_COMMENT"
-                "not here"
-                "#+END_COMMENT")
+      (:buffer "#+BEGIN_COMMENT"
+               "not here"
+               "#+END_COMMENT")
       (->> (om-elem-parse-this-element)
            (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
@@ -1716,16 +1716,16 @@
 
       ;; TODO add diary-sexp
 
-      (:content ":LOGBOOK:"
-                ":END:")
+      (:buffer ":LOGBOOK:"
+               ":END:")
       (->> (om-elem-parse-this-element)
            (om-elem-map-property :drawer-name #'s-capitalize)
            (om-elem-to-trimmed-string))
       => (:result ":Logbook:"
                   ":END:")
 
-      (:content "#+BEGIN: blockhead"
-                "#+END:")
+      (:buffer "#+BEGIN: blockhead"
+               "#+END:")
       (->> (om-elem-parse-this-element)
            (om-elem-map-property :block-name #'s-upcase)
            (om-elem-to-trimmed-string))
@@ -1736,9 +1736,9 @@
 
       ;; TODO add entity
 
-      (:content "#+BEGIN_EXAMPLE"
-                "example.com"
-                "#+END_EXAMPLE")
+      (:buffer "#+BEGIN_EXAMPLE"
+               "example.com"
+               "#+END_EXAMPLE")
       (->> (om-elem-parse-this-element)
            (om-elem-map-property* :value (concat "https://" it))
            (om-elem-to-trimmed-string))
@@ -1748,31 +1748,31 @@
 
       :begin-hidden
 
-      (:content "#+BEGIN_EXPORT domestic"
-                "bullets, bombs, and bigotry"
-                "#+END_EXPORT")
+      (:buffer "#+BEGIN_EXPORT domestic"
+               "bullets, bombs, and bigotry"
+               "#+END_EXPORT")
       (->> (om-elem-parse-this-element)
            (om-elem-map-property :type #'s-upcase)
            (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_EXPORT DOMESTIC"
-                   "BULLETS, BOMBS, AND BIGOTRY"
-                   "#+END_EXPORT")
+                  "BULLETS, BOMBS, AND BIGOTRY"
+                  "#+END_EXPORT")
 
-      (:content "@@back-end:value@@")
+      (:buffer "@@back-end:value@@")
       (->> (om-elem-parse-this-object)
            (om-elem-map-property :back-end #'s-upcase)
            (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "@@BACK-END:VALUE@@"
 
-      (:content ": fixed")
+      (:buffer ": fixed")
       (->> (om-elem-parse-this-element)
            (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => ": FIXED"
 
-      (:content "[fn:blacklabel] society")
+      (:buffer "[fn:blacklabel] society")
       (->> (om-elem-parse-this-element)
            (om-elem-map-property :label #'s-upcase)
            (om-elem-to-trimmed-string))
@@ -1780,7 +1780,7 @@
 
       ;; TODO add example for headline
 
-      (:content "call_ktulu()")
+      (:buffer "call_ktulu()")
       (->> (om-elem-parse-this-object)
            (om-elem-map-property :call #'s-upcase)
            (om-elem-to-trimmed-string))
@@ -1788,13 +1788,13 @@
 
       ;; TODO add example for inline src block
 
-      (:content "- tag :: thing")
+      (:buffer "- tag :: thing")
       (->> (om-elem-parse-this-item)
            (om-elem-map-property :tag (lambda (it) (-map #'s-upcase it)))
            (om-elem-to-trimmed-string))
       => "- TAG :: thing"
 
-      (:content "#+KEY: VAL")
+      (:buffer "#+KEY: VAL")
       (->> (om-elem-parse-this-element)
            (om-elem-map-property :key (-partial #'s-prepend "OM_"))
            (om-elem-map-property :value (-partial #'s-prepend "OM_"))
@@ -1805,16 +1805,16 @@
 
       ;; TODO add example for link
 
-      (:content "{{{economics}}}")
+      (:buffer "{{{economics}}}")
       (->> (om-elem-parse-this-object)
            (om-elem-map-property :key #'s-upcase)
            (om-elem-to-trimmed-string))
       => "{{{ECONOMICS}}}"
 
-      (:content "* dummy"
-                ":PROPERTIES:"
-                ":KEY: VAL"
-                ":END:")
+      (:buffer "* dummy"
+               ":PROPERTIES:"
+               ":KEY: VAL"
+               ":END:")
       ;; TODO need public function
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-node-properties)
@@ -1826,8 +1826,8 @@
 
       ;; TODO add example for planning
 
-      (:content "#+BEGIN_special"
-                "#+END_special")
+      (:buffer "#+BEGIN_special"
+               "#+END_special")
       (->> (om-elem-parse-this-element)
            (om-elem-map-property :type #'s-upcase)
            (om-elem-to-trimmed-string))
@@ -1838,20 +1838,20 @@
 
       ;; TODO add example for statistics cookie
 
-      (:content "<<found>>")
+      (:buffer "<<found>>")
       (->> (om-elem-parse-this-object)
            (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "<<FOUND>>"
 
-      (:content "=I am not a crook=")
+      (:buffer "=I am not a crook=")
       (->> (om-elem-parse-this-object)
            (om-elem-map-property :value #'s-upcase)
            (om-elem-to-trimmed-string))
       => "=I AM NOT A CROOK="
       :end-hidden
 
-      (:content "~code~")
+      (:buffer "~code~")
       (:comment "Throw error if property doesn't exist")
       (->> (om-elem-parse-this-object)
            (om-elem-map-property :title #'s-upcase)
@@ -1866,7 +1866,7 @@
     (defexamples-content om-elem-map-properties
       nil
 
-      (:content "#+KEY: VAL")
+      (:buffer "#+KEY: VAL")
       (->> (om-elem-parse-this-element)
            (om-elem-map-properties
             (list :key (-partial #'s-prepend "OM_")
@@ -1886,7 +1886,7 @@
     (defexamples-content om-elem-toggle-property
       nil
 
-      (:content "\\pi")
+      (:buffer "\\pi")
       (->> (om-elem-parse-this-object)
            (om-elem-toggle-property :use-brackets-p)
            (om-elem-to-trimmed-string))
@@ -1894,7 +1894,7 @@
 
       ;; TODO test src/example block preserve indent
       
-      (:content "* headline")
+      (:buffer "* headline")
       (->> (om-elem-parse-this-headline)
            (om-elem-toggle-property :archivedp)
            (om-elem-to-trimmed-string))
@@ -1910,13 +1910,13 @@
 
       :begin-hidden
 
-      (:content "sub_woofer")
+      (:buffer "sub_woofer")
       (->> (om-elem-parse-object-at 5)
            (om-elem-toggle-property :use-brackets-p)
            (om-elem-to-trimmed-string))
       => "_{woofer}"
 
-      (:content "super^woofer")
+      (:buffer "super^woofer")
       (->> (om-elem-parse-object-at 7)
            (om-elem-toggle-property :use-brackets-p)
            (om-elem-to-trimmed-string))
@@ -1924,7 +1924,7 @@
 
       :end-hidden
 
-      (:content "- [ ] nope")
+      (:buffer "- [ ] nope")
       (:comment "Throw an error when trying to toggle a non-boolean property")
       (->> (om-elem-parse-this-item)
            (om-elem-toggle-property :checkbox)
@@ -1935,14 +1935,14 @@
       ;; TODO need to ensure that the min/max priorities are always the same
       nil
 
-      (:content "* no priorities")
+      (:buffer "* no priorities")
       (:comment "Do nothing if there is nothing to shift.")
       (->> (om-elem-parse-this-headline)
            (om-elem-shift-property :priority 1)
            (om-elem-to-trimmed-string))
       => "* no priorities"
 
-      (:content "* [#A] priorities")
+      (:buffer "* [#A] priorities")
       (->> (om-elem-parse-this-headline)
            (om-elem-shift-property :priority -1)
            (om-elem-to-trimmed-string))
@@ -1957,7 +1957,7 @@
            (om-elem-to-trimmed-string))
       => "* [#C] priorities"
 
-      (:content "* TODO or not todo")
+      (:buffer "* TODO or not todo")
       (:comment "Throw error when shifting an unshiftable property")
       (->> (om-elem-parse-this-headline)
            (om-elem-shift-property :todo-keyword 1)
@@ -1966,7 +1966,7 @@
 
       :begin-hidden
 
-      (:content "*bold*")
+      (:buffer "*bold*")
       (->> (om-elem-parse-this-object)
            (om-elem-shift-property :post-blank 1)
            (om-elem-to-string))
@@ -1976,13 +1976,13 @@
            (om-elem-to-string))
       => "*bold*"
 
-      (:content "1. thing")
+      (:buffer "1. thing")
       (->> (om-elem-parse-this-item)
            (om-elem-shift-property :counter 1)
            (om-elem-to-trimmed-string))
       => "1. thing"
 
-      (:content "1. [@1] thing")
+      (:buffer "1. [@1] thing")
       (->> (om-elem-parse-this-item)
            (om-elem-shift-property :counter 1)
            (om-elem-to-trimmed-string))
@@ -1992,7 +1992,7 @@
            (om-elem-to-trimmed-string))
       => "1. [@1] thing"
 
-      (:content "* noob level")
+      (:buffer "* noob level")
       (->> (om-elem-parse-this-headline)
            (om-elem-shift-property :level 1)
            (om-elem-to-trimmed-string))
@@ -2004,8 +2004,8 @@
            (om-elem-to-trimmed-string))
       => "* noob level"
 
-      (:content "* headline"
-                "stuff")
+      (:buffer "* headline"
+               "stuff")
       (->> (om-elem-parse-this-headline)
            (om-elem-shift-property :pre-blank 1)
            (om-elem-to-trimmed-string))
@@ -2022,7 +2022,7 @@
     (defexamples-content om-elem-insert-into-property
       nil
 
-      (:content "#+CALL: ktulu(y=1)")
+      (:buffer "#+CALL: ktulu(y=1)")
       (->> (om-elem-parse-this-element)
            (om-elem-insert-into-property :arguments 0 "x=4")
            (om-elem-to-trimmed-string))
@@ -2040,7 +2040,7 @@
            (om-elem-to-trimmed-string))
       !!> error
 
-      (:content "* headline       :tag1:")
+      (:buffer "* headline       :tag1:")
       (->> (om-elem-parse-this-headline)
            (om-elem-insert-into-property :tags 0 "tag0")
            (om-elem-to-trimmed-string))
@@ -2048,8 +2048,8 @@
 
       :begin-hidden
 
-      (:content "#+BEGIN_EXAMPLE -n"
-                "#+END_EXAMPLE")
+      (:buffer "#+BEGIN_EXAMPLE -n"
+               "#+END_EXAMPLE")
       (->> (om-elem-parse-this-element)
            (om-elem-insert-into-property :switches -1 "-r")
            (om-elem-to-trimmed-string))
@@ -2057,28 +2057,28 @@
                   "#+END_EXAMPLE")
 
 
-      (:content "call_ktulu(y=1)")
+      (:buffer "call_ktulu(y=1)")
       (->> (om-elem-parse-this-object)
            (om-elem-insert-into-property :arguments 0 "x=4")
            (om-elem-to-trimmed-string))
       => "call_ktulu(x=4,y=1)"
 
-      (:content "{{{economics(x=4)}}}")
+      (:buffer "{{{economics(x=4)}}}")
       (->> (om-elem-parse-this-object)
            (om-elem-insert-into-property :args 0 "z=2")
            (om-elem-to-trimmed-string))
       => "{{{economics(z=2,x=4)}}}"
       
-      (:content "#+BEGIN_SRC emacs-lisp -n"
-                "#+END_SRC")
+      (:buffer "#+BEGIN_SRC emacs-lisp -n"
+               "#+END_SRC")
       (->> (om-elem-parse-this-element)
            (om-elem-insert-into-property :switches -1 "-r")
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_SRC emacs-lisp -n -r"
                   "#+END_SRC")
 
-      (:content "| a |"
-                "#+TBLFM: x=$2")
+      (:buffer "| a |"
+               "#+TBLFM: x=$2")
       (->> (om-elem-parse-this-element)
            (om-elem-insert-into-property :tblfm -1 "y=$3")
            (om-elem-to-trimmed-string))
@@ -2090,7 +2090,7 @@
     (defexamples-content om-elem-remove-from-property
       nil
 
-      (:content "#+CALL: ktulu(y=1)")
+      (:buffer "#+CALL: ktulu(y=1)")
       (->> (om-elem-parse-this-element)
            (om-elem-remove-from-property :arguments "y=1")
            (om-elem-to-trimmed-string))
@@ -2108,7 +2108,7 @@
            (om-elem-to-trimmed-string))
       !!> error
 
-      (:content "* headline       :tag1:")
+      (:buffer "* headline       :tag1:")
       (->> (om-elem-parse-this-headline)
            (om-elem-remove-from-property :tags "tag1")
            (om-elem-to-trimmed-string))
@@ -2116,36 +2116,36 @@
 
       :begin-hidden
 
-      (:content "#+BEGIN_EXAMPLE -n"
-                "#+END_EXAMPLE")
+      (:buffer "#+BEGIN_EXAMPLE -n"
+               "#+END_EXAMPLE")
       (->> (om-elem-parse-this-element)
            (om-elem-remove-from-property :switches "-n")
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_EXAMPLE"
                   "#+END_EXAMPLE")
 
-      (:content "call_ktulu(y=1)")
+      (:buffer "call_ktulu(y=1)")
       (->> (om-elem-parse-this-object)
            (om-elem-remove-from-property :arguments "y=1")
            (om-elem-to-trimmed-string))
       => "call_ktulu()"
 
-      (:content "{{{economics(x=4)}}}")
+      (:buffer "{{{economics(x=4)}}}")
       (->> (om-elem-parse-this-object)
            (om-elem-remove-from-property :args "x=4")
            (om-elem-to-trimmed-string))
       => "{{{economics}}}"
       
-      (:content "#+BEGIN_SRC emacs-lisp -n"
-                "#+END_SRC")
+      (:buffer "#+BEGIN_SRC emacs-lisp -n"
+               "#+END_SRC")
       (->> (om-elem-parse-this-element)
            (om-elem-remove-from-property :switches "-n")
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN_SRC emacs-lisp"
                   "#+END_SRC")
 
-      (:content "| a |"
-                "#+TBLFM: x=$2")
+      (:buffer "| a |"
+               "#+TBLFM: x=$2")
       (->> (om-elem-parse-this-element)
            (om-elem-remove-from-property :tblfm "x=$2")
            (om-elem-to-trimmed-string))
@@ -2155,7 +2155,7 @@
     (defexamples-content om-elem-plist-put-property
       nil
 
-      (:content "#+CALL: ktulu[:cache no]()")
+      (:buffer "#+CALL: ktulu[:cache no]()")
       (->> (om-elem-parse-this-element)
            (om-elem-plist-put-property :end-header :results 'html)
            (om-elem-to-trimmed-string))
@@ -2178,29 +2178,29 @@
 
       :begin-hidden
 
-      (:content "#+BEGIN: blockhead :format \"[%s]\""
-                "#+END:")
+      (:buffer "#+BEGIN: blockhead :format \"[%s]\""
+               "#+END:")
       (->> (om-elem-parse-this-element)
            (om-elem-plist-put-property :arguments :format "<%s>")
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN: blockhead :format \"<%s>\""
                   "#+END:")
 
-      (:content "call_ktulu[:cache no]()")
+      (:buffer "call_ktulu[:cache no]()")
       (->> (om-elem-parse-this-object)
            (om-elem-plist-put-property :inside-header :cache 'yes)
            (om-elem-plist-put-property :end-header :results 'html)
            (om-elem-to-trimmed-string))
       => "call_ktulu[:cache yes]()[:results html]"
 
-      (:content "src_emacs-lisp[:exports results]{}")
+      (:buffer "src_emacs-lisp[:exports results]{}")
       (->> (om-elem-parse-this-object)
            (om-elem-plist-put-property :parameters :exports 'both)
            (om-elem-to-trimmed-string))
       => "src_emacs-lisp[:exports both]{}"
 
-      (:content "#+BEGIN_SRC emacs-lisp -n :exports results"
-                "#+END_SRC")
+      (:buffer "#+BEGIN_SRC emacs-lisp -n :exports results"
+               "#+END_SRC")
       (->> (om-elem-parse-this-element)
            (om-elem-plist-put-property :parameters :exports 'both)
            (om-elem-to-trimmed-string))
@@ -2211,7 +2211,7 @@
     (defexamples-content om-elem-plist-remove-property
       nil
 
-      (:content "#+CALL: ktulu() :results html")
+      (:buffer "#+CALL: ktulu() :results html")
       (->> (om-elem-parse-this-element)
            (om-elem-plist-remove-property :end-header :results)
            (om-elem-to-trimmed-string))
@@ -2229,29 +2229,29 @@
 
       :begin-hidden
 
-      (:content "#+BEGIN: blockhead :format \"[%s]\""
-                "#+END:")
+      (:buffer "#+BEGIN: blockhead :format \"[%s]\""
+               "#+END:")
       (->> (om-elem-parse-this-element)
            (om-elem-plist-remove-property :arguments :format)
            (om-elem-to-trimmed-string))
       => (:result "#+BEGIN: blockhead"
                   "#+END:")
 
-      (:content "call_ktulu[:cache no]()[:results html]")
+      (:buffer "call_ktulu[:cache no]()[:results html]")
       (->> (om-elem-parse-this-object)
            (om-elem-plist-remove-property :inside-header :cache)
            (om-elem-plist-remove-property :end-header :results)
            (om-elem-to-trimmed-string))
       => "call_ktulu()"
 
-      (:content "src_emacs-lisp[:exports results]{}")
+      (:buffer "src_emacs-lisp[:exports results]{}")
       (->> (om-elem-parse-this-object)
            (om-elem-plist-remove-property :parameters :exports)
            (om-elem-to-trimmed-string))
       => "src_emacs-lisp{}"
 
-      (:content "#+BEGIN_SRC emacs-lisp -n :exports results"
-                "#+END_SRC")
+      (:buffer "#+BEGIN_SRC emacs-lisp -n :exports results"
+               "#+END_SRC")
       (->> (om-elem-parse-this-element)
            (om-elem-plist-remove-property :parameters :exports)
            (om-elem-to-trimmed-string))
@@ -2261,7 +2261,7 @@
 
     ;; (defexamples-content om-elem-property-is-nil-p
     ;;   nil
-    ;;   (:content "* TODO dummy")
+    ;;   (:buffer "* TODO dummy")
     ;;   (->> (om-elem-parse-this-headline)
     ;;        (om-elem-property-is-nil-p :todo-keyword))
     ;;   => nil
@@ -2271,7 +2271,7 @@
 
     ;; (defexamples-content om-elem-property-is-non-nil-p
     ;;   nil
-    ;;   (:content "* TODO dummy")
+    ;;   (:buffer "* TODO dummy")
     ;;   (->> (om-elem-parse-this-headline)
     ;;        (om-elem-property-is-non-nil-p :todo-keyword))
     ;;   => t
@@ -2281,7 +2281,7 @@
 
     ;; (defexamples-content om-elem-property-is-eq-p
     ;;   nil
-    ;;   (:content "* [#A] dummy")
+    ;;   (:buffer "* [#A] dummy")
     ;;   (->> (om-elem-parse-this-headline)
     ;;        (om-elem-property-is-eq-p :priority ?A))
     ;;   => t
@@ -2291,7 +2291,7 @@
 
     ;; (defexamples-content om-elem-property-is-equal-p
     ;;   nil
-    ;;   (:content "* TODO dummy")
+    ;;   (:buffer "* TODO dummy")
     ;;   (->> (om-elem-parse-this-headline)
     ;;        (om-elem-property-is-equal-p :todo-keyword "TODO"))
     ;;   => t
@@ -2301,7 +2301,7 @@
 
     ;; (defexamples-content om-elem-property-is-predicate-p
     ;;   nil
-    ;;   (:content "* this is a dummy")
+    ;;   (:buffer "* this is a dummy")
     ;;   (->> (om-elem-parse-this-headline)
     ;;        (om-elem-property-is-predicate-p*
     ;;         :title (s-contains? "dummy" (car it))))
@@ -2316,11 +2316,11 @@
 
     (defexamples-content om-elem-clock-is-running-p
       nil
-      (:content "CLOCK: [2019-01-01 Tue 00:00]")
+      (:buffer "CLOCK: [2019-01-01 Tue 00:00]")
       (->> (om-elem-parse-this-element)
            (om-elem-clock-is-running-p))
       => t
-      (:content "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00")
+      (:buffer "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00")
       (->> (om-elem-parse-this-element)
            (om-elem-clock-is-running-p))
       => nil))
@@ -2328,70 +2328,70 @@
   (defexamples-content om-elem-clock-map-timestamp
     nil
     ;; TODO add more unit tests for this
-    (:content "CLOCK: [2019-01-01 Tue 00:00]")
+    (:buffer "CLOCK: [2019-01-01 Tue 00:00]")
     (->> (om-elem-parse-this-element)
          (om-elem-clock-map-timestamp*
           (om-elem-timestamp-shift 1 'day it))
          (om-elem-to-trimmed-string))
     => "CLOCK: [2019-01-02 Wed 00:00]"
     )
-    
+  
 
   (def-example-subgroup "Headline"
     nil
 
     (defexamples-content om-elem-headline-is-done-p
       nil
-      (:content "* TODO darn")
+      (:buffer "* TODO darn")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-is-done-p))
       => nil
-      (:content "* DONE yay")
+      (:buffer "* DONE yay")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-is-done-p))
       => t)
 
     (defexamples-content om-elem-headline-is-archived-p
       nil
-      (:content "* dummy")
+      (:buffer "* dummy")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-is-archived-p))
       => nil
-      (:content "* dummy                                                             :ARCHIVE:")
+      (:buffer "* dummy                                                             :ARCHIVE:")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-is-archived-p))
       => t)
 
     (defexamples-content om-elem-headline-is-commented-p
       nil
-      (:content "* dummy")
+      (:buffer "* dummy")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-is-commented-p))
       => nil
-      (:content "* COMMENT dummy")
+      (:buffer "* COMMENT dummy")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-is-commented-p))
       => t)
 
     (defexamples-content om-elem-headline-has-tag-p
       nil
-      (:content "* dummy")
+      (:buffer "* dummy")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-has-tag-p "tmsu"))
       => nil
-      (:content "* dummy                                                             :tmsu:")
+      (:buffer "* dummy                                                             :tmsu:")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-has-tag-p "tmsu"))
       => t)
 
     (defexamples-content om-elem-headline-get-statistics-cookie
       nil
-      (:content "* statistically significant [10/10]")
+      (:buffer "* statistically significant [10/10]")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-get-statistics-cookie)
            (om-elem-to-string))
       => "[10/10]"
-      (:content "* not statistically significant")
+      (:buffer "* not statistically significant")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-get-statistics-cookie))
       => nil)
@@ -2410,10 +2410,10 @@
 
     (defexamples-content om-elem-item-is-unchecked-p
       nil
-      (:content "- one"
-                "- [ ] two"
-                "- [X] three"
-                "- [-] four")
+      (:buffer "- one"
+               "- [ ] two"
+               "- [X] three"
+               "- [-] four")
       (->> (om-elem-parse-this-element)
            (om-elem--get-children)
            (-map #'om-elem-item-is-unchecked-p))
@@ -2421,10 +2421,10 @@
 
     (defexamples-content om-elem-item-is-checked-p
       nil
-      (:content "- one"
-                "- [ ] two"
-                "- [X] three"
-                "- [-] four")
+      (:buffer "- one"
+               "- [ ] two"
+               "- [X] three"
+               "- [-] four")
       (->> (om-elem-parse-this-element)
            (om-elem--get-children)
            (-map #'om-elem-item-is-checked-p))
@@ -2432,10 +2432,10 @@
 
     (defexamples-content om-elem-item-is-trans-p
       nil
-      (:content "- one"
-                "- [ ] two"
-                "- [X] three"
-                "- [-] four")
+      (:buffer "- one"
+               "- [ ] two"
+               "- [X] three"
+               "- [-] four")
       (->> (om-elem-parse-this-element)
            (om-elem--get-children)
            (-map #'om-elem-item-is-trans-p))
@@ -2443,7 +2443,7 @@
     
     (defexamples-content om-elem-item-toggle-checkbox
       nil
-      (:content "- [ ] one")
+      (:buffer "- [ ] one")
       (->> (om-elem-parse-this-item)
            (om-elem-item-toggle-checkbox)
            (om-elem-to-trimmed-string))
@@ -2453,12 +2453,12 @@
            (om-elem-item-toggle-checkbox)
            (om-elem-to-trimmed-string))
       => "- [ ] one"
-      (:content "- [-] one")
+      (:buffer "- [-] one")
       (->> (om-elem-parse-this-item)
            (om-elem-item-toggle-checkbox)
            (om-elem-to-trimmed-string))
       => "- [-] one"
-      (:content "- one")
+      (:buffer "- one")
       (->> (om-elem-parse-this-item)
            (om-elem-item-toggle-checkbox)
            (om-elem-to-trimmed-string))
@@ -2470,8 +2470,8 @@
 
     (defexamples-content om-elem-planning-set-timestamp
       nil
-      (:content "* dummy"
-                "CLOSED: [2019-01-01 Tue]")
+      (:buffer "* dummy"
+               "CLOSED: [2019-01-01 Tue]")
       (:comment "Change an existing timestamp in planning")
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-planning)
@@ -2491,8 +2491,8 @@
 
     (defexamples-content om-elem-planning-map-timestamp
       nil
-      (:content "* dummy"
-                "CLOSED: [2019-01-01 Tue]")
+      (:buffer "* dummy"
+               "CLOSED: [2019-01-01 Tue]")
       (:comment "Apply mapping function if timestamp exists")
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-planning)
@@ -2519,25 +2519,25 @@
     nil
     (defexamples-content om-elem-statistics-cookie-is-complete-p
       nil
-      (:content "* statistically significant [10/10]")
+      (:buffer "* statistically significant [10/10]")
       (->> (om-elem-parse-this-headline)
            ;; TODO make public
            (om-elem-headline-get-statistics-cookie)
            (om-elem-statistics-cookie-is-complete-p))
       => t
-      (:content "* statistically significant [1/10]")
+      (:buffer "* statistically significant [1/10]")
       (->> (om-elem-parse-this-headline)
            ;; TODO make public
            (om-elem-headline-get-statistics-cookie)
            (om-elem-statistics-cookie-is-complete-p))
       => nil
-      (:content "* statistically significant [100%]")
+      (:buffer "* statistically significant [100%]")
       (->> (om-elem-parse-this-headline)
            ;; TODO make public
            (om-elem-headline-get-statistics-cookie)
            (om-elem-statistics-cookie-is-complete-p))
       => t
-      (:content "* statistically significant [33%]")
+      (:buffer "* statistically significant [33%]")
       (->> (om-elem-parse-this-headline)
            ;; TODO make public
            (om-elem-headline-get-statistics-cookie)
@@ -2549,63 +2549,63 @@
 
     (defexamples-content om-elem-timestamp-get-start-time
       nil
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-get-start-time))
       => '(2019 1 1 nil nil)
-      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-get-start-time))
       => '(2019 1 1 nil nil)
-      (:content "[2019-01-01 Tue 00:00-12:00]")
+      (:buffer "[2019-01-01 Tue 00:00-12:00]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-get-start-time))
       => '(2019 1 1 0 0))
 
     (defexamples-content om-elem-timestamp-get-end-time
       nil
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-get-end-time))
       => nil
-      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-get-end-time))
       => '(2019 1 2 nil nil)
-      (:content "[2019-01-01 Tue 00:00-12:00]")
+      (:buffer "[2019-01-01 Tue 00:00-12:00]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-get-end-time))
       => '(2019 1 1 12 0))
 
     (defexamples-content om-elem-timestamp-is-active-p
       nil
-      (:content "<2019-01-01 Tue>")
+      (:buffer "<2019-01-01 Tue>")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-is-active-p))
       => t
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-is-active-p))
       => nil)
 
     (defexamples-content om-elem-timestamp-is-ranged-p
       nil
-      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-is-ranged-p))
       => t
-      (:content "[2019-01-01 Tue 00:00-12:00]")
+      (:buffer "[2019-01-01 Tue 00:00-12:00]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-is-ranged-p))
       => t
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-is-ranged-p))
       => nil)
 
     (defexamples-content om-elem-timestamp-set-start-time
       nil
-      (:content "[2019-01-02 Wed]")
+      (:buffer "[2019-01-02 Wed]")
       (:comment "If not a range this will turn into a range by moving only the start time.")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-set-start-time '(2019 1 1))
@@ -2619,13 +2619,13 @@
 
     (defexamples-content om-elem-timestamp-set-end-time
       nil
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (:comment "Add the end time")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-set-end-time '(2019 1 2))
            (om-elem-to-trimmed-string))
       => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
       (:comment "Remove the end time")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-set-end-time nil)
@@ -2634,13 +2634,13 @@
 
     (defexamples-content om-elem-timestamp-set-single-time
       nil
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (:comment "Don't make a range")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-set-single-time '(2019 1 2))
            (om-elem-to-trimmed-string))
       => "[2019-01-02 Wed]"
-      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
       (:comment "Output is not a range despite input being ranged")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-set-single-time '(2019 1 3))
@@ -2649,13 +2649,13 @@
 
     (defexamples-content om-elem-timestamp-set-double-time
       nil
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (:comment "Make a range")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-set-double-time '(2019 1 2) '(2019 1 3))
            (om-elem-to-trimmed-string))
       => "[2019-01-02 Wed]--[2019-01-03 Thu]"
-      (:content "[2019-01-01 Tue]--[2019-01-03 Wed]")
+      (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
       (:comment "Output is not a range despite input being ranged")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-set-double-time '(2019 1 4) '(2019 1 5))
@@ -2664,19 +2664,19 @@
 
     (defexamples-content om-elem-timestamp-set-range
       nil
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (:comment "Use days as the unit for short format")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-set-range 1)
            (om-elem-to-trimmed-string))
       => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-      (:content "[2019-01-01 Tue 00:00]")
+      (:buffer "[2019-01-01 Tue 00:00]")
       (:comment "Use minutes as the unit for long format")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-set-range 3)
            (om-elem-to-trimmed-string))
       => "[2019-01-01 Tue 00:00]--[2019-01-01 Tue 00:03]"
-      (:content "[2019-01-01 Tue]--[2019-01-03 Wed]")
+      (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
       (:comment "Set range to 0 to remove end time")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-set-range 0)
@@ -2685,7 +2685,7 @@
 
     (defexamples-content om-elem-timestamp-set-type
       nil
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-set-type 'active)
            (om-elem-to-trimmed-string))
@@ -2693,7 +2693,7 @@
 
     (defexamples-content om-elem-timestamp-shift
       nil
-      (:content "[2019-01-01 Tue 12:00]")
+      (:buffer "[2019-01-01 Tue 12:00]")
       (:comment "Change each unit, and wrap around to the next unit as needed.")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-shift 30 'minute)
@@ -2731,7 +2731,7 @@
            (om-elem-timestamp-shift 0 'year)
            (om-elem-to-trimmed-string))
       => "[2019-01-01 Tue 12:00]"
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (:comment "Error when shifting hour/minute in short format")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-shift 30 'minute)
@@ -2744,13 +2744,13 @@
 
     (defexamples-content om-elem-timestamp-shift-start
       nil
-      (:content "[2019-01-01 Tue 12:00]")
+      (:buffer "[2019-01-01 Tue 12:00]")
       (:comment "If not a range, change start time and leave implicit end time.")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-shift-start -1 'year)
            (om-elem-to-trimmed-string))
       => "[2018-01-01 Mon 12:00]--[2019-01-01 Tue 12:00]"
-      (:content "[2019-01-01 Tue]--[2019-01-03 Thu]")
+      (:buffer "[2019-01-01 Tue]--[2019-01-03 Thu]")
       (:comment "Change only start time if a range")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-shift-start 1 'day)
@@ -2759,13 +2759,13 @@
 
     (defexamples-content om-elem-timestamp-shift-end
       nil
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (:comment "Shift implicit end time if not a range.")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-shift-end 1 'day)
            (om-elem-to-trimmed-string))
       => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
       (:comment "Move only the second time if a range.")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-shift-end 1 'day)
@@ -2774,7 +2774,7 @@
 
     (defexamples-content om-elem-timestamp-toggle-active
       nil
-      (:content "[2019-01-01 Tue]")
+      (:buffer "[2019-01-01 Tue]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-toggle-active)
            (om-elem-to-trimmed-string))
@@ -2784,7 +2784,7 @@
            (om-elem-timestamp-toggle-active)
            (om-elem-to-trimmed-string))
       => "[2019-01-01 Tue]"
-      (:content "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
       (->> (om-elem-parse-this-object)
            (om-elem-timestamp-toggle-active)
            (om-elem-to-trimmed-string))
@@ -2804,23 +2804,23 @@
     (defexamples-content om-elem-get-children
       nil
 
-      (:content "/this/ is a *paragraph*")
+      (:buffer "/this/ is a *paragraph*")
       (:comment "Return objects for object containers")
       (->> (om-elem-parse-this-element)
            (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(italic plain-text bold)
 
-      (:content "* headline"
-                "stuff"
-                "** subheadline")
+      (:buffer "* headline"
+               "stuff"
+               "** subheadline")
       (:comment "Return elements for greater elements")
       (->> (om-elem-parse-this-subtree)
            (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(section headline)
 
-      (:content "#+CALL: ktulu()")
+      (:buffer "#+CALL: ktulu()")
       (:comment "Throw error when attempting to get contents of a non-container")
       (->> (om-elem-parse-this-element)
            (om-elem-get-children)
@@ -2829,46 +2829,46 @@
 
       :begin-hidden
 
-      (:content "| a | b |")
+      (:buffer "| a | b |")
       (->> (om-elem-parse-this-table-row)
            (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(table-cell table-cell)
 
-      (:content "#+BEGIN_VERSE"
-                "verse /666/"
-                "#+END_VERSE")
+      (:buffer "#+BEGIN_VERSE"
+               "verse /666/"
+               "#+END_VERSE")
       (->> (om-elem-parse-this-element)
            (om-elem-get-children)
            (-map #'om-elem-get-type))
       ;; plain-text for the newline at the end...I think
       => '(plain-text italic plain-text)
 
-      (:content "#+BEGIN_CENTER"
-                "paragraph thing"
-                "#+END_CENTER")
+      (:buffer "#+BEGIN_CENTER"
+               "paragraph thing"
+               "#+END_CENTER")
       (->> (om-elem-parse-this-element)
            (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(paragraph)
 
-      (:content ":LOGBOOK:"
-                "- log entry"
-                "CLOCK: [2019-01-01 Tue]"
-                ":END:")
+      (:buffer ":LOGBOOK:"
+               "- log entry"
+               "CLOCK: [2019-01-01 Tue]"
+               ":END:")
       (->> (om-elem-parse-this-element)
            (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(plain-list clock)
 
-      (:content "[fn:1] bigfoot")
+      (:buffer "[fn:1] bigfoot")
       (->> (om-elem-parse-this-element)
            (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(paragraph)
 
-      (:content "- item"
-                "  - subitem")
+      (:buffer "- item"
+               "  - subitem")
       (->> (om-elem-parse-this-element)
            (om-elem-get-children)
            (-map #'om-elem-get-type))
@@ -2878,26 +2878,26 @@
            (-map #'om-elem-get-type))
       => '(paragraph plain-list)
 
-      (:content "* dummy"
-                ":PROPERTIES:"
-                ":ONE: one"
-                ":TWO: two"
-                ":END:")
+      (:buffer "* dummy"
+               ":PROPERTIES:"
+               ":ONE: one"
+               ":TWO: two"
+               ":END:")
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-properties-drawer)
            (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(node-property node-property) 
 
-      (:content "#+BEGIN_QUOTE"
-                "no pity for the majority"
-                "#+END_QUOTE")
+      (:buffer "#+BEGIN_QUOTE"
+               "no pity for the majority"
+               "#+END_QUOTE")
       (->> (om-elem-parse-this-element)
            (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(paragraph)
 
-      ;; (:content "* dummy"
+      ;; (:buffer "* dummy"
       ;;           "stuff")
       ;; (->> (om-elem-parse-this-headline)
       ;;      (om-elem-headline-get-section)
@@ -2905,8 +2905,8 @@
       ;;      (-map #'om-elem-get-type))
       ;; => '(paragraph)
 
-      (:content "| a |"
-                "| b |")
+      (:buffer "| a |"
+               "| b |")
       (->> (om-elem-parse-this-element)
            (om-elem-get-children)
            (-map #'om-elem-get-type))
@@ -2917,16 +2917,16 @@
     (defexamples-content om-elem-set-children
       nil
 
-      (:content "/this/ is a *paragraph*")
+      (:buffer "/this/ is a *paragraph*")
       (:comment "Set contents for object containers")
       (->> (om-elem-parse-this-element)
            (om-elem-set-children (list "this is lame"))
            (om-elem-to-trimmed-string))
       => "this is lame"
 
-      (:content "* headline"
-                "stuff"
-                "** subheadline")
+      (:buffer "* headline"
+               "stuff"
+               "** subheadline")
       (:comment "Set contents for greater elements")
       (->> (om-elem-parse-this-subtree)
            (om-elem-set-children (list (om-elem-build-headline! :title-text "only me" :level 2)))
@@ -2934,7 +2934,7 @@
       => (:result "* headline"
                   "** only me")
 
-      (:content "#+CALL: ktulu()")
+      (:buffer "#+CALL: ktulu()")
       (:comment "Throw error when attempting to get contents of a non-container")
       (->> (om-elem-parse-this-element)
            (om-elem-set-children "nil by mouth")
@@ -2950,22 +2950,22 @@
     (defexamples-content om-elem-map-children
       nil
 
-      (:content "/this/ is a *paragraph*")
+      (:buffer "/this/ is a *paragraph*")
       (->> (om-elem-parse-this-element)
            (om-elem-map-children
             (lambda (objs) (append objs (list " ...yeah"))))
            (om-elem-to-trimmed-string))
       => "/this/ is a *paragraph* ...yeah"
 
-      (:content "* headline"
-                "** subheadline")
+      (:buffer "* headline"
+               "** subheadline")
       (->> (om-elem-parse-this-subtree)
            (om-elem-map-children* (--map (om-elem-shift-property :level 1 it) it))
            (om-elem-to-trimmed-string))
       => (:result "* headline"
                   "*** subheadline")
 
-      (:content "#+CALL: ktulu()")
+      (:buffer "#+CALL: ktulu()")
       (:comment "Throw error when attempting to map contents of a non-container")
       (->> (om-elem-parse-this-element)
            (om-elem-map-children #'ignore)
@@ -2981,16 +2981,16 @@
     
     (defexamples-content om-elem-is-childless-p
       nil
-      (:content "* dummy"
-                "filled with useless knowledge")
+      (:buffer "* dummy"
+               "filled with useless knowledge")
       (->> (om-elem-parse-this-headline)
            (om-elem-is-childless-p))
       => nil
-      (:content "* dummy")
+      (:buffer "* dummy")
       (->> (om-elem-parse-this-headline)
            (om-elem-is-childless-p))
       => t
-      (:content "#+CALL: ktulu()")
+      (:buffer "#+CALL: ktulu()")
       (:comment "Throw error when attempting to determine if non-container is empty")
       (->> (om-elem-parse-this-element)
            (om-elem-is-childless-p))
@@ -3001,10 +3001,10 @@
 
     (defexamples-content om-elem-headline-update-item-statistics
       nil
-      (:content "* statistically significant [/]"
-                "- irrelevant data"
-                "- [ ] good data"
-                "- [X] bad data")
+      (:buffer "* statistically significant [/]"
+               "- irrelevant data"
+               "- [ ] good data"
+               "- [X] bad data")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-update-item-statistics)
            (om-elem-to-trimmed-string))
@@ -3013,10 +3013,10 @@
                   "- [ ] good data"
                   "- [X] bad data")
 
-      (:content "* statistically significant [%]"
-                "- irrelevant data"
-                "- [ ] good data"
-                "- [X] bad data")
+      (:buffer "* statistically significant [%]"
+               "- irrelevant data"
+               "- [ ] good data"
+               "- [X] bad data")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-update-item-statistics)
            (om-elem-to-trimmed-string))
@@ -3025,10 +3025,10 @@
                   "- [ ] good data"
                   "- [X] bad data")
 
-      (:content "* statistically significant"
-                "- irrelevant data"
-                "- [ ] good data"
-                "- [X] bad data")
+      (:buffer "* statistically significant"
+               "- irrelevant data"
+               "- [ ] good data"
+               "- [X] bad data")
       (->> (om-elem-parse-this-headline)
            (om-elem-headline-update-item-statistics)
            (om-elem-to-trimmed-string))
@@ -3039,10 +3039,10 @@
 
     (defexamples-content om-elem-headline-update-todo-statistics
       nil
-      (:content "* statistically significant [/]"
-                "** irrelevant data"
-                "** TODO good data"
-                "** DONE bad data")
+      (:buffer "* statistically significant [/]"
+               "** irrelevant data"
+               "** TODO good data"
+               "** DONE bad data")
       (->> (om-elem-parse-this-subtree)
            (om-elem-headline-update-todo-statistics)
            (om-elem-to-trimmed-string))
@@ -3051,10 +3051,10 @@
                   "** TODO good data"
                   "** DONE bad data")
 
-      (:content "* statistically significant [%]"
-                "** irrelevant data"
-                "** TODO good data"
-                "** DONE bad data")
+      (:buffer "* statistically significant [%]"
+               "** irrelevant data"
+               "** TODO good data"
+               "** DONE bad data")
       (->> (om-elem-parse-this-subtree)
            (om-elem-headline-update-todo-statistics)
            (om-elem-to-trimmed-string))
@@ -3063,10 +3063,10 @@
                   "** TODO good data"
                   "** DONE bad data")
 
-      (:content "* statistically significant"
-                "** irrelevant data"
-                "** TODO good data"
-                "** DONE bad data")
+      (:buffer "* statistically significant"
+               "** irrelevant data"
+               "** TODO good data"
+               "** DONE bad data")
       (->> (om-elem-parse-this-subtree)
            (om-elem-headline-update-todo-statistics)
            (om-elem-to-trimmed-string))
@@ -3077,11 +3077,11 @@
 
     ;; (defexamples-content om-elem-headline-is-scheduled-p
     ;;   nil
-    ;;   (:content "* lazy")
+    ;;   (:buffer "* lazy")
     ;;   (->> (om-elem-parse-this-headline)
     ;;        (om-elem-headline-is-scheduled-p))
     ;;   => nil
-    ;;   (:content "* proactive"
+    ;;   (:buffer "* proactive"
     ;;             "SCHEDULED: [2019-01-01 Tue]")
     ;;   (->> (om-elem-parse-this-headline)
     ;;        (om-elem-headline-is-scheduled-p))
@@ -3089,11 +3089,11 @@
 
     ;; (defexamples-content om-elem-headline-is-deadlined-p
     ;;   nil
-    ;;   (:content "* lazy")
+    ;;   (:buffer "* lazy")
     ;;   (->> (om-elem-parse-this-headline)
     ;;        (om-elem-headline-is-deadlined-p))
     ;;   => nil
-    ;;   (:content "* proactive"
+    ;;   (:buffer "* proactive"
     ;;             "DEADLINE: [2019-01-01 Tue]")
     ;;   (->> (om-elem-parse-this-headline)
     ;;        (om-elem-headline-is-deadlined-p))
@@ -3101,11 +3101,11 @@
     
     ;; (defexamples-content om-elem-headline-is-closed-p
     ;;   nil
-    ;;   (:content "* lazy")
+    ;;   (:buffer "* lazy")
     ;;   (->> (om-elem-parse-this-headline)
     ;;        (om-elem-headline-is-closed-p))
     ;;   => nil
-    ;;   (:content "* proactive"
+    ;;   (:buffer "* proactive"
     ;;             "CLOSED: [2019-01-01 Tue]")
     ;;   (->> (om-elem-parse-this-headline)
     ;;        (om-elem-headline-is-closed-p))
@@ -3113,7 +3113,7 @@
 
     ;; (defexamples-content om-elem-headline-get-subheadlines
     ;;   nil
-    ;;   (:content "* headline 1"
+    ;;   (:buffer "* headline 1"
     ;;             "sectional stuff"
     ;;             "** headline 2"
     ;;             "** headline 3")
@@ -3121,7 +3121,7 @@
     ;;        (om-elem-headline-get-subheadlines)
     ;;        (-map #'om-elem-to-trimmed-string))
     ;;   => '("** headline 2" "** headline 3")
-    ;;   (:content "* headline 1"
+    ;;   (:buffer "* headline 1"
     ;;             "sectional stuff")
     ;;   (->> (om-elem-parse-this-subtree)
     ;;        (om-elem-headline-get-subheadlines)
@@ -3130,7 +3130,7 @@
 
     ;; (defexamples-content om-elem-headline-get-section
     ;;   nil
-    ;;   (:content "* headline 1"
+    ;;   (:buffer "* headline 1"
     ;;             "sectional stuff"
     ;;             "** headline 2"
     ;;             "** headline 3")
@@ -3138,7 +3138,7 @@
     ;;        (om-elem-headline-get-section)
     ;;        (om-elem-to-trimmed-string))
     ;;   => "sectional stuff"
-    ;;   (:content "* headline 1"
+    ;;   (:buffer "* headline 1"
     ;;             "** headline 2"
     ;;             "** headline 3")
     ;;   (->> (om-elem-parse-this-subtree)
@@ -3148,7 +3148,7 @@
 
     ;; (defexamples-content om-elem-headline-get-drawer
     ;;   nil
-    ;;   (:content "* headline 1"
+    ;;   (:buffer "* headline 1"
     ;;             ":LOGBOOK:"
     ;;             "- random note"
     ;;             ":END:"
@@ -3167,7 +3167,7 @@
 
     ;; (defexamples-content om-elem-headline-get-path
     ;;   nil
-    ;;   (:content "* one"
+    ;;   (:buffer "* one"
     ;;             "** two"
     ;;             "*** three")
     ;;   (--> (om-elem-parse-this-subtree)
@@ -3178,10 +3178,10 @@
 
     (defexamples-content om-elem-headline-indent-subheadline
       nil
-      (:content "* one"
-                "** two"
-                "** three"
-                "*** four")
+      (:buffer "* one"
+               "** two"
+               "** three"
+               "*** four")
       (->> (om-elem-parse-element-at 1)
            (om-elem-headline-indent-subheadline 0)
            (om-elem-to-trimmed-string))
@@ -3196,10 +3196,10 @@
 
     (defexamples-content om-elem-headline-indent-subtree
       nil
-      (:content "* one"
-                "** two"
-                "** three"
-                "*** four")
+      (:buffer "* one"
+               "** two"
+               "** three"
+               "*** four")
       (->> (om-elem-parse-element-at 1)
            (om-elem-headline-indent-subtree 1)
            (om-elem-to-trimmed-string))
@@ -3210,12 +3210,12 @@
 
     (defexamples-content om-elem-headline-unindent-subheadline
       nil
-      (:content "* one"
-                "** two"
-                "** three"
-                "*** four"
-                "*** four"
-                "*** four")
+      (:buffer "* one"
+               "** two"
+               "** three"
+               "*** four"
+               "*** four"
+               "*** four")
       (->> (om-elem-parse-element-at 1)
            (om-elem-headline-unindent-subheadline 1 1)
            (om-elem-to-trimmed-string))
@@ -3228,12 +3228,12 @@
 
     (defexamples-content om-elem-headline-unindent-subtree
       nil
-      (:content "* one"
-                "** two"
-                "** three"
-                "*** four"
-                "*** four"
-                "*** four")
+      (:buffer "* one"
+               "** two"
+               "** three"
+               "*** four"
+               "*** four"
+               "*** four")
       (->> (om-elem-parse-element-at 1)
            (om-elem-headline-unindent-subtree 1)
            (om-elem-to-trimmed-string))
@@ -3247,69 +3247,69 @@
   ;; (def-example-subgroup "Item"
   ;;   nil
 
-    ;; (defexamples-content om-elem-item-get-level
-    ;;   nil
-    ;;   (:content "- one"
-    ;;             "  - two"
-    ;;             "    - three")
-    ;;   (->> (om-elem-parse-this-item)
-    ;;        (om-elem-)))
+  ;; (defexamples-content om-elem-item-get-level
+  ;;   nil
+  ;;   (:buffer "- one"
+  ;;             "  - two"
+  ;;             "    - three")
+  ;;   (->> (om-elem-parse-this-item)
+  ;;        (om-elem-)))
 
-    ;; (defexamples-content om-elem-item-get-sublist
-    ;;   nil
-    ;;   (:content "- one"
-    ;;             "  - two"
-    ;;             "  - three"
-    ;;             "- four")
-    ;;   (->> (om-elem-parse-this-item)
-    ;;        (om-elem-item-get-sublist)
-    ;;        (om-elem-to-trimmed-string))
-    ;;   => (:result "- two"
-    ;;               "- three")
-    ;;   (:content "- one"
-    ;;             "- two")
-    ;;   (->> (om-elem-parse-this-item)
-    ;;        (om-elem-item-get-sublist)
-    ;;        (om-elem-to-trimmed-string))
-    ;;   => "")
+  ;; (defexamples-content om-elem-item-get-sublist
+  ;;   nil
+  ;;   (:buffer "- one"
+  ;;             "  - two"
+  ;;             "  - three"
+  ;;             "- four")
+  ;;   (->> (om-elem-parse-this-item)
+  ;;        (om-elem-item-get-sublist)
+  ;;        (om-elem-to-trimmed-string))
+  ;;   => (:result "- two"
+  ;;               "- three")
+  ;;   (:buffer "- one"
+  ;;             "- two")
+  ;;   (->> (om-elem-parse-this-item)
+  ;;        (om-elem-item-get-sublist)
+  ;;        (om-elem-to-trimmed-string))
+  ;;   => "")
 
-    ;; (defexamples-content om-elem-item-get-paragraph
-    ;;   nil
-    ;;   (:content "- one")
-    ;;   (->> (om-elem-parse-this-item)
-    ;;        (om-elem-item-get-paragraph)
-    ;;        (om-elem-to-trimmed-string))
-    ;;   => "one"
-    ;;   (:content "- [ ] one")
-    ;;   (->> (om-elem-parse-this-item)
-    ;;        (om-elem-item-get-paragraph)
-    ;;        (om-elem-to-trimmed-string))
-    ;;   => "one"
-    ;;   (:content "- tmsu :: one")
-    ;;   (->> (om-elem-parse-this-item)
-    ;;        (om-elem-item-get-paragraph)
-    ;;        (om-elem-to-trimmed-string))
-    ;;   => "one"
-    ;;   (:content "- tmsu ::")
-    ;;   (->> (om-elem-parse-this-item)
-    ;;        (om-elem-item-get-paragraph)
-    ;;        (om-elem-to-trimmed-string))
-    ;;   => ""))
+  ;; (defexamples-content om-elem-item-get-paragraph
+  ;;   nil
+  ;;   (:buffer "- one")
+  ;;   (->> (om-elem-parse-this-item)
+  ;;        (om-elem-item-get-paragraph)
+  ;;        (om-elem-to-trimmed-string))
+  ;;   => "one"
+  ;;   (:buffer "- [ ] one")
+  ;;   (->> (om-elem-parse-this-item)
+  ;;        (om-elem-item-get-paragraph)
+  ;;        (om-elem-to-trimmed-string))
+  ;;   => "one"
+  ;;   (:buffer "- tmsu :: one")
+  ;;   (->> (om-elem-parse-this-item)
+  ;;        (om-elem-item-get-paragraph)
+  ;;        (om-elem-to-trimmed-string))
+  ;;   => "one"
+  ;;   (:buffer "- tmsu ::")
+  ;;   (->> (om-elem-parse-this-item)
+  ;;        (om-elem-item-get-paragraph)
+  ;;        (om-elem-to-trimmed-string))
+  ;;   => ""))
 
   (def-example-subgroup "Plain List"
     nil
     
     (defexamples-content om-elem-plain-list-set-type
       nil
-      (:content "- [ ] one"
-                "- [X] two")
+      (:buffer "- [ ] one"
+               "- [X] two")
       (->> (om-elem-parse-this-element)
            (om-elem-plain-list-set-type 'ordered)
            (om-elem-to-trimmed-string))
       => (:result "1. [ ] one"
                   "2. [X] two")
-      (:content "1. [ ] one"
-                "2. [X] two")
+      (:buffer "1. [ ] one"
+               "2. [X] two")
       (->> (om-elem-parse-this-element)
            (om-elem-plain-list-set-type '-)
            (om-elem-to-trimmed-string))
@@ -3318,10 +3318,10 @@
 
     (defexamples-content om-elem-plain-list-indent-item
       nil
-      (:content "- one"
-                "- two"
-                "  - three"
-                "- four")
+      (:buffer "- one"
+               "- two"
+               "  - three"
+               "- four")
       (:comment "It makes no sense to indent the first item")
       (->> (om-elem-parse-element-at 1)
            (om-elem-plain-list-indent-item 0)
@@ -3344,10 +3344,10 @@
 
     (defexamples-content om-elem-plain-list-indent-item-tree
       nil
-      (:content "- one"
-                "- two"
-                "  - three"
-                "- four")
+      (:buffer "- one"
+               "- two"
+               "  - three"
+               "- four")
       (->> (om-elem-parse-element-at 1)
            (om-elem-plain-list-indent-item-tree 1)
            (om-elem-to-trimmed-string))
@@ -3358,12 +3358,12 @@
 
     (defexamples-content om-elem-plain-list-unindent-item
       nil
-      (:content "- one"
-                "- two"
-                "  - three"
-                "  - three"
-                "  - three"
-                "- four")
+      (:buffer "- one"
+               "- two"
+               "  - three"
+               "  - three"
+               "  - three"
+               "- four")
       (->> (om-elem-parse-element-at 1)
            (om-elem-plain-list-unindent-item 1 0)
            (om-elem-to-trimmed-string))
@@ -3391,15 +3391,15 @@
                   "  - three"
                   "  - three"
                   "- four"))
-  
+    
     (defexamples-content om-elem-plain-list-unindent-items
       nil
-      (:content "- one"
-                "- two"
-                "  - three"
-                "  - three"
-                "  - three"
-                "- four")
+      (:buffer "- one"
+               "- two"
+               "  - three"
+               "  - three"
+               "  - three"
+               "- four")
       (->> (om-elem-parse-element-at 1)
            (om-elem-plain-list-unindent-items 1)
            (om-elem-to-trimmed-string))
@@ -3424,9 +3424,9 @@
 
     (defexamples-content om-elem-table-get-cell
       nil
-      (:content "| 1 | 2 | 3 |"
-                "|---+---+---|"
-                "| a | b | c |")
+      (:buffer "| 1 | 2 | 3 |"
+               "|---+---+---|"
+               "| a | b | c |")
       (->> (om-elem-parse-this-element)
            (om-elem-table-get-cell 0 0)
            (om-elem--get-children)
@@ -3452,9 +3452,9 @@
 
     (defexamples-content om-elem-table-replace-cell
       nil
-      (:content "| 1 | 2 |"
-                "|---+---|"
-                "| a | b |")
+      (:buffer "| 1 | 2 |"
+               "|---+---|"
+               "| a | b |")
       (->> (om-elem-parse-this-element)
            (om-elem-table-replace-cell
             0 0 (om-elem-build-table-cell "2"))
@@ -3472,9 +3472,9 @@
 
     (defexamples-content om-elem-table-replace-cell!
       nil
-      (:content "| 1 | 2 |"
-                "|---+---|"
-                "| a | b |")
+      (:buffer "| 1 | 2 |"
+               "|---+---|"
+               "| a | b |")
       (->> (om-elem-parse-this-element)
            (om-elem-table-replace-cell! 0 0 "2")
            (om-elem-to-trimmed-string))
@@ -3490,9 +3490,9 @@
 
     (defexamples-content om-elem-table-clear-cell
       nil
-      (:content "| 1 | 2 |"
-                "|---+---|"
-                "| a | b |")
+      (:buffer "| 1 | 2 |"
+               "|---+---|"
+               "| a | b |")
       (->> (om-elem-parse-this-element)
            (om-elem-table-clear-cell 0 0)
            (om-elem-to-trimmed-string))
@@ -3508,9 +3508,9 @@
 
     (defexamples-content om-elem-table-delete-column
       nil
-      (:content "| a | b |"
-                "|---+---|"
-                "| c | d |")
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-delete-column 0)
            (om-elem-to-trimmed-string))
@@ -3532,9 +3532,9 @@
 
     (defexamples-content om-elem-table-replace-column
       nil
-      (:content "| a | b |"
-                "|---+---|"
-                "| c | d |")
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-replace-column
             0 (list
@@ -3547,8 +3547,8 @@
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-replace-column
             -1 (list
-               (om-elem-build-table-cell "A")
-               (om-elem-build-table-cell "B")))
+                (om-elem-build-table-cell "A")
+                (om-elem-build-table-cell "B")))
            (om-elem-to-trimmed-string))
       => (:result "| a | A |"
                   "|---+---|"
@@ -3556,9 +3556,9 @@
 
     (defexamples-content om-elem-table-replace-column!
       nil
-      (:content "| a | b |"
-                "|---+---|"
-                "| c | d |")
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-replace-column! 0 '("A" "B"))
            (om-elem-to-trimmed-string))
@@ -3574,9 +3574,9 @@
 
     (defexamples-content om-elem-table-clear-column
       nil
-      (:content "| a | b |"
-                "|---+---|"
-                "| c | d |")
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-clear-column 0)
            (om-elem-to-trimmed-string))
@@ -3592,9 +3592,9 @@
 
     (defexamples-content om-elem-table-replace-row
       nil
-      (:content "| a | b |"
-                "|---+---|"
-                "| c | d |")
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-replace-row
             0 (om-elem-build-table-row
@@ -3607,8 +3607,8 @@
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-replace-row
             -1 (om-elem-build-table-row
-               (om-elem-build-table-cell "A")
-               (om-elem-build-table-cell "B")))
+                (om-elem-build-table-cell "A")
+                (om-elem-build-table-cell "B")))
            (om-elem-to-trimmed-string))
       => (:result "| a | b |"
                   "|---+---|"
@@ -3616,9 +3616,9 @@
 
     (defexamples-content om-elem-table-replace-row!
       nil
-      (:content "| a | b |"
-                "|---+---|"
-                "| c | d |")
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-replace-row! 0 '("A" "B"))
            (om-elem-to-trimmed-string))
@@ -3634,9 +3634,9 @@
 
     (defexamples-content om-elem-table-clear-row
       nil
-      (:content "| a | b |"
-                "|---+---|"
-                "| c | d |")
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-clear-row 0)
            (om-elem-to-trimmed-string))
@@ -3652,9 +3652,9 @@
 
     (defexamples-content om-elem-table-delete-row
       nil
-      (:content "| a | b |"
-                "|---+---|"
-                "| c | d |")
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-delete-row 0)
            (om-elem-to-trimmed-string))
@@ -3673,9 +3673,9 @@
 
     (defexamples-content om-elem-table-insert-column
       nil
-      (:content "| a | b |"
-                "|---+---|"
-                "| c | d |")
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-insert-column
             1
@@ -3699,9 +3699,9 @@
 
     (defexamples-content om-elem-table-insert-column!
       nil
-      (:content "| a | b |"
-                "|---+---|"
-                "| c | d |")
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-insert-column! 1 '("x" "y"))
            (om-elem-to-trimmed-string))
@@ -3717,9 +3717,9 @@
 
     (defexamples-content om-elem-table-insert-row
       nil
-      (:content "| a | b |"
-                "|---+---|"
-                "| c | d |")
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-insert-row
             1
@@ -3756,9 +3756,9 @@
 
     (defexamples-content om-elem-table-insert-row!
       nil
-      (:content "| a | b |"
-                "|---+---|"
-                "| c | d |")
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
       (->> (om-elem-parse-element-at 1)
            (om-elem-table-insert-row! 1 '("x" "y"))
            (om-elem-to-trimmed-string))
@@ -3787,10 +3787,10 @@
   (defexamples-content om-elem-match
     nil
 
-    (:content "* headline one"
-              "** TODO headline two"
-              "** COMMENT headline three"
-              "** headline four")
+    (:buffer "* headline one"
+             "** TODO headline two"
+             "** COMMENT headline three"
+             "** headline four")
 
     (:comment "Use a symbol to match a type, in this case all "
               "headlines.")
@@ -3843,13 +3843,13 @@
          (--map (om-elem-to-trimmed-string it)))
     => nil
 
-    (:content "* headline one"
-              "this is *text1* of *text2*"
-              "** headline two"
-              "here is more *text3*"
-              "*** headline three"
-              "and here is even more *text4* and *text5*"
-              "**** headline 4")
+    (:buffer "* headline one"
+             "this is *text1* of *text2*"
+             "** headline two"
+             "here is more *text3*"
+             "*** headline three"
+             "and here is even more *text4* and *text5*"
+             "**** headline 4")
     (:comment "Specify multiple levels of matching using multiple "
               "queries.")
     (->> (om-elem-parse-this-subtree)
@@ -3891,10 +3891,10 @@
 and here is even more *text4* and *text5*
 **** headline 4")
 
-    (:content "* headline one"
-              "** TODO headline two"
-              "** COMMENT headline three"
-              "** headline four")
+    (:buffer "* headline one"
+             "** TODO headline two"
+             "** COMMENT headline three"
+             "** headline four")
     (:comment "Find the first subheadline")
     (->> (om-elem-parse-this-subtree)
          (om-elem-match '(:first headline))
@@ -3902,10 +3902,10 @@ and here is even more *text4* and *text5*
          (om-elem-to-trimmed-string))
     => "** TODO headline two"
     
-    (:content "* headline one"
-               "** TODO headline two"
-               "** COMMENT headline three"
-               "** headline four")
+    (:buffer "* headline one"
+             "** TODO headline two"
+             "** COMMENT headline three"
+             "** headline four")
     (:comment "Find the last subheadline")
     (->> (om-elem-parse-this-subtree)
          (om-elem-match '(:last headline))
@@ -3915,10 +3915,10 @@ and here is even more *text4* and *text5*
 
   (defexamples-content om-elem-match-delete
     nil
-    (:content "* headline one"
-               "** headline two"
-               "** headline three"
-               "** headline four")
+    (:buffer "* headline one"
+             "** headline two"
+             "** headline three"
+             "** headline four")
     (:comment "Selectively delete headlines")
     (->> (om-elem-parse-this-subtree)
          (om-elem-match-delete '(headline))
@@ -3939,7 +3939,7 @@ and here is even more *text4* and *text5*
 
   (defexamples-content om-elem-match-extract
     nil
-    (:content "pull me /under/")
+    (:buffer "pull me /under/")
     (--> (om-elem-parse-this-element)
          (om-elem-match-extract '(:many italic) it)
          (cons (-map #'om-elem-to-trimmed-string (car it))
@@ -3949,10 +3949,10 @@ and here is even more *text4* and *text5*
   (defexamples-content om-elem-match-map
     nil
 
-    (:content "* headline one"
-               "** TODO headline two"
-               "** headline three"
-               "** headline four")
+    (:buffer "* headline one"
+             "** TODO headline two"
+             "** headline three"
+             "** headline four")
 
     (:comment "Selectively mark headlines as DONE")
     (->> (om-elem-parse-this-subtree)
@@ -3983,8 +3983,8 @@ and here is even more *text4* and *text5*
   (defexamples-content om-elem-match-mapcat
     nil
 
-    (:content "* one"
-              "** two")
+    (:buffer "* one"
+             "** two")
     (->> (om-elem-parse-this-subtree)
          (om-elem-match-mapcat* '(:first headline)
            (list (om-elem-build-headline! :title-text "1.5" :level 2) it))
@@ -3995,7 +3995,7 @@ and here is even more *text4* and *text5*
 
   (defexamples-content om-elem-match-replace
     nil
-    (:content "*1* 2 *3* 4 *5* 6 *7* 8 *9* 10")
+    (:buffer "*1* 2 *3* 4 *5* 6 *7* 8 *9* 10")
     (->> (om-elem-parse-this-element)
          (om-elem-match-replace '(:many bold)
            (om-elem-build-bold :post-blank 1 "0"))
@@ -4004,9 +4004,9 @@ and here is even more *text4* and *text5*
 
   (defexamples-content om-elem-match-insert-before
     nil
-    (:content "* one"
-              "** two"
-              "** three")
+    (:buffer "* one"
+             "** two"
+             "** three")
     (->> (om-elem-parse-this-subtree)
          (om-elem-match-insert-before '(headline)
            (om-elem-build-headline! :title-text "new" :level 2))
@@ -4019,9 +4019,9 @@ and here is even more *text4* and *text5*
 
   (defexamples-content om-elem-match-insert-after
     nil
-    (:content "* one"
-              "** two"
-              "** three")
+    (:buffer "* one"
+             "** two"
+             "** three")
     (->> (om-elem-parse-this-subtree)
          (om-elem-match-insert-after '(headline)
            (om-elem-build-headline! :title-text "new" :level 2))
@@ -4034,9 +4034,9 @@ and here is even more *text4* and *text5*
 
   (defexamples-content om-elem-match-insert-within
     nil
-    (:content "* one"
-              "** two"
-              "** three")
+    (:buffer "* one"
+             "** two"
+             "** three")
     (->> (om-elem-parse-this-subtree)
          (om-elem-match-insert-within '(headline) 0
            (om-elem-build-headline! :title-text "new" :level 3))
@@ -4060,9 +4060,9 @@ and here is even more *text4* and *text5*
 
   (defexamples-content om-elem-match-splice-before
     nil
-    (:content "* one"
-              "** two"
-              "** three")
+    (:buffer "* one"
+             "** two"
+             "** three")
     (->> (om-elem-parse-this-subtree)
          (om-elem-match-splice-before '(0)
            (list
@@ -4077,9 +4077,9 @@ and here is even more *text4* and *text5*
 
   (defexamples-content om-elem-match-splice-after
     nil
-    (:content "* one"
-              "** two"
-              "** three")
+    (:buffer "* one"
+             "** two"
+             "** three")
     (->> (om-elem-parse-this-subtree)
          (om-elem-match-splice-after '(0)
            (list
@@ -4094,9 +4094,9 @@ and here is even more *text4* and *text5*
 
   (defexamples-content om-elem-match-splice-within
     nil
-    (:content "* one"
-              "** two"
-              "** three")
+    (:buffer "* one"
+             "** two"
+             "** three")
     (->> (om-elem-parse-this-subtree)
          (om-elem-match-splice-within nil 1
            (list
@@ -4117,14 +4117,14 @@ and here is even more *text4* and *text5*
 
     (defexamples-content om-elem-insert
       nil
-      (:content "* one"
-                "")
+      (:buffer "* one"
+               "")
       (->> (om-elem-build-headline! :title-text "two")
            (om-elem-insert (point-max)))
       $> (:result "* one"
                   "* two")
 
-      (:content "a *game* or a /boy/")
+      (:buffer "a *game* or a /boy/")
       (->> (om-elem-build-paragraph! "we don't care if you're")
            (om-elem-insert (point-min)))
       $> (:result "we don't care if you're"
@@ -4133,14 +4133,14 @@ and here is even more *text4* and *text5*
     (defexamples-content om-elem-insert-tail
       nil
       :begin-hidden
-      (:content "* one"
-                "")
+      (:buffer "* one"
+               "")
       (->> (om-elem-build-headline! :title-text "two")
            (om-elem-insert-tail (point-max)))
       $> (:result "* one"
                   "* two")
 
-      (:content "a *game* or a /boy/")
+      (:buffer "a *game* or a /boy/")
       (->> (om-elem-build-paragraph! "we don't care if you're")
            (om-elem-insert-tail (point-min)))
       $> (:result "we don't care if you're"
@@ -4153,16 +4153,16 @@ and here is even more *text4* and *text5*
     (defexamples-content om-elem-update
       nil
       
-      (:content "* TODO win grammy")
+      (:buffer "* TODO win grammy")
       (->> (om-elem-parse-this-headline)
            (om-elem-update
             (lambda (hl) (om-elem-set-property :todo-keyword "DONE" hl))))
       $> "* DONE win grammy"
 
-      (:content "* win grammy [0/0]"
-                "- [ ] write punk song"
-                "- [ ] get new vocalist"
-                "- [ ] sell 2 singles")
+      (:buffer "* win grammy [0/0]"
+               "- [ ] write punk song"
+               "- [ ] get new vocalist"
+               "- [ ] sell 2 singles")
       (->> (om-elem-parse-this-headline)
            (om-elem-update*
              (->> (om-elem-match-map '(:many item) #'om-elem-item-toggle-checkbox it)
@@ -4175,14 +4175,14 @@ and here is even more *text4* and *text5*
 
     (defexamples-content om-elem-update-object-at
       nil
-      (:content "[[http://example.com][desc]]")
+      (:buffer "[[http://example.com][desc]]")
       (om-elem-update-object-at* (point)
         (om-elem-set-property :path "//buymoreram.com" it))
       $> "[[http://buymoreram.com][desc]]")
 
     (defexamples-content om-elem-update-element-at
       nil
-      (:content "#+CALL: ktulu()")
+      (:buffer "#+CALL: ktulu()")
       (om-elem-update-element-at* (point)
         (om-elem-set-properties 
          (list :call "cthulhu"
@@ -4194,30 +4194,30 @@ and here is even more *text4* and *text5*
 
     (defexamples-content om-elem-update-table-row-at
       nil
-      (:content "| a | b |")
+      (:buffer "| a | b |")
       (om-elem-update-table-row-at* (point)
         (om-elem-map-children* (cons (om-elem-build-table-cell! "0") it) it))
       $> "| 0 | a | b |")
 
     (defexamples-content om-elem-update-item-at
       nil
-      (:content "- [ ] thing")
+      (:buffer "- [ ] thing")
       (om-elem-update-item-at* (point)
         (om-elem-item-toggle-checkbox it))
       $> "- [X] thing")
 
     (defexamples-content om-elem-update-headline-at
       nil
-      (:content "* TODO might get done")
+      (:buffer "* TODO might get done")
       (om-elem-update-headline-at* (point)
         (om-elem-set-property :todo-keyword "DONE" it))
       $> "* DONE might get done")
 
     (defexamples-content om-elem-update-subtree-at
       nil
-      (:content "* one"
-                "** two"
-                "** three")
+      (:buffer "* one"
+               "** two"
+               "** three")
       (om-elem-update-subtree-at* (point)
         (om-elem-headline-indent-subheadline 1 it))
       $> (:result "* one"
@@ -4226,23 +4226,23 @@ and here is even more *text4* and *text5*
 
   ;; TODO should probably still test these
 
-    ;; (defexamples-content om-elem-update-this-object
-    ;;   nil)
+  ;; (defexamples-content om-elem-update-this-object
+  ;;   nil)
 
-    ;; (defexamples-content om-elem-update-this-element
-    ;;   nil)
-      
-    ;; (defexamples-content om-elem-update-this-table-row
-    ;;   nil)
+  ;; (defexamples-content om-elem-update-this-element
+  ;;   nil)
+  
+  ;; (defexamples-content om-elem-update-this-table-row
+  ;;   nil)
 
-    ;; (defexamples-content om-elem-update-this-item
-    ;;   nil)
+  ;; (defexamples-content om-elem-update-this-item
+  ;;   nil)
 
-    ;; (defexamples-content om-elem-update-this-headline
-    ;;   nil)
+  ;; (defexamples-content om-elem-update-this-headline
+  ;;   nil)
 
-    ;; (defexamples-content om-elem-update-this-subtree
-    ;;   nil))
+  ;; (defexamples-content om-elem-update-this-subtree
+  ;;   nil))
 
   (def-example-subgroup "Misc"
     nil
