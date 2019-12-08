@@ -241,7 +241,7 @@ Build nodes with more convenient/shorter syntax.
 * [om-elem-build-clock!](#om-elem-build-clock-start-key-end-post-blank) `(start &key end post-blank)`
 * [om-elem-build-planning!](#om-elem-build-planning-key-closed-deadline-scheduled-post-blank) `(&key closed deadline scheduled post-blank)`
 * [om-elem-build-property-drawer!](#om-elem-build-property-drawer-key-post-blank-rest-keyvals) `(&key post-blank &rest keyvals)`
-* [om-elem-build-headline!](#om-elem-build-headline-key-level-1-title-text-todo-keyword-tags-pre-blank-priority-commentedp-archivedp-post-blank-planning-properties-statistics-cookie-section-contents-rest-subheadlines) `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning properties statistics-cookie section-contents &rest subheadlines)`
+* [om-elem-build-headline!](#om-elem-build-headline-key-level-1-title-text-todo-keyword-tags-pre-blank-priority-commentedp-archivedp-post-blank-planning-properties-statistics-cookie-section-children-rest-subheadlines) `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning properties statistics-cookie section-children &rest subheadlines)`
 * [om-elem-build-item!](#om-elem-build-item-key-post-blank-bullet-checkbox-tag-paragraph-counter-rest-subitems) `(&key post-blank bullet checkbox tag paragraph counter &rest subitems)`
 * [om-elem-build-paragraph!](#om-elem-build-paragraph-string-key-post-blank) `(string &key post-blank)`
 * [om-elem-build-table!](#om-elem-build-table-key-tblfm-post-blank-rest-row-lists) `(&key tblfm post-blank &rest row-lists)`
@@ -332,10 +332,10 @@ Set, get, and map the children of branch nodes.
 
 ### Generic
 
-* [om-elem-get-contents](#om-elem-get-contents-node) `(node)`
-* [om-elem-set-contents](#om-elem-set-contents-contents-node) `(contents node)`
-* [om-elem-map-contents](#om-elem-map-contents-fun-node) `(fun node)`
-* [om-elem-is-empty-p](#om-elem-is-empty-p-node) `(node)`
+* [om-elem-get-children](#om-elem-get-children-node) `(node)`
+* [om-elem-set-children](#om-elem-set-children-children-node) `(children node)`
+* [om-elem-map-children](#om-elem-map-children-fun-node) `(fun node)`
+* [om-elem-is-childless-p](#om-elem-is-childless-p-node) `(node)`
 
 ### Headline
 
@@ -414,8 +414,8 @@ Map node manipulations into buffers.
 
 ### Misc
 
-* [om-elem-fold-contents](#om-elem-fold-contents-node) `(node)`
-* [om-elem-unfold-contents](#om-elem-unfold-contents-node) `(node)`
+* [om-elem-fold](#om-elem-fold-node) `(node)`
+* [om-elem-unfold](#om-elem-unfold-node) `(node)`
 
 # Function Examples
 
@@ -964,7 +964,7 @@ The following properties are settable:
 
 #### om-elem-build-bold `(&key post-blank &rest objs)`
 
-Build a bold object with `objs` as contents.
+Build a bold object with `objs` as children.
 
 The following properties are settable:
 
@@ -979,7 +979,7 @@ The following properties are settable:
 
 #### om-elem-build-footnote-reference `(&key label post-blank &rest objs)`
 
-Build a footnote-reference object with `objs` as contents.
+Build a footnote-reference object with `objs` as children.
 
 The following properties are settable:
 - `label`: a oneline string or nil
@@ -1002,7 +1002,7 @@ The following properties are settable:
 
 #### om-elem-build-italic `(&key post-blank &rest objs)`
 
-Build a italic object with `objs` as contents.
+Build a italic object with `objs` as children.
 
 The following properties are settable:
 
@@ -1017,7 +1017,7 @@ The following properties are settable:
 
 #### om-elem-build-link `(path &key format (type fuzzy) post-blank &rest objs)`
 
-Build a link object with `objs` as contents.
+Build a link object with `objs` as children.
 
 The following properties are settable:
 - `path`: a oneline string
@@ -1042,7 +1042,7 @@ The following properties are settable:
 
 #### om-elem-build-radio-target `(&key post-blank &rest objs)`
 
-Build a radio-target object with `objs` as contents.
+Build a radio-target object with `objs` as children.
 
 The following properties are settable:
 
@@ -1057,7 +1057,7 @@ The following properties are settable:
 
 #### om-elem-build-strike-through `(&key post-blank &rest objs)`
 
-Build a strike-through object with `objs` as contents.
+Build a strike-through object with `objs` as children.
 
 The following properties are settable:
 
@@ -1072,7 +1072,7 @@ The following properties are settable:
 
 #### om-elem-build-superscript `(&key use-brackets-p post-blank &rest objs)`
 
-Build a superscript object with `objs` as contents.
+Build a superscript object with `objs` as children.
 
 The following properties are settable:
 - `use-brackets-p`: nil or t
@@ -1087,7 +1087,7 @@ The following properties are settable:
 
 #### om-elem-build-subscript `(&key use-brackets-p post-blank &rest objs)`
 
-Build a subscript object with `objs` as contents.
+Build a subscript object with `objs` as children.
 
 The following properties are settable:
 - `use-brackets-p`: nil or t
@@ -1102,7 +1102,7 @@ The following properties are settable:
 
 #### om-elem-build-table-cell `(&key post-blank &rest objs)`
 
-Build a table-cell object with `objs` as contents.
+Build a table-cell object with `objs` as children.
 
 The following properties are settable:
 
@@ -1118,7 +1118,7 @@ The following properties are settable:
 
 #### om-elem-build-underline `(&key post-blank &rest objs)`
 
-Build a underline object with `objs` as contents.
+Build a underline object with `objs` as children.
 
 The following properties are settable:
 
@@ -1441,7 +1441,7 @@ Build a table-row element with the 'rule' type.
 
 #### om-elem-build-paragraph `(&key post-blank &rest objs)`
 
-Build a paragraph element with `objs` as contents.
+Build a paragraph element with `objs` as children.
 
 The following properties are settable:
 
@@ -1456,7 +1456,7 @@ The following properties are settable:
 
 #### om-elem-build-table-row `(&key post-blank &rest objs)`
 
-Build a table-row element with `objs` as contents.
+Build a table-row element with `objs` as children.
 
 The following properties are settable:
 
@@ -1472,7 +1472,7 @@ The following properties are settable:
 
 #### om-elem-build-verse-block `(&key post-blank &rest objs)`
 
-Build a verse-block element with `objs` as contents.
+Build a verse-block element with `objs` as children.
 
 The following properties are settable:
 
@@ -1493,7 +1493,7 @@ The following properties are settable:
 
 #### om-elem-build-center-block `(&key post-blank &rest nodes)`
 
-Build a center-block element with `nodes` as contents.
+Build a center-block element with `nodes` as children.
 
 The following properties are settable:
 
@@ -1511,7 +1511,7 @@ The following properties are settable:
 
 #### om-elem-build-drawer `(drawer-name &key post-blank &rest nodes)`
 
-Build a drawer element with `nodes` as contents.
+Build a drawer element with `nodes` as children.
 
 The following properties are settable:
 - `drawer-name`: a oneline string
@@ -1529,7 +1529,7 @@ The following properties are settable:
 
 #### om-elem-build-footnote-definition `(label &key post-blank &rest nodes)`
 
-Build a footnote-definition element with `nodes` as contents.
+Build a footnote-definition element with `nodes` as children.
 
 The following properties are settable:
 - `label`: a oneline string or nil
@@ -1545,7 +1545,7 @@ The following properties are settable:
 
 #### om-elem-build-headline `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest nodes)`
 
-Build a headline element with `nodes` as contents.
+Build a headline element with `nodes` as children.
 
 The following properties are settable:
 - `archivedp`: nil or t
@@ -1597,7 +1597,7 @@ The following properties are settable:
 
 #### om-elem-build-item `(&key (bullet '-) checkbox counter tag post-blank &rest nodes)`
 
-Build a item element with `nodes` as contents.
+Build a item element with `nodes` as children.
 
 The following properties are settable:
 - `bullet`: a positive integer (for '1.'), a positive integer in a list (for '1)'), a '-', or a '+'
@@ -1636,7 +1636,7 @@ The following properties are settable:
 
 #### om-elem-build-plain-list `(&key post-blank &rest nodes)`
 
-Build a plain-list element with `nodes` as contents.
+Build a plain-list element with `nodes` as children.
 
 The following properties are settable:
 
@@ -1653,7 +1653,7 @@ The following properties are settable:
 
 #### om-elem-build-property-drawer `(&key post-blank &rest nodes)`
 
-Build a property-drawer element with `nodes` as contents.
+Build a property-drawer element with `nodes` as children.
 
 The following properties are settable:
 
@@ -1671,7 +1671,7 @@ The following properties are settable:
 
 #### om-elem-build-quote-block `(&key post-blank &rest nodes)`
 
-Build a quote-block element with `nodes` as contents.
+Build a quote-block element with `nodes` as children.
 
 The following properties are settable:
 
@@ -1689,7 +1689,7 @@ The following properties are settable:
 
 #### om-elem-build-section `(&key post-blank &rest nodes)`
 
-Build a section element with `nodes` as contents.
+Build a section element with `nodes` as children.
 
 The following properties are settable:
 
@@ -1705,7 +1705,7 @@ The following properties are settable:
 
 #### om-elem-build-table `(&key tblfm post-blank &rest nodes)`
 
-Build a table element with `nodes` as contents.
+Build a table element with `nodes` as children.
 
 The following properties are settable:
 - `tblfm`: a list of oneline strings
@@ -1866,7 +1866,7 @@ Val'.
 
 ```
 
-#### om-elem-build-headline! `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning properties statistics-cookie section-contents &rest subheadlines)`
+#### om-elem-build-headline! `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning properties statistics-cookie section-children &rest subheadlines)`
 
 Build a headline element.
 
@@ -1881,7 +1881,7 @@ in the same list like (:closed args :deadline args :scheduled).
 `statistics-cookie` is a list following the same format as 
 [`om-elem-build-statistics-cookie`](#om-elem-build-statistics-cookie-value-key-post-blank).
 
-`section-contents` is a list of elements that will go in the headline
+`section-children` is a list of elements that will go in the headline
 section.
 
 `subheadlines` contains zero or more headlines that will go under the
@@ -1900,7 +1900,7 @@ All arguments not mentioned here follow the same rules as
  ;; => "* really impressive title [0/9000]"
 
 (->> (om-elem-build-headline! :title-text "really impressive title" :properties '((key val))
-			       :section-contents (list (om-elem-build-paragraph! "section text"))
+			       :section-children (list (om-elem-build-paragraph! "section text"))
 			       (om-elem-build-headline! :level 2 :title-text "subhead"))
      (om-elem-to-trimmed-string))
  ;; => "* really impressive title
@@ -2833,7 +2833,7 @@ Return t if `item` element is unchecked.
 ; - [-] four
 
 (->> (om-elem-parse-this-element)
-     (om-elem--get-contents)
+     (om-elem--get-children)
      (-map (function om-elem-item-is-unchecked-p)))
  ;; => '(nil t nil nil)
 
@@ -2851,7 +2851,7 @@ Return t if `item` element is checked.
 ; - [-] four
 
 (->> (om-elem-parse-this-element)
-     (om-elem--get-contents)
+     (om-elem--get-children)
      (-map (function om-elem-item-is-checked-p)))
  ;; => '(nil nil t nil)
 
@@ -2869,7 +2869,7 @@ Return t if `item` element is transitional.
 ; - [-] four
 
 (->> (om-elem-parse-this-element)
-     (om-elem--get-contents)
+     (om-elem--get-children)
      (-map (function om-elem-item-is-trans-p)))
  ;; => '(nil nil nil t)
 
@@ -3487,9 +3487,9 @@ Set, get, and map the children of branch nodes.
 
 ### Generic
 
-#### om-elem-get-contents `(node)`
+#### om-elem-get-children `(node)`
 
-Return the contents of `node` as a list.
+Return the children of `node` as a list.
 
 ```el
 ;; Given the following contents:
@@ -3497,7 +3497,7 @@ Return the contents of `node` as a list.
 
 ;; Return objects for object containers
 (->> (om-elem-parse-this-element)
-     (om-elem-get-contents)
+     (om-elem-get-children)
      (-map (function om-elem-get-type)))
  ;; => '(italic plain-text bold)
 
@@ -3508,7 +3508,7 @@ Return the contents of `node` as a list.
 
 ;; Return elements for greater elements
 (->> (om-elem-parse-this-subtree)
-     (om-elem-get-contents)
+     (om-elem-get-children)
      (-map (function om-elem-get-type)))
  ;; => '(section headline)
 
@@ -3517,17 +3517,17 @@ Return the contents of `node` as a list.
 
 ;; Throw error when attempting to get contents of a non-container
 (->> (om-elem-parse-this-element)
-     (om-elem-get-contents)
+     (om-elem-get-children)
      (-map (function om-elem-get-type)))
 Error
 
 ```
 
-#### om-elem-set-contents `(contents node)`
+#### om-elem-set-children `(children node)`
 
-Set the contents of `node` to `contents`.
-`contents` is a list of elements or objects; the types permitted in this
-list depend on the type of `node`.
+Set the children of `node` to `children`.
+`children` is a list of nodes; the types permitted in this list depend
+on the type of `node`.
 
 ```el
 ;; Given the following contents:
@@ -3535,7 +3535,7 @@ list depend on the type of `node`.
 
 ;; Set contents for object containers
 (->> (om-elem-parse-this-element)
-     (om-elem-set-contents (list "this is lame"))
+     (om-elem-set-children (list "this is lame"))
      (om-elem-to-trimmed-string))
  ;; => "this is lame"
 
@@ -3546,7 +3546,7 @@ list depend on the type of `node`.
 
 ;; Set contents for greater elements
 (->> (om-elem-parse-this-subtree)
-     (om-elem-set-contents (list (om-elem-build-headline! :title-text "only me" :level 2)))
+     (om-elem-set-children (list (om-elem-build-headline! :title-text "only me" :level 2)))
      (om-elem-to-trimmed-string))
  ;; => "* headline
  ;      ** only me"
@@ -3556,24 +3556,24 @@ list depend on the type of `node`.
 
 ;; Throw error when attempting to get contents of a non-container
 (->> (om-elem-parse-this-element)
-     (om-elem-set-contents "nil by mouth")
+     (om-elem-set-children "nil by mouth")
      (om-elem-to-trimmed-string))
 Error
 
 ```
 
-#### om-elem-map-contents `(fun node)`
+#### om-elem-map-children `(fun node)`
 
-Apply `fun` to the contents of `node`. 
-`fun` is a function that takes the current contents as a list and
-returns a modified contents as a list.
+Apply `fun` to the children of `node`. 
+`fun` is a function that takes the current children as a list and
+returns a modified children as a list.
 
 ```el
 ;; Given the following contents:
 ; /this/ is a *paragraph*
 
 (->> (om-elem-parse-this-element)
-     (om-elem-map-contents (lambda (objs)
+     (om-elem-map-children (lambda (objs)
 			     (append objs (list " ...yeah"))))
      (om-elem-to-trimmed-string))
  ;; => "/this/ is a *paragraph* ...yeah"
@@ -3583,7 +3583,7 @@ returns a modified contents as a list.
 ; ** subheadline
 
 (->> (om-elem-parse-this-subtree)
-     (om-elem-map-contents* (--map (om-elem-shift-property :level 1 it)
+     (om-elem-map-children* (--map (om-elem-shift-property :level 1 it)
 				   it))
      (om-elem-to-trimmed-string))
  ;; => "* headline
@@ -3594,16 +3594,16 @@ returns a modified contents as a list.
 
 ;; Throw error when attempting to map contents of a non-container
 (->> (om-elem-parse-this-element)
-     (om-elem-map-contents (function ignore))
+     (om-elem-map-children (function ignore))
      (om-elem-to-trimmed-string))
 Error
 
 ```
 
-#### om-elem-is-empty-p `(node)`
+#### om-elem-is-childless-p `(node)`
 
 Return t if `node` is empty.
-This will throw an error if `node` is not a container type.
+This will throw an error if `node` is not a branch type.
 
 ```el
 ;; Given the following contents:
@@ -3611,14 +3611,14 @@ This will throw an error if `node` is not a container type.
 ; filled with useless knowledge
 
 (->> (om-elem-parse-this-headline)
-     (om-elem-is-empty-p))
+     (om-elem-is-childless-p))
  ;; => nil
 
 ;; Given the following contents:
 ; * dummy
 
 (->> (om-elem-parse-this-headline)
-     (om-elem-is-empty-p))
+     (om-elem-is-childless-p))
  ;; => t
 
 ;; Given the following contents:
@@ -3626,7 +3626,7 @@ This will throw an error if `node` is not a container type.
 
 ;; Throw error when attempting to determine if non-container is empty
 (->> (om-elem-parse-this-element)
-     (om-elem-is-empty-p))
+     (om-elem-is-childless-p))
 Error
 
 ```
@@ -3740,7 +3740,7 @@ subheadlines will not be counted).
 
 #### om-elem-headline-indent-subheadline `(index headline)`
 
-Indent the subheadline without moving its contents at `index` within `headline`.
+Indent the subheadline without moving its children at `index` within `headline`.
 
 ```el
 ;; Given the following contents:
@@ -3766,7 +3766,7 @@ Error
 
 #### om-elem-headline-indent-subtree `(index headline)`
 
-Indent the subheadline and its contents at `index` within `headline`.
+Indent the subheadline and its children at `index` within `headline`.
 
 ```el
 ;; Given the following contents:
@@ -3788,7 +3788,7 @@ Indent the subheadline and its contents at `index` within `headline`.
 #### om-elem-headline-unindent-subheadline `(index child-index headline)`
 
 Unindent subheadline at `child-index` in the subheadline at `index` in `headline`.
-This will not move the contents under the headline at `child-index`.
+This will not move the children under the headline at `child-index`.
 
 ```el
 ;; Given the following contents:
@@ -3926,7 +3926,7 @@ Indent the subitem at `index` in `plain-list` and move items below it.
 #### om-elem-plain-list-unindent-item `(index child-index plain-list)`
 
 Unindent subitem at `child-index` in the subitem at `index` in `plain-list`.
-This will not move the contents under the item at `child-index`.
+This will not move the children under the item at `child-index`.
 
 ```el
 ;; Given the following contents:
@@ -4021,19 +4021,19 @@ zero-indexed.
 
 (->> (om-elem-parse-this-element)
      (om-elem-table-get-cell 0 0)
-     (om-elem--get-contents)
+     (om-elem--get-children)
      (car))
  ;; => "1"
 
 (->> (om-elem-parse-this-element)
      (om-elem-table-get-cell 1 1)
-     (om-elem--get-contents)
+     (om-elem--get-children)
      (car))
  ;; => "b"
 
 (->> (om-elem-parse-this-element)
      (om-elem-table-get-cell -1 -1)
-     (om-elem--get-contents)
+     (om-elem--get-children)
      (car))
  ;; => "c"
 
@@ -4070,7 +4070,7 @@ position of the cell to be replaced.
 #### om-elem-table-replace-cell! `(row-index column-index cell-text table)`
 
 Replace a cell in `table` with `cell-text`.
-`cell-text` is a string which will replace the contents of the cell at
+`cell-text` is a string which will replace the children of the cell at
 `row-index` and `column-index` (zero-indexed integers).
 
 ```el
@@ -4510,7 +4510,7 @@ returned. Possible values are:
 
 'cond' denotes conditions that that match nodes in the parse
 tree. This first condition will select matches within the
-contents of `node`, the next condition will select matches within
+children of `node`, the next condition will select matches within
 the matches from the first condition, and so on. The types of
 conditions are:
 
@@ -4519,7 +4519,7 @@ conditions are:
 - `type` - match when the node's type is `eq` to `type` (a symbol)
 - `index` - match when the node's index is `=` to `index` (an integer).
     The first index is zero. If `index` is negative, start counting
-    backward from the end of contents where -1 is the last node
+    backward from the end of children where -1 is the last node
 - (`op` `index`) - match when (`op` `node-index` `index`) returns t. `op` is
     one of '<', '>', '<=', or '>='
 - `plist` - match nodes with the same properties and values as `plist`
@@ -4875,7 +4875,7 @@ Return modified `node`.
 
 `pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node) with the exception
 that `pattern` may be nil. In this case `node`* will be inserted at `index`
-in the immediate, top level contents of `node`.
+in the immediate, top level children of `node`.
 
 ```el
 ;; Given the following contents:
@@ -4963,7 +4963,7 @@ Return modified `node`. `nodes`* is a list of nodes.
 
 `pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node) with the exception
 that `pattern` may be nil. In this case `nodes`* will be inserted at `index`
-in the immediate, top level contents of `node`.
+in the immediate, top level children of `node`.
 
 ```el
 ;; Given the following contents:
@@ -5111,7 +5111,7 @@ Update table-row under `point` using `fun`.
 ; | a | b |
 
 (om-elem-update-table-row-at* (point)
-  (om-elem-map-contents* (cons (om-elem-build-table-cell! "0")
+  (om-elem-map-children* (cons (om-elem-build-table-cell! "0")
 			       it)
 			 it))
  ;; Output these buffer contents
@@ -5174,17 +5174,17 @@ Update subtree under `point` using `fun`.
 
 ### Misc
 
-#### om-elem-fold-contents `(node)`
+#### om-elem-fold `(node)`
 
-Fold the contents of `node` if they exist.
+Fold the children of `node` if they exist.
 
 ```el
 no examples :(
 ```
 
-#### om-elem-unfold-contents `(node)`
+#### om-elem-unfold `(node)`
 
-Unfold the contents of `node` if they exist.
+Unfold the children of `node` if they exist.
 
 ```el
 no examples :(

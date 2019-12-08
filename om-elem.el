@@ -181,10 +181,10 @@
 
 ;;; MISC HELPER FUNCTIONS
 
-(defun om-elem--construct (type props contents)
-  "Make a new org element list structure of TYPE, PROPS, and CONTENTS.
-TYPE is a symbol, PROPS is a plist, and CONTENTS is a list or nil."
-  `(,type ,props ,@contents))
+(defun om-elem--construct (type props children)
+  "Make a new org element list structure of TYPE, PROPS, and CHILDREN.
+TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
+  `(,type ,props ,@children))
 
 (defmacro om-elem--verify (&rest args)
   (let ((tests
@@ -205,13 +205,13 @@ TYPE is a symbol, PROPS is a plist, and CONTENTS is a list or nil."
   "Convert STRING to org-element representation."
   (with-temp-buffer
     (insert string)
-    (-> (om-elem-parse-this-buffer) (om-elem--get-contents) (car))))
+    (-> (om-elem-parse-this-buffer) (om-elem--get-children) (car))))
 
 (defun om-elem--build-secondary-string (string)
   "Return a list of elements from STRING as a secondary string."
   (->> (om-elem--from-string string)
-       (om-elem--get-nested-contents '(0))
-       (om-elem--get-contents)))
+       (om-elem--get-descendent '(0))
+       (om-elem--get-children)))
 
 (defun om-elem--gen-anaphoric-form (fun &optional docstring indent)
   "Generate the anaphoric form of FUN where FUN points to a function.
@@ -943,7 +943,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
                                "\"fuzzy\"")
                    ;; TODO is fuzzy a good default?
                    :require "fuzzy")
-            (:raw-link) ; update contents through this?
+            (:raw-link) ; update children through this?
             (:application)
             (:search-option))
       (macro (:args ,@slist :cis om-elem--update-macro-value)
@@ -1073,7 +1073,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
                 (om-elem--construct
                  (om-elem--get-type node)
                  (--reduce-from (filter acc it type) cur-props prop-values)
-                 (om-elem--get-contents node))))
+                 (om-elem--get-children node))))
           (if (not update-funs) node*
             (--reduce-from (funcall it acc) node* update-funs)))
       (error "Not a plist: %S" plist))))
@@ -1141,7 +1141,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
     (om-elem--construct
      (om-elem--get-type node)
      (plist-put (om-elem--get-properties node) prop value)
-     (om-elem--get-contents node))))
+     (om-elem--get-children node))))
 
 (defun om-elem--set-properties (plist node)
   "Set all properties in NODE to the values corresponding to PLIST.
@@ -1153,7 +1153,7 @@ property list in NODE."
          (om-elem--get-type node)
          (->> (-partition 2 plist)
               (--reduce-from (apply #'plist-put acc it) props))
-         (om-elem--get-contents node)))
+         (om-elem--get-children node)))
     (error "Not a plist: %S" plist)))
 
 (defun om-elem--set-property-nil (prop node)
@@ -1614,7 +1614,7 @@ float-times, which assumes the :type property is valid."
 (defun om-elem--build-recursive-object (type post-blank objs)
   (->> om-elem--recursive-object-properties
        (om-elem--build type post-blank)
-       (om-elem--set-contents-by-type type objs)))
+       (om-elem--set-children-by-type type objs)))
 
 (defun om-elem--build-element (type post-blank)
   (om-elem--build type post-blank om-elem--element-properties))
@@ -1622,7 +1622,7 @@ float-times, which assumes the :type property is valid."
 (defun om-elem--build-container-element (type post-blank nodes)
   (->> om-elem--container-element-properties
        (om-elem--build type post-blank)
-       (om-elem--set-contents-by-type type nodes)))
+       (om-elem--set-children-by-type type nodes)))
 
 ;; define all builders using this automated monstrosity
 
@@ -1686,7 +1686,7 @@ float-times, which assumes the :type property is valid."
                 (end (if (not rest-arg) "."
                        (->> (symbol-name rest-arg)
                             (s-upcase)
-                            (format " with %s as contents."))))
+                            (format " with %s as children."))))
                 (post-blank (if element? "newlines" "spaces"))
                 (prop
                  (-some->>
@@ -1823,7 +1823,7 @@ Val'."
                                               post-blank planning
                                               properties
                                               statistics-cookie
-                                              section-contents
+                                              section-children
                                               &rest
                                               subheadlines)
   "Build a headline element.
@@ -1839,7 +1839,7 @@ in the same list like (:closed args :deadline args :scheduled).
 STATISTICS-COOKIE is a list following the same format as 
 `om-elem-build-statistics-cookie'.
 
-SECTION-CONTENTS is a list of elements that will go in the headline
+SECTION-CHILDREN is a list of elements that will go in the headline
 section.
 
 SUBHEADLINES contains zero or more headlines that will go under the
@@ -1854,7 +1854,7 @@ All arguments not mentioned here follow the same rules as
                            properties
                            (apply #'om-elem-build-property-drawer!)))
          (section (-some->>
-                   (append `(,planning) `(,property-drawer) section-contents)
+                   (append `(,planning) `(,property-drawer) section-children)
                    (-non-nil)
                    (apply #'om-elem-build-section)))
          ;; TODO need to ensure the all subheadlines are level + 1
@@ -1903,7 +1903,7 @@ STRING is the text to be parsed into a paragraph. It must contain valid
 formatting (eg, text that will be formatted into objects)."
   ;; TODO this can be simplified?
   (let ((p (->> (om-elem--from-string string)
-                (om-elem--get-nested-contents '(0)))))
+                (om-elem--get-descendent '(0)))))
     (if (om-elem--is-type-p 'paragraph p)
         (om-elem--set-property-strict :post-blank (or post-blank 0) p)
       (error "String could not be parsed to a paragraph: %s" string))))
@@ -1942,78 +1942,78 @@ All other arguments follow the same rules as `om-elem-build-table'."
               :tblfm tblfm
               :post-blank post-blank)))
 
-;;; INTERNAL CONTENT FUNCTIONS
-;; operations on contents of containers
+;;; INTERNAL CHILDREN FUNCTIONS
+;; operations on children of containers
 
 ;; generic
 
-(defalias 'om-elem--get-contents 'org-element-contents)
+(defalias 'om-elem--get-children 'org-element-contents)
 
-(defun om-elem--get-nested-contents (indices node)
-  "Return the nested contents of NODE as given by INDICES.
+(defun om-elem--get-descendent (indices node)
+  "Return the nested children of NODE as given by INDICES.
 INDICES is a list of integers specifying the index and level of the
 nested element to return."
   (if (not indices) node
-    (->> (om-elem--get-contents node)
+    (->> (om-elem--get-children node)
          (nth (car indices))
-         (om-elem--get-nested-contents (cdr indices)))))
+         (om-elem--get-descendent (cdr indices)))))
 
 (defun om-elem--get-head (node)
   "Return the type and properties cells of NODE."
   (if (stringp node) node
     (-take 2 node)))
 
-(defun om-elem--is-empty-p (node)
-  "Return t if NODE has no contents."
-  (not (om-elem--get-contents node)))
+(defun om-elem--is-childless-p (node)
+  "Return t if NODE has no children."
+  (not (om-elem--get-children node)))
 
-(defun om-elem--map-contents (fun node)
-  (let ((contents (om-elem--get-contents node)))
-    ;; TODO check the types of contents after they are mapped?
-    (om-elem--set-contents (funcall fun contents) node)))
+(defun om-elem--map-children (fun node)
+  (let ((children (om-elem--get-children node)))
+    ;; TODO check the types of children after they are mapped?
+    (om-elem--set-children (funcall fun children) node)))
 
-(om-elem--gen-anaphoric-form #'om-elem--map-contents)
+(om-elem--gen-anaphoric-form #'om-elem--map-children)
 
 (defun om-elem--map-contained (pred fun node)
-  (om-elem--map-contents*
+  (om-elem--map-children*
    (--map-when (funcall pred it) (funcall fun it) it)
    node))
 
 (defun om-elem--map-contained-first (pred fun node)
-  (om-elem--map-contents*
+  (om-elem--map-children*
    (--map-first (funcall pred it) (funcall fun it) it)
    node))
 
-(defun om-elem--set-contents (contents node)
+(defun om-elem--set-children (children node)
    (let ((head (om-elem--get-head node)))
-     (if contents (append head contents) head)))
+     (if children (append head children) head)))
 
-(defun om-elem--set-contents-restricted (types contents node)
-  ;; TODO this should recursively dig up all types in contents
+(defun om-elem--set-children-restricted (types children node)
+  ;; TODO this should recursively dig up all types in children
   ;; even if they are nested
-  (-when-let (illegal (-some->> (-map #'om-elem--get-type contents)
+  (-when-let (illegal (-some->> (-map #'om-elem--get-type children)
                                 (--remove (memq it types))
                                 (-map #'symbol-name)
                                 (s-join ", ")))
     (error "Illegal types found: %s; allowed types are: %s"
            illegal (s-join ", " (-map #'symbol-name types))))
-  (om-elem--set-contents contents node))
+  (om-elem--set-children children node))
 
-(defun om-elem--set-contents-by-type (container-type contents node)
+(defun om-elem--set-children-by-type (container-type children node)
   ;; TODO there may be additional restrictions, such as newlines
   ;; in strings not being allowed
   (-if-let (types (alist-get container-type om-elem-restrictions))
-      (om-elem--set-contents-restricted types contents node)
+      (om-elem--set-children-restricted types children node)
     (error "Invalid container type requested: %s" container-type)))
 
 ;; headline
 
 (defun om-elem--headline-get-subheadlines (headline)
-  (-some->> (om-elem--get-contents headline)
+  (-some->> (om-elem--get-children headline)
             (--filter (om-elem-is-headline-p it))))
 
 (defun om-elem--headline-get-section (headline)
-  (-some->> (om-elem--get-contents headline) (assoc 'section)))
+  (-some->> (om-elem--get-children headline) (assoc 'section)))
 
 (defun om-elem--headline-get-statistics-cookie (headline)
   (->> (om-elem--get-property :title headline)
@@ -2040,7 +2040,7 @@ nested element to return."
 
 (defun om-elem--headline-get-planning (headline)
   (-some->> (om-elem--headline-get-section headline)
-            (om-elem--get-contents)
+            (om-elem--get-children)
             (--first (om-elem--is-type-p 'planning it))))
 
 (defun om-elem--headline-get-path (headline)
@@ -2055,11 +2055,11 @@ nested element to return."
     (reverse (get-path headline))))
 
 (defun om-elem--headline-map-subheadlines (fun headline)
-  (om-elem--map-contents
-   (lambda (contents)
-     (let ((section (assoc 'section contents))
+  (om-elem--map-children
+   (lambda (children)
+     (let ((section (assoc 'section children))
            (subheadlines (-some->>
-                          (-filter #'om-elem-is-headline-p contents)
+                          (-filter #'om-elem-is-headline-p children)
                           (funcall fun))))
        (cond
         ((and section subheadlines) (cons section subheadlines))
@@ -2074,20 +2074,20 @@ nested element to return."
     (om-elem--node-property-map-value fun it) headline))
 
 (defun om-elem--map-or-build (map-fun build-fun pred-fun pos node)
-  (om-elem--map-contents
-   (lambda (contents)
-     (-if-let (target (--first (funcall pred-fun it) contents))
+  (om-elem--map-children
+   (lambda (children)
+     (-if-let (target (--first (funcall pred-fun it) children))
          ;; TODO this is probably not the most efficient
-         (-replace target (funcall map-fun target) contents)
+         (-replace target (funcall map-fun target) children)
        (let ((pos
               (cond
                ((integerp pos)
                 pos)
                ((functionp pos)
-                (or (--find-index (funcall pos it) contents) 0))
+                (or (--find-index (funcall pos it) children) 0))
                (t (error "Invalid pos given: %S" pos))))
              (new (funcall build-fun)))
-         (-insert-at pos new contents))))
+         (-insert-at pos new children))))
    node))
 
 (defmacro om-elem--map-or-build-nested (map-form &rest args)
@@ -2115,7 +2115,7 @@ nested element to return."
 
 (defun om-elem--headline-set-section (section headline)
   (let ((subheadlines (om-elem-headline-get-subheadlines headline)))
-    (om-elem--set-contents (cons section subheadlines) headline)))
+    (om-elem--set-children (cons section subheadlines) headline)))
 
 (defun om-elem--headline-set-property-drawer (property-drawer headline)
   (om-elem--headline-set-section (om-elem-build-section property-drawer)))
@@ -2183,11 +2183,11 @@ nested element to return."
 
 (defun om-elem--item-get-sublist (item)
   "Return plain-list under ITEM element or nil if none."
-  (-some->> (om-elem--get-contents item) (assoc 'plain-list)))
+  (-some->> (om-elem--get-children item) (assoc 'plain-list)))
 
 (defun om-elem--item-get-paragraph (item)
   "Return paragraph under ITEM element or nil if none."
-  (-some->> (om-elem--get-contents item) (assoc 'paragraph)))
+  (-some->> (om-elem--get-children item) (assoc 'paragraph)))
 
 ;; table
 
@@ -2206,19 +2206,19 @@ nested element to return."
        (map-row 
         (row)
         (if (om-elem--property-is-eq-p :type 'rule row) row
-          (om-elem--map-contents #'delete-cell row))))
-    (om-elem--map-contents* (-map #'map-row it) table)))
+          (om-elem--map-children #'delete-cell row))))
+    (om-elem--map-children* (-map #'map-row it) table)))
 
 (defun om-elem--table-delete-row (index table)
   (om-elem--verify index integerp)
-  (om-elem--map-contents* (om-elem--remove-at index it) table))
+  (om-elem--map-children* (om-elem--remove-at index it) table))
 
 (defun om-elem--column-map-down-rows (fun column table)
   (cl-flet*
       ((zip-into-rows
         (row new-cell)
         (if (om-elem--property-is-eq-p :type 'rule row) row
-          (om-elem--map-contents
+          (om-elem--map-children
            ;; (lambda (cells) (om-elem--insert-at index new-cell cells))
            (lambda (cells) (funcall fun new-cell cells))
            row)))
@@ -2229,7 +2229,7 @@ nested element to return."
              (--reduce-from (-insert-at it nil acc) column)
              (om-elem--table-pad-or-truncate (length rows))
              (-zip-with #'zip-into-rows rows))))
-    (om-elem--map-contents #'map-rows table)))
+    (om-elem--map-children #'map-rows table)))
 
 (defun om-elem--table-insert-column (index column table)
   (om-elem--verify index integerp)
@@ -2242,19 +2242,19 @@ nested element to return."
   (om-elem--verify index integerp)
   (let ((row (if (om-elem--property-is-eq-p :type 'rule row) row
                (let ((width (om-elem--table-get-width table)))
-                 (om-elem--map-contents*
+                 (om-elem--map-children*
                   (om-elem--table-pad-or-truncate width it)
                   row)))))
-    (om-elem--map-contents* (om-elem--insert-at index row it) table)))
+    (om-elem--map-children* (om-elem--insert-at index row it) table)))
 
 (defun om-elem--table-get-column (column table)
-  (-some->> (om-elem--get-contents table)
+  (-some->> (om-elem--get-children table)
             (--filter (om-elem--property-is-eq-p :type 'standard it))
-            (--map (->> (om-elem--get-contents it)
+            (--map (->> (om-elem--get-children it)
                         (om-elem--nth column)))))
 
 (defun om-elem--table-get-row (row table)
-  (-some->> (om-elem--get-contents table)
+  (-some->> (om-elem--get-children table)
             (--filter (om-elem--property-is-eq-p :type 'standard it))
             (om-elem--nth row)))
 
@@ -2263,7 +2263,7 @@ nested element to return."
 Hlines do not count toward row indices, and all indices are
 zero-indexed."
   (-some->> (om-elem--table-get-row row table)
-            (om-elem--get-contents)
+            (om-elem--get-children)
             (om-elem--nth column)))
 
 (defun om-elem--table-replace-column (index column table)
@@ -2278,13 +2278,13 @@ zero-indexed."
   (om-elem--verify index integerp)
   (let ((row (if (om-elem--property-is-eq-p :type 'rule row) row
                (let ((width (om-elem--table-get-width table)))
-                 (om-elem--map-contents*
+                 (om-elem--map-children*
                   (om-elem--table-pad-or-truncate width it) row)))))
-    (om-elem--map-contents* (om-elem--replace-at index row it) table)))
+    (om-elem--map-children* (om-elem--replace-at index row it) table)))
 
 (defun om-elem--table-replace-cell (row-index column-index cell table)
   (let ((row (->> (om-elem--table-get-row row-index table)
-                  (om-elem--map-contents*
+                  (om-elem--map-children*
                    (om-elem--replace-at column-index cell it)))))
     (om-elem--table-replace-row row-index row table)))
 
@@ -2300,11 +2300,11 @@ zero-indexed."
   (om-elem--table-replace-column index (list (om-elem-build-table-cell "")) table))
 
 (defun om-elem--table-get-height (table)
-  (length (om-elem--get-contents table)))
+  (length (om-elem--get-children table)))
 
 (defun om-elem--table-get-width (table)
-  (->> (om-elem--get-contents table)
-       (--map (length (om-elem--get-contents it)))
+  (->> (om-elem--get-children table)
+       (--map (length (om-elem--get-children it)))
        (-max)))
 
 ;;; INTERNAL INDENTATION
@@ -2312,13 +2312,13 @@ zero-indexed."
 ;;; helper functions
 
 ;; TODO this is a bit sketchy...it depends on the indentation
-;; function to make the contents list one element shorter, which
+;; function to make the children list one element shorter, which
 ;; is usually true but makes a really hard error to catch when it
 ;; fails
 (defun om-elem--indent-after (indent-fun index node)
   (unless (and (integerp index) (<= 0 index))
     (error "Index must be non-negative integer"))
-  (if (< index (1- (length (om-elem--get-contents node))))
+  (if (< index (1- (length (om-elem--get-children node))))
       (->> (funcall indent-fun (1+ index) node)
            (om-elem--indent-after indent-fun index))
     node))
@@ -2352,9 +2352,9 @@ zero-indexed."
         (target-headline parent-headline)
         (let ((target-headline*
                (om-elem--headline-subtree-shift-level 1 target-headline)))
-          (om-elem--map-contents
-           (lambda (headline-contents)
-             (append headline-contents (list target-headline*)))
+          (om-elem--map-children
+           (lambda (headline-children)
+             (append headline-children (list target-headline*)))
            parent-headline))))
     (om-elem--headline-map-subheadlines
      (lambda (subheadlines)
@@ -2371,9 +2371,9 @@ zero-indexed."
                     (om-elem--headline-shift-level 1)))
               (headlines-in-target
                (om-elem--headline-get-subheadlines target-headline))) 
-          (om-elem--map-contents
-           (lambda (contents)
-             (append contents (list target-headline*) headlines-in-target))
+          (om-elem--map-children
+           (lambda (children)
+             (append children (list target-headline*) headlines-in-target))
            parent-headline))))
     (om-elem--headline-map-subheadlines
      (lambda (subheadlines)
@@ -2391,7 +2391,7 @@ zero-indexed."
         (parent)
         (->> (om-elem--indent-after #'om-elem-headline-indent-subtree
                                     child-index parent)
-             (om-elem--get-contents)
+             (om-elem--get-children)
              (-drop child-index)
              (--map (om-elem--headline-subtree-shift-level -1 it)))))
     (om-elem--headline-map-subheadlines
@@ -2406,7 +2406,7 @@ zero-indexed."
         (om-elem--headline-map-subheadlines #'ignore parent))
        (extract
         (parent)
-        (->> (om-elem--get-contents parent)
+        (->> (om-elem--get-children parent)
              (--map (om-elem--headline-subtree-shift-level -1 it)))))
     (om-elem--headline-map-subheadlines
      (lambda (subheadlines)
@@ -2420,10 +2420,10 @@ zero-indexed."
       ((append-indented
         (target-item parent-item)
         (let ((target-item* (om-elem-build-plain-list target-item)))
-          (om-elem--map-contents
-           (lambda (item-contents) (append item-contents (list target-item*)))
+          (om-elem--map-children
+           (lambda (item-children) (append item-children (list target-item*)))
            parent-item))))
-    (om-elem--map-contents
+    (om-elem--map-children
      (lambda (items)
        (om-elem--indent-members #'append-indented index items))
      plain-list)))
@@ -2434,19 +2434,19 @@ zero-indexed."
         (target-item parent-item)
         (let ((target-item*
                (->> target-item
-                    (om-elem--map-contents*
+                    (om-elem--map-children*
                      (-remove #'om-elem-is-plain-list-p it))
                     (om-elem-build-plain-list)))
               (items-in-target
-               (->> (om-elem--get-contents target-item)
+               (->> (om-elem--get-children target-item)
                     (-filter #'om-elem-is-plain-list-p))))
-          (om-elem--map-contents
-           (lambda (item-contents)
+          (om-elem--map-children
+           (lambda (item-children)
              ;; TODO technically the target-item* should go in an
              ;; existing plain list but I don't this matters (for now)
-             (append item-contents (list target-item*) items-in-target))
+             (append item-children (list target-item*) items-in-target))
            parent-item))))
-    (om-elem--map-contents
+    (om-elem--map-children
      (lambda (items)
        (om-elem--indent-members #'append-indented index items))
      plain-list)))
@@ -2455,25 +2455,25 @@ zero-indexed."
   (cl-flet
       ((trim
         (parent)
-        (om-elem--map-contents
-         (lambda (contents)
+        (om-elem--map-children
+         (lambda (children)
            (if (= 0 index)
-               (-remove-first #'om-elem-is-plain-list-p contents)
+               (-remove-first #'om-elem-is-plain-list-p children)
              (--map-first (om-elem-is-plain-list-p it)
-                          (om-elem--map-contents
+                          (om-elem--map-children
                            (lambda (items) (-take child-index items)) it)
-                          contents)))
+                          children)))
          parent))
        (extract
         (parent)
         (->>
-         (om-elem--get-contents parent)
+         (om-elem--get-children parent)
          (-first #'om-elem-is-plain-list-p)
          (om-elem--indent-after #'om-elem--plain-list-indent-item-tree
                                 child-index)
-         (om-elem--get-contents)
+         (om-elem--get-children)
          (-drop child-index))))
-    (om-elem--map-contents
+    (om-elem--map-children
      (lambda (items)
        (om-elem--unindent-members index #'trim #'extract items))
      plain-list)))
@@ -2482,16 +2482,16 @@ zero-indexed."
   (cl-flet
       ((trim
         (parent)
-        (om-elem--map-contents
-         (lambda (contents)
-           (-remove-first #'om-elem-is-plain-list-p contents))
+        (om-elem--map-children
+         (lambda (children)
+           (-remove-first #'om-elem-is-plain-list-p children))
          parent))
        (extract
         (parent)
-        (->> (om-elem--get-contents parent)
+        (->> (om-elem--get-children parent)
              (-first #'om-elem-is-plain-list-p)
-             (om-elem--get-contents))))
-    (om-elem--map-contents
+             (om-elem--get-children))))
+    (om-elem--map-children
      (lambda (items)
        (om-elem--unindent-members index #'trim #'extract items))
      plain-list)))
@@ -2978,9 +2978,9 @@ over the number of items with checkboxes (non-checkbox items will
 not be considered)."
   (let* ((items
           (->> (om-elem--headline-get-section headline)
-               (om-elem--get-contents)
+               (om-elem--get-children)
                (--filter (om-elem-is-type-p 'plain-list it))
-               (-mapcat #'om-elem--get-contents)
+               (-mapcat #'om-elem--get-children)
                (--remove (om-elem--property-is-nil-p :checkbox it))))
          (done (length (-filter #'om-elem-item-is-checked-p items)))
          (total (length items)))
@@ -3052,41 +3052,41 @@ nil values."
 
 (om-elem--gen-anaphoric-form 'om-elem-planning-map-timestamp)
 
-;;; PUBLIC CONTENT FUNCTIONS
+;;; PUBLIC CHILDREN FUNCTIONS
 
 ;; generic
 
-(defun om-elem-get-contents (node)
-  "Return the contents of NODE as a list."
+(defun om-elem-get-children (node)
+  "Return the children of NODE as a list."
   ;; TODO use private predicate here...
   (om-elem--verify node om-elem-is-branch-node-p)
-  (om-elem--get-contents node))
+  (om-elem--get-children node))
 
-(defun om-elem-set-contents (contents node)
-  "Set the contents of NODE to CONTENTS.
-CONTENTS is a list of elements or objects; the types permitted in this
-list depend on the type of NODE."
+(defun om-elem-set-children (children node)
+  "Set the children of NODE to CHILDREN.
+CHILDREN is a list of nodes; the types permitted in this list depend
+on the type of NODE."
   ;; TODO use private predicate here...
   (om-elem--verify node om-elem-is-branch-node-p)
   (let ((type (om-elem--get-type node)))
-    (om-elem--set-contents-by-type type contents node)))
+    (om-elem--set-children-by-type type children node)))
 
-(defun om-elem-map-contents (fun node)
-  "Apply FUN to the contents of NODE. 
-FUN is a function that takes the current contents as a list and
-returns a modified contents as a list."
+(defun om-elem-map-children (fun node)
+  "Apply FUN to the children of NODE. 
+FUN is a function that takes the current children as a list and
+returns a modified children as a list."
   ;; TODO use private predicate here...
   (om-elem--verify node om-elem-is-branch-node-p)
-  (om-elem--map-contents fun node))
+  (om-elem--map-children fun node))
 
-(om-elem--gen-anaphoric-form #'om-elem-map-contents)
+(om-elem--gen-anaphoric-form #'om-elem-map-children)
 
-(defun om-elem-is-empty-p (node)
+(defun om-elem-is-childless-p (node)
   "Return t if NODE is empty.
-This will throw an error if NODE is not a container type."
+This will throw an error if NODE is not a branch type."
   ;; TODO use private predicate here...
   (om-elem--verify node om-elem-is-branch-node-p)
-  (om-elem--is-empty-p node))
+  (om-elem--is-childless-p node))
 
 ;; (defun om-elem-contains-point-p (point node)
 ;;   "Return t if integer POINT is within the beginning and end of NODE."
@@ -3094,7 +3094,7 @@ This will throw an error if NODE is not a container type."
 ;;       (om-elem--get-property :end node)))
 
 ;; (defun om-elem-contents-contains-point-p (point node)
-;;   "Return t if integer POINT is within the beginning and end of NODE's contents."
+;;   "Return t if integer POINT is within the beginning and end of NODE's children."
 ;;   (<= (om-elem--get-property :contents-begin node) point
 ;;       (om-elem--get-property :contents-end node)))
 
@@ -3120,25 +3120,25 @@ This will throw an error if NODE is not a container type."
 
 ;; ;; TODO is this a meaningful distinction?
 ;; (defun om-elem-unwrap (obj)
-;;   "Remove the contents of recursive/container object or greater element OBJ."
+;;   "Remove the children of recursive/container object or greater element OBJ."
 ;;   (if (om-elem-plain-list-p obj) (list obj)
-;;     (let* ((contents (om-elem--get-contents obj))
+;;     (let* ((children (om-elem--get-children obj))
 ;;            (post-blank (om-elem--get-property :post-blank obj))
-;;            (first (-drop-last 1 contents))
-;;            (last* (->> (-last-item contents)
+;;            (first (-drop-last 1 children))
+;;            (last* (->> (-last-item children)
 ;;                        (om-elem-set-post-blank post-blank)
 ;;                        (list))))
 ;;       (append first last*))))
 
 ;; (defun om-elem-unwrap-deep (types obj)
-;;   "Remove the contents of all objects of type in TYPES from OBJ.
+;;   "Remove the children of all objects of type in TYPES from OBJ.
 ;; Return a list of objects."
 ;;   (cond
 ;;    ((om-elem--is-any-type-p types obj) 
-;;     (let* ((contents (om-elem--get-contents obj))
+;;     (let* ((children (om-elem--get-children obj))
 ;;            (post-blank (om-elem--get-property :post-blank obj))
-;;            (first (-drop-last 1 contents))
-;;            (last* (->> (-last-item contents)
+;;            (first (-drop-last 1 children))
+;;            (last* (->> (-last-item children)
 ;;                        (om-elem-set-post-blank post-blank)
 ;;                        (list))))
 ;;       (--mapcat (om-elem-unwrap-deep types it) (append first last*))))
@@ -3161,7 +3161,7 @@ This will throw an error if NODE is not a container type."
 ;; TODO add shortcut function for this
 (defun om-elem-link-set-description (desc link)
   (om-elem--verify link om-elem-is-link-p)
-  (om-elem--set-contents-by-type 'link desc link))
+  (om-elem--set-children-by-type 'link desc link))
 
 ;; elements
 ;;
@@ -3271,7 +3271,7 @@ position of the cell to be replaced."
 (defun om-elem-table-replace-cell! (row-index column-index cell-text
                                               table)
   "Replace a cell in TABLE with CELL-TEXT.
-CELL-TEXT is a string which will replace the contents of the cell at
+CELL-TEXT is a string which will replace the children of the cell at
 ROW-INDEX and COLUMN-INDEX (zero-indexed integers)."
   (om-elem--verify table om-elem-is-table-p)
   (let ((cell (om-elem-build-table-cell! cell-text)))
@@ -3364,18 +3364,18 @@ ROW-TEXT is a list of text to be made into table-cell objects."
 ;; headline
 
 (defun om-elem-headline-indent-subtree (index headline)
-  "Indent the subheadline and its contents at INDEX within HEADLINE."
+  "Indent the subheadline and its children at INDEX within HEADLINE."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-indent-subtree index headline))
 
 (defun om-elem-headline-indent-subheadline (index headline)
-  "Indent the subheadline without moving its contents at INDEX within HEADLINE."
+  "Indent the subheadline without moving its children at INDEX within HEADLINE."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-indent-subheadline index headline))
 
 (defun om-elem-headline-unindent-subheadline (index child-index headline)
   "Unindent subheadline at CHILD-INDEX in the subheadline at INDEX in HEADLINE.
-This will not move the contents under the headline at CHILD-INDEX."
+This will not move the children under the headline at CHILD-INDEX."
   (om-elem--verify headline om-elem-is-headline-p)
   (om-elem--headline-unindent-subheadline index child-index headline))
 
@@ -3398,7 +3398,7 @@ This will not move the contents under the headline at CHILD-INDEX."
 
 (defun om-elem-plain-list-unindent-item (index child-index plain-list)
   "Unindent subitem at CHILD-INDEX in the subitem at INDEX in PLAIN-LIST.
-This will not move the contents under the item at CHILD-INDEX."
+This will not move the children under the item at CHILD-INDEX."
   (om-elem--verify plain-list om-elem-is-plain-list-p)
   (om-elem--plain-list-unindent-item index child-index plain-list))
 
@@ -3409,16 +3409,16 @@ This will not move the contents under the item at CHILD-INDEX."
 
 ;;; printing functions
 
-(defun om-elem--set-blank-contents (node)
-  "Set the contents of NODE to a blank string (\"\")."
-  (om-elem--set-contents '("") node))
+(defun om-elem--set-blank-children (node)
+  "Set the children of NODE to a blank string (\"\")."
+  (om-elem--set-children '("") node))
 
 (defun om-elem-is-zero-length-p (node)
   "Return t if NODE will print as a blank string."
-  (-if-let (contents (om-elem--get-contents node))
-      (-all? #'om-elem-is-zero-length-p contents)
+  (-if-let (children (om-elem--get-children node))
+      (-all? #'om-elem-is-zero-length-p children)
     (and (om-elem--is-any-type-p om-elem--rm-if-empty node)
-         (om-elem--is-empty-p node))))
+         (om-elem--is-childless-p node))))
 
 (defconst om-elem--rm-if-empty
   '(table plain-list bold italic radio-target strike-through
@@ -3428,11 +3428,11 @@ This will not move the contents under the item at CHILD-INDEX."
 (defconst om-elem--blank-if-empty
   '(center-block drawer dynamic-block property-drawer quote-block
                  special-block verse-block)
-  "Elements that require contents of \"\" to correctly print empty.
+  "Elements that require children of \"\" to correctly print empty.
 This is a workaround for a bug.")
 
 (defun om-elem--filter-non-zero-length (node)
-  (unless (and (om-elem--is-empty-p node)
+  (unless (and (om-elem--is-childless-p node)
                (or (om-elem--is-any-type-p om-elem--rm-if-empty node)
                    (and (om-elem--is-type-p 'table-row node)
                         (om-elem--property-is-eq-p :type 'standard node))))
@@ -3440,15 +3440,15 @@ This is a workaround for a bug.")
 
 (defun om-elem--clean (node)
   (->> node
-       (om-elem--map-contents* (-non-nil (-map #'om-elem--clean it)))
+       (om-elem--map-children* (-non-nil (-map #'om-elem--clean it)))
        (om-elem--filter-non-zero-length)))
 
 (defun om-elem--blank (node)
-  (if (om-elem--is-empty-p node)
+  (if (om-elem--is-childless-p node)
       (if (om-elem--is-any-type-p om-elem--blank-if-empty node)
-          (om-elem--set-blank-contents node)
+          (om-elem--set-blank-children node)
         node)
-    (om-elem--map-contents* (-map #'om-elem--blank it) node)))
+    (om-elem--map-children* (-map #'om-elem--blank it) node)))
 
 (defun om-elem-to-string (node)
   "Return NODE as an interpreted string without text properties."
@@ -3458,10 +3458,10 @@ This is a workaround for a bug.")
        ;; sense if they are empty. This is an org mode bug, they
        ;; should not be printed by the interpreter by default
        (om-elem--clean)
-       ;; some greater elements will print "nil" in their contents if
+       ;; some greater elements will print "nil" in their children if
        ;; they are empty. This is likely an org bug, since it means
        ;; that the element <-> string conversion is not 100%
-       ;; reproducible. The workaround for this is to set the contents
+       ;; reproducible. The workaround for this is to set the children
        ;; to a single blank string if empty
        (om-elem--blank)
        (org-element-interpret-data)
@@ -3496,7 +3496,7 @@ not of that type. TYPE is a symbol from `om-elem-objects'."
               (tree (org-element--parse-elements (+ begin offset) end 'first-section
                                                  nil nil nil nil)))
         (--> (car tree)
-             (om-elem--get-nested-contents nesting it)
+             (om-elem--get-descendent nesting it)
              (om-elem--filter-types org-element-all-objects it)
              (if type (om-elem--filter-type type it) it))))))
 
@@ -3529,7 +3529,7 @@ for plain-list elements vs item elements."
                            (table (if (eq type 'table-row) '(0 0) '(0)))
                            (plain-list (if (eq type 'item) '(0 0) '(0)))
                            (t '(0)))))
-          (--> (om-elem--get-nested-contents nesting tree)
+          (--> (om-elem--get-descendent nesting tree)
                (if type (om-elem--filter-type type it) it)))))))
 
 (defun om-elem-parse-element-at (point)
@@ -3588,7 +3588,7 @@ headline. If POINT is before the first headline (if any), return
 the section at the top of the org buffer."
   (save-excursion
     (goto-char point)
-    (om-elem--get-nested-contents
+    (om-elem--get-descendent
      '(0)
      (condition-case nil
          (progn
@@ -3615,7 +3615,7 @@ the section at the top of the org buffer."
   "Return org-data document tree for the current buffer.
 Contrary to the org-element specification, the org-data element
 returned from this function will have :begin and :end properties."
-  (let* ((c (om-elem--get-contents (org-element-parse-buffer)))
+  (let* ((c (om-elem--get-children (org-element-parse-buffer)))
          (b (if c (om-elem--get-property :begin (-first-item c)) 1))
          (e (if c (om-elem--get-property :end (-last-item c)) 1)))
     (om-elem--construct 'org-data `(:begin ,b :end ,e) c)))
@@ -3732,14 +3732,14 @@ holds the element returned from IN-FORM."
   (om-elem--verify flag booleanp
                    node om-elem--is-node-p)
   (-let (((&plist :contents-begin :contents-end) (om-elem--get-properties node)))
-    (outline-flag-region (- contents-begin 1) (- contents-end 1) flag)))
+    (outline-flag-region (- children-begin 1) (- children-end 1) flag)))
 
-(defun om-elem-fold-contents (node)
-  "Fold the contents of NODE if they exist."
+(defun om-elem-fold (node)
+  "Fold the children of NODE if they exist."
   (om-elem--flag-elem-contents t node))
 
-(defun om-elem-unfold-contents (node)
-  "Unfold the contents of NODE if they exist."
+(defun om-elem-unfold (node)
+  "Unfold the children of NODE if they exist."
   (om-elem--flag-elem-contents nil node))
 
 ;;; misc functions
@@ -3770,11 +3770,11 @@ This is meant to be used as input for functions such as
 
 ;;; generalized CRUD operations
 
-(defmacro om-elem--modify-contents (node form)
-  "Recursively modify the contents of NODE using FORM.
+(defmacro om-elem--modify-children (node form)
+  "Recursively modify the children of NODE using FORM.
 FORM is a form that returns a list of elements or objects as the
-new contents, and the variable 'it' is available to represent the
-original contents to be modified."
+new children, and the variable 'it' is available to represent the
+original children to be modified."
   (declare (indent 1))
   `(cl-labels
        ((rec
@@ -3782,7 +3782,7 @@ original contents to be modified."
          (let ((type (om-elem--get-type node)))
            (if (eq type 'plain-text) node
              (->>
-              (om-elem--get-contents node)
+              (om-elem--get-children node)
               (funcall (lambda (it) ,form))
               (--map (rec it))
               (om-elem--construct type (nth 1 node)))))))
@@ -3790,7 +3790,7 @@ original contents to be modified."
 
 ;; find
 
-(defun om-elem--match-filter (pattern contents)
+(defun om-elem--match-filter (pattern children)
   (pcase pattern
     ;; quote (may be accidentally in pattern
     (`(quote . ,_)
@@ -3804,40 +3804,40 @@ original contents to be modified."
     ((and (pred integerp) index)
      (-some->
       (if (< index 0)
-          (nth (- (* -1 index) 1) (nreverse contents))
-        (nth index contents))
+          (nth (- (* -1 index) 1) (nreverse children))
+        (nth index children))
       (list)))
 
     ;; type
     ((and (pred (lambda (y) (memq y om-elem-nodes))) type)
-     (--filter (om-elem--is-type-p type it) contents))
+     (--filter (om-elem--is-type-p type it) children))
 
     ;; relative index
     (`(,(and (or '< '<= '> '>=) f)
        ,(and (pred integerp) i))
      ;; TODO what if they give a negative index?
-     (->> contents
+     (->> children
           (--map-indexed (when (funcall f it-index i) it))
           (-non-nil)))
 
     ;; predicate
     ;; ((and (pred functionp) fun)
     (`(:pred . (,p . nil))
-     (--filter (funcall p it) contents))
+     (--filter (funcall p it) children))
 
     ;; not
     (`(:not . (,p . nil))
-     (->> (om-elem--match-filter p contents)
-          (-difference contents)))
+     (->> (om-elem--match-filter p children)
+          (-difference children)))
 
     ;; or
     (`(:or . ,(and (pred and) p))
-     (->> (--mapcat (om-elem--match-filter it contents) p)
+     (->> (--mapcat (om-elem--match-filter it children) p)
           (-distinct)))
 
     ;; and
     (`(:and . ,(and (pred and) p))
-     (->> (--map (om-elem--match-filter it contents) p)
+     (->> (--map (om-elem--match-filter it children) p)
           (-reduce #'-intersection)))
 
     ;; properties
@@ -3850,39 +3850,39 @@ original contents to be modified."
            (->> (-partition 2 (om-elem--get-properties node))
                 (-difference (-partition 2 props))
                 (not))))
-       (--filter (all-props-match? it plist) contents)))
+       (--filter (all-props-match? it plist) children)))
     (_ (error "Invalid pattern: %s" pattern))))
 
 ;; TODO this is inefficient
 (defun om-elem--match-pattern (reverse? count pattern node)
-  (let ((contents (--> (om-elem--get-contents node)
+  (let ((children (--> (om-elem--get-children node)
                        (if reverse? (reverse it) it))))
     (pcase pattern
       (`(,(and p (guard (memq p '(:first :last :nth :slice)))) . ,_)
        (error "Slicer detected: %s" p))
       (`(:many! . (,p . nil))
-       (let ((found (om-elem--match-filter p contents)))
-         (->> (-difference contents found)
+       (let ((found (om-elem--match-filter p children)))
+         (->> (-difference children found)
               (--mapcat (om-elem--match-pattern reverse? count `(:many! ,p) it))
               (append found))))
       (`(:many! . ,_)
        (error "Query with :many! must have one target"))
       (`(:many . (,p . nil))
-       (let ((found (om-elem--match-filter p contents))
+       (let ((found (om-elem--match-filter p children))
              (p* (list :many p)))
-         (->> contents
+         (->> children
               (--mapcat (om-elem--match-pattern reverse? count p* it))
               (append found))))
       (`(:many . ,_)
        (error "Query with :many must have one target"))
       (`(:any . ,(and (pred and) ps))
-       (--mapcat (om-elem--match-pattern reverse? count ps it) contents))
+       (--mapcat (om-elem--match-pattern reverse? count ps it) children))
       (`(:any . nil)
-       contents)
+       children)
       (`(,p . nil)
-       (om-elem--match-filter p contents))
+       (om-elem--match-filter p children))
       (`(,p . ,ps)
-       (->> (om-elem--match-filter p contents)
+       (->> (om-elem--match-filter p children)
             (--mapcat (om-elem--match-pattern reverse? count ps it))))
       (_ (error "Invalid query")))))
 
@@ -3937,7 +3937,7 @@ returned. Possible values are:
 
 'cond' denotes conditions that that match nodes in the parse
 tree. This first condition will select matches within the
-contents of NODE, the next condition will select matches within
+children of NODE, the next condition will select matches within
 the matches from the first condition, and so on. The types of
 conditions are:
 
@@ -3946,7 +3946,7 @@ conditions are:
 - TYPE - match when the node's type is `eq' to TYPE (a symbol)
 - INDEX - match when the node's index is `=' to INDEX (an integer).
   The first index is zero. If INDEX is negative, start counting
-  backward from the end of contents where -1 is the last node
+  backward from the end of children where -1 is the last node
 - (OP INDEX) - match when (OP NODE-INDEX INDEX) returns t. OP is
   one of '<', '>', '<=', or '>='
 - PLIST - match nodes with the same properties and values as PLIST
@@ -4019,8 +4019,8 @@ nested within each other."
 ;; delete
 
 (defun om-elem--delete-targets (node targets)
-  "Delete TARGETS in the contents of NODE."
-  (om-elem--modify-contents node
+  "Delete TARGETS in the children of NODE."
+  (om-elem--modify-children node
     (--remove (member it targets) it)))
 
 (defun om-elem-match-delete (pattern node)
@@ -4053,7 +4053,7 @@ which will replace the original.
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
   (-if-let (targets (om-elem-match pattern node))
-      (om-elem--modify-contents node
+      (om-elem--modify-children node
         (--map-when (member it targets) (funcall fun it) it))
     node))
 
@@ -4068,7 +4068,7 @@ nodes which will be spliced in place of the original node.
 
 PATTERN follows the same rules as `om-elem-match'."
   (-if-let (targets (om-elem-match pattern node))
-      (om-elem--modify-contents node
+      (om-elem--modify-children node
         (--mapcat (if (member it targets)
                       (funcall fun it) (list it))
                   it))
@@ -4085,7 +4085,7 @@ Return modified NODE.
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
   (-if-let (targets (om-elem-match pattern node))
-      (om-elem--modify-contents node
+      (om-elem--modify-children node
         (--map-when (member it targets) node* it))
     node))
 
@@ -4098,7 +4098,7 @@ Return modified NODE.
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
   (-if-let (targets (om-elem-match pattern node))
-      (om-elem--modify-contents node
+      (om-elem--modify-children node
         (--mapcat (if (member it targets) (list node* it) (list it)) it))
     node))
 
@@ -4111,7 +4111,7 @@ Return modified NODE.
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
   (-if-let (targets (om-elem-match pattern node))
-      (om-elem--modify-contents node
+      (om-elem--modify-children node
         (--mapcat (if (member it targets) (list it node*) (list it)) it))
     node))
 
@@ -4127,13 +4127,13 @@ front."
   (if (<= 0 index) index (+ (length list) index 1)))
 
 (defun om-elem--insert-in (node node* index)
-  "Insert NODE* into the contents of NODE at INDEX."
-  (let* ((contents (om-elem--get-contents node))
-         (i (om-elem--normalize-insert-index index contents)))
+  "Insert NODE* into the children of NODE at INDEX."
+  (let* ((children (om-elem--get-children node))
+         (i (om-elem--normalize-insert-index index children)))
       (om-elem--construct
        (nth 0 node)
        (nth 1 node)
-       (-insert-at index node* contents))))
+       (-insert-at index node* children))))
 
 (defun om-elem-match-insert-within (pattern index node* node)
   "Insert new NODE* at INDEX into nodes matching PATTERN in NODE.
@@ -4141,11 +4141,11 @@ Return modified NODE.
 
 PATTERN follows the same rules as `om-elem-match' with the exception
 that PATTERN may be nil. In this case NODE* will be inserted at INDEX
-in the immediate, top level contents of NODE."
+in the immediate, top level children of NODE."
   (declare (indent 2))
   (if (-non-nil pattern)
       (-if-let (targets (om-elem-match pattern node))
-          (om-elem--modify-contents node
+          (om-elem--modify-children node
             (if (not (member node targets)) it
               (om-elem--insert-in it node* index)))
         node)
@@ -4160,7 +4160,7 @@ Return modified NODE. NODES* is a list of nodes.
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
   (-if-let (targets (om-elem-match pattern node))
-      (om-elem--modify-contents node
+      (om-elem--modify-children node
         (--mapcat (if (member it targets) nodes* (list it)) it))
     node))
 
@@ -4173,7 +4173,7 @@ Return modified NODE. NODES* is a list of nodes.
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
   (-if-let (targets (om-elem-match pattern node))
-      (om-elem--modify-contents node
+      (om-elem--modify-children node
         (--mapcat (if (member it targets)
                       (append nodes* (list it))
                     (list it))
@@ -4189,20 +4189,20 @@ Return modified NODE. NODES* is a list of nodes.
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
   (-if-let (targets (om-elem-match pattern node))
-      (om-elem--modify-contents node
+      (om-elem--modify-children node
         (--mapcat (if (member it targets) (cons it nodes*) (list it)) it))
     node))
 
 ;; splice-within
 
 (defun om-elem--splice-at (node nodes* index)
-  "Splice NODES* into the contents of NODE at INDEX."
-  (let* ((contents (om-elem--get-contents node))
-         (i (om-elem--normalize-insert-index index contents)))
+  "Splice NODES* into the children of NODE at INDEX."
+  (let* ((children (om-elem--get-children node))
+         (i (om-elem--normalize-insert-index index children)))
     (om-elem--construct
      (nth 0 node)
      (nth 1 node)
-     (->> (-split-at i contents)
+     (->> (-split-at i children)
           (-insert-at 1 nodes*)
           (apply #'append)))))
 
@@ -4212,13 +4212,13 @@ Return modified NODE. NODES* is a list of nodes.
 
 PATTERN follows the same rules as `om-elem-match' with the exception
 that PATTERN may be nil. In this case NODES* will be inserted at INDEX
-in the immediate, top level contents of NODE."
+in the immediate, top level children of NODE."
   (declare (indent 2))
   (if (-non-nil pattern)
       (-if-let (targets (om-elem-match pattern node))
-          (om-elem--modify-contents
-              node (if (not (member node targets)) it
-                     (om-elem--splice-at nodes* index contents)))
+          (om-elem--modify-children node
+            (if (not (member node targets)) it
+              (om-elem--splice-at nodes* index children)))
         node)
     (om-elem--splice-at node nodes* index)))
 
@@ -4243,9 +4243,9 @@ Has no effect on 'plain-text' elements."
         (node)
         (let ((type (om-elem--get-type node)))
           (if (eq type 'plain-text) node
-            (->> (om-elem--get-contents node)
+            (->> (om-elem--get-children node)
                  (--remove
-                  (and (om-elem--is-empty-p it)
+                  (and (om-elem--is-childless-p it)
                        (om-elem--is-any-type-p '(section plain-list) it)))
                  (--map (clean-rec it))
                  (append (list type (nth 1 node))))))))

@@ -835,7 +835,7 @@
         (->> (om-elem-build-headline!
               :title-text "really impressive title"
               :properties '((key val))
-              :section-contents (list (om-elem-build-paragraph! "section text"))
+              :section-children (list (om-elem-build-paragraph! "section text"))
               ;; TODO make levels make sense
               (om-elem-build-headline! :level 2 :title-text "subhead"))
              (om-elem-to-trimmed-string))
@@ -2415,7 +2415,7 @@
                 "- [X] three"
                 "- [-] four")
       (->> (om-elem-parse-this-element)
-           (om-elem--get-contents)
+           (om-elem--get-children)
            (-map #'om-elem-item-is-unchecked-p))
       => '(nil t nil nil))
 
@@ -2426,7 +2426,7 @@
                 "- [X] three"
                 "- [-] four")
       (->> (om-elem-parse-this-element)
-           (om-elem--get-contents)
+           (om-elem--get-children)
            (-map #'om-elem-item-is-checked-p))
       => '(nil nil t nil))
 
@@ -2437,7 +2437,7 @@
                 "- [X] three"
                 "- [-] four")
       (->> (om-elem-parse-this-element)
-           (om-elem--get-contents)
+           (om-elem--get-children)
            (-map #'om-elem-item-is-trans-p))
       => '(nil nil nil t))
     
@@ -2801,13 +2801,13 @@
   (def-example-subgroup "Generic"
     nil
 
-    (defexamples-content om-elem-get-contents
+    (defexamples-content om-elem-get-children
       nil
 
       (:content "/this/ is a *paragraph*")
       (:comment "Return objects for object containers")
       (->> (om-elem-parse-this-element)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(italic plain-text bold)
 
@@ -2816,14 +2816,14 @@
                 "** subheadline")
       (:comment "Return elements for greater elements")
       (->> (om-elem-parse-this-subtree)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(section headline)
 
       (:content "#+CALL: ktulu()")
       (:comment "Throw error when attempting to get contents of a non-container")
       (->> (om-elem-parse-this-element)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       !!> error
 
@@ -2831,7 +2831,7 @@
 
       (:content "| a | b |")
       (->> (om-elem-parse-this-table-row)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(table-cell table-cell)
 
@@ -2839,7 +2839,7 @@
                 "verse /666/"
                 "#+END_VERSE")
       (->> (om-elem-parse-this-element)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       ;; plain-text for the newline at the end...I think
       => '(plain-text italic plain-text)
@@ -2848,7 +2848,7 @@
                 "paragraph thing"
                 "#+END_CENTER")
       (->> (om-elem-parse-this-element)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(paragraph)
 
@@ -2857,24 +2857,24 @@
                 "CLOCK: [2019-01-01 Tue]"
                 ":END:")
       (->> (om-elem-parse-this-element)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(plain-list clock)
 
       (:content "[fn:1] bigfoot")
       (->> (om-elem-parse-this-element)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(paragraph)
 
       (:content "- item"
                 "  - subitem")
       (->> (om-elem-parse-this-element)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(item)
       (->> (om-elem-parse-this-item)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(paragraph plain-list)
 
@@ -2885,7 +2885,7 @@
                 ":END:")
       (->> (om-elem-parse-this-headline)
            (om-elem--headline-get-properties-drawer)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(node-property node-property) 
 
@@ -2893,7 +2893,7 @@
                 "no pity for the majority"
                 "#+END_QUOTE")
       (->> (om-elem-parse-this-element)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(paragraph)
 
@@ -2901,26 +2901,26 @@
       ;;           "stuff")
       ;; (->> (om-elem-parse-this-headline)
       ;;      (om-elem-headline-get-section)
-      ;;      (om-elem-get-contents)
+      ;;      (om-elem-get-children)
       ;;      (-map #'om-elem-get-type))
       ;; => '(paragraph)
 
       (:content "| a |"
                 "| b |")
       (->> (om-elem-parse-this-element)
-           (om-elem-get-contents)
+           (om-elem-get-children)
            (-map #'om-elem-get-type))
       => '(table-row table-row)
 
       :end-hidden)
 
-    (defexamples-content om-elem-set-contents
+    (defexamples-content om-elem-set-children
       nil
 
       (:content "/this/ is a *paragraph*")
       (:comment "Set contents for object containers")
       (->> (om-elem-parse-this-element)
-           (om-elem-set-contents (list "this is lame"))
+           (om-elem-set-children (list "this is lame"))
            (om-elem-to-trimmed-string))
       => "this is lame"
 
@@ -2929,7 +2929,7 @@
                 "** subheadline")
       (:comment "Set contents for greater elements")
       (->> (om-elem-parse-this-subtree)
-           (om-elem-set-contents (list (om-elem-build-headline! :title-text "only me" :level 2)))
+           (om-elem-set-children (list (om-elem-build-headline! :title-text "only me" :level 2)))
            (om-elem-to-trimmed-string))
       => (:result "* headline"
                   "** only me")
@@ -2937,7 +2937,7 @@
       (:content "#+CALL: ktulu()")
       (:comment "Throw error when attempting to get contents of a non-container")
       (->> (om-elem-parse-this-element)
-           (om-elem-set-contents "nil by mouth")
+           (om-elem-set-children "nil by mouth")
            (om-elem-to-trimmed-string))
       !!> error
 
@@ -2947,12 +2947,12 @@
 
       :end-hidden)
 
-    (defexamples-content om-elem-map-contents
+    (defexamples-content om-elem-map-children
       nil
 
       (:content "/this/ is a *paragraph*")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-contents
+           (om-elem-map-children
             (lambda (objs) (append objs (list " ...yeah"))))
            (om-elem-to-trimmed-string))
       => "/this/ is a *paragraph* ...yeah"
@@ -2960,7 +2960,7 @@
       (:content "* headline"
                 "** subheadline")
       (->> (om-elem-parse-this-subtree)
-           (om-elem-map-contents* (--map (om-elem-shift-property :level 1 it) it))
+           (om-elem-map-children* (--map (om-elem-shift-property :level 1 it) it))
            (om-elem-to-trimmed-string))
       => (:result "* headline"
                   "*** subheadline")
@@ -2968,7 +2968,7 @@
       (:content "#+CALL: ktulu()")
       (:comment "Throw error when attempting to map contents of a non-container")
       (->> (om-elem-parse-this-element)
-           (om-elem-map-contents #'ignore)
+           (om-elem-map-children #'ignore)
            (om-elem-to-trimmed-string))
       !!> error
 
@@ -2979,21 +2979,21 @@
       :end-hidden)
 
     
-    (defexamples-content om-elem-is-empty-p
+    (defexamples-content om-elem-is-childless-p
       nil
       (:content "* dummy"
                 "filled with useless knowledge")
       (->> (om-elem-parse-this-headline)
-           (om-elem-is-empty-p))
+           (om-elem-is-childless-p))
       => nil
       (:content "* dummy")
       (->> (om-elem-parse-this-headline)
-           (om-elem-is-empty-p))
+           (om-elem-is-childless-p))
       => t
       (:content "#+CALL: ktulu()")
       (:comment "Throw error when attempting to determine if non-container is empty")
       (->> (om-elem-parse-this-element)
-           (om-elem-is-empty-p))
+           (om-elem-is-childless-p))
       !!> error))
 
   (def-example-subgroup "Headline"
@@ -3429,23 +3429,23 @@
                 "| a | b | c |")
       (->> (om-elem-parse-this-element)
            (om-elem-table-get-cell 0 0)
-           (om-elem--get-contents)
+           (om-elem--get-children)
            (car))
       => "1"
       (->> (om-elem-parse-this-element)
            (om-elem-table-get-cell 1 1)
-           (om-elem--get-contents)
+           (om-elem--get-children)
            (car))
       => "b"
       (->> (om-elem-parse-this-element)
            (om-elem-table-get-cell -1 -1)
-           (om-elem--get-contents)
+           (om-elem--get-children)
            (car))
       => "c"
       :begin-hidden
       (->> (om-elem-parse-this-element)
            (om-elem-table-get-cell 0 3)
-           (om-elem--get-contents)
+           (om-elem--get-children)
            (car))
       !!> error
       :end-hidden)
@@ -4196,7 +4196,7 @@ and here is even more *text4* and *text5*
       nil
       (:content "| a | b |")
       (om-elem-update-table-row-at* (point)
-        (om-elem-map-contents* (cons (om-elem-build-table-cell! "0") it) it))
+        (om-elem-map-children* (cons (om-elem-build-table-cell! "0") it) it))
       $> "| 0 | a | b |")
 
     (defexamples-content om-elem-update-item-at
@@ -4247,8 +4247,8 @@ and here is even more *text4* and *text5*
   (def-example-subgroup "Misc"
     nil
 
-    (defexamples-content om-elem-fold-contents
+    (defexamples-content om-elem-fold
       nil)
 
-    (defexamples-content om-elem-unfold-contents
+    (defexamples-content om-elem-unfold
       nil)))
