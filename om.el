@@ -5,7 +5,7 @@
 ;; Author: Nathan Dwarshuis <natedwarshuis@gmail.com>
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/om.el
-;; Package-Requires: ((emacs "26.1") (dash "2.15"))
+;; Package-Requires: ((emacs "26.1") (dash "2.15") (s "1.12"))
 ;; Version: 0.0.1
 
 ;; This program is free software; you can redistribute it and/or modify
