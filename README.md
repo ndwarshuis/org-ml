@@ -394,7 +394,7 @@ Use pattern-matching to selectively perform operations on nodes in trees.
 ## Buffer Side Effects
 
 
-Insert and update elements and objects into buffers.
+Map node manipulations into buffers.
 
 
 ### Insert
@@ -4990,7 +4990,7 @@ in the immediate, top level contents of `node`.
 ## Buffer Side Effects
 
 
-Insert and update elements and objects into buffers.
+Map node manipulations into buffers.
 
 
 ### Insert

@@ -4110,7 +4110,7 @@ and here is even more *text4* and *text5*
                 "** three")))
 
 (def-example-group "Buffer Side Effects"
-  "Insert and update elements and objects into buffers."
+  "Map node manipulations into buffers."
 
   (def-example-subgroup "Insert"
     nil
