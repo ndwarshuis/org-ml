@@ -280,8 +280,8 @@ Test node types.
 * [om-is-any-type-p](#om-is-any-type-p-types-node) `(types node)`
 * [om-is-element-p](#om-is-element-p-node) `(node)`
 * [om-is-branch-node-p](#om-is-branch-node-p-node) `(node)`
-* [om-is-branch-node-with-child-objects-p](#om-is-branch-node-with-child-objects-p-node) `(node)`
-* [om-is-branch-element-with-child-elements-p](#om-is-branch-element-with-child-elements-p-node) `(node)`
+* [om-node-may-have-child-objects-p](#om-node-may-have-child-objects-p-node) `(node)`
+* [om-node-may-have-child-elements-p](#om-node-may-have-child-elements-p-node) `(node)`
 
 ## Property Manipulation
 
@@ -2117,7 +2117,7 @@ Return t if `node` is a branch node.
 
 ```
 
-#### om-is-branch-node-with-child-objects-p `(node)`
+#### om-node-may-have-child-objects-p `(node)`
 
 Return t if `node` is a branch node that may have child objects.
 
@@ -2127,12 +2127,12 @@ Return t if `node` is a branch node that may have child objects.
 
 ;; Parsing this as an element gives a paragraph type (an object container).
 (->> (om-parse-this-element)
-     (om-is-branch-node-with-child-objects-p))
+     (om-node-may-have-child-objects-p))
  ;; => t
 
 ;; Parsing this as an object gives a bold type (also an object container).
 (->> (om-parse-this-object)
-     (om-is-branch-node-with-child-objects-p))
+     (om-node-may-have-child-objects-p))
  ;; => t
 
 ;; Given the following contents:
@@ -2140,7 +2140,7 @@ Return t if `node` is a branch node that may have child objects.
 
 ;; Parsing this as an object gives a code type (not a container).
 (->> (om-parse-this-object)
-     (om-is-branch-node-with-child-objects-p))
+     (om-node-may-have-child-objects-p))
  ;; => nil
 
 ;; Given the following contents:
@@ -2148,7 +2148,7 @@ Return t if `node` is a branch node that may have child objects.
 
 ;; Parsing this as an element gives a comment type (not a container).
 (->> (om-parse-this-element)
-     (om-is-branch-node-with-child-objects-p))
+     (om-node-may-have-child-objects-p))
  ;; => nil
 
 ;; Given the following contents:
@@ -2156,14 +2156,16 @@ Return t if `node` is a branch node that may have child objects.
 
 ;; Parsing this as an element gives a table (a greater element).
 (->> (om-parse-this-element)
-     (om-is-branch-node-with-child-objects-p))
+     (om-node-may-have-child-objects-p))
  ;; => nil
 
 ```
 
-#### om-is-branch-element-with-child-elements-p `(node)`
+#### om-node-may-have-child-elements-p `(node)`
 
-Return t if `node` is a branch element that may have child objects.
+Return t if `node` is a branch node that may have child elements.
+Note this implies that `node` is also of class element since only
+elements may have other elements as children.
 
 ```el
 ;; Given the following contents:
@@ -2171,7 +2173,7 @@ Return t if `node` is a branch element that may have child objects.
 
 ;; Parsing this as an element gives a table (a greater element).
 (->> (om-parse-this-element)
-     (om-is-branch-element-with-child-elements-p))
+     (om-node-may-have-child-elements-p))
  ;; => t
 
 ;; Given the following contents:
@@ -2179,7 +2181,7 @@ Return t if `node` is a branch element that may have child objects.
 
 ;; Parsing this as an element gives a paragraph type (not a greater element).
 (->> (om-parse-this-element)
-     (om-is-branch-element-with-child-elements-p))
+     (om-node-may-have-child-elements-p))
  ;; => nil
 
 ;; Given the following contents:
@@ -2187,7 +2189,7 @@ Return t if `node` is a branch element that may have child objects.
 
 ;; Parsing this as an element gives a comment type (not a container).
 (->> (om-parse-this-element)
-     (om-is-branch-element-with-child-elements-p))
+     (om-node-may-have-child-elements-p))
  ;; => nil
 
 ```

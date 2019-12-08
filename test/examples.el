@@ -945,49 +945,49 @@
          (om-is-branch-node-p))
     => t)
 
-  (defexamples-content om-is-branch-node-with-child-objects-p
+  (defexamples-content om-node-may-have-child-objects-p
     nil
     (:buffer "*ziltoid*")
     (:comment "Parsing this as an element gives a paragraph type (an object container).")
     (->> (om-parse-this-element)
-         (om-is-branch-node-with-child-objects-p))
+         (om-node-may-have-child-objects-p))
     => t
     (:comment "Parsing this as an object gives a bold type (also an object container).")
     (->> (om-parse-this-object)
-         (om-is-branch-node-with-child-objects-p))
+         (om-node-may-have-child-objects-p))
     => t
     (:buffer "~ziltoid~")
     (:comment "Parsing this as an object gives a code type (not a container).")
     (->> (om-parse-this-object)
-         (om-is-branch-node-with-child-objects-p))
+         (om-node-may-have-child-objects-p))
     => nil
     (:buffer "# ziltoid")
     (:comment "Parsing this as an element gives a comment type (not a container).")
     (->> (om-parse-this-element)
-         (om-is-branch-node-with-child-objects-p))
+         (om-node-may-have-child-objects-p))
     => nil
     (:buffer "* I'm so great")
     (:comment "Parsing this as an element gives a table (a greater element).")
     (->> (om-parse-this-element)
-         (om-is-branch-node-with-child-objects-p))
+         (om-node-may-have-child-objects-p))
     => nil)
 
-  (defexamples-content om-is-branch-element-with-child-elements-p
+  (defexamples-content om-node-may-have-child-elements-p
     nil
     (:buffer "* I'm so great")
     (:comment "Parsing this as an element gives a table (a greater element).")
     (->> (om-parse-this-element)
-         (om-is-branch-element-with-child-elements-p))
+         (om-node-may-have-child-elements-p))
     => t
     (:buffer "*ziltoid*")
     (:comment "Parsing this as an element gives a paragraph type (not a greater element).")
     (->> (om-parse-this-element)
-         (om-is-branch-element-with-child-elements-p))
+         (om-node-may-have-child-elements-p))
     => nil
     (:buffer "# ziltoid")
     (:comment "Parsing this as an element gives a comment type (not a container).")
     (->> (om-parse-this-element)
-         (om-is-branch-element-with-child-elements-p))
+         (om-node-may-have-child-elements-p))
     => nil))
 
 (def-example-group "Property Manipulation"

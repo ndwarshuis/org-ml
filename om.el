@@ -465,7 +465,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
   "Return t is ELEM is a node."
   (om--is-any-type-p om-nodes elem))
 
-;; (defun om-is-branch-element-with-child-elements-p (elem)
+;; (defun om-node-may-have-child-elements-p (elem)
 ;;   "Return t is ELEM is a greater element."
 ;;   (om--is-any-type-p om-branch-elements-with-child-elements elem))
 
@@ -2530,13 +2530,15 @@ zero-indexed."
   (om--verify node om--is-node-p)
   (om--is-any-type-p om-node-branches node))
 
-(defun om-is-branch-node-with-child-objects-p (node)
+(defun om-node-may-have-child-objects-p (node)
   "Return t if NODE is a branch node that may have child objects."
   (om--verify node om--is-node-p)
   (om--is-any-type-p om-branch-nodes-with-child-objects node))
 
-(defun om-is-branch-element-with-child-elements-p (node)
-  "Return t if NODE is a branch element that may have child objects."
+(defun om-node-may-have-child-elements-p (node)
+  "Return t if NODE is a branch node that may have child elements.
+Note this implies that NODE is also of class element since only
+elements may have other elements as children."
   (om--verify node om--is-node-p)
   (om--is-any-type-p om-branch-elements-with-child-elements node))
 
