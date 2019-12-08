@@ -473,13 +473,13 @@ These are also known as \"recursive objects\" in `org-element.el'")
 
 ;; filters
 
-(defun om-elem--filter-type (type elem)
-  "Return ELEM if it is TYPE or nil otherwise."
-  (and (om-elem--is-type-p type elem) elem))
+(defun om-elem--filter-type (type node)
+  "Return NODE if it is TYPE or nil otherwise."
+  (and (om-elem--is-type-p type node) node))
 
-(defun om-elem--filter-types (types elem)
-  "Return ELEM if it is one of TYPES or nil otherwise."
-  (and (om-elem--is-any-type-p types elem) elem))
+(defun om-elem--filter-types (types node)
+  "Return NODE if it is one of TYPES or nil otherwise."
+  (and (om-elem--is-any-type-p types node) node))
 
 (defun om-elem--oneline-string-p (s)
   (and (stringp s) (not (s-contains? "\n" s))))
@@ -489,12 +489,12 @@ These are also known as \"recursive objects\" in `org-element.el'")
 
 ;; filters (general)
 
-(defun om-elem--filter (value prop elem msg pred)
+(defun om-elem--filter (value prop node msg pred)
   (declare (indent 4))
   (if (funcall pred value) value
     (error
      "Property '%s' in element/object of type '%s' must be a %s. Got '%S'"
-     prop (om-elem--get-type elem) msg value)))
+     prop (om-elem--get-type node) msg value)))
 
 (defun om-elem--filter-string (v p eo)
   (om-elem--filter v p eo "string" #'stringp))
@@ -1044,58 +1044,58 @@ These are also known as \"recursive objects\" in `org-element.el'")
 (defun om-elem--get-update-function (type prop)
   (om-elem--get-strict-function :cis type prop))
 
-(defun om-elem--set-property-strict (prop value elem)
-  (let* ((type (om-elem--get-type elem))
+(defun om-elem--set-property-strict (prop value node)
+  (let* ((type (om-elem--get-type node))
          (filter-fun (om-elem--get-setter-function type prop))
          (update-fun (om-elem--get-update-function type prop))
-         (elem* (--> (funcall filter-fun value prop elem)
-                     (om-elem--set-property prop it elem))))
-    (if update-fun (funcall update-fun elem*) elem*)))
+         (node* (--> (funcall filter-fun value prop node)
+                     (om-elem--set-property prop it node))))
+    (if update-fun (funcall update-fun node*) node*)))
 
-(defun om-elem--set-properties-strict (plist elem)
+(defun om-elem--set-properties-strict (plist node)
   (cl-flet
       ((filter
         (acc prop-value type)
         (-let* (((prop value) prop-value)
                 (filter-fun (om-elem--get-setter-function type prop)))
-          (->> (funcall filter-fun value prop elem)
+          (->> (funcall filter-fun value prop node)
                (funcall #'plist-put acc prop)))))
     (if (om-elem--is-plist-p plist)
-        (let* ((cur-props (om-elem--get-properties elem))
-               (type (om-elem--get-type elem))
+        (let* ((cur-props (om-elem--get-properties node))
+               (type (om-elem--get-type node))
                (prop-values (-partition 2 plist))
                (update-funs
                 (->> (-map #'car prop-values)
                      (--map (om-elem--get-update-function type it))
                      (-uniq)
                      (-non-nil)))
-               (elem*
+               (node*
                 (om-elem--construct
-                 (om-elem--get-type elem)
+                 (om-elem--get-type node)
                  (--reduce-from (filter acc it type) cur-props prop-values)
-                 (om-elem--get-contents elem))))
-          (if (not update-funs) elem*
-            (--reduce-from (funcall it acc) elem* update-funs)))
+                 (om-elem--get-contents node))))
+          (if (not update-funs) node*
+            (--reduce-from (funcall it acc) node* update-funs)))
       (error "Not a plist: %S" plist))))
 
-(defun om-elem--get-property-strict (prop elem)
-  (let ((filter-fun (-> (om-elem--get-type elem)
+(defun om-elem--get-property-strict (prop node)
+  (let ((filter-fun (-> (om-elem--get-type node)
                         (om-elem--get-getter-function prop)))
-        (value (om-elem--get-property prop elem)))
+        (value (om-elem--get-property prop node)))
     (if filter-fun (funcall filter-fun value) value)))
 
-(defun om-elem--map-property-strict (prop fun elem)
+(defun om-elem--map-property-strict (prop fun node)
   (om-elem--verify fun functionp)
-  (let ((value (funcall fun (om-elem--get-property-strict prop elem))))
-    (om-elem--set-property-strict prop value elem)))
+  (let ((value (funcall fun (om-elem--get-property-strict prop node))))
+    (om-elem--set-property-strict prop value node)))
 
 (om-elem--gen-anaphoric-form #'om-elem--map-property-strict)
 
-(defun om-elem--map-properties-strict (plist elem)
+(defun om-elem--map-properties-strict (plist node)
   (cond
-   ((not plist) elem)
+   ((not plist) node)
    ((om-elem--is-plist-p plist)
-    (->> (om-elem--map-property-strict (nth 0 plist) (nth 1 plist) elem)
+    (->> (om-elem--map-property-strict (nth 0 plist) (nth 1 plist) node)
          (om-elem--map-properties-strict (-drop 2 plist))))
    (t (error "Not a plist: %s" plist))))
 
@@ -1108,105 +1108,105 @@ These are also known as \"recursive objects\" in `org-element.el'")
 ;;; generic
 
 ;; (defalias 'om-elem--get-property 'org-element-property)
-(defun om-elem--get-property (prop elem)
-  (if (and (stringp elem) (eq prop :post-blank))
-      (length (car (s-match "[ ]*$" elem)))
-    (org-element-property prop elem)))
+(defun om-elem--get-property (prop node)
+  (if (and (stringp node) (eq prop :post-blank))
+      (length (car (s-match "[ ]*$" node)))
+    (org-element-property prop node)))
 
-(defun om-elem--get-properties (elem)
-  "Return the properties list of ELEM."
-  (if (stringp elem) (text-properties-at 0 elem) (nth 1 elem)))
+(defun om-elem--get-properties (node)
+  "Return the properties list of NODE."
+  (if (stringp node) (text-properties-at 0 node) (nth 1 node)))
 
-(defun om-elem--get-parent (elem)
-  "Return the parent of ELEM."
-  (om-elem--get-property :parent elem))
+(defun om-elem--get-parent (node)
+  "Return the parent of NODE."
+  (om-elem--get-property :parent node))
 
-(defun om-elem--get-parent-headline (elem)
-  "Return the most immediate parent headline of ELEM."
-  (-when-let (parent (om-elem--get-parent elem))
+(defun om-elem--get-parent-headline (node)
+  "Return the most immediate parent headline of NODE."
+  (-when-let (parent (om-elem--get-parent node))
     (if (om-elem--is-type-p 'headline parent) parent
       (om-elem--get-parent-headline parent))))
 
-;; (defun om-elem--get-parent-item (elem)
-;;   "Return the parent item element for ELEM."
-;;   (om-elem-match-parent elem :many 'item))
+;; (defun om-elem--get-parent-item (node)
+;;   "Return the parent item element for NODE."
+;;   (om-elem-match-parent node :many 'item))
 
-(defun om-elem--set-property (prop value elem)
-  "Set property PROP in element ELEM to VALUE."
-  ;; TODO validate that prop exists in elem first?
-  (if (stringp elem)
+(defun om-elem--set-property (prop value node)
+  "Set property PROP in element NODE to VALUE."
+  ;; TODO validate that prop exists in node first?
+  (if (stringp node)
       (if (eq prop :post-blank)
-          (->> (s-trim-right elem) (s-append (s-repeat value " ")))
-        (org-add-props elem nil prop value))
+          (->> (s-trim-right node) (s-append (s-repeat value " ")))
+        (org-add-props node nil prop value))
     (om-elem--construct
-     (om-elem--get-type elem)
-     (plist-put (om-elem--get-properties elem) prop value)
-     (om-elem--get-contents elem))))
+     (om-elem--get-type node)
+     (plist-put (om-elem--get-properties node) prop value)
+     (om-elem--get-contents node))))
 
-(defun om-elem--set-properties (plist elem)
-  "Set all properties in ELEM to the values corresponding to PLIST.
+(defun om-elem--set-properties (plist node)
+  "Set all properties in NODE to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that correspond to the
-property list in ELEM."
+property list in NODE."
   (if (om-elem--is-plist-p plist)
-      (let ((props (om-elem--get-properties elem)))
+      (let ((props (om-elem--get-properties node)))
         (om-elem--construct
-         (om-elem--get-type elem)
+         (om-elem--get-type node)
          (->> (-partition 2 plist)
               (--reduce-from (apply #'plist-put acc it) props))
-         (om-elem--get-contents elem)))
+         (om-elem--get-contents node)))
     (error "Not a plist: %S" plist)))
 
-(defun om-elem--set-property-nil (prop elem)
-  "Set property PROP to nil in ELEM."
-  (om-elem--set-property prop nil elem))
+(defun om-elem--set-property-nil (prop node)
+  "Set property PROP to nil in NODE."
+  (om-elem--set-property prop nil node))
 
-(defun om-elem--set-properties-nil (props elem)
-  "Set all properties PROPS to new in ELEM."
+(defun om-elem--set-properties-nil (props node)
+  "Set all properties PROPS to new in NODE."
   (let ((plist (--mapcat (list it nil) props)))
-    (om-elem--set-properties plist elem)))
+    (om-elem--set-properties plist node)))
 
-(defun om-elem--map-property (prop fun elem)
+(defun om-elem--map-property (prop fun node)
   (om-elem--verify fun functionp)
-  (let ((value (funcall fun (om-elem--get-property prop elem))))
-    (om-elem--set-property prop value elem)))
+  (let ((value (funcall fun (om-elem--get-property prop node))))
+    (om-elem--set-property prop value node)))
 
 (om-elem--gen-anaphoric-form #'om-elem--map-property)
 
-(defun om-elem--map-properties (plist elem)
+(defun om-elem--map-properties (plist node)
   (cond
-   ((not plist) elem)
+   ((not plist) node)
    ((om-elem--is-plist-p plist)
-    (->> (om-elem--map-property (nth 0 plist) (nth 1 plist) elem)
+    (->> (om-elem--map-property (nth 0 plist) (nth 1 plist) node)
          (om-elem--map-properties (-drop 2 plist))))
    (t (error "Not a plist: %s" plist))))
 
-(defmacro om-elem--map-properties* (plist elem)
+(defmacro om-elem--map-properties* (plist node)
   `(let ((plist*
           (-map-indexed
            (lambda (index item) (if (cl-evenp index) item `(lambda (it) ,item)))
            ,plist)))
-     (om-elem--map-properties new-plist ,elem)))
+     (om-elem--map-properties new-plist ,node)))
 
-(defun om-elem--property-is-nil-p (prop elem)
-  "Return t if PROP in ELEM is nil."
-  (not (om-elem--get-property prop elem)))
+(defun om-elem--property-is-nil-p (prop node)
+  "Return t if PROP in NODE is nil."
+  (not (om-elem--get-property prop node)))
 
-(defun om-elem--property-is-non-nil-p (prop elem)
-  "Return t if PROP in ELEM is not nil."
-  (if (om-elem--get-property prop elem) t))
+(defun om-elem--property-is-non-nil-p (prop node)
+  "Return t if PROP in NODE is not nil."
+  (if (om-elem--get-property prop node) t))
 
-(defun om-elem--property-is-eq-p (prop val elem)
-  "Return t if PROP in ELEM is `eq' to VAL."
-  (eq val (om-elem--get-property prop elem)))
+(defun om-elem--property-is-eq-p (prop val node)
+  "Return t if PROP in NODE is `eq' to VAL."
+  (eq val (om-elem--get-property prop node)))
 
-(defun om-elem--property-is-equal-p (prop val elem)
-  "Return t if PROP in ELEM is `equal' to VAL."
-  (equal val (om-elem--get-property prop elem)))
+(defun om-elem--property-is-equal-p (prop val node)
+  "Return t if PROP in NODE is `equal' to VAL."
+  (equal val (om-elem--get-property prop node)))
 
-(defun om-elem--property-is-predicate-p (prop fun elem)
-  "Return t if FUN applied to the value of PROP in ELEM results not nil.
+(defun om-elem--property-is-predicate-p (prop fun node)
+  "Return t if FUN applied to the value of PROP in NODE results not nil.
 FUN is a predicate function that takes one argument."
-  (->> (om-elem--get-property prop elem) (funcall fun) (and)))
+  (->> (om-elem--get-property prop node) (funcall fun) (and)))
 
 (om-elem--gen-anaphoric-form #'om-elem--property-is-predicate-p)
 
@@ -1619,10 +1619,10 @@ float-times, which assumes the :type property is valid."
 (defun om-elem--build-element (type post-blank)
   (om-elem--build type post-blank om-elem--element-properties))
 
-(defun om-elem--build-container-element (type post-blank elems)
+(defun om-elem--build-container-element (type post-blank nodes)
   (->> om-elem--container-element-properties
        (om-elem--build type post-blank)
-       (om-elem--set-contents-by-type type elems)))
+       (om-elem--set-contents-by-type type nodes)))
 
 ;; define all builders using this automated monstrosity
 
@@ -1652,7 +1652,7 @@ float-times, which assumes the :type property is valid."
                               (default (plist-get (cdr it) :require)))
                           (if default `(,prop ,default) prop)))))
          (rest-arg (cond
-                    ((memq type om-elem-element-branches-with-child-elements) 'elems)
+                    ((memq type om-elem-element-branches-with-child-elements) 'nodes)
                     ((memq type om-elem-node-branches-with-child-objects) 'objs)))
          (args
           (let ((a `(,@pos-args &key ,@kw-args post-blank)))
@@ -1858,7 +1858,7 @@ All arguments not mentioned here follow the same rules as
                    (-non-nil)
                    (apply #'om-elem-build-section)))
          ;; TODO need to ensure the all subheadlines are level + 1
-         (elems (-non-nil (append (list section) subheadlines))))
+         (nodes (-non-nil (append (list section) subheadlines))))
     (->> (apply #'om-elem-build-headline
                 :level level
                 :post-blank post-blank
@@ -1866,7 +1866,7 @@ All arguments not mentioned here follow the same rules as
                 :priority priority
                 :commentedp commentedp
                 :archivedp archivedp
-                elems)
+                nodes)
          (om-elem--headline-set-title! title-text statistics-cookie))))
 
 (om-elem--defun om-elem-build-item! (&key post-blank bullet checkbox
@@ -1949,46 +1949,46 @@ All other arguments follow the same rules as `om-elem-build-table'."
 
 (defalias 'om-elem--get-contents 'org-element-contents)
 
-(defun om-elem--get-nested-contents (indices elem)
-  "Return the nested contents of ELEM as given by INDICES.
+(defun om-elem--get-nested-contents (indices node)
+  "Return the nested contents of NODE as given by INDICES.
 INDICES is a list of integers specifying the index and level of the
 nested element to return."
-  (if (not indices) elem
-    (->> (om-elem--get-contents elem)
+  (if (not indices) node
+    (->> (om-elem--get-contents node)
          (nth (car indices))
          (om-elem--get-nested-contents (cdr indices)))))
 
-(defun om-elem--get-head (elem)
-  "Return the type and properties cells of ELEM."
-  (if (stringp elem) elem
-    (-take 2 elem)))
+(defun om-elem--get-head (node)
+  "Return the type and properties cells of NODE."
+  (if (stringp node) node
+    (-take 2 node)))
 
-(defun om-elem--is-empty-p (elem)
-  "Return t if ELEM has no contents."
-  (not (om-elem--get-contents elem)))
+(defun om-elem--is-empty-p (node)
+  "Return t if NODE has no contents."
+  (not (om-elem--get-contents node)))
 
-(defun om-elem--map-contents (fun elem)
-  (let ((contents (om-elem--get-contents elem)))
+(defun om-elem--map-contents (fun node)
+  (let ((contents (om-elem--get-contents node)))
     ;; TODO check the types of contents after they are mapped?
-    (om-elem--set-contents (funcall fun contents) elem)))
+    (om-elem--set-contents (funcall fun contents) node)))
 
 (om-elem--gen-anaphoric-form #'om-elem--map-contents)
 
-(defun om-elem--map-contained (pred fun elem)
+(defun om-elem--map-contained (pred fun node)
   (om-elem--map-contents*
    (--map-when (funcall pred it) (funcall fun it) it)
-   elem))
+   node))
 
-(defun om-elem--map-contained-first (pred fun elem)
+(defun om-elem--map-contained-first (pred fun node)
   (om-elem--map-contents*
    (--map-first (funcall pred it) (funcall fun it) it)
-   elem))
+   node))
 
-(defun om-elem--set-contents (contents elem)
-   (let ((head (om-elem--get-head elem)))
+(defun om-elem--set-contents (contents node)
+   (let ((head (om-elem--get-head node)))
      (if contents (append head contents) head)))
 
-(defun om-elem--set-contents-restricted (types contents elem)
+(defun om-elem--set-contents-restricted (types contents node)
   ;; TODO this should recursively dig up all types in contents
   ;; even if they are nested
   (-when-let (illegal (-some->> (-map #'om-elem--get-type contents)
@@ -1997,13 +1997,13 @@ nested element to return."
                                 (s-join ", ")))
     (error "Illegal types found: %s; allowed types are: %s"
            illegal (s-join ", " (-map #'symbol-name types))))
-  (om-elem--set-contents contents elem))
+  (om-elem--set-contents contents node))
 
-(defun om-elem--set-contents-by-type (container-type contents elem)
+(defun om-elem--set-contents-by-type (container-type contents node)
   ;; TODO there may be additional restrictions, such as newlines
   ;; in strings not being allowed
   (-if-let (types (alist-get container-type om-elem-restrictions))
-      (om-elem--set-contents-restricted types contents elem)
+      (om-elem--set-contents-restricted types contents node)
     (error "Invalid container type requested: %s" container-type)))
 
 ;; headline
@@ -2073,7 +2073,7 @@ nested element to return."
    `(section property-drawer (:and node-property (:key ,key)))
     (om-elem--node-property-map-value fun it) headline))
 
-(defun om-elem--map-or-build (map-fun build-fun pred-fun pos elem)
+(defun om-elem--map-or-build (map-fun build-fun pred-fun pos node)
   (om-elem--map-contents
    (lambda (contents)
      (-if-let (target (--first (funcall pred-fun it) contents))
@@ -2088,12 +2088,12 @@ nested element to return."
                (t (error "Invalid pos given: %S" pos))))
              (new (funcall build-fun)))
          (-insert-at pos new contents))))
-   elem))
+   node))
 
 (defmacro om-elem--map-or-build-nested (map-form &rest args)
   ;; forms are of form (pred builder pos-fun)
   (declare (indent 1))
-  (let* ((elem (-last-item args))
+  (let* ((node (-last-item args))
          (forms (-drop-last 1 args))
          (first (car args))
          (rem (cdr forms))
@@ -2104,7 +2104,7 @@ nested element to return."
           (if (not rem) `(lambda (it) ,map-form)
             `(lambda (inner)
                (om-elem--map-or-build-nested ,map-form ,@rem inner)))))
-    `(om-elem--map-or-build ,map-fun ,build-fun ,pred-fun ,pos-fun ,elem)))
+    `(om-elem--map-or-build ,map-fun ,build-fun ,pred-fun ,pos-fun ,node)))
 
 (defun om-elem--headline-subtree-shift-level (n headline)
   (->> (om-elem--headline-shift-level n headline)
@@ -2315,13 +2315,13 @@ zero-indexed."
 ;; function to make the contents list one element shorter, which
 ;; is usually true but makes a really hard error to catch when it
 ;; fails
-(defun om-elem--indent-after (indent-fun index elem)
+(defun om-elem--indent-after (indent-fun index node)
   (unless (and (integerp index) (<= 0 index))
     (error "Index must be non-negative integer"))
-  (if (< index (1- (length (om-elem--get-contents elem))))
-      (->> (funcall indent-fun (1+ index) elem)
+  (if (< index (1- (length (om-elem--get-contents node))))
+      (->> (funcall indent-fun (1+ index) node)
            (om-elem--indent-after indent-fun index))
-    elem))
+    node))
 
 (defun om-elem--indent-members (fun index members)
   (unless (and (integerp index) (< 0 index))
@@ -2498,39 +2498,39 @@ zero-indexed."
 
 ;;; PUBLIC TYPE FUNCTIONS
 
-(defun om-elem-is-type-p (type elem)
-  "Return t if the type of ELEM is TYPE (a symbol)."
-  (om-elem--verify elem om-elem--is-node-p)
-  (om-elem--is-type-p type elem))
+(defun om-elem-is-type-p (type node)
+  "Return t if the type of NODE is TYPE (a symbol)."
+  (om-elem--verify node om-elem--is-node-p)
+  (om-elem--is-type-p type node))
 
-(defun om-elem-is-any-type-p (types elem)
-  "Return t if the type of ELEM is in TYPES (a list of symbols)."
-  (om-elem--verify elem om-elem--is-node-p)
-  (om-elem--is-any-type-p types elem))
+(defun om-elem-is-any-type-p (types node)
+  "Return t if the type of NODE is in TYPES (a list of symbols)."
+  (om-elem--verify node om-elem--is-node-p)
+  (om-elem--is-any-type-p types node))
 
-(defun om-elem-is-element-p (elem)
-  "Return t if ELEM is an element type."
-  (om-elem--verify elem om-elem--is-node-p)
-  (om-elem--is-any-type-p om-elem-elements elem))
+(defun om-elem-is-element-p (node)
+  "Return t if NODE is an element type."
+  (om-elem--verify node om-elem--is-node-p)
+  (om-elem--is-any-type-p om-elem-elements node))
 
-(defun om-elem-is-container-p (elem)
-  "Return t if ELEM is a container.
+(defun om-elem-is-container-p (node)
+  "Return t if NODE is a container.
 Containers are elements or objects that may contain other elements
 or objects."
-  (om-elem--verify elem om-elem--is-node-p)
-  (om-elem--is-any-type-p om-elem-node-branches elem))
+  (om-elem--verify node om-elem--is-node-p)
+  (om-elem--is-any-type-p om-elem-node-branches node))
 
-(defun om-elem-is-object-container-p (elem)
-  "Return t if ELEM is an object container.
+(defun om-elem-is-object-container-p (node)
+  "Return t if NODE is an object container.
 Object containers are elements or objects that may contain objects."
-  (om-elem--verify elem om-elem--is-node-p)
-  (om-elem--is-any-type-p om-elem-node-branches-with-child-objects elem))
+  (om-elem--verify node om-elem--is-node-p)
+  (om-elem--is-any-type-p om-elem-node-branches-with-child-objects node))
 
-(defun om-elem-is-greater-element-p (elem)
-  "Return t if ELEM is a greater element.
+(defun om-elem-is-greater-element-p (node)
+  "Return t if NODE is a greater element.
 Greater elements are elements that may contain other elements."
-  (om-elem--verify elem om-elem--is-node-p)
-  (om-elem--is-any-type-p om-elem-element-branches-with-child-elements elem))
+  (om-elem--verify node om-elem--is-node-p)
+  (om-elem--is-any-type-p om-elem-element-branches-with-child-elements node))
 
 ;;; PUBLIC PROPERTY FUNCTIONS
 
@@ -2556,79 +2556,79 @@ Greater elements are elements that may contain other elements."
 
 ;; set
 
-(defun om-elem-set-property (prop value elem)
-  "Set property PROP to VALUE in ELEM.
+(defun om-elem-set-property (prop value node)
+  "Set property PROP to VALUE in NODE.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om-elem--set-property-strict prop value elem))
+  (om-elem--set-property-strict prop value node))
 
 ;; (->> (om-elem--get-type-alist-operation :set)
 ;;      (om-elem--format-alist-operations)
 ;;      (om-elem--append-documentation 'om-elem-set-property))
 
-(defun om-elem-set-properties (plist elem)
-  "Set all properties in ELEM to the values corresponding to PLIST.
+(defun om-elem-set-properties (plist node)
+  "Set all properties in NODE to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that corresponds to the
-property list in ELEM.
+property list in NODE.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om-elem--verify elem om-elem--is-node-p)
-  (om-elem--set-properties-strict plist elem))
+  (om-elem--verify node om-elem--is-node-p)
+  (om-elem--set-properties-strict plist node))
 
 ;; get
 
-(defun om-elem-get-property (prop elem)
-  "Return the value or property PROP in ELEM.
+(defun om-elem-get-property (prop node)
+  "Return the value or property PROP in NODE.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om-elem--get-property-strict prop elem))
+  (om-elem--get-property-strict prop node))
 
 ;; TODO add plural version of this...
 
 ;; map
 
-(defun om-elem-map-property (prop fun elem)
-  "Apply function FUN to the value of property PROP in ELEM.
+(defun om-elem-map-property (prop fun node)
+  "Apply function FUN to the value of property PROP in NODE.
 FUN takes one argument (the current value of PROP) and returns
 a new value to which PROP will be set.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om-elem--map-property-strict prop fun elem))
+  (om-elem--map-property-strict prop fun node))
 
 (om-elem--gen-anaphoric-form #'om-elem-map-property)
 
-(defun om-elem-map-properties (plist elem)
-  "Alter the values of properties in place within ELEM.
-PLIST is a property list where the keys are properties in ELEM and
+(defun om-elem-map-properties (plist node)
+  "Alter the values of properties in place within NODE.
+PLIST is a property list where the keys are properties in NODE and
 its values are functions to be mapped to these properties.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om-elem--verify elem om-elem--is-node-p)
-  (om-elem--map-properties-strict plist elem))
+  (om-elem--verify node om-elem--is-node-p)
+  (om-elem--map-properties-strict plist node))
 
-(defmacro om-elem-map-properties* (plist elem)
+(defmacro om-elem-map-properties* (plist node)
   "Anaphoric form of `om-elem-map-properties'.
-PLIST is a property list where the keys are properties in ELEM and
+PLIST is a property list where the keys are properties in NODE and
 its values are forms to be mapped to these properties."
   `(let ((plist* (om-elem--plist-map-values (lambda (form) `(lambda (it) ,form)) ',plist)))
-    (om-elem--map-properties-strict plist* ,elem)))
+    (om-elem--map-properties-strict plist* ,node)))
 
 ;; toggle
 
-(defun om-elem-toggle-property (prop elem)
-  "Flip the value of property PROP in ELEM.
+(defun om-elem-toggle-property (prop node)
+  "Flip the value of property PROP in NODE.
 This function only applies to properties that are booleans.
 
 The following elements and properties are supported:"
-  (let* ((type (om-elem--get-type elem))
+  (let* ((type (om-elem--get-type node))
          (flag (om-elem--get-strict-function :toggle type prop)))
     (if flag
-        (om-elem--map-property-strict prop #'not elem)
+        (om-elem--map-property-strict prop #'not node)
       (error "Not a toggle-able property"))))
 
 (->> (om-elem--get-type-alist-operation :toggle)
@@ -2637,15 +2637,15 @@ The following elements and properties are supported:"
 
 ;; shift
 
-(defun om-elem-shift-property (prop n elem)
-  "Shift property PROP by N (an integer) units within ELEM.
+(defun om-elem-shift-property (prop n node)
+  "Shift property PROP by N (an integer) units within NODE.
 This only applies the properties that are represented as integers.
 
 The following elements and properties are supported:"
-  (let* ((type (om-elem--get-type elem))
+  (let* ((type (om-elem--get-type node))
          (fun (om-elem--get-strict-function :shift type prop)))
     (if fun
-        (om-elem--map-property-strict* prop (funcall fun n it) elem)
+        (om-elem--map-property-strict* prop (funcall fun n it) node)
       (error "Not a shiftable property"))))
 
 (->> (om-elem--get-type-alist-operation :shift)
@@ -2657,8 +2657,8 @@ The following elements and properties are supported:"
 
 ;; insert
 
-(defun om-elem-insert-into-property (prop index string elem)
-  "Insert STRING into PROP at INDEX within ELEM if it is not already there.
+(defun om-elem-insert-into-property (prop index string node)
+  "Insert STRING into PROP at INDEX within NODE if it is not already there.
 This only applies to properties that are represented as lists of strings.
 
 The following elements and properties are supported:"
@@ -2667,11 +2667,11 @@ The following elements and properties are supported:"
         (string-list)
         (if (member string string-list) string-list
           (om-elem--insert-at index string string-list))))
-    (let* ((type (om-elem--get-type elem))
+    (let* ((type (om-elem--get-type node))
            (flag (om-elem--get-strict-function :string-list type prop)))
       (if flag
-          (om-elem--map-property-strict prop #'insert-at-maybe elem)
-        (error "Property '%s' in elem of type '%s' is not a string-list"
+          (om-elem--map-property-strict prop #'insert-at-maybe node)
+        (error "Property '%s' in node of type '%s' is not a string-list"
                prop type)))))
 
 (->> (om-elem--get-type-alist-operation :string-list)
@@ -2680,32 +2680,32 @@ The following elements and properties are supported:"
 
 ;; remove
 
-(defun om-elem-remove-from-property (prop string elem)
-  "Remove string STRING from list PROP within ELEM.
+(defun om-elem-remove-from-property (prop string node)
+  "Remove string STRING from list PROP within NODE.
 This only applies to properties that are represented as lists of 
 strings.
 
 See `om-elem-insert-into-property' for a list of supported elements
 and properties that may be used with this function."
-  (let* ((type (om-elem--get-type elem))
+  (let* ((type (om-elem--get-type node))
          (flag (om-elem--get-strict-function :string-list type prop)))
     (if flag
-        (om-elem--map-property-strict* prop (-remove-item string it) elem)
-      (error "Property '%s' in elem of type '%s' is not a string-list"
+        (om-elem--map-property-strict* prop (-remove-item string it) node)
+      (error "Property '%s' in node of type '%s' is not a string-list"
              prop type))))
 
 ;; plist-put
 
-(defun om-elem-plist-put-property (prop key value elem)
-  "Insert KEY and VALUE pair into PROP within ELEM.
+(defun om-elem-plist-put-property (prop key value node)
+  "Insert KEY and VALUE pair into PROP within NODE.
 KEY is a keyword and VALUE is a symbol. This only applies to 
 properties that are represented as plists.
 
 The following elements and properties are supported:."
-  (let* ((type (om-elem--get-type elem))
+  (let* ((type (om-elem--get-type node))
          (flag (om-elem--get-strict-function :plist type prop)))
     (if flag
-        (om-elem--map-property-strict* prop (plist-put it key value) elem)
+        (om-elem--map-property-strict* prop (plist-put it key value) node)
       (error "Not a plist property"))))
 
 (->> (om-elem--get-type-alist-operation :plist)
@@ -2714,17 +2714,17 @@ The following elements and properties are supported:."
 
 ;; plist-remove
 
-(defun om-elem-plist-remove-property (prop key elem)
-  "Remove KEY and its value from PROP within ELEM.
+(defun om-elem-plist-remove-property (prop key node)
+  "Remove KEY and its value from PROP within NODE.
 KEY is a keyword. This only applies to properties that are
 represented as plists.
 
 See `om-elem-plist-put-property' for a list of supported elements
 and properties that may be used with this function."
-  (let* ((type (om-elem--get-type elem))
+  (let* ((type (om-elem--get-type node))
          (flag (om-elem--get-strict-function :plist type prop)))
     (if flag
-        (om-elem--map-property-strict* prop (om-elem--plist-remove key it) elem)
+        (om-elem--map-property-strict* prop (om-elem--plist-remove key it) node)
       (error "Not a plist property"))))
 
 ;;; generic
@@ -2791,7 +2791,7 @@ a negative integer."
       (om-elem--property-is-eq-p :type 'active-range timestamp)))
 
 ;; (defun om-elem-timestamp-is-inactive-p (timestamp)
-;;   "Return t if TIMESTAMP elem is inactive."
+;;   "Return t if TIMESTAMP node is inactive."
 ;;   (om-elem--verify timestamp om-elem-is-timestamp-p)
 ;;   (or (om-elem--property-is-eq-p :type 'inactive timestamp)
 ;;       (om-elem--property-is-eq-p :type 'inactive-range timestamp)))
@@ -2835,7 +2835,7 @@ a negative integer."
 ;;   (om-elem--timestamp-end-is-equal-to-p unixtime timestamp))
 
 (defun om-elem-timestamp-range-contains-p (unixtime timestamp)
-  "Return t if UNIXTIME is between start and end of TIMESTAMP elem."
+  "Return t if UNIXTIME is between start and end of TIMESTAMP node."
   (om-elem--verify timestamp om-elem-is-timestamp-p)
   (let ((ut1 (om-elem--timestamp-get-start-unixtime timestamp))
         (ut2 (om-elem--timestamp-get-end-unixtime timestamp)))
@@ -3059,47 +3059,47 @@ nil values."
 
 ;; generic
 
-(defun om-elem-get-contents (elem)
-  "Return the contents of ELEM as a list."
+(defun om-elem-get-contents (node)
+  "Return the contents of NODE as a list."
   ;; TODO use private predicate here...
-  (om-elem--verify elem om-elem-is-container-p)
-  (om-elem--get-contents elem))
+  (om-elem--verify node om-elem-is-container-p)
+  (om-elem--get-contents node))
 
-(defun om-elem-set-contents (contents elem)
-  "Set the contents of ELEM to CONTENTS.
+(defun om-elem-set-contents (contents node)
+  "Set the contents of NODE to CONTENTS.
 CONTENTS is a list of elements or objects; the types permitted in this
-list depend on the type of ELEM."
+list depend on the type of NODE."
   ;; TODO use private predicate here...
-  (om-elem--verify elem om-elem-is-container-p)
-  (let ((type (om-elem--get-type elem)))
-    (om-elem--set-contents-by-type type contents elem)))
+  (om-elem--verify node om-elem-is-container-p)
+  (let ((type (om-elem--get-type node)))
+    (om-elem--set-contents-by-type type contents node)))
 
-(defun om-elem-map-contents (fun elem)
-  "Apply FUN to the contents of ELEM. 
+(defun om-elem-map-contents (fun node)
+  "Apply FUN to the contents of NODE. 
 FUN is a function that takes the current contents as a list and
 returns a modified contents as a list."
   ;; TODO use private predicate here...
-  (om-elem--verify elem om-elem-is-container-p)
-  (om-elem--map-contents fun elem))
+  (om-elem--verify node om-elem-is-container-p)
+  (om-elem--map-contents fun node))
 
 (om-elem--gen-anaphoric-form #'om-elem-map-contents)
 
-(defun om-elem-is-empty-p (elem)
-  "Return t if ELEM is empty.
-This will throw an error if ELEM is not a container type."
+(defun om-elem-is-empty-p (node)
+  "Return t if NODE is empty.
+This will throw an error if NODE is not a container type."
   ;; TODO use private predicate here...
-  (om-elem--verify elem om-elem-is-container-p)
-  (om-elem--is-empty-p elem))
+  (om-elem--verify node om-elem-is-container-p)
+  (om-elem--is-empty-p node))
 
-;; (defun om-elem-contains-point-p (point elem)
-;;   "Return t if integer POINT is within the beginning and end of ELEM."
-;;   (<= (om-elem--get-property :begin elem) point
-;;       (om-elem--get-property :end elem)))
+;; (defun om-elem-contains-point-p (point node)
+;;   "Return t if integer POINT is within the beginning and end of NODE."
+;;   (<= (om-elem--get-property :begin node) point
+;;       (om-elem--get-property :end node)))
 
-;; (defun om-elem-contents-contains-point-p (point elem)
-;;   "Return t if integer POINT is within the beginning and end of ELEM's contents."
-;;   (<= (om-elem--get-property :contents-begin elem) point
-;;       (om-elem--get-property :contents-end elem)))
+;; (defun om-elem-contents-contains-point-p (point node)
+;;   "Return t if integer POINT is within the beginning and end of NODE's contents."
+;;   (<= (om-elem--get-property :contents-begin node) point
+;;       (om-elem--get-property :contents-end node)))
 
 ;; (defun om-elem--wrap (type args)
 ;;   (-> (format "om-elem-build-%s" type) (intern) (apply args)))
@@ -3148,14 +3148,14 @@ This will throw an error if ELEM is not a container type."
 ;;    ((om-elem--is-plain-text-p obj) (list obj))
 ;;    (t (list obj))))
 
-;; (defun om-elem-remove-formatting (types elem)
-;;   "Remove all recursive formatting TYPES from ELEM."
+;; (defun om-elem-remove-formatting (types node)
+;;   "Remove all recursive formatting TYPES from NODE."
 ;;   (om-elem-match-map* `(:many! (:or ,@types))
-;;                 (om-elem-unwrap-deep types it) elem))
+;;                 (om-elem-unwrap-deep types it) node))
 
-;; (defun om-elem-remove-all-formatting (elem)
-;;   "Remove all recursive formatting from ELEM."
-;;   (om-elem-remove-formatting org-element-all-objects elem))
+;; (defun om-elem-remove-all-formatting (node)
+;;   "Remove all recursive formatting from NODE."
+;;   (om-elem-remove-formatting org-element-all-objects node))
 
 ;; objects
 ;;
@@ -3412,16 +3412,16 @@ This will not move the contents under the item at CHILD-INDEX."
 
 ;;; printing functions
 
-(defun om-elem--set-blank-contents (elem)
-  "Set the contents of ELEM to a blank string (\"\")."
-  (om-elem--set-contents '("") elem))
+(defun om-elem--set-blank-contents (node)
+  "Set the contents of NODE to a blank string (\"\")."
+  (om-elem--set-contents '("") node))
 
-(defun om-elem-is-zero-length-p (elem)
-  "Return t if ELEM will print as a blank string."
-  (-if-let (contents (om-elem--get-contents elem))
+(defun om-elem-is-zero-length-p (node)
+  "Return t if NODE will print as a blank string."
+  (-if-let (contents (om-elem--get-contents node))
       (-all? #'om-elem-is-zero-length-p contents)
-    (and (om-elem--is-any-type-p om-elem--rm-if-empty elem)
-         (om-elem--is-empty-p elem))))
+    (and (om-elem--is-any-type-p om-elem--rm-if-empty node)
+         (om-elem--is-empty-p node))))
 
 (defconst om-elem--rm-if-empty
   '(table plain-list bold italic radio-target strike-through
@@ -3434,28 +3434,28 @@ This will not move the contents under the item at CHILD-INDEX."
   "Elements that require contents of \"\" to correctly print empty.
 This is a workaround for a bug.")
 
-(defun om-elem--filter-non-zero-length (elem)
-  (unless (and (om-elem--is-empty-p elem)
-               (or (om-elem--is-any-type-p om-elem--rm-if-empty elem)
-                   (and (om-elem--is-type-p 'table-row elem)
-                        (om-elem--property-is-eq-p :type 'standard elem))))
-    elem))
+(defun om-elem--filter-non-zero-length (node)
+  (unless (and (om-elem--is-empty-p node)
+               (or (om-elem--is-any-type-p om-elem--rm-if-empty node)
+                   (and (om-elem--is-type-p 'table-row node)
+                        (om-elem--property-is-eq-p :type 'standard node))))
+    node))
 
-(defun om-elem--clean (elem)
-  (->> elem
+(defun om-elem--clean (node)
+  (->> node
        (om-elem--map-contents* (-non-nil (-map #'om-elem--clean it)))
        (om-elem--filter-non-zero-length)))
 
-(defun om-elem--blank (elem)
-  (if (om-elem--is-empty-p elem)
-      (if (om-elem--is-any-type-p om-elem--blank-if-empty elem)
-          (om-elem--set-blank-contents elem)
-        elem)
-    (om-elem--map-contents* (-map #'om-elem--blank it) elem)))
+(defun om-elem--blank (node)
+  (if (om-elem--is-empty-p node)
+      (if (om-elem--is-any-type-p om-elem--blank-if-empty node)
+          (om-elem--set-blank-contents node)
+        node)
+    (om-elem--map-contents* (-map #'om-elem--blank it) node)))
 
-(defun om-elem-to-string (elem)
-  "Return ELEM as an interpreted string without text properties."
-  (->> elem
+(defun om-elem-to-string (node)
+  "Return NODE as an interpreted string without text properties."
+  (->> node
        ;; some objects and greater elements should be removed if blank
        ;; table and plain list will error, and the others make no
        ;; sense if they are empty. This is an org mode bug, they
@@ -3470,9 +3470,9 @@ This is a workaround for a bug.")
        (org-element-interpret-data)
        (substring-no-properties)))
 
-(defun om-elem-to-trimmed-string (elem)
-  "Like `om-elem-to-string' but strip whitespace when returning ELEM."
-  (-some->> (om-elem-to-string elem) (s-trim)))
+(defun om-elem-to-trimmed-string (node)
+  "Like `om-elem-to-string' but strip whitespace when returning NODE."
+  (-some->> (om-elem-to-string node) (s-trim)))
 
 ;;; parsing functions
 
@@ -3518,13 +3518,13 @@ for plain-list elements vs item elements."
   (save-excursion
     (goto-char point)
     (let*
-        ((elem (org-element-at-point))
-         (elem-type (om-elem--get-type elem)))
+        ((node (org-element-at-point))
+         (elem-type (om-elem--get-type node)))
       (if (not
            (memq elem-type (append org-element-greater-elements
                                    org-element-object-containers)))
-          elem
-        (-let* (((&plist :begin :end) (om-elem--get-properties elem))
+          node
+        (-let* (((&plist :begin :end) (om-elem--get-properties node))
                 (tree (car (org-element--parse-elements
                             begin end 'first-section nil nil nil nil)))
                 (nesting (cl-case elem-type
@@ -3627,26 +3627,26 @@ returned from this function will have :begin and :end properties."
 
 ;; write
 
-(defun om-elem-insert (point elem)
-  "Convert ELEM to a string and insert at POINT in the current buffer.
-Return ELEM."
+(defun om-elem-insert (point node)
+  "Convert NODE to a string and insert at POINT in the current buffer.
+Return NODE."
   (om-elem--verify point integerp
-                   elem om-elem--is-node-p)
+                   node om-elem--is-node-p)
   (save-excursion
     (goto-char point)
-    (insert (om-elem-to-string elem)))
-  elem)
+    (insert (om-elem-to-string node)))
+  node)
 
-(defun om-elem-insert-tail (point elem)
-  "Like `om-elem-insert' but insert ELEM at POINT and move to end of insertion."
+(defun om-elem-insert-tail (point node)
+  "Like `om-elem-insert' but insert NODE at POINT and move to end of insertion."
   (om-elem--verify point integerp
-                   elem om-elem--is-node-p)
-  (let ((s (om-elem-to-string elem)))
+                   node om-elem--is-node-p)
+  (let ((s (om-elem-to-string node)))
     (save-excursion
       (goto-char point)
       (insert s))
     (goto-char (+ point (length s))))
-  elem)
+  node)
 
 (defun om-elem--apply-overlays (os)
   (cl-flet
@@ -3659,16 +3659,16 @@ Return ELEM."
           (--each (-partition 2 props) (apply #'overlay-put o* it)))))
     (-each os #'apply-overlays)))
 
-(defun om-elem-update (fun elem)
-  "Replace ELEM in the current buffer with a new one. 
-FUN is a function that takes ELEM as its only argument and returns a
-modified ELEM. This modified element is then written in place of the
+(defun om-elem-update (fun node)
+  "Replace NODE in the current buffer with a new one. 
+FUN is a function that takes NODE as its only argument and returns a
+modified NODE. This modified element is then written in place of the
 old element in the current buffer."
   (om-elem--verify fun functionp
-                   elem om-elem--is-node-p)
-  ;; if elem is of type 'org-data' it will have no props
-  (let* ((begin (or (om-elem--get-property :begin elem) (point-min)))
-         (end (or (om-elem--get-property :end elem) (point-max)))
+                   node om-elem--is-node-p)
+  ;; if node is of type 'org-data' it will have no props
+  (let* ((begin (or (om-elem--get-property :begin node) (point-min)))
+         (end (or (om-elem--get-property :end node) (point-max)))
          ;; get the outline overlays that make text invisible
          (ov-cmd (->>
                   (overlays-in begin end)
@@ -3680,16 +3680,16 @@ old element in the current buffer."
     ;; hacky way to add overlays to undo tree
     (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
     (delete-region begin end)
-    (->> (funcall fun elem) (om-elem-insert begin))
+    (->> (funcall fun node) (om-elem-insert begin))
     nil))
 
-(defmacro om-elem-update* (form elem)
+(defmacro om-elem-update* (form node)
   "Anaphoric form of `om-elem-update'.
 IN-FORM and PROC-FORM are forms corresponding to 'in-fun' and 
 'proc-fun'. The latter has the variable 'it' available to it, which
 holds the element returned from IN-FORM."
   (declare (indent 0))
-  `(om-elem-update (lambda (it) ,form) ,elem))
+  `(om-elem-update (lambda (it) ,form) ,node))
 
 ;; generate all update functions for corresponding parse functions
 ;; since all take function args, also generate anaphoric forms
@@ -3731,27 +3731,27 @@ holds the element returned from IN-FORM."
 
 ;; fold
 ;; TODO this will fold items improperly
-(defun om-elem--flag-elem-contents (flag elem)
+(defun om-elem--flag-elem-contents (flag node)
   (om-elem--verify flag booleanp
-                   elem om-elem--is-node-p)
-  (-let (((&plist :contents-begin :contents-end) (om-elem--get-properties elem)))
+                   node om-elem--is-node-p)
+  (-let (((&plist :contents-begin :contents-end) (om-elem--get-properties node)))
     (outline-flag-region (- contents-begin 1) (- contents-end 1) flag)))
 
-(defun om-elem-fold-contents (elem)
-  "Fold the contents of ELEM if they exist."
-  (om-elem--flag-elem-contents t elem))
+(defun om-elem-fold-contents (node)
+  "Fold the contents of NODE if they exist."
+  (om-elem--flag-elem-contents t node))
 
-(defun om-elem-unfold-contents (elem)
-  "Unfold the contents of ELEM if they exist."
-  (om-elem--flag-elem-contents nil elem))
+(defun om-elem-unfold-contents (node)
+  "Unfold the contents of NODE if they exist."
+  (om-elem--flag-elem-contents nil node))
 
 ;;; misc functions
 
-(defun om-elem-length (elem)
-  "Return the character length of ELEM."
-  (if (not elem) 0
-    (let ((b (om-elem--get-property :begin elem))
-          (e (om-elem--get-property :end elem)))
+(defun om-elem-length (node)
+  "Return the character length of NODE."
+  (if (not node) 0
+    (let ((b (om-elem--get-property :begin node))
+          (e (om-elem--get-property :end node)))
       (if (and b e) (- e b)
         (error "Can't determine element length")))))
 
@@ -3767,29 +3767,29 @@ This is meant to be used as input for functions such as
 `om-elem-build-timestamp'."
   (->> (decode-time) (-select-by-indices '(1 2 3 4 5)) (reverse)))
 
-(defun om-elem-get-type (elem)
-  (om-elem--verify elem om-elem--is-node-p)
-  (om-elem--get-type elem))
+(defun om-elem-get-type (node)
+  (om-elem--verify node om-elem--is-node-p)
+  (om-elem--get-type node))
 
 ;;; generalized CRUD operations
 
-(defmacro om-elem--modify-contents (elem form)
-  "Recursively modify the contents of ELEM using FORM.
+(defmacro om-elem--modify-contents (node form)
+  "Recursively modify the contents of NODE using FORM.
 FORM is a form that returns a list of elements or objects as the
 new contents, and the variable 'it' is available to represent the
 original contents to be modified."
   (declare (indent 1))
   `(cl-labels
        ((rec
-         (elem)
-         (let ((type (om-elem--get-type elem)))
-           (if (eq type 'plain-text) elem
+         (node)
+         (let ((type (om-elem--get-type node)))
+           (if (eq type 'plain-text) node
              (->>
-              (om-elem--get-contents elem)
+              (om-elem--get-contents node)
               (funcall (lambda (it) ,form))
               (--map (rec it))
-              (om-elem--construct type (nth 1 elem)))))))
-     (rec elem)))
+              (om-elem--construct type (nth 1 node)))))))
+     (rec node)))
 
 ;; find
 
@@ -3849,16 +3849,16 @@ original contents to be modified."
     ((and (pred om-elem--is-plist-p) plist)
      (cl-flet
          ((all-props-match?
-           (elem props)
-           (->> (-partition 2 (om-elem--get-properties elem))
+           (node props)
+           (->> (-partition 2 (om-elem--get-properties node))
                 (-difference (-partition 2 props))
                 (not))))
        (--filter (all-props-match? it plist) contents)))
     (_ (error "Invalid pattern: %s" pattern))))
 
 ;; TODO this is inefficient
-(defun om-elem--match-pattern (reverse? count pattern elem)
-  (let ((contents (--> (om-elem--get-contents elem)
+(defun om-elem--match-pattern (reverse? count pattern node)
+  (let ((contents (--> (om-elem--get-contents node)
                        (if reverse? (reverse it) it))))
     (pcase pattern
       (`(,(and p (guard (memq p '(:first :last :nth :slice)))) . ,_)
@@ -3890,15 +3890,15 @@ original contents to be modified."
       (_ (error "Invalid query")))))
 
 ;; TODO this is inefficient
-(defun om-elem--match-slicer (pattern elem)
+(defun om-elem--match-slicer (pattern node)
   (pcase pattern
     (`(:first . ,ps)
-     (-take 1 (om-elem--match-pattern nil 1 ps elem)))
+     (-take 1 (om-elem--match-pattern nil 1 ps node)))
     (`(:last . ,ps)
-     (-take 1 (om-elem--match-pattern t 1 ps elem)))
+     (-take 1 (om-elem--match-pattern t 1 ps node)))
     (`(:nth . (,(and (pred integerp) n) . ,ps))
-     (if (< n 0) (reverse (om-elem--match-pattern t (abs n) ps elem))
-       (list (nth n (om-elem--match-pattern nil (1+ n) ps elem)))))
+     (if (< n 0) (reverse (om-elem--match-pattern t (abs n) ps node))
+       (list (nth n (om-elem--match-pattern nil (1+ n) ps node)))))
     (`(:sub
        . (,(and (pred integerp) a)
           . (,(and (pred integerp) b)
@@ -3914,14 +3914,14 @@ original contents to be modified."
          (let ((a* (if (< a 0) (1- (abs a)) a))
                (b* (if (< b 0) (abs b) (1+ b) )))
            (->>
-            (if (<= 0 sum) (om-elem--match-pattern nil b* ps elem)
-              (reverse (om-elem--match-pattern t b* ps elem)))
+            (if (<= 0 sum) (om-elem--match-pattern nil b* ps node)
+              (reverse (om-elem--match-pattern t b* ps node)))
             (-take b*)
             (-drop a* matched)))))))
-    (_ (om-elem--match-pattern nil nil pattern elem))))
+    (_ (om-elem--match-pattern nil nil pattern node))))
 
-(defun om-elem-match (pattern elem)
-  "Return a list of all nodes matching PATTERN in ELEM.
+(defun om-elem-match (pattern node)
+  "Return a list of all nodes matching PATTERN in NODE.
 
 PATTERN is a list of form ([slicer [arg1] [arg2]] cond1 [cond2 ...]).
 
@@ -3940,7 +3940,7 @@ returned. Possible values are:
 
 'cond' denotes conditions that that match nodes in the parse
 tree. This first condition will select matches within the
-contents of ELEM, the next condition will select matches within
+contents of NODE, the next condition will select matches within
 the matches from the first condition, and so on. The types of
 conditions are:
 
@@ -3967,8 +3967,8 @@ Additionally, conditions may be further refined using boolean forms:
 The 'c' members in the forms above are one of any of the condition
 types except :many, :many!, and :any. Boolean forms may be
 nested within each other."
-  (om-elem--verify elem om-elem--is-node-p)
-  (om-elem--match-slicer pattern elem))
+  (om-elem--verify node om-elem--is-node-p)
+  (om-elem--match-slicer pattern node))
 
 ;; find-parent
 
@@ -3986,22 +3986,22 @@ nested within each other."
 ;;     ((pred om-elem--is-plist-p)
 ;;      (cl-flet
 ;;          ((all-props-match?
-;;            (elem props)
+;;            (node props)
 ;;            (->> (-slice props 0 nil 2)
 ;;                 (--map (equal (plist-get props it)
-;;                               (om-elem--get-property it elem)))
+;;                               (om-elem--get-property it node)))
 ;;                 (-none? #'null))))
 ;;        (and (all-props-match? parent query) parent)))
 ;;     (_ (error "Invalid query: %s" query))))
 
-;; (defun om-elem-match-parent (elem &rest queries)
-;;   ;; TODO validate elem (should be any valid element or object)
-;;   (unless elem (error "No element given"))
+;; (defun om-elem-match-parent (node &rest queries)
+;;   ;; TODO validate node (should be any valid element or object)
+;;   (unless node (error "No element given"))
 ;;   ;; the non-nil is required for cases where we may get
 ;;   ;; a nil for queries instead of no argument
 ;;   (let ((queries (-non-nil queries)))
 ;;     (when queries
-;;       (let ((parent (om-elem--get-parent elem)))
+;;       (let ((parent (om-elem--get-parent node)))
 ;;         (pcase queries
 ;;           (`(:many . (,q . nil))
 ;;            (or (om-elem-match-parent-query parent q)
@@ -4021,102 +4021,102 @@ nested within each other."
 
 ;; delete
 
-(defun om-elem--delete-targets (elem targets)
-  "Delete TARGETS in the contents of ELEM."
-  (om-elem--modify-contents elem
+(defun om-elem--delete-targets (node targets)
+  "Delete TARGETS in the contents of NODE."
+  (om-elem--modify-contents node
     (--remove (member it targets) it)))
 
-(defun om-elem-match-delete (pattern elem)
-  "Remove nodes matching PATTERN from ELEM and return modified ELEM.
+(defun om-elem-match-delete (pattern node)
+  "Remove nodes matching PATTERN from NODE and return modified NODE.
 
 PATTERN follows the same rules as `om-elem-match'."
-  (-if-let (targets (om-elem-match pattern elem))
-      (om-elem--delete-targets elem targets)
-    elem))
+  (-if-let (targets (om-elem-match pattern node))
+      (om-elem--delete-targets node targets)
+    node))
 
 ;; extract
 
-(defun om-elem-match-extract (pattern elem)
-  "Remove nodes matching PATTERN from ELEM.
+(defun om-elem-match-extract (pattern node)
+  "Remove nodes matching PATTERN from NODE.
 Return cons cell where the car is a list of all removed nodes and
-the cdr is the modified ELEM.
+the cdr is the modified NODE.
 
 PATTERN follows the same rules as `om-elem-match'."
-  (-if-let (targets (om-elem-match pattern elem))
-      (cons targets (om-elem--delete-targets elem targets))
-    elem))
+  (-if-let (targets (om-elem-match pattern node))
+      (cons targets (om-elem--delete-targets node targets))
+    node))
 
 ;; map
 
-(defun om-elem-match-map (pattern fun elem)
-  "Apply FUN to nodes matching PATTERN in ELEM.
+(defun om-elem-match-map (pattern fun node)
+  "Apply FUN to nodes matching PATTERN in NODE.
 FUN is a unary function that takes a node and returns a new node
 which will replace the original.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
-  (-if-let (targets (om-elem-match pattern elem))
-      (om-elem--modify-contents elem
+  (-if-let (targets (om-elem-match pattern node))
+      (om-elem--modify-contents node
         (--map-when (member it targets) (funcall fun it) it))
-    elem))
+    node))
 
 (om-elem--gen-anaphoric-form 'om-elem-match-map nil 1)
 
 ;; mapcat
 
-(defun om-elem-match-mapcat (pattern fun elem)
-  "Apply FUN to nodes matching PATTERN in ELEM.
+(defun om-elem-match-mapcat (pattern fun node)
+  "Apply FUN to nodes matching PATTERN in NODE.
 FUN is a unary function that takes a node and returns a list of new
 nodes which will be spliced in place of the original node.
 
 PATTERN follows the same rules as `om-elem-match'."
-  (-if-let (targets (om-elem-match pattern elem))
-      (om-elem--modify-contents elem
+  (-if-let (targets (om-elem-match pattern node))
+      (om-elem--modify-contents node
         (--mapcat (if (member it targets)
                       (funcall fun it) (list it))
                   it))
-    elem))
+    node))
 
 (om-elem--gen-anaphoric-form 'om-elem-match-mapcat nil 1)
 
 ;; replace
 
-(defun om-elem-match-replace (pattern elem* elem)
-  "Replace nodes matching PATTERN with ELEM* within ELEM.
-Return modified ELEM.
+(defun om-elem-match-replace (pattern node* node)
+  "Replace nodes matching PATTERN with NODE* within NODE.
+Return modified NODE.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
-  (-if-let (targets (om-elem-match pattern elem))
-      (om-elem--modify-contents elem
-        (--map-when (member it targets) elem* it))
-    elem))
+  (-if-let (targets (om-elem-match pattern node))
+      (om-elem--modify-contents node
+        (--map-when (member it targets) node* it))
+    node))
 
 ;; insert-before
 
-(defun om-elem-match-insert-before (pattern elem* elem)
-  "Insert ELEM* before every node matching PATTERN in ELEM.
-Return modified ELEM.
+(defun om-elem-match-insert-before (pattern node* node)
+  "Insert NODE* before every node matching PATTERN in NODE.
+Return modified NODE.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
-  (-if-let (targets (om-elem-match pattern elem))
-      (om-elem--modify-contents elem
-        (--mapcat (if (member it targets) (list elem* it) (list it)) it))
-    elem))
+  (-if-let (targets (om-elem-match pattern node))
+      (om-elem--modify-contents node
+        (--mapcat (if (member it targets) (list node* it) (list it)) it))
+    node))
 
 ;; insert-after
 
-(defun om-elem-match-insert-after (pattern elem* elem)
-  "Insert ELEM* after every node matching PATTERN in ELEM.
-Return modified ELEM.
+(defun om-elem-match-insert-after (pattern node* node)
+  "Insert NODE* after every node matching PATTERN in NODE.
+Return modified NODE.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
-  (-if-let (targets (om-elem-match pattern elem))
-      (om-elem--modify-contents elem
-        (--mapcat (if (member it targets) (list it elem*) (list it)) it))
-    elem))
+  (-if-let (targets (om-elem-match pattern node))
+      (om-elem--modify-contents node
+        (--mapcat (if (member it targets) (list it node*) (list it)) it))
+    node))
 
 ;; insert-within
 
@@ -4129,106 +4129,106 @@ behind the last member of LIST and decreasing integers move toward the
 front."
   (if (<= 0 index) index (+ (length list) index 1)))
 
-(defun om-elem--insert-in (elem elem* index)
-  "Insert ELEM* into the contents of ELEM at INDEX."
-  (let* ((contents (om-elem--get-contents elem))
+(defun om-elem--insert-in (node node* index)
+  "Insert NODE* into the contents of NODE at INDEX."
+  (let* ((contents (om-elem--get-contents node))
          (i (om-elem--normalize-insert-index index contents)))
       (om-elem--construct
-       (nth 0 elem)
-       (nth 1 elem)
-       (-insert-at index elem* contents))))
+       (nth 0 node)
+       (nth 1 node)
+       (-insert-at index node* contents))))
 
-(defun om-elem-match-insert-within (pattern index elem* elem)
-  "Insert new ELEM* at INDEX into nodes matching PATTERN in ELEM.
-Return modified ELEM.
+(defun om-elem-match-insert-within (pattern index node* node)
+  "Insert new NODE* at INDEX into nodes matching PATTERN in NODE.
+Return modified NODE.
 
 PATTERN follows the same rules as `om-elem-match' with the exception
-that PATTERN may be nil. In this case ELEM* will be inserted at INDEX
-in the immediate, top level contents of ELEM."
+that PATTERN may be nil. In this case NODE* will be inserted at INDEX
+in the immediate, top level contents of NODE."
   (declare (indent 2))
   (if (-non-nil pattern)
-      (-if-let (targets (om-elem-match pattern elem))
-          (om-elem--modify-contents elem
-            (if (not (member elem targets)) it
-              (om-elem--insert-in it elem* index)))
-        elem)
-    (om-elem--insert-in elem elem* index)))
+      (-if-let (targets (om-elem-match pattern node))
+          (om-elem--modify-contents node
+            (if (not (member node targets)) it
+              (om-elem--insert-in it node* index)))
+        node)
+    (om-elem--insert-in node node* index)))
 
 ;; splice
 
-(defun om-elem-match-splice (pattern elems* elem)
-  "Splice nodes matching PATTERN in ELEM with ELEMS*.
-Return modified ELEM. ELEMS* is a list of nodes.
+(defun om-elem-match-splice (pattern nodes* node)
+  "Splice nodes matching PATTERN in NODE with NODES*.
+Return modified NODE. NODES* is a list of nodes.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
-  (-if-let (targets (om-elem-match pattern elem))
-      (om-elem--modify-contents elem
-        (--mapcat (if (member it targets) elems* (list it)) it))
-    elem))
+  (-if-let (targets (om-elem-match pattern node))
+      (om-elem--modify-contents node
+        (--mapcat (if (member it targets) nodes* (list it)) it))
+    node))
 
 ;; splice-before
 
-(defun om-elem-match-splice-before (pattern elems* elem)
-  "Splice ELEMS* before every nodes matching PATTERN in ELEM.
-Return modified ELEM. ELEMS* is a list of nodes.
+(defun om-elem-match-splice-before (pattern nodes* node)
+  "Splice NODES* before every nodes matching PATTERN in NODE.
+Return modified NODE. NODES* is a list of nodes.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
-  (-if-let (targets (om-elem-match pattern elem))
-      (om-elem--modify-contents elem
+  (-if-let (targets (om-elem-match pattern node))
+      (om-elem--modify-contents node
         (--mapcat (if (member it targets)
-                      (append elems* (list it))
+                      (append nodes* (list it))
                     (list it))
                   it))
-    elem))
+    node))
 
 ;; splice-after
 
-(defun om-elem-match-splice-after (pattern elems* elem)
-  "Splice ELEMS* after every nodes matching PATTERN in ELEM.
-Return modified ELEM. ELEMS* is a list of nodes.
+(defun om-elem-match-splice-after (pattern nodes* node)
+  "Splice NODES* after every nodes matching PATTERN in NODE.
+Return modified NODE. NODES* is a list of nodes.
 
 PATTERN follows the same rules as `om-elem-match'."
   (declare (indent 1))
-  (-if-let (targets (om-elem-match pattern elem))
-      (om-elem--modify-contents elem
-        (--mapcat (if (member it targets) (cons it elems*) (list it)) it))
-    elem))
+  (-if-let (targets (om-elem-match pattern node))
+      (om-elem--modify-contents node
+        (--mapcat (if (member it targets) (cons it nodes*) (list it)) it))
+    node))
 
 ;; splice-within
 
-(defun om-elem--splice-at (elem elems* index)
-  "Splice ELEMS* into the contents of ELEM at INDEX."
-  (let* ((contents (om-elem--get-contents elem))
+(defun om-elem--splice-at (node nodes* index)
+  "Splice NODES* into the contents of NODE at INDEX."
+  (let* ((contents (om-elem--get-contents node))
          (i (om-elem--normalize-insert-index index contents)))
     (om-elem--construct
-     (nth 0 elem)
-     (nth 1 elem)
+     (nth 0 node)
+     (nth 1 node)
      (->> (-split-at i contents)
-          (-insert-at 1 elems*)
+          (-insert-at 1 nodes*)
           (apply #'append)))))
 
-(defun om-elem-match-splice-within (pattern index elems* elem)
-  "Splice new ELEMS* at INDEX into nodes matching PATTERN in ELEM.
-Return modified ELEM. ELEMS* is a list of nodes.
+(defun om-elem-match-splice-within (pattern index nodes* node)
+  "Splice new NODES* at INDEX into nodes matching PATTERN in NODE.
+Return modified NODE. NODES* is a list of nodes.
 
 PATTERN follows the same rules as `om-elem-match' with the exception
-that PATTERN may be nil. In this case ELEMS* will be inserted at INDEX
-in the immediate, top level contents of ELEM."
+that PATTERN may be nil. In this case NODES* will be inserted at INDEX
+in the immediate, top level contents of NODE."
   (declare (indent 2))
   (if (-non-nil pattern)
-      (-if-let (targets (om-elem-match pattern elem))
+      (-if-let (targets (om-elem-match pattern node))
           (om-elem--modify-contents
-              elem (if (not (member elem targets)) it
-                     (om-elem--splice-at elems* index contents)))
-        elem)
-    (om-elem--splice-at elem elems* index)))
+              node (if (not (member node targets)) it
+                     (om-elem--splice-at nodes* index contents)))
+        node)
+    (om-elem--splice-at node nodes* index)))
 
-;; (defun om-elem-match-delete-in-place (elem query &rest queries)
-;;   (let ((begin (om-elem--get-property :begin elem))
-;;         (end (om-elem--get-property :end elem))
-;;         (new-text (-> (apply #'om-elem-match-delete elem query queries)
+;; (defun om-elem-match-delete-in-place (node query &rest queries)
+;;   (let ((begin (om-elem--get-property :begin node))
+;;         (end (om-elem--get-property :end node))
+;;         (new-text (-> (apply #'om-elem-match-delete node query queries)
 ;;                       (org-element-interpret-data)
 ;;                       (s-trim))))
 ;;     (delete-region begin end)
@@ -4238,31 +4238,31 @@ in the immediate, top level contents of ELEM."
 
 ;; misc
 
-;; (defun om-elem-clean (elem)
-;;   "Recursively remove all empty elements from ELEM.
-;; Has no effect on 'plain-text' elements."
-;;   (cl-labels
-;;       ((clean-rec
-;;         (elem)
-;;         (let ((type (om-elem--get-type elem)))
-;;           (if (eq type 'plain-text) elem
-;;             (->> (om-elem--get-contents elem)
-;;                  (--remove
-;;                   (and (om-elem--is-empty-p it)
-;;                        (om-elem--is-any-type-p '(section plain-list) it)))
-;;                  (--map (clean-rec it))
-;;                  (append (list type (nth 1 elem))))))))
-;;     (clean-rec elem)))
+(defun om-elem-clean (node)
+  "Recursively remove all empty elements from NODE.
+Has no effect on 'plain-text' elements."
+  (cl-labels
+      ((clean-rec
+        (node)
+        (let ((type (om-elem--get-type node)))
+          (if (eq type 'plain-text) node
+            (->> (om-elem--get-contents node)
+                 (--remove
+                  (and (om-elem--is-empty-p it)
+                       (om-elem--is-any-type-p '(section plain-list) it)))
+                 (--map (clean-rec it))
+                 (append (list type (nth 1 node))))))))
+    (clean-rec node)))
 
 ;; side-effects
 
-(defun om-elem-match-do (pattern fun elem)
+(defun om-elem-match-do (pattern fun node)
   "Like `om-elem-match-map' but for side effects only.
 FUN is function that side effects and takes on argument, the matches
-from ELEM using PATTERN. This function itself returns nil.
+from NODE using PATTERN. This function itself returns nil.
 
 PATTERN follows the same rules as `om-elem-match'."
-  (-when-let (targets (om-elem-match queries elem))
+  (-when-let (targets (om-elem-match queries node))
       (--each (funcall fun it) targets)))
 
 (provide 'om-elem)
