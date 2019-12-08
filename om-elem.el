@@ -453,11 +453,11 @@ These are also known as \"recursive objects\" in `org-element.el'")
   "Return t is ELEM is a node."
   (om-elem--is-any-type-p om-elem-nodes elem))
 
-;; (defun om-elem-is-greater-element-p (elem)
+;; (defun om-elem-is-branch-element-with-child-elements-p (elem)
 ;;   "Return t is ELEM is a greater element."
 ;;   (om-elem--is-any-type-p om-elem-branch-elements-with-child-elements elem))
 
-;; (defun om-elem-is-container-p (elem)
+;; (defun om-elem-is-branch-node-p (elem)
 ;;   "Return t is ELEM is a container."
 ;;   (om-elem--is-any-type-p om-elem-node-branches elem))
 
@@ -2509,26 +2509,22 @@ zero-indexed."
   (om-elem--is-any-type-p types node))
 
 (defun om-elem-is-element-p (node)
-  "Return t if NODE is an element type."
+  "Return t if NODE is an element class."
   (om-elem--verify node om-elem--is-node-p)
   (om-elem--is-any-type-p om-elem-elements node))
 
-(defun om-elem-is-container-p (node)
-  "Return t if NODE is a container.
-Containers are elements or objects that may contain other elements
-or objects."
+(defun om-elem-is-branch-node-p (node)
+  "Return t if NODE is a branch node."
   (om-elem--verify node om-elem--is-node-p)
   (om-elem--is-any-type-p om-elem-node-branches node))
 
-(defun om-elem-is-object-container-p (node)
-  "Return t if NODE is an object container.
-Object containers are elements or objects that may contain objects."
+(defun om-elem-is-branch-node-with-child-objects-p (node)
+  "Return t if NODE is a branch node that may have child objects."
   (om-elem--verify node om-elem--is-node-p)
   (om-elem--is-any-type-p om-elem-branch-nodes-with-child-objects node))
 
-(defun om-elem-is-greater-element-p (node)
-  "Return t if NODE is a greater element.
-Greater elements are elements that may contain other elements."
+(defun om-elem-is-branch-element-with-child-elements-p (node)
+  "Return t if NODE is a branch element that may have child objects."
   (om-elem--verify node om-elem--is-node-p)
   (om-elem--is-any-type-p om-elem-branch-elements-with-child-elements node))
 
@@ -3062,7 +3058,7 @@ nil values."
 (defun om-elem-get-contents (node)
   "Return the contents of NODE as a list."
   ;; TODO use private predicate here...
-  (om-elem--verify node om-elem-is-container-p)
+  (om-elem--verify node om-elem-is-branch-node-p)
   (om-elem--get-contents node))
 
 (defun om-elem-set-contents (contents node)
@@ -3070,7 +3066,7 @@ nil values."
 CONTENTS is a list of elements or objects; the types permitted in this
 list depend on the type of NODE."
   ;; TODO use private predicate here...
-  (om-elem--verify node om-elem-is-container-p)
+  (om-elem--verify node om-elem-is-branch-node-p)
   (let ((type (om-elem--get-type node)))
     (om-elem--set-contents-by-type type contents node)))
 
@@ -3079,7 +3075,7 @@ list depend on the type of NODE."
 FUN is a function that takes the current contents as a list and
 returns a modified contents as a list."
   ;; TODO use private predicate here...
-  (om-elem--verify node om-elem-is-container-p)
+  (om-elem--verify node om-elem-is-branch-node-p)
   (om-elem--map-contents fun node))
 
 (om-elem--gen-anaphoric-form #'om-elem-map-contents)
@@ -3088,7 +3084,7 @@ returns a modified contents as a list."
   "Return t if NODE is empty.
 This will throw an error if NODE is not a container type."
   ;; TODO use private predicate here...
-  (om-elem--verify node om-elem-is-container-p)
+  (om-elem--verify node om-elem-is-branch-node-p)
   (om-elem--is-empty-p node))
 
 ;; (defun om-elem-contains-point-p (point node)

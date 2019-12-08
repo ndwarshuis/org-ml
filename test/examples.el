@@ -918,76 +918,76 @@
          (om-elem-is-element-p))
     => nil)
 
-  (defexamples-content om-elem-is-container-p
+  (defexamples-content om-elem-is-branch-node-p
     nil
     (:content "*ziltoid*")
     (:comment "Parsing this as an element gives a paragraph type (an object container).")
     (->> (om-elem-parse-this-element)
-         (om-elem-is-container-p))
+         (om-elem-is-branch-node-p))
     => t
     (:comment "Parsing this as an object gives a bold type (also an object container).")
     (->> (om-elem-parse-this-object)
-         (om-elem-is-container-p))
+         (om-elem-is-branch-node-p))
     => t
     (:content "~ziltoid~")
     (:comment "Parsing this as an object gives a code type (not a container).")
     (->> (om-elem-parse-this-object)
-         (om-elem-is-container-p))
+         (om-elem-is-branch-node-p))
     => nil
     (:content "# ziltoid")
     (:comment "Parsing this as an element gives a comment type (not a container).")
     (->> (om-elem-parse-this-element)
-         (om-elem-is-container-p))
+         (om-elem-is-branch-node-p))
     => nil
     (:content "* I'm so great")
     (:comment "Parsing this as an element gives a table (a greater element).")
     (->> (om-elem-parse-this-element)
-         (om-elem-is-container-p))
+         (om-elem-is-branch-node-p))
     => t)
 
-  (defexamples-content om-elem-is-object-container-p
+  (defexamples-content om-elem-is-branch-node-with-child-objects-p
     nil
     (:content "*ziltoid*")
     (:comment "Parsing this as an element gives a paragraph type (an object container).")
     (->> (om-elem-parse-this-element)
-         (om-elem-is-object-container-p))
+         (om-elem-is-branch-node-with-child-objects-p))
     => t
     (:comment "Parsing this as an object gives a bold type (also an object container).")
     (->> (om-elem-parse-this-object)
-         (om-elem-is-object-container-p))
+         (om-elem-is-branch-node-with-child-objects-p))
     => t
     (:content "~ziltoid~")
     (:comment "Parsing this as an object gives a code type (not a container).")
     (->> (om-elem-parse-this-object)
-         (om-elem-is-object-container-p))
+         (om-elem-is-branch-node-with-child-objects-p))
     => nil
     (:content "# ziltoid")
     (:comment "Parsing this as an element gives a comment type (not a container).")
     (->> (om-elem-parse-this-element)
-         (om-elem-is-object-container-p))
+         (om-elem-is-branch-node-with-child-objects-p))
     => nil
     (:content "* I'm so great")
     (:comment "Parsing this as an element gives a table (a greater element).")
     (->> (om-elem-parse-this-element)
-         (om-elem-is-object-container-p))
+         (om-elem-is-branch-node-with-child-objects-p))
     => nil)
 
-  (defexamples-content om-elem-is-greater-element-p
+  (defexamples-content om-elem-is-branch-element-with-child-elements-p
     nil
     (:content "* I'm so great")
     (:comment "Parsing this as an element gives a table (a greater element).")
     (->> (om-elem-parse-this-element)
-         (om-elem-is-greater-element-p))
+         (om-elem-is-branch-element-with-child-elements-p))
     => t
     (:content "*ziltoid*")
     (:comment "Parsing this as an element gives a paragraph type (not a greater element).")
     (->> (om-elem-parse-this-element)
-         (om-elem-is-greater-element-p))
+         (om-elem-is-branch-element-with-child-elements-p))
     => nil
     (:content "# ziltoid")
     (:comment "Parsing this as an element gives a comment type (not a container).")
     (->> (om-elem-parse-this-element)
-         (om-elem-is-greater-element-p))
+         (om-elem-is-branch-element-with-child-elements-p))
     => nil))
 
 (def-example-group "Property Manipulation"
