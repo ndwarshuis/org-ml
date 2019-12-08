@@ -254,9 +254,9 @@ Test node types.
 * [om-elem-is-type-p](#om-elem-is-type-p-type-node) `(type node)`
 * [om-elem-is-any-type-p](#om-elem-is-any-type-p-types-node) `(types node)`
 * [om-elem-is-element-p](#om-elem-is-element-p-node) `(node)`
-* [om-elem-is-container-p](#om-elem-is-container-p-node) `(node)`
-* [om-elem-is-object-container-p](#om-elem-is-object-container-p-node) `(node)`
-* [om-elem-is-greater-element-p](#om-elem-is-greater-element-p-node) `(node)`
+* [om-elem-is-branch-node-p](#om-elem-is-branch-node-p-node) `(node)`
+* [om-elem-is-branch-node-with-child-objects-p](#om-elem-is-branch-node-with-child-objects-p-node) `(node)`
+* [om-elem-is-branch-element-with-child-elements-p](#om-elem-is-branch-element-with-child-elements-p-node) `(node)`
 
 ## Property Manipulation
 
@@ -2030,7 +2030,7 @@ Return t if the type of `node` is in `types` (a list of symbols).
 
 #### om-elem-is-element-p `(node)`
 
-Return t if `node` is an element type.
+Return t if `node` is an element class.
 
 ```el
 ;; Given the following contents:
@@ -2048,11 +2048,9 @@ Return t if `node` is an element type.
 
 ```
 
-#### om-elem-is-container-p `(node)`
+#### om-elem-is-branch-node-p `(node)`
 
-Return t if `node` is a container.
-Containers are elements or objects that may contain other elements
-or objects.
+Return t if `node` is a branch node.
 
 ```el
 ;; Given the following contents:
@@ -2060,12 +2058,12 @@ or objects.
 
 ;; Parsing this as an element gives a paragraph type (an object container).
 (->> (om-elem-parse-this-element)
-     (om-elem-is-container-p))
+     (om-elem-is-branch-node-p))
  ;; => t
 
 ;; Parsing this as an object gives a bold type (also an object container).
 (->> (om-elem-parse-this-object)
-     (om-elem-is-container-p))
+     (om-elem-is-branch-node-p))
  ;; => t
 
 ;; Given the following contents:
@@ -2073,7 +2071,7 @@ or objects.
 
 ;; Parsing this as an object gives a code type (not a container).
 (->> (om-elem-parse-this-object)
-     (om-elem-is-container-p))
+     (om-elem-is-branch-node-p))
  ;; => nil
 
 ;; Given the following contents:
@@ -2081,7 +2079,7 @@ or objects.
 
 ;; Parsing this as an element gives a comment type (not a container).
 (->> (om-elem-parse-this-element)
-     (om-elem-is-container-p))
+     (om-elem-is-branch-node-p))
  ;; => nil
 
 ;; Given the following contents:
@@ -2089,15 +2087,14 @@ or objects.
 
 ;; Parsing this as an element gives a table (a greater element).
 (->> (om-elem-parse-this-element)
-     (om-elem-is-container-p))
+     (om-elem-is-branch-node-p))
  ;; => t
 
 ```
 
-#### om-elem-is-object-container-p `(node)`
+#### om-elem-is-branch-node-with-child-objects-p `(node)`
 
-Return t if `node` is an object container.
-Object containers are elements or objects that may contain objects.
+Return t if `node` is a branch node that may have child objects.
 
 ```el
 ;; Given the following contents:
@@ -2105,12 +2102,12 @@ Object containers are elements or objects that may contain objects.
 
 ;; Parsing this as an element gives a paragraph type (an object container).
 (->> (om-elem-parse-this-element)
-     (om-elem-is-object-container-p))
+     (om-elem-is-branch-node-with-child-objects-p))
  ;; => t
 
 ;; Parsing this as an object gives a bold type (also an object container).
 (->> (om-elem-parse-this-object)
-     (om-elem-is-object-container-p))
+     (om-elem-is-branch-node-with-child-objects-p))
  ;; => t
 
 ;; Given the following contents:
@@ -2118,7 +2115,7 @@ Object containers are elements or objects that may contain objects.
 
 ;; Parsing this as an object gives a code type (not a container).
 (->> (om-elem-parse-this-object)
-     (om-elem-is-object-container-p))
+     (om-elem-is-branch-node-with-child-objects-p))
  ;; => nil
 
 ;; Given the following contents:
@@ -2126,7 +2123,7 @@ Object containers are elements or objects that may contain objects.
 
 ;; Parsing this as an element gives a comment type (not a container).
 (->> (om-elem-parse-this-element)
-     (om-elem-is-object-container-p))
+     (om-elem-is-branch-node-with-child-objects-p))
  ;; => nil
 
 ;; Given the following contents:
@@ -2134,15 +2131,14 @@ Object containers are elements or objects that may contain objects.
 
 ;; Parsing this as an element gives a table (a greater element).
 (->> (om-elem-parse-this-element)
-     (om-elem-is-object-container-p))
+     (om-elem-is-branch-node-with-child-objects-p))
  ;; => nil
 
 ```
 
-#### om-elem-is-greater-element-p `(node)`
+#### om-elem-is-branch-element-with-child-elements-p `(node)`
 
-Return t if `node` is a greater element.
-Greater elements are elements that may contain other elements.
+Return t if `node` is a branch element that may have child objects.
 
 ```el
 ;; Given the following contents:
@@ -2150,7 +2146,7 @@ Greater elements are elements that may contain other elements.
 
 ;; Parsing this as an element gives a table (a greater element).
 (->> (om-elem-parse-this-element)
-     (om-elem-is-greater-element-p))
+     (om-elem-is-branch-element-with-child-elements-p))
  ;; => t
 
 ;; Given the following contents:
@@ -2158,7 +2154,7 @@ Greater elements are elements that may contain other elements.
 
 ;; Parsing this as an element gives a paragraph type (not a greater element).
 (->> (om-elem-parse-this-element)
-     (om-elem-is-greater-element-p))
+     (om-elem-is-branch-element-with-child-elements-p))
  ;; => nil
 
 ;; Given the following contents:
@@ -2166,7 +2162,7 @@ Greater elements are elements that may contain other elements.
 
 ;; Parsing this as an element gives a comment type (not a container).
 (->> (om-elem-parse-this-element)
-     (om-elem-is-greater-element-p))
+     (om-elem-is-branch-element-with-child-elements-p))
  ;; => nil
 
 ```
@@ -2220,7 +2216,7 @@ Error
 
 #### om-elem-set-properties `(plist node)`
 
-Set all properties in `node` to the values corresponding to `plist`.
+Set all properties of `node` to the values corresponding to `plist`.
 `plist` is a list of property-value pairs that corresponds to the
 property list in `node`.
 
@@ -2241,7 +2237,7 @@ each type.
 
 #### om-elem-get-property `(prop node)`
 
-Return the value or property `prop` in `node`.
+Return the value or property `prop` of `node`.
 
 See builder functions for a list of properties and their rules for
 each type.
@@ -2293,9 +2289,9 @@ Error
 
 #### om-elem-map-property `(prop fun node)`
 
-Apply function `fun` to the value of property `prop` in `node`.
-`fun` takes one argument (the current value of `prop`) and returns
-a new value to which `prop` will be set.
+Apply `fun` to the value of property `prop` of `node`.
+`fun` is a unary function which takes the current value of `prop` and
+returns a new value to which `prop` will be set.
 
 See builder functions for a list of properties and their rules for
 each type.
@@ -2340,8 +2336,8 @@ Error
 
 #### om-elem-map-properties `(plist node)`
 
-Alter the values of properties in place within `node`.
-`plist` is a property list where the keys are properties in `node` and
+Alter property values of `node` in place.
+`plist` is a property list where the keys are properties of `node` and
 its values are functions to be mapped to these properties.
 
 See builder functions for a list of properties and their rules for
@@ -2363,7 +2359,7 @@ each type.
 
 #### om-elem-toggle-property `(prop node)`
 
-Flip the value of property `prop` in `node`.
+Flip the value of property `prop` of `node`.
 This function only applies to properties that are booleans.
 
 The following elements and properties are supported:
@@ -2428,7 +2424,7 @@ Error
 
 #### om-elem-shift-property `(prop n node)`
 
-Shift property `prop` by `n` (an integer) units within `node`.
+Shift property `prop` by `n` (an integer) units of `node`.
 This only applies the properties that are represented as integers.
 
 The following elements and properties are supported:
@@ -2486,8 +2482,9 @@ Error
 
 #### om-elem-insert-into-property `(prop index string node)`
 
-Insert `string` into `prop` at `index` within `node` if it is not already there.
-This only applies to properties that are represented as lists of strings.
+Insert `string` into `prop` at `index` of `node` if not already there.
+This only applies to properties that are represented as lists of
+strings.
 
 The following elements and properties are supported:
 
@@ -2545,7 +2542,7 @@ Error
 
 #### om-elem-remove-from-property `(prop string node)`
 
-Remove string `string` from list `prop` within `node`.
+Remove `string` from `prop` of `node`.
 This only applies to properties that are represented as lists of 
 strings.
 
@@ -2585,7 +2582,7 @@ Error
 
 #### om-elem-plist-put-property `(prop key value node)`
 
-Insert `key` and `value` pair into `prop` within `node`.
+Insert `key` and `value` pair into `prop` of `node`.
 `key` is a keyword and `value` is a symbol. This only applies to 
 properties that are represented as plists.
 
@@ -2639,7 +2636,7 @@ Error
 
 #### om-elem-plist-remove-property `(prop key node)`
 
-Remove `key` and its value from `prop` within `node`.
+Remove `key` and its value from `prop` of `node`.
 `key` is a keyword. This only applies to properties that are
 represented as plists.
 

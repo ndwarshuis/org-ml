@@ -2553,7 +2553,7 @@ zero-indexed."
 ;; set
 
 (defun om-elem-set-property (prop value node)
-  "Set property PROP to VALUE in NODE.
+  "Set property PROP to VALUE of NODE.
 
 See builder functions for a list of properties and their rules for
 each type."
@@ -2564,7 +2564,7 @@ each type."
 ;;      (om-elem--append-documentation 'om-elem-set-property))
 
 (defun om-elem-set-properties (plist node)
-  "Set all properties in NODE to the values corresponding to PLIST.
+  "Set all properties of NODE to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that corresponds to the
 property list in NODE.
 
@@ -2576,7 +2576,7 @@ each type."
 ;; get
 
 (defun om-elem-get-property (prop node)
-  "Return the value or property PROP in NODE.
+  "Return the value or property PROP of NODE.
 
 See builder functions for a list of properties and their rules for
 each type."
@@ -2587,9 +2587,9 @@ each type."
 ;; map
 
 (defun om-elem-map-property (prop fun node)
-  "Apply function FUN to the value of property PROP in NODE.
-FUN takes one argument (the current value of PROP) and returns
-a new value to which PROP will be set.
+  "Apply FUN to the value of property PROP of NODE.
+FUN is a unary function which takes the current value of PROP and
+returns a new value to which PROP will be set.
 
 See builder functions for a list of properties and their rules for
 each type."
@@ -2598,8 +2598,8 @@ each type."
 (om-elem--gen-anaphoric-form #'om-elem-map-property)
 
 (defun om-elem-map-properties (plist node)
-  "Alter the values of properties in place within NODE.
-PLIST is a property list where the keys are properties in NODE and
+  "Alter property values of NODE in place.
+PLIST is a property list where the keys are properties of NODE and
 its values are functions to be mapped to these properties.
 
 See builder functions for a list of properties and their rules for
@@ -2609,7 +2609,7 @@ each type."
 
 (defmacro om-elem-map-properties* (plist node)
   "Anaphoric form of `om-elem-map-properties'.
-PLIST is a property list where the keys are properties in NODE and
+PLIST is a property list where the keys are properties of NODE and
 its values are forms to be mapped to these properties."
   `(let ((plist* (om-elem--plist-map-values (lambda (form) `(lambda (it) ,form)) ',plist)))
     (om-elem--map-properties-strict plist* ,node)))
@@ -2617,7 +2617,7 @@ its values are forms to be mapped to these properties."
 ;; toggle
 
 (defun om-elem-toggle-property (prop node)
-  "Flip the value of property PROP in NODE.
+  "Flip the value of property PROP of NODE.
 This function only applies to properties that are booleans.
 
 The following elements and properties are supported:"
@@ -2634,7 +2634,7 @@ The following elements and properties are supported:"
 ;; shift
 
 (defun om-elem-shift-property (prop n node)
-  "Shift property PROP by N (an integer) units within NODE.
+  "Shift property PROP by N (an integer) units of NODE.
 This only applies the properties that are represented as integers.
 
 The following elements and properties are supported:"
@@ -2654,8 +2654,9 @@ The following elements and properties are supported:"
 ;; insert
 
 (defun om-elem-insert-into-property (prop index string node)
-  "Insert STRING into PROP at INDEX within NODE if it is not already there.
-This only applies to properties that are represented as lists of strings.
+  "Insert STRING into PROP at INDEX of NODE if not already there.
+This only applies to properties that are represented as lists of
+strings.
 
 The following elements and properties are supported:"
   (cl-flet
@@ -2677,7 +2678,7 @@ The following elements and properties are supported:"
 ;; remove
 
 (defun om-elem-remove-from-property (prop string node)
-  "Remove string STRING from list PROP within NODE.
+  "Remove STRING from PROP of NODE.
 This only applies to properties that are represented as lists of 
 strings.
 
@@ -2693,7 +2694,7 @@ and properties that may be used with this function."
 ;; plist-put
 
 (defun om-elem-plist-put-property (prop key value node)
-  "Insert KEY and VALUE pair into PROP within NODE.
+  "Insert KEY and VALUE pair into PROP of NODE.
 KEY is a keyword and VALUE is a symbol. This only applies to 
 properties that are represented as plists.
 
@@ -2711,7 +2712,7 @@ The following elements and properties are supported:."
 ;; plist-remove
 
 (defun om-elem-plist-remove-property (prop key node)
-  "Remove KEY and its value from PROP within NODE.
+  "Remove KEY and its value from PROP of NODE.
 KEY is a keyword. This only applies to properties that are
 represented as plists.
 
