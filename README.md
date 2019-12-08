@@ -235,7 +235,7 @@ Build new nodes.
 ### Shorthand Builders
 
 
-Build elements and objects with more convenient/shorter syntax.
+Build nodes with more convenient/shorter syntax.
 
 * [om-elem-build-timestamp!](#om-elem-build-timestamp-type-start-key-end-repeater-warning-post-blank) `(type start &key end repeater warning post-blank)`
 * [om-elem-build-clock!](#om-elem-build-clock-start-key-end-post-blank) `(start &key end post-blank)`
@@ -249,7 +249,7 @@ Build elements and objects with more convenient/shorter syntax.
 ## Type Predicates
 
 
-Testing types of nodes.
+Test node types.
 
 * [om-elem-is-type-p](#om-elem-is-type-p-type-node) `(type node)`
 * [om-elem-is-any-type-p](#om-elem-is-any-type-p-types-node) `(types node)`
@@ -1750,7 +1750,7 @@ Build a table-row element with the 'rule' type.
 ### Shorthand Builders
 
 
-Build elements and objects with more convenient/shorter syntax.
+Build nodes with more convenient/shorter syntax.
 
 #### om-elem-build-timestamp! `(type start &key end repeater warning post-blank)`
 
@@ -1986,7 +1986,7 @@ All other arguments follow the same rules as [`om-elem-build-table`](#om-elem-bu
 ## Type Predicates
 
 
-Testing types of nodes.
+Test node types.
 
 #### om-elem-is-type-p `(type node)`
 

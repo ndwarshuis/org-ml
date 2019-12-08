@@ -777,7 +777,7 @@
         => "|-"))
 
     (def-example-subgroup "Shorthand Builders"
-      "Build elements and objects with more convenient/shorter syntax."
+      "Build nodes with more convenient/shorter syntax."
 
       (defexamples om-elem-build-timestamp!
         (->> (om-elem-build-timestamp! 'inactive '(2019 1 1))
@@ -881,7 +881,7 @@
                     "| V | E |")))))
 
 (def-example-group "Type Predicates"
-  "Testing types of nodes."
+  "Test node types."
 
   (defexamples-content om-elem-is-type-p
     nil
