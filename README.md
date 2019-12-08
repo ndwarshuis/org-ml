@@ -45,53 +45,78 @@ functional library for emacs-lisp.
 # Org-Element Overview
 
 Parsing a buffer with the function `org-element-parse-buffer` will
-yield a parse-tree composed of leaves and branches.
+yield a parse tree composed of nodes. Nodes have types and properties
+associated with them. See [the org-element API
+documentation](https://orgmode.org/worg/dev/org-element-api.html#attributes)
+for a list of all node types and their properties (also see the
+[terminology conventions](#terminology) and [property
+omissions](#properties) used in this package).
 
-The leaves can be one of two broad categories:
-- Objects: roughly correspond to raw, possibly-formatted text
-  (plain-text, timestamp, code, etc)
-- Elements: more complex structures, some of which may have objects in
-  their properties (clock, planning, src-blocks, etc)
-
-Each leaf is represented by a list where the first member is the type
-and the second member is a plist describing the element or object's
-properties:
+Each node is represented by a list where the first member is the type
+and the second member is a plist describing the node's properties:
 
 ``` emacs-lisp
 (type (:prop1 value1 :prop2 value2 ...))
 ```
 
-The branches with the leaves come in three
-broad types:
-- Recursive objects: objects that contain other objects
-- Object Containers: elements that contain other objects
-- Greater elements: elements that contain other elements
+Node types may be either leaves or branches, where branches
+may have zero or more child nodes and leaves may not have child nodes
+at all. Leaves will always have lists of the form shown above.
+Branches, on the other hand, have their children appended to the end:
 
-Branches of the tree have almost the same list structure as leaves; in
-addition to the type and plist, each child is appended at the end:
-  
 ``` emacs-lisp
 (type (:prop1 value1 :prop2 value2) child1 child2 ...)
 ```
 
-In summary, this implies the following hierarchy of types that
-can validly fit into each other in the buffer parse-tree:
-- Greater Elements
-  - Greater Elements
-  - Elements
-  - Object Containers
-    - Objects
-    - Recursive Objects
-      - Recursive Objects
-      - Objects
-      
-More information and a full list of elements, objects and their
-compatible properties can be found in [the org-element API
-documentation](https://orgmode.org/worg/dev/org-element-api.html).
+In addition to leaves and branches, node types can belong to one of
+two classes:
+- Objects: roughly correspond to raw, possibly-formatted text
+- Elements: more complex structures which may be built from objects
 
+Within the branch node types, there are restrictions of which class
+is allowed to be a child depending on the type. There are three of
+these restrictions:
+- Branch element with child elements (aka 'greater elements'): these
+  are element types that are generally nestable inside one another (eg
+  headlines, plain-lists, items)
+- Branch elements with child objects (aka 'object containers'): these
+  are element types that hold textual information (eg paragraph)
+- Branch objects with child objects (aka 'recursive objects'): these
+  are object types used primarily for text formating (bold, italic,
+  underline, etc)
+
+Note: it is never allowed for an element type to be a child of a
+branch object type.
+      
 # Conventions
 
-### Threading
+## Terminology
+
+This package takes several deviations from the original terminology
+found in `org-element.el`. Generally, the names used here conform to
+terminology more often used with tree data structures:
+- 'node' is used here to describe a vertex in the parse
+  tree, where 'element' and 'object' are two classes used to describe
+  said vertex (`org-element.el` seems to use 'element' to generally
+  mean 'node' and uses 'object' to further specify)
+- 'child' and 'children' are used here instead of 'content' and
+  'contents'
+- 'branch' is used here instead of 'container'. Furthermore, 'leaf' is
+  used to describe the converse of 'branch' (there does not seem to be
+  an equivalent term in `org-element.el`)
+- `org-element.el` uses 'attribute(s)' and 'property(ies)'
+  interchangably to describe nodes; here only 'property(ies)' is used
+
+## Properties
+
+The properties `:begin`, `:end`, `:contents-begin`, `:contents-end`,
+and `post-affiliated` are not exposed by this API. They are not
+necessary for manipulating the functional representation of the parse
+tree. In addition to these, some properties unique to certain types
+are not exposed for the same reason. Each type's build function
+describes the properties that are available.
+
+## Threading
 
 Each function that operates on an element/object will take the
 element/object as its right-most argument. This allows convenient
@@ -100,15 +125,15 @@ and `-some->>`). The examples below almost exclusively demonstrate
 this pattern. Additionally, the right-argument convention also allows
 convenient partial application using `-partial` from `dash.el`.
 
-### Higher-order functions
+## Higher-order functions
 
 Higher-order functions (functions that take other functions as
 arguments) have two forms. The first takes a (usually unary) function
 and applies it:
 
 ``` emacs-lisp
-(om-elem-map-property :value (lambda (s) (concat "foo" s)) elem)
-(om-elem-map-property :value (-partial concat "foo") elem)
+(om-map-property :value (lambda (s) (concat "foo" s)) node)
+(om-map-property :value (-partial concat "foo") node)
 ```
 
 This can equivalently be written using an anaphoric form where the
@@ -116,21 +141,21 @@ original function name is appended with `*`. The symbol `it`
 carries the value of the unary argument (unless otherwise specified):
 
 ``` emacs-lisp
-(om-elem-map-property* :value (concat "foo" it) elem)
+(om-map-property* :value (concat "foo" it) node)
 ```
 
-### Side effect functions
+## Side effect functions
 
 All functions that read and write from buffers are named like
-`om-elem-OPERATION-THING-at` where `OPERATION` is some operation to be
+`om-OPERATION-THING-at` where `OPERATION` is some operation to be
 performed on `THING` in the current buffer. All these functions take
 `point` as one of their arguments to denote where in the buffer to
 perform `OPERATION`.
 
 All of these functions have current-point convenience analogues that
-are named as `om-elem-OPERATION-this-THING` where `OPERATION` and
-`THING` carry the same meaning, but `OPERATION` is done at the current
-point and `point` is not an argument to the function.
+are named as `om-OPERATION-this-THING` where `OPERATION` and `THING`
+carry the same meaning, but `OPERATION` is done at the current point
+and `point` is not an argument to the function.
 
 For the sake of brevity, only the former form of these functions are
 given in the examples below.
