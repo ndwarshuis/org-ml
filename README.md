@@ -141,7 +141,7 @@ given in the examples below.
 ## Buffer Parsing
 
 
-Parse buffer contents to parse trees.
+Parse buffers to trees.
 
 * [om-elem-parse-object-at](#om-elem-parse-object-at-point) `(point)`
 * [om-elem-parse-element-at](#om-elem-parse-element-at-point) `(point)`
@@ -423,7 +423,7 @@ Insert and update elements and objects into buffers.
 ## Buffer Parsing
 
 
-Parse buffer contents to parse trees.
+Parse buffers to trees.
 
 #### om-elem-parse-object-at `(point)`
 

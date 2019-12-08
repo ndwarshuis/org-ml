@@ -23,7 +23,7 @@
 (require 's)
 
 (def-example-group "Buffer Parsing"
-  "Parse buffer contents to parse trees."
+  "Parse buffers to trees."
 
   (defexamples-content om-elem-parse-object-at
     nil
