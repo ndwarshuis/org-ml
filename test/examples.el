@@ -23,7 +23,7 @@
 (require 's)
 
 (def-example-group "Buffer Parsing"
-  "Parse buffer contents to element and object trees"
+  "Parse buffer contents to parse trees."
 
   (defexamples-content om-elem-parse-object-at
     nil
@@ -398,7 +398,7 @@
     => ""))
 
 (def-example-group "String Conversion"
-  "Convert elements to strings"
+  "Convert nodes to strings."
 
   (defexamples om-elem-to-string
     (om-elem-to-string
@@ -427,9 +427,9 @@
     (om-elem-to-trimmed-string nil) => ""))
 
 (def-example-group "Building"
-  "Functions that build new elements and objects"
+  "Build new nodes."
 
-  (def-example-subgroup "Objects"
+  (def-example-subgroup "Leaf Objects"
     nil
 
     (defexamples om-elem-build-code
@@ -491,7 +491,7 @@
       (->> (om-elem-build-verbatim "text")
            (om-elem-to-trimmed-string)) => "=text="))
 
-  (def-example-subgroup "Recursive Objects"
+  (def-example-subgroup "Branch Objects"
     nil
 
     (defexamples om-elem-build-bold
@@ -543,7 +543,7 @@
       (->> (om-elem-build-underline "text")
            (om-elem-to-trimmed-string)) => "_text_"))
 
-  (def-example-subgroup "Elements"
+  (def-example-subgroup "Leaf Elements"
     nil
 
     (defexamples om-elem-build-babel-call
@@ -652,7 +652,7 @@
             (om-elem-to-trimmed-string)) => (:result "| text |"
                                                      "|------|")))
 
-  (def-example-subgroup "Object Containers"
+  (def-example-subgroup "Branch Elements with Child Objects"
     nil
 
     (defexamples om-elem-build-paragraph
@@ -674,7 +674,7 @@
                   "text"
                   "#+END_VERSE")))
 
-  (def-example-subgroup "Greater Elements"
+  (def-example-subgroup "Branch Elements with Child Elements"
     nil
 
     (defexamples om-elem-build-center-block
@@ -881,7 +881,7 @@
                     "| V | E |")))))
 
 (def-example-group "Type Predicates"
-  "Testing types of elements"
+  "Testing types of nodes."
 
   (defexamples-content om-elem-is-type-p
     nil
@@ -991,7 +991,7 @@
     => nil))
 
 (def-example-group "Property Manipulation"
-  "Set, get, and map properties of elements and objects."
+  "Set, get, and map properties of nodes."
 
   (def-example-subgroup "Generic"
     nil
@@ -2795,8 +2795,8 @@
            (om-elem-to-trimmed-string))
       => "[2019-01-01 Tue]--[2019-01-02 Wed]")))
 
-(def-example-group "Content Manipulation"
-  "Set, get and map the contents of containers"
+(def-example-group "Branch/Child Manipulation"
+  "Set, get and map the children of branch nodes."
 
   (def-example-subgroup "Generic"
     nil
@@ -3781,8 +3781,8 @@
                   "| c | d |"
                   "| x | y |"))))
 
-(def-example-group "Parse Tree Matching"
-  "Use pattern-matching to perform operations on objects and elements in trees."
+(def-example-group "Node Matching"
+  "Use pattern-matching to selectively perform operations on nodes in trees."
 
   (defexamples-content om-elem-match
     nil
@@ -4110,7 +4110,7 @@ and here is even more *text4* and *text5*
                 "** three")))
 
 (def-example-group "Buffer Side Effects"
-  "Insert and update elements and objects into buffers"
+  "Insert and update elements and objects into buffers."
 
   (def-example-subgroup "Insert"
     nil

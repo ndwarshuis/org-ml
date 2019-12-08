@@ -156,16 +156,16 @@ Parse buffer contents to element and object trees
 
 Convert elements to strings
 
-* [om-elem-to-string](#om-elem-to-string-elem) `(elem)`
-* [om-elem-to-trimmed-string](#om-elem-to-trimmed-string-elem) `(elem)`
+* [om-elem-to-string](#om-elem-to-string-node) `(node)`
+* [om-elem-to-trimmed-string](#om-elem-to-trimmed-string-node) `(node)`
 
 ## Building
 
 
-Functions that build new elements and objects
+Functions that build new nodes
 
 
-### Objects
+### Leaf Objects
 
 * [om-elem-build-code](#om-elem-build-code-value-key-post-blank) `(value &key post-blank)`
 * [om-elem-build-entity](#om-elem-build-entity-name-key-use-brackets-p-post-blank) `(name &key use-brackets-p post-blank)`
@@ -177,7 +177,7 @@ Functions that build new elements and objects
 * [om-elem-build-timestamp](#om-elem-build-timestamp-type-year-start-month-start-day-start-year-end-month-end-day-end-key-hour-start-minute-start-hour-end-minute-end-repeater-type-repeater-unit-repeater-value-warning-type-warning-unit-warning-value-post-blank) `(type year-start month-start day-start year-end month-end day-end &key hour-start minute-start hour-end minute-end repeater-type repeater-unit repeater-value warning-type warning-unit warning-value post-blank)`
 * [om-elem-build-verbatim](#om-elem-build-verbatim-value-key-post-blank) `(value &key post-blank)`
 
-### Recursive Objects
+### Branch Objects
 
 * [om-elem-build-bold](#om-elem-build-bold-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
 * [om-elem-build-footnote-reference](#om-elem-build-footnote-reference-key-label-post-blank-rest-objs) `(&key label post-blank &rest objs)`
@@ -190,7 +190,7 @@ Functions that build new elements and objects
 * [om-elem-build-table-cell](#om-elem-build-table-cell-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
 * [om-elem-build-underline](#om-elem-build-underline-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
 
-### Elements
+### Leaf Elements
 
 * [om-elem-build-babel-call](#om-elem-build-babel-call-call-key-inside-header-arguments-end-header-post-blank) `(call &key inside-header arguments end-header post-blank)`
 * [om-elem-build-clock](#om-elem-build-clock-value-key-post-blank) `(value &key post-blank)`
@@ -208,24 +208,24 @@ Functions that build new elements and objects
 * [om-elem-build-src-block](#om-elem-build-src-block-value-key-language-parameters-preserve-indent-switches-post-blank) `(value &key language parameters preserve-indent switches post-blank)`
 * [om-elem-build-table-row-hline](#om-elem-build-table-row-hline-key-post-blank) `(&key post-blank)`
 
-### Object Containers
+### Branch Elements with Child Objects
 
 * [om-elem-build-paragraph](#om-elem-build-paragraph-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
 * [om-elem-build-table-row](#om-elem-build-table-row-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
 * [om-elem-build-verse-block](#om-elem-build-verse-block-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
 
-### Greater Elements
+### Branch Elements with Child Elements
 
-* [om-elem-build-center-block](#om-elem-build-center-block-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
-* [om-elem-build-drawer](#om-elem-build-drawer-drawer-name-key-post-blank-rest-elems) `(drawer-name &key post-blank &rest elems)`
-* [om-elem-build-footnote-definition](#om-elem-build-footnote-definition-label-key-post-blank-rest-elems) `(label &key post-blank &rest elems)`
-* [om-elem-build-headline](#om-elem-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-elems) `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest elems)`
-* [om-elem-build-item](#om-elem-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-elems) `(&key (bullet '-) checkbox counter tag post-blank &rest elems)`
-* [om-elem-build-plain-list](#om-elem-build-plain-list-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
-* [om-elem-build-property-drawer](#om-elem-build-property-drawer-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
-* [om-elem-build-quote-block](#om-elem-build-quote-block-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
-* [om-elem-build-section](#om-elem-build-section-key-post-blank-rest-elems) `(&key post-blank &rest elems)`
-* [om-elem-build-table](#om-elem-build-table-key-tblfm-post-blank-rest-elems) `(&key tblfm post-blank &rest elems)`
+* [om-elem-build-center-block](#om-elem-build-center-block-key-post-blank-rest-nodes) `(&key post-blank &rest nodes)`
+* [om-elem-build-drawer](#om-elem-build-drawer-drawer-name-key-post-blank-rest-nodes) `(drawer-name &key post-blank &rest nodes)`
+* [om-elem-build-footnote-definition](#om-elem-build-footnote-definition-label-key-post-blank-rest-nodes) `(label &key post-blank &rest nodes)`
+* [om-elem-build-headline](#om-elem-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-nodes) `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest nodes)`
+* [om-elem-build-item](#om-elem-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-nodes) `(&key (bullet '-) checkbox counter tag post-blank &rest nodes)`
+* [om-elem-build-plain-list](#om-elem-build-plain-list-key-post-blank-rest-nodes) `(&key post-blank &rest nodes)`
+* [om-elem-build-property-drawer](#om-elem-build-property-drawer-key-post-blank-rest-nodes) `(&key post-blank &rest nodes)`
+* [om-elem-build-quote-block](#om-elem-build-quote-block-key-post-blank-rest-nodes) `(&key post-blank &rest nodes)`
+* [om-elem-build-section](#om-elem-build-section-key-post-blank-rest-nodes) `(&key post-blank &rest nodes)`
+* [om-elem-build-table](#om-elem-build-table-key-tblfm-post-blank-rest-nodes) `(&key tblfm post-blank &rest nodes)`
 
 ### Miscellaneous Builders
 
@@ -249,34 +249,34 @@ Build elements and objects with more convenient/shorter syntax.
 ## Type Predicates
 
 
-Testing types of elements
+Testing types of nodes
 
-* [om-elem-is-type-p](#om-elem-is-type-p-type-elem) `(type elem)`
-* [om-elem-is-any-type-p](#om-elem-is-any-type-p-types-elem) `(types elem)`
-* [om-elem-is-element-p](#om-elem-is-element-p-elem) `(elem)`
-* [om-elem-is-container-p](#om-elem-is-container-p-elem) `(elem)`
-* [om-elem-is-object-container-p](#om-elem-is-object-container-p-elem) `(elem)`
-* [om-elem-is-greater-element-p](#om-elem-is-greater-element-p-elem) `(elem)`
+* [om-elem-is-type-p](#om-elem-is-type-p-type-node) `(type node)`
+* [om-elem-is-any-type-p](#om-elem-is-any-type-p-types-node) `(types node)`
+* [om-elem-is-element-p](#om-elem-is-element-p-node) `(node)`
+* [om-elem-is-container-p](#om-elem-is-container-p-node) `(node)`
+* [om-elem-is-object-container-p](#om-elem-is-object-container-p-node) `(node)`
+* [om-elem-is-greater-element-p](#om-elem-is-greater-element-p-node) `(node)`
 
 ## Property Manipulation
 
 
-Set, get, and map properties of elements and objects.
+Set, get, and map properties of nodes.
 
 
 ### Generic
 
-* [om-elem-set-property](#om-elem-set-property-prop-value-elem) `(prop value elem)`
-* [om-elem-set-properties](#om-elem-set-properties-plist-elem) `(plist elem)`
-* [om-elem-get-property](#om-elem-get-property-prop-elem) `(prop elem)`
-* [om-elem-map-property](#om-elem-map-property-prop-fun-elem) `(prop fun elem)`
-* [om-elem-map-properties](#om-elem-map-properties-plist-elem) `(plist elem)`
-* [om-elem-toggle-property](#om-elem-toggle-property-prop-elem) `(prop elem)`
-* [om-elem-shift-property](#om-elem-shift-property-prop-n-elem) `(prop n elem)`
-* [om-elem-insert-into-property](#om-elem-insert-into-property-prop-index-string-elem) `(prop index string elem)`
-* [om-elem-remove-from-property](#om-elem-remove-from-property-prop-string-elem) `(prop string elem)`
-* [om-elem-plist-put-property](#om-elem-plist-put-property-prop-key-value-elem) `(prop key value elem)`
-* [om-elem-plist-remove-property](#om-elem-plist-remove-property-prop-key-elem) `(prop key elem)`
+* [om-elem-set-property](#om-elem-set-property-prop-value-node) `(prop value node)`
+* [om-elem-set-properties](#om-elem-set-properties-plist-node) `(plist node)`
+* [om-elem-get-property](#om-elem-get-property-prop-node) `(prop node)`
+* [om-elem-map-property](#om-elem-map-property-prop-fun-node) `(prop fun node)`
+* [om-elem-map-properties](#om-elem-map-properties-plist-node) `(plist node)`
+* [om-elem-toggle-property](#om-elem-toggle-property-prop-node) `(prop node)`
+* [om-elem-shift-property](#om-elem-shift-property-prop-n-node) `(prop n node)`
+* [om-elem-insert-into-property](#om-elem-insert-into-property-prop-index-string-node) `(prop index string node)`
+* [om-elem-remove-from-property](#om-elem-remove-from-property-prop-string-node) `(prop string node)`
+* [om-elem-plist-put-property](#om-elem-plist-put-property-prop-key-value-node) `(prop key value node)`
+* [om-elem-plist-remove-property](#om-elem-plist-remove-property-prop-key-node) `(prop key node)`
 
 ### Clock
 
@@ -324,18 +324,18 @@ Set, get, and map properties of elements and objects.
 * [om-elem-timestamp-shift-end](#om-elem-timestamp-shift-end-n-unit-timestamp) `(n unit timestamp)`
 * [om-elem-timestamp-toggle-active](#om-elem-timestamp-toggle-active-timestamp) `(timestamp)`
 
-## Content Manipulation
+## Branch/Child Manipulation
 
 
-Set, get and map the contents of containers
+Set, get and map the children of branch nodes
 
 
 ### Generic
 
-* [om-elem-get-contents](#om-elem-get-contents-elem) `(elem)`
-* [om-elem-set-contents](#om-elem-set-contents-contents-elem) `(contents elem)`
-* [om-elem-map-contents](#om-elem-map-contents-fun-elem) `(fun elem)`
-* [om-elem-is-empty-p](#om-elem-is-empty-p-elem) `(elem)`
+* [om-elem-get-contents](#om-elem-get-contents-node) `(node)`
+* [om-elem-set-contents](#om-elem-set-contents-contents-node) `(contents node)`
+* [om-elem-map-contents](#om-elem-map-contents-fun-node) `(fun node)`
+* [om-elem-is-empty-p](#om-elem-is-empty-p-node) `(node)`
 
 ### Headline
 
@@ -373,23 +373,23 @@ Set, get and map the contents of containers
 * [om-elem-table-insert-row](#om-elem-table-insert-row-row-index-row-table) `(row-index row table)`
 * [om-elem-table-insert-row!](#om-elem-table-insert-row-row-index-row-text-table) `(row-index row-text table)`
 
-## Parse Tree Matching
+## Node Matching
 
 
-Use pattern-matching to perform operations on objects and elements in trees.
+Use pattern-matching to selectively perform operations on nodes in trees.
 
-* [om-elem-match](#om-elem-match-pattern-elem) `(pattern elem)`
-* [om-elem-match-delete](#om-elem-match-delete-pattern-elem) `(pattern elem)`
-* [om-elem-match-extract](#om-elem-match-extract-pattern-elem) `(pattern elem)`
-* [om-elem-match-map](#om-elem-match-map-pattern-fun-elem) `(pattern fun elem)`
-* [om-elem-match-mapcat](#om-elem-match-mapcat-pattern-fun-elem) `(pattern fun elem)`
-* [om-elem-match-replace](#om-elem-match-replace-pattern-elem-elem) `(pattern elem* elem)`
-* [om-elem-match-insert-before](#om-elem-match-insert-before-pattern-elem-elem) `(pattern elem* elem)`
-* [om-elem-match-insert-after](#om-elem-match-insert-after-pattern-elem-elem) `(pattern elem* elem)`
-* [om-elem-match-insert-within](#om-elem-match-insert-within-pattern-index-elem-elem) `(pattern index elem* elem)`
-* [om-elem-match-splice-before](#om-elem-match-splice-before-pattern-elems-elem) `(pattern elems* elem)`
-* [om-elem-match-splice-after](#om-elem-match-splice-after-pattern-elems-elem) `(pattern elems* elem)`
-* [om-elem-match-splice-within](#om-elem-match-splice-within-pattern-index-elems-elem) `(pattern index elems* elem)`
+* [om-elem-match](#om-elem-match-pattern-node) `(pattern node)`
+* [om-elem-match-delete](#om-elem-match-delete-pattern-node) `(pattern node)`
+* [om-elem-match-extract](#om-elem-match-extract-pattern-node) `(pattern node)`
+* [om-elem-match-map](#om-elem-match-map-pattern-fun-node) `(pattern fun node)`
+* [om-elem-match-mapcat](#om-elem-match-mapcat-pattern-fun-node) `(pattern fun node)`
+* [om-elem-match-replace](#om-elem-match-replace-pattern-node-node) `(pattern node* node)`
+* [om-elem-match-insert-before](#om-elem-match-insert-before-pattern-node-node) `(pattern node* node)`
+* [om-elem-match-insert-after](#om-elem-match-insert-after-pattern-node-node) `(pattern node* node)`
+* [om-elem-match-insert-within](#om-elem-match-insert-within-pattern-index-node-node) `(pattern index node* node)`
+* [om-elem-match-splice-before](#om-elem-match-splice-before-pattern-nodes-node) `(pattern nodes* node)`
+* [om-elem-match-splice-after](#om-elem-match-splice-after-pattern-nodes-node) `(pattern nodes* node)`
+* [om-elem-match-splice-within](#om-elem-match-splice-within-pattern-index-nodes-node) `(pattern index nodes* node)`
 
 ## Buffer Side Effects
 
@@ -399,12 +399,12 @@ Insert and update elements and objects into buffers
 
 ### Insert
 
-* [om-elem-insert](#om-elem-insert-point-elem) `(point elem)`
-* [om-elem-insert-tail](#om-elem-insert-tail-point-elem) `(point elem)`
+* [om-elem-insert](#om-elem-insert-point-node) `(point node)`
+* [om-elem-insert-tail](#om-elem-insert-tail-point-node) `(point node)`
 
 ### Update
 
-* [om-elem-update](#om-elem-update-fun-elem) `(fun elem)`
+* [om-elem-update](#om-elem-update-fun-node) `(fun node)`
 * [om-elem-update-object-at](#om-elem-update-object-at-point-fun) `(point fun)`
 * [om-elem-update-element-at](#om-elem-update-element-at-point-fun) `(point fun)`
 * [om-elem-update-table-row-at](#om-elem-update-table-row-at-point-fun) `(point fun)`
@@ -414,8 +414,8 @@ Insert and update elements and objects into buffers
 
 ### Misc
 
-* [om-elem-fold-contents](#om-elem-fold-contents-elem) `(elem)`
-* [om-elem-unfold-contents](#om-elem-unfold-contents-elem) `(elem)`
+* [om-elem-fold-contents](#om-elem-fold-contents-node) `(node)`
+* [om-elem-unfold-contents](#om-elem-unfold-contents-node) `(node)`
 
 # Function Examples
 
@@ -716,9 +716,9 @@ the section at the top of the org buffer.
 
 Convert elements to strings
 
-#### om-elem-to-string `(elem)`
+#### om-elem-to-string `(node)`
 
-Return `elem` as an interpreted string without text properties.
+Return `node` as an interpreted string without text properties.
 
 ```el
 (om-elem-to-string '(bold (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
@@ -734,9 +734,9 @@ Return `elem` as an interpreted string without text properties.
 
 ```
 
-#### om-elem-to-trimmed-string `(elem)`
+#### om-elem-to-trimmed-string `(node)`
 
-Like [`om-elem-to-string`](#om-elem-to-string-elem) but strip whitespace when returning `elem`.
+Like [`om-elem-to-string`](#om-elem-to-string-node) but strip whitespace when returning `node`.
 
 ```el
 (om-elem-to-trimmed-string '(bold (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
@@ -756,10 +756,10 @@ Like [`om-elem-to-string`](#om-elem-to-string-elem) but strip whitespace when re
 ## Building
 
 
-Functions that build new elements and objects
+Functions that build new nodes
 
 
-### Objects
+### Leaf Objects
 
 #### om-elem-build-code `(value &key post-blank)`
 
@@ -960,7 +960,7 @@ The following properties are settable:
 ```
 
 
-### Recursive Objects
+### Branch Objects
 
 #### om-elem-build-bold `(&key post-blank &rest objs)`
 
@@ -1132,7 +1132,7 @@ The following properties are settable:
 ```
 
 
-### Elements
+### Leaf Elements
 
 #### om-elem-build-babel-call `(call &key inside-header arguments end-header post-blank)`
 
@@ -1437,7 +1437,7 @@ Build a table-row element with the 'rule' type.
 ```
 
 
-### Object Containers
+### Branch Elements with Child Objects
 
 #### om-elem-build-paragraph `(&key post-blank &rest objs)`
 
@@ -1489,11 +1489,11 @@ The following properties are settable:
 ```
 
 
-### Greater Elements
+### Branch Elements with Child Elements
 
-#### om-elem-build-center-block `(&key post-blank &rest elems)`
+#### om-elem-build-center-block `(&key post-blank &rest nodes)`
 
-Build a center-block element with `elems` as contents.
+Build a center-block element with `nodes` as contents.
 
 The following properties are settable:
 
@@ -1509,9 +1509,9 @@ The following properties are settable:
 
 ```
 
-#### om-elem-build-drawer `(drawer-name &key post-blank &rest elems)`
+#### om-elem-build-drawer `(drawer-name &key post-blank &rest nodes)`
 
-Build a drawer element with `elems` as contents.
+Build a drawer element with `nodes` as contents.
 
 The following properties are settable:
 - `drawer-name`: a oneline string
@@ -1527,9 +1527,9 @@ The following properties are settable:
 
 ```
 
-#### om-elem-build-footnote-definition `(label &key post-blank &rest elems)`
+#### om-elem-build-footnote-definition `(label &key post-blank &rest nodes)`
 
-Build a footnote-definition element with `elems` as contents.
+Build a footnote-definition element with `nodes` as contents.
 
 The following properties are settable:
 - `label`: a oneline string or nil
@@ -1543,9 +1543,9 @@ The following properties are settable:
 
 ```
 
-#### om-elem-build-headline `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest elems)`
+#### om-elem-build-headline `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest nodes)`
 
-Build a headline element with `elems` as contents.
+Build a headline element with `nodes` as contents.
 
 The following properties are settable:
 - `archivedp`: nil or t
@@ -1595,9 +1595,9 @@ The following properties are settable:
 
 ```
 
-#### om-elem-build-item `(&key (bullet '-) checkbox counter tag post-blank &rest elems)`
+#### om-elem-build-item `(&key (bullet '-) checkbox counter tag post-blank &rest nodes)`
 
-Build a item element with `elems` as contents.
+Build a item element with `nodes` as contents.
 
 The following properties are settable:
 - `bullet`: a positive integer (for '1.'), a positive integer in a list (for '1)'), a '-', or a '+'
@@ -1634,9 +1634,9 @@ The following properties are settable:
 
 ```
 
-#### om-elem-build-plain-list `(&key post-blank &rest elems)`
+#### om-elem-build-plain-list `(&key post-blank &rest nodes)`
 
-Build a plain-list element with `elems` as contents.
+Build a plain-list element with `nodes` as contents.
 
 The following properties are settable:
 
@@ -1651,9 +1651,9 @@ The following properties are settable:
 
 ```
 
-#### om-elem-build-property-drawer `(&key post-blank &rest elems)`
+#### om-elem-build-property-drawer `(&key post-blank &rest nodes)`
 
-Build a property-drawer element with `elems` as contents.
+Build a property-drawer element with `nodes` as contents.
 
 The following properties are settable:
 
@@ -1669,9 +1669,9 @@ The following properties are settable:
 
 ```
 
-#### om-elem-build-quote-block `(&key post-blank &rest elems)`
+#### om-elem-build-quote-block `(&key post-blank &rest nodes)`
 
-Build a quote-block element with `elems` as contents.
+Build a quote-block element with `nodes` as contents.
 
 The following properties are settable:
 
@@ -1687,9 +1687,9 @@ The following properties are settable:
 
 ```
 
-#### om-elem-build-section `(&key post-blank &rest elems)`
+#### om-elem-build-section `(&key post-blank &rest nodes)`
 
-Build a section element with `elems` as contents.
+Build a section element with `nodes` as contents.
 
 The following properties are settable:
 
@@ -1703,9 +1703,9 @@ The following properties are settable:
 
 ```
 
-#### om-elem-build-table `(&key tblfm post-blank &rest elems)`
+#### om-elem-build-table `(&key tblfm post-blank &rest nodes)`
 
-Build a table element with `elems` as contents.
+Build a table element with `nodes` as contents.
 
 The following properties are settable:
 - `tblfm`: a list of oneline strings
@@ -1888,7 +1888,7 @@ section.
 created headline.
 
 All arguments not mentioned here follow the same rules as
-[`om-elem-build-headline`](#om-elem-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-elems)
+[`om-elem-build-headline`](#om-elem-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-nodes)
 
 ```el
 (->> (om-elem-build-headline! :title-text "really impressive title")
@@ -1922,7 +1922,7 @@ Build an item element.
 
 `subitems` contains the items that will go under this item.
 
-All other arguments follow the same rules as [`om-elem-build-item`](#om-elem-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-elems).
+All other arguments follow the same rules as [`om-elem-build-item`](#om-elem-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-nodes).
 
 ```el
 (->> (om-elem-build-item! :bullet '(1)
@@ -1963,7 +1963,7 @@ Build a table element.
 in a table cell or the symbol 'hline' which represents a horizontal
 line.
 
-All other arguments follow the same rules as [`om-elem-build-table`](#om-elem-build-table-key-tblfm-post-blank-rest-elems).
+All other arguments follow the same rules as [`om-elem-build-table`](#om-elem-build-table-key-tblfm-post-blank-rest-nodes).
 
 ```el
 (->> (om-elem-build-table! '("R" "A")
@@ -1986,11 +1986,11 @@ All other arguments follow the same rules as [`om-elem-build-table`](#om-elem-bu
 ## Type Predicates
 
 
-Testing types of elements
+Testing types of nodes
 
-#### om-elem-is-type-p `(type elem)`
+#### om-elem-is-type-p `(type node)`
 
-Return t if the type of `elem` is `type` (a symbol).
+Return t if the type of `node` is `type` (a symbol).
 
 ```el
 ;; Given the following contents:
@@ -2006,9 +2006,9 @@ Return t if the type of `elem` is `type` (a symbol).
 
 ```
 
-#### om-elem-is-any-type-p `(types elem)`
+#### om-elem-is-any-type-p `(types node)`
 
-Return t if the type of `elem` is in `types` (a list of symbols).
+Return t if the type of `node` is in `types` (a list of symbols).
 
 ```el
 ;; Given the following contents:
@@ -2028,9 +2028,9 @@ Return t if the type of `elem` is in `types` (a list of symbols).
 
 ```
 
-#### om-elem-is-element-p `(elem)`
+#### om-elem-is-element-p `(node)`
 
-Return t if `elem` is an element type.
+Return t if `node` is an element type.
 
 ```el
 ;; Given the following contents:
@@ -2048,9 +2048,9 @@ Return t if `elem` is an element type.
 
 ```
 
-#### om-elem-is-container-p `(elem)`
+#### om-elem-is-container-p `(node)`
 
-Return t if `elem` is a container.
+Return t if `node` is a container.
 Containers are elements or objects that may contain other elements
 or objects.
 
@@ -2094,9 +2094,9 @@ or objects.
 
 ```
 
-#### om-elem-is-object-container-p `(elem)`
+#### om-elem-is-object-container-p `(node)`
 
-Return t if `elem` is an object container.
+Return t if `node` is an object container.
 Object containers are elements or objects that may contain objects.
 
 ```el
@@ -2139,9 +2139,9 @@ Object containers are elements or objects that may contain objects.
 
 ```
 
-#### om-elem-is-greater-element-p `(elem)`
+#### om-elem-is-greater-element-p `(node)`
 
-Return t if `elem` is a greater element.
+Return t if `node` is a greater element.
 Greater elements are elements that may contain other elements.
 
 ```el
@@ -2175,12 +2175,12 @@ Greater elements are elements that may contain other elements.
 ## Property Manipulation
 
 
-Set, get, and map properties of elements and objects.
+Set, get, and map properties of nodes.
 
 
 ### Generic
 
-#### om-elem-set-property `(prop value elem)`
+#### om-elem-set-property `(prop value node)`
 
 Set property `prop` to `value` in `elem`.
 
@@ -2218,11 +2218,11 @@ Error
 
 ```
 
-#### om-elem-set-properties `(plist elem)`
+#### om-elem-set-properties `(plist node)`
 
-Set all properties in `elem` to the values corresponding to `plist`.
+Set all properties in `node` to the values corresponding to `plist`.
 `plist` is a list of property-value pairs that corresponds to the
-property list in `elem`.
+property list in `node`.
 
 See builder functions for a list of properties and their rules for
 each type.
@@ -2239,9 +2239,9 @@ each type.
 
 ```
 
-#### om-elem-get-property `(prop elem)`
+#### om-elem-get-property `(prop node)`
 
-Return the value or property `prop` in `elem`.
+Return the value or property `prop` in `node`.
 
 See builder functions for a list of properties and their rules for
 each type.
@@ -2291,9 +2291,9 @@ Error
 
 ```
 
-#### om-elem-map-property `(prop fun elem)`
+#### om-elem-map-property `(prop fun node)`
 
-Apply function `fun` to the value of property `prop` in `elem`.
+Apply function `fun` to the value of property `prop` in `node`.
 `fun` takes one argument (the current value of `prop`) and returns
 a new value to which `prop` will be set.
 
@@ -2338,10 +2338,10 @@ Error
 
 ```
 
-#### om-elem-map-properties `(plist elem)`
+#### om-elem-map-properties `(plist node)`
 
-Alter the values of properties in place within `elem`.
-`plist` is a property list where the keys are properties in `elem` and
+Alter the values of properties in place within `node`.
+`plist` is a property list where the keys are properties in `node` and
 its values are functions to be mapped to these properties.
 
 See builder functions for a list of properties and their rules for
@@ -2361,9 +2361,9 @@ each type.
 
 ```
 
-#### om-elem-toggle-property `(prop elem)`
+#### om-elem-toggle-property `(prop node)`
 
-Flip the value of property `prop` in `elem`.
+Flip the value of property `prop` in `node`.
 This function only applies to properties that are booleans.
 
 The following elements and properties are supported:
@@ -2426,9 +2426,9 @@ Error
 
 ```
 
-#### om-elem-shift-property `(prop n elem)`
+#### om-elem-shift-property `(prop n node)`
 
-Shift property `prop` by `n` (an integer) units within `elem`.
+Shift property `prop` by `n` (an integer) units within `node`.
 This only applies the properties that are represented as integers.
 
 The following elements and properties are supported:
@@ -2484,9 +2484,9 @@ Error
 
 ```
 
-#### om-elem-insert-into-property `(prop index string elem)`
+#### om-elem-insert-into-property `(prop index string node)`
 
-Insert `string` into `prop` at `index` within `elem` if it is not already there.
+Insert `string` into `prop` at `index` within `node` if it is not already there.
 This only applies to properties that are represented as lists of strings.
 
 The following elements and properties are supported:
@@ -2543,13 +2543,13 @@ Error
 
 ```
 
-#### om-elem-remove-from-property `(prop string elem)`
+#### om-elem-remove-from-property `(prop string node)`
 
-Remove string `string` from list `prop` within `elem`.
+Remove string `string` from list `prop` within `node`.
 This only applies to properties that are represented as lists of 
 strings.
 
-See [`om-elem-insert-into-property`](#om-elem-insert-into-property-prop-index-string-elem) for a list of supported elements
+See [`om-elem-insert-into-property`](#om-elem-insert-into-property-prop-index-string-node) for a list of supported elements
 and properties that may be used with this function.
 
 ```el
@@ -2583,9 +2583,9 @@ Error
 
 ```
 
-#### om-elem-plist-put-property `(prop key value elem)`
+#### om-elem-plist-put-property `(prop key value node)`
 
-Insert `key` and `value` pair into `prop` within `elem`.
+Insert `key` and `value` pair into `prop` within `node`.
 `key` is a keyword and `value` is a symbol. This only applies to 
 properties that are represented as plists.
 
@@ -2637,13 +2637,13 @@ Error
 
 ```
 
-#### om-elem-plist-remove-property `(prop key elem)`
+#### om-elem-plist-remove-property `(prop key node)`
 
-Remove `key` and its value from `prop` within `elem`.
+Remove `key` and its value from `prop` within `node`.
 `key` is a keyword. This only applies to properties that are
 represented as plists.
 
-See [`om-elem-plist-put-property`](#om-elem-plist-put-property-prop-key-value-elem) for a list of supported elements
+See [`om-elem-plist-put-property`](#om-elem-plist-put-property-prop-key-value-node) for a list of supported elements
 and properties that may be used with this function.
 
 ```el
@@ -2955,7 +2955,7 @@ Modify timestamp matching `prop` in place in `planning` using `fun`.
 timestamp conforming to that described in [`om-elem-build-planning`](#om-elem-build-planning-key-closed-deadline-scheduled-post-blank).
 
 The only difference between using this function and using 
-[`om-elem-map-property`](#om-elem-map-property-prop-fun-elem) is that the former will silently no-op if `prop`
+[`om-elem-map-property`](#om-elem-map-property-prop-fun-node) is that the former will silently no-op if `prop`
 is nil. The latter will throw an error unless `fun` is able to handle
 nil values.
 
@@ -3482,17 +3482,17 @@ Toggle the active/inactive type of `timestamp` element.
 ```
 
 
-## Content Manipulation
+## Branch/Child Manipulation
 
 
-Set, get and map the contents of containers
+Set, get and map the children of branch nodes
 
 
 ### Generic
 
-#### om-elem-get-contents `(elem)`
+#### om-elem-get-contents `(node)`
 
-Return the contents of `elem` as a list.
+Return the contents of `node` as a list.
 
 ```el
 ;; Given the following contents:
@@ -3526,11 +3526,11 @@ Error
 
 ```
 
-#### om-elem-set-contents `(contents elem)`
+#### om-elem-set-contents `(contents node)`
 
-Set the contents of `elem` to `contents`.
+Set the contents of `node` to `contents`.
 `contents` is a list of elements or objects; the types permitted in this
-list depend on the type of `elem`.
+list depend on the type of `node`.
 
 ```el
 ;; Given the following contents:
@@ -3565,9 +3565,9 @@ Error
 
 ```
 
-#### om-elem-map-contents `(fun elem)`
+#### om-elem-map-contents `(fun node)`
 
-Apply `fun` to the contents of `elem`. 
+Apply `fun` to the contents of `node`. 
 `fun` is a function that takes the current contents as a list and
 returns a modified contents as a list.
 
@@ -3603,10 +3603,10 @@ Error
 
 ```
 
-#### om-elem-is-empty-p `(elem)`
+#### om-elem-is-empty-p `(node)`
 
-Return t if `elem` is empty.
-This will throw an error if `elem` is not a container type.
+Return t if `node` is empty.
+This will throw an error if `node` is not a container type.
 
 ```el
 ;; Given the following contents:
@@ -4487,14 +4487,14 @@ Insert `row-text` at `row-index` in `table`.
 ```
 
 
-## Parse Tree Matching
+## Node Matching
 
 
-Use pattern-matching to perform operations on objects and elements in trees.
+Use pattern-matching to selectively perform operations on nodes in trees.
 
-#### om-elem-match `(pattern elem)`
+#### om-elem-match `(pattern node)`
 
-Return a list of all nodes matching `pattern` in `elem`.
+Return a list of all nodes matching `pattern` in `node`.
 
 `pattern` is a list of form ([slicer [arg1] [arg2]] cond1 [cond2 ...]).
 
@@ -4513,7 +4513,7 @@ returned. Possible values are:
 
 'cond' denotes conditions that that match nodes in the parse
 tree. This first condition will select matches within the
-contents of `elem`, the next condition will select matches within
+contents of `node`, the next condition will select matches within
 the matches from the first condition, and so on. The types of
 conditions are:
 
@@ -4674,11 +4674,11 @@ nested within each other.
 
 ```
 
-#### om-elem-match-delete `(pattern elem)`
+#### om-elem-match-delete `(pattern node)`
 
-Remove nodes matching `pattern` from `elem` and return modified `elem`.
+Remove nodes matching `pattern` from `node` and return modified `node`.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4709,13 +4709,13 @@ Remove nodes matching `pattern` from `elem` and return modified `elem`.
 
 ```
 
-#### om-elem-match-extract `(pattern elem)`
+#### om-elem-match-extract `(pattern node)`
 
-Remove nodes matching `pattern` from `elem`.
+Remove nodes matching `pattern` from `node`.
 Return cons cell where the car is a list of all removed nodes and
-the cdr is the modified `elem`.
+the cdr is the modified `node`.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4731,13 +4731,13 @@ the cdr is the modified `elem`.
 
 ```
 
-#### om-elem-match-map `(pattern fun elem)`
+#### om-elem-match-map `(pattern fun node)`
 
-Apply `fun` to nodes matching `pattern` in `elem`.
+Apply `fun` to nodes matching `pattern` in `node`.
 `fun` is a unary function that takes a node and returns a new node
 which will replace the original.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4778,13 +4778,13 @@ which will replace the original.
 
 ```
 
-#### om-elem-match-mapcat `(pattern fun elem)`
+#### om-elem-match-mapcat `(pattern fun node)`
 
-Apply `fun` to nodes matching `pattern` in `elem`.
+Apply `fun` to nodes matching `pattern` in `node`.
 `fun` is a unary function that takes a node and returns a list of new
 nodes which will be spliced in place of the original node.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4802,12 +4802,12 @@ nodes which will be spliced in place of the original node.
 
 ```
 
-#### om-elem-match-replace `(pattern elem* elem)`
+#### om-elem-match-replace `(pattern node* node)`
 
-Replace nodes matching `pattern` with `elem`* within `elem`.
-Return modified `elem`.
+Replace nodes matching `pattern` with `node`* within `node`.
+Return modified `node`.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4821,12 +4821,12 @@ Return modified `elem`.
 
 ```
 
-#### om-elem-match-insert-before `(pattern elem* elem)`
+#### om-elem-match-insert-before `(pattern node* node)`
 
-Insert `elem`* before every node matching `pattern` in `elem`.
-Return modified `elem`.
+Insert `node`* before every node matching `pattern` in `node`.
+Return modified `node`.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4846,12 +4846,12 @@ Return modified `elem`.
 
 ```
 
-#### om-elem-match-insert-after `(pattern elem* elem)`
+#### om-elem-match-insert-after `(pattern node* node)`
 
-Insert `elem`* after every node matching `pattern` in `elem`.
-Return modified `elem`.
+Insert `node`* after every node matching `pattern` in `node`.
+Return modified `node`.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4871,14 +4871,14 @@ Return modified `elem`.
 
 ```
 
-#### om-elem-match-insert-within `(pattern index elem* elem)`
+#### om-elem-match-insert-within `(pattern index node* node)`
 
-Insert new `elem`* at `index` into nodes matching `pattern` in `elem`.
-Return modified `elem`.
+Insert new `node`* at `index` into nodes matching `pattern` in `node`.
+Return modified `node`.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem) with the exception
-that `pattern` may be nil. In this case `elem`* will be inserted at `index`
-in the immediate, top level contents of `elem`.
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node) with the exception
+that `pattern` may be nil. In this case `node`* will be inserted at `index`
+in the immediate, top level contents of `node`.
 
 ```el
 ;; Given the following contents:
@@ -4907,12 +4907,12 @@ in the immediate, top level contents of `elem`.
 
 ```
 
-#### om-elem-match-splice-before `(pattern elems* elem)`
+#### om-elem-match-splice-before `(pattern nodes* node)`
 
-Splice `elems`* before every nodes matching `pattern` in `elem`.
-Return modified `elem`. `elems`* is a list of nodes.
+Splice `nodes`* before every nodes matching `pattern` in `node`.
+Return modified `node`. `nodes`* is a list of nodes.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4933,12 +4933,12 @@ Return modified `elem`. `elems`* is a list of nodes.
 
 ```
 
-#### om-elem-match-splice-after `(pattern elems* elem)`
+#### om-elem-match-splice-after `(pattern nodes* node)`
 
-Splice `elems`* after every nodes matching `pattern` in `elem`.
-Return modified `elem`. `elems`* is a list of nodes.
+Splice `nodes`* after every nodes matching `pattern` in `node`.
+Return modified `node`. `nodes`* is a list of nodes.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem).
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4959,14 +4959,14 @@ Return modified `elem`. `elems`* is a list of nodes.
 
 ```
 
-#### om-elem-match-splice-within `(pattern index elems* elem)`
+#### om-elem-match-splice-within `(pattern index nodes* node)`
 
-Splice new `elems`* at `index` into nodes matching `pattern` in `elem`.
-Return modified `elem`. `elems`* is a list of nodes.
+Splice new `nodes`* at `index` into nodes matching `pattern` in `node`.
+Return modified `node`. `nodes`* is a list of nodes.
 
-`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-elem) with the exception
-that `pattern` may be nil. In this case `elems`* will be inserted at `index`
-in the immediate, top level contents of `elem`.
+`pattern` follows the same rules as [`om-elem-match`](#om-elem-match-pattern-node) with the exception
+that `pattern` may be nil. In this case `nodes`* will be inserted at `index`
+in the immediate, top level contents of `node`.
 
 ```el
 ;; Given the following contents:
@@ -4995,10 +4995,10 @@ Insert and update elements and objects into buffers
 
 ### Insert
 
-#### om-elem-insert `(point elem)`
+#### om-elem-insert `(point node)`
 
-Convert `elem` to a string and insert at `point` in the current buffer.
-Return `elem`.
+Convert `node` to a string and insert at `point` in the current buffer.
+Return `node`.
 
 ```el
 ;; Given the following contents:
@@ -5022,9 +5022,9 @@ Return `elem`.
 
 ```
 
-#### om-elem-insert-tail `(point elem)`
+#### om-elem-insert-tail `(point node)`
 
-Like [`om-elem-insert`](#om-elem-insert-point-elem) but insert `elem` at `point` and move to end of insertion.
+Like [`om-elem-insert`](#om-elem-insert-point-node) but insert `node` at `point` and move to end of insertion.
 
 ```el
 no examples :(
@@ -5033,11 +5033,11 @@ no examples :(
 
 ### Update
 
-#### om-elem-update `(fun elem)`
+#### om-elem-update `(fun node)`
 
-Replace `elem` in the current buffer with a new one. 
-`fun` is a function that takes `elem` as its only argument and returns a
-modified `elem`. This modified element is then written in place of the
+Replace `node` in the current buffer with a new one. 
+`fun` is a function that takes `node` as its only argument and returns a
+modified `node`. This modified element is then written in place of the
 old element in the current buffer.
 
 ```el
@@ -5177,17 +5177,17 @@ Update subtree under `point` using `fun`.
 
 ### Misc
 
-#### om-elem-fold-contents `(elem)`
+#### om-elem-fold-contents `(node)`
 
-Fold the contents of `elem` if they exist.
+Fold the contents of `node` if they exist.
 
 ```el
 no examples :(
 ```
 
-#### om-elem-unfold-contents `(elem)`
+#### om-elem-unfold-contents `(node)`
 
-Unfold the contents of `elem` if they exist.
+Unfold the contents of `node` if they exist.
 
 ```el
 no examples :(
