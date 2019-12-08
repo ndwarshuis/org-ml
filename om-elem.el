@@ -375,23 +375,23 @@ and object containers and includes the 'plain-text' type.")
   (append om-elem-elements om-elem-objects)
   "List of all node types (which includes all elements and objects).")
 
-(defvaralias 'om-elem-node-branches-with-child-objects
+(defvaralias 'om-elem-branch-nodes-with-child-objects
   'org-element-object-containers
   "List of node types that can have objects as children.
 These are also known as \"object containers\" in `org-element.el'")
 
-(defconst om-elem-element-branches-with-child-objects
-  (-intersection om-elem-node-branches-with-child-objects om-elem-elements)
+(defconst om-elem-branch-elements-with-child-objects
+  (-intersection om-elem-branch-nodes-with-child-objects om-elem-elements)
   "List of element types that can have objects as children.")
 
-(defconst om-elem-element-branches-with-child-elements
+(defconst om-elem-branch-elements-with-child-elements
   (cons 'org-data org-element-greater-elements)
   "List of element types that can have elements as children.
 These are also known as \"greater elements\" in `org-element.el'")
 
-(defconst om-elem-element-branches
-  (append om-elem-element-branches-with-child-objects
-          om-elem-element-branches-with-child-elements)
+(defconst om-elem-branch-elements
+  (append om-elem-branch-elements-with-child-objects
+          om-elem-branch-elements-with-child-elements)
   "List of element types that can have children.")
 
 (defvaralias 'om-elem-object-branches
@@ -400,20 +400,20 @@ These are also known as \"greater elements\" in `org-element.el'")
 These are also known as \"recursive objects\" in `org-element.el'")
 
 (defconst om-elem-node-branches
-  (append om-elem-element-branches-with-child-elements
-          om-elem-node-branches-with-child-objects)
+  (append om-elem-branch-elements-with-child-elements
+          om-elem-branch-nodes-with-child-objects)
   "List of node types that can have children.")
 
-(defconst om-elem-element-leaves
-  (-difference om-elem-elements om-elem-element-branches)
+(defconst om-elem-leaf-elements
+  (-difference om-elem-elements om-elem-branch-elements)
   "List of element types that are leaves.")
 
-(defconst om-elem-object-leaves
+(defconst om-elem-leaf-objects
   (-difference om-elem-objects om-elem-object-branches)
   "List of object types that are leaves.")
 
 (defconst om-elem-node-leaves
-  (append om-elem-object-leaves om-elem-element-leaves)
+  (append om-elem-leaf-objects om-elem-leaf-elements)
   "List of node types that are leaves.")
 
 (defalias 'om-elem--get-type 'org-element-type)
@@ -455,7 +455,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
 
 ;; (defun om-elem-is-greater-element-p (elem)
 ;;   "Return t is ELEM is a greater element."
-;;   (om-elem--is-any-type-p om-elem-element-branches-with-child-elements elem))
+;;   (om-elem--is-any-type-p om-elem-branch-elements-with-child-elements elem))
 
 ;; (defun om-elem-is-container-p (elem)
 ;;   "Return t is ELEM is a container."
@@ -1652,8 +1652,8 @@ float-times, which assumes the :type property is valid."
                               (default (plist-get (cdr it) :require)))
                           (if default `(,prop ,default) prop)))))
          (rest-arg (cond
-                    ((memq type om-elem-element-branches-with-child-elements) 'nodes)
-                    ((memq type om-elem-node-branches-with-child-objects) 'objs)))
+                    ((memq type om-elem-branch-elements-with-child-elements) 'nodes)
+                    ((memq type om-elem-branch-nodes-with-child-objects) 'objs)))
          (args
           (let ((a `(,@pos-args &key ,@kw-args post-blank)))
             (if rest-arg `(,@a &rest ,rest-arg) a)))
@@ -2524,13 +2524,13 @@ or objects."
   "Return t if NODE is an object container.
 Object containers are elements or objects that may contain objects."
   (om-elem--verify node om-elem--is-node-p)
-  (om-elem--is-any-type-p om-elem-node-branches-with-child-objects node))
+  (om-elem--is-any-type-p om-elem-branch-nodes-with-child-objects node))
 
 (defun om-elem-is-greater-element-p (node)
   "Return t if NODE is a greater element.
 Greater elements are elements that may contain other elements."
   (om-elem--verify node om-elem--is-node-p)
-  (om-elem--is-any-type-p om-elem-element-branches-with-child-elements node))
+  (om-elem--is-any-type-p om-elem-branch-elements-with-child-elements node))
 
 ;;; PUBLIC PROPERTY FUNCTIONS
 
