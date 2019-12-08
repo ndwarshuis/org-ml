@@ -231,7 +231,7 @@ Optionally supply DOCSTRING to override the generic docstring."
   (let* ((fun-name (intern (format "%s*" fun)))
          (arglist (->> (help-function-arglist fun)
                        (-replace 'fun 'form)))
-         (doc-string (format "Anaphoric form of `%s'" fun))
+         (doc (or docstring (format "Anaphoric form of `%s'" fun)))
          (funargs (->> (help-function-arglist fun)
                        (--map (if (eq it 'fun)
                                   "(lambda (it) ,form)"
@@ -240,7 +240,7 @@ Optionally supply DOCSTRING to override the generic docstring."
          (call `(backquote (,fun ,@funargs)))
          (body (if (not indent) (list call)
                  (list `(declare (indent ,indent)) call))))
-    (eval `(defmacro ,fun-name ,arglist ,doc-string ,@body))))
+    (eval `(defmacro ,fun-name ,arglist ,doc ,@body))))
 
 ;;; LIST OPERATIONS (EXTENDING DASH)
 
