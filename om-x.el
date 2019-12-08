@@ -23,13 +23,6 @@
 
 ;;; Commentary:
 
-;; You are a...puppet
-;; You are a...puppet
-;; You are a...puppet
-;; You are a...puppet
-
-;; I AM A...PUPPET
-
 ;;; Code:
 
 ;; (require 'om-elem)

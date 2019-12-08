@@ -23,6 +23,18 @@
 
 ;;; Commentary:
 
+;; You are a...puppet
+;; You are a...puppet
+;; You are a...puppet
+;; You are a...puppet
+
+;; I am a...puppet
+;; I am a...puppet
+;; I am a...puppet
+;; I am a...puppet
+
+;; WE ARE ALL...PUPPETS
+
 ;;; Code:
 
 ;; (require 'cl-lib)
