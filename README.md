@@ -3533,7 +3533,7 @@ on the type of `node`.
 ;; Given the following contents:
 ; /this/ is a *paragraph*
 
-;; Set contents for object containers
+;; Set children for object containers
 (->> (om-elem-parse-this-element)
      (om-elem-set-children (list "this is lame"))
      (om-elem-to-trimmed-string))
@@ -3544,7 +3544,7 @@ on the type of `node`.
 ; stuff
 ; ** subheadline
 
-;; Set contents for greater elements
+;; Set children for greater elements
 (->> (om-elem-parse-this-subtree)
      (om-elem-set-children (list (om-elem-build-headline! :title-text "only me" :level 2)))
      (om-elem-to-trimmed-string))
@@ -3554,7 +3554,7 @@ on the type of `node`.
 ;; Given the following contents:
 ; #+CALL: ktulu()
 
-;; Throw error when attempting to get contents of a non-container
+;; Throw error when attempting to get children of a non-container
 (->> (om-elem-parse-this-element)
      (om-elem-set-children "nil by mouth")
      (om-elem-to-trimmed-string))
@@ -3592,7 +3592,7 @@ returns a modified children as a list.
 ;; Given the following contents:
 ; #+CALL: ktulu()
 
-;; Throw error when attempting to map contents of a non-container
+;; Throw error when attempting to map children of a non-container
 (->> (om-elem-parse-this-element)
      (om-elem-map-children (function ignore))
      (om-elem-to-trimmed-string))
