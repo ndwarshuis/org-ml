@@ -2796,7 +2796,7 @@
       => "[2019-01-01 Tue]--[2019-01-02 Wed]")))
 
 (def-example-group "Branch/Child Manipulation"
-  "Set, get and map the children of branch nodes."
+  "Set, get, and map the children of branch nodes."
 
   (def-example-subgroup "Generic"
     nil

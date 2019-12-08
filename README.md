@@ -327,7 +327,7 @@ Set, get, and map properties of nodes.
 ## Branch/Child Manipulation
 
 
-Set, get and map the children of branch nodes.
+Set, get, and map the children of branch nodes.
 
 
 ### Generic
@@ -3485,7 +3485,7 @@ Toggle the active/inactive type of `timestamp` element.
 ## Branch/Child Manipulation
 
 
-Set, get and map the children of branch nodes.
+Set, get, and map the children of branch nodes.
 
 
 ### Generic
