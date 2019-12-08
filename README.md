@@ -141,7 +141,7 @@ given in the examples below.
 ## Buffer Parsing
 
 
-Parse buffer contents to element and object trees
+Parse buffer contents to parse trees.
 
 * [om-elem-parse-object-at](#om-elem-parse-object-at-point) `(point)`
 * [om-elem-parse-element-at](#om-elem-parse-element-at-point) `(point)`
@@ -154,7 +154,7 @@ Parse buffer contents to element and object trees
 ## String Conversion
 
 
-Convert elements to strings
+Convert nodes to strings.
 
 * [om-elem-to-string](#om-elem-to-string-node) `(node)`
 * [om-elem-to-trimmed-string](#om-elem-to-trimmed-string-node) `(node)`
@@ -162,7 +162,7 @@ Convert elements to strings
 ## Building
 
 
-Functions that build new nodes
+Build new nodes.
 
 
 ### Leaf Objects
@@ -249,7 +249,7 @@ Build elements and objects with more convenient/shorter syntax.
 ## Type Predicates
 
 
-Testing types of nodes
+Testing types of nodes.
 
 * [om-elem-is-type-p](#om-elem-is-type-p-type-node) `(type node)`
 * [om-elem-is-any-type-p](#om-elem-is-any-type-p-types-node) `(types node)`
@@ -327,7 +327,7 @@ Set, get, and map properties of nodes.
 ## Branch/Child Manipulation
 
 
-Set, get and map the children of branch nodes
+Set, get and map the children of branch nodes.
 
 
 ### Generic
@@ -394,7 +394,7 @@ Use pattern-matching to selectively perform operations on nodes in trees.
 ## Buffer Side Effects
 
 
-Insert and update elements and objects into buffers
+Insert and update elements and objects into buffers.
 
 
 ### Insert
@@ -423,7 +423,7 @@ Insert and update elements and objects into buffers
 ## Buffer Parsing
 
 
-Parse buffer contents to element and object trees
+Parse buffer contents to parse trees.
 
 #### om-elem-parse-object-at `(point)`
 
@@ -714,7 +714,7 @@ the section at the top of the org buffer.
 ## String Conversion
 
 
-Convert elements to strings
+Convert nodes to strings.
 
 #### om-elem-to-string `(node)`
 
@@ -756,7 +756,7 @@ Like [`om-elem-to-string`](#om-elem-to-string-node) but strip whitespace when re
 ## Building
 
 
-Functions that build new nodes
+Build new nodes.
 
 
 ### Leaf Objects
@@ -1986,7 +1986,7 @@ All other arguments follow the same rules as [`om-elem-build-table`](#om-elem-bu
 ## Type Predicates
 
 
-Testing types of nodes
+Testing types of nodes.
 
 #### om-elem-is-type-p `(type node)`
 
@@ -3485,7 +3485,7 @@ Toggle the active/inactive type of `timestamp` element.
 ## Branch/Child Manipulation
 
 
-Set, get and map the children of branch nodes
+Set, get and map the children of branch nodes.
 
 
 ### Generic
@@ -4990,7 +4990,7 @@ in the immediate, top level contents of `node`.
 ## Buffer Side Effects
 
 
-Insert and update elements and objects into buffers
+Insert and update elements and objects into buffers.
 
 
 ### Insert
