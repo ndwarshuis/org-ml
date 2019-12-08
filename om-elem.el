@@ -363,45 +363,58 @@ and object containers and includes the 'plain-text' type.")
 
 ;;; INTERNAL TYPE FUNCTIONS
 
-(defvaralias 'om-elem-object-containers 'org-element-object-containers)
-(defvaralias 'om-elem-recursive-objects 'org-element-recursive-objects)
-
 (defconst om-elem-elements
-  (cons 'org-data org-element-all-elements))
-
-(defconst om-elem-greater-elements
-  (cons 'org-data org-element-greater-elements))
+  (cons 'org-data org-element-all-elements)
+  "List of all element types including 'org-data'.")
 
 (defconst om-elem-objects
   (cons 'plain-text org-element-all-objects)
   "List of all object types including 'plain-text'.")
 
-(defconst om-elem-elements-and-objects
+(defconst om-elem-nodes
   (append om-elem-elements om-elem-objects)
-  "List of all elements and objects.")
+  "List of all node types (which includes all elements and objects).")
 
-(defconst om-elem-containers
-  (append om-elem-greater-elements om-elem-object-containers)
-  "List of elements/objects that can hold other elements/objects.")
+(defvaralias 'om-elem-node-branches-with-child-objects
+  'org-element-object-containers
+  "List of node types that can have objects as children.
+These are also known as \"object containers\" in `org-element.el'")
 
-(defconst om-elem-container-elements
-  (append om-elem-greater-elements om-elem-object-containers)
-  "List of elements/objects that can hold other elements/objects.")
+(defconst om-elem-element-branches-with-child-objects
+  (-intersection om-elem-node-branches-with-child-objects om-elem-elements)
+  "List of element types that can have objects as children.")
 
-;; TODO this naming is stupid
-(defconst om-elem-atomic-elements
-  (-> om-elem-elements
-      (-difference om-elem-greater-elements)
-      (-difference om-elem-object-containers))
-  "List of elements that are not containers.")
+(defconst om-elem-element-branches-with-child-elements
+  (cons 'org-data org-element-greater-elements)
+  "List of element types that can have elements as children.
+These are also known as \"greater elements\" in `org-element.el'")
 
-(defconst om-elem-atomic-objects
-  (-> om-elem-objects (-difference om-elem-recursive-objects))
-  "List of objects that are not containers.")
+(defconst om-elem-element-branches
+  (append om-elem-element-branches-with-child-objects
+          om-elem-element-branches-with-child-elements)
+  "List of element types that can have children.")
 
-(defconst om-elem-atoms
-  (append om-elem-atomic-objects om-elem-atomic-elements)
-  "List of objects and elements that are not containers.")
+(defvaralias 'om-elem-object-branches
+  'org-element-recursive-objects
+  "List of object types that can have objects as children.
+These are also known as \"recursive objects\" in `org-element.el'")
+
+(defconst om-elem-node-branches
+  (append om-elem-element-branches-with-child-elements
+          om-elem-node-branches-with-child-objects)
+  "List of node types that can have children.")
+
+(defconst om-elem-element-leaves
+  (-difference om-elem-elements om-elem-element-branches)
+  "List of element types that are leaves.")
+
+(defconst om-elem-object-leaves
+  (-difference om-elem-objects om-elem-object-branches)
+  "List of object types that are leaves.")
+
+(defconst om-elem-node-leaves
+  (append om-elem-object-leaves om-elem-element-leaves)
+  "List of node types that are leaves.")
 
 (defalias 'om-elem--get-type 'org-element-type)
 (defalias 'om-elem--get-class 'org-element-class)
@@ -414,7 +427,7 @@ and object containers and includes the 'plain-text' type.")
              ,doc-string
              (eq ',fun (om-elem--get-type elem))))))
 
-(-each om-elem-elements-and-objects #'om-elem--gen-type-predicate)
+(-each om-elem-nodes #'om-elem--gen-type-predicate)
 
 (defun om-elem--is-type-p (type elem)
   "Return t if ELEM's type is `eq' to TYPE (a symbol)."
@@ -436,21 +449,21 @@ and object containers and includes the 'plain-text' type.")
 ;;   "Return t is ELEM is an element."
 ;;   (om-elem--is-any-type-p om-elem-elements elem))
 
-(defun om-elem--is-element-or-object-p (elem)
-  "Return t is ELEM is an element or an object."
-  (om-elem--is-any-type-p om-elem-elements-and-objects elem))
+(defun om-elem--is-node-p (elem)
+  "Return t is ELEM is a node."
+  (om-elem--is-any-type-p om-elem-nodes elem))
 
 ;; (defun om-elem-is-greater-element-p (elem)
 ;;   "Return t is ELEM is a greater element."
-;;   (om-elem--is-any-type-p om-elem-greater-elements elem))
+;;   (om-elem--is-any-type-p om-elem-element-branches-with-child-elements elem))
 
 ;; (defun om-elem-is-container-p (elem)
 ;;   "Return t is ELEM is a container."
-;;   (om-elem--is-any-type-p om-elem-containers elem))
+;;   (om-elem--is-any-type-p om-elem-node-branches elem))
 
 ;; (defun om-elem-is-recursive-object-p (elem)
 ;;   "Return t is ELEM is a recursive object."
-;;   (om-elem--is-any-type-p om-elem-recursive-objects elem))
+;;   (om-elem--is-any-type-p om-elem-object-branches elem))
 
 ;; (defun om-elem-is-allowed-object-p (container-type elem)
 ;;   "Return t if object ELEM is allowed to be in CONTAINER-TYPE."
@@ -1639,8 +1652,8 @@ float-times, which assumes the :type property is valid."
                               (default (plist-get (cdr it) :require)))
                           (if default `(,prop ,default) prop)))))
          (rest-arg (cond
-                    ((memq type om-elem-greater-elements) 'elems)
-                    ((memq type om-elem-object-containers) 'objs)))
+                    ((memq type om-elem-element-branches-with-child-elements) 'elems)
+                    ((memq type om-elem-node-branches-with-child-objects) 'objs)))
          (args
           (let ((a `(,@pos-args &key ,@kw-args post-blank)))
             (if rest-arg `(,@a &rest ,rest-arg) a)))
@@ -2487,37 +2500,37 @@ zero-indexed."
 
 (defun om-elem-is-type-p (type elem)
   "Return t if the type of ELEM is TYPE (a symbol)."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--verify elem om-elem--is-node-p)
   (om-elem--is-type-p type elem))
 
 (defun om-elem-is-any-type-p (types elem)
   "Return t if the type of ELEM is in TYPES (a list of symbols)."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--verify elem om-elem--is-node-p)
   (om-elem--is-any-type-p types elem))
 
 (defun om-elem-is-element-p (elem)
   "Return t if ELEM is an element type."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--verify elem om-elem--is-node-p)
   (om-elem--is-any-type-p om-elem-elements elem))
 
 (defun om-elem-is-container-p (elem)
   "Return t if ELEM is a container.
 Containers are elements or objects that may contain other elements
 or objects."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--is-any-type-p om-elem-containers elem))
+  (om-elem--verify elem om-elem--is-node-p)
+  (om-elem--is-any-type-p om-elem-node-branches elem))
 
 (defun om-elem-is-object-container-p (elem)
   "Return t if ELEM is an object container.
 Object containers are elements or objects that may contain objects."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--is-any-type-p om-elem-object-containers elem))
+  (om-elem--verify elem om-elem--is-node-p)
+  (om-elem--is-any-type-p om-elem-node-branches-with-child-objects elem))
 
 (defun om-elem-is-greater-element-p (elem)
   "Return t if ELEM is a greater element.
 Greater elements are elements that may contain other elements."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
-  (om-elem--is-any-type-p om-elem-greater-elements elem))
+  (om-elem--verify elem om-elem--is-node-p)
+  (om-elem--is-any-type-p om-elem-element-branches-with-child-elements elem))
 
 ;;; PUBLIC PROPERTY FUNCTIONS
 
@@ -2561,7 +2574,7 @@ property list in ELEM.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--verify elem om-elem--is-node-p)
   (om-elem--set-properties-strict plist elem))
 
 ;; get
@@ -2595,7 +2608,7 @@ its values are functions to be mapped to these properties.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--verify elem om-elem--is-node-p)
   (om-elem--map-properties-strict plist elem))
 
 (defmacro om-elem-map-properties* (plist elem)
@@ -3618,7 +3631,7 @@ returned from this function will have :begin and :end properties."
   "Convert ELEM to a string and insert at POINT in the current buffer.
 Return ELEM."
   (om-elem--verify point integerp
-                   elem om-elem--is-element-or-object-p)
+                   elem om-elem--is-node-p)
   (save-excursion
     (goto-char point)
     (insert (om-elem-to-string elem)))
@@ -3627,7 +3640,7 @@ Return ELEM."
 (defun om-elem-insert-tail (point elem)
   "Like `om-elem-insert' but insert ELEM at POINT and move to end of insertion."
   (om-elem--verify point integerp
-                   elem om-elem--is-element-or-object-p)
+                   elem om-elem--is-node-p)
   (let ((s (om-elem-to-string elem)))
     (save-excursion
       (goto-char point)
@@ -3652,7 +3665,7 @@ FUN is a function that takes ELEM as its only argument and returns a
 modified ELEM. This modified element is then written in place of the
 old element in the current buffer."
   (om-elem--verify fun functionp
-                   elem om-elem--is-element-or-object-p)
+                   elem om-elem--is-node-p)
   ;; if elem is of type 'org-data' it will have no props
   (let* ((begin (or (om-elem--get-property :begin elem) (point-min)))
          (end (or (om-elem--get-property :end elem) (point-max)))
@@ -3720,7 +3733,7 @@ holds the element returned from IN-FORM."
 ;; TODO this will fold items improperly
 (defun om-elem--flag-elem-contents (flag elem)
   (om-elem--verify flag booleanp
-                   elem om-elem--is-element-or-object-p)
+                   elem om-elem--is-node-p)
   (-let (((&plist :contents-begin :contents-end) (om-elem--get-properties elem)))
     (outline-flag-region (- contents-begin 1) (- contents-end 1) flag)))
 
@@ -3755,7 +3768,7 @@ This is meant to be used as input for functions such as
   (->> (decode-time) (-select-by-indices '(1 2 3 4 5)) (reverse)))
 
 (defun om-elem-get-type (elem)
-  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--verify elem om-elem--is-node-p)
   (om-elem--get-type elem))
 
 ;;; generalized CRUD operations
@@ -3799,7 +3812,7 @@ original contents to be modified."
       (list)))
 
     ;; type
-    ((and (pred (lambda (y) (memq y om-elem-elements-and-objects))) type)
+    ((and (pred (lambda (y) (memq y om-elem-nodes))) type)
      (--filter (om-elem--is-type-p type it) contents))
 
     ;; relative index
@@ -3954,7 +3967,7 @@ Additionally, conditions may be further refined using boolean forms:
 The 'c' members in the forms above are one of any of the condition
 types except :many, :many!, and :any. Boolean forms may be
 nested within each other."
-  (om-elem--verify elem om-elem--is-element-or-object-p)
+  (om-elem--verify elem om-elem--is-node-p)
   (om-elem--match-slicer pattern elem))
 
 ;; find-parent
