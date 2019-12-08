@@ -1,4 +1,4 @@
-;;; om.el --- Org Mode Functional API (elements) -*- lexical-binding: t; -*-
+;;; om.el --- Functional Org Mode API -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2019  Nathan Dwarshuis
 
