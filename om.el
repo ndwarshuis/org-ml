@@ -385,35 +385,34 @@ and object containers and includes the 'plain-text' type.")
 
 (defconst om-nodes
   (append om-elements om-objects)
-  "List of all node types (which includes all elements and objects).")
+  "List of all node types.")
 
-(defvaralias 'om-branch-nodes-with-child-objects
+(defvaralias 'om-branch-nodes-permitting-child-objects
   'org-element-object-containers
   "List of node types that can have objects as children.
 These are also known as \"object containers\" in `org-element.el'")
 
-(defconst om-branch-elements-with-child-objects
-  (-intersection om-branch-nodes-with-child-objects om-elements)
+(defconst om-branch-elements-permitting-child-objects
+  (-intersection om-branch-nodes-permitting-child-objects om-elements)
   "List of element types that can have objects as children.")
 
-(defconst om-branch-elements-with-child-elements
+(defconst om-branch-elements-permitting-child-elements
   (cons 'org-data org-element-greater-elements)
   "List of element types that can have elements as children.
 These are also known as \"greater elements\" in `org-element.el'")
 
 (defconst om-branch-elements
-  (append om-branch-elements-with-child-objects
-          om-branch-elements-with-child-elements)
+  (append om-branch-elements-permitting-child-objects
+          om-branch-elements-permitting-child-elements)
   "List of element types that can have children.")
 
-(defvaralias 'om-object-branches
+(defvaralias 'om-branch-objects
   'org-element-recursive-objects
   "List of object types that can have objects as children.
 These are also known as \"recursive objects\" in `org-element.el'")
 
-(defconst om-node-branches
-  (append om-branch-elements-with-child-elements
-          om-branch-nodes-with-child-objects)
+(defconst om-branch-nodes
+  (append om-branch-elements om-branch-objects)
   "List of node types that can have children.")
 
 (defconst om-leaf-elements
@@ -421,7 +420,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
   "List of element types that are leaves.")
 
 (defconst om-leaf-objects
-  (-difference om-objects om-object-branches)
+  (-difference om-objects om-branch-objects)
   "List of object types that are leaves.")
 
 (defconst om-node-leaves
@@ -467,15 +466,15 @@ These are also known as \"recursive objects\" in `org-element.el'")
 
 ;; (defun om-node-may-have-child-elements-p (elem)
 ;;   "Return t is ELEM is a greater element."
-;;   (om--is-any-type-p om-branch-elements-with-child-elements elem))
+;;   (om--is-any-type-p om-branch-elements-permitting-child-elements elem))
 
 ;; (defun om-is-branch-node-p (elem)
 ;;   "Return t is ELEM is a container."
-;;   (om--is-any-type-p om-node-branches elem))
+;;   (om--is-any-type-p om-branch-nodes elem))
 
 ;; (defun om-is-recursive-object-p (elem)
 ;;   "Return t is ELEM is a recursive object."
-;;   (om--is-any-type-p om-object-branches elem))
+;;   (om--is-any-type-p om-branch-objects elem))
 
 ;; (defun om-is-allowed-object-p (container-type elem)
 ;;   "Return t if object ELEM is allowed to be in CONTAINER-TYPE."
@@ -1664,8 +1663,8 @@ float-times, which assumes the :type property is valid."
                               (default (plist-get (cdr it) :require)))
                           (if default `(,prop ,default) prop)))))
          (rest-arg (cond
-                    ((memq type om-branch-elements-with-child-elements) 'nodes)
-                    ((memq type om-branch-nodes-with-child-objects) 'objs)))
+                    ((memq type om-branch-elements-permitting-child-elements) 'nodes)
+                    ((memq type om-branch-nodes-permitting-child-objects) 'objs)))
          (args
           (let ((a `(,@pos-args &key ,@kw-args post-blank)))
             (if rest-arg `(,@a &rest ,rest-arg) a)))
@@ -2528,19 +2527,19 @@ zero-indexed."
 (defun om-is-branch-node-p (node)
   "Return t if NODE is a branch node."
   (om--verify node om--is-node-p)
-  (om--is-any-type-p om-node-branches node))
+  (om--is-any-type-p om-branch-nodes node))
 
 (defun om-node-may-have-child-objects-p (node)
   "Return t if NODE is a branch node that may have child objects."
   (om--verify node om--is-node-p)
-  (om--is-any-type-p om-branch-nodes-with-child-objects node))
+  (om--is-any-type-p om-branch-nodes-permitting-child-objects node))
 
 (defun om-node-may-have-child-elements-p (node)
   "Return t if NODE is a branch node that may have child elements.
 Note this implies that NODE is also of class element since only
 elements may have other elements as children."
   (om--verify node om--is-node-p)
-  (om--is-any-type-p om-branch-elements-with-child-elements node))
+  (om--is-any-type-p om-branch-elements-permitting-child-elements node))
 
 ;;; PUBLIC PROPERTY FUNCTIONS
 
