@@ -996,6 +996,16 @@
   (def-example-subgroup "Generic"
     nil
 
+    (defexamples-content om-contains-point-p
+      nil
+      (:buffer "*findme*")
+      (->> (om-parse-this-object)
+           (om-contains-point-p 2))
+      => t
+      (->> (om-parse-this-object)
+           (om-contains-point-p 10))
+      => nil)
+
     (defexamples-content om-set-property
       "Set property PROP to VALUE in ELEM."
 
@@ -2800,6 +2810,17 @@
 
   (def-example-subgroup "Generic"
     nil
+
+    (defexamples-content om-children-contain-point-p
+      nil
+      (:buffer "* headline"
+               "findme")
+      (->> (om-parse-this-headline)
+           (om-children-contain-point-p 2))
+      => nil
+      (->> (om-parse-this-headline)
+           (om-children-contain-point-p 15))
+      => t)
 
     (defexamples-content om-get-children
       nil

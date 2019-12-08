@@ -291,6 +291,7 @@ Set, get, and map properties of nodes.
 
 ### Generic
 
+* [om-contains-point-p](#om-contains-point-p-point-node) `(point node)`
 * [om-set-property](#om-set-property-prop-value-node) `(prop value node)`
 * [om-set-properties](#om-set-properties-plist-node) `(plist node)`
 * [om-get-property](#om-get-property-prop-node) `(prop node)`
@@ -357,6 +358,7 @@ Set, get, and map the children of branch nodes.
 
 ### Generic
 
+* [om-children-contain-point-p](#om-children-contain-point-p-point-node) `(point node)`
 * [om-get-children](#om-get-children-node) `(node)`
 * [om-set-children](#om-set-children-children-node) `(children node)`
 * [om-map-children](#om-map-children-fun-node) `(fun node)`
@@ -2203,6 +2205,24 @@ Set, get, and map properties of nodes.
 
 ### Generic
 
+#### om-contains-point-p `(point node)`
+
+Return t if `point` is within the boundaries of `node`.
+
+```el
+;; Given the following contents:
+; *findme*
+
+(->> (om-parse-this-object)
+     (om-contains-point-p 2))
+ ;; => t
+
+(->> (om-parse-this-object)
+     (om-contains-point-p 10))
+ ;; => nil
+
+```
+
 #### om-set-property `(prop value node)`
 
 Set property `prop` to `value` in `elem`.
@@ -3513,6 +3533,25 @@ Set, get, and map the children of branch nodes.
 
 
 ### Generic
+
+#### om-children-contain-point-p `(point node)`
+
+Return t if `point` is within the boundaries of `node``s children.
+
+```el
+;; Given the following contents:
+; * headline
+; findme
+
+(->> (om-parse-this-headline)
+     (om-children-contain-point-p 2))
+ ;; => nil
+
+(->> (om-parse-this-headline)
+     (om-children-contain-point-p 15))
+ ;; => t
+
+```
 
 #### om-get-children `(node)`
 

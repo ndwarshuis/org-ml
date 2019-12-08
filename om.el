@@ -427,6 +427,16 @@ These are also known as \"recursive objects\" in `org-element.el'")
   (append om-leaf-objects om-leaf-elements)
   "List of node types that are leaves.")
 
+(defconst om--item-tag-restrictions
+  (->> org-element-object-restrictions
+       (alist-get 'item)
+       (cons 'plain-text)))
+
+(defconst om--headline-title-restrictions
+  (->> org-element-object-restrictions
+       (alist-get 'headline)
+       (cons 'plain-text)))
+
 (defalias 'om--get-type 'org-element-type)
 (defalias 'om--get-class 'org-element-class)
 
@@ -1527,11 +1537,6 @@ float-times, which assumes the :type property is valid."
 
 ;; headline
 
-(defconst om--headline-title-restrictions
-  (->> org-element-object-restrictions
-       (alist-get 'headline)
-       (cons 'plain-text)))
-
 (defun om--headline-set-title! (string stat-ckie headline)
   (let* ((ss (om--build-secondary-string string)))
     (if (not stat-ckie)
@@ -1559,11 +1564,6 @@ float-times, which assumes the :type property is valid."
       (when (s-matches? "^[a-zA-z]$" s)
         (if org-list-allow-alphabetical counter
           (error "Set `org-list-allow-alphabetical' to t to use alphabetical bullets"))))))
-
-(defconst om--item-tag-restrictions
-  (->> org-element-object-restrictions
-       (alist-get 'item)
-       (cons 'plain-text)))
 
 (defun om--item-set-tag! (raw-tag item)
   (-> (om--build-secondary-string raw-tag)
@@ -2563,6 +2563,17 @@ elements may have other elements as children."
 
 ;;; polymorphic
 
+;; containing
+
+(defun om-contains-point-p (point node)
+  "Return t if POINT is within the boundaries of NODE."
+  ;; TODO point should be a positive integer only
+  (om--verify node om--is-node-p point integerp)
+  (-let (((&plist :begin :end) (om--get-properties node)))
+    (if (and (integerp begin) (integerp end))
+        (<= begin point end)
+      (error "Node boundaries are not defined"))))
+
 ;; set
 
 (defun om-set-property (prop value node)
@@ -3069,6 +3080,16 @@ nil values."
 
 ;; generic
 
+(defun om-children-contain-point-p (point node)
+  "Return t if POINT is within the boundaries of NODE's children."
+  ;; TODO point should be a positive integer only
+  (om--verify node om-is-branch-node-p point integerp)
+  (-let (((&plist :contents-begin :contents-end)
+          (om--get-properties node)))
+    (if (and (integerp contents-begin) (integerp contents-end))
+        (<= contents-begin point contents-end)
+      (error "Node boundaries are not defined"))))
+
 (defun om-get-children (node)
   "Return the children of NODE as a list."
   ;; TODO use private predicate here...
@@ -3100,11 +3121,6 @@ This will throw an error if NODE is not a branch type."
   ;; TODO use private predicate here...
   (om--verify node om-is-branch-node-p)
   (om--is-childless-p node))
-
-;; (defun om-contains-point-p (point node)
-;;   "Return t if integer POINT is within the beginning and end of NODE."
-;;   (<= (om--get-property :begin node) point
-;;       (om--get-property :end node)))
 
 ;; (defun om-contents-contains-point-p (point node)
 ;;   "Return t if integer POINT is within the beginning and end of NODE's children."
