@@ -1440,10 +1440,10 @@
                "stuff")
       (->> (om-parse-this-element)
            (om-get-property :archivedp))
-      => '("ARCHIVE")
+      => t
       (->> (om-parse-this-element)
            (om-get-property :commentedp))
-      => 21
+      => t
       (->> (om-parse-this-element)
            (om-get-property :level))
       => 2
@@ -1604,12 +1604,12 @@
       (:buffer "sub_{woofer}")
       (->> (om-parse-object-at 6)
            (om-get-property :use-brackets-p))
-      => 6
+      => t
 
       (:buffer "super_{woofer}")
       (->> (om-parse-object-at 8)
            (om-get-property :use-brackets-p))
-      => 8
+      => t
 
       (:buffer "| a |"
                "#+TBLFM: x=$2")

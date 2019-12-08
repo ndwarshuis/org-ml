@@ -631,6 +631,9 @@ These are also known as \"recursive objects\" in `org-element.el'")
 
 ;; encode/decode (general)
 
+(defun om--decode-boolean (v)
+  (and v t))
+
 (defun om--encode-string-list-delim (v p eo delim)
   (-some->> (om--filter-string-list v p eo) (s-join delim)))
 
@@ -807,6 +810,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
 
 (defconst om--type-alist
   (let ((bool (list :set 'om--filter-boolean
+                    :get 'om--decode-boolean
                     :type-desc "nil or t"
                     :toggle t))
         (pos-int (list :set 'om--filter-pos-integer
