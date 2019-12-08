@@ -924,7 +924,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
       (latex-environment (:value :encode om--encode-latex-environment-value
                                  :pred om--is-valid-latex-environment-value-p
                                  :decode om--decode-latex-environment-value
-                                 :type-desc "list of strings like (ENV BODY) or (ENV)"
+                                 :type-desc "a list of strings like (ENV BODY) or (ENV)"
                                  :require t))
       (latex-fragment (:value ,@str :require t))
       (line-break)
@@ -1028,8 +1028,9 @@ These are also known as \"recursive objects\" in `org-element.el'")
   (-if-let (type-list (alist-get type om--type-alist))
       (-if-let (plist (alist-get prop type-list))
           (plist-get plist operation)
-        (error "Unsettable property '%s' for type '%s' requested"
-               prop type))
+        (error "Unsettable property '%s' for type '%s' requested; settable properties are %s"
+               prop type (->> (--map (symbol-name (car it)) type-list)
+                              (s-join ", "))))
     (error "Tried to get property for non-existent type %s" type)))
 
 (defun om--get-setter-function (type prop)
