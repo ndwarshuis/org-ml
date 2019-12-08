@@ -2918,7 +2918,7 @@
       nil
 
       (:buffer "/this/ is a *paragraph*")
-      (:comment "Set contents for object containers")
+      (:comment "Set children for object containers")
       (->> (om-elem-parse-this-element)
            (om-elem-set-children (list "this is lame"))
            (om-elem-to-trimmed-string))
@@ -2927,7 +2927,7 @@
       (:buffer "* headline"
                "stuff"
                "** subheadline")
-      (:comment "Set contents for greater elements")
+      (:comment "Set children for greater elements")
       (->> (om-elem-parse-this-subtree)
            (om-elem-set-children (list (om-elem-build-headline! :title-text "only me" :level 2)))
            (om-elem-to-trimmed-string))
@@ -2935,7 +2935,7 @@
                   "** only me")
 
       (:buffer "#+CALL: ktulu()")
-      (:comment "Throw error when attempting to get contents of a non-container")
+      (:comment "Throw error when attempting to get children of a non-container")
       (->> (om-elem-parse-this-element)
            (om-elem-set-children "nil by mouth")
            (om-elem-to-trimmed-string))
@@ -2966,7 +2966,7 @@
                   "*** subheadline")
 
       (:buffer "#+CALL: ktulu()")
-      (:comment "Throw error when attempting to map contents of a non-container")
+      (:comment "Throw error when attempting to map children of a non-container")
       (->> (om-elem-parse-this-element)
            (om-elem-map-children #'ignore)
            (om-elem-to-trimmed-string))
