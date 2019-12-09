@@ -156,12 +156,15 @@
             (let ((opt-len (length opt-lets))
                   (keys (-map #'car kw-lets))
                   (rest-let (when rest-arg `((,rest-arg (nth 2 s)))))
-                  (lets (append opt-lets (-map #'cdr kw-lets))))
+                  (lets (append opt-lets (-map #'cdr kw-lets)))
+                  (opt-setter (and opt-lets '((--opt-args (nth 0 s)))))
+                  (kw-setter (and kw-lets '((--kw-args (nth 1 s))))))
+              ;; TODO there is probably a more efficient way to do this...
               `((s (om--partition-rest-args
                     --rest-args ,opt-len (quote ,keys)
-                    ,(not (null rest-arg))))
-                (--opt-args (nth 0 s))
-                (--kw-args (nth 1 s))
+                    ,(and rest-arg t)))
+                ,@opt-setter
+                ,@kw-setter
                 ,@rest-let
                 ,@lets)))))
     ;; mercilessly stolen from cl--transform-whatever
@@ -224,7 +227,8 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 
 (defun om--gen-anaphoric-form (fun &optional docstring indent)
   "Generate the anaphoric form of FUN where FUN points to a function.
-Optionally supply DOCSTRING to override the generic docstring."
+Optionally supply DOCSTRING to override the generic docstring, and
+INDENT sets the indent declaration."
   (let* ((fun-name (intern (format "%s*" fun)))
          (arglist (->> (help-function-arglist fun)
                        (-replace 'fun 'form)))
@@ -541,8 +545,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
 
 (defun om--is-valid-clock-timestamp-p (x)
   (and (om--is-type-p 'timestamp x)
-       (om--property-is-predicate-p*
-        :type (memq it '(inactive inactive-range)) x)
+       (om--property-is-predicate-p :type
+         (lambda (it) (memq it '(inactive inactive-range))) x)
        (om--property-is-nil-p :repeater-type x)))
 
 (defun om--is-valid-planning-timestamp-p (x)
@@ -1217,9 +1221,10 @@ property list in NODE."
 (defun om--property-is-predicate-p (prop fun node)
   "Return t if FUN applied to the value of PROP in NODE results not nil.
 FUN is a predicate function that takes one argument."
-  (->> (om--get-property prop node) (funcall fun) (and)))
+  (declare (indent 1))
+  (and (funcall fun (om--get-property prop node)) t))
 
-(om--gen-anaphoric-form #'om--property-is-predicate-p)
+(om--gen-anaphoric-form #'om--property-is-predicate-p nil 1)
 
 ;;; objects
 ;;
@@ -1242,8 +1247,7 @@ FUN is a predicate function that takes one argument."
   (let ((value (om--get-property :value statistics-cookie)))
     (cond ((s-contains? "/" value) 'fraction)
           ((s-contains? "%" value) 'percent)
-          (t (error "Unparsable statistics cookie value: %s"
-                    (om--get-property :value))))))
+          (t (error "Unparsable statistics cookie: %s" value)))))
 
 ;; timestamp (auxiliary functions)
 
@@ -1555,9 +1559,9 @@ float-times, which assumes the :type property is valid."
         (if org-list-allow-alphabetical counter
           (error "Set `org-list-allow-alphabetical' to t to use alphabetical bullets"))))))
 
-(defun om--item-set-tag! (raw-tag item)
-  (-> (om--build-secondary-string raw-tag)
-      (om--item-set-tag item)))
+;; (defun om--item-set-tag! (raw-tag item)
+;;   (-> (om--build-secondary-string raw-tag)
+;;       (om--item-set-tag item)))
 
 (defun om--item-toggle-checkbox (item)
   (cl-case (om--get-property :checkbox item)
@@ -1603,7 +1607,7 @@ float-times, which assumes the :type property is valid."
 
 (defun om--init-properties (props)
   "Return a plist where the keys are PROPS and all values are nil."
-  (--splice 't (list it nil) props))
+  (--mapcat (list it nil) props))
 
 (defun om--build (type post-blank props)
   (->> (om--set-property-strict :post-blank (or post-blank 0) `(,type nil))
@@ -1675,7 +1679,7 @@ float-times, which assumes the :type property is valid."
                         `(om--set-property-nil ,@it)
                       `(om--set-properties-nil (list ,@it)))))
          (strict-props
-          (-some--> 
+          (-some-->
            (append (alist-get 'key props) (alist-get 'req props))
            (-map #'car it)
            (--mapcat (list it (om--kwd-to-sym it)) it)
@@ -1688,7 +1692,7 @@ float-times, which assumes the :type property is valid."
                        (->> (symbol-name rest-arg)
                             (s-upcase)
                             (format " with %s as children."))))
-                (post-blank (if element? "newlines" "spaces"))
+                ;; (post-blank (if element? "newlines" "spaces"))
                 (prop
                  (-some->>
                   (append (alist-get 'req props) (alist-get 'key props))
@@ -1861,7 +1865,9 @@ All arguments not mentioned here follow the same rules as
          ;; TODO need to ensure the all subheadlines are level + 1
          (nodes (-non-nil (append (list section) subheadlines))))
     (->> (apply #'om-build-headline
+                :todo-keyword todo-keyword
                 :level level
+                :tags tags
                 :post-blank post-blank
                 :pre-blank pre-blank
                 :priority priority
@@ -2068,11 +2074,11 @@ nested element to return."
         (t subheadlines))))
    headline))
 
-(defun om-headline-map-node-property (key fun headline)
-  (om--verify key stringp headline om-is-headline-p)
-  (om-match-map-first*
-   `(section property-drawer (:and node-property (:key ,key)))
-    (om--node-property-map-value fun it) headline))
+;; (defun om-headline-map-node-property (key fun headline)
+;;   (om--verify key stringp headline om-is-headline-p)
+;;   (om-match-map-first*
+;;    `(section property-drawer (:and node-property (:key ,key)))
+;;     (om--node-property-map-value fun it) headline))
 
 (defun om--map-or-build (map-fun build-fun pred-fun pos node)
   (om--map-children
@@ -2114,33 +2120,33 @@ nested element to return."
           (--map (om--headline-subtree-shift-level n it)
                  headlines)))))
 
-(defun om--headline-set-section (section headline)
-  (let ((subheadlines (om-headline-get-subheadlines headline)))
-    (om--set-children (cons section subheadlines) headline)))
+;; (defun om--headline-set-section (section headline)
+;;   (let ((subheadlines (om--headline-get-subheadlines headline)))
+;;     (om--set-children (cons section subheadlines) headline)))
 
-(defun om--headline-set-property-drawer (property-drawer headline)
-  (om--headline-set-section (om-build-section property-drawer)))
+;; (defun om--headline-set-property-drawer (property-drawer headline)
+;;   (om--headline-set-section (om-build-section property-drawer)))
 
-(defun om--headline-set-node-property (key value headline)
-  (om--map-or-build-nested (om--set-property-strict :value value it)
-    ((om-is-section-p it)
-     (om-build-section)
-     0)
-    ((om-is-property-drawer-p it)
-     (om-build-property-drawer)
-     (-if-let (i (-find-index (om-is-planning-p it) it)) ((1+ i) it)))
-    ((and (om-is-node-property-p it)
-          (om--property-is-equal-p :value key it))
-     (om-build-node-property key value) 
-     0)
-    headline))
+;; (defun om--headline-set-node-property (key value headline)
+;;   (om--map-or-build-nested (om--set-property-strict :value value it)
+;;     ((om-is-section-p it)
+;;      (om-build-section)
+;;      0)
+;;     ((om-is-property-drawer-p it)
+;;      (om-build-property-drawer)
+;;      (-if-let (i (-find-index (om-is-planning-p it) it)) ((1+ i) it)))
+;;     ((and (om-is-node-property-p it)
+;;           (om--property-is-equal-p :value key it))
+;;      (om-build-node-property key value) 
+;;      0)
+;;     headline))
 
-(defun om--headline-set-planning (planning headline)
-  ;; TODO what if we give this a nil?
-  (om--map-or-build-nested (om--set-property-strict :value value it)
-    ((om-is-section-p it) (om-build-section) 0)
-    ((om-is-planning-p it) (apply #'om-build-planning planning) 0)
-    headline))
+;; (defun om--headline-set-planning (planning headline)
+;;   ;; TODO what if we give this a nil?
+;;   (om--map-or-build-nested (om--set-property-strict :value value it)
+;;     ((om-is-section-p it) (om-build-section) 0)
+;;     ((om-is-planning-p it) (apply #'om-build-planning planning) 0)
+;;     headline))
 
 (defun om--headline-set-statistics-cookie (value headline)
   (om--map-property*
@@ -2170,17 +2176,17 @@ nested element to return."
 
 ;; item
 
-(defun om--item-get-level (item)
-  "Return the level of ITEM element item (1 indexed)."
-  (cl-labels
-      ((get-level
-        (item acc)
-        (let ((parent (->> (om--get-property :parent item)
-                           (om--get-property :parent))))
-          (if (om-item-p parent)
-              (get-level parent (+ 1 acc))
-            acc))))
-    (get-level item 1)))
+;; (defun om--item-get-level (item)
+;;   "Return the level of ITEM element item (1 indexed)."
+;;   (cl-labels
+;;       ((get-level
+;;         (item acc)
+;;         (let ((parent (->> (om--get-property :parent item)
+;;                            (om--get-property :parent))))
+;;           (if (om-item-p parent)
+;;               (get-level parent (+ 1 acc))
+;;             acc))))
+;;     (get-level item 1)))
 
 (defun om--item-get-sublist (item)
   "Return plain-list under ITEM element or nil if none."
@@ -2290,7 +2296,7 @@ zero-indexed."
     (om--table-replace-row row-index row table)))
 
 (defun om--table-clear-cell (row-index column-index table)
-  (om--table-replace-cell row-index column-index table))
+  (om--table-replace-cell row-index column-index (om-build-table-cell " ") table))
 
 (defun om--table-clear-row (index table)
   ;; this assumes the blank cell will be padded with other blank cells
@@ -3750,8 +3756,9 @@ holds the element returned from IN-FORM."
 (defun om--flag-elem-contents (flag node)
   (om--verify flag booleanp
                    node om--is-node-p)
-  (-let (((&plist :contents-begin :contents-end) (om--get-properties node)))
-    (outline-flag-region (- children-begin 1) (- children-end 1) flag)))
+  (-let (((&plist :contents-begin :contents-end)
+          (om--get-properties node)))
+    (outline-flag-region (1- contents-begin) (1- contents-end) flag)))
 
 (defun om-fold (node)
   "Fold the children of NODE if they exist."
@@ -3805,7 +3812,7 @@ original children to be modified."
               (funcall (lambda (it) ,form))
               (--map (rec it))
               (om--construct type (nth 1 node)))))))
-     (rec node)))
+     (rec ,node)))
 
 ;; find
 
@@ -3933,7 +3940,7 @@ original children to be modified."
             (if (<= 0 sum) (om--match-pattern nil b* ps node)
               (reverse (om--match-pattern t b* ps node)))
             (-take b*)
-            (-drop a* matched)))))))
+            (-drop a*)))))))
     (_ (om--match-pattern nil nil pattern node))))
 
 (defun om-match (pattern node)
@@ -4147,12 +4154,12 @@ front."
 
 (defun om--insert-in (node node* index)
   "Insert NODE* into the children of NODE at INDEX."
-  (let* ((children (om--get-children node))
-         (i (om--normalize-insert-index index children)))
+  (let* ((children (om--get-children node)))
       (om--construct
        (nth 0 node)
        (nth 1 node)
-       (-insert-at index node* children))))
+       ;; TODO should we throw an error here?
+       (om--insert-at index node* children))))
 
 (defun om-match-insert-within (pattern index node* node)
   "Insert new NODE* at INDEX into nodes matching PATTERN in NODE.
@@ -4221,6 +4228,7 @@ PATTERN follows the same rules as `om-match'."
     (om--construct
      (nth 0 node)
      (nth 1 node)
+     ;; TODO make negative index version of this
      (->> (-split-at i children)
           (-insert-at 1 nodes*)
           (apply #'append)))))
@@ -4237,7 +4245,7 @@ in the immediate, top level children of NODE."
       (-if-let (targets (om-match pattern node))
           (om--modify-children node
             (if (not (member node targets)) it
-              (om--splice-at nodes* index children)))
+              (om--splice-at it nodes* index)))
         node)
     (om--splice-at node nodes* index)))
 
@@ -4278,8 +4286,8 @@ FUN is function that side effects and takes on argument, the matches
 from NODE using PATTERN. This function itself returns nil.
 
 PATTERN follows the same rules as `om-match'."
-  (-when-let (targets (om-match queries node))
-      (--each (funcall fun it) targets)))
+  (-when-let (targets (om-match pattern node))
+      (--each targets (funcall fun it))))
 
 (provide 'om)
 ;;; om.el ends here
