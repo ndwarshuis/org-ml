@@ -1453,6 +1453,7 @@ The following properties are settable:
 #### om-build-table-row-hline `(&key post-blank)`
 
 Build a table-row element with the 'rule' type.
+Optionally set `post-blank` (a positive integer).
 
 ```el
 (->> (om-build-table (om-build-table-row (om-build-table-cell "text"))
@@ -1752,8 +1753,8 @@ The following properties are settable:
 
 #### om-build-timestamp-diary-sexp `(form &key post-blank)`
 
-Build a diary-sexp timestamp element from `string`.
-`string` is a lisp form as a string.
+Build a diary-sexp timestamp element from `form`.
+Optionally set `post-blank` (a positive integer).
 
 ```el
 (->> (om-build-timestamp-diary-sexp '(diary-float t 4 2))
@@ -1765,6 +1766,7 @@ Build a diary-sexp timestamp element from `string`.
 #### om-build-table-row-hline `(&key post-blank)`
 
 Build a table-row element with the 'rule' type.
+Optionally set `post-blank` (a positive integer).
 
 ```el
 (->> (om-build-table-row-hline)
@@ -1786,13 +1788,13 @@ Build a timestamp object.
 `type` is one if 'active' or 'inactive' (the range suffix will be added
 if an end time is supplied).
 
-`start` specifies the start time and is a list of integers in one of 
+`start` specifies the start time and is a list of integers in one of
 the following forms:
 - (year month day): short form
 - (year month day nil nil) short form
 - (year month day hour minute) long form
 
-`end` (if supplied) will add the ending time, and follows the same 
+`end` (if supplied) will add the ending time, and follows the same
 formatting rules as `start`.
 
 `repeater` and `warning` are lists formatted as (`type` `value` `unit`) where

@@ -1731,8 +1731,8 @@ float-times, which assumes the :type property is valid."
 ;; misc builders
 
 (om--defun om-build-timestamp-diary-sexp (form &key post-blank)
-  "Build a diary-sexp timestamp element from STRING.
-STRING is a lisp form as a string."
+  "Build a diary-sexp timestamp element from FORM.
+Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-object 'timestamp post-blank)
        (om--set-property :type 'diary)
        (om--timestamp-set-diary-sexp form)
@@ -1743,7 +1743,8 @@ STRING is a lisp form as a string."
               :year-end :month-end :day-end :hour-end :minute-end))))
 
 (om--defun om-build-table-row-hline (&key post-blank)
-  "Build a table-row element with the 'rule' type."
+  "Build a table-row element with the 'rule' type.
+Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-container-element 'table-row post-blank nil)
        (om--set-property :type 'rule)))
 
@@ -1758,13 +1759,13 @@ STRING is a lisp form as a string."
 TYPE is one if 'active' or 'inactive' (the range suffix will be added
 if an end time is supplied).
 
-START specifies the start time and is a list of integers in one of 
+START specifies the start time and is a list of integers in one of
 the following forms:
 - (year month day): short form
 - (year month day nil nil) short form
 - (year month day hour minute) long form
 
-END (if supplied) will add the ending time, and follows the same 
+END (if supplied) will add the ending time, and follows the same
 formatting rules as START.
 
 REPEATER and WARNING are lists formatted as (TYPE VALUE UNIT) where
