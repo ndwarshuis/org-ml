@@ -37,7 +37,6 @@
 
 ;;; Code:
 
-;; (require 'cl-lib)
 (require 'org)
 (require 'dash)
 (require 's)
@@ -46,133 +45,134 @@
 ;; some functions here require a clean way to use &rest and &key
 ;; at the same time, which `cl-defun' does not do...let's roll our own
 
-(defun om--symbol-to-keyword (symbol)
-  "Convert SYMBOL to keyword if not already."
-  (if (keywordp symbol) symbol
-    (->> (symbol-name symbol)
-         (s-prepend ":")
-         (intern))))
+(eval-when-compile
+  (defun om--symbol-to-keyword (symbol)
+    "Convert SYMBOL to keyword if not already."
+    (if (keywordp symbol) symbol
+      (->> (symbol-name symbol)
+           (s-prepend ":")
+           (intern))))
 
-(defun om--verify-pos-args (pos-args)
-  (if (-all? #'symbolp pos-args) pos-args
-    (error "All positional arguments must be symbols")))
+  (defun om--verify-pos-args (pos-args)
+    (if (-all? #'symbolp pos-args) pos-args
+      (error "All positional arguments must be symbols")))
 
-(defun om--verify-rest-arg (resarg)
-  (if (and (>= 1 (length resarg)) (symbolp (car resarg)))
-      (car resarg)
-    (error "Rest argument must only have one member")))
- 
-(defun om--make-optarg-let (optarg index)
-  (cl-flet
-      ((make-plist
-        (arg init)
-        (let* ((opt-get `(nth ,index --opt-args))
-               (val (if init `(or ,opt-get ,init) opt-get)))
-          `(,arg ,val))))
-    (pcase optarg
-      (`(,arg ,init) (make-plist arg init))
-      ((and (pred symbolp) arg) (make-plist arg nil))
-      (_ (error "Invalid optional argument: %s" optarg)))))
+  (defun om--verify-rest-arg (resarg)
+    (if (and (>= 1 (length resarg)) (symbolp (car resarg)))
+        (car resarg)
+      (error "Rest argument must only have one member")))
+  
+  (defun om--make-optarg-let (optarg index)
+    (cl-flet
+        ((make-plist
+          (arg init)
+          (let* ((opt-get `(nth ,index --opt-args))
+                 (val (if init `(or ,opt-get ,init) opt-get)))
+            `(,arg ,val))))
+      (pcase optarg
+        (`(,arg ,init) (make-plist arg init))
+        ((and (pred symbolp) arg) (make-plist arg nil))
+        (_ (error "Invalid optional argument: %s" optarg)))))
 
-(defun om--make-kwarg-let (kwarg)
-  "For each in KWARGS, return a plist."
-  (cl-flet
-      ((make-plist
-        (arg kw init)
-        (when (and kw (not (keywordp kw)))
-          (error "Must use keyword for kw-arg, not %s" kw))
-        (let* ((kw (or kw (om--symbol-to-keyword arg)))
-               (kw-get `(cadr (plist-member --kw-args ',kw)))
-               (val (if init `(or ,kw-get ,init) kw-get)))
-          (cons kw `(,arg ,val)))))
-    (pcase kwarg
-      (`((,(and (pred keywordp) kw) ,arg) ,init)
-       (make-plist arg kw init))
-      (`((,(and (pred keywordp) kw) ,arg))
-       (make-plist arg kw nil))
-      (`(,arg ,init) (make-plist arg nil init))
-      ((and (pred symbolp) arg)
-       (make-plist arg nil nil))
-      (_ (error "Invalid keyword argument: %s" kwarg)))))
+  (defun om--make-kwarg-let (kwarg)
+    "For each in KWARGS, return a plist."
+    (cl-flet
+        ((make-plist
+          (arg kw init)
+          (when (and kw (not (keywordp kw)))
+            (error "Must use keyword for kw-arg, not %s" kw))
+          (let* ((kw (or kw (om--symbol-to-keyword arg)))
+                 (kw-get `(cadr (plist-member --kw-args ',kw)))
+                 (val (if init `(or ,kw-get ,init) kw-get)))
+            (cons kw `(,arg ,val)))))
+      (pcase kwarg
+        (`((,(and (pred keywordp) kw) ,arg) ,init)
+         (make-plist arg kw init))
+        (`((,(and (pred keywordp) kw) ,arg))
+         (make-plist arg kw nil))
+        (`(,arg ,init) (make-plist arg nil init))
+        ((and (pred symbolp) arg)
+         (make-plist arg nil nil))
+        (_ (error "Invalid keyword argument: %s" kwarg)))))
 
-(defun om--partition-rest-args (args opt-len kws use-rest?)
-  (if (= opt-len (length args)) (list args nil nil)
-    (-let [(optargs restargs)
-           (if (= 0 opt-len) (list nil args) (-split-at opt-len args))]
-      (if (not kws)
-          (if use-rest? (list optargs nil restargs)
-            (error "Too many arguments supplied"))
-        (-let* (((kwargs restargs)
-                 (->> (-partition-all 2 restargs)
-                      (--split-with (keywordp (car it)))))
-                (restargs (apply #'append restargs)))
-          (-some->> (-difference (--map (car it) kwargs) kws)
-                    (error "Invalid keyword(s) found: %s"))
-          (when (-filter #'keywordp restargs)
-            (error "Keywords not allowed in rest arguments when kw-args used"))
-          (when (and restargs (not use-rest?))
-            (error "Too many arguments supplied"))
-          (list optargs (apply #'append kwargs) restargs))))))
+  (defun om--partition-rest-args (args opt-len kws use-rest?)
+    (if (= opt-len (length args)) (list args nil nil)
+      (-let [(optargs restargs)
+             (if (= 0 opt-len) (list nil args) (-split-at opt-len args))]
+        (if (not kws)
+            (if use-rest? (list optargs nil restargs)
+              (error "Too many arguments supplied"))
+          (-let* (((kwargs restargs)
+                   (->> (-partition-all 2 restargs)
+                        (--split-with (keywordp (car it)))))
+                  (restargs (apply #'append restargs)))
+            (-some->> (-difference (--map (car it) kwargs) kws)
+                      (error "Invalid keyword(s) found: %s"))
+            (when (-filter #'keywordp restargs)
+              (error "Keywords not allowed in rest arguments when kw-args used"))
+            (when (and restargs (not use-rest?))
+              (error "Too many arguments supplied"))
+            (list optargs (apply #'append kwargs) restargs))))))
 
-(defun om--make-header (body args)
-  (let ((header (caar (macroexp-parse-body body))))
-    ;; Macro expansion can take place in the middle of
-    ;; apparently harmless computation, so it should not
-    ;; touch the match-data.
-    (save-match-data
-      (let ((print-gensym nil)
-            (print-quoted t)
-            (print-escape-newlines t))
-        (->> (cl--make-usage-args args)
-             (cons 'fn)
-             (format "%S")
-             (help--docstring-quote)
-             (help-add-fundoc-usage header))))))
+  (defun om--make-header (body args)
+    (let ((header (caar (macroexp-parse-body body))))
+      ;; Macro expansion can take place in the middle of
+      ;; apparently harmless computation, so it should not
+      ;; touch the match-data.
+      (save-match-data
+        (let ((print-gensym nil)
+              (print-quoted t)
+              (print-escape-newlines t))
+          (->> (cl--make-usage-args args)
+               (cons 'fn)
+               (format "%S")
+               (help--docstring-quote)
+               (help-add-fundoc-usage header))))))
 
-(defun om--transform-lambda (args body name)
-  "Transform ARGS and BODY to a block bound to NAME."
-  (let* ((partargs (-partition-before-pred
-                    (lambda (it) (memq it '(&pos &rest &optional &key)))
-                    (cons '&pos args)))
-         (opt-lets
-          (->> (alist-get '&optional partargs)
-               (--map-indexed (om--make-optarg-let it it-index))))
-         (kw-lets (->> (alist-get '&key partargs)
-                       (-map #'om--make-kwarg-let)))
-         (rest-arg (->> (alist-get '&rest partargs)
-                        (om--verify-rest-arg)))
-         (header (om--make-header body args))
-         ;; (car (macroexp-parse-body body)))
-         (body (->> (macroexp-parse-body body)
-                    (cdr)
-                    (append `(cl-block ,name))))
-         (pos-args (->> (alist-get '&pos partargs)
-                        (om--verify-pos-args)))
-         (arg-form (if (not (or opt-lets kw-lets rest-arg))
-                       `(,@pos-args)
-                     `(,@pos-args &rest --rest-args)))
-         (let-forms
-          (when (or opt-lets rest-arg kw-lets)
-            (let ((opt-len (length opt-lets))
-                  (keys (-map #'car kw-lets))
-                  (rest-let (when rest-arg `((,rest-arg (nth 2 s)))))
-                  (lets (append opt-lets (-map #'cdr kw-lets)))
-                  (opt-setter (and opt-lets '((--opt-args (nth 0 s)))))
-                  (kw-setter (and kw-lets '((--kw-args (nth 1 s))))))
-              ;; TODO there is probably a more efficient way to do this...
-              `((s (om--partition-rest-args
-                    --rest-args ,opt-len (quote ,keys)
-                    ,(and rest-arg t)))
-                ,@opt-setter
-                ,@kw-setter
-                ,@rest-let
-                ,@lets)))))
-    ;; mercilessly stolen from cl--transform-whatever
-    `(defun ,name ,arg-form
-       ,header
-       ,(macroexp-let*
-         let-forms
-         (macroexp-progn `(,body))))))
+  (defun om--transform-lambda (args body name)
+    "Transform ARGS and BODY to a block bound to NAME."
+    (let* ((partargs (-partition-before-pred
+                      (lambda (it) (memq it '(&pos &rest &optional &key)))
+                      (cons '&pos args)))
+           (opt-lets
+            (->> (alist-get '&optional partargs)
+                 (--map-indexed (om--make-optarg-let it it-index))))
+           (kw-lets (->> (alist-get '&key partargs)
+                         (-map #'om--make-kwarg-let)))
+           (rest-arg (->> (alist-get '&rest partargs)
+                          (om--verify-rest-arg)))
+           (header (om--make-header body args))
+           ;; (car (macroexp-parse-body body)))
+           (body (->> (macroexp-parse-body body)
+                      (cdr)
+                      (append `(cl-block ,name))))
+           (pos-args (->> (alist-get '&pos partargs)
+                          (om--verify-pos-args)))
+           (arg-form (if (not (or opt-lets kw-lets rest-arg))
+                         `(,@pos-args)
+                       `(,@pos-args &rest --rest-args)))
+           (let-forms
+            (when (or opt-lets rest-arg kw-lets)
+              (let ((opt-len (length opt-lets))
+                    (keys (-map #'car kw-lets))
+                    (rest-let (when rest-arg `((,rest-arg (nth 2 s)))))
+                    (lets (append opt-lets (-map #'cdr kw-lets)))
+                    (opt-setter (and opt-lets '((--opt-args (nth 0 s)))))
+                    (kw-setter (and kw-lets '((--kw-args (nth 1 s))))))
+                ;; TODO there is probably a more efficient way to do this...
+                `((s (om--partition-rest-args
+                      --rest-args ,opt-len (quote ,keys)
+                      ,(and rest-arg t)))
+                  ,@opt-setter
+                  ,@kw-setter
+                  ,@rest-let
+                  ,@lets)))))
+      ;; mercilessly stolen from cl--transform-whatever
+      `(,arg-form
+        ,header
+        ,(macroexp-let*
+          let-forms
+          (macroexp-progn `(,body)))))))
 
 ;; TODO catch duplicate keys
 (defmacro om--defun (name args &rest body)
@@ -192,7 +192,8 @@
                      def-body))
            (doc-string 3)
            (indent 2))
-  (om--transform-lambda args body name))
+  (let ((res (om--transform-lambda args body name)))
+    `(defun ,name ,@res)))
 
 ;;; MISC HELPER FUNCTIONS
 
