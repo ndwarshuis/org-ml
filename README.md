@@ -1355,7 +1355,7 @@ The following properties are settable:
 Build a latex-environment element.
 
 The following properties are settable:
-- `value`: list of strings like (`env` `body`) or (`env`)
+- `value`: a list of strings like (`env` `body`) or (`env`)
 - `post-blank`: a non-negative integer
 
 ```el
