@@ -24,12 +24,12 @@ $EMACS -batch \
        -l test/om-test.el \
        --eval "(ert-run-tests-batch-and-exit (quote ${ERT_SELECTOR}))"
 
-VERSION=`$EMACS -version | head -1 | cut -d" " -f3`
+# VERSION=`$EMACS -version | head -1 | cut -d" " -f3`
 
-if [[ $VERSION == "24.1.1" ]] || [[ $VERSION == "24.2.1" ]] ; then
-    echo Skipping byte compile check for early Emacs version
-else
-    $EMACS -Q --batch \
-           --eval '(setq byte-compile-error-on-warn t)' \
-           -f batch-byte-compile om.el
-fi
+# if [[ $VERSION == "24.1.1" ]] || [[ $VERSION == "24.2.1" ]] ; then
+#     echo Skipping byte compile check for early Emacs version
+# else
+$EMACS -Q --batch \
+       --eval '(setq byte-compile-error-on-warn nil)' \
+       -f batch-byte-compile om.el
+# fi
