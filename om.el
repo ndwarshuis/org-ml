@@ -226,23 +226,22 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
        (om--get-descendent '(0))
        (om--get-children)))
 
-(defun om--gen-anaphoric-form (fun &optional docstring indent)
-  "Generate the anaphoric form of FUN where FUN points to a function.
-Optionally supply DOCSTRING to override the generic docstring, and
-INDENT sets the indent declaration."
-  (let* ((fun-name (intern (format "%s*" fun)))
-         (arglist (->> (help-function-arglist fun)
-                       (-replace 'fun 'form)))
-         (doc (or docstring (format "Anaphoric form of `%s'" fun)))
-         (funargs (->> (help-function-arglist fun)
-                       (--map (if (eq it 'fun)
-                                  "(lambda (it) ,form)"
-                                (format ",%s" it)))
-                       (-map #'read)))
-         (call `(backquote (,fun ,@funargs)))
-         (body (if (not indent) (list call)
-                 (list `(declare (indent ,indent)) call))))
-    (eval `(defmacro ,fun-name ,arglist ,doc ,@body))))
+(defmacro om--defaform (name arglist &optional docstring &rest body)
+  (declare (doc-string 3) (indent 2))
+  (let* ((name* (intern (format "%s*" name)))
+         (arglist* (-replace 'fun 'form arglist))
+         (docstring* (format "Anaphoric form of `%s'." name))
+         (funargs (--map (if (eq it 'form) '(lambda (it) (\, form))
+                           (cons '\, (list it)))
+                         arglist*))
+         (call (cdr (backquote-process (backquote (,name ,@funargs)))))
+         (indent (-elem-index 'form arglist*))
+         (body* (list `(declare (indent ,indent)) call)))
+         ;; (body* (if (= 0 indent) (list call)
+         ;;          (list `(declare (indent ,(1+ indent))) call))))
+    `(progn
+       (defmacro ,name* ,arglist* ,docstring* ,@body*)
+       (defun ,name ,arglist ,docstring ,@body))))
 
 ;;; LIST OPERATIONS (EXTENDING DASH)
 
@@ -316,16 +315,12 @@ a non-existent index."
 (defun om--nth (n list)
   (nth (om--convert-intra-index n list) list))
 
-(defun om--map-first (fun list)
+(om--defaform om--map-first (fun list)
   (om--verify fun functionp)
   (->> (cdr list) (cons (funcall fun (car list)))))
 
-(om--gen-anaphoric-form #'om--map-first)
-
-(defun om--map-last (fun list)
+(om--defaform om--map-last (fun list)
   (->> (nreverse list) (om--map-first fun) (nreverse)))
-
-(om--gen-anaphoric-form #'om--map-last)
 
 ;;; INTERNAL CONSTANTS
 
@@ -1100,12 +1095,10 @@ These are also known as \"recursive objects\" in `org-element.el'")
         (value (om--get-property prop node)))
     (if filter-fun (funcall filter-fun value) value)))
 
-(defun om--map-property-strict (prop fun node)
+(om--defaform om--map-property-strict (prop fun node)
   (om--verify fun functionp)
   (let ((value (funcall fun (om--get-property-strict prop node))))
     (om--set-property-strict prop value node)))
-
-(om--gen-anaphoric-form #'om--map-property-strict)
 
 (defun om--map-properties-strict (plist node)
   (cond
@@ -1181,12 +1174,10 @@ property list in NODE."
   (let ((plist (--mapcat (list it nil) props)))
     (om--set-properties plist node)))
 
-(defun om--map-property (prop fun node)
+(om--defaform om--map-property (prop fun node)
   (om--verify fun functionp)
   (let ((value (funcall fun (om--get-property prop node))))
     (om--set-property prop value node)))
-
-(om--gen-anaphoric-form #'om--map-property)
 
 (defun om--map-properties (plist node)
   (cond
@@ -1219,13 +1210,11 @@ property list in NODE."
   "Return t if PROP in NODE is `equal' to VAL."
   (equal val (om--get-property prop node)))
 
-(defun om--property-is-predicate-p (prop fun node)
+(om--defaform om--property-is-predicate-p (prop fun node)
   "Return t if FUN applied to the value of PROP in NODE results not nil.
 FUN is a predicate function that takes one argument."
   (declare (indent 1))
   (and (funcall fun (om--get-property prop node)) t))
-
-(om--gen-anaphoric-form #'om--property-is-predicate-p nil 1)
 
 ;;; objects
 ;;
@@ -1528,12 +1517,10 @@ float-times, which assumes the :type property is valid."
 ;; (defun om--clock-map-timestamp (fun clock)
 ;;   (->> (om--map-property :value fun clock)))
 
-;; (om--gen-anaphoric-form #'om--clock-map-timestamp)
-
 ;; headline
 
 (defun om--headline-set-title! (string stat-ckie headline)
-  (let* ((ss (om--build-secondary-string string)))
+  (let ((ss (om--build-secondary-string string)))
     (if (not stat-ckie)
         (om--set-property-strict :title ss headline)
       (let ((ss* (om--map-last*
@@ -1543,8 +1530,7 @@ float-times, which assumes the :type property is valid."
 
 (defun om--headline-shift-level (n headline)
   (om--verify n integerp)
-  (om--map-property* :level (om--shift-pos-integer n it)
-                          headline))
+  (om--map-property* :level (om--shift-pos-integer n it) headline))
 
 ;; item
 
@@ -1976,12 +1962,10 @@ nested element to return."
   "Return t if NODE has no children."
   (not (om--get-children node)))
 
-(defun om--map-children (fun node)
+(om--defaform om--map-children (fun node)
   (let ((children (om--get-children node)))
     ;; TODO check the types of children after they are mapped?
     (om--set-children (funcall fun children) node)))
-
-(om--gen-anaphoric-form #'om--map-children)
 
 (defun om--map-contained (pred fun node)
   (om--map-children*
@@ -2608,7 +2592,7 @@ each type."
 
 ;; map
 
-(defun om-map-property (prop fun node)
+(om--defaform om-map-property (prop fun node)
   "Apply FUN to the value of property PROP of NODE.
 FUN is a unary function which takes the current value of PROP and
 returns a new value to which PROP will be set.
@@ -2616,8 +2600,6 @@ returns a new value to which PROP will be set.
 See builder functions for a list of properties and their rules for
 each type."
   (om--map-property-strict prop fun node))
-
-(om--gen-anaphoric-form #'om-map-property)
 
 (defun om-map-properties (plist node)
   "Alter property values of NODE in place.
@@ -2954,15 +2936,13 @@ behavior is not desired, use `om-timestamp-shift'."
   (om--verify clock om-is-clock-p)
   (om--property-is-eq-p :status 'running clock))
 
-(defun om-clock-map-timestamp (fun clock)
+(om--defaform om-clock-map-timestamp (fun clock)
   "Apply FUN to timestamp in CLOCK.
 FUN is a function that takes the current timestamp and returns
 a modified timestamp. The returned timestamp must be inactive and
 cannot contain any warnings or repeaters."
   (om--verify clock om-is-clock-p)
   (om-map-property :value fun clock))
-
-(om--gen-anaphoric-form 'om-clock-map-timestamp)
 
 ;; headline
 
@@ -3055,7 +3035,7 @@ same as that described in `om-build-planning!'."
     (om--set-property-strict prop ts planning)))
 
 ;; TODO this is a bit redundant...
-(defun om-planning-map-timestamp (prop fun planning)
+(om--defaform om-planning-map-timestamp (prop fun planning)
   "Modify timestamp matching PROP in place in PLANNING using FUN.
 
 PROP is one of :closed, :deadline, or :scheduled. FUN must return a
@@ -3071,8 +3051,6 @@ nil values."
   (-if-let (ts (om--get-property-strict prop planning))
       (om--set-property-strict prop (funcall fun ts) planning)
     planning))
-
-(om--gen-anaphoric-form 'om-planning-map-timestamp)
 
 ;;; PUBLIC CHILDREN FUNCTIONS
 
@@ -3103,15 +3081,13 @@ on the type of NODE."
   (let ((type (om--get-type node)))
     (om--set-children-by-type type children node)))
 
-(defun om-map-children (fun node)
+(om--defaform om-map-children (fun node)
   "Apply FUN to the children of NODE. 
 FUN is a function that takes the current children as a list and
 returns a modified children as a list."
   ;; TODO use private predicate here...
   (om--verify node om-is-branch-node-p)
   (om--map-children fun node))
-
-(om--gen-anaphoric-form #'om-map-children)
 
 (defun om-is-childless-p (node)
   "Return t if NODE is empty.
@@ -3737,21 +3713,18 @@ holds the element returned from IN-FORM."
          (call (intern (format "om-parse-%s-at" it)))
          (update-at-body `(om-update fun (,call point)))
          (update-this-body `(,update-at (point) fun)))
-    (eval `(defun ,update-at (point fun)
+    ;; TODO why do these not need om--defaform to be eval'ed on compile?
+    (eval `(om--defaform ,update-at (point fun)
              (declare (indent 1))
              ,update-at-doc
              ,update-at-body))
-    (om--gen-anaphoric-form update-at nil 1)
-    (eval `(defun ,update-this (fun)
+    (eval `(om--defaform ,update-this (fun)
              (declare (indent 0))
              ,update-this-doc
-             ,update-this-body))
-    (om--gen-anaphoric-form update-this nil 0)))
+             ,update-this-body))))
 
-(defun om-update-this-buffer (fun)
+(om--defaform om-update-this-buffer (fun)
   (om-update fun (om-parse-this-buffer)))
-
-(om--gen-anaphoric-form 'om-update-this-buffer)
 
 ;; fold
 ;; TODO this will fold items improperly
@@ -4073,7 +4046,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;; map
 
-(defun om-match-map (pattern fun node)
+(om--defaform om-match-map (pattern fun node)
   "Apply FUN to nodes matching PATTERN in NODE.
 FUN is a unary function that takes a node and returns a new node
 which will replace the original.
@@ -4085,11 +4058,9 @@ PATTERN follows the same rules as `om-match'."
         (--map-when (member it targets) (funcall fun it) it))
     node))
 
-(om--gen-anaphoric-form 'om-match-map nil 1)
-
 ;; mapcat
 
-(defun om-match-mapcat (pattern fun node)
+(om--defaform om-match-mapcat (pattern fun node)
   "Apply FUN to nodes matching PATTERN in NODE.
 FUN is a unary function that takes a node and returns a list of new
 nodes which will be spliced in place of the original node.
@@ -4101,8 +4072,6 @@ PATTERN follows the same rules as `om-match'."
                       (funcall fun it) (list it))
                   it))
     node))
-
-(om--gen-anaphoric-form 'om-match-mapcat nil 1)
 
 ;; replace
 
