@@ -172,28 +172,28 @@
         ,header
         ,(macroexp-let*
           let-forms
-          (macroexp-progn `(,body)))))))
+          (macroexp-progn `(,body))))))
 
-;; TODO catch duplicate keys
-(defmacro om--defun (name args &rest body)
-  "Define NAME as a function.
+  ;; TODO catch duplicate keys
+  (defmacro om--defun (name args &rest body)
+    "Define NAME as a function.
 
    ((VAR [PRED])...
     [&optional ((VAR [PRED]) [INITFORM])...]
     [&rest (VAR [PRED]]
     [&key (([KEYWORD] VAR) [[PRED] [INITFORM]])...])"
-  ;; TODO wtf does this stuff do...???
-  (declare (debug
-            ;; Same as defun but use cl-lambda-list.
-            (&define [&or name ("setf" :name setf name)]
-                     cl-lambda-list
-                     cl-declarations-or-string
-                     [&optional ("interactive" interactive)]
-                     def-body))
-           (doc-string 3)
-           (indent 2))
-  (let ((res (om--transform-lambda args body name)))
-    `(defun ,name ,@res)))
+    ;; TODO wtf does this stuff do...???
+    (declare (debug
+              ;; Same as defun but use cl-lambda-list.
+              (&define [&or name ("setf" :name setf name)]
+                       cl-lambda-list
+                       cl-declarations-or-string
+                       [&optional ("interactive" interactive)]
+                       def-body))
+             (doc-string 3)
+             (indent 2))
+    (let ((res (om--transform-lambda args body name)))
+      `(defun ,name ,@res))))
 
 ;;; MISC HELPER FUNCTIONS
 
@@ -372,57 +372,58 @@ and object containers and includes the 'plain-text' type.")
 
 ;;; INTERNAL TYPE FUNCTIONS
 
-(defconst om-elements
-  (cons 'org-data org-element-all-elements)
-  "List of all element types including 'org-data'.")
+(eval-when-compile
+  (defconst om-elements
+    (cons 'org-data org-element-all-elements)
+    "List of all element types including 'org-data'.")
 
-(defconst om-objects
-  (cons 'plain-text org-element-all-objects)
-  "List of all object types including 'plain-text'.")
+  (defconst om-objects
+    (cons 'plain-text org-element-all-objects)
+    "List of all object types including 'plain-text'.")
 
-(defconst om-nodes
-  (append om-elements om-objects)
-  "List of all node types.")
+  (defconst om-nodes
+    (append om-elements om-objects)
+    "List of all node types.")
 
-(defvaralias 'om-branch-nodes-permitting-child-objects
-  'org-element-object-containers
-  "List of node types that can have objects as children.
+  (defvaralias 'om-branch-nodes-permitting-child-objects
+    'org-element-object-containers
+    "List of node types that can have objects as children.
 These are also known as \"object containers\" in `org-element.el'")
 
-(defconst om-branch-elements-permitting-child-objects
-  (-intersection om-branch-nodes-permitting-child-objects om-elements)
-  "List of element types that can have objects as children.")
+  (defconst om-branch-elements-permitting-child-objects
+    (-intersection om-branch-nodes-permitting-child-objects om-elements)
+    "List of element types that can have objects as children.")
 
-(defconst om-branch-elements-permitting-child-elements
-  (cons 'org-data org-element-greater-elements)
-  "List of element types that can have elements as children.
+  (defconst om-branch-elements-permitting-child-elements
+    (cons 'org-data org-element-greater-elements)
+    "List of element types that can have elements as children.
 These are also known as \"greater elements\" in `org-element.el'")
 
-(defconst om-branch-elements
-  (append om-branch-elements-permitting-child-objects
-          om-branch-elements-permitting-child-elements)
-  "List of element types that can have children.")
+  (defconst om-branch-elements
+    (append om-branch-elements-permitting-child-objects
+            om-branch-elements-permitting-child-elements)
+    "List of element types that can have children.")
 
-(defvaralias 'om-branch-objects
-  'org-element-recursive-objects
-  "List of object types that can have objects as children.
+  (defvaralias 'om-branch-objects
+    'org-element-recursive-objects
+    "List of object types that can have objects as children.
 These are also known as \"recursive objects\" in `org-element.el'")
 
-(defconst om-branch-nodes
-  (append om-branch-elements om-branch-objects)
-  "List of node types that can have children.")
+  (defconst om-branch-nodes
+    (append om-branch-elements om-branch-objects)
+    "List of node types that can have children.")
 
-(defconst om-leaf-elements
-  (-difference om-elements om-branch-elements)
-  "List of element types that are leaves.")
+  (defconst om-leaf-elements
+    (-difference om-elements om-branch-elements)
+    "List of element types that are leaves.")
 
-(defconst om-leaf-objects
-  (-difference om-objects om-branch-objects)
-  "List of object types that are leaves.")
+  (defconst om-leaf-objects
+    (-difference om-objects om-branch-objects)
+    "List of object types that are leaves.")
 
-(defconst om-node-leaves
-  (append om-leaf-objects om-leaf-elements)
-  "List of node types that are leaves.")
+  (defconst om-node-leaves
+    (append om-leaf-objects om-leaf-elements)
+    "List of node types that are leaves."))
 
 (defconst om--item-tag-restrictions
   (->> org-element-object-restrictions
@@ -765,258 +766,251 @@ These are also known as \"recursive objects\" in `org-element.el'")
            (- it offset)
            (+ priority it)))))
 
-(defconst om--type-alist
-  (let ((bool (list :pred #'booleanp
-                    :decode 'om--decode-boolean
-                    :type-desc "nil or t"
-                    :toggle t))
-        (pos-int (list
-                       :pred #'om--is-pos-integer-p
-                       :type-desc "a positive integer"))
-        (pos-int-nil (list
-                           :pred #'om--is-pos-integer-or-nil-p
-                           :type-desc "a positive integer or nil"))
-        (nn-int (list
-                      :pred #'om--is-non-neg-integer-p
-                      :type-desc "a non-negative integer"))
-        (nn-int-nil (list
-                          :pred #'om--is-non-neg-integer-or-nil-p
-                          :type-desc "a non-negative integer or nil"))
-        (str (list
-                   :pred #'stringp
-                   :type-desc "a string"))
-        (str-nil (list
-                       :pred #'string-or-null-p
-                       :type-desc "a string or nil"))
-        (ol-str (list
-                      :pred #'om--is-oneline-string-p
-                      :type-desc "a oneline string"))
-        (ol-str-nil (list
-                          :pred #'om--is-oneline-string-or-nil-p
-                          :type-desc "a oneline string or nil"))
-        (plist (list :encode 'om--encode-plist
-                     :pred #'om--is-plist-p
-                     :decode 'om--decode-plist
-                     :plist t
-                     :type-desc "a plist"))
-        (slist (list :pred #'om--is-string-list-p
-                     :string-list t
-                     :type-desc "a list of oneline strings"))
-        (slist-com (list :encode 'om--encode-string-list-comma-delim
-                         :decode 'om--decode-string-list-comma-delim
-                         :pred #'om--is-string-list-p
-                         :string-list t
-                         :type-desc "a list of oneline strings"))
-        (slist-spc (list :encode 'om--encode-string-list-space-delim
-                         :decode 'om--decode-string-list-space-delim
-                         :pred #'om--is-string-list-p
-                         :string-list t
-                         :type-desc "a list of oneline strings"))
-        (planning (list :pred #'om--is-valid-planning-timestamp-p
-                        :type-desc "a zero-range, inactive timestamp object"))
-        (ts-unit (list :pred #'om--is-valid-timestamp-unit-p
-                       :type-desc '("nil or a symbol from 'year' 'month'"
-                                    "'week' 'day', or 'hour'"))))
-    `((babel-call (:call ,@ol-str :require t)
-                  (:inside-header ,@plist)
-                  (:arguments ,@slist-com)
-                  (:end-header ,@plist)
-                  (:value))
-      (bold)
-      (center-block)
-      (clock (:value :pred om--is-valid-clock-timestamp-p
-                     :cis om--update-clock-duration
-                     :type-desc "an unranged, inactive timestamp with no warning or repeater"
-                     :require t)
-             (:status)
-             (:duration))
-      (code (:value ,@ol-str :require t))
-      (comment (:value ,@ol-str :require t)) ; TODO this isn't actually required?
-      (comment-block (:value ,@ol-str :decode s-trim-right :require t)) ; TODO is this actually required?
-      (drawer (:drawer-name ,@ol-str :require t))
-      (diary-sexp (:value :encode om--encode-diary-sexp-value
-                          :pred om--is-valid-diary-sexp-value-p
-                          :decode om--decode-diary-sexp-value
-                          :type-desc "a list form"
-                          ;; TODO is this actually required?
-                          :require t))
-      (dynamic-block (:arguments ,@plist)
-                     (:block-name ,@ol-str :require t))
-      (entity (:name :pred om--is-valid-entity-name-p
-                     :type-desc "a string that makes `org-entity-get' return non-nil"
-                     :require t)
-              (:use-brackets-p ,@bool)
-              ;; TODO what do these do?
-              (:latex)
-              (:latex-math-p)
-              (:html)
-              (:ascii)
-              (:latin1)
-              (:utf-8))
-      (example-block (:preserve-indent ,@bool)
-                     (:switches ,@slist-spc)
-                     ;; TODO is this required?
-                     (:value ,@str :decode s-trim-right :require t)
-                     ;; TODO how many of these are tied to switches?
-                     (:number-lines)
-                     (:retain-labels)
-                     (:use-labels)
-                     (:label-fmt))
-      (export-block (:type ,@ol-str :require t)
-                    (:value ,@str :require t))
-      (export-snippet (:back-end ,@ol-str :require t)
+(eval-when-compile
+  (defconst om--type-alist
+    (let ((bool (list :pred #'booleanp
+                      :decode 'om--decode-boolean
+                      :type-desc "nil or t"
+                      :toggle t))
+          (pos-int (list :pred #'om--is-pos-integer-p
+                         :type-desc "a positive integer"))
+          (pos-int-nil (list :pred #'om--is-pos-integer-or-nil-p
+                             :type-desc "a positive integer or nil"))
+          (nn-int (list :pred #'om--is-non-neg-integer-p
+                        :type-desc "a non-negative integer"))
+          (nn-int-nil (list :pred #'om--is-non-neg-integer-or-nil-p
+                            :type-desc "a non-negative integer or nil"))
+          (str (list :pred #'stringp
+                     :type-desc "a string"))
+          (str-nil (list :pred #'string-or-null-p
+                         :type-desc "a string or nil"))
+          (ol-str (list :pred #'om--is-oneline-string-p
+                        :type-desc "a oneline string"))
+          (ol-str-nil (list :pred #'om--is-oneline-string-or-nil-p
+                            :type-desc "a oneline string or nil"))
+          (plist (list :encode 'om--encode-plist
+                       :pred #'om--is-plist-p
+                       :decode 'om--decode-plist
+                       :plist t
+                       :type-desc "a plist"))
+          (slist (list :pred #'om--is-string-list-p
+                       :string-list t
+                       :type-desc "a list of oneline strings"))
+          (slist-com (list :encode 'om--encode-string-list-comma-delim
+                           :decode 'om--decode-string-list-comma-delim
+                           :pred #'om--is-string-list-p
+                           :string-list t
+                           :type-desc "a list of oneline strings"))
+          (slist-spc (list :encode 'om--encode-string-list-space-delim
+                           :decode 'om--decode-string-list-space-delim
+                           :pred #'om--is-string-list-p
+                           :string-list t
+                           :type-desc "a list of oneline strings"))
+          (planning (list :pred #'om--is-valid-planning-timestamp-p
+                          :type-desc "a zero-range, inactive timestamp object"))
+          (ts-unit (list :pred #'om--is-valid-timestamp-unit-p
+                         :type-desc '("nil or a symbol from 'year' 'month'"
+                                      "'week' 'day', or 'hour'"))))
+      `((babel-call (:call ,@ol-str :require t)
+                    (:inside-header ,@plist)
+                    (:arguments ,@slist-com)
+                    (:end-header ,@plist)
+                    (:value))
+        (bold)
+        (center-block)
+        (clock (:value :pred om--is-valid-clock-timestamp-p
+                       :cis om--update-clock-duration
+                       :type-desc "an unranged, inactive timestamp with no warning or repeater"
+                       :require t)
+               (:status)
+               (:duration))
+        (code (:value ,@ol-str :require t))
+        (comment (:value ,@ol-str :require t)) ; TODO this isn't actually required?
+        (comment-block (:value ,@ol-str :decode s-trim-right :require t)) ; TODO is this actually required?
+        (drawer (:drawer-name ,@ol-str :require t))
+        (diary-sexp (:value :encode om--encode-diary-sexp-value
+                            :pred om--is-valid-diary-sexp-value-p
+                            :decode om--decode-diary-sexp-value
+                            :type-desc "a list form"
+                            ;; TODO is this actually required?
+                            :require t))
+        (dynamic-block (:arguments ,@plist)
+                       (:block-name ,@ol-str :require t))
+        (entity (:name :pred om--is-valid-entity-name-p
+                       :type-desc "a string that makes `org-entity-get' return non-nil"
+                       :require t)
+                (:use-brackets-p ,@bool)
+                ;; TODO what do these do?
+                (:latex)
+                (:latex-math-p)
+                (:html)
+                (:ascii)
+                (:latin1)
+                (:utf-8))
+        (example-block (:preserve-indent ,@bool)
+                       (:switches ,@slist-spc)
+                       ;; TODO is this required?
+                       (:value ,@str :decode s-trim-right :require t)
+                       ;; TODO how many of these are tied to switches?
+                       (:number-lines)
+                       (:retain-labels)
+                       (:use-labels)
+                       (:label-fmt))
+        (export-block (:type ,@ol-str :require t)
                       (:value ,@str :require t))
-      (fixed-width (:value ,@ol-str :decode s-trim-right :require t))
-      (footnote-definition (:label ,@ol-str-nil :require t))
-      (footnote-reference (:label ,@ol-str-nil)
-                          (:type))
-      (headline (:archivedp ,@bool :cis om--update-headline-tags)
-                (:commentedp ,@bool)
-                (:footnote-section-p ,@bool)
-                (:level ,@pos-int
-                        :shift om--shift-pos-integer
-                        :require 1)
-                (:pre-blank ,@nn-int
-                            :shift om--shift-non-neg-integer
-                            :require 0)
-                (:priority :pred om--is-valid-headline-priority-p
-                           :shift om--shift-headline-priority
-                           :type-desc ("an integer between (inclusive)"
-                                       "`org-highest-priority' and"
-                                       "`org-lowest-priority'"))
-                (:tags :pred om--is-valid-headline-tags-p
-                       :decode om--decode-headline-tags
-                       :cis om--update-headline-tags
-                       :type-desc "a string list"
-                       :string-list t)
-                (:title :pred om--is-valid-headline-title-p
-                        :type-desc "a secondary string")
-                (:todo-keyword ,@ol-str-nil) ; TODO restrict this?
-                (:raw-value)
-                (:todo-type))
-      (horizontal-rule)
-      (inline-babel-call (:call ,@ol-str :require t)
-                         (:inside-header ,@plist)
-                         (:arguments ,@slist-com)
-                         (:end-header ,@plist)
-                         (:value))
-      (inline-src-block (:language ,@ol-str :require t)
-                        (:parameters ,@plist)
-                        ;; TODO should this be required?
-                        (:value ,@ol-str :require t))
-      ;; (inlinetask)
-      (italic)
-      (item (:bullet :encode om--encode-item-bullet
-                     :pred om--is-valid-item-bullet-p
-                     :decode om--decode-item-bullet
-                     :type-desc ("a positive integer (for '1.'),"
-                                 "a positive integer in a list"
-                                 "(for '1)'), a '-', or a '+'")
-                     :require '-)
-            (:checkbox :pred om--is-valid-item-checkbox-p
-                       :type-desc "nil or the symbols 'on', 'off', or 'trans'")
-            (:counter ,@pos-int-nil :shift om--shift-pos-integer)
-            (:tag :pred om--is-valid-item-tag-p
-                  :type-desc "a secondary string")
-            (:structure))
-      (keyword (:key ,@ol-str :require t)
-               (:value ,@ol-str :require t))
-      (latex-environment (:value :encode om--encode-latex-environment-value
-                                 :pred om--is-valid-latex-environment-value-p
-                                 :decode om--decode-latex-environment-value
-                                 :type-desc "a list of strings like (ENV BODY) or (ENV)"
-                                 :require t))
-      (latex-fragment (:value ,@str :require t))
-      (line-break)
-      (link (:path ,@ol-str :require t)
-            (:format :pred om--is-valid-link-format-p
-                     :type-desc "the symbol 'plain', 'bracket' or 'angle'")
-            (:type :pred om--is-valid-link-type-p
-                   ;; TODO make this desc better
-                   :type-desc ("a oneline string from `org-link-types'"
-                               "or \"coderef\", \"custom-id\","
-                               "\"file\", \"id\", \"radio\", or"
-                               "\"fuzzy\"")
-                   ;; TODO is fuzzy a good default?
-                   :require "fuzzy")
-            (:raw-link) ; TODO update children through this?
-            (:application)
-            (:search-option))
-      (macro (:args ,@slist :cis om--update-macro-value)
-             (:key ,@ol-str :cis om--update-macro-value :require t)
-             (:value))
-      (node-property (:key ,@ol-str :require t)
-                     (:value ,@ol-str :require t))
-      (paragraph)
-      (plain-list (:structure)
-                  (:type))
-      (plain-text)
-      (planning (:closed ,@planning)
-                (:deadline ,@planning)
-                (:scheduled ,@planning))
-      (property-drawer)
-      (quote-block)
-      (radio-target (:value))
-      (section)
-      (special-block (:type ,@ol-str :require t))
-      (src-block (:value ,@str :decode s-trim-right :require t) ; TODO should this actually be required? nil should = ""
-                 (:language ,@str-nil)
-                 (:parameters ,@plist)
-                 (:preserve-indent ,@bool)
-                 (:switches ,@slist-spc)
-                 (:number-lines)
-                 (:retain-labels)
-                 (:use-labels)
-                 (:label-fmt))
-      (statistics-cookie (:value
-                          :encode om--encode-statistics-cookie-value
-                          :pred om--is-valid-statistics-cookie-value-p
-                          :decode om--decode-statistics-cookie-value
-                          :type-desc ("a list of non-neg integers"
-                                      "like (PERC) or (NUM DEN)"
-                                      "which make [NUM/DEN] and"
-                                      ;; TODO this is formatted weirdly
-                                      "[PERC %] respectively")
-                          :require t))
-      (strike-through)
-      (subscript (:use-brackets-p ,@bool))
-      (superscript (:use-brackets-p ,@bool))
-      (table (:tblfm ,@slist)
-             (:type :const 'org)
-             (:value))
-      (table-cell)
-      (table-row (:type :const 'standard))
-      (target (:value ,@ol-str :require t))
-      (timestamp (:type :pred om--is-valid-timestamp-type-p
-                        :type-desc ("a symbol from 'inactive',"
-                                    "'active', 'inactive-ranged', or"
-                                    "'active-ranged'")
-                        :require t)
-                 (:year-start ,@pos-int :require t)
-                 (:month-start ,@pos-int :require t)
-                 (:day-start ,@pos-int :require t)
-                 (:year-end ,@pos-int :require t)
-                 (:month-end ,@pos-int :require t)
-                 (:day-end ,@pos-int :require t)
-                 (:hour-start ,@nn-int-nil)
-                 (:minute-start ,@nn-int-nil)
-                 (:hour-end ,@nn-int-nil)
-                 (:minute-end ,@nn-int-nil)
-                 (:repeater-type :pred om--is-valid-timestamp-repeater-type-p
-                                 :type-desc ("nil or a symbol from"
-                                             "'catch-up', 'restart',"
-                                             "or 'cumulate'"))
-                 (:repeater-unit ,@ts-unit)
-                 (:repeater-value ,@pos-int-nil)
-                 (:warning-type :pred om--is-valid-timestamp-warning-type-p
-                                :type-desc ("nil or a symbol from"
-                                            "'all' or 'first'"))
-                 (:warning-unit ,@ts-unit)
-                 (:warning-value ,@pos-int-nil)
-                 (:raw-value))
-      (underline)
-      (verbatim (:value ,@ol-str :require t))
-      (verse-block))))
+        (export-snippet (:back-end ,@ol-str :require t)
+                        (:value ,@str :require t))
+        (fixed-width (:value ,@ol-str :decode s-trim-right :require t))
+        (footnote-definition (:label ,@ol-str-nil :require t))
+        (footnote-reference (:label ,@ol-str-nil)
+                            (:type))
+        (headline (:archivedp ,@bool :cis om--update-headline-tags)
+                  (:commentedp ,@bool)
+                  (:footnote-section-p ,@bool)
+                  (:level ,@pos-int
+                          :shift om--shift-pos-integer
+                          :require 1)
+                  (:pre-blank ,@nn-int
+                              :shift om--shift-non-neg-integer
+                              :require 0)
+                  (:priority :pred om--is-valid-headline-priority-p
+                             :shift om--shift-headline-priority
+                             :type-desc ("an integer between (inclusive)"
+                                         "`org-highest-priority' and"
+                                         "`org-lowest-priority'"))
+                  (:tags :pred om--is-valid-headline-tags-p
+                         :decode om--decode-headline-tags
+                         :cis om--update-headline-tags
+                         :type-desc "a string list"
+                         :string-list t)
+                  (:title :pred om--is-valid-headline-title-p
+                          :type-desc "a secondary string")
+                  (:todo-keyword ,@ol-str-nil) ; TODO restrict this?
+                  (:raw-value)
+                  (:todo-type))
+        (horizontal-rule)
+        (inline-babel-call (:call ,@ol-str :require t)
+                           (:inside-header ,@plist)
+                           (:arguments ,@slist-com)
+                           (:end-header ,@plist)
+                           (:value))
+        (inline-src-block (:language ,@ol-str :require t)
+                          (:parameters ,@plist)
+                          ;; TODO should this be required?
+                          (:value ,@ol-str :require t))
+        ;; (inlinetask)
+        (italic)
+        (item (:bullet :encode om--encode-item-bullet
+                       :pred om--is-valid-item-bullet-p
+                       :decode om--decode-item-bullet
+                       :type-desc ("a positive integer (for '1.'),"
+                                   "a positive integer in a list"
+                                   "(for '1)'), a '-', or a '+'")
+                       :require '-)
+              (:checkbox :pred om--is-valid-item-checkbox-p
+                         :type-desc "nil or the symbols 'on', 'off', or 'trans'")
+              (:counter ,@pos-int-nil :shift om--shift-pos-integer)
+              (:tag :pred om--is-valid-item-tag-p
+                    :type-desc "a secondary string")
+              (:structure))
+        (keyword (:key ,@ol-str :require t)
+                 (:value ,@ol-str :require t))
+        (latex-environment (:value :encode om--encode-latex-environment-value
+                                   :pred om--is-valid-latex-environment-value-p
+                                   :decode om--decode-latex-environment-value
+                                   :type-desc "a list of strings like (ENV BODY) or (ENV)"
+                                   :require t))
+        (latex-fragment (:value ,@str :require t))
+        (line-break)
+        (link (:path ,@ol-str :require t)
+              (:format :pred om--is-valid-link-format-p
+                       :type-desc "the symbol 'plain', 'bracket' or 'angle'")
+              (:type :pred om--is-valid-link-type-p
+                     ;; TODO make this desc better
+                     :type-desc ("a oneline string from `org-link-types'"
+                                 "or \"coderef\", \"custom-id\","
+                                 "\"file\", \"id\", \"radio\", or"
+                                 "\"fuzzy\"")
+                     ;; TODO is fuzzy a good default?
+                     :require "fuzzy")
+              (:raw-link) ; TODO update children through this?
+              (:application)
+              (:search-option))
+        (macro (:args ,@slist :cis om--update-macro-value)
+               (:key ,@ol-str :cis om--update-macro-value :require t)
+               (:value))
+        (node-property (:key ,@ol-str :require t)
+                       (:value ,@ol-str :require t))
+        (paragraph)
+        (plain-list (:structure)
+                    (:type))
+        (plain-text)
+        (planning (:closed ,@planning)
+                  (:deadline ,@planning)
+                  (:scheduled ,@planning))
+        (property-drawer)
+        (quote-block)
+        (radio-target (:value))
+        (section)
+        (special-block (:type ,@ol-str :require t))
+        (src-block (:value ,@str :decode s-trim-right :require t) ; TODO should this actually be required? nil should = ""
+                   (:language ,@str-nil)
+                   (:parameters ,@plist)
+                   (:preserve-indent ,@bool)
+                   (:switches ,@slist-spc)
+                   (:number-lines)
+                   (:retain-labels)
+                   (:use-labels)
+                   (:label-fmt))
+        (statistics-cookie (:value
+                            :encode om--encode-statistics-cookie-value
+                            :pred om--is-valid-statistics-cookie-value-p
+                            :decode om--decode-statistics-cookie-value
+                            :type-desc ("a list of non-neg integers"
+                                        "like (PERC) or (NUM DEN)"
+                                        "which make [NUM/DEN] and"
+                                        ;; TODO this is formatted weirdly
+                                        "[PERC %] respectively")
+                            :require t))
+        (strike-through)
+        (subscript (:use-brackets-p ,@bool))
+        (superscript (:use-brackets-p ,@bool))
+        (table (:tblfm ,@slist)
+               (:type :const 'org)
+               (:value))
+        (table-cell)
+        (table-row (:type :const 'standard))
+        (target (:value ,@ol-str :require t))
+        (timestamp (:type :pred om--is-valid-timestamp-type-p
+                          :type-desc ("a symbol from 'inactive',"
+                                      "'active', 'inactive-ranged', or"
+                                      "'active-ranged'")
+                          :require t)
+                   (:year-start ,@pos-int :require t)
+                   (:month-start ,@pos-int :require t)
+                   (:day-start ,@pos-int :require t)
+                   (:year-end ,@pos-int :require t)
+                   (:month-end ,@pos-int :require t)
+                   (:day-end ,@pos-int :require t)
+                   (:hour-start ,@nn-int-nil)
+                   (:minute-start ,@nn-int-nil)
+                   (:hour-end ,@nn-int-nil)
+                   (:minute-end ,@nn-int-nil)
+                   (:repeater-type :pred om--is-valid-timestamp-repeater-type-p
+                                   :type-desc ("nil or a symbol from"
+                                               "'catch-up', 'restart',"
+                                               "or 'cumulate'"))
+                   (:repeater-unit ,@ts-unit)
+                   (:repeater-value ,@pos-int-nil)
+                   (:warning-type :pred om--is-valid-timestamp-warning-type-p
+                                  :type-desc ("nil or a symbol from"
+                                              "'all' or 'first'"))
+                   (:warning-unit ,@ts-unit)
+                   (:warning-value ,@pos-int-nil)
+                   (:raw-value))
+        (underline)
+        (verbatim (:value ,@ol-str :require t))
+        (verse-block)))))
 
 ;; add post-blank functions to all entries
 (let ((post-blank-funs '(:post-blank :pred om--is-non-neg-integer-p
@@ -1618,102 +1612,104 @@ float-times, which assumes the :type property is valid."
 
 ;; define all builders using this automated monstrosity
 
-(defun om--kwd-to-sym (keyword)
-  (->> (symbol-name keyword) (s-chop-prefix ":") (intern)))
 
-(--each om--type-alist
-  (let* ((type (car it))
-         (element? (memq type om-elements))
-         (name (intern (format "om-build-%s" type)))
-         (props (->> (cdr it)
-                     (--remove (eq :post-blank (car it)))
-                     (-non-nil)))
-         (props (->> props
-                     (--group-by
-                      (-let (((&plist :require :pred :const) (cdr it)))
-                        (cond
-                         (const 'const)
-                         ((not pred) 'null)
-                         ((eq require t) 'req)
-                         (t 'key))))))
-         (pos-args (->> (alist-get 'req props)
-                        (--map (om--kwd-to-sym (car it)))))
-         (kw-args (->> (alist-get 'key props)
-                       (--map
-                        (let ((prop (om--kwd-to-sym (car it)))
-                              (default (plist-get (cdr it) :require)))
-                          (if default `(,prop ,default) prop)))))
-         (rest-arg (cond
-                    ((memq type om-branch-elements-permitting-child-elements) 'nodes)
-                    ((memq type om-branch-nodes-permitting-child-objects) 'objs)))
-         (args
-          (let ((a `(,@pos-args &key ,@kw-args post-blank)))
-            (if rest-arg `(,@a &rest ,rest-arg) a)))
-         (const-props
-          (-some--> (alist-get 'const props)
-                    (--mapcat
-                     (let ((p (car it))
-                           (c (plist-get (cdr it) :const)))
-                       (list p c))
-                     it)
-                    (if (= 2 (length it))
-                        `(om--set-property ,@it)
-                      `(om--set-properties (list ,@it)))))
-         (nil-props
-          (-some--> (alist-get 'null props)
-                    (-map #'car it)
-                    (if (= 1 (length it))
-                        `(om--set-property-nil ,@it)
-                      `(om--set-properties-nil (list ,@it)))))
-         (strict-props
-          (-some-->
-           (append (alist-get 'key props) (alist-get 'req props))
-           (-map #'car it)
-           (--mapcat (list it (om--kwd-to-sym it)) it)
-           (if (= 2 (length it))
-               `(om--set-property-strict ,@it)
-             `(om--set-properties-strict (list ,@it)))))
-         (doc
-          (let ((class (if element? "element" "object"))
-                (end (if (not rest-arg) "."
-                       (->> (symbol-name rest-arg)
-                            (s-upcase)
-                            (format " with %s as children."))))
-                ;; (post-blank (if element? "newlines" "spaces"))
-                (prop
-                 (-some->>
-                  (append (alist-get 'req props) (alist-get 'key props))
-                  (--map (let ((p (->> (car it)
-                                       (symbol-name)
-                                       (s-chop-prefix ":")
-                                       (s-upcase)))
-                               (d (plist-get (cdr it) :type-desc)))
-                           (unless d
-                             (error "No type-desc: %s %s" type p))
-                           (->> (if (listp d) (s-join " " d) d)
-                                (format "- %s: %s" p))))
-                  (s-join "\n"))))
-            (concat
-             ;; TODO use a/an here
-             (format "Build a %s %s" type class) end
-             "\n\nThe following properties are settable:\n"
-             prop "\n- POST-BLANK: a non-negative integer")))
-         (builder
-          (let ((a `(',type post-blank)))
-            (cond
-             ((and element? rest-arg)
-              `(om--build-container-element ,@a ,rest-arg))
-             (element?
-              `(om--build-element ,@a))
-             (rest-arg
-              `(om--build-recursive-object ,@a ,rest-arg))
-             (t
-              `(om--build-object ,@a)))))
-         (body (if (or strict-props nil-props const-props)
-                   `(->> ,@(-non-nil (list builder const-props
-                                           nil-props strict-props)))
-                 builder)))
-    (eval `(om--defun ,name ,args ,doc ,body))))
+(eval-when-compile
+  (defun om--kwd-to-sym (keyword)
+    (->> (symbol-name keyword) (s-chop-prefix ":") (intern)))
+
+  (--each om--type-alist
+    (let* ((type (car it))
+           (element? (memq type om-elements))
+           (name (intern (format "om-build-%s" type)))
+           (props (->> (cdr it)
+                       (--remove (eq :post-blank (car it)))
+                       (-non-nil)))
+           (props (->> props
+                       (--group-by
+                        (-let (((&plist :require :pred :const) (cdr it)))
+                          (cond
+                           (const 'const)
+                           ((not pred) 'null)
+                           ((eq require t) 'req)
+                           (t 'key))))))
+           (pos-args (->> (alist-get 'req props)
+                          (--map (om--kwd-to-sym (car it)))))
+           (kw-args (->> (alist-get 'key props)
+                         (--map
+                          (let ((prop (om--kwd-to-sym (car it)))
+                                (default (plist-get (cdr it) :require)))
+                            (if default `(,prop ,default) prop)))))
+           (rest-arg (cond
+                      ((memq type om-branch-elements-permitting-child-elements) 'nodes)
+                      ((memq type om-branch-nodes-permitting-child-objects) 'objs)))
+           (args
+            (let ((a `(,@pos-args &key ,@kw-args post-blank)))
+              (if rest-arg `(,@a &rest ,rest-arg) a)))
+           (const-props
+            (-some--> (alist-get 'const props)
+                      (--mapcat
+                       (let ((p (car it))
+                             (c (plist-get (cdr it) :const)))
+                         (list p c))
+                       it)
+                      (if (= 2 (length it))
+                          `(om--set-property ,@it)
+                        `(om--set-properties (list ,@it)))))
+           (nil-props
+            (-some--> (alist-get 'null props)
+                      (-map #'car it)
+                      (if (= 1 (length it))
+                          `(om--set-property-nil ,@it)
+                        `(om--set-properties-nil (list ,@it)))))
+           (strict-props
+            (-some-->
+             (append (alist-get 'key props) (alist-get 'req props))
+             (-map #'car it)
+             (--mapcat (list it (om--kwd-to-sym it)) it)
+             (if (= 2 (length it))
+                 `(om--set-property-strict ,@it)
+               `(om--set-properties-strict (list ,@it)))))
+           (doc
+            (let ((class (if element? "element" "object"))
+                  (end (if (not rest-arg) "."
+                         (->> (symbol-name rest-arg)
+                              (s-upcase)
+                              (format " with %s as children."))))
+                  ;; (post-blank (if element? "newlines" "spaces"))
+                  (prop
+                   (-some->>
+                    (append (alist-get 'req props) (alist-get 'key props))
+                    (--map (let ((p (->> (car it)
+                                         (symbol-name)
+                                         (s-chop-prefix ":")
+                                         (s-upcase)))
+                                 (d (plist-get (cdr it) :type-desc)))
+                             (unless d
+                               (error "No type-desc: %s %s" type p))
+                             (->> (if (listp d) (s-join " " d) d)
+                                  (format "- %s: %s" p))))
+                    (s-join "\n"))))
+              (concat
+               ;; TODO use a/an here
+               (format "Build a %s %s" type class) end
+               "\n\nThe following properties are settable:\n"
+               prop "\n- POST-BLANK: a non-negative integer")))
+           (builder
+            (let ((a `(',type post-blank)))
+              (cond
+               ((and element? rest-arg)
+                `(om--build-container-element ,@a ,rest-arg))
+               (element?
+                `(om--build-element ,@a))
+               (rest-arg
+                `(om--build-recursive-object ,@a ,rest-arg))
+               (t
+                `(om--build-object ,@a)))))
+           (body (if (or strict-props nil-props const-props)
+                     `(->> ,@(-non-nil (list builder const-props
+                                             nil-props strict-props)))
+                   builder)))
+      (eval `(om--defun ,name ,args ,doc ,body)))))
 
 ;; misc builders
 
