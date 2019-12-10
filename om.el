@@ -3412,17 +3412,17 @@ This will not move the children under the item at CHILD-INDEX."
   "Set the children of NODE to a blank string (\"\")."
   (om--set-children '("") node))
 
+(defconst om--rm-if-empty
+  '(table plain-list bold italic radio-target strike-through
+          superscript subscript table-cell underline)
+  "Elements/objects that will be blank if printed and empty.")
+
 (defun om-is-zero-length-p (node)
   "Return t if NODE will print as a blank string."
   (-if-let (children (om--get-children node))
       (-all? #'om-is-zero-length-p children)
     (and (om--is-any-type-p om--rm-if-empty node)
          (om--is-childless-p node))))
-
-(defconst om--rm-if-empty
-  '(table plain-list bold italic radio-target strike-through
-          superscript subscript table-cell underline)
-  "Elements/objects that will be blank if printed and empty.")
 
 (defconst om--blank-if-empty
   '(center-block drawer dynamic-block property-drawer quote-block
