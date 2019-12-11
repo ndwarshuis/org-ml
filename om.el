@@ -175,7 +175,7 @@
           (macroexp-progn `(,body))))))
 
   ;; TODO catch duplicate keys
-  (defmacro om--defun (name args &rest body)
+  (defmacro om--defun-kw (name args &rest body)
     "Define NAME as a function.
 
    ((VAR [PRED])...
@@ -1244,8 +1244,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
                      `(->> ,@(-non-nil (list builder const-props
                                              nil-props strict-props)))
                    builder)))
-      (eval `(om--defun ,name ,args ,doc ,body)))))
-
+      (eval `(om--defun-kw ,name ,args ,doc ,body)))))
 
 ;;; INTERNAL PROPERTY FUNCTIONS
 
@@ -1707,7 +1706,7 @@ float-times, which assumes the :type property is valid."
 
 ;; misc builders
 
-(om--defun om-build-timestamp-diary-sexp (form &key post-blank)
+(om--defun-kw om-build-timestamp-diary-sexp (form &key post-blank)
   "Build a diary-sexp timestamp element from FORM.
 Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-object 'timestamp post-blank)
@@ -1719,7 +1718,7 @@ Optionally set POST-BLANK (a positive integer)."
               :month-start :day-start :hour-start :minute-start
               :year-end :month-end :day-end :hour-end :minute-end))))
 
-(om--defun om-build-table-row-hline (&key post-blank)
+(om--defun-kw om-build-table-row-hline (&key post-blank)
   "Build a table-row element with the 'rule' type.
 Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-container-element 'table-row post-blank nil)
@@ -1727,7 +1726,7 @@ Optionally set POST-BLANK (a positive integer)."
 
 ;;; shortcut builders
 
-(om--defun om-build-timestamp! (type start &key end
+(om--defun-kw om-build-timestamp! (type start &key end
                                                repeater
                                                warning
                                                post-blank)
@@ -1758,7 +1757,7 @@ Building a diary sexp timestamp is not possible with this function."
        (om--timestamp-set-repeater repeater)
        (om--set-property-nil :raw-value)))
 
-(om--defun om-build-clock! (start &key end post-blank)
+(om--defun-kw om-build-clock! (start &key end post-blank)
   "Build a clock object.
 
 START and END follow the same rules as their respective arguments in
@@ -1766,7 +1765,7 @@ START and END follow the same rules as their respective arguments in
   (let ((ts (om-build-timestamp! 'inactive start :end end)))
     (om-build-clock ts :post-blank post-blank)))
 
-(om--defun om-build-planning! (&key closed deadline
+(om--defun-kw om-build-planning! (&key closed deadline
                                               scheduled post-blank)
   "Build a planning element using shorthand arguments.
 CLOSED, DEADLINE, and SCHEDULED are lists with the following structure
@@ -1786,7 +1785,7 @@ REPEATER. The order of warning and repeater does not matter."
    :scheduled (om--planning-list-to-timestamp scheduled)
    :post-blank post-blank))
 
-(om--defun om-build-property-drawer! (&key post-blank &rest
+(om--defun-kw om-build-property-drawer! (&key post-blank &rest
                                                      keyvals)
   "Create a property drawer element.
 
@@ -1799,7 +1798,7 @@ Val'."
                 (om-build-node-property key val)))
        (apply #'om-build-property-drawer :post-blank post-blank)))
 
-(om--defun om-build-headline! (&key (level 1) title-text
+(om--defun-kw om-build-headline! (&key (level 1) title-text
                                               todo-keyword tags
                                               pre-blank priority
                                               commentedp archivedp
@@ -1854,7 +1853,7 @@ All arguments not mentioned here follow the same rules as
                 nodes)
          (om--headline-set-title! title-text statistics-cookie))))
 
-(om--defun om-build-item! (&key post-blank bullet checkbox
+(om--defun-kw om-build-item! (&key post-blank bullet checkbox
                                           tag paragraph counter
                                           &rest subitems)
   "Build an item element.
@@ -1881,7 +1880,7 @@ All other arguments follow the same rules as `om-build-item'."
                 :counter counter
                 :tag tag))))
 
-(om--defun om-build-paragraph! (string &key post-blank)
+(om--defun-kw om-build-paragraph! (string &key post-blank)
   "Build a paragraph element.
 
 STRING is the text to be parsed into a paragraph. It must contain valid
@@ -1893,7 +1892,7 @@ formatting (eg, text that will be formatted into objects)."
         (om--set-property-strict :post-blank (or post-blank 0) p)
       (error "String could not be parsed to a paragraph: %s" string))))
 
-(om--defun om-build-table-cell! (string &key post-blank)
+(om--defun-kw om-build-table-cell! (string &key post-blank)
   "Build a table-cell object.
 
 STRING is the text to be contained in the table cell. It must contain
@@ -1902,7 +1901,7 @@ valid formatting."
       (apply #'om-build-table-cell :post-blank post-blank ss)
     (error "Could not create valid secondary string from '%s'" string)))
 
-(om--defun om-build-table-row! (string-list &key post-blank)
+(om--defun-kw om-build-table-row! (string-list &key post-blank)
   "Build a table-row object.
 
 STRING-LIST is a list of strings to be contained in the table-cells
@@ -1914,7 +1913,7 @@ described in `om-build-table-cell!'."
     (->> (-map #'om-build-table-cell! string-list)
          (apply #'om-build-table-row :post-blank post-blank))))
 
-(om--defun om-build-table! (&key tblfm post-blank &rest row-lists)
+(om--defun-kw om-build-table! (&key tblfm post-blank &rest row-lists)
   "Build a table element.
 
 ROW-LISTS is a list of lists where each member is a string to be put
