@@ -248,6 +248,24 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
        (defmacro ,name* ,arglist* ,docstring* ,@body*)
        (defun ,name ,arglist ,docstring ,@body))))
 
+(defmacro om--defun-node (name arglist &optional docstring &rest body)
+  (declare (doc-string 3) (indent 2))
+  (let ((type (-last-item arglist)))
+    `(defun ,name ,arglist
+       ,docstring
+       (unless (om--is-type-p ',type ,type)
+         (error "Last argument must be a node of type %s" ',type))
+       ,@body)))
+
+(defmacro om--defun-node* (name arglist &optional docstring &rest body)
+  (declare (doc-string 3) (indent 2))
+  (let ((type (-last-item arglist)))
+    `(om--defun* ,name ,arglist
+       ,docstring
+       (unless (om--is-type-p ',type ,type)
+         (error "Last argument must be a node of type %s" ',type))
+       ,@body)))
+
 ;;; LIST OPERATIONS (EXTENDING DASH)
 
 (defun om--pad-or-truncate (length pad list)
@@ -2727,155 +2745,132 @@ and properties that may be used with this function."
 ;; statistics-cookie
 
 ;; TODO make a test for this?
-(defun om-headline-get-statistics-cookie (headline)
+(om--defun-node om-headline-get-statistics-cookie (headline)
   "Return the statistics cookie object from HEADLINE if it exists."
-  (om--verify-type headline 'headline)
   (om--headline-get-statistics-cookie headline))
 
-(defun om-statistics-cookie-is-complete-p (statistics-cookie)
+(om--defun-node om-statistics-cookie-is-complete-p (statistics-cookie)
   "Return t is STATISTICS-COOKIE element is complete."
-  (om--verify-type statistics-cookie 'statistics-cookie)
   (om--statistics-cookie-is-complete-p statistics-cookie))
 
 ;; timestamp
 
-;; (defun om-timestamp-get-start-timestamp (timestamp)
+;; (om--defun-node om-timestamp-get-start-timestamp (timestamp)
 ;;   "Return the start of TIMESTAMP as a timestamp element.
 ;; If not a range, this will simply return TIMESTAMP unmodified."
-;;   (om--verify-type timestamp 'timestamp)
 ;;   (om--timestamp-get-start-timestamp timestamp))
 
-;; (defun om-timestamp-get-end-timestamp (timestamp)
+;; (om--defun-node om-timestamp-get-end-timestamp (timestamp)
 ;;   "Return the end of TIMESTAMP as a timestamp element.
 ;; If not a range, return nil."
-;;   (om--verify-type timestamp 'timestamp)
 ;;   (and (om--timestamp-is-ranged-fast-p timestamp)
 ;;        (om--timestamp-get-end-timestamp timestamp)))
 
-(defun om-timestamp-get-start-time (timestamp)
+(om--defun-node om-timestamp-get-start-time (timestamp)
   "Return the time list of TIMESTAMP or start time if a range.
 The return value will be a list as specified by the TIME argument in
 `om-build-timestamp!'."
-  (om--verify-type timestamp 'timestamp)
   (om--timestamp-get-start-time timestamp))
 
-(defun om-timestamp-get-end-time (timestamp)
+(om--defun-node om-timestamp-get-end-time (timestamp)
   "Return the end time list of TIMESTAMP end or nil if not a range.
 The return value will be a list as specified by the TIME argument in
 `om-build-timestamp!'."
-  (om--verify-type timestamp 'timestamp)
   (and (om--timestamp-is-ranged-fast-p timestamp)
        (om--timestamp-get-end-time timestamp)))
 
-(defun om-timestamp-get-range (timestamp)
+(om--defun-node om-timestamp-get-range (timestamp)
   "Return the range of TIMESTAMP in seconds as an integer.
 If non-ranged, this function will return 0. If ranged but
 the start time is in the future relative to end the time, return
 a negative integer."
-  (om--verify-type timestamp 'timestamp)
   (om--timestamp-get-range timestamp))
 
-(defun om-timestamp-is-active-p (timestamp)
+(om--defun-node om-timestamp-is-active-p (timestamp)
   "Return t if TIMESTAMP is active."
-  (om--verify-type timestamp 'timestamp)
   (or (om--property-is-eq-p :type 'active timestamp)
       (om--property-is-eq-p :type 'active-range timestamp)))
 
-;; (defun om-timestamp-is-inactive-p (timestamp)
+;; (om--defun-node om-timestamp-is-inactive-p (timestamp)
 ;;   "Return t if TIMESTAMP node is inactive."
-;;   (om--verify-type timestamp 'timestamp)
 ;;   (or (om--property-is-eq-p :type 'inactive timestamp)
 ;;       (om--property-is-eq-p :type 'inactive-range timestamp)))
 
-(defun om-timestamp-is-ranged-p (timestamp)
+(om--defun-node om-timestamp-is-ranged-p (timestamp)
   "Return t if TIMESTAMP is ranged."
-  (om--verify-type timestamp 'timestamp)
   (or (om--property-is-eq-p :type 'active-range timestamp)
       (om--property-is-eq-p :type 'inactive-range timestamp)))
 
 ;; TODO not sure how I feel about these :(
-;; (defun om-timestamp-start-is-less-than-p (unixtime timestamp)
+;; (om--defun-node om-timestamp-start-is-less-than-p (unixtime timestamp)
 ;;   "Return t if TIMESTAMP start time is less than UNIXTIME."
-;;   (om--verify-type timestamp 'timestamp)
 ;;   (om--timestamp-start-is-less-than-p unixtime timestamp))
 
-;; (defun om-timestamp-start-is-greater-than-p (unixtime timestamp)
+;; (om--defun-node om-timestamp-start-is-greater-than-p (unixtime timestamp)
 ;;   "Return t if TIMESTAMP start time is greater than UNIXTIME."
-;;   (om--verify-type timestamp 'timestamp)
 ;;   (om--timestamp-start-is-greater-than-p unixtime timestamp))
 
-;; (defun om-timestamp-start-is-equal-to-p (unixtime timestamp)
+;; (om--defun-node om-timestamp-start-is-equal-to-p (unixtime timestamp)
 ;;   "Return t if TIMESTAMP start time is equal to UNIXTIME."
-;;   (om--verify-type timestamp 'timestamp)
 ;;   (om--timestamp-start-is-equal-to-p unixtime timestamp))
 
 ;; TODO what happens if not a range?
-;; (defun om-timestamp-end-is-less-than-p (unixtime timestamp)
+;; (om--defun-node om-timestamp-end-is-less-than-p (unixtime timestamp)
 ;;   "Return t if TIMESTAMP end time is less than UNIXTIME."
-;;   (om--verify-type timestamp 'timestamp)
 ;;   (om--timestamp-end-is-less-than-p unixtime timestamp))
 
-;; (defun om-timestamp-end-is-greater-than-p (unixtime timestamp)
+;; (om--defun-node om-timestamp-end-is-greater-than-p (unixtime timestamp)
 ;;   "Return t if TIMESTAMP end time is greater than UNIXTIME."
-;;   (om--verify-type timestamp 'timestamp)
 ;;   (om--timestamp-end-is-greater-than-p unixtime timestamp))
 
-;; (defun om-timestamp-end-is-equal-to-p (unixtime timestamp)
+;; (om--defun-node om-timestamp-end-is-equal-to-p (unixtime timestamp)
 ;;   "Return t if TIMESTAMP end time is equal to UNIXTIME."
-;;   (om--verify-type timestamp 'timestamp)
 ;;   (om--timestamp-end-is-equal-to-p unixtime timestamp))
 
-(defun om-timestamp-range-contains-p (unixtime timestamp)
+(om--defun-node om-timestamp-range-contains-p (unixtime timestamp)
   "Return t if UNIXTIME is between start and end of TIMESTAMP node."
-  (om--verify-type timestamp 'timestamp)
   (let ((ut1 (om--timestamp-get-start-unixtime timestamp))
         (ut2 (om--timestamp-get-end-unixtime timestamp)))
     (< ut1 unixtime ut2)))
 
-(defun om-timestamp-set-start-time (time timestamp)
+(om--defun-node om-timestamp-set-start-time (time timestamp)
   "Set start time of TIMESTAMP element to TIME.
 TIME is a list analogous to the same argument specified in
 `om-build-timestamp!'."
-  (om--verify-type timestamp 'timestamp)
   (om--timestamp-set-start-time time timestamp))
 
-(defun om-timestamp-set-end-time (time timestamp)
+(om--defun-node om-timestamp-set-end-time (time timestamp)
   "Set end time of TIMESTAMP element to TIME.
 TIME is a list analogous to the same argument specified in
 `om-build-timestamp!'."
-  (om--verify-type timestamp 'timestamp)
   (om--timestamp-set-end-time time timestamp))
 
-(defun om-timestamp-set-single-time (time timestamp)
+(om--defun-node om-timestamp-set-single-time (time timestamp)
   "Set start time of TIMESTAMP to TIME, and remove the end time.
 TIME is a list analogous to the same argument specified in
 `om-build-timestamp!'."
-  (om--verify-type timestamp 'timestamp)
   (om--timestamp-set-single-time time timestamp))
 
-(defun om-timestamp-set-double-time (time1 time2 timestamp)
+(om--defun-node om-timestamp-set-double-time (time1 time2 timestamp)
   "Set start and end time of TIMESTAMP to TIME1 and TIME2 respectively.
 TIME1 and TIME2 are lists analogous to the TIME argument specified in
 `om-build-timestamp!'."
-  (om--verify-type timestamp 'timestamp)
   (om--timestamp-set-double-time time1 time2 timestamp))
 
-(defun om-timestamp-set-range (range timestamp)
+(om--defun-node om-timestamp-set-range (range timestamp)
   "Set the RANGE of TIMESTAMP.
 If TIMESTAMP is ranged, keep start time the same and adjust the end
 time. If not, make a new end time. The units for RANGE are in minutes
 if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format."
-  (om--verify-type timestamp 'timestamp)
   (om--timestamp-set-range range timestamp))
 
-(defun om-timestamp-set-type (type timestamp)
+(om--defun-node om-timestamp-set-type (type timestamp)
   "Set type of TIMESTAMP element to TYPE.
 TYPE can be either 'active' or 'inactive'."
-  (om--verify-type timestamp 'timestamp)
   (om--timestamp-set-type type timestamp))
 
-(defun om-timestamp-shift (n unit timestamp)
+(om--defun-node om-timestamp-shift (n unit timestamp)
   "Shift TIMESTAMP time by N UNITS.
 
 This function will move the start and end times together; therefore
@@ -2887,10 +2882,9 @@ N is a positive or negative integer and UNIT is one of 'minute',
 'hour', 'day', 'month', or 'year'. Overflows will wrap around
 transparently; for instance, supplying 'minute' for UNIT and 90 for N
 will increase the hour property by 1 and the minute property by 30."
-  (om--verify-type timestamp 'timestamp)
   (om--timestamp-shift-range n unit timestamp))
 
-(defun om-timestamp-shift-start (n unit timestamp)
+(om--defun-node om-timestamp-shift-start (n unit timestamp)
   "Shift TIMESTAMP start time by N UNITS.
 
 N and UNIT behave the same as those in `om-timestamp-shift'.
@@ -2898,10 +2892,9 @@ N and UNIT behave the same as those in `om-timestamp-shift'.
 If TIMESTAMP is not range, the output will be a ranged timestamp with
 the shifted start time and the end time as that of TIMESTAMP. If this
 behavior is not desired, use `om-timestamp-shift'."
-  (om--verify-type timestamp 'timestamp)
   (om--timestamp-shift-start n unit timestamp))
 
-(defun om-timestamp-shift-end (n unit timestamp)
+(om--defun-node om-timestamp-shift-end (n unit timestamp)
   "Shift TIMESTAMP end time by N UNITS.
 
 N and UNIT behave the same as those in `om-timestamp-shift'.
@@ -2909,66 +2902,56 @@ N and UNIT behave the same as those in `om-timestamp-shift'.
 If TIMESTAMP is not range, the output will be a ranged timestamp with
 the shifted end time and the start time as that of TIMESTAMP. If this
 behavior is not desired, use `om-timestamp-shift'."
-  (om--verify-type timestamp 'timestamp)
   (om--timestamp-shift-end n unit timestamp))
 
-(defun om-timestamp-toggle-active (timestamp)
+(om--defun-node om-timestamp-toggle-active (timestamp)
   "Toggle the active/inactive type of TIMESTAMP element."
-  (om--verify-type timestamp 'timestamp)
   (om--timestamp-toggle-active timestamp))
 
 ;;; elements
 ;;
 ;; clock
 
-(defun om-clock-is-running-p (clock)
+(om--defun-node om-clock-is-running-p (clock)
   "Return t if CLOCK element is running (eg is open)."
-  (om--verify-type clock 'clock)
   (om--property-is-eq-p :status 'running clock))
 
-(om--defun* om-clock-map-timestamp (fun clock)
+(om--defun-node* om-clock-map-timestamp (fun clock)
   "Apply FUN to timestamp in CLOCK.
 FUN is a function that takes the current timestamp and returns
 a modified timestamp. The returned timestamp must be inactive and
 cannot contain any warnings or repeaters."
-  (om--verify-type clock 'clock)
   (om-map-property :value fun clock))
 
 ;; headline
 
-(defun om-headline-is-done-p (headline)
+(om--defun-node om-headline-is-done-p (headline)
   "Return t if HEADLINE element has a DONE todo keyword."
-  (om--verify-type headline 'headline)
   (-> (om--get-property :todo-keyword headline)
       (member org-done-keywords)
       (and t)))
 
-(defun om-headline-is-archived-p (headline)
+(om--defun-node om-headline-is-archived-p (headline)
   "Return t if HEADLINE element is archived."
-  (om--verify-type headline 'headline)
   (om--property-is-non-nil-p :archivedp headline))
 
-(defun om-headline-is-commented-p (headline)
+(om--defun-node om-headline-is-commented-p (headline)
   "Return t if HEADLINE element is commented."
-  (om--verify-type headline 'headline)
   (om--property-is-non-nil-p :commentedp headline))
 
 ;; TODO refactor this to be in terms of property-list functions
-(defun om-headline-has-tag-p (tag headline)
+(om--defun-node om-headline-has-tag-p (tag headline)
   "Return t if HEADLINE element is tagged with TAG."
-  (om--verify-type headline 'headline)
   (if (member tag (om--get-property :tags headline)) t))
 
-(defun om-headline-set-title! (text stats headline)
-  (om--verify-type headline 'headline)
+(om--defun-node om-headline-set-title! (text stats headline)
   (om--headline-set-title! text stats headline))
 
-(defun om-headline-update-item-statistics (headline)
+(om--defun-node om-headline-update-item-statistics (headline)
   "Update the statistics cookie for HEADLINE.
 The percent/fraction will be computed as the number of checked items
 over the number of items with checkboxes (non-checkbox items will
 not be considered)."
-  (om--verify-type headline 'headline)
   (let* ((items
           (->> (om--headline-get-section headline)
                (om--get-children)
@@ -2979,12 +2962,11 @@ not be considered)."
          (total (length items)))
     (om--headline-set-statistics-cookie-fraction done total headline)))
 
-(defun om-headline-update-todo-statistics (headline)
+(om--defun-node om-headline-update-todo-statistics (headline)
   "Update the statistics cookie for HEADLINE.
 The percent/fraction will be computed as the number of done
 subheadlines over the number of todo subheadlines (eg non-todo
 subheadlines will not be counted)."
-  (om--verify-type headline 'headline)
   (let* ((subtodo (->> (om--headline-get-subheadlines headline)
                        (--filter (om--get-property :todo-keyword it))))
          (done (length (-filter #'om-headline-is-done-p subtodo)))
@@ -2993,41 +2975,36 @@ subheadlines will not be counted)."
 
 ;; item
 
-(defun om-item-is-checked-p (item)
+(om--defun-node om-item-is-checked-p (item)
   "Return t if ITEM element is checked."
-  (om--verify-type item 'item)
   (om--property-is-eq-p :checkbox 'on item))
 
-(defun om-item-is-unchecked-p (item)
+(om--defun-node om-item-is-unchecked-p (item)
   "Return t if ITEM element is unchecked."
-  (om--verify-type item 'item)
   (om--property-is-eq-p :checkbox 'off item))
 
-(defun om-item-is-trans-p (item)
+(om--defun-node om-item-is-trans-p (item)
   "Return t if ITEM element is transitional."
-  (om--verify-type item 'item)
   (om--property-is-eq-p :checkbox 'trans item))
 
-(defun om-item-toggle-checkbox (item)
+(om--defun-node om-item-toggle-checkbox (item)
   "Toggle the checked/unchecked state of ITEM element."
-  (om--verify-type item 'item)
   (om--item-toggle-checkbox item))
 
 ;; planning
 
-(defun om-planning-set-timestamp (prop planning-list planning)
+(om--defun-node om-planning-set-timestamp (prop planning-list planning)
   "Set the timestamp of PLANNING matching PROP.
 
 PROP is one of :closed, :deadline, or :scheduled. PLANNING-LIST is the
 same as that described in `om-build-planning!'."
-  (om--verify-type planning 'planning)
   (unless (memq prop '(:closed :deadline :scheduled))
     (error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
   (let ((ts (om--planning-list-to-timestamp planning-list)))
     (om--set-property-strict prop ts planning)))
 
 ;; TODO this is a bit redundant...
-(om--defun* om-planning-map-timestamp (prop fun planning)
+(om--defun-node* om-planning-map-timestamp (prop fun planning)
   "Modify timestamp matching PROP in place in PLANNING using FUN.
 
 PROP is one of :closed, :deadline, or :scheduled. FUN must return a
@@ -3037,7 +3014,6 @@ The only difference between using this function and using
 `om-map-property' is that the former will silently no-op if PROP
 is nil. The latter will throw an error unless FUN is able to handle
 nil values."
-  (om--verify-type planning 'planning)
   (unless (memq prop '(:closed :deadline :scheduled))
     (error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
   (-if-let (ts (om--get-property-strict prop planning))
@@ -3154,62 +3130,52 @@ This will throw an error if NODE is not a branch type."
 ;; link
 
 ;; TODO add shortcut function for this
-(defun om-link-set-description (desc link)
-  (om--verify-type link 'link)
+(om--defun-node om-link-set-description (desc link)
   (om--set-children-by-type 'link desc link))
 
 ;; elements
 ;;
 ;; headline
 
-;; (defun om-headline-get-subheadlines (headline)
+;; (om--defun-node om-headline-get-subheadlines (headline)
 ;;   "Return list of subheadlines for HEADLINE element or nil if none."
-;;   (om--verify-type headline 'headline)
 ;;   (om--headline-get-subheadlines headline))
 
-;; (defun om-headline-get-section (headline)
+;; (om--defun-node om-headline-get-section (headline)
 ;;   "Return section for headline HEADLINE element or nil if none."
-;;   (om--verify-type headline 'headline)
 ;;   (om--headline-get-section headline))
 
-;; (defun om-headline-get-drawer (name headline)
+;; (om--defun-node om-headline-get-drawer (name headline)
 ;;   "Return the first drawer element in HEADLINE named NAME."
-;;   (om--verify-type headline 'headline)
 ;;   (om--headline-get-drawer name headline))
 
-;; (defun om-headline-is-closed-p (headline)
+;; (om--defun-node om-headline-is-closed-p (headline)
 ;;   "Return t if HEADLINE element is closed."
-;;   (om--verify-type headline 'headline)
 ;;   (and (->> (om--headline-get-planning headline)
 ;;             (om--get-property :closed))
 ;;        t))
 
-;; (defun om-headline-is-deadlined-p (headline)
+;; (om--defun-node om-headline-is-deadlined-p (headline)
 ;;   "Return t if HEADLINE element has a deadline."
-;;   (om--verify-type headline 'headline)
 ;;   (and (->> (om--headline-get-planning headline)
 ;;             (om--get-property :deadline))
 ;;        t))
 
-;; (defun om-headline-is-scheduled-p (headline)
+;; (om--defun-node om-headline-is-scheduled-p (headline)
 ;;   "Return t if HEADLINE element is scheduled."
-;;   (om--verify-type headline 'headline)
 ;;   (and (->> (om--headline-get-planning headline)
 ;;             (om--get-property :scheduled))
 ;;        t))
 
-;; (defun om-headline-set-section (section headline)
+;; (om--defun-node om-headline-set-section (section headline)
 ;;   "Set the section of HEADLINE to SECTION."
-;;   (om--verify-type headline 'headline)
 ;;   (om--headline-set-section section headline))
 
-;; (defun om-headline-set-planning (planning headline)
+;; (om--defun-node om-headline-set-planning (planning headline)
 ;;   "Set the planning of HEADLINE to PLANNING."
-;;   (om--verify-type headline 'headline)
 ;;   (om--headline-set-planning section headline))
 
-;; (defun om-set-planning (planning-plist headline)
-;;   (om--verify-type headline 'headline)
+;; (om--defun-node om-set-planning (planning-plist headline)
 ;;   (let ((keys (om--plist-get-keys planning-plist)))
 ;;     (--> (om--plist-get-vals planning-plist)
 ;;          (--map (-some->> it (om-build-timestamp 'inactive)) it)
@@ -3233,10 +3199,9 @@ This will throw an error if NODE is not a branch type."
 ;; TODO there seems to be a bug in the org-interpeter that prevents
 ;; "+" bullets from being recognized (as of org-9.1.9 they are simply
 ;; read as "-")
-(defun om-plain-list-set-type (type plain-list)
+(om--defun-node om-plain-list-set-type (type plain-list)
   "Set the type of PLAIN-LIST greater element to TYPE.
 TYPE is '-', '+', or 'ordered'."
-  (om--verify-type plain-list 'plain-list)
   (cond
    ((memq type '(+ -))
     (om--map-children*
@@ -3251,108 +3216,92 @@ TYPE is '-', '+', or 'ordered'."
 
 ;; table
 
-(defun om-table-get-cell (row-index column-index table)
+(om--defun-node om-table-get-cell (row-index column-index table)
   "Return table-cell at ROW-INDEX and COLUMN-INDEX in TABLE element.
 H-lines do not count toward row indices, and all indices are
 zero-indexed."
-  (om--verify-type table 'table)
   (om--table-get-cell row-index column-index table))
 
-(defun om-table-replace-cell (row-index column-index cell table)
+(om--defun-node om-table-replace-cell (row-index column-index cell table)
   "Replace a cell in TABLE with CELL (a table-cell element).
 ROW-INDEX and COLUMN-INDEX are zero-indexed integers pointing to the
 position of the cell to be replaced."
-  (om--verify-type table 'table)
   (om--table-replace-cell row-index column-index cell table))
 
-(defun om-table-replace-cell! (row-index column-index cell-text
+(om--defun-node om-table-replace-cell! (row-index column-index cell-text
                                               table)
   "Replace a cell in TABLE with CELL-TEXT.
 CELL-TEXT is a string which will replace the children of the cell at
 ROW-INDEX and COLUMN-INDEX (zero-indexed integers)."
-  (om--verify-type table 'table)
   (let ((cell (om-build-table-cell! cell-text)))
     (om--table-replace-cell row-index column-index cell table)))
 
-(defun om-table-clear-cell (row-index column-index table)
+(om--defun-node om-table-clear-cell (row-index column-index table)
   "Clear a cell in TABLE.
 ROW-INDEX and COLUMN-INDEX are zero-indexed integers pointing to the
 position of the cell to be replaced."
-  (om--verify-type table 'table)
   (let ((cell (om-build-table-cell " ")))
     (om--table-replace-cell row-index column-index cell table)))
 
-(defun om-table-delete-row (row-index table)
+(om--defun-node om-table-delete-row (row-index table)
   "Delete the row at ROW-INDEX in TABLE."
-  (om--verify-type table 'table)
   (om--table-delete-row row-index table))
 
-(defun om-table-delete-column (column-index table)
+(om--defun-node om-table-delete-column (column-index table)
   "Delete the column at COLUMN-INDEX in TABLE."
-  (om--verify-type table 'table)
   (om--table-delete-column column-index table))
 
-(defun om-table-insert-column (column-index column-cells table)
+(om--defun-node om-table-insert-column (column-index column-cells table)
   "Insert COLUMN-CELLS at COLUMN-INDEX in TABLE."
-  (om--verify-type table 'table)
   (unless (--all? (om--is-type-p 'table-cell it) column-cells)
     (error "All members of column must be table cells"))
   (om--table-insert-column column-index column-cells table))
 
-(defun om-table-insert-column! (column-index column-text table)
+(om--defun-node om-table-insert-column! (column-index column-text table)
   "Insert COLUMN-TEXT at COLUMN-INDEX in TABLE."
-  (om--verify-type table 'table)
   (let ((column (-map #'om-build-table-cell! column-text)))
     (om--table-insert-column column-index column table)))
 
-(defun om-table-clear-column (column-index table)
+(om--defun-node om-table-clear-column (column-index table)
   "Clear the column at COLUMN-INDEX in TABLE."
-  (om--verify-type table 'table)
   (om--table-clear-column column-index table))
 
-(defun om-table-insert-row (row-index row table)
+(om--defun-node om-table-insert-row (row-index row table)
   "Insert ROW at ROW-INDEX in TABLE."
-  (om--verify-type table 'table)
   (om--table-insert-row row-index row table))
 
-(defun om-table-insert-row! (row-index row-text table)
+(om--defun-node om-table-insert-row! (row-index row-text table)
   "Insert ROW-TEXT at ROW-INDEX in TABLE."
-  (om--verify-type table 'table)
   (let ((row (om-build-table-row! row-text)))
     (om--table-insert-row row-index row table)))
 
-(defun om-table-clear-row (row-index table)
+(om--defun-node om-table-clear-row (row-index table)
   "Clear the row at ROW-INDEX in TABLE."
-  (om--verify-type table 'table)
   (om--table-clear-row row-index table))
 
-(defun om-table-replace-column (column-index column-cells table)
+(om--defun-node om-table-replace-column (column-index column-cells table)
   "Replace column at COLUMN-INDEX in TABLE with COLUMN-CELLS.
 COLUMN-INDEX is the index of the column (starting at zero) and
 COLUMN-CELLS is a list of table-cell objects."
-  (om--verify-type table 'table)
   (om--table-replace-column column-index column-cells table))
 
-(defun om-table-replace-column! (column-index column-text table)
+(om--defun-node om-table-replace-column! (column-index column-text table)
   "Replace column at COLUMN-INDEX in TABLE with COLUMN-TEXT.
 COLUMN-INDEX is the index of the column (starting at zero) and
 COLUMN-TEXT is a list of text to be made into table-cell objects."
-  (om--verify-type table 'table)
   (let ((column-cells (-map #'om-build-table-cell! column-text)))
     (om--table-replace-column column-index column-cells table)))
 
-(defun om-table-replace-row (row-index row-cells table)
+(om--defun-node om-table-replace-row (row-index row-cells table)
   "Replace row at ROW-INDEX in TABLE with ROW-CELLS.
 ROW-INDEX is the index of the row (starting at zero) and
 ROW-CELLS is a list of table-cell objects."
-  (om--verify-type table 'table)
   (om--table-replace-row row-index row-cells table))
 
-(defun om-table-replace-row! (row-index row-text table)
+(om--defun-node om-table-replace-row! (row-index row-text table)
   "Replace row at ROW-INDEX in TABLE with ROW-TEXT.
 ROW-INDEX is the index of the row (starting at zero) and
 ROW-TEXT is a list of text to be made into table-cell objects."
-  (om--verify-type table 'table)
   (let ((row-cells (om-build-table-row! row-text)))
     (om--table-replace-row row-index row-cells table)))
 
@@ -3360,48 +3309,40 @@ ROW-TEXT is a list of text to be made into table-cell objects."
 
 ;; headline
 
-(defun om-headline-indent-subtree (index headline)
+(om--defun-node om-headline-indent-subtree (index headline)
   "Indent the subheadline and its children at INDEX within HEADLINE."
-  (om--verify-type headline 'headline)
   (om--headline-indent-subtree index headline))
 
-(defun om-headline-indent-subheadline (index headline)
+(om--defun-node om-headline-indent-subheadline (index headline)
   "Indent the subheadline without moving its children at INDEX within HEADLINE."
-  (om--verify-type headline 'headline)
   (om--headline-indent-subheadline index headline))
 
-(defun om-headline-unindent-subheadline (index child-index headline)
+(om--defun-node om-headline-unindent-subheadline (index child-index headline)
   "Unindent subheadline at CHILD-INDEX in the subheadline at INDEX in HEADLINE.
 This will not move the children under the headline at CHILD-INDEX."
-  (om--verify-type headline 'headline)
   (om--headline-unindent-subheadline index child-index headline))
 
-(defun om-headline-unindent-subtree (index headline)
+(om--defun-node om-headline-unindent-subtree (index headline)
   "Unindent all subheadlines under the subheadline at INDEX in HEADLINE."
-  (om--verify-type headline 'headline)
   (om--headline-unindent-subtree index headline))
 
 ;; plain-list
 
-(defun om-plain-list-indent-item-tree (index plain-list)
+(om--defun-node om-plain-list-indent-item-tree (index plain-list)
   "Indent the subitem at INDEX in PLAIN-LIST and move items below it."
-  (om--verify-type plain-list 'plain-list)
   (om--plain-list-indent-item-tree index plain-list))
 
-(defun om-plain-list-indent-item (index plain-list)
+(om--defun-node om-plain-list-indent-item (index plain-list)
   "Indent the subitem at INDEX in PLAIN-LIST without moving items below it."
-  (om--verify-type plain-list 'plain-list)
   (om--plain-list-indent-item index plain-list))
 
-(defun om-plain-list-unindent-item (index child-index plain-list)
+(om--defun-node om-plain-list-unindent-item (index child-index plain-list)
   "Unindent subitem at CHILD-INDEX in the subitem at INDEX in PLAIN-LIST.
 This will not move the children under the item at CHILD-INDEX."
-  (om--verify-type plain-list 'plain-list)
   (om--plain-list-unindent-item index child-index plain-list))
 
-(defun om-plain-list-unindent-items (index plain-list)
+(om--defun-node om-plain-list-unindent-items (index plain-list)
   "Unindent all items under the item at INDEX in PLAIN-LIST."
-  (om--verify-type plain-list 'plain-list)
   (om--plain-list-unindent-items index plain-list))
 
 ;;; printing functions
