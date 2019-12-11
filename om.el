@@ -1102,6 +1102,151 @@ These are also known as \"recursive objects\" in `org-element.el'")
 ;;   (let ((plist (om--plist-map-values (lambda (form) `(lambda (it) ,form)) plist)))
 ;;     `(om--map-properties-strict ,plist ,elem)))
 
+;;; BUILDER FUNCTIONS
+
+;; build helpers
+
+(defconst om--object-properties
+  '(:begin :end :parent)
+  "Minimum properties for objects.")
+
+(defconst om--recursive-object-properties
+  (append om--object-properties '(:contents-begin :contents-end))
+  "Minimum properties for recursive objects.")
+
+(defconst om--element-properties
+  (cons :post-affiliated om--object-properties)
+  "Minimum properties for elements.")
+
+(defconst om--container-element-properties
+  (cons :post-affiliated om--recursive-object-properties)
+  "Minimum properties for container elements.")
+
+(defun om--init-properties (props)
+  "Return a plist where the keys are PROPS and all values are nil."
+  (--mapcat (list it nil) props))
+
+(defun om--build (type post-blank props)
+  (->> (om--set-property-strict :post-blank (or post-blank 0) `(,type nil))
+       (om--set-properties-nil props)))
+
+(defun om--build-object (type post-blank)
+  (om--build type post-blank om--object-properties))
+
+(defun om--build-recursive-object (type post-blank objs)
+  (->> om--recursive-object-properties
+       (om--build type post-blank)
+       (om--set-children-by-type type objs)))
+
+(defun om--build-element (type post-blank)
+  (om--build type post-blank om--element-properties))
+
+(defun om--build-container-element (type post-blank nodes)
+  (->> om--container-element-properties
+       (om--build type post-blank)
+       (om--set-children-by-type type nodes)))
+
+;; define all builders using this automated monstrosity
+
+(eval-when-compile
+  (defun om--kwd-to-sym (keyword)
+    (->> (symbol-name keyword) (s-chop-prefix ":") (intern)))
+
+  (--each om--type-alist
+    (let* ((type (car it))
+           (element? (memq type om-elements))
+           (name (intern (format "om-build-%s" type)))
+           (props (->> (cdr it)
+                       (--remove (eq :post-blank (car it)))
+                       (-non-nil)))
+           (props (->> props
+                       (--group-by
+                        (-let (((&plist :require :pred :const) (cdr it)))
+                          (cond
+                           (const 'const)
+                           ((not pred) 'null)
+                           ((eq require t) 'req)
+                           (t 'key))))))
+           (pos-args (->> (alist-get 'req props)
+                          (--map (om--kwd-to-sym (car it)))))
+           (kw-args (->> (alist-get 'key props)
+                         (--map
+                          (let ((prop (om--kwd-to-sym (car it)))
+                                (default (plist-get (cdr it) :require)))
+                            (if default `(,prop ,default) prop)))))
+           (rest-arg (cond
+                      ((memq type om-branch-elements-permitting-child-elements) 'nodes)
+                      ((memq type om-branch-nodes-permitting-child-objects) 'objs)))
+           (args
+            (let ((a `(,@pos-args &key ,@kw-args post-blank)))
+              (if rest-arg `(,@a &rest ,rest-arg) a)))
+           (const-props
+            (-some--> (alist-get 'const props)
+                      (--mapcat
+                       (let ((p (car it))
+                             (c (plist-get (cdr it) :const)))
+                         (list p c))
+                       it)
+                      (if (= 2 (length it))
+                          `(om--set-property ,@it)
+                        `(om--set-properties (list ,@it)))))
+           (nil-props
+            (-some--> (alist-get 'null props)
+                      (-map #'car it)
+                      (if (= 1 (length it))
+                          `(om--set-property-nil ,@it)
+                        `(om--set-properties-nil (list ,@it)))))
+           (strict-props
+            (-some-->
+             (append (alist-get 'key props) (alist-get 'req props))
+             (-map #'car it)
+             (--mapcat (list it (om--kwd-to-sym it)) it)
+             (if (= 2 (length it))
+                 `(om--set-property-strict ,@it)
+               `(om--set-properties-strict (list ,@it)))))
+           (doc
+            (let ((class (if element? "element" "object"))
+                  (end (if (not rest-arg) "."
+                         (->> (symbol-name rest-arg)
+                              (s-upcase)
+                              (format " with %s as children."))))
+                  ;; (post-blank (if element? "newlines" "spaces"))
+                  (prop
+                   (-some->>
+                    (append (alist-get 'req props) (alist-get 'key props))
+                    (--map (let ((p (->> (car it)
+                                         (symbol-name)
+                                         (s-chop-prefix ":")
+                                         (s-upcase)))
+                                 (d (plist-get (cdr it) :type-desc)))
+                             (unless d
+                               (error "No type-desc: %s %s" type p))
+                             (->> (if (listp d) (s-join " " d) d)
+                                  (format "- %s: %s" p))))
+                    (s-join "\n"))))
+              (concat
+               ;; TODO use a/an here
+               (format "Build a %s %s" type class) end
+               "\n\nThe following properties are settable:\n"
+               prop "\n- POST-BLANK: a non-negative integer")))
+           (builder
+            (let ((a `(',type post-blank)))
+              (cond
+               ((and element? rest-arg)
+                `(om--build-container-element ,@a ,rest-arg))
+               (element?
+                `(om--build-element ,@a))
+               (rest-arg
+                `(om--build-recursive-object ,@a ,rest-arg))
+               (t
+                `(om--build-object ,@a)))))
+           (body (if (or strict-props nil-props const-props)
+                     `(->> ,@(-non-nil (list builder const-props
+                                             nil-props strict-props)))
+                   builder)))
+      (eval `(om--defun ,name ,args ,doc ,body)))))
+
+
 ;;; INTERNAL PROPERTY FUNCTIONS
 
 ;;; generic
@@ -1547,9 +1692,6 @@ float-times, which assumes the :type property is valid."
     ('off (om--set-property :checkbox 'on item))
     (t (error "This should not happen"))))
 
-;; latex environment
-
-
 ;; planning
 
 (defun om--planning-list-to-timestamp (planning-list)
@@ -1562,150 +1704,6 @@ float-times, which assumes the :type property is valid."
                                 :repeater (alist-get '&repeater p)))))
 
 
-;;; BUILDER FUNCTIONS
-
-;; build helpers
-
-(defconst om--object-properties
-  '(:begin :end :parent)
-  "Minimum properties for objects.")
-
-(defconst om--recursive-object-properties
-  (append om--object-properties '(:contents-begin :contents-end))
-  "Minimum properties for recursive objects.")
-
-(defconst om--element-properties
-  (cons :post-affiliated om--object-properties)
-  "Minimum properties for elements.")
-
-(defconst om--container-element-properties
-  (cons :post-affiliated om--recursive-object-properties)
-  "Minimum properties for container elements.")
-
-(defun om--init-properties (props)
-  "Return a plist where the keys are PROPS and all values are nil."
-  (--mapcat (list it nil) props))
-
-(defun om--build (type post-blank props)
-  (->> (om--set-property-strict :post-blank (or post-blank 0) `(,type nil))
-       (om--set-properties-nil props)))
-
-(defun om--build-object (type post-blank)
-  (om--build type post-blank om--object-properties))
-
-(defun om--build-recursive-object (type post-blank objs)
-  (->> om--recursive-object-properties
-       (om--build type post-blank)
-       (om--set-children-by-type type objs)))
-
-(defun om--build-element (type post-blank)
-  (om--build type post-blank om--element-properties))
-
-(defun om--build-container-element (type post-blank nodes)
-  (->> om--container-element-properties
-       (om--build type post-blank)
-       (om--set-children-by-type type nodes)))
-
-;; define all builders using this automated monstrosity
-
-
-(eval-when-compile
-  (defun om--kwd-to-sym (keyword)
-    (->> (symbol-name keyword) (s-chop-prefix ":") (intern)))
-
-  (--each om--type-alist
-    (let* ((type (car it))
-           (element? (memq type om-elements))
-           (name (intern (format "om-build-%s" type)))
-           (props (->> (cdr it)
-                       (--remove (eq :post-blank (car it)))
-                       (-non-nil)))
-           (props (->> props
-                       (--group-by
-                        (-let (((&plist :require :pred :const) (cdr it)))
-                          (cond
-                           (const 'const)
-                           ((not pred) 'null)
-                           ((eq require t) 'req)
-                           (t 'key))))))
-           (pos-args (->> (alist-get 'req props)
-                          (--map (om--kwd-to-sym (car it)))))
-           (kw-args (->> (alist-get 'key props)
-                         (--map
-                          (let ((prop (om--kwd-to-sym (car it)))
-                                (default (plist-get (cdr it) :require)))
-                            (if default `(,prop ,default) prop)))))
-           (rest-arg (cond
-                      ((memq type om-branch-elements-permitting-child-elements) 'nodes)
-                      ((memq type om-branch-nodes-permitting-child-objects) 'objs)))
-           (args
-            (let ((a `(,@pos-args &key ,@kw-args post-blank)))
-              (if rest-arg `(,@a &rest ,rest-arg) a)))
-           (const-props
-            (-some--> (alist-get 'const props)
-                      (--mapcat
-                       (let ((p (car it))
-                             (c (plist-get (cdr it) :const)))
-                         (list p c))
-                       it)
-                      (if (= 2 (length it))
-                          `(om--set-property ,@it)
-                        `(om--set-properties (list ,@it)))))
-           (nil-props
-            (-some--> (alist-get 'null props)
-                      (-map #'car it)
-                      (if (= 1 (length it))
-                          `(om--set-property-nil ,@it)
-                        `(om--set-properties-nil (list ,@it)))))
-           (strict-props
-            (-some-->
-             (append (alist-get 'key props) (alist-get 'req props))
-             (-map #'car it)
-             (--mapcat (list it (om--kwd-to-sym it)) it)
-             (if (= 2 (length it))
-                 `(om--set-property-strict ,@it)
-               `(om--set-properties-strict (list ,@it)))))
-           (doc
-            (let ((class (if element? "element" "object"))
-                  (end (if (not rest-arg) "."
-                         (->> (symbol-name rest-arg)
-                              (s-upcase)
-                              (format " with %s as children."))))
-                  ;; (post-blank (if element? "newlines" "spaces"))
-                  (prop
-                   (-some->>
-                    (append (alist-get 'req props) (alist-get 'key props))
-                    (--map (let ((p (->> (car it)
-                                         (symbol-name)
-                                         (s-chop-prefix ":")
-                                         (s-upcase)))
-                                 (d (plist-get (cdr it) :type-desc)))
-                             (unless d
-                               (error "No type-desc: %s %s" type p))
-                             (->> (if (listp d) (s-join " " d) d)
-                                  (format "- %s: %s" p))))
-                    (s-join "\n"))))
-              (concat
-               ;; TODO use a/an here
-               (format "Build a %s %s" type class) end
-               "\n\nThe following properties are settable:\n"
-               prop "\n- POST-BLANK: a non-negative integer")))
-           (builder
-            (let ((a `(',type post-blank)))
-              (cond
-               ((and element? rest-arg)
-                `(om--build-container-element ,@a ,rest-arg))
-               (element?
-                `(om--build-element ,@a))
-               (rest-arg
-                `(om--build-recursive-object ,@a ,rest-arg))
-               (t
-                `(om--build-object ,@a)))))
-           (body (if (or strict-props nil-props const-props)
-                     `(->> ,@(-non-nil (list builder const-props
-                                             nil-props strict-props)))
-                   builder)))
-      (eval `(om--defun ,name ,args ,doc ,body)))))
 
 ;; misc builders
 
