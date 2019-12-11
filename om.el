@@ -231,7 +231,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
        (om--get-descendent '(0))
        (om--get-children)))
 
-(defmacro om--defaform (name arglist &optional docstring &rest body)
+(defmacro om--defun* (name arglist &optional docstring &rest body)
   (declare (doc-string 3) (indent 2))
   (let* ((name* (intern (format "%s*" name)))
          (arglist* (-replace 'fun 'form arglist))
@@ -320,11 +320,11 @@ a non-existent index."
 (defun om--nth (n list)
   (nth (om--convert-intra-index n list) list))
 
-(om--defaform om--map-first (fun list)
+(om--defun* om--map-first (fun list)
   (om--verify fun functionp)
   (->> (cdr list) (cons (funcall fun (car list)))))
 
-(om--defaform om--map-last (fun list)
+(om--defun* om--map-last (fun list)
   (->> (nreverse list) (om--map-first fun) (nreverse)))
 
 ;;; INTERNAL CONSTANTS
@@ -1085,7 +1085,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
         (value (om--get-property prop node)))
     (if filter-fun (funcall filter-fun value) value)))
 
-(om--defaform om--map-property-strict (prop fun node)
+(om--defun* om--map-property-strict (prop fun node)
   (om--verify fun functionp)
   (let ((value (funcall fun (om--get-property-strict prop node))))
     (om--set-property-strict prop value node)))
@@ -1308,7 +1308,7 @@ property list in NODE."
   (let ((plist (--mapcat (list it nil) props)))
     (om--set-properties plist node)))
 
-(om--defaform om--map-property (prop fun node)
+(om--defun* om--map-property (prop fun node)
   (om--verify fun functionp)
   (let ((value (funcall fun (om--get-property prop node))))
     (om--set-property prop value node)))
@@ -1344,7 +1344,7 @@ property list in NODE."
   "Return t if PROP in NODE is `equal' to VAL."
   (equal val (om--get-property prop node)))
 
-(om--defaform om--property-is-predicate-p (prop fun node)
+(om--defun* om--property-is-predicate-p (prop fun node)
   "Return t if FUN applied to the value of PROP in NODE results not nil.
 FUN is a predicate function that takes one argument."
   (declare (indent 1))
@@ -1951,7 +1951,7 @@ nested element to return."
   "Return t if NODE has no children."
   (not (om--get-children node)))
 
-(om--defaform om--map-children (fun node)
+(om--defun* om--map-children (fun node)
   (let ((children (om--get-children node)))
     ;; TODO check the types of children after they are mapped?
     (om--set-children (funcall fun children) node)))
@@ -2581,7 +2581,7 @@ each type."
 
 ;; map
 
-(om--defaform om-map-property (prop fun node)
+(om--defun* om-map-property (prop fun node)
   "Apply FUN to the value of property PROP of NODE.
 FUN is a unary function which takes the current value of PROP and
 returns a new value to which PROP will be set.
@@ -2926,7 +2926,7 @@ behavior is not desired, use `om-timestamp-shift'."
   (om--verify-type clock 'clock)
   (om--property-is-eq-p :status 'running clock))
 
-(om--defaform om-clock-map-timestamp (fun clock)
+(om--defun* om-clock-map-timestamp (fun clock)
   "Apply FUN to timestamp in CLOCK.
 FUN is a function that takes the current timestamp and returns
 a modified timestamp. The returned timestamp must be inactive and
@@ -3027,7 +3027,7 @@ same as that described in `om-build-planning!'."
     (om--set-property-strict prop ts planning)))
 
 ;; TODO this is a bit redundant...
-(om--defaform om-planning-map-timestamp (prop fun planning)
+(om--defun* om-planning-map-timestamp (prop fun planning)
   "Modify timestamp matching PROP in place in PLANNING using FUN.
 
 PROP is one of :closed, :deadline, or :scheduled. FUN must return a
@@ -3073,7 +3073,7 @@ on the type of NODE."
   (let ((type (om--get-type node)))
     (om--set-children-by-type type children node)))
 
-(om--defaform om-map-children (fun node)
+(om--defun* om-map-children (fun node)
   "Apply FUN to the children of NODE. 
 FUN is a function that takes the current children as a list and
 returns a modified children as a list."
@@ -3706,17 +3706,17 @@ holds the element returned from IN-FORM."
          (call (intern (format "om-parse-%s-at" it)))
          (update-at-body `(om-update fun (,call point)))
          (update-this-body `(,update-at (point) fun)))
-    ;; TODO why do these not need om--defaform to be eval'ed on compile?
-    (eval `(om--defaform ,update-at (point fun)
+    ;; TODO why do these not need om--defun* to be eval'ed on compile?
+    (eval `(om--defun* ,update-at (point fun)
              (declare (indent 1))
              ,update-at-doc
              ,update-at-body))
-    (eval `(om--defaform ,update-this (fun)
+    (eval `(om--defun* ,update-this (fun)
              (declare (indent 0))
              ,update-this-doc
              ,update-this-body))))
 
-(om--defaform om-update-this-buffer (fun)
+(om--defun* om-update-this-buffer (fun)
   (om-update fun (om-parse-this-buffer)))
 
 ;; fold
@@ -4039,7 +4039,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;; map
 
-(om--defaform om-match-map (pattern fun node)
+(om--defun* om-match-map (pattern fun node)
   "Apply FUN to nodes matching PATTERN in NODE.
 FUN is a unary function that takes a node and returns a new node
 which will replace the original.
@@ -4053,7 +4053,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;; mapcat
 
-(om--defaform om-match-mapcat (pattern fun node)
+(om--defun* om-match-mapcat (pattern fun node)
   "Apply FUN to nodes matching PATTERN in NODE.
 FUN is a unary function that takes a node and returns a list of new
 nodes which will be spliced in place of the original node.
