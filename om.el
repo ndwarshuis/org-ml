@@ -3242,12 +3242,14 @@ TYPE is '-', '+', or 'ordered'."
   (om--verify-type plain-list 'plain-list)
   (cond
    ((memq type '(+ -))
-    (om-match-map* '(item) (om--set-property-strict :bullet type it) plain-list))
+    (om--map-children*
+      (--map (om--set-property-strict :bullet type it) it) plain-list))
    ((eq type 'ordered)
     ;; NOTE the org-interpreter seems to use the correct, ordered
     ;; numbers if any number is set here. This behavior may not be
     ;; reliable.
-    (om-match-map* '(item) (om--set-property-strict :bullet 1 it) plain-list))
+    (om--map-children*
+      (--map (om--set-property-strict :bullet 1 it) it) plain-list))
    (t (error "Invalid type: %s" type))))
 
 ;; table
