@@ -1065,7 +1065,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
             (error "Property '%s' in node of type '%s' must be %s. Got '%S'"
                    prop type (om--get-type-desc type prop) value)))))
     (if (om--is-plist-p plist)
-        (let* ((cur-props (om--get-properties node))
+        (let* ((cur-props (om--get-all-properties node))
                (type (om--get-type node))
                (keyvals (-partition 2 plist))
                (update-funs
@@ -1259,7 +1259,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
       (length (car (s-match "[ ]*$" node)))
     (org-element-property prop node)))
 
-(defun om--get-properties (node)
+(defun om--get-all-properties (node)
   "Return the properties list of NODE."
   (if (stringp node) (text-properties-at 0 node) (nth 1 node)))
 
@@ -1286,7 +1286,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
         (org-add-props node nil prop value))
     (om--construct
      (om--get-type node)
-     (plist-put (om--get-properties node) prop value)
+     (plist-put (om--get-all-properties node) prop value)
      (om--get-children node))))
 
 (defun om--set-properties (plist node)
@@ -1294,7 +1294,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
 PLIST is a list of property-value pairs that correspond to the
 property list in NODE."
   (if (om--is-plist-p plist)
-      (let ((props (om--get-properties node)))
+      (let ((props (om--get-all-properties node)))
         (om--construct
          (om--get-type node)
          (->> (-partition 2 plist)
@@ -1472,13 +1472,13 @@ FUN is a predicate function that takes one argument."
 (defun om--timestamp-get-start-time (timestamp)
   (-let (((&plist :minute-start n :hour-start h :day-start d
                   :month-start m :year-start y)
-          (om--get-properties timestamp)))
+          (om--get-all-properties timestamp)))
     `(,y ,m ,d ,h ,n)))
 
 (defun om--timestamp-get-end-time (timestamp)
   (-let (((&plist :minute-end n :hour-end h :day-end d
                   :month-end m :year-end y)
-          (om--get-properties timestamp)))
+          (om--get-all-properties timestamp)))
     `(,y ,m ,d ,h ,n)))
 
 (defun om--timestamp-get-start-timestamp (timestamp)
@@ -2543,7 +2543,7 @@ elements may have other elements as children."
   "Return t if POINT is within the boundaries of NODE."
   ;; TODO point should be a positive integer only
   (om--verify node om--is-node-p point integerp)
-  (-let (((&plist :begin :end) (om--get-properties node)))
+  (-let (((&plist :begin :end) (om--get-all-properties node)))
     (if (and (integerp begin) (integerp end))
         (<= begin point end)
       (error "Node boundaries are not defined"))))
@@ -3014,7 +3014,7 @@ nil values."
   ;; TODO point should be a positive integer only
   (om--verify node om-is-branch-node-p point integerp)
   (-let (((&plist :contents-begin :contents-end)
-          (om--get-properties node)))
+          (om--get-all-properties node)))
     (if (and (integerp contents-begin) (integerp contents-end))
         (<= contents-begin point contents-end)
       (error "Node boundaries are not defined"))))
@@ -3415,7 +3415,7 @@ not of that type. TYPE is a symbol from `om-objects'."
                      ((memq type '(superscript subscript)) '(0 1))
                      ((eq type 'table-cell) '(0 0 0))
                      (t '(0 0)))))
-      (-let* (((&plist :begin :end) (om--get-properties context))
+      (-let* (((&plist :begin :end) (om--get-all-properties context))
               (tree (org-element--parse-elements (+ begin offset) end 'first-section
                                                  nil nil nil nil)))
         (--> (car tree)
@@ -3444,7 +3444,7 @@ for plain-list elements vs item elements."
            (memq elem-type (append org-element-greater-elements
                                    org-element-object-containers)))
           node
-        (-let* (((&plist :begin :end) (om--get-properties node))
+        (-let* (((&plist :begin :end) (om--get-all-properties node))
                 (tree (car (org-element--parse-elements
                             begin end 'first-section nil nil nil nil)))
                 (nesting (cl-case elem-type
@@ -3651,7 +3651,7 @@ holds the element returned from IN-FORM."
   (om--verify flag booleanp
                    node om--is-node-p)
   (-let (((&plist :contents-begin :contents-end)
-          (om--get-properties node)))
+          (om--get-all-properties node)))
     (outline-flag-region (1- contents-begin) (1- contents-end) flag)))
 
 (defun om-fold (node)
@@ -3767,7 +3767,7 @@ original children to be modified."
      (cl-flet
          ((all-props-match?
            (node props)
-           (->> (-partition 2 (om--get-properties node))
+           (->> (-partition 2 (om--get-all-properties node))
                 (-difference (-partition 2 props))
                 (not))))
        (--filter (all-props-match? it plist) children)))
