@@ -1353,7 +1353,6 @@ property list in NODE."
 (om--defun* om--property-is-predicate-p (prop fun node)
   "Return t if FUN applied to the value of PROP in NODE results not nil.
 FUN is a predicate function that takes one argument."
-  (declare (indent 1))
   (and (funcall fun (om--get-property prop node)) t))
 
 ;;; objects
@@ -3640,17 +3639,17 @@ holds the element returned from IN-FORM."
          (call (intern (format "om-parse-%s-at" it)))
          (update-at-body `(om-update fun (,call point)))
          (update-this-body `(,update-at (point) fun)))
-    ;; TODO why do these not need om--defun* to be eval'ed on compile?
     (eval `(om--defun* ,update-at (point fun)
-             (declare (indent 1))
              ,update-at-doc
              ,update-at-body))
     (eval `(om--defun* ,update-this (fun)
-             (declare (indent 0))
              ,update-this-doc
              ,update-this-body))))
 
 (om--defun* om-update-this-buffer (fun)
+  "Apply FUN to the contents of the current buffer.
+FUN is a unary function that takes a node of type 'org-data' and
+returns a modified node."
   (om-update fun (om-parse-this-buffer)))
 
 ;; fold
@@ -3979,7 +3978,6 @@ FUN is a unary function that takes a node and returns a new node
 which will replace the original.
 
 PATTERN follows the same rules as `om-match'."
-  (declare (indent 1))
   (-if-let (targets (om-match pattern node))
       (om--modify-children node
         (--map-when (member it targets) (funcall fun it) it))
