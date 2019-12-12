@@ -478,48 +478,17 @@ These are also known as \"recursive objects\" in `org-element.el'")
 (defalias 'om--get-type 'org-element-type)
 (defalias 'om--get-class 'org-element-class)
 
-;; TODO the variable names here are wrong
-(defun om--is-type-p (type elem)
-  "Return t if ELEM's type is `eq' to TYPE (a symbol)."
-  (eq (om--get-type elem) type))
+(defun om--is-node-p (list)
+  "Return t is LIST is a node."
+  (om--is-any-type-p om-nodes list))
 
-(defun om--is-any-type-p (types elem)
-  "Return t if ELEM's type is any in TYPES (a list of symbols)."
-  (if (memq (om--get-type elem) types) t))
+(defun om--is-type-p (type node)
+  "Return t if NODE's type is `eq' to TYPE (a symbol)."
+  (eq (om--get-type node) type))
 
-(defun om--is-plain-text-p (elem)
-  "Return t if org element ELEM is of type 'plain-text'."
-  (eq 'plain-text (om--get-type elem)))
-
-;; (defun om-is-object-p (elem)
-;;   "Return t is ELEM is an object."
-;;   (om--is-any-type-p om-objects elem))
-
-;; (defun om-is-element-p (elem)
-;;   "Return t is ELEM is an element."
-;;   (om--is-any-type-p om-elements elem))
-
-(defun om--is-node-p (elem)
-  "Return t is ELEM is a node."
-  (om--is-any-type-p om-nodes elem))
-
-;; (defun om-node-may-have-child-elements-p (elem)
-;;   "Return t is ELEM is a greater element."
-;;   (om--is-any-type-p om-branch-elements-permitting-child-elements elem))
-
-;; (defun om-is-branch-node-p (elem)
-;;   "Return t is ELEM is a container."
-;;   (om--is-any-type-p om-branch-nodes elem))
-
-;; (defun om-is-recursive-object-p (elem)
-;;   "Return t is ELEM is a recursive object."
-;;   (om--is-any-type-p om-branch-objects elem))
-
-;; (defun om-is-allowed-object-p (container-type elem)
-;;   "Return t if object ELEM is allowed to be in CONTAINER-TYPE."
-;;   (-if-let (r (alist-get container-type om-object-restrictions))
-;;       (om--is-any-type-p r elem)
-;;     (error "Invalid container type requested: %s" container-type)))
+(defun om--is-any-type-p (types node)
+  "Return t if NODE's type is any in TYPES (a list of symbols)."
+  (if (memq (om--get-type node) types) t))
 
 ;; filters
 
@@ -632,7 +601,6 @@ These are also known as \"recursive objects\" in `org-element.el'")
 
 (defun om--is-valid-diary-sexp-value-p (x)
   (listp x))
-
 
 ;; encode/decode (general)
 
