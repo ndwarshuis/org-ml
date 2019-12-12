@@ -269,10 +269,10 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
           (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
           ((post test)
            (if (eq type 'node)
-               '("node" om--is-node-p)
-             `(,(format "node of type %s" type) om--is-type-p)))
+               '("node" (om--is-node-p))
+             `(,(format "node of type %s" type) (om--is-type-p ',type))))
           (msg (format "%s must be a %s" pre post)))
-    `(unless (,test ',type ,type) (error ,msg))))
+    `(unless (,@test ,type) (error ,msg))))
 
 (defmacro om--defun-node (name arglist &rest args)
   (declare (doc-string 3) (indent 2))
