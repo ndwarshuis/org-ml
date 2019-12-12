@@ -236,7 +236,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
   ;; is at least one thing after it to be the body
   (declare (indent 1))
   `(-let (((docstring body)
-           (if (and (stringp (car ,args)) (> 1 (length ,args)))
+           (if (and (stringp (car ,args)) (< 1 (length ,args)))
                (list (car ,args) (-drop 1 ,args))
              (list nil ,args))))
      ,@rest))
