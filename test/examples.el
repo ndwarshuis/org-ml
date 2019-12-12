@@ -836,8 +836,7 @@
               :title-text "really impressive title"
               :properties '((key val))
               :section-children (list (om-build-paragraph! "section text"))
-              ;; TODO make levels make sense
-              (om-build-headline! :level 2 :title-text "subhead"))
+              (om-build-headline! :title-text "subhead"))
              (om-to-trimmed-string))
         => (:result "* really impressive title"
                     ":PROPERTIES:"

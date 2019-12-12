@@ -1279,7 +1279,6 @@ These are also known as \"recursive objects\" in `org-element.el'")
 
 (defun om--set-property (prop value node)
   "Set property PROP in element NODE to VALUE."
-  ;; TODO validate that prop exists in node first?
   (if (stringp node)
       (if (eq prop :post-blank)
           (->> (s-trim-right node) (s-append (s-repeat value " ")))
@@ -1842,8 +1841,10 @@ All arguments not mentioned here follow the same rules as
                    (append `(,planning) `(,property-drawer) section-children)
                    (-non-nil)
                    (apply #'om-build-section)))
-         ;; TODO need to ensure the all subheadlines are level + 1
-         (nodes (-non-nil (append (list section) subheadlines))))
+         (nodes (->> subheadlines
+                     (--map (om--headline-set-level 2 it))
+                     (append (list section))
+                     (-non-nil))))
     (->> (apply #'om-build-headline
                 :todo-keyword todo-keyword
                 :level level
@@ -2328,6 +2329,11 @@ zero-indexed."
 ;;; elements functions
 
 ;; headline
+
+(defun om--headline-set-level (level headline)
+  (->> (om--set-property-strict :level level headline)
+       (om--map-children*
+         (--map (om--headline-set-level (1+ level)) it))))
 
 ;; TODO throw error when index out of range
 
