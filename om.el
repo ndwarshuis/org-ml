@@ -584,9 +584,14 @@ These are also known as \"recursive objects\" in `org-element.el'")
      t)))
 
 (defun om--is-valid-item-bullet-p (x)
-  ;; NOTE org mode 9.1.9 will crash when given an alphabetic symbol
-  ;; NOTE org mode 9.1.9 does not acknowledge '+ bullets
-  (pcase x ((or '- (pred integerp) `(,(pred integerp))) t)))
+  ;; NOTE org mode 9.1.9 has the following limitations:
+  ;; - "+" will be converted to "-" when interpreted
+  ;; - "1)" will be converted to "1." when interpreted
+  ;; - alphanumeric symbols make the interpreter crash
+  ;; TODO what to do about these limitations???
+  ;; some valid org buffers might be parsed, but then can't be
+  ;; use in this library because...org element is inconsistent
+  (pcase x ((or '- (pred integerp)) t)))
 
 (defun om--is-valid-statistics-cookie-value-p (x)
   (pcase x
@@ -902,9 +907,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
         (item (:bullet :encode om--encode-item-bullet
                        :pred om--is-valid-item-bullet-p
                        :decode om--decode-item-bullet
-                       :type-desc ("a positive integer (for '1.'),"
-                                   "a positive integer in a list"
-                                   "(for '1)'), a '-', or a '+'")
+                       :type-desc ("a positive integer (ordered)"
+                                   "or the symbol '-' (unordered)")
                        :require '-)
               (:checkbox :pred om--is-valid-item-checkbox-p
                          :type-desc "nil or the symbols 'on', 'off', or 'trans'")

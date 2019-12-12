@@ -848,8 +848,7 @@
 
       (defexamples om-build-item!
         (->> (om-build-item!
-              ;; TODO (x) should make x)
-              :bullet '(1)
+              :bullet 1
               :tag "complicated *tag*"
               :paragraph "petulant /frenzy/"
               (om-build-plain-list
