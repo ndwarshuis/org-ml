@@ -1858,23 +1858,22 @@ All arguments not mentioned here follow the same rules as
 
 (om--defun-kw om-build-item! (&key post-blank bullet checkbox
                                           tag paragraph counter
-                                          &rest subitems)
+                                          &rest nodes)
   "Build an item element.
 
 TAG is a string representing the tag.
 
 PARAGRAPH is a string that will be the initial text in the item.
 
-SUBITEMS contains the items that will go under this item.
+NODES contains the nodes that will go under this item after
+PARAGRAPH.
 
 All other arguments follow the same rules as `om-build-item'."
   (let ((paragraph* (-some->> paragraph (om-build-paragraph!)))
         (tag (-some->> tag (om--build-secondary-string))))
     ;; TODO this restricts all subitems to plain lists...there are
     ;; other things we can put into lists
-    (->> (apply #'om-build-plain-list subitems)
-         (list)
-         (append (list paragraph*))
+    (->> (append (list paragraph*) nodes)
          (-non-nil)
          (apply #'om-build-item
                 :post-blank post-blank

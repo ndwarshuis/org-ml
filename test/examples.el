@@ -852,7 +852,8 @@
               :bullet '(1)
               :tag "complicated *tag*"
               :paragraph "petulant /frenzy/"
-              (om-build-item! :bullet '- :paragraph "below"))
+              (om-build-plain-list
+               (om-build-item! :bullet '- :paragraph "below")))
              (om-to-trimmed-string))
         => (:result "1. complicated *tag* :: petulant /frenzy/"
                     "   - below"))
