@@ -3585,7 +3585,7 @@ Return NODE."
           (--each (-partition 2 props) (apply #'overlay-put o* it)))))
     (-each os #'apply-overlays)))
 
-(defun om-update (fun node)
+(om--defun* om-update (fun node)
   "Replace NODE in the current buffer with a new one. 
 FUN is a function that takes NODE as its only argument and returns a
 modified NODE. This modified element is then written in place of the
