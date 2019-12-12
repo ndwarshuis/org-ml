@@ -413,58 +413,57 @@ and object containers and includes the 'plain-text' type.")
 
 ;;; INTERNAL TYPE FUNCTIONS
 
-(eval-when-compile
-  (defconst om-elements
-    (cons 'org-data org-element-all-elements)
-    "List of all element types including 'org-data'.")
+(defconst om-elements
+  (cons 'org-data org-element-all-elements)
+  "List of all element types including 'org-data'.")
 
-  (defconst om-objects
-    (cons 'plain-text org-element-all-objects)
-    "List of all object types including 'plain-text'.")
+(defconst om-objects
+  (cons 'plain-text org-element-all-objects)
+  "List of all object types including 'plain-text'.")
 
-  (defconst om-nodes
-    (append om-elements om-objects)
-    "List of all node types.")
+(defconst om-nodes
+  (append om-elements om-objects)
+  "List of all node types.")
 
-  (defvaralias 'om-branch-nodes-permitting-child-objects
-    'org-element-object-containers
-    "List of node types that can have objects as children.
+(defvaralias 'om-branch-nodes-permitting-child-objects
+  'org-element-object-containers
+  "List of node types that can have objects as children.
 These are also known as \"object containers\" in `org-element.el'")
 
-  (defconst om-branch-elements-permitting-child-objects
-    (-intersection om-branch-nodes-permitting-child-objects om-elements)
-    "List of element types that can have objects as children.")
+(defconst om-branch-elements-permitting-child-objects
+  (-intersection om-branch-nodes-permitting-child-objects om-elements)
+  "List of element types that can have objects as children.")
 
-  (defconst om-branch-elements-permitting-child-elements
-    (cons 'org-data org-element-greater-elements)
-    "List of element types that can have elements as children.
+(defconst om-branch-elements-permitting-child-elements
+  (cons 'org-data org-element-greater-elements)
+  "List of element types that can have elements as children.
 These are also known as \"greater elements\" in `org-element.el'")
 
-  (defconst om-branch-elements
-    (append om-branch-elements-permitting-child-objects
-            om-branch-elements-permitting-child-elements)
-    "List of element types that can have children.")
+(defconst om-branch-elements
+  (append om-branch-elements-permitting-child-objects
+          om-branch-elements-permitting-child-elements)
+  "List of element types that can have children.")
 
-  (defvaralias 'om-branch-objects
-    'org-element-recursive-objects
-    "List of object types that can have objects as children.
+(defvaralias 'om-branch-objects
+  'org-element-recursive-objects
+  "List of object types that can have objects as children.
 These are also known as \"recursive objects\" in `org-element.el'")
 
-  (defconst om-branch-nodes
-    (append om-branch-elements om-branch-objects)
-    "List of node types that can have children.")
+(defconst om-branch-nodes
+  (append om-branch-elements om-branch-objects)
+  "List of node types that can have children.")
 
-  (defconst om-leaf-elements
-    (-difference om-elements om-branch-elements)
-    "List of element types that are leaves.")
+(defconst om-leaf-elements
+  (-difference om-elements om-branch-elements)
+  "List of element types that are leaves.")
 
-  (defconst om-leaf-objects
-    (-difference om-objects om-branch-objects)
-    "List of object types that are leaves.")
+(defconst om-leaf-objects
+  (-difference om-objects om-branch-objects)
+  "List of object types that are leaves.")
 
-  (defconst om-node-leaves
-    (append om-leaf-objects om-leaf-elements)
-    "List of node types that are leaves."))
+(defconst om-node-leaves
+  (append om-leaf-objects om-leaf-elements)
+  "List of node types that are leaves.")
 
 (defconst om--item-tag-restrictions
   (->> org-element-object-restrictions
@@ -1188,9 +1187,9 @@ These are also known as \"recursive objects\" in `org-element.el'")
   (defun om--kwd-to-sym (keyword)
     (->> (symbol-name keyword) (s-chop-prefix ":") (intern)))
 
-  (--each om--type-alist
+  (--each (--remove (eq 'plain-text (car it)) om--type-alist)
     (let* ((type (car it))
-           (element? (memq type om-elements))
+           (element? (memq type org-element-all-elements))
            (name (intern (format "om-build-%s" type)))
            (props (->> (cdr it)
                        (--remove (eq :post-blank (car it)))
@@ -1211,8 +1210,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
                                 (default (plist-get (cdr it) :require)))
                             (if default `(,prop ,default) prop)))))
            (rest-arg (cond
-                      ((memq type om-branch-elements-permitting-child-elements) 'nodes)
-                      ((memq type om-branch-nodes-permitting-child-objects) 'objs)))
+                      ((memq type org-element-greater-elements) 'nodes)
+                      ((memq type org-element-object-containers) 'objs)))
            (args
             (let ((a `(,@pos-args &key ,@kw-args post-blank)))
               (if rest-arg `(,@a &rest ,rest-arg) a)))
