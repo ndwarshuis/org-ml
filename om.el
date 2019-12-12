@@ -3560,19 +3560,18 @@ returned from this function will have :begin and :end properties."
 
 ;; write
 
-(defun om-insert (point node)
+(om--defun-node om-insert (point node)
   "Convert NODE to a string and insert at POINT in the current buffer.
 Return NODE."
-  (om--verify point integerp node om--is-node-p)
+  (om--verify point integerp)
   (save-excursion
     (goto-char point)
     (insert (om-to-string node)))
   node)
 
-(defun om-insert-tail (point node)
+(om--defun-node om-insert-tail (point node)
   "Like `om-insert' but insert NODE at POINT and move to end of insertion."
-  (om--verify point integerp
-                   node om--is-node-p)
+  (om--verify point integerp)
   (let ((s (om-to-string node)))
     (save-excursion
       (goto-char point)
@@ -3591,13 +3590,11 @@ Return NODE."
           (--each (-partition 2 props) (apply #'overlay-put o* it)))))
     (-each os #'apply-overlays)))
 
-(om--defun* om-update (fun node)
+(om--defun-node* om-update (fun node)
   "Replace NODE in the current buffer with a new one. 
 FUN is a function that takes NODE as its only argument and returns a
 modified NODE. This modified element is then written in place of the
 old element in the current buffer."
-  (om--verify fun functionp
-                   node om--is-node-p)
   ;; if node is of type 'org-data' it will have no props
   (let* ((begin (or (om--get-property :begin node) (point-min)))
          (end (or (om--get-property :end node) (point-max)))
@@ -3659,11 +3656,11 @@ returns a modified node."
           (om--get-all-properties node)))
     (outline-flag-region (1- contents-begin) (1- contents-end) flag)))
 
-(defun om-fold (node)
+(om--defun-node om-fold (node)
   "Fold the children of NODE if they exist."
   (om--flag-elem-contents t node))
 
-(defun om-unfold (node)
+(om--defun-node om-unfold (node)
   "Unfold the children of NODE if they exist."
   (om--flag-elem-contents nil node))
 
