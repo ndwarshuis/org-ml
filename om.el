@@ -264,25 +264,31 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
            (om--verify fun functionp)
            ,@body)))))
 
+(defmacro om--defun-test-node (arglist)
+  (-let* ((type (-last-item arglist))
+          (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
+          ((post test)
+           (if (eq type 'node)
+               '("node" om--is-node-p)
+             `(,(format "node of type %s" type) om--is-type-p)))
+          (msg (format "%s must be a %s" pre post)))
+    `(unless (,test ',type ,type) (error ,msg))))
+
 (defmacro om--defun-node (name arglist &rest args)
   (declare (doc-string 3) (indent 2))
   (om--defun-with-docstring-body args
-    (-let ((type (-last-item arglist)))
-      `(defun ,name ,arglist
-         ,docstring
-         (unless (om--is-type-p ',type ,type)
-           (error "Last argument must be a node of type %s" ',type))
-         ,@body))))
+    `(defun ,name ,arglist
+       ,docstring
+       ,`(om--defun-test-node ,arglist)
+       ,@body)))
 
 (defmacro om--defun-node* (name arglist &rest args)
   (declare (doc-string 3) (indent 2))
   (om--defun-with-docstring-body args
-    (-let ((type (-last-item arglist)))
-      `(om--defun* ,name ,arglist
-         ,docstring
-         (unless (om--is-type-p ',type ,type)
-           (error "Last argument must be a node of type %s" ',type))
-         ,@body))))
+    `(om--defun* ,name ,arglist
+       ,docstring
+       ,`(om--defun-test-node ,arglist)
+       ,@body)))
 
 ;;; LIST OPERATIONS (EXTENDING DASH)
 
