@@ -267,7 +267,7 @@ Build nodes with more convenient/shorter syntax.
 * [om-build-planning!](#om-build-planning-key-closed-deadline-scheduled-post-blank) `(&key closed deadline scheduled post-blank)`
 * [om-build-property-drawer!](#om-build-property-drawer-key-post-blank-rest-keyvals) `(&key post-blank &rest keyvals)`
 * [om-build-headline!](#om-build-headline-key-level-1-title-text-todo-keyword-tags-pre-blank-priority-commentedp-archivedp-post-blank-planning-properties-statistics-cookie-section-children-rest-subheadlines) `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning properties statistics-cookie section-children &rest subheadlines)`
-* [om-build-item!](#om-build-item-key-post-blank-bullet-checkbox-tag-paragraph-counter-rest-subitems) `(&key post-blank bullet checkbox tag paragraph counter &rest subitems)`
+* [om-build-item!](#om-build-item-key-post-blank-bullet-checkbox-tag-paragraph-counter-rest-nodes) `(&key post-blank bullet checkbox tag paragraph counter &rest nodes)`
 * [om-build-paragraph!](#om-build-paragraph-string-key-post-blank) `(string &key post-blank)`
 * [om-build-table!](#om-build-table-key-tblfm-post-blank-rest-row-lists) `(&key tblfm post-blank &rest row-lists)`
 
@@ -1628,7 +1628,7 @@ The following properties are settable:
 Build a item element with `nodes` as children.
 
 The following properties are settable:
-- `bullet`: a positive integer (for '1.'), a positive integer in a list (for '1)'), a '-', or a '+'
+- `bullet`: a positive integer (ordered) or the symbol '-' (unordered)
 - `checkbox`: nil or the symbols 'on', 'off', or 'trans'
 - `counter`: a positive integer or nil
 - `tag`: a secondary string
@@ -1907,14 +1907,15 @@ Build a headline element.
 [`om-build-planning!`](#om-build-planning-key-closed-deadline-scheduled-post-blank). Up to all three planning types can be used
 in the same list like (:closed args :deadline args :scheduled).
 
-`statistics-cookie` is a list following the same format as 
+`statistics-cookie` is a list following the same format as
 [`om-build-statistics-cookie`](#om-build-statistics-cookie-value-key-post-blank).
 
 `section-children` is a list of elements that will go in the headline
 section.
 
 `subheadlines` contains zero or more headlines that will go under the
-created headline.
+created headline. The level of all members in `subheadlines` will
+automatically be adjusted to `level` + 1.
 
 All arguments not mentioned here follow the same rules as
 [`om-build-headline`](#om-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-nodes)
@@ -1930,7 +1931,7 @@ All arguments not mentioned here follow the same rules as
 
 (->> (om-build-headline! :title-text "really impressive title" :properties '((key val))
 			  :section-children (list (om-build-paragraph! "section text"))
-			  (om-build-headline! :level 2 :title-text "subhead"))
+			  (om-build-headline! :title-text "subhead"))
      (om-to-trimmed-string))
  ;; => "* really impressive title
  ;      :PROPERTIES:
@@ -1941,7 +1942,7 @@ All arguments not mentioned here follow the same rules as
 
 ```
 
-#### om-build-item! `(&key post-blank bullet checkbox tag paragraph counter &rest subitems)`
+#### om-build-item! `(&key post-blank bullet checkbox tag paragraph counter &rest nodes)`
 
 Build an item element.
 
@@ -1949,14 +1950,14 @@ Build an item element.
 
 `paragraph` is a string that will be the initial text in the item.
 
-`subitems` contains the items that will go under this item.
+`nodes` contains the nodes that will go under this item after
+`paragraph`.
 
 All other arguments follow the same rules as [`om-build-item`](#om-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-nodes).
 
 ```el
-(->> (om-build-item! :bullet '(1)
-		      :tag "complicated *tag*" :paragraph "petulant /frenzy/" (om-build-item! :bullet '-
-											       :paragraph "below"))
+(->> (om-build-item! :bullet 1 :tag "complicated *tag*" :paragraph "petulant /frenzy/" (om-build-plain-list (om-build-item! :bullet '-
+															     :paragraph "below")))
      (om-to-trimmed-string))
  ;; => "1. complicated *tag* :: petulant /frenzy/
  ;         - below"

@@ -3609,14 +3609,6 @@ old element in the current buffer."
     (->> (funcall fun node) (om-insert begin))
     nil))
 
-(defmacro om-update* (form node)
-  "Anaphoric form of `om-update'.
-IN-FORM and PROC-FORM are forms corresponding to 'in-fun' and 
-'proc-fun'. The latter has the variable 'it' available to it, which
-holds the element returned from IN-FORM."
-  (declare (indent 0))
-  `(om-update (lambda (it) ,form) ,node))
-
 ;; generate all update functions for corresponding parse functions
 ;; since all take function args, also generate anaphoric forms
 (--each '(object element table-row item headline subtree section)
