@@ -1801,15 +1801,13 @@ Val'."
        (apply #'om-build-property-drawer :post-blank post-blank)))
 
 (om--defun-kw om-build-headline! (&key (level 1) title-text
-                                              todo-keyword tags
-                                              pre-blank priority
-                                              commentedp archivedp
-                                              post-blank planning
-                                              properties
-                                              statistics-cookie
-                                              section-children
-                                              &rest
-                                              subheadlines)
+                                       todo-keyword tags pre-blank
+                                       priority commentedp archivedp
+                                       post-blank planning properties
+                                       statistics-cookie
+                                       section-children
+                                       &rest
+                                       subheadlines)
   "Build a headline element.
 
 TITLE-TEXT is a oneline string for the title of the headline.
@@ -1820,14 +1818,15 @@ PLANNING is a list like ('planning-type' 'args' ...) where
 `om-build-planning!'. Up to all three planning types can be used
 in the same list like (:closed args :deadline args :scheduled).
 
-STATISTICS-COOKIE is a list following the same format as 
+STATISTICS-COOKIE is a list following the same format as
 `om-build-statistics-cookie'.
 
 SECTION-CHILDREN is a list of elements that will go in the headline
 section.
 
 SUBHEADLINES contains zero or more headlines that will go under the
-created headline.
+created headline. The level of all members in SUBHEADLINES will
+automatically be adjusted to LEVEL + 1.
 
 All arguments not mentioned here follow the same rules as
 `om-build-headline'"
@@ -1842,7 +1841,7 @@ All arguments not mentioned here follow the same rules as
                    (-non-nil)
                    (apply #'om-build-section)))
          (nodes (->> subheadlines
-                     (--map (om--headline-set-level 2 it))
+                     (--map (om--headline-set-level (1+ level) it))
                      (append (list section))
                      (-non-nil))))
     (->> (apply #'om-build-headline
