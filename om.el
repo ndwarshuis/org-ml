@@ -231,40 +231,58 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
        (om--get-descendent '(0))
        (om--get-children)))
 
-(defmacro om--defun* (name arglist &optional docstring &rest body)
-  (declare (doc-string 3) (indent 2))
-  (let* ((name* (intern (format "%s*" name)))
-         (arglist* (-replace 'fun 'form arglist))
-         (docstring* (format "Anaphoric form of `%s'." name))
-         (funargs (--map (if (eq it 'form) '(lambda (it) (\, form))
-                           (cons '\, (list it)))
-                         arglist*))
-         (call (cdr (backquote-process (backquote (,name ,@funargs)))))
-         (indent (-elem-index 'form arglist*))
-         (body* (list `(declare (indent ,indent)) call)))
-         ;; (body* (if (= 0 indent) (list call)
-         ;;          (list `(declare (indent ,(1+ indent))) call))))
-    `(progn
-       (defmacro ,name* ,arglist* ,docstring* ,@body*)
-       (defun ,name ,arglist ,docstring ,@body))))
+(defmacro om--defun-with-docstring-body (args &rest rest)
+  ;; the third arg is a docstring if it is a string and there
+  ;; is at least one thing after it to be the body
+  (declare (indent 1))
+  `(-let (((docstring body)
+           (if (and (stringp (car ,args)) (> 1 (length ,args)))
+               (list (car ,args) (-drop 1 ,args))
+             (list nil ,args))))
+     ,@rest))
 
-(defmacro om--defun-node (name arglist &optional docstring &rest body)
+(defmacro om--defun* (name arglist &rest args)
   (declare (doc-string 3) (indent 2))
-  (let ((type (-last-item arglist)))
-    `(defun ,name ,arglist
-       ,docstring
-       (unless (om--is-type-p ',type ,type)
-         (error "Last argument must be a node of type %s" ',type))
-       ,@body)))
+  (om--defun-with-docstring-body args
+    (-let* ((name* (intern (format "%s*" name)))
+            (arglist* (-replace 'fun 'form arglist))
+            (docstring* (format "Anaphoric form of `%s'." name))
+            (funargs (--map (if (eq it 'form) '(lambda (it) (\, form))
+                              (cons '\, (list it)))
+                            arglist*))
+            (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
+            (indent* `(declare (indent ,(-elem-index 'form arglist*)))))
+      `(progn
+         (defmacro ,name* ,arglist*
+           ,docstring*
+           ,indent*
+           (om--verify form listp)
+           ,body*)
+         (defun ,name ,arglist
+           ,docstring
+           ,indent*
+           (om--verify fun functionp)
+           ,@body)))))
 
-(defmacro om--defun-node* (name arglist &optional docstring &rest body)
+(defmacro om--defun-node (name arglist &rest args)
   (declare (doc-string 3) (indent 2))
-  (let ((type (-last-item arglist)))
-    `(om--defun* ,name ,arglist
-       ,docstring
-       (unless (om--is-type-p ',type ,type)
-         (error "Last argument must be a node of type %s" ',type))
-       ,@body)))
+  (om--defun-with-docstring-body args
+    (-let ((type (-last-item arglist)))
+      `(defun ,name ,arglist
+         ,docstring
+         (unless (om--is-type-p ',type ,type)
+           (error "Last argument must be a node of type %s" ',type))
+         ,@body))))
+
+(defmacro om--defun-node* (name arglist &rest args)
+  (declare (doc-string 3) (indent 2))
+  (om--defun-with-docstring-body args
+    (-let ((type (-last-item arglist)))
+      `(om--defun* ,name ,arglist
+         ,docstring
+         (unless (om--is-type-p ',type ,type)
+           (error "Last argument must be a node of type %s" ',type))
+         ,@body))))
 
 ;;; LIST OPERATIONS (EXTENDING DASH)
 
