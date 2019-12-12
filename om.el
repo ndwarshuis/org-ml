@@ -2332,7 +2332,7 @@ zero-indexed."
 (defun om--headline-set-level (level headline)
   (->> (om--set-property-strict :level level headline)
        (om--map-children*
-         (--map (om--headline-set-level (1+ level)) it))))
+         (--map (om--headline-set-level (1+ level) it) it))))
 
 ;; TODO throw error when index out of range
 
