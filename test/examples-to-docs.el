@@ -220,28 +220,27 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
               ;; (mapconcat 'identity (-take 3 examples) "\n")))))
               (mapconcat 'identity examples "\n")))))
 
-(defun docs--chop-prefix (prefix s)
-  "Remove PREFIX if it is at the start of S."
-  (let ((pos (length prefix)))
-    (if (and (>= (length s) (length prefix))
-             (string= prefix (substring s 0 pos)))
-        (substring s pos)
-      s)))
+;; (defun docs--chop-prefix (prefix s)
+;;   "Remove PREFIX if it is at the start of S."
+;;   (let ((pos (length prefix)))
+;;     (if (and (>= (length s) (length prefix))
+;;              (string= prefix (substring s 0 pos)))
+;;         (substring s pos)
+;;       s)))
 
-(defun docs--chop-suffix (suffix s)
-  "Remove SUFFIX if it is at end of S."
-  (let ((pos (- (length suffix))))
-    (if (and (>= (length s) (length suffix))
-             (string= suffix (substring s pos)))
-        (substring s 0 pos)
-      s)))
+;; (defun docs--chop-suffix (suffix s)
+;;   "Remove SUFFIX if it is at end of S."
+;;   (let ((pos (- (length suffix))))
+;;     (if (and (>= (length s) (length suffix))
+;;              (string= suffix (substring s pos)))
+;;         (substring s 0 pos)
+;;       s)))
 
 (defun github-id (command-name signature)
-  (docs--chop-suffix
-   "-"
-   (replace-regexp-in-string "[^a-zA-Z0-9-]+" "-" (docs--chop-prefix
-                                                   "!"
-                                                   (format "%S %S" command-name signature)))))
+  (->> (format "%S-%S" command-name signature)
+       (s-downcase)
+       (s-replace-regexp "[^a-zA-Z0-9- ]+" "")
+       (s-replace " " "-")))
 
 (defun s-replace (old new s)
   "Replace OLD with NEW in S."
