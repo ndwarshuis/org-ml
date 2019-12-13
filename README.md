@@ -222,7 +222,7 @@ Build new nodes.
 * [om-build-comment](#om-build-comment-value-key-post-blank) `(value &key post-blank)`
 * [om-build-comment-block](#om-build-comment-block-value-key-post-blank) `(value &key post-blank)`
 * [om-build-diary-sexp](#om-build-diary-sexp-key-value-post-blank) `(&key value post-blank)`
-* [om-build-example-block](#om-build-example-block-value-key-preserve-indent-switches-post-blank) `(value &key preserve-indent switches post-blank)`
+* [om-build-example-block](#om-build-example-block-key-preserve-indent-switches-value-post-blank) `(&key preserve-indent switches value post-blank)`
 * [om-build-export-block](#om-build-export-block-type-value-key-post-blank) `(type value &key post-blank)`
 * [om-build-fixed-width](#om-build-fixed-width-value-key-post-blank) `(value &key post-blank)`
 * [om-build-horizontal-rule](#om-build-horizontal-rule-key-post-blank) `(&key post-blank)`
@@ -1264,24 +1264,29 @@ The following properties are settable:
 
 ```
 
-#### om-build-example-block `(value &key preserve-indent switches post-blank)`
+#### om-build-example-block `(&key preserve-indent switches value post-blank)`
 
 Build a example-block element.
 
 The following properties are settable:
-- `value`: a string
 - `preserve-indent`: nil or t
 - `switches`: a list of oneline strings
+- `value`: a string or nil
 - `post-blank`: a non-negative integer
 
 ```el
-(->> (om-build-example-block "text")
+(->> (om-build-example-block)
+     (om-to-trimmed-string))
+ ;; => "#+BEGIN_EXAMPLE
+ ;      #+END_EXAMPLE"
+
+(->> (om-build-example-block :value "text")
      (om-to-trimmed-string))
  ;; => "#+BEGIN_EXAMPLE
  ;      text
  ;      #+END_EXAMPLE"
 
-(->> (om-build-example-block "text" :switches '("switches"))
+(->> (om-build-example-block :value "text" :switches '("switches"))
      (om-to-trimmed-string))
  ;; => "#+BEGIN_EXAMPLE switches
  ;      text

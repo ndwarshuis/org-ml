@@ -581,14 +581,20 @@
            (om-to-trimmed-string)) => "%%(text)")
 
     (defexamples om-build-example-block
-      (->> (om-build-example-block "text")
-           (om-to-trimmed-string)) => (:result "#+BEGIN_EXAMPLE"
-           "text"
-           "#+END_EXAMPLE")
-      (->> (om-build-example-block "text" :switches '("switches"))
-           (om-to-trimmed-string)) => (:result "#+BEGIN_EXAMPLE switches"
-           "text"
-           "#+END_EXAMPLE"))
+      (->> (om-build-example-block)
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_EXAMPLE"
+                  "#+END_EXAMPLE")
+      (->> (om-build-example-block :value "text")
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_EXAMPLE"
+                  "text"
+                  "#+END_EXAMPLE")
+      (->> (om-build-example-block :value "text" :switches '("switches"))
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_EXAMPLE switches"
+                  "text"
+                  "#+END_EXAMPLE"))
 
     (defexamples om-build-export-block
       (->> (om-build-export-block "type" "value\n")

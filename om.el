@@ -619,6 +619,9 @@ These are also known as \"recursive objects\" in `org-element.el'")
 (defun om--decode-boolean (bool)
   (and bool t))
 
+(defun om--encode-string-or-nil (string)
+  (if (null string) "" string))
+
 (defun om--encode-string-list-delim (string-list delim)
   (-some->> string-list (s-join delim)))
 
@@ -845,7 +848,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
                        :type-desc "a string that makes `org-entity-get' return non-nil"
                        :require t)
                 (:use-brackets-p ,@bool)
-                ;; TODO what do these do?
+                ;; TODO these are useful just part of the list that
+                ;; `org-entity-get' returns, might as well use them
                 (:latex)
                 (:latex-math-p)
                 (:html)
@@ -854,9 +858,12 @@ These are also known as \"recursive objects\" in `org-element.el'")
                 (:utf-8))
         (example-block (:preserve-indent ,@bool)
                        (:switches ,@slist-spc)
-                       ;; TODO is this required?
-                       (:value ,@str :decode s-trim-right :require t)
-                       ;; TODO how many of these are tied to switches?
+                       (:value ,@str-nil
+                               :encode om--encode-string-or-nil
+                               ;; TODO what if value is a blank string?
+                               :decode s-trim-right)
+                       ;; TODO some of these are tied to switches, it
+                       ;; may be good to set them directly
                        (:number-lines)
                        (:retain-labels)
                        (:use-labels)

@@ -155,7 +155,7 @@
 
 (ert-deftest om--example-block/valid-props ()
   (om--compare-element-props
-   (om-build-example-block "useless")
+   (om-build-example-block)
    "#+BEGIN_EXAMPLE\nuseless\n#+END_EXAMPLE"))
 
 (ert-deftest om--export-block/valid-props ()
