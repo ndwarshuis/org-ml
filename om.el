@@ -711,12 +711,12 @@ These are also known as \"recursive objects\" in `org-element.el'")
    ((equal "[%]" value) '(nil))
    ((equal "[/]" value) '(nil nil))
    (t
-    (->> (or (s-match-strings-all "\\[\\([0-9]+\\)/\\([0-9]+\\)\\]" value)
-             (s-match-strings-all "\\[\\([0-9]+\\)%\\]" value)
-             (error "Invalid stats-cookie: %s" value))
-         (car)
-         (cdr)
-         (-map #'string-to-number)))))
+    (->>
+     (or (s-match-strings-all "\\[\\([0-9]+\\)/\\([0-9]+\\)\\]" value)
+         (s-match-strings-all "\\[\\([0-9]+\\)%\\]" value)
+         (error "Invalid stats-cookie: %s" value))
+     (cdar)
+     (-map #'string-to-number)))))
 
 (defun om--encode-diary-sexp-value (value)
   (format "%%%%%S" value)) ;; assumes value is a form
