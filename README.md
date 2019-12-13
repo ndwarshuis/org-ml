@@ -221,7 +221,7 @@ Build new nodes.
 * [om-build-clock](#om-build-clock-value-key-post-blank) `(value &key post-blank)`
 * [om-build-comment](#om-build-comment-value-key-post-blank) `(value &key post-blank)`
 * [om-build-comment-block](#om-build-comment-block-value-key-post-blank) `(value &key post-blank)`
-* [om-build-diary-sexp](#om-build-diary-sexp-value-key-post-blank) `(value &key post-blank)`
+* [om-build-diary-sexp](#om-build-diary-sexp-key-value-post-blank) `(&key value post-blank)`
 * [om-build-example-block](#om-build-example-block-value-key-preserve-indent-switches-post-blank) `(value &key preserve-indent switches post-blank)`
 * [om-build-export-block](#om-build-export-block-type-value-key-post-blank) `(type value &key post-blank)`
 * [om-build-fixed-width](#om-build-fixed-width-value-key-post-blank) `(value &key post-blank)`
@@ -1245,16 +1245,20 @@ The following properties are settable:
 
 ```
 
-#### om-build-diary-sexp `(value &key post-blank)`
+#### om-build-diary-sexp `(&key value post-blank)`
 
 Build a diary-sexp element.
 
 The following properties are settable:
-- `value`: a list form
+- `value`: a list form or nil
 - `post-blank`: a non-negative integer
 
 ```el
-(->> (om-build-diary-sexp '(text))
+(->> (om-build-diary-sexp)
+     (om-to-trimmed-string))
+ ;; => "%%()"
+
+(->> (om-build-diary-sexp :value '(text))
      (om-to-trimmed-string))
  ;; => "%%(text)"
 

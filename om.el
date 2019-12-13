@@ -612,7 +612,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
           (<= numerator denominator)))))
 
 (defun om--is-valid-diary-sexp-value-p (x)
-  (listp x))
+  (or (null x) (listp x)))
 
 ;; encode/decode (general)
 
@@ -718,7 +718,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
      (-map #'string-to-number)))))
 
 (defun om--encode-diary-sexp-value (value)
-  (format "%%%%%S" value)) ;; assumes value is a form
+  ;; assumes value is a form or nil
+  (if value (format "%%%%%S" value) "%%()"))
 
 (defun om--decode-diary-sexp-value (value)
   (->> (s-chop-prefix "%%" value) (read)))
@@ -837,9 +838,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
         (diary-sexp (:value :encode om--encode-diary-sexp-value
                             :pred om--is-valid-diary-sexp-value-p
                             :decode om--decode-diary-sexp-value
-                            :type-desc "a list form"
-                            ;; TODO is this actually required?
-                            :require t))
+                            :type-desc "a list form or nil"))
         (dynamic-block (:arguments ,@plist)
                        (:block-name ,@ol-str :require t))
         (entity (:name :pred om--is-valid-entity-name-p

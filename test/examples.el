@@ -575,7 +575,9 @@
            "#+END_COMMENT"))
 
     (defexamples om-build-diary-sexp
-      (->> (om-build-diary-sexp '(text))
+      (->> (om-build-diary-sexp)
+           (om-to-trimmed-string)) => "%%()"
+      (->> (om-build-diary-sexp :value '(text))
            (om-to-trimmed-string)) => "%%(text)")
 
     (defexamples om-build-example-block
