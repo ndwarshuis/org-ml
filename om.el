@@ -665,27 +665,24 @@ These are also known as \"recursive objects\" in `org-element.el'")
     (_ (error "This should not happen"))))
 
 (defun om--decode-item-bullet (bullet)
-  ;; TODO refactor this
-  (if (s-matches? "^\\(-\\|+\\)" bullet)
-      (intern (s-left 1 bullet))
-    (let* ((case-fold-search nil) ; need case-sensitivity
-           (n (or (-some->> (s-match "^[0-9]+" bullet)
-                            (car)
-                            (string-to-number))
-                  ;; convert letters to numbers if they are used
-                  (-some->> (s-match "^[a-z]+" bullet)
-                            (car)
-                            (string-to-char)
-                            (+ -96))
-                  (-some->> (s-match "^[A-Z]+" bullet)
-                            (car)
-                            (string-to-char)
-                            (+ -64))
-                  (error "Invalid bullet found: %s" bullet))))
-      (cond
-       ((s-matches? "^[a-zA-Z0-9]+." bullet) n)
-       ((s-matches? "^[a-zA-Z0-9]+)" bullet) (list n))
-       (t (error "Invalid bullet found: %s" bullet))))))
+  ;; NOTE this must conform to the full range of item bullets since
+  ;; anything could be parsed from an org file. Anything "invalid"
+  ;; should be converted to it's closest "element legal" bullet
+  (if (s-matches? "^\\(-\\|+\\)" bullet) '-
+    (let* ((case-fold-search nil)) ; need case-sensitivity
+      (or (-some->> (s-match "^[0-9]+" bullet)
+                    (car)
+                    (string-to-number))
+          ;; convert letters to numbers if they are used
+          (-some->> (s-match "^[a-z]+" bullet)
+                    (car)
+                    (string-to-char)
+                    (+ -96))
+          (-some->> (s-match "^[A-Z]+" bullet)
+                    (car)
+                    (string-to-char)
+                    (+ -64))
+          (error "Invalid bullet found: %s" bullet)))))
 
 (defun om--decode-item-tag (tag)
   (om--build-secondary-string tag))
