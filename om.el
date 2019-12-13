@@ -706,7 +706,6 @@ These are also known as \"recursive objects\" in `org-element.el'")
     (format "[%s]" (mk-stat value))))
 
 (defun om--decode-statistics-cookie-value (value)
-  ;; TODO refactor
   (cond
    ((equal "[%]" value) '(nil))
    ((equal "[/]" value) '(nil nil))
