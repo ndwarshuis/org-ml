@@ -195,7 +195,7 @@ Build new nodes.
 * [om-build-code](#om-build-code-value-key-post-blank) `(value &key post-blank)`
 * [om-build-entity](#om-build-entity-name-key-use-brackets-p-post-blank) `(name &key use-brackets-p post-blank)`
 * [om-build-inline-babel-call](#om-build-inline-babel-call-call-key-inside-header-arguments-end-header-post-blank) `(call &key inside-header arguments end-header post-blank)`
-* [om-build-inline-src-block](#om-build-inline-src-block-language-value-key-parameters-post-blank) `(language value &key parameters post-blank)`
+* [om-build-inline-src-block](#om-build-inline-src-block-language-key-parameters-value-post-blank) `(language &key parameters value post-blank)`
 * [om-build-line-break](#om-build-line-break-key-post-blank) `(&key post-blank)`
 * [om-build-statistics-cookie](#om-build-statistics-cookie-value-key-post-blank) `(value &key post-blank)`
 * [om-build-target](#om-build-target-value-key-post-blank) `(value &key post-blank)`
@@ -849,22 +849,26 @@ The following properties are settable:
 
 ```
 
-#### om-build-inline-src-block `(language value &key parameters post-blank)`
+#### om-build-inline-src-block `(language &key parameters value post-blank)`
 
 Build a inline-src-block object.
 
 The following properties are settable:
 - `language`: a oneline string
-- `value`: a oneline string
 - `parameters`: a plist
+- `value`: a oneline string or nil
 - `post-blank`: a non-negative integer
 
 ```el
-(->> (om-build-inline-src-block "lang" "value")
+(->> (om-build-inline-src-block "lang")
+     (om-to-trimmed-string))
+ ;; => "src_lang{}"
+
+(->> (om-build-inline-src-block "lang" :value "value")
      (om-to-trimmed-string))
  ;; => "src_lang{value}"
 
-(->> (om-build-inline-src-block "lang" "value" :parameters '(:key val))
+(->> (om-build-inline-src-block "lang" :value "value" :parameters '(:key val))
      (om-to-trimmed-string))
  ;; => "src_lang[:key val]{value}"
 

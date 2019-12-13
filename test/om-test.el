@@ -44,7 +44,7 @@
 
 (ert-deftest om--inline-src-block/valid-props ()
   (om--compare-object-props
-   (om-build-inline-src-block "lang" "value") "src_lang{value}"))
+   (om-build-inline-src-block "lang") "src_lang{value}"))
 
 ;; TODO add latex fragment
 

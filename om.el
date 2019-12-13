@@ -908,8 +908,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
                            (:value))
         (inline-src-block (:language ,@ol-str :require t)
                           (:parameters ,@plist)
-                          ;; TODO should this be required?
-                          (:value ,@ol-str :require t))
+                          (:value ,@ol-str-nil
+                                  :encode om--encode-string-or-nil))
         ;; (inlinetask)
         (italic)
         (item (:bullet :encode om--encode-item-bullet

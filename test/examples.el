@@ -451,10 +451,15 @@
            (om-to-trimmed-string)) => "call_name()[:key val]")
 
     (defexamples om-build-inline-src-block
-      (->> (om-build-inline-src-block "lang" "value")
-           (om-to-trimmed-string)) => "src_lang{value}"
-      (->> (om-build-inline-src-block "lang" "value" :parameters '(:key val))
-           (om-to-trimmed-string)) => "src_lang[:key val]{value}")
+      (->> (om-build-inline-src-block "lang")
+           (om-to-trimmed-string))
+      => "src_lang{}"
+      (->> (om-build-inline-src-block "lang" :value "value")
+           (om-to-trimmed-string))
+      => "src_lang{value}"
+      (->> (om-build-inline-src-block "lang" :value "value" :parameters '(:key val))
+           (om-to-trimmed-string))
+      => "src_lang[:key val]{value}")
 
     (defexamples om-build-line-break
       (->> (om-build-line-break)
