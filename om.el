@@ -264,6 +264,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
            (om--verify fun functionp)
            ,@body)))))
 
+;; TODO what if we want to accept nil?
 (defmacro om--defun-test-node (arglist)
   (-let* ((type (-last-item arglist))
           (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
@@ -661,7 +662,6 @@ These are also known as \"recursive objects\" in `org-element.el'")
   (pcase bullet
     ('- "- ")
     ((pred integerp) (format "%s. " bullet))
-    (`(,(and (pred integerp) bullet)) (format "%s) " bullet))
     (_ (error "This should not happen"))))
 
 (defun om--decode-item-bullet (bullet)
