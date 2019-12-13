@@ -195,7 +195,7 @@ Build new nodes.
 * [om-build-code](#om-build-code-value-key-post-blank) `(value &key post-blank)`
 * [om-build-entity](#om-build-entity-name-key-use-brackets-p-post-blank) `(name &key use-brackets-p post-blank)`
 * [om-build-inline-babel-call](#om-build-inline-babel-call-call-key-inside-header-arguments-end-header-post-blank) `(call &key inside-header arguments end-header post-blank)`
-* [om-build-inline-src-block](#om-build-inline-src-block-language-key-parameters-value-post-blank) `(language &key parameters value post-blank)`
+* [om-build-inline-src-block](#om-build-inline-src-block-language-key-parameters-value-post-blank) `(language &key parameters (value ) post-blank)`
 * [om-build-line-break](#om-build-line-break-key-post-blank) `(&key post-blank)`
 * [om-build-statistics-cookie](#om-build-statistics-cookie-value-key-post-blank) `(value &key post-blank)`
 * [om-build-target](#om-build-target-value-key-post-blank) `(value &key post-blank)`
@@ -220,9 +220,9 @@ Build new nodes.
 * [om-build-babel-call](#om-build-babel-call-call-key-inside-header-arguments-end-header-post-blank) `(call &key inside-header arguments end-header post-blank)`
 * [om-build-clock](#om-build-clock-value-key-post-blank) `(value &key post-blank)`
 * [om-build-comment](#om-build-comment-value-key-post-blank) `(value &key post-blank)`
-* [om-build-comment-block](#om-build-comment-block-value-key-post-blank) `(value &key post-blank)`
+* [om-build-comment-block](#om-build-comment-block-key-value-post-blank) `(&key (value ) post-blank)`
 * [om-build-diary-sexp](#om-build-diary-sexp-key-value-post-blank) `(&key value post-blank)`
-* [om-build-example-block](#om-build-example-block-key-preserve-indent-switches-value-post-blank) `(&key preserve-indent switches value post-blank)`
+* [om-build-example-block](#om-build-example-block-key-preserve-indent-switches-value-post-blank) `(&key preserve-indent switches (value ) post-blank)`
 * [om-build-export-block](#om-build-export-block-type-value-key-post-blank) `(type value &key post-blank)`
 * [om-build-fixed-width](#om-build-fixed-width-value-key-post-blank) `(value &key post-blank)`
 * [om-build-horizontal-rule](#om-build-horizontal-rule-key-post-blank) `(&key post-blank)`
@@ -849,14 +849,14 @@ The following properties are settable:
 
 ```
 
-#### om-build-inline-src-block `(language &key parameters value post-blank)`
+#### om-build-inline-src-block `(language &key parameters (value ) post-blank)`
 
 Build a inline-src-block object.
 
 The following properties are settable:
 - `language`: a oneline string
 - `parameters`: a plist
-- `value`: a oneline string or nil
+- `value`: a oneline string
 - `post-blank`: a non-negative integer
 
 ```el
@@ -1232,7 +1232,7 @@ The following properties are settable:
 
 ```
 
-#### om-build-comment-block `(value &key post-blank)`
+#### om-build-comment-block `(&key (value ) post-blank)`
 
 Build a comment-block element.
 
@@ -1241,7 +1241,12 @@ The following properties are settable:
 - `post-blank`: a non-negative integer
 
 ```el
-(->> (om-build-comment-block "text")
+(->> (om-build-comment-block)
+     (om-to-trimmed-string))
+ ;; => "#+BEGIN_COMMENT
+ ;      #+END_COMMENT"
+
+(->> (om-build-comment-block :value "text")
      (om-to-trimmed-string))
  ;; => "#+BEGIN_COMMENT
  ;      text
@@ -1268,14 +1273,14 @@ The following properties are settable:
 
 ```
 
-#### om-build-example-block `(&key preserve-indent switches value post-blank)`
+#### om-build-example-block `(&key preserve-indent switches (value ) post-blank)`
 
 Build a example-block element.
 
 The following properties are settable:
 - `preserve-indent`: nil or t
 - `switches`: a list of oneline strings
-- `value`: a string or nil
+- `value`: a string
 - `post-blank`: a non-negative integer
 
 ```el

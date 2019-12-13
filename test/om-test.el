@@ -146,7 +146,7 @@
 
 (ert-deftest om--comment-block/valid-props ()
   (om--compare-element-props
-   (om-build-comment-block "useless")
+   (om-build-comment-block)
    "#+BEGIN_COMMENT\nuseless\n#+END_COMMENT"))
 
 (ert-deftest om--diary-sexp/valid-props ()

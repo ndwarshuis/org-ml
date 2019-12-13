@@ -835,8 +835,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
                (:status)
                (:duration))
         (code (:value ,@ol-str :require t))
-        (comment (:value ,@ol-str :require t)) ; TODO this isn't actually required?
-        (comment-block (:value ,@ol-str :decode s-trim-right :require t)) ; TODO is this actually required?
+        (comment (:value ,@ol-str :require t))
+        (comment-block (:value ,@ol-str :decode s-trim-right :require ""))
         (drawer (:drawer-name ,@ol-str :require t))
         (diary-sexp (:value :encode om--encode-diary-sexp-value
                             :pred om--is-valid-diary-sexp-value-p
@@ -858,10 +858,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
                 (:utf-8))
         (example-block (:preserve-indent ,@bool)
                        (:switches ,@slist-spc)
-                       (:value ,@str-nil
-                               :encode om--encode-string-or-nil
-                               ;; TODO what if value is a blank string?
-                               :decode s-trim-right)
+                       (:value ,@str :require "" :decode s-trim-right)
                        ;; TODO some of these are tied to switches, it
                        ;; may be good to set them directly
                        (:number-lines)
@@ -908,8 +905,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
                            (:value))
         (inline-src-block (:language ,@ol-str :require t)
                           (:parameters ,@plist)
-                          (:value ,@ol-str-nil
-                                  :encode om--encode-string-or-nil))
+                          (:value ,@ol-str :require ""))
         ;; (inlinetask)
         (italic)
         (item (:bullet :encode om--encode-item-bullet

@@ -570,14 +570,22 @@
       => "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00] =>  1:00")
 
     (defexamples om-build-comment
+      ;; TODO there is a bug that makes a blank string return a
+      ;; blank string (it should return a "# ")
       (->> (om-build-comment "text")
-           (om-to-trimmed-string)) => "# text")
+           (om-to-trimmed-string))
+      => "# text")
 
     (defexamples om-build-comment-block
-      (->> (om-build-comment-block "text")
-           (om-to-trimmed-string)) => (:result "#+BEGIN_COMMENT"
-           "text"
-           "#+END_COMMENT"))
+      (->> (om-build-comment-block)
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_COMMENT"
+                  "#+END_COMMENT")
+      (->> (om-build-comment-block :value "text")
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_COMMENT"
+                  "text"
+                  "#+END_COMMENT"))
 
     (defexamples om-build-diary-sexp
       (->> (om-build-diary-sexp)
