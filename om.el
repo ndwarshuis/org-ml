@@ -960,7 +960,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
         (radio-target (:value))
         (section)
         (special-block (:type ,@ol-str :require t))
-        (src-block (:value ,@str :decode s-trim-right :require t) ; TODO should this actually be required? nil should = ""
+        (src-block (:value ,@str :decode s-trim-right :require "")
                    (:language ,@str-nil)
                    (:parameters ,@plist)
                    (:preserve-indent ,@bool)

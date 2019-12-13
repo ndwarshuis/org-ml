@@ -230,7 +230,7 @@ Build new nodes.
 * [om-build-latex-environment](#om-build-latex-environment-value-key-post-blank) `(value &key post-blank)`
 * [om-build-node-property](#om-build-node-property-key-value-key-post-blank) `(key value &key post-blank)`
 * [om-build-planning](#om-build-planning-key-closed-deadline-scheduled-post-blank) `(&key closed deadline scheduled post-blank)`
-* [om-build-src-block](#om-build-src-block-value-key-language-parameters-preserve-indent-switches-post-blank) `(value &key language parameters preserve-indent switches post-blank)`
+* [om-build-src-block](#om-build-src-block-key-value-language-parameters-preserve-indent-switches-post-blank) `(&key (value ) language parameters preserve-indent switches post-blank)`
 * [om-build-table-row-hline](#om-build-table-row-hline-key-post-blank) `(&key post-blank)`
 
 ### Branch Elements with Child Objects
@@ -1429,7 +1429,7 @@ The following properties are settable:
 
 ```
 
-#### om-build-src-block `(value &key language parameters preserve-indent switches post-blank)`
+#### om-build-src-block `(&key (value ) language parameters preserve-indent switches post-blank)`
 
 Build a src-block element.
 
@@ -1442,25 +1442,30 @@ The following properties are settable:
 - `post-blank`: a non-negative integer
 
 ```el
-(->> (om-build-src-block "body")
+(->> (om-build-src-block)
+     (om-to-trimmed-string))
+ ;; => "#+BEGIN_SRC
+ ;      #+END_SRC"
+
+(->> (om-build-src-block :value "body")
      (om-to-trimmed-string))
  ;; => "#+BEGIN_SRC
  ;        body
  ;      #+END_SRC"
 
-(->> (om-build-src-block "body" :language "emacs-lisp")
+(->> (om-build-src-block :value "body" :language "emacs-lisp")
      (om-to-trimmed-string))
  ;; => "#+BEGIN_SRC emacs-lisp
  ;        body
  ;      #+END_SRC"
 
-(->> (om-build-src-block "body" :switches '("-n 20" "-r"))
+(->> (om-build-src-block :value "body" :switches '("-n 20" "-r"))
      (om-to-trimmed-string))
  ;; => "#+BEGIN_SRC -n 20 -r
  ;        body
  ;      #+END_SRC"
 
-(->> (om-build-src-block "body" :parameters '(:key val))
+(->> (om-build-src-block :value "body" :parameters '(:key val))
      (om-to-trimmed-string))
  ;; => "#+BEGIN_SRC :key val
  ;        body

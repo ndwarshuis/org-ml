@@ -194,7 +194,7 @@
 
 (ert-deftest om--src-block/valid-props ()
   (om--compare-element-props
-   (om-build-src-block "value")
+   (om-build-src-block)
    "#+BEGIN_SRC\nuseless\n#+END_SRC"))
 
 ;; containers

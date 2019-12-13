@@ -646,24 +646,32 @@
            (om-to-trimmed-string)) => "DEADLINE: [2019-01-01 Tue]")
 
     (defexamples om-build-src-block
-      (->> (om-build-src-block "body")
-           (om-to-trimmed-string)) => (:result "#+BEGIN_SRC"
-           "  body"
-           "#+END_SRC")
-      (->> (om-build-src-block "body" :language "emacs-lisp")
-           (om-to-trimmed-string)) => (:result "#+BEGIN_SRC emacs-lisp"
-           "  body"
-           "#+END_SRC")
+      (->> (om-build-src-block)
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_SRC"
+                  "#+END_SRC")
+      (->> (om-build-src-block :value "body")
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_SRC"
+                  "  body"
+                  "#+END_SRC")
+      (->> (om-build-src-block :value "body" :language "emacs-lisp")
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_SRC emacs-lisp"
+                  "  body"
+                  "#+END_SRC")
       ;; TODO pretty sure this makes no sense...
-      (->> (om-build-src-block "body" :switches '("-n 20" "-r"))
-           (om-to-trimmed-string)) => (:result "#+BEGIN_SRC -n 20 -r"
-           "  body"
-           "#+END_SRC")
+      (->> (om-build-src-block :value "body" :switches '("-n 20" "-r"))
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_SRC -n 20 -r"
+                  "  body"
+                  "#+END_SRC")
       ;; TODO and this...
-      (->> (om-build-src-block "body" :parameters '(:key val))
-           (om-to-trimmed-string)) => (:result "#+BEGIN_SRC :key val"
-           "  body"
-           "#+END_SRC"))
+      (->> (om-build-src-block :value "body" :parameters '(:key val))
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_SRC :key val"
+                  "  body"
+                  "#+END_SRC"))
 
     (defexamples om-build-table-row-hline
       (->>  (om-build-table
