@@ -212,7 +212,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
     (-let [(command-name signature docstring examples) function]
       (unless docstring
         (error "No docstring supplied for %s" command-name))
-      (format "#### %s `%s`\n\n%s\n\n```el\n%s\n```\n"
+      (format "#### %s `%S`\n\n%s\n\n```el\n%s\n```\n"
       ;; (format "### %s `%s`\n\n%s\n\n%s"
               command-name
               signature
@@ -251,7 +251,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
       (concat "\n" function "\n")
     (let ((command-name (car function))
           (signature (cadr function)))
-      (format "* [%s](#%s) `%s`" command-name (github-id command-name signature) signature))))
+      (format "* [%s](#%s) `%S`" command-name (github-id command-name signature) signature))))
 
 (defun simplify-quotes ()
   (goto-char (point-min))

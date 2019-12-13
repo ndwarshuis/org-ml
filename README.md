@@ -195,7 +195,7 @@ Build new nodes.
 * [om-build-code](#om-build-code-value-key-post-blank) `(value &key post-blank)`
 * [om-build-entity](#om-build-entity-name-key-use-brackets-p-post-blank) `(name &key use-brackets-p post-blank)`
 * [om-build-inline-babel-call](#om-build-inline-babel-call-call-key-inside-header-arguments-end-header-post-blank) `(call &key inside-header arguments end-header post-blank)`
-* [om-build-inline-src-block](#om-build-inline-src-block-language-key-parameters-value--post-blank) `(language &key parameters (value ) post-blank)`
+* [om-build-inline-src-block](#om-build-inline-src-block-language-key-parameters-value--post-blank) `(language &key parameters (value "") post-blank)`
 * [om-build-line-break](#om-build-line-break-key-post-blank) `(&key post-blank)`
 * [om-build-statistics-cookie](#om-build-statistics-cookie-value-key-post-blank) `(value &key post-blank)`
 * [om-build-target](#om-build-target-value-key-post-blank) `(value &key post-blank)`
@@ -207,7 +207,7 @@ Build new nodes.
 * [om-build-bold](#om-build-bold-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
 * [om-build-footnote-reference](#om-build-footnote-reference-key-label-post-blank-rest-objs) `(&key label post-blank &rest objs)`
 * [om-build-italic](#om-build-italic-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-build-link](#om-build-link-path-key-format-type-fuzzy-post-blank-rest-objs) `(path &key format (type fuzzy) post-blank &rest objs)`
+* [om-build-link](#om-build-link-path-key-format-type-fuzzy-post-blank-rest-objs) `(path &key format (type "fuzzy") post-blank &rest objs)`
 * [om-build-radio-target](#om-build-radio-target-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
 * [om-build-strike-through](#om-build-strike-through-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
 * [om-build-superscript](#om-build-superscript-key-use-brackets-p-post-blank-rest-objs) `(&key use-brackets-p post-blank &rest objs)`
@@ -220,9 +220,9 @@ Build new nodes.
 * [om-build-babel-call](#om-build-babel-call-call-key-inside-header-arguments-end-header-post-blank) `(call &key inside-header arguments end-header post-blank)`
 * [om-build-clock](#om-build-clock-value-key-post-blank) `(value &key post-blank)`
 * [om-build-comment](#om-build-comment-value-key-post-blank) `(value &key post-blank)`
-* [om-build-comment-block](#om-build-comment-block-key-value--post-blank) `(&key (value ) post-blank)`
+* [om-build-comment-block](#om-build-comment-block-key-value--post-blank) `(&key (value "") post-blank)`
 * [om-build-diary-sexp](#om-build-diary-sexp-key-value-post-blank) `(&key value post-blank)`
-* [om-build-example-block](#om-build-example-block-key-preserve-indent-switches-value--post-blank) `(&key preserve-indent switches (value ) post-blank)`
+* [om-build-example-block](#om-build-example-block-key-preserve-indent-switches-value--post-blank) `(&key preserve-indent switches (value "") post-blank)`
 * [om-build-export-block](#om-build-export-block-type-value-key-post-blank) `(type value &key post-blank)`
 * [om-build-fixed-width](#om-build-fixed-width-value-key-post-blank) `(value &key post-blank)`
 * [om-build-horizontal-rule](#om-build-horizontal-rule-key-post-blank) `(&key post-blank)`
@@ -230,7 +230,7 @@ Build new nodes.
 * [om-build-latex-environment](#om-build-latex-environment-value-key-post-blank) `(value &key post-blank)`
 * [om-build-node-property](#om-build-node-property-key-value-key-post-blank) `(key value &key post-blank)`
 * [om-build-planning](#om-build-planning-key-closed-deadline-scheduled-post-blank) `(&key closed deadline scheduled post-blank)`
-* [om-build-src-block](#om-build-src-block-key-value--language-parameters-preserve-indent-switches-post-blank) `(&key (value ) language parameters preserve-indent switches post-blank)`
+* [om-build-src-block](#om-build-src-block-key-value--language-parameters-preserve-indent-switches-post-blank) `(&key (value "") language parameters preserve-indent switches post-blank)`
 * [om-build-table-row-hline](#om-build-table-row-hline-key-post-blank) `(&key post-blank)`
 
 ### Branch Elements with Child Objects
@@ -849,7 +849,7 @@ The following properties are settable:
 
 ```
 
-#### om-build-inline-src-block `(language &key parameters (value ) post-blank)`
+#### om-build-inline-src-block `(language &key parameters (value "") post-blank)`
 
 Build a inline-src-block object.
 
@@ -1046,7 +1046,7 @@ The following properties are settable:
 
 ```
 
-#### om-build-link `(path &key format (type fuzzy) post-blank &rest objs)`
+#### om-build-link `(path &key format (type "fuzzy") post-blank &rest objs)`
 
 Build a link object with `objs` as children.
 
@@ -1232,7 +1232,7 @@ The following properties are settable:
 
 ```
 
-#### om-build-comment-block `(&key (value ) post-blank)`
+#### om-build-comment-block `(&key (value "") post-blank)`
 
 Build a comment-block element.
 
@@ -1273,7 +1273,7 @@ The following properties are settable:
 
 ```
 
-#### om-build-example-block `(&key preserve-indent switches (value ) post-blank)`
+#### om-build-example-block `(&key preserve-indent switches (value "") post-blank)`
 
 Build a example-block element.
 
@@ -1429,7 +1429,7 @@ The following properties are settable:
 
 ```
 
-#### om-build-src-block `(&key (value ) language parameters preserve-indent switches post-blank)`
+#### om-build-src-block `(&key (value "") language parameters preserve-indent switches post-blank)`
 
 Build a src-block element.
 
