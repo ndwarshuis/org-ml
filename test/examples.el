@@ -1353,13 +1353,16 @@
     (defexamples-content om-get-property
       nil
 
-      (:buffer "#+CALL: ktulu[:cache no](x=4) :exports results")
+      (:buffer "#+CALL: ktulu(x=4) :exports results")
       (->> (om-parse-this-element)
            (om-get-property :call))
       => "ktulu"
       (->> (om-parse-this-element)
            (om-get-property :inside-header))
-      => '(:cache no)
+      => nil
+
+      :begin-hidden
+
       (->> (om-parse-this-element)
            (om-get-property :arguments))
       => '("x=4")
@@ -1367,7 +1370,6 @@
            (om-get-property :end-header))
       => '(:exports results)
 
-      :begin-hidden
       (:buffer "CLOCK: [2019-01-01 Tue]")
       (->> (om-parse-this-element)
            (om-get-property :value)
@@ -1548,7 +1550,6 @@
       (->> (om-parse-this-object)
            (om-get-property :value))
       => "$2+2=4$"
-      :end-hidden
 
       (:buffer "[[file:/dev/null]]")
       (->> (om-parse-this-object)
@@ -1561,7 +1562,6 @@
            (om-get-property :format))
       => 'bracket
       
-      :begin-hidden
       (:buffer "{{{economics(x=4,y=2)}}}")
       (->> (om-parse-this-object)
            (om-get-property :key))
@@ -1715,21 +1715,35 @@
     (defexamples-content om-map-property
       nil
 
+      :begin-hidden
+
       (:buffer "#+CALL: ktulu()")
       (->> (om-parse-this-element)
            (om-map-property :call #'s-upcase)
            (om-to-trimmed-string))
       => "#+CALL: KTULU()"
 
-      :begin-hidden
-
       ;; TODO add clock
 
+      :end-hidden
+      
       (:buffer "~learn to~")
       (->> (om-parse-this-object)
            (om-map-property :value #'s-upcase)
            (om-to-trimmed-string))
       => "~LEARN TO~"
+      (:comment "Throw error if property doesn't exist")
+      (->> (om-parse-this-object)
+           (om-map-property :title #'s-upcase)
+           (om-to-trimmed-string))
+      !!> error
+      (:comment "Throw error if function doesn't return proper type")
+      (->> (om-parse-this-object)
+           (om-map-property* :value (if it 1 0))
+           (om-to-trimmed-string))
+      !!> error
+
+      :begin-hidden
 
       (:buffer "# not here")
       (->> (om-parse-this-element)
@@ -1765,8 +1779,6 @@
       => (:result "#+BEGIN: BLOCKHEAD"
                   "#+END:")
 
-      :end-hidden
-
       ;; TODO add entity
 
       (:buffer "#+BEGIN_EXAMPLE"
@@ -1778,8 +1790,6 @@
       => (:result "#+BEGIN_EXAMPLE"
                   "https://example.com"
                   "#+END_EXAMPLE")
-
-      :begin-hidden
 
       (:buffer "#+BEGIN_EXPORT domestic"
                "bullets, bombs, and bigotry"
@@ -1882,19 +1892,7 @@
            (om-map-property :value #'s-upcase)
            (om-to-trimmed-string))
       => "=I AM NOT A CROOK="
-      :end-hidden
-
-      (:buffer "~code~")
-      (:comment "Throw error if property doesn't exist")
-      (->> (om-parse-this-object)
-           (om-map-property :title #'s-upcase)
-           (om-to-trimmed-string))
-      !!> error
-      (:comment "Throw error if function doesn't return proper type")
-      (->> (om-parse-this-object)
-           (om-map-property* :value (if it 1 0))
-           (om-to-trimmed-string))
-      !!> error)
+      :end-hidden)
 
     (defexamples-content om-map-properties
       nil
@@ -1906,14 +1904,13 @@
                   :value (-partial #'s-prepend "OM_")))
            (om-to-trimmed-string))
       => "#+OM_KEY: OM_VAL"
-
-      ;; TODO spice this up...
-      ;; TODO this makes the document parser puke for some reason
+      ;; TODO this makes the document parser puke
+      ;; (:comment "Throw error if any of the properties are invalid")
       ;; (->> (om-parse-this-element)
       ;;      (om-map-properties*
-      ;;       (:key (s-prepend "OM_" it) :value (s-prepend "OM_" it)))
+      ;;       (:title (s-prepend "OM_" it) :value (s-prepend "OM_" it)))
       ;;      (om-to-trimmed-string))
-      ;; => "#+OM_KEY: OM_VAL"
+      ;; !!> error
       )
 
     (defexamples-content om-toggle-property
@@ -1926,6 +1923,8 @@
       => "\\pi{}"
 
       ;; TODO test src/example block preserve indent
+
+      :begin-hidden
       
       (:buffer "* headline")
       (->> (om-parse-this-headline)
@@ -1941,7 +1940,6 @@
            (om-to-trimmed-string))
       => "* Footnotes"
 
-      :begin-hidden
 
       (:buffer "sub_woofer")
       (->> (om-parse-object-at 5)
@@ -1980,15 +1978,20 @@
            (om-shift-property :priority -1)
            (om-to-trimmed-string))
       => "* [#B] priorities"
-      (->> (om-parse-this-headline)
-           (om-shift-property :priority -2)
-           (om-to-trimmed-string))
-      => "* [#C] priorities"
       (:comment "Wrap priority around when crossing the min or max")
       (->> (om-parse-this-headline)
            (om-shift-property :priority 1)
            (om-to-trimmed-string))
       => "* [#C] priorities"
+
+      :begin-hidden
+
+      (->> (om-parse-this-headline)
+           (om-shift-property :priority -2)
+           (om-to-trimmed-string))
+      => "* [#C] priorities"
+
+      :end-hidden
 
       (:buffer "* TODO or not todo")
       (:comment "Throw error when shifting an unshiftable property")
@@ -2073,13 +2076,13 @@
            (om-to-trimmed-string))
       !!> error
 
+      :begin-hidden
+
       (:buffer "* headline       :tag1:")
       (->> (om-parse-this-headline)
            (om-insert-into-property :tags 0 "tag0")
            (om-to-trimmed-string))
       => "* headline                                                        :tag0:tag1:"
-
-      :begin-hidden
 
       (:buffer "#+BEGIN_EXAMPLE -n"
                "#+END_EXAMPLE")
@@ -2088,7 +2091,6 @@
            (om-to-trimmed-string))
       => (:result "#+BEGIN_EXAMPLE -n -r"
                   "#+END_EXAMPLE")
-
 
       (:buffer "call_ktulu(y=1)")
       (->> (om-parse-this-object)
@@ -2141,13 +2143,13 @@
            (om-to-trimmed-string))
       !!> error
 
+      :begin-hidden
+
       (:buffer "* headline       :tag1:")
       (->> (om-parse-this-headline)
            (om-remove-from-property :tags "tag1")
            (om-to-trimmed-string))
       => "* headline"
-
-      :begin-hidden
 
       (:buffer "#+BEGIN_EXAMPLE -n"
                "#+END_EXAMPLE")
@@ -2356,19 +2358,23 @@
       (:buffer "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00")
       (->> (om-parse-this-element)
            (om-clock-is-running-p))
-      => nil))
+      => nil)
 
-  (defexamples-content om-clock-map-timestamp
-    nil
-    ;; TODO add more unit tests for this
-    (:buffer "CLOCK: [2019-01-01 Tue 00:00]")
-    (->> (om-parse-this-element)
-         (om-clock-map-timestamp*
-          (om-timestamp-shift 1 'day it))
-         (om-to-trimmed-string))
-    => "CLOCK: [2019-01-02 Wed 00:00]"
-    )
-  
+    (defexamples-content om-clock-map-timestamp
+      nil
+      ;; TODO add more unit tests for this
+      (:buffer "CLOCK: [2019-01-01 Tue 00:00]")
+      (->> (om-parse-this-element)
+           (om-clock-map-timestamp*
+             (om-timestamp-shift 1 'day it))
+           (om-to-trimmed-string))
+      => "CLOCK: [2019-01-02 Wed 00:00]"
+      (:comment "Throw error if new timestamp is not allowed")
+      (->> (om-parse-this-element)
+           (om-clock-map-timestamp*
+             (om-timestamp-toggle-active it))
+           (om-to-trimmed-string))
+      !!> error))
 
   (def-example-subgroup "Headline"
     nil
@@ -2481,22 +2487,18 @@
            (om-item-toggle-checkbox)
            (om-to-trimmed-string))
       => "- [X] one"
-      (->> (om-parse-this-item)
-           (om-item-toggle-checkbox)
-           (om-item-toggle-checkbox)
-           (om-to-trimmed-string))
-      => "- [ ] one"
       (:buffer "- [-] one")
+      (:comment "Ignore trans state checkboxes")
       (->> (om-parse-this-item)
            (om-item-toggle-checkbox)
            (om-to-trimmed-string))
       => "- [-] one"
       (:buffer "- one")
+      (:comment "Do nothing if there is no checkbox")
       (->> (om-parse-this-item)
            (om-item-toggle-checkbox)
            (om-to-trimmed-string))
-      => "- one")
-    )
+      => "- one"))
 
   (def-example-subgroup "Planning"
     nil
@@ -2733,6 +2735,11 @@
            (om-to-trimmed-string))
       => "[2019-01-01 Tue 12:30]"
       (->> (om-parse-this-object)
+           (om-timestamp-shift 13 'month)
+           (om-to-trimmed-string))
+      => "[2020-02-01 Sat 12:00]"
+      :begin-hidden
+      (->> (om-parse-this-object)
            (om-timestamp-shift 60 'minute)
            (om-to-trimmed-string))
       => "[2019-01-01 Tue 13:00]"
@@ -2753,10 +2760,6 @@
            (om-to-trimmed-string))
       => "[2019-02-01 Fri 12:00]"
       (->> (om-parse-this-object)
-           (om-timestamp-shift 13 'month)
-           (om-to-trimmed-string))
-      => "[2020-02-01 Sat 12:00]"
-      (->> (om-parse-this-object)
            (om-timestamp-shift 1 'year)
            (om-to-trimmed-string))
       => "[2020-01-01 Wed 12:00]"
@@ -2764,16 +2767,19 @@
            (om-timestamp-shift 0 'year)
            (om-to-trimmed-string))
       => "[2019-01-01 Tue 12:00]"
+      :end-hidden
       (:buffer "[2019-01-01 Tue]")
       (:comment "Error when shifting hour/minute in short format")
       (->> (om-parse-this-object)
            (om-timestamp-shift 30 'minute)
            (om-to-trimmed-string))
       !!> error
+      :begin-hidden
       (->> (om-parse-this-object)
            (om-timestamp-shift 30 'hour)
            (om-to-trimmed-string))
-      !!> error)
+      !!> error
+      :end-hidden)
 
     (defexamples-content om-timestamp-shift-start
       nil
@@ -2812,21 +2818,25 @@
            (om-timestamp-toggle-active)
            (om-to-trimmed-string))
       => "<2019-01-01 Tue>"
+      :begin-hidden
       (->> (om-parse-this-object)
            (om-timestamp-toggle-active)
            (om-timestamp-toggle-active)
            (om-to-trimmed-string))
       => "[2019-01-01 Tue]"
-      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      :end-hidden
+      (:buffer "<2019-01-01 Tue>--<2019-01-02 Wed>")
       (->> (om-parse-this-object)
+           (om-timestamp-toggle-active)
+           (om-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      :begin-hidden
+      (->> (om-parse-this-object)
+           (om-timestamp-toggle-active)
            (om-timestamp-toggle-active)
            (om-to-trimmed-string))
       => "<2019-01-01 Tue>--<2019-01-02 Wed>"
-      (->> (om-parse-this-object)
-           (om-timestamp-toggle-active)
-           (om-timestamp-toggle-active)
-           (om-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]")))
+      :end-hidden)))
 
 (def-example-group "Branch/Child Manipulation"
   "Set, get, and map the children of branch nodes."
@@ -2855,14 +2865,12 @@
            (-map #'om-get-type))
       => '(italic plain-text bold)
 
-      (:buffer "* headline"
-               "stuff"
-               "** subheadline")
-      (:comment "Return elements for greater elements")
+      (:buffer "* headline")
+      (:comment "Return nil if no children")
       (->> (om-parse-this-subtree)
            (om-get-children)
            (-map #'om-get-type))
-      => '(section headline)
+      => nil
 
       (:buffer "#+CALL: ktulu()")
       (:comment "Throw error when attempting to get contents of a non-container")
@@ -2872,6 +2880,17 @@
       !!> error
 
       :begin-hidden
+
+      (:buffer "* headline"
+               "stuff"
+               "** subheadline")
+      (:comment "Return elements for greater elements")
+      (->> (om-parse-this-subtree)
+           (om-get-children)
+           (-map #'om-get-type))
+      => '(section headline)
+
+
 
       (:buffer "| a | b |")
       (->> (om-parse-this-table-row)
@@ -2968,9 +2987,7 @@
            (om-to-trimmed-string))
       => "this is lame"
 
-      (:buffer "* headline"
-               "stuff"
-               "** subheadline")
+      (:buffer "* headline")
       (:comment "Set children for greater elements")
       (->> (om-parse-this-subtree)
            (om-set-children (list (om-build-headline! :title-text "only me" :level 2)))
@@ -2979,7 +2996,7 @@
                   "** only me")
 
       (:buffer "#+CALL: ktulu()")
-      (:comment "Throw error when attempting to get children of a non-container")
+      (:comment "Throw error when attempting to set children of a non-container")
       (->> (om-parse-this-element)
            (om-set-children "nil by mouth")
            (om-to-trimmed-string))
@@ -3057,6 +3074,7 @@
                   "- [ ] good data"
                   "- [X] bad data")
 
+      :begin-hidden
       (:buffer "* statistically significant [%]"
                "- irrelevant data"
                "- [ ] good data"
@@ -3068,11 +3086,13 @@
                   "- irrelevant data"
                   "- [ ] good data"
                   "- [X] bad data")
+      :end-hidden
 
       (:buffer "* statistically significant"
                "- irrelevant data"
                "- [ ] good data"
                "- [X] bad data")
+      (:comment "Do nothing if nothing to update")
       (->> (om-parse-this-headline)
            (om-headline-update-item-statistics)
            (om-to-trimmed-string))
@@ -3095,6 +3115,7 @@
                   "** TODO good data"
                   "** DONE bad data")
 
+      :begin-hidden
       (:buffer "* statistically significant [%]"
                "** irrelevant data"
                "** TODO good data"
@@ -3106,11 +3127,13 @@
                   "** irrelevant data"
                   "** TODO good data"
                   "** DONE bad data")
+      :end-hidden
 
       (:buffer "* statistically significant"
                "** irrelevant data"
                "** TODO good data"
                "** DONE bad data")
+      (:comment "Do nothing if nothing to update")
       (->> (om-parse-this-subtree)
            (om-headline-update-todo-statistics)
            (om-to-trimmed-string))
@@ -3831,6 +3854,60 @@
   (defexamples-content om-match
     nil
 
+    (:buffer "* headline 1"
+             "** TODO headline 2"
+             "stuff"
+             "- item 1"
+             "- item 2"
+             "- item 3"
+             "** DONE headline 3"
+             "- item 4"
+             "- item 5"
+             "- item 6"
+             "** TODO COMMENT headline 4"
+             "- item 7"
+             "- item 8"
+             "- item 9")
+    (:comment "Match items (excluding the first) in headlines that"
+              "are marked \"TODO\" and not commented."
+              "The :many keyword matches the section and plain-list"
+              "nodes holding the items.")
+    (->> (om-parse-this-subtree)
+         (om-match '((:and (:todo-keyword "TODO") (:commentedp nil))
+                     :many
+                     (:and item (> 0))))
+         (-map #'om-to-trimmed-string))
+    => '("- item 2" "- item 3")
+
+    (:buffer "*one* *two* *three* *four* *five* *six*")
+    (:comment "Return all bold nodes")
+    (->> (om-parse-this-element)
+         (om-match '(bold))
+         (-map #'om-to-trimmed-string))
+    => '("*one*" "*two*" "*three*" "*four*" "*five*" "*six*")
+    (:comment "Return first bold node")
+    (->> (om-parse-this-element)
+         (om-match '(:first bold))
+         (-map #'om-to-trimmed-string))
+    => '("*one*")
+    (:comment "Return last bold node")
+    (->> (om-parse-this-element)
+         (om-match '(:last bold))
+         (-map #'om-to-trimmed-string))
+    => '("*six*")
+    (:comment "Return a select bold node")
+    (->> (om-parse-this-element)
+         (om-match '(:nth 2 bold))
+         (-map #'om-to-trimmed-string))
+    => '("*three*")
+    (:comment "Return a sublist of matched bold nodes")
+    (->> (om-parse-this-element)
+         (om-match '(:sub 1 3 bold))
+         (-map #'om-to-trimmed-string))
+    => '("*two*" "*three*" "*four*")
+
+    :begin-hidden
+
     (:buffer "* headline one"
              "** TODO headline two"
              "** COMMENT headline three"
@@ -3845,9 +3922,6 @@
          "** COMMENT headline three"
          "** headline four")
 
-    (:comment "Use integers specify the index to return. Negative "
-              "integers count from the end. Out of range integers "
-              "return nil")
     (->> (om-parse-this-subtree)
          (om-match '(1))
          (--map (om-to-trimmed-string it)))
@@ -3861,9 +3935,6 @@
          (--map (om-to-trimmed-string it)))
     => nil
 
-    (:comment "Use a two-membered list with an operator and an "
-              "integer to match a range of indices. Allowed "
-              "operators are <, >, <=, and and >=.")
     (->> (om-parse-this-subtree)
          (om-match '((> 0)))
          (--map (om-to-trimmed-string it)))
@@ -3924,38 +3995,13 @@
          (--map (om-to-trimmed-string it)))
     => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
 
-    (:comment "Use the keyword :many! to match one or more levels, "
-              "except unlike :many do not match within any elements "
-              "that have already matched.")
-    ;; TODO add predicate???
     (->> (om-parse-this-subtree)
          (om-match '(headline :many! headline))
          (--map (om-to-trimmed-string it)))
     => '("*** headline three
 and here is even more *text4* and *text5*
 **** headline 4")
-
-    (:buffer "* headline one"
-             "** TODO headline two"
-             "** COMMENT headline three"
-             "** headline four")
-    (:comment "Find the first subheadline")
-    (->> (om-parse-this-subtree)
-         (om-match '(:first headline))
-         (car)
-         (om-to-trimmed-string))
-    => "** TODO headline two"
-    
-    (:buffer "* headline one"
-             "** TODO headline two"
-             "** COMMENT headline three"
-             "** headline four")
-    (:comment "Find the last subheadline")
-    (->> (om-parse-this-subtree)
-         (om-match '(:last headline))
-         (car)
-         (om-to-trimmed-string))
-    => "** headline four")
+    :end-hidden)
 
   (defexamples-content om-match-delete
     nil

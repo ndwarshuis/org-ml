@@ -2308,7 +2308,7 @@ each type.
 
 ```el
 ;; Given the following contents:
-; #+CALL: ktulu[:cache no](x=4) :exports results
+; #+CALL: ktulu(x=4) :exports results
 
 (->> (om-parse-this-element)
      (om-get-property :call))
@@ -2316,30 +2316,7 @@ each type.
 
 (->> (om-parse-this-element)
      (om-get-property :inside-header))
- ;; => '(:cache no)
-
-(->> (om-parse-this-element)
-     (om-get-property :arguments))
- ;; => '("x=4")
-
-(->> (om-parse-this-element)
-     (om-get-property :end-header))
- ;; => '(:exports results)
-
-;; Given the following contents:
-; [[file:/dev/null]]
-
-(->> (om-parse-this-object)
-     (om-get-property :path))
- ;; => "/dev/null"
-
-(->> (om-parse-this-object)
-     (om-get-property :type))
- ;; => "file"
-
-(->> (om-parse-this-object)
-     (om-get-property :format))
- ;; => 'bracket
+ ;; => nil
 
 ;; Given the following contents:
 ; * not arguable
@@ -2362,27 +2339,12 @@ each type.
 
 ```el
 ;; Given the following contents:
-; #+CALL: ktulu()
+; ~learn to~
 
-(->> (om-parse-this-element)
-     (om-map-property :call (function s-upcase))
+(->> (om-parse-this-object)
+     (om-map-property :value (function s-upcase))
      (om-to-trimmed-string))
- ;; => "#+CALL: KTULU()"
-
-;; Given the following contents:
-; #+BEGIN_EXAMPLE
-; example.com
-; #+END_EXAMPLE
-
-(->> (om-parse-this-element)
-     (om-map-property* :value (concat "https://" it))
-     (om-to-trimmed-string))
- ;; => "#+BEGIN_EXAMPLE
- ;      https://example.com
- ;      #+END_EXAMPLE"
-
-;; Given the following contents:
-; ~code~
+ ;; => "~LEARN TO~"
 
 ;; Throw error if property doesn't exist
 (->> (om-parse-this-object)
@@ -2458,24 +2420,6 @@ superscript
  ;; => "\\pi{}"
 
 ;; Given the following contents:
-; * headline
-
-(->> (om-parse-this-headline)
-     (om-toggle-property :archivedp)
-     (om-to-trimmed-string))
- ;; => "* headline                                                          :ARCHIVE:"
-
-(->> (om-parse-this-headline)
-     (om-toggle-property :commentedp)
-     (om-to-trimmed-string))
- ;; => "* COMMENT headline"
-
-(->> (om-parse-this-headline)
-     (om-toggle-property :footnote-section-p)
-     (om-to-trimmed-string))
- ;; => "* Footnotes"
-
-;; Given the following contents:
 ; - [ ] nope
 
 ;; Throw an error when trying to toggle a non-boolean property
@@ -2521,11 +2465,6 @@ item
      (om-shift-property :priority -1)
      (om-to-trimmed-string))
  ;; => "* [#B] priorities"
-
-(->> (om-parse-this-headline)
-     (om-shift-property :priority -2)
-     (om-to-trimmed-string))
- ;; => "* [#C] priorities"
 
 ;; Wrap priority around when crossing the min or max
 (->> (om-parse-this-headline)
@@ -2594,14 +2533,6 @@ table
      (om-to-trimmed-string))
 Error
 
-;; Given the following contents:
-; * headline       :tag1:
-
-(->> (om-parse-this-headline)
-     (om-insert-into-property :tags 0 "tag0")
-     (om-to-trimmed-string))
- ;; => "* headline                                                        :tag0:tag1:"
-
 ```
 
 #### om-remove-from-property `(prop string node)`
@@ -2633,14 +2564,6 @@ and properties that may be used with this function.
      (om-remove-from-property :end-header ":results")
      (om-to-trimmed-string))
 Error
-
-;; Given the following contents:
-; * headline       :tag1:
-
-(->> (om-parse-this-headline)
-     (om-remove-from-property :tags "tag1")
-     (om-to-trimmed-string))
- ;; => "* headline"
 
 ```
 
@@ -2770,6 +2693,12 @@ cannot contain any warnings or repeaters.
 						  it))
      (om-to-trimmed-string))
  ;; => "CLOCK: [2019-01-02 Wed 00:00]"
+
+;; Throw error if new timestamp is not allowed
+(->> (om-parse-this-element)
+     (om-clock-map-timestamp* (om-timestamp-toggle-active it))
+     (om-to-trimmed-string))
+Error
 
 ```
 
@@ -2952,15 +2881,10 @@ Toggle the checked/unchecked state of **`item`** element.
      (om-to-trimmed-string))
  ;; => "- [X] one"
 
-(->> (om-parse-this-item)
-     (om-item-toggle-checkbox)
-     (om-item-toggle-checkbox)
-     (om-to-trimmed-string))
- ;; => "- [ ] one"
-
 ;; Given the following contents:
 ; - [-] one
 
+;; Ignore trans state checkboxes
 (->> (om-parse-this-item)
      (om-item-toggle-checkbox)
      (om-to-trimmed-string))
@@ -2969,6 +2893,7 @@ Toggle the checked/unchecked state of **`item`** element.
 ;; Given the following contents:
 ; - one
 
+;; Do nothing if there is no checkbox
 (->> (om-parse-this-item)
      (om-item-toggle-checkbox)
      (om-to-trimmed-string))
@@ -3391,44 +3316,9 @@ will increase the hour property by 1 and the minute property by 30.
  ;; => "[2019-01-01 Tue 12:30]"
 
 (->> (om-parse-this-object)
-     (om-timestamp-shift 60 'minute)
-     (om-to-trimmed-string))
- ;; => "[2019-01-01 Tue 13:00]"
-
-(->> (om-parse-this-object)
-     (om-timestamp-shift 1 'hour)
-     (om-to-trimmed-string))
- ;; => "[2019-01-01 Tue 13:00]"
-
-(->> (om-parse-this-object)
-     (om-timestamp-shift 1 'day)
-     (om-to-trimmed-string))
- ;; => "[2019-01-02 Wed 12:00]"
-
-(->> (om-parse-this-object)
-     (om-timestamp-shift 31 'day)
-     (om-to-trimmed-string))
- ;; => "[2019-02-01 Fri 12:00]"
-
-(->> (om-parse-this-object)
-     (om-timestamp-shift 1 'month)
-     (om-to-trimmed-string))
- ;; => "[2019-02-01 Fri 12:00]"
-
-(->> (om-parse-this-object)
      (om-timestamp-shift 13 'month)
      (om-to-trimmed-string))
  ;; => "[2020-02-01 Sat 12:00]"
-
-(->> (om-parse-this-object)
-     (om-timestamp-shift 1 'year)
-     (om-to-trimmed-string))
- ;; => "[2020-01-01 Wed 12:00]"
-
-(->> (om-parse-this-object)
-     (om-timestamp-shift 0 'year)
-     (om-to-trimmed-string))
- ;; => "[2019-01-01 Tue 12:00]"
 
 ;; Given the following contents:
 ; [2019-01-01 Tue]
@@ -3436,11 +3326,6 @@ will increase the hour property by 1 and the minute property by 30.
 ;; Error when shifting hour/minute in short format
 (->> (om-parse-this-object)
      (om-timestamp-shift 30 'minute)
-     (om-to-trimmed-string))
-Error
-
-(->> (om-parse-this-object)
-     (om-timestamp-shift 30 'hour)
      (om-to-trimmed-string))
 Error
 
@@ -3521,22 +3406,10 @@ Toggle the active/inactive type of **`timestamp`** element.
      (om-to-trimmed-string))
  ;; => "<2019-01-01 Tue>"
 
-(->> (om-parse-this-object)
-     (om-timestamp-toggle-active)
-     (om-timestamp-toggle-active)
-     (om-to-trimmed-string))
- ;; => "[2019-01-01 Tue]"
-
 ;; Given the following contents:
-; [2019-01-01 Tue]--[2019-01-02 Wed]
+; <2019-01-01 Tue>--<2019-01-02 Wed>
 
 (->> (om-parse-this-object)
-     (om-timestamp-toggle-active)
-     (om-to-trimmed-string))
- ;; => "<2019-01-01 Tue>--<2019-01-02 Wed>"
-
-(->> (om-parse-this-object)
-     (om-timestamp-toggle-active)
      (om-timestamp-toggle-active)
      (om-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
@@ -3587,14 +3460,12 @@ Return the children of **`node`** as a list.
 
 ;; Given the following contents:
 ; * headline
-; stuff
-; ** subheadline
 
-;; Return elements for greater elements
+;; Return nil if no children
 (->> (om-parse-this-subtree)
      (om-get-children)
      (-map (function om-get-type)))
- ;; => '(section headline)
+ ;; => nil
 
 ;; Given the following contents:
 ; #+CALL: ktulu()
@@ -3625,8 +3496,6 @@ on the type of **`node`**.
 
 ;; Given the following contents:
 ; * headline
-; stuff
-; ** subheadline
 
 ;; Set children for greater elements
 (->> (om-parse-this-subtree)
@@ -3638,7 +3507,7 @@ on the type of **`node`**.
 ;; Given the following contents:
 ; #+CALL: ktulu()
 
-;; Throw error when attempting to get children of a non-container
+;; Throw error when attempting to set children of a non-container
 (->> (om-parse-this-element)
      (om-set-children "nil by mouth")
      (om-to-trimmed-string))
@@ -3741,25 +3610,12 @@ not be considered).
  ;      - [X] bad data"
 
 ;; Given the following contents:
-; * statistically significant [%]
-; - irrelevant data
-; - [ ] good data
-; - [X] bad data
-
-(->> (om-parse-this-headline)
-     (om-headline-update-item-statistics)
-     (om-to-trimmed-string))
- ;; => "* statistically significant [50%]
- ;      - irrelevant data
- ;      - [ ] good data
- ;      - [X] bad data"
-
-;; Given the following contents:
 ; * statistically significant
 ; - irrelevant data
 ; - [ ] good data
 ; - [X] bad data
 
+;; Do nothing if nothing to update
 (->> (om-parse-this-headline)
      (om-headline-update-item-statistics)
      (om-to-trimmed-string))
@@ -3793,25 +3649,12 @@ subheadlines will not be counted).
  ;      ** DONE bad data"
 
 ;; Given the following contents:
-; * statistically significant [%]
-; ** irrelevant data
-; ** TODO good data
-; ** DONE bad data
-
-(->> (om-parse-this-subtree)
-     (om-headline-update-todo-statistics)
-     (om-to-trimmed-string))
- ;; => "* statistically significant [50%]
- ;      ** irrelevant data
- ;      ** TODO good data
- ;      ** DONE bad data"
-
-;; Given the following contents:
 ; * statistically significant
 ; ** irrelevant data
 ; ** TODO good data
 ; ** DONE bad data
 
+;; Do nothing if nothing to update
 (->> (om-parse-this-subtree)
      (om-headline-update-todo-statistics)
      (om-to-trimmed-string))
@@ -4625,134 +4468,63 @@ nested within each other.
 
 ```el
 ;; Given the following contents:
-; * headline one
-; ** TODO headline two
-; ** COMMENT headline three
-; ** headline four
+; * headline 1
+; ** TODO headline 2
+; stuff
+; - item 1
+; - item 2
+; - item 3
+; ** DONE headline 3
+; - item 4
+; - item 5
+; - item 6
+; ** TODO COMMENT headline 4
+; - item 7
+; - item 8
+; - item 9
 
-;; Use a symbol to match a type, in this case all headlines.
+;; Match items (excluding the first) in headlines that are marked "TODO" and not
+;; commented. The :many keyword matches the section and plain-list nodes holding
+;; the items.
 (->> (om-parse-this-subtree)
-     (om-match '(headline))
-     (--map (om-to-trimmed-string it)))
- ;; => '("** TODO headline two" "** COMMENT headline three" "** headline four")
-
-;; Use integers specify the index to return. Negative integers count from the
-;; end. Out of range integers return nil
-(->> (om-parse-this-subtree)
-     (om-match '(1))
-     (--map (om-to-trimmed-string it)))
- ;; => '("** COMMENT headline three")
-
-(->> (om-parse-this-subtree)
-     (om-match '(-1))
-     (--map (om-to-trimmed-string it)))
- ;; => '("** headline four")
-
-(->> (om-parse-this-subtree)
-     (om-match '(3))
-     (--map (om-to-trimmed-string it)))
- ;; => nil
-
-;; Use a two-membered list with an operator and an integer to match a range of
-;; indices. Allowed operators are <, >, <=, and and >=.
-(->> (om-parse-this-subtree)
-     (om-match '((> 0)))
-     (--map (om-to-trimmed-string it)))
- ;; => '("** COMMENT headline three" "** headline four")
-
-(->> (om-parse-this-subtree)
-     (om-match '((>= 1)))
-     (--map (om-to-trimmed-string it)))
- ;; => '("** COMMENT headline three" "** headline four")
-
-;; Use a plist to match based on an elements properties.
-(->> (om-parse-this-subtree)
-     (om-match '((:todo-keyword "TODO")))
-     (--map (om-to-trimmed-string it)))
- ;; => '("** TODO headline two")
-
-(->> (om-parse-this-subtree)
-     (om-match '((:todo-keyword nil)))
-     (--map (om-to-trimmed-string it)))
- ;; => '("** COMMENT headline three" "** headline four")
-
-(->> (om-parse-this-subtree)
-     (om-match '((:todo-keyword "DONE")))
-     (--map (om-to-trimmed-string it)))
- ;; => nil
+     (om-match '((:and (:todo-keyword "TODO")
+			     (:commentedp nil))
+		       :many (:and item (> 0))))
+     (-map (function om-to-trimmed-string)))
+ ;; => '("- item 2" "- item 3")
 
 ;; Given the following contents:
-; * headline one
-; this is *text1* of *text2*
-; ** headline two
-; here is more *text3*
-; *** headline three
-; and here is even more *text4* and *text5*
-; **** headline 4
+; *one* *two* *three* *four* *five* *six*
 
-;; Specify multiple levels of matching using multiple queries.
-(->> (om-parse-this-subtree)
-     (om-match '(section paragraph bold))
-     (--map (om-to-trimmed-string it)))
- ;; => '("*text1*" "*text2*")
+;; Return all bold node
+(->> (om-parse-this-element)
+     (om-match '(bold))
+     (-map (function om-to-trimmed-string)))
+ ;; => '("*one*" "*two*" "*three*" "*four*" "*five*" "*six*")
 
-;; Use the keyword :any as a wildcard to match any element at a particular
-;; level.
-(->> (om-parse-this-subtree)
-     (om-match '(:any :any bold))
-     (--map (om-to-trimmed-string it)))
- ;; => '("*text1*" "*text2*")
+;; Return first bold node
+(->> (om-parse-this-element)
+     (om-match '(:first bold))
+     (-map (function om-to-trimmed-string)))
+ ;; => '("*one*")
 
-(->> (om-parse-this-subtree)
-     (om-match '(section paragraph :any))
-     (--map (om-to-trimmed-string it)))
- ;; => '("this is" "*text1*" "of" "*text2*" "")
+;; Return last bold node
+(->> (om-parse-this-element)
+     (om-match '(:last bold))
+     (-map (function om-to-trimmed-string)))
+ ;; => '("*six*")
 
-(->> (om-parse-this-subtree)
-     (om-match '(:any bold))
-     (--map (om-to-trimmed-string it)))
- ;; => nil
+;; Return a select bold node
+(->> (om-parse-this-element)
+     (om-match '(:nth 2 bold))
+     (-map (function om-to-trimmed-string)))
+ ;; => '("*three*")
 
-;; Use the keyword :many to match one or more levels of any element.
-(->> (om-parse-this-subtree)
-     (om-match '(:many bold))
-     (--map (om-to-trimmed-string it)))
- ;; => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
-
-;; Use the keyword :many! to match one or more levels, except unlike :many do
-;; not match within any elements that have already matched.
-(->> (om-parse-this-subtree)
-     (om-match '(headline :many! headline))
-     (--map (om-to-trimmed-string it)))
- ;; => '("*** headline three
- ;     and here is even more *text4* and *text5*
- ;     **** headline 4")
-
-;; Given the following contents:
-; * headline one
-; ** TODO headline two
-; ** COMMENT headline three
-; ** headline four
-
-;; Find the first subheadline
-(->> (om-parse-this-subtree)
-     (om-match '(:first headline))
-     (car)
-     (om-to-trimmed-string))
- ;; => "** TODO headline two"
-
-;; Given the following contents:
-; * headline one
-; ** TODO headline two
-; ** COMMENT headline three
-; ** headline four
-
-;; Find the last subheadline
-(->> (om-parse-this-subtree)
-     (om-match '(:last headline))
-     (car)
-     (om-to-trimmed-string))
- ;; => "** headline four"
+;; Return a sublist of matched bold nodes
+(->> (om-parse-this-element)
+     (om-match '(:sub 1 3 bold))
+     (-map (function om-to-trimmed-string)))
+ ;; => '("*two*" "*three*" "*four*")
 
 ```
 
