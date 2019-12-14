@@ -37,8 +37,14 @@
     (->> (om-parse-object-at 1)
          (om-get-type))
     => 'code
-    ;; TODO add entity
-    ;; TODO add export snippet
+    (:buffer "\\pi")
+    (->> (om-parse-object-at 1)
+         (om-get-type))
+    => 'entity
+    (:buffer "@@export:snippet@@")
+    (->> (om-parse-object-at 1)
+         (om-get-type))
+    => 'export-snippet
     (:buffer "[fn:1:text]")
     (->> (om-parse-object-at 1)
          (om-get-type))

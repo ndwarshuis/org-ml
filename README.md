@@ -4496,7 +4496,7 @@ nested within each other.
 ;; Given the following contents:
 ; *one* *two* *three* *four* *five* *six*
 
-;; Return all bold node
+;; Return all bold nodes
 (->> (om-parse-this-element)
      (om-match '(bold))
      (-map (function om-to-trimmed-string)))
