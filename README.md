@@ -231,7 +231,6 @@ Build new nodes.
 * [om-build-node-property](#om-build-node-property-key-value-key-post-blank) `(key value &key post-blank)`
 * [om-build-planning](#om-build-planning-key-closed-deadline-scheduled-post-blank) `(&key closed deadline scheduled post-blank)`
 * [om-build-src-block](#om-build-src-block-key-value--language-parameters-preserve-indent-switches-post-blank) `(&key (value "") language parameters preserve-indent switches post-blank)`
-* [om-build-table-row-hline](#om-build-table-row-hline-key-post-blank) `(&key post-blank)`
 
 ### Branch Elements with Child Objects
 
@@ -254,8 +253,8 @@ Build new nodes.
 
 ### Miscellaneous Builders
 
-* [om-build-timestamp-diary-sexp](#om-build-timestamp-diary-sexp-form-key-post-blank) `(form &key post-blank)`
 * [om-build-table-row-hline](#om-build-table-row-hline-key-post-blank) `(&key post-blank)`
+* [om-build-timestamp-diary-sexp](#om-build-timestamp-diary-sexp-form-key-post-blank) `(form &key post-blank)`
 
 ### Shorthand Builders
 
@@ -454,7 +453,7 @@ Parse buffers to trees.
 
 #### om-parse-object-at `(point)`
 
-Return the object tree under `point` or nil if not on an object.
+Return the object tree under **`point`** or nil if not on an object.
 
 If `type` is supplied, only return nil if the object under point is
 not of that type. `type` is a symbol from `om-objects`.
@@ -486,12 +485,12 @@ not of that type. `type` is a symbol from `om-objects`.
 
 #### om-parse-element-at `(point)`
 
-Return element under `point` or nil if not on an element.
+Return element under **`point`** or nil if not on an element.
 
 This function will return every element available in `om-elements`
-with the exception of 'section', 'item', and 'table-row'. To
-specifically parse these, use the functions `om-parse-section-at',
-`om-parse-item-at`, and [`om-parse-table-row-at`](#om-parse-table-row-at-point).
+with the exception of `section`, `item`, and `table-row`. To
+specifically parse these, use the functions [`om-parse-section-at`](#om-parse-section-at-point),
+[`om-parse-item-at`](#om-parse-item-at-point), and [`om-parse-table-row-at`](#om-parse-table-row-at-point).
 
 ```el
 ;; Given the following contents:
@@ -522,10 +521,10 @@ specifically parse these, use the functions `om-parse-section-at',
 
 #### om-parse-headline-at `(point)`
 
-Return headline tree under `point` or nil if not on a headline.
-`point` does not need to be on the headline itself. Only the headline
+Return headline tree under **`point`** or nil if not on a headline.
+**`point`** does not need to be on the headline itself. Only the headline
 and its section will be returned. To include subheadlines, use
-`om-parse-headline-subtree-at`.
+[`om-parse-subtree-at`](#om-parse-subtree-at-point).
 
 ```el
 ;; Given the following contents:
@@ -575,8 +574,8 @@ and its section will be returned. To include subheadlines, use
 
 #### om-parse-subtree-at `(point)`
 
-Return headline tree under `point` or nil if not on a headline.
-`point` does not need to be on the headline itself. Unlike
+Return headline tree under **`point`** or nil if not on a headline.
+**`point`** does not need to be on the headline itself. Unlike
 [`om-parse-headline-at`](#om-parse-headline-at-point), the returned tree will include
 subheadlines.
 
@@ -629,8 +628,8 @@ subheadlines.
 
 #### om-parse-item-at `(point)`
 
-Return item element under `point` or nil if not on an item.
-This will return the item even if `point` is not at the beginning of
+Return item element under **`point`** or nil if not on an item.
+This will return the item even if **`point`** is not at the beginning of
 the line.
 
 ```el
@@ -669,7 +668,7 @@ the line.
 
 #### om-parse-table-row-at `(point)`
 
-Return table-row element under `point` or nil if not on a table-row.
+Return table-row element under **`point`** or nil if not on a table-row.
 
 ```el
 ;; Given the following contents:
@@ -697,9 +696,9 @@ Return table-row element under `point` or nil if not on a table-row.
 
 #### om-parse-section-at `(point)`
 
-Return tree of the section under `point` or nil if not on a section.
-If `point` is on or within a headline, return the section under that
-headline. If `point` is before the first headline (if any), return
+Return tree of the section under **`point`** or nil if not on a section.
+If **`point`** is on or within a headline, return the section under that
+headline. If **`point`** is before the first headline (if any), return
 the section at the top of the org buffer.
 
 ```el
@@ -745,7 +744,7 @@ Convert nodes to strings.
 
 #### om-to-string `(node)`
 
-Return `node` as an interpreted string without text properties.
+Return **`node`** as an interpreted string without text properties.
 
 ```el
 (om-to-string '(bold (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
@@ -763,7 +762,7 @@ Return `node` as an interpreted string without text properties.
 
 #### om-to-trimmed-string `(node)`
 
-Like [`om-to-string`](#om-to-string-node) but strip whitespace when returning `node`.
+Like [`om-to-string`](#om-to-string-node) but strip whitespace when returning **`node`**.
 
 ```el
 (om-to-trimmed-string '(bold (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
@@ -793,8 +792,8 @@ Build new nodes.
 Build a code object.
 
 The following properties are settable:
-- `value`: a oneline string
-- `post-blank`: a non-negative integer
+- **`value`**: a oneline string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-code "text")
@@ -808,9 +807,9 @@ The following properties are settable:
 Build a entity object.
 
 The following properties are settable:
-- `name`: a string that makes `org-entity-get` return non-nil
-- `use-brackets-p`: nil or t
-- `post-blank`: a non-negative integer
+- **`name`**: a string that makes `org-entity-get` return non-nil
+- **`use-brackets-p`**: nil or t
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-entity "gamma")
@@ -824,11 +823,11 @@ The following properties are settable:
 Build a inline-babel-call object.
 
 The following properties are settable:
-- `call`: a oneline string
-- `inside-header`: a plist
-- `arguments`: a list of oneline strings
-- `end-header`: a plist
-- `post-blank`: a non-negative integer
+- **`call`**: a oneline string
+- **`inside-header`**: a plist
+- **`arguments`**: a list of oneline strings
+- **`end-header`**: a plist
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-inline-babel-call "name")
@@ -854,10 +853,10 @@ The following properties are settable:
 Build a inline-src-block object.
 
 The following properties are settable:
-- `language`: a oneline string
-- `parameters`: a plist
-- `value`: a oneline string
-- `post-blank`: a non-negative integer
+- **`language`**: a oneline string
+- **`parameters`**: a plist
+- **`value`**: a oneline string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-inline-src-block "lang")
@@ -880,7 +879,7 @@ Build a line-break object.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-line-break)
@@ -894,8 +893,8 @@ The following properties are settable:
 Build a statistics-cookie object.
 
 The following properties are settable:
-- `value`: a list of non-neg integers like (`perc`) or (`num` `den`) which make [`num`/`den`] and [`perc` %] respectively
-- `post-blank`: a non-negative integer
+- **`value`**: a list of non-neg integers like `(perc)` or `(num den)` which make [`num`/`den`] and [`perc`%] respectively
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-statistics-cookie '(nil))
@@ -921,8 +920,8 @@ The following properties are settable:
 Build a target object.
 
 The following properties are settable:
-- `value`: a oneline string
-- `post-blank`: a non-negative integer
+- **`value`**: a oneline string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-target "text")
@@ -936,24 +935,24 @@ The following properties are settable:
 Build a timestamp object.
 
 The following properties are settable:
-- `type`: a symbol from 'inactive', 'active', 'inactive-ranged', or 'active-ranged'
-- `year-start`: a positive integer
-- `month-start`: a positive integer
-- `day-start`: a positive integer
-- `year-end`: a positive integer
-- `month-end`: a positive integer
-- `day-end`: a positive integer
-- `hour-start`: a non-negative integer or nil
-- `minute-start`: a non-negative integer or nil
-- `hour-end`: a non-negative integer or nil
-- `minute-end`: a non-negative integer or nil
-- `repeater-type`: nil or a symbol from 'catch-up', 'restart', or 'cumulate'
-- `repeater-unit`: nil or a symbol from 'year' 'month' 'week' 'day', or 'hour'
-- `repeater-value`: a positive integer or nil
-- `warning-type`: nil or a symbol from 'all' or 'first'
-- `warning-unit`: nil or a symbol from 'year' 'month' 'week' 'day', or 'hour'
-- `warning-value`: a positive integer or nil
-- `post-blank`: a non-negative integer
+- **`type`**: a symbol from `inactive`, `active`, `inactive-ranged`, or `active-ranged`
+- **`year-start`**: a positive integer
+- **`month-start`**: a positive integer
+- **`day-start`**: a positive integer
+- **`year-end`**: a positive integer
+- **`month-end`**: a positive integer
+- **`day-end`**: a positive integer
+- **`hour-start`**: a non-negative integer or nil
+- **`minute-start`**: a non-negative integer or nil
+- **`hour-end`**: a non-negative integer or nil
+- **`minute-end`**: a non-negative integer or nil
+- **`repeater-type`**: nil or a symbol from `catch-up`, `restart`, or `cumulate`
+- **`repeater-unit`**: nil or a symbol from `year` `month` `week` `day`, or `hour`
+- **`repeater-value`**: a positive integer or nil
+- **`warning-type`**: nil or a symbol from `all` or `first`
+- **`warning-unit`**: nil or a symbol from `year` `month` `week` `day`, or `hour`
+- **`warning-value`**: a positive integer or nil
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-timestamp 'inactive
@@ -980,8 +979,8 @@ The following properties are settable:
 Build a verbatim object.
 
 The following properties are settable:
-- `value`: a oneline string
-- `post-blank`: a non-negative integer
+- **`value`**: a oneline string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-verbatim "text")
@@ -995,11 +994,11 @@ The following properties are settable:
 
 #### om-build-bold `(&key post-blank &rest objs)`
 
-Build a bold object with `objs` as children.
+Build a bold object with **`objs`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-bold "text")
@@ -1010,11 +1009,11 @@ The following properties are settable:
 
 #### om-build-footnote-reference `(&key label post-blank &rest objs)`
 
-Build a footnote-reference object with `objs` as children.
+Build a footnote-reference object with **`objs`** as children.
 
 The following properties are settable:
-- `label`: a oneline string or nil
-- `post-blank`: a non-negative integer
+- **`label`**: a oneline string or nil
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-footnote-reference)
@@ -1033,11 +1032,11 @@ The following properties are settable:
 
 #### om-build-italic `(&key post-blank &rest objs)`
 
-Build a italic object with `objs` as children.
+Build a italic object with **`objs`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-italic "text")
@@ -1048,13 +1047,13 @@ The following properties are settable:
 
 #### om-build-link `(path &key format (type "fuzzy") post-blank &rest objs)`
 
-Build a link object with `objs` as children.
+Build a link object with **`objs`** as children.
 
 The following properties are settable:
-- `path`: a oneline string
-- `format`: the symbol 'plain', 'bracket' or 'angle'
-- `type`: a oneline string from `org-link-types` or "coderef", "custom-id", "file", "id", "radio", or "fuzzy"
-- `post-blank`: a non-negative integer
+- **`path`**: a oneline string
+- **`format`**: the symbol `plain`, `bracket` or `angle`
+- **`type`**: a oneline string from `org-link-types` or `"coderef"`, `"custom-id"`, `"file"`, `"id"`, `"radio"`, or `"fuzzy"`
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-link "target")
@@ -1073,11 +1072,11 @@ The following properties are settable:
 
 #### om-build-radio-target `(&key post-blank &rest objs)`
 
-Build a radio-target object with `objs` as children.
+Build a radio-target object with **`objs`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-radio-target "text")
@@ -1088,11 +1087,11 @@ The following properties are settable:
 
 #### om-build-strike-through `(&key post-blank &rest objs)`
 
-Build a strike-through object with `objs` as children.
+Build a strike-through object with **`objs`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-strike-through "text")
@@ -1103,11 +1102,11 @@ The following properties are settable:
 
 #### om-build-superscript `(&key use-brackets-p post-blank &rest objs)`
 
-Build a superscript object with `objs` as children.
+Build a superscript object with **`objs`** as children.
 
 The following properties are settable:
-- `use-brackets-p`: nil or t
-- `post-blank`: a non-negative integer
+- **`use-brackets-p`**: nil or t
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-superscript "text")
@@ -1118,11 +1117,11 @@ The following properties are settable:
 
 #### om-build-subscript `(&key use-brackets-p post-blank &rest objs)`
 
-Build a subscript object with `objs` as children.
+Build a subscript object with **`objs`** as children.
 
 The following properties are settable:
-- `use-brackets-p`: nil or t
-- `post-blank`: a non-negative integer
+- **`use-brackets-p`**: nil or t
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-subscript "text")
@@ -1133,11 +1132,11 @@ The following properties are settable:
 
 #### om-build-table-cell `(&key post-blank &rest objs)`
 
-Build a table-cell object with `objs` as children.
+Build a table-cell object with **`objs`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-table-cell "text")
@@ -1149,11 +1148,11 @@ The following properties are settable:
 
 #### om-build-underline `(&key post-blank &rest objs)`
 
-Build a underline object with `objs` as children.
+Build a underline object with **`objs`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-underline "text")
@@ -1170,11 +1169,11 @@ The following properties are settable:
 Build a babel-call element.
 
 The following properties are settable:
-- `call`: a oneline string
-- `inside-header`: a plist
-- `arguments`: a list of oneline strings
-- `end-header`: a plist
-- `post-blank`: a non-negative integer
+- **`call`**: a oneline string
+- **`inside-header`**: a plist
+- **`arguments`**: a list of oneline strings
+- **`end-header`**: a plist
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-babel-call "name")
@@ -1200,8 +1199,8 @@ The following properties are settable:
 Build a clock element.
 
 The following properties are settable:
-- `value`: an unranged, inactive timestamp with no warning or repeater
-- `post-blank`: a non-negative integer
+- **`value`**: an unranged, inactive timestamp with no warning or repeater
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-clock (om-build-timestamp! 'inactive
@@ -1222,8 +1221,8 @@ The following properties are settable:
 Build a comment element.
 
 The following properties are settable:
-- `value`: a oneline string
-- `post-blank`: a non-negative integer
+- **`value`**: a oneline string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-comment "text")
@@ -1237,8 +1236,8 @@ The following properties are settable:
 Build a comment-block element.
 
 The following properties are settable:
-- `value`: a oneline string
-- `post-blank`: a non-negative integer
+- **`value`**: a oneline string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-comment-block)
@@ -1259,8 +1258,8 @@ The following properties are settable:
 Build a diary-sexp element.
 
 The following properties are settable:
-- `value`: a list form or nil
-- `post-blank`: a non-negative integer
+- **`value`**: a list form or nil
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-diary-sexp)
@@ -1278,10 +1277,10 @@ The following properties are settable:
 Build a example-block element.
 
 The following properties are settable:
-- `preserve-indent`: nil or t
-- `switches`: a list of oneline strings
-- `value`: a string
-- `post-blank`: a non-negative integer
+- **`preserve-indent`**: nil or t
+- **`switches`**: a list of oneline strings
+- **`value`**: a string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-example-block)
@@ -1308,9 +1307,9 @@ The following properties are settable:
 Build a export-block element.
 
 The following properties are settable:
-- `type`: a oneline string
-- `value`: a string
-- `post-blank`: a non-negative integer
+- **`type`**: a oneline string
+- **`value`**: a string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-export-block "type" "value
@@ -1327,8 +1326,8 @@ The following properties are settable:
 Build a fixed-width element.
 
 The following properties are settable:
-- `value`: a oneline string
-- `post-blank`: a non-negative integer
+- **`value`**: a oneline string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-fixed-width "text")
@@ -1343,7 +1342,7 @@ Build a horizontal-rule element.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-horizontal-rule)
@@ -1357,9 +1356,9 @@ The following properties are settable:
 Build a keyword element.
 
 The following properties are settable:
-- `key`: a oneline string
-- `value`: a oneline string
-- `post-blank`: a non-negative integer
+- **`key`**: a oneline string
+- **`value`**: a oneline string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-keyword "FILETAGS" "tmsu")
@@ -1373,8 +1372,8 @@ The following properties are settable:
 Build a latex-environment element.
 
 The following properties are settable:
-- `value`: a list of strings like (`env` `body`) or (`env`)
-- `post-blank`: a non-negative integer
+- **`value`**: a list of strings like `(env body)` or `(env)`
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-latex-environment '("env" "text"))
@@ -1390,9 +1389,9 @@ The following properties are settable:
 Build a node-property element.
 
 The following properties are settable:
-- `key`: a oneline string
-- `value`: a oneline string
-- `post-blank`: a non-negative integer
+- **`key`**: a oneline string
+- **`value`**: a oneline string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-node-property "key" "val")
@@ -1406,10 +1405,10 @@ The following properties are settable:
 Build a planning element.
 
 The following properties are settable:
-- `closed`: a zero-range, inactive timestamp object
-- `deadline`: a zero-range, inactive timestamp object
-- `scheduled`: a zero-range, inactive timestamp object
-- `post-blank`: a non-negative integer
+- **`closed`**: a zero-range, inactive timestamp object
+- **`deadline`**: a zero-range, inactive timestamp object
+- **`scheduled`**: a zero-range, inactive timestamp object
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-planning :closed (om-build-timestamp! 'inactive
@@ -1434,12 +1433,12 @@ The following properties are settable:
 Build a src-block element.
 
 The following properties are settable:
-- `value`: a string
-- `language`: a string or nil
-- `parameters`: a plist
-- `preserve-indent`: nil or t
-- `switches`: a list of oneline strings
-- `post-blank`: a non-negative integer
+- **`value`**: a string
+- **`language`**: a string or nil
+- **`parameters`**: a plist
+- **`preserve-indent`**: nil or t
+- **`switches`**: a list of oneline strings
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-src-block)
@@ -1473,30 +1472,16 @@ The following properties are settable:
 
 ```
 
-#### om-build-table-row-hline `(&key post-blank)`
-
-Build a table-row element with the 'rule' type.
-Optionally set `post-blank` (a positive integer).
-
-```el
-(->> (om-build-table (om-build-table-row (om-build-table-cell "text"))
-		     (om-build-table-row-hline))
-     (om-to-trimmed-string))
- ;; => "| text |
- ;      |------|"
-
-```
-
 
 ### Branch Elements with Child Objects
 
 #### om-build-paragraph `(&key post-blank &rest objs)`
 
-Build a paragraph element with `objs` as children.
+Build a paragraph element with **`objs`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-paragraph "text")
@@ -1507,11 +1492,11 @@ The following properties are settable:
 
 #### om-build-table-row `(&key post-blank &rest objs)`
 
-Build a table-row element with `objs` as children.
+Build a table-row element with **`objs`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-table-cell "a")
@@ -1523,11 +1508,11 @@ The following properties are settable:
 
 #### om-build-verse-block `(&key post-blank &rest objs)`
 
-Build a verse-block element with `objs` as children.
+Build a verse-block element with **`objs`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-verse-block "text
@@ -1544,11 +1529,11 @@ The following properties are settable:
 
 #### om-build-center-block `(&key post-blank &rest nodes)`
 
-Build a center-block element with `nodes` as children.
+Build a center-block element with **`nodes`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-paragraph "text")
@@ -1562,11 +1547,11 @@ The following properties are settable:
 
 #### om-build-drawer `(drawer-name &key post-blank &rest nodes)`
 
-Build a drawer element with `nodes` as children.
+Build a drawer element with **`nodes`** as children.
 
 The following properties are settable:
-- `drawer-name`: a oneline string
-- `post-blank`: a non-negative integer
+- **`drawer-name`**: a oneline string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-paragraph "text")
@@ -1580,11 +1565,11 @@ The following properties are settable:
 
 #### om-build-footnote-definition `(label &key post-blank &rest nodes)`
 
-Build a footnote-definition element with `nodes` as children.
+Build a footnote-definition element with **`nodes`** as children.
 
 The following properties are settable:
-- `label`: a oneline string
-- `post-blank`: a non-negative integer
+- **`label`**: a oneline string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-paragraph "footnote contents")
@@ -1596,19 +1581,19 @@ The following properties are settable:
 
 #### om-build-headline `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest nodes)`
 
-Build a headline element with `nodes` as children.
+Build a headline element with **`nodes`** as children.
 
 The following properties are settable:
-- `archivedp`: nil or t
-- `commentedp`: nil or t
-- `footnote-section-p`: nil or t
-- `level`: a positive integer
-- `pre-blank`: a non-negative integer
-- `priority`: an integer between (inclusive) `org-highest-priority` and `org-lowest-priority`
-- `tags`: a string list
-- `title`: a secondary string
-- `todo-keyword`: a oneline string or nil
-- `post-blank`: a non-negative integer
+- **`archivedp`**: nil or t
+- **`commentedp`**: nil or t
+- **`footnote-section-p`**: nil or t
+- **`level`**: a positive integer
+- **`pre-blank`**: a non-negative integer
+- **`priority`**: an integer between (inclusive) `org-highest-priority` and `org-lowest-priority`
+- **`tags`**: a string list
+- **`title`**: a secondary string
+- **`todo-keyword`**: a oneline string or nil
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-headline)
@@ -1648,14 +1633,14 @@ The following properties are settable:
 
 #### om-build-item `(&key (bullet '-) checkbox counter tag post-blank &rest nodes)`
 
-Build a item element with `nodes` as children.
+Build a item element with **`nodes`** as children.
 
 The following properties are settable:
-- `bullet`: a positive integer (ordered) or the symbol '-' (unordered)
-- `checkbox`: nil or the symbols 'on', 'off', or 'trans'
-- `counter`: a positive integer or nil
-- `tag`: a secondary string
-- `post-blank`: a non-negative integer
+- **`bullet`**: a positive integer (ordered) or the symbol `-` (unordered)
+- **`checkbox`**: nil or the symbols `on`, `off`, or `trans`
+- **`counter`**: a positive integer or nil
+- **`tag`**: a secondary string
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-paragraph "item contents")
@@ -1687,11 +1672,11 @@ The following properties are settable:
 
 #### om-build-plain-list `(&key post-blank &rest nodes)`
 
-Build a plain-list element with `nodes` as children.
+Build a plain-list element with **`nodes`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-paragraph "item contents")
@@ -1704,11 +1689,11 @@ The following properties are settable:
 
 #### om-build-property-drawer `(&key post-blank &rest nodes)`
 
-Build a property-drawer element with `nodes` as children.
+Build a property-drawer element with **`nodes`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-node-property "key" "val")
@@ -1722,11 +1707,11 @@ The following properties are settable:
 
 #### om-build-quote-block `(&key post-blank &rest nodes)`
 
-Build a quote-block element with `nodes` as children.
+Build a quote-block element with **`nodes`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-paragraph "quoted stuff")
@@ -1740,11 +1725,11 @@ The following properties are settable:
 
 #### om-build-section `(&key post-blank &rest nodes)`
 
-Build a section element with `nodes` as children.
+Build a section element with **`nodes`** as children.
 
 The following properties are settable:
 
-- `post-blank`: a non-negative integer
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-paragraph "text")
@@ -1756,11 +1741,11 @@ The following properties are settable:
 
 #### om-build-table `(&key tblfm post-blank &rest nodes)`
 
-Build a table element with `nodes` as children.
+Build a table element with **`nodes`** as children.
 
 The following properties are settable:
-- `tblfm`: a list of oneline strings
-- `post-blank`: a non-negative integer
+- **`tblfm`**: a list of oneline strings
+- **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-table-cell "cell")
@@ -1774,27 +1759,29 @@ The following properties are settable:
 
 ### Miscellaneous Builders
 
+#### om-build-table-row-hline `(&key post-blank)`
+
+Build a table-row element with the 'rule' type.
+Optionally set **`post-blank`** (a positive integer).
+
+```el
+(->> (om-build-table (om-build-table-row (om-build-table-cell "text"))
+		     (om-build-table-row-hline))
+     (om-to-trimmed-string))
+ ;; => "| text |
+ ;      |------|"
+
+```
+
 #### om-build-timestamp-diary-sexp `(form &key post-blank)`
 
-Build a diary-sexp timestamp element from `form`.
-Optionally set `post-blank` (a positive integer).
+Build a diary-sexp timestamp element from **`form`**.
+Optionally set **`post-blank`** (a positive integer).
 
 ```el
 (->> (om-build-timestamp-diary-sexp '(diary-float t 4 2))
      (om-to-string))
  ;; => "<%%(diary-float t 4 2)>"
-
-```
-
-#### om-build-table-row-hline `(&key post-blank)`
-
-Build a table-row element with the 'rule' type.
-Optionally set `post-blank` (a positive integer).
-
-```el
-(->> (om-build-table-row-hline)
-     (om-to-trimmed-string))
- ;; => "|-"
 
 ```
 
@@ -1808,19 +1795,19 @@ Build nodes with more convenient/shorter syntax.
 
 Build a timestamp object.
 
-`type` is one if 'active' or 'inactive' (the range suffix will be added
-if an end time is supplied).
+**`type`** is the symbol `active` or `inactive` (the range suffix will be
+added if an end time is supplied).
 
-`start` specifies the start time and is a list of integers in one of
+**`start`** specifies the start time and is a list of integers in one of
 the following forms:
-- (year month day): short form
-- (year month day nil nil) short form
-- (year month day hour minute) long form
+- `(year month day)`: short form
+- `(year month day nil nil)` short form
+- `(year month day hour minute)` long form
 
-`end` (if supplied) will add the ending time, and follows the same
-formatting rules as `start`.
+**`end`** (if supplied) will add the ending time, and follows the same
+formatting rules as **`start`**.
 
-`repeater` and `warning` are lists formatted as (`type` `value` `unit`) where
+**`repeater`** and **`warning`** are lists formatted as `(type value unit)` where
 the three members correspond to the :repeater/warning-type, -value,
 and -unit properties in [`om-build-timestamp`](#om-build-timestamp-type-year-start-month-start-day-start-year-end-month-end-day-end-key-hour-start-minute-start-hour-end-minute-end-repeater-type-repeater-unit-repeater-value-warning-type-warning-unit-warning-value-post-blank).
 
@@ -1851,7 +1838,7 @@ Building a diary sexp timestamp is not possible with this function.
 
 Build a clock object.
 
-`start` and `end` follow the same rules as their respective arguments in
+**`start`** and **`end`** follow the same rules as their respective arguments in
 [`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
 
 ```el
@@ -1873,17 +1860,18 @@ Build a clock object.
 #### om-build-planning! `(&key closed deadline scheduled post-blank)`
 
 Build a planning element using shorthand arguments.
-`closed`, `deadline`, and `scheduled` are lists with the following structure
+**`closed`**, **`deadline`**, and **`scheduled`** are lists with the following structure
 (brackets denote optional members):
 
-'(year minute day [hour] [min]
-    [&warning type value unit])
-    [&repeater type value unit])'
+`(year minute day [hour] [min]
+ [&warning type value unit]
+ [&repeater type value unit])`
 
-In terms of arguments supplied to [`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank), the
-first five members correspond to the list supplied as `time`, and the
-type/value/unit correspond to the lists supplied to `warning` and
-`repeater`. The order of warning and repeater does not matter.
+In terms of arguments supplied to [`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank), the first
+five members correspond to the list supplied as `time`, and the `type`,
+`value`, and `unit` fields correspond to the lists supplied to `warning` and
+`repeater` arguments. The order of warning and repeater does not
+matter.
 
 ```el
 (->> (om-build-planning! :closed '(2019 1 1))
@@ -1905,9 +1893,9 @@ type/value/unit correspond to the lists supplied to `warning` and
 
 Create a property drawer element.
 
-Each member in `keyvals` is a list of symbols like (key val), where each
-list will generate a node property in the property drawer like ':Key:
-Val'.
+Each member in **`keyvals`** is a list of symbols like `(key val)`, where each
+list will generate a node property in the property drawer like `":key:
+val"`.
 
 ```el
 (->> (om-build-property-drawer! '(key val))
@@ -1922,23 +1910,23 @@ Val'.
 
 Build a headline element.
 
-`title-text` is a oneline string for the title of the headline.
+**`title-text`** is a oneline string for the title of the headline.
 
-`planning` is a list like ('planning-type' 'args' ...) where
-'planning-type' is one of :closed, :deadline, or :scheduled, and
-'args' are the args supplied to any of the planning types in
+**`planning`** is a list like `(planning-type args ...)` where
+`planning-type` is one of `:closed`, `:deadline`, or `:scheduled`, and
+`args` are the args supplied to any of the planning types in
 [`om-build-planning!`](#om-build-planning-key-closed-deadline-scheduled-post-blank). Up to all three planning types can be used
-in the same list like (:closed args :deadline args :scheduled).
+in the same list like `(:closed args :deadline args :scheduled args)`.
 
-`statistics-cookie` is a list following the same format as
+**`statistics-cookie`** is a list following the same format as
 [`om-build-statistics-cookie`](#om-build-statistics-cookie-value-key-post-blank).
 
-`section-children` is a list of elements that will go in the headline
+**`section-children`** is a list of elements that will go in the headline
 section.
 
-`subheadlines` contains zero or more headlines that will go under the
-created headline. The level of all members in `subheadlines` will
-automatically be adjusted to `level` + 1.
+**`subheadlines`** contains zero or more headlines that will go under the
+created headline. The level of all members in **`subheadlines`** will
+automatically be adjusted to **`level`** + 1.
 
 All arguments not mentioned here follow the same rules as
 [`om-build-headline`](#om-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-nodes)
@@ -1969,12 +1957,12 @@ All arguments not mentioned here follow the same rules as
 
 Build an item element.
 
-`tag` is a string representing the tag.
+**`tag`** is a string representing the tag.
 
-`paragraph` is a string that will be the initial text in the item.
+**`paragraph`** is a string that will be the initial text in the item.
 
-`nodes` contains the nodes that will go under this item after
-`paragraph`.
+**`nodes`** contains the nodes that will go under this item after
+**`paragraph`**.
 
 All other arguments follow the same rules as [`om-build-item`](#om-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-nodes).
 
@@ -1991,7 +1979,7 @@ All other arguments follow the same rules as [`om-build-item`](#om-build-item-ke
 
 Build a paragraph element.
 
-`string` is the text to be parsed into a paragraph. It must contain valid
+**`string`** is the text to be parsed into a paragraph. It must contain valid
 formatting (eg, text that will be formatted into objects).
 
 ```el
@@ -2012,7 +2000,7 @@ Error
 
 Build a table element.
 
-`row-lists` is a list of lists where each member is a string to be put
+**`row-lists`** is a list of lists where each member is a string to be put
 in a table cell or the symbol 'hline' which represents a horizontal
 line.
 
@@ -2043,7 +2031,7 @@ Test node types.
 
 #### om-is-type-p `(type node)`
 
-Return t if the type of `node` is `type` (a symbol).
+Return t if the type of **`node`** is **`type`** (a symbol).
 
 ```el
 ;; Given the following contents:
@@ -2061,7 +2049,7 @@ Return t if the type of `node` is `type` (a symbol).
 
 #### om-is-any-type-p `(types node)`
 
-Return t if the type of `node` is in `types` (a list of symbols).
+Return t if the type of **`node`** is in **`types`** (a list of symbols).
 
 ```el
 ;; Given the following contents:
@@ -2083,7 +2071,7 @@ Return t if the type of `node` is in `types` (a list of symbols).
 
 #### om-is-element-p `(node)`
 
-Return t if `node` is an element class.
+Return t if **`node`** is an element class.
 
 ```el
 ;; Given the following contents:
@@ -2103,7 +2091,7 @@ Return t if `node` is an element class.
 
 #### om-is-branch-node-p `(node)`
 
-Return t if `node` is a branch node.
+Return t if **`node`** is a branch node.
 
 ```el
 ;; Given the following contents:
@@ -2147,7 +2135,7 @@ Return t if `node` is a branch node.
 
 #### om-node-may-have-child-objects-p `(node)`
 
-Return t if `node` is a branch node that may have child objects.
+Return t if **`node`** is a branch node that may have child objects.
 
 ```el
 ;; Given the following contents:
@@ -2191,8 +2179,8 @@ Return t if `node` is a branch node that may have child objects.
 
 #### om-node-may-have-child-elements-p `(node)`
 
-Return t if `node` is a branch node that may have child elements.
-Note this implies that `node` is also of class element since only
+Return t if **`node`** is a branch node that may have child elements.
+Note this implies that **`node`** is also of class element since only
 elements may have other elements as children.
 
 ```el
@@ -2233,7 +2221,7 @@ Set, get, and map properties of nodes.
 
 #### om-contains-point-p `(point node)`
 
-Return t if `point` is within the boundaries of `node`.
+Return t if **`point`** is within the boundaries of **`node`**.
 
 ```el
 ;; Given the following contents:
@@ -2251,7 +2239,10 @@ Return t if `point` is within the boundaries of `node`.
 
 #### om-set-property `(prop value node)`
 
-Set property `prop` to `value` in `elem`.
+Set property **`prop`** to **`value`** of **`node`**.
+
+See builder functions for a list of properties and their rules for
+each type.
 
 ```el
 ;; Given the following contents:
@@ -2289,9 +2280,9 @@ Error
 
 #### om-set-properties `(plist node)`
 
-Set all properties of `node` to the values corresponding to `plist`.
-`plist` is a list of property-value pairs that corresponds to the
-property list in `node`.
+Set all properties of **`node`** to the values corresponding to **`plist`**.
+**`plist`** is a list of property-value pairs that corresponds to the
+property list in **`node`**.
 
 See builder functions for a list of properties and their rules for
 each type.
@@ -2310,7 +2301,7 @@ each type.
 
 #### om-get-property `(prop node)`
 
-Return the value or property `prop` of `node`.
+Return the value or property **`prop`** of **`node`**.
 
 See builder functions for a list of properties and their rules for
 each type.
@@ -2362,9 +2353,9 @@ Error
 
 #### om-map-property `(prop fun node)`
 
-Apply `fun` to the value of property `prop` of `node`.
-`fun` is a unary function which takes the current value of `prop` and
-returns a new value to which `prop` will be set.
+Apply **`fun`** to the value of property **`prop`** of **`node`**.
+**`fun`** is a unary function which takes the current value of **`prop`** and
+returns a new value to which **`prop`** will be set.
 
 See builder functions for a list of properties and their rules for
 each type.
@@ -2409,8 +2400,8 @@ Error
 
 #### om-map-properties `(plist node)`
 
-Alter property values of `node` in place.
-`plist` is a property list where the keys are properties of `node` and
+Alter property values of **`node`** in place.
+**`plist`** is a property list where the keys are properties of **`node`** and
 its values are functions to be mapped to these properties.
 
 See builder functions for a list of properties and their rules for
@@ -2432,7 +2423,7 @@ each type.
 
 #### om-toggle-property `(prop node)`
 
-Flip the value of property `prop` of `node`.
+Flip the value of property **`prop`** of **`node`**.
 This function only applies to properties that are booleans.
 
 The following elements and properties are supported:
@@ -2497,7 +2488,7 @@ Error
 
 #### om-shift-property `(prop n node)`
 
-Shift property `prop` by `n` (an integer) units of `node`.
+Shift property **`prop`** by **`n`** (an integer) units of **`node`**.
 This only applies the properties that are represented as integers.
 
 The following elements and properties are supported:
@@ -2555,7 +2546,7 @@ Error
 
 #### om-insert-into-property `(prop index string node)`
 
-Insert `string` into `prop` at `index` of `node` if not already there.
+Insert **`string`** into **`prop`** at **`index`** of **`node`** if not already there.
 This only applies to properties that are represented as lists of
 strings.
 
@@ -2615,7 +2606,7 @@ Error
 
 #### om-remove-from-property `(prop string node)`
 
-Remove `string` from `prop` of `node`.
+Remove **`string`** from **`prop`** of **`node`**.
 This only applies to properties that are represented as lists of 
 strings.
 
@@ -2655,8 +2646,8 @@ Error
 
 #### om-plist-put-property `(prop key value node)`
 
-Insert `key` and `value` pair into `prop` of `node`.
-`key` is a keyword and `value` is a symbol. This only applies to 
+Insert **`key`** and **`value`** pair into **`prop`** of **`node`**.
+**`key`** is a keyword and **`value`** is a symbol. This only applies to 
 properties that are represented as plists.
 
 The following elements and properties are supported:.
@@ -2709,8 +2700,8 @@ Error
 
 #### om-plist-remove-property `(prop key node)`
 
-Remove `key` and its value from `prop` of `node`.
-`key` is a keyword. This only applies to properties that are
+Remove **`key`** and its value from **`prop`** of **`node`**.
+**`key`** is a keyword. This only applies to properties that are
 represented as plists.
 
 See [`om-plist-put-property`](#om-plist-put-property-prop-key-value-node) for a list of supported elements
@@ -2744,7 +2735,7 @@ Error
 
 #### om-clock-is-running-p `(clock)`
 
-Return t if `clock` element is running (eg is open).
+Return t if **`clock`** element is running (eg is open).
 
 ```el
 ;; Given the following contents:
@@ -2765,8 +2756,8 @@ Return t if `clock` element is running (eg is open).
 
 #### om-clock-map-timestamp `(fun clock)`
 
-Apply `fun` to timestamp in `clock`.
-`fun` is a function that takes the current timestamp and returns
+Apply **`fun`** to timestamp in **`clock`**.
+**`fun`** is a function that takes the current timestamp and returns
 a modified timestamp. The returned timestamp must be inactive and
 cannot contain any warnings or repeaters.
 
@@ -2787,7 +2778,7 @@ cannot contain any warnings or repeaters.
 
 #### om-headline-is-done-p `(headline)`
 
-Return t if `headline` element has a `done` todo keyword.
+Return t if **`headline`** element has a done todo keyword.
 
 ```el
 ;; Given the following contents:
@@ -2808,7 +2799,7 @@ Return t if `headline` element has a `done` todo keyword.
 
 #### om-headline-is-archived-p `(headline)`
 
-Return t if `headline` element is archived.
+Return t if **`headline`** element is archived.
 
 ```el
 ;; Given the following contents:
@@ -2829,7 +2820,7 @@ Return t if `headline` element is archived.
 
 #### om-headline-is-commented-p `(headline)`
 
-Return t if `headline` element is commented.
+Return t if **`headline`** element is commented.
 
 ```el
 ;; Given the following contents:
@@ -2850,7 +2841,7 @@ Return t if `headline` element is commented.
 
 #### om-headline-has-tag-p `(tag headline)`
 
-Return t if `headline` element is tagged with `tag`.
+Return t if **`headline`** element is tagged with **`tag`**.
 
 ```el
 ;; Given the following contents:
@@ -2871,7 +2862,7 @@ Return t if `headline` element is tagged with `tag`.
 
 #### om-headline-get-statistics-cookie `(headline)`
 
-Return the statistics cookie object from `headline` if it exists.
+Return the statistics cookie object from **`headline`** if it exists.
 
 ```el
 ;; Given the following contents:
@@ -2896,7 +2887,7 @@ Return the statistics cookie object from `headline` if it exists.
 
 #### om-item-is-unchecked-p `(item)`
 
-Return t if `item` element is unchecked.
+Return t if **`item`** element is unchecked.
 
 ```el
 ;; Given the following contents:
@@ -2914,7 +2905,7 @@ Return t if `item` element is unchecked.
 
 #### om-item-is-checked-p `(item)`
 
-Return t if `item` element is checked.
+Return t if **`item`** element is checked.
 
 ```el
 ;; Given the following contents:
@@ -2932,7 +2923,7 @@ Return t if `item` element is checked.
 
 #### om-item-is-trans-p `(item)`
 
-Return t if `item` element is transitional.
+Return t if **`item`** element is transitional.
 
 ```el
 ;; Given the following contents:
@@ -2950,7 +2941,7 @@ Return t if `item` element is transitional.
 
 #### om-item-toggle-checkbox `(item)`
 
-Toggle the checked/unchecked state of `item` element.
+Toggle the checked/unchecked state of **`item`** element.
 
 ```el
 ;; Given the following contents:
@@ -2990,10 +2981,10 @@ Toggle the checked/unchecked state of `item` element.
 
 #### om-planning-set-timestamp `(prop planning-list planning)`
 
-Set the timestamp of `planning` matching `prop`.
+Set the timestamp of **`planning`** matching **`prop`**.
 
-`prop` is one of :closed, :deadline, or :scheduled. `planning-list` is the
-same as that described in [`om-build-planning!`](#om-build-planning-key-closed-deadline-scheduled-post-blank).
+**`prop`** is one of `:closed`, `:deadline`, or `:scheduled`. **`planning-list`**
+is the same as that described in [`om-build-planning!`](#om-build-planning-key-closed-deadline-scheduled-post-blank).
 
 ```el
 ;; Given the following contents:
@@ -3019,14 +3010,15 @@ same as that described in [`om-build-planning!`](#om-build-planning-key-closed-d
 
 #### om-planning-map-timestamp `(prop fun planning)`
 
-Modify timestamp matching `prop` in place in `planning` using `fun`.
+Modify timestamp matching **`prop`** in place in **`planning`** using **`fun`**.
 
-`prop` is one of :closed, :deadline, or :scheduled. `fun` must return a
-timestamp conforming to that described in [`om-build-planning`](#om-build-planning-key-closed-deadline-scheduled-post-blank).
+**`prop`** is one of `:closed`, `:deadline`, or `:scheduled`. **`fun`** must
+return a timestamp conforming to that described in
+[`om-build-planning`](#om-build-planning-key-closed-deadline-scheduled-post-blank).
 
 The only difference between using this function and using 
-[`om-map-property`](#om-map-property-prop-fun-node) is that the former will silently no-op if `prop`
-is nil. The latter will throw an error unless `fun` is able to handle
+[`om-map-property`](#om-map-property-prop-fun-node) is that the former will silently no-op if **`prop`**
+is nil. The latter will throw an error unless **`fun`** is able to handle
 nil values.
 
 ```el
@@ -3064,7 +3056,7 @@ Error
 
 #### om-statistics-cookie-is-complete-p `(statistics-cookie)`
 
-Return t is `statistics-cookie` element is complete.
+Return t is **`statistics-cookie`** element is complete.
 
 ```el
 ;; Given the following contents:
@@ -3106,7 +3098,7 @@ Return t is `statistics-cookie` element is complete.
 
 #### om-timestamp-get-start-time `(timestamp)`
 
-Return the time list of `timestamp` or start time if a range.
+Return the time list of **`timestamp`** or start time if a range.
 The return value will be a list as specified by the `time` argument in
 [`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
 
@@ -3136,7 +3128,7 @@ The return value will be a list as specified by the `time` argument in
 
 #### om-timestamp-get-end-time `(timestamp)`
 
-Return the end time list of `timestamp` end or nil if not a range.
+Return the end time list of **`timestamp`** end or nil if not a range.
 The return value will be a list as specified by the `time` argument in
 [`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
 
@@ -3166,7 +3158,7 @@ The return value will be a list as specified by the `time` argument in
 
 #### om-timestamp-is-active-p `(timestamp)`
 
-Return t if `timestamp` is active.
+Return t if **`timestamp`** is active.
 
 ```el
 ;; Given the following contents:
@@ -3187,7 +3179,7 @@ Return t if `timestamp` is active.
 
 #### om-timestamp-is-ranged-p `(timestamp)`
 
-Return t if `timestamp` is ranged.
+Return t if **`timestamp`** is ranged.
 
 ```el
 ;; Given the following contents:
@@ -3215,8 +3207,8 @@ Return t if `timestamp` is ranged.
 
 #### om-timestamp-set-start-time `(time timestamp)`
 
-Set start time of `timestamp` element to `time`.
-`time` is a list analogous to the same argument specified in
+Set start time of **`timestamp`** element to **`time`**.
+**`time`** is a list analogous to the same argument specified in
 [`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
 
 ```el
@@ -3239,8 +3231,8 @@ Set start time of `timestamp` element to `time`.
 
 #### om-timestamp-set-end-time `(time timestamp)`
 
-Set end time of `timestamp` element to `time`.
-`time` is a list analogous to the same argument specified in
+Set end time of **`timestamp`** element to **`time`**.
+**`time`** is a list analogous to the same argument specified in
 [`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
 
 ```el
@@ -3266,8 +3258,8 @@ Set end time of `timestamp` element to `time`.
 
 #### om-timestamp-set-single-time `(time timestamp)`
 
-Set start time of `timestamp` to `time`, and remove the end time.
-`time` is a list analogous to the same argument specified in
+Set start time of **`timestamp`** to **`time`**, and remove the end time.
+**`time`** is a list analogous to the same argument specified in
 [`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
 
 ```el
@@ -3293,8 +3285,8 @@ Set start time of `timestamp` to `time`, and remove the end time.
 
 #### om-timestamp-set-double-time `(time1 time2 timestamp)`
 
-Set start and end time of `timestamp` to `time1` and `time2` respectively.
-`time1` and `time2` are lists analogous to the `time` argument specified in
+Set start and end time of **`timestamp`** to **`time1`** and **`time2`** respectively.
+**`time1`** and **`time2`** are lists analogous to the `time` argument specified in
 [`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
 
 ```el
@@ -3322,10 +3314,10 @@ Set start and end time of `timestamp` to `time1` and `time2` respectively.
 
 #### om-timestamp-set-range `(range timestamp)`
 
-Set the `range` of `timestamp`.
-If `timestamp` is ranged, keep start time the same and adjust the end
-time. If not, make a new end time. The units for `range` are in minutes
-if `timestamp` is in long format and days if `timestamp` is in short
+Set the **`range`** of **`timestamp`**.
+If **`timestamp`** is ranged, keep start time the same and adjust the end
+time. If not, make a new end time. The units for **`range`** are in minutes
+if **`timestamp`** is in long format and days if **`timestamp`** is in short
 format.
 
 ```el
@@ -3360,8 +3352,8 @@ format.
 
 #### om-timestamp-set-type `(type timestamp)`
 
-Set type of `timestamp` element to `type`.
-`type` can be either 'active' or 'inactive'.
+Set type of **`timestamp`** element to **`type`**.
+**`type`** can be either `active` or `inactive`.
 
 ```el
 ;; Given the following contents:
@@ -3376,16 +3368,16 @@ Set type of `timestamp` element to `type`.
 
 #### om-timestamp-shift `(n unit timestamp)`
 
-Shift `timestamp` time by `n` `units`.
+Shift **`timestamp`** time by **`n`** **`unit`**`s.
 
 This function will move the start and end times together; therefore
 ranged inputs will always output ranged timestamps and same for
 non-ranged. To move the start and end time independently, use
 [`om-timestamp-shift-start`](#om-timestamp-shift-start-n-unit-timestamp) or [`om-timestamp-shift-end`](#om-timestamp-shift-end-n-unit-timestamp).
 
-`n` is a positive or negative integer and `unit` is one of 'minute',
-'hour', 'day', 'month', or 'year'. Overflows will wrap around
-transparently; for instance, supplying 'minute' for `unit` and 90 for `n`
+**`n`** is a positive or negative integer and **`unit`** is one of `minute`,
+`hour`, `day`, `month`, or `year`. Overflows will wrap around
+transparently; for instance, supplying `minute` for **`unit`** and 90 for **`n`**
 will increase the hour property by 1 and the minute property by 30.
 
 ```el
@@ -3456,12 +3448,12 @@ Error
 
 #### om-timestamp-shift-start `(n unit timestamp)`
 
-Shift `timestamp` start time by `n` `units`.
+Shift **`timestamp`** start time by **`n`** **`unit`**`s.
 
-`n` and `unit` behave the same as those in [`om-timestamp-shift`](#om-timestamp-shift-n-unit-timestamp).
+**`n`** and **`unit`** behave the same as those in [`om-timestamp-shift`](#om-timestamp-shift-n-unit-timestamp).
 
-If `timestamp` is not range, the output will be a ranged timestamp with
-the shifted start time and the end time as that of `timestamp`. If this
+If **`timestamp`** is not range, the output will be a ranged timestamp with
+the shifted start time and the end time as that of **`timestamp`**. If this
 behavior is not desired, use [`om-timestamp-shift`](#om-timestamp-shift-n-unit-timestamp).
 
 ```el
@@ -3487,12 +3479,12 @@ behavior is not desired, use [`om-timestamp-shift`](#om-timestamp-shift-n-unit-t
 
 #### om-timestamp-shift-end `(n unit timestamp)`
 
-Shift `timestamp` end time by `n` `units`.
+Shift **`timestamp`** end time by **`n`** **`unit`**`s.
 
-`n` and `unit` behave the same as those in [`om-timestamp-shift`](#om-timestamp-shift-n-unit-timestamp).
+**`n`** and **`unit`** behave the same as those in [`om-timestamp-shift`](#om-timestamp-shift-n-unit-timestamp).
 
-If `timestamp` is not range, the output will be a ranged timestamp with
-the shifted end time and the start time as that of `timestamp`. If this
+If **`timestamp`** is not range, the output will be a ranged timestamp with
+the shifted end time and the start time as that of **`timestamp`**. If this
 behavior is not desired, use [`om-timestamp-shift`](#om-timestamp-shift-n-unit-timestamp).
 
 ```el
@@ -3518,7 +3510,7 @@ behavior is not desired, use [`om-timestamp-shift`](#om-timestamp-shift-n-unit-t
 
 #### om-timestamp-toggle-active `(timestamp)`
 
-Toggle the active/inactive type of `timestamp` element.
+Toggle the active/inactive type of **`timestamp`** element.
 
 ```el
 ;; Given the following contents:
@@ -3562,7 +3554,7 @@ Set, get, and map the children of branch nodes.
 
 #### om-children-contain-point-p `(point node)`
 
-Return t if `point` is within the boundaries of `node``s children.
+Return t if **`point`** is within the boundaries of **`node`**`s children.
 
 ```el
 ;; Given the following contents:
@@ -3581,7 +3573,7 @@ Return t if `point` is within the boundaries of `node``s children.
 
 #### om-get-children `(node)`
 
-Return the children of `node` as a list.
+Return the children of **`node`** as a list.
 
 ```el
 ;; Given the following contents:
@@ -3617,9 +3609,9 @@ Error
 
 #### om-set-children `(children node)`
 
-Set the children of `node` to `children`.
-`children` is a list of nodes; the types permitted in this list depend
-on the type of `node`.
+Set the children of **`node`** to **`children`**.
+**`children`** is a list of nodes; the types permitted in this list depend
+on the type of **`node`**.
 
 ```el
 ;; Given the following contents:
@@ -3656,8 +3648,8 @@ Error
 
 #### om-map-children `(fun node)`
 
-Apply `fun` to the children of `node`. 
-`fun` is a function that takes the current children as a list and
+Apply **`fun`** to the children of **`node`**. 
+**`fun`** is a function that takes the current children as a list and
 returns a modified children as a list.
 
 ```el
@@ -3694,8 +3686,8 @@ Error
 
 #### om-is-childless-p `(node)`
 
-Return t if `node` is empty.
-This will throw an error if `node` is not a branch type.
+Return t if **`node`** is empty.
+This will throw an error if **`node`** is not a branch type.
 
 ```el
 ;; Given the following contents:
@@ -3728,7 +3720,7 @@ Error
 
 #### om-headline-update-item-statistics `(headline)`
 
-Update the statistics cookie for `headline`.
+Update the statistics cookie for **`headline`**.
 The percent/fraction will be computed as the number of checked items
 over the number of items with checkboxes (non-checkbox items will
 not be considered).
@@ -3780,7 +3772,7 @@ not be considered).
 
 #### om-headline-update-todo-statistics `(headline)`
 
-Update the statistics cookie for `headline`.
+Update the statistics cookie for **`headline`**.
 The percent/fraction will be computed as the number of done
 subheadlines over the number of todo subheadlines (eg non-todo
 subheadlines will not be counted).
@@ -3832,7 +3824,7 @@ subheadlines will not be counted).
 
 #### om-headline-indent-subheadline `(index headline)`
 
-Indent the subheadline without moving its children at `index` within `headline`.
+Indent the subheadline without moving its children at **`index`** within **`headline`**.
 
 ```el
 ;; Given the following contents:
@@ -3858,7 +3850,7 @@ Error
 
 #### om-headline-indent-subtree `(index headline)`
 
-Indent the subheadline and its children at `index` within `headline`.
+Indent the subheadline and its children at **`index`** within **`headline`**.
 
 ```el
 ;; Given the following contents:
@@ -3879,8 +3871,8 @@ Indent the subheadline and its children at `index` within `headline`.
 
 #### om-headline-unindent-subheadline `(index child-index headline)`
 
-Unindent subheadline at `child-index` in the subheadline at `index` in `headline`.
-This will not move the children under the headline at `child-index`.
+Unindent subheadline at **`child-index`** in the subheadline at **`index`** in **`headline`**.
+This will not move the children under the headline at **`child-index`**.
 
 ```el
 ;; Given the following contents:
@@ -3905,7 +3897,7 @@ This will not move the children under the headline at `child-index`.
 
 #### om-headline-unindent-subtree `(index headline)`
 
-Unindent all subheadlines under the subheadline at `index` in `headline`.
+Unindent all subheadlines under the subheadline at **`index`** in **`headline`**.
 
 ```el
 ;; Given the following contents:
@@ -3933,8 +3925,8 @@ Unindent all subheadlines under the subheadline at `index` in `headline`.
 
 #### om-plain-list-set-type `(type plain-list)`
 
-Set the type of `plain-list` greater element to `type`.
-`type` is '-', '+', or 'ordered'.
+Set the type of **`plain-list`** greater element to **`type`**.
+**`type`** is one of the symbols `unordered` or `ordered`.
 
 ```el
 ;; Given the following contents:
@@ -3952,7 +3944,7 @@ Set the type of `plain-list` greater element to `type`.
 ; 2. [X] two
 
 (->> (om-parse-this-element)
-     (om-plain-list-set-type '-)
+     (om-plain-list-set-type 'unordered)
      (om-to-trimmed-string))
  ;; => "- [ ] one
  ;      - [X] two"
@@ -3961,7 +3953,7 @@ Set the type of `plain-list` greater element to `type`.
 
 #### om-plain-list-indent-item `(index plain-list)`
 
-Indent the subitem at `index` in `plain-list` without moving items below it.
+Indent the subitem at **`index`** in **`plain-list`** without moving items below it.
 
 ```el
 ;; Given the following contents:
@@ -3996,7 +3988,7 @@ Error
 
 #### om-plain-list-indent-item-tree `(index plain-list)`
 
-Indent the subitem at `index` in `plain-list` and move items below it.
+Indent the subitem at **`index`** in **`plain-list`** and move items below it.
 
 ```el
 ;; Given the following contents:
@@ -4017,8 +4009,8 @@ Indent the subitem at `index` in `plain-list` and move items below it.
 
 #### om-plain-list-unindent-item `(index child-index plain-list)`
 
-Unindent subitem at `child-index` in the subitem at `index` in `plain-list`.
-This will not move the children under the item at `child-index`.
+Unindent subitem at **`child-index`** in the subitem at **`index`** in **`plain-list`**.
+This will not move the children under the item at **`child-index`**.
 
 ```el
 ;; Given the following contents:
@@ -4063,7 +4055,7 @@ This will not move the children under the item at `child-index`.
 
 #### om-plain-list-unindent-items `(index plain-list)`
 
-Unindent all items under the item at `index` in `plain-list`.
+Unindent all items under the item at **`index`** in **`plain-list`**.
 
 ```el
 ;; Given the following contents:
@@ -4101,8 +4093,8 @@ Unindent all items under the item at `index` in `plain-list`.
 
 #### om-table-get-cell `(row-index column-index table)`
 
-Return table-cell at `row-index` and `column-index` in `table` element.
-`h-`lines do not count toward row indices, and all indices are
+Return table-cell at **`row-index`** and **`column-index`** in **`table`** element.
+Rule-type rows do not count toward row indices, and all indices are
 zero-indexed.
 
 ```el
@@ -4133,8 +4125,8 @@ zero-indexed.
 
 #### om-table-replace-cell `(row-index column-index cell table)`
 
-Replace a cell in `table` with `cell` (a table-cell element).
-`row-index` and `column-index` are zero-indexed integers pointing to the
+Replace a cell in **`table`** with **`cell`** (a table-cell element).
+**`row-index`** and **`column-index`** are zero-indexed integers pointing to the
 position of the cell to be replaced.
 
 ```el
@@ -4161,9 +4153,9 @@ position of the cell to be replaced.
 
 #### om-table-replace-cell! `(row-index column-index cell-text table)`
 
-Replace a cell in `table` with `cell-text`.
-`cell-text` is a string which will replace the children of the cell at
-`row-index` and `column-index` (zero-indexed integers).
+Replace a cell in **`table`** with **`cell-text`**.
+**`cell-text`** is a string which will replace the children of the cell at
+**`row-index`** and **`column-index`** (zero-indexed integers).
 
 ```el
 ;; Given the following contents:
@@ -4189,8 +4181,8 @@ Replace a cell in `table` with `cell-text`.
 
 #### om-table-clear-cell `(row-index column-index table)`
 
-Clear a cell in `table`.
-`row-index` and `column-index` are zero-indexed integers pointing to the
+Clear a cell in **`table`**.
+**`row-index`** and **`column-index`** are zero-indexed integers pointing to the
 position of the cell to be replaced.
 
 ```el
@@ -4217,7 +4209,7 @@ position of the cell to be replaced.
 
 #### om-table-delete-column `(column-index table)`
 
-Delete the column at `column-index` in `table`.
+Delete the column at **`column-index`** in **`table`**.
 
 ```el
 ;; Given the following contents:
@@ -4250,9 +4242,9 @@ Delete the column at `column-index` in `table`.
 
 #### om-table-replace-column `(column-index column-cells table)`
 
-Replace column at `column-index` in `table` with `column-cells`.
-`column-index` is the index of the column (starting at zero) and
-`column-cells` is a list of table-cell objects.
+Replace column at **`column-index`** in **`table`** with **`column-cells`**.
+**`column-index`** is the index of the column (starting at zero) and
+**`column-cells`** is a list of table-cell objects.
 
 ```el
 ;; Given the following contents:
@@ -4280,9 +4272,9 @@ Replace column at `column-index` in `table` with `column-cells`.
 
 #### om-table-replace-column! `(column-index column-text table)`
 
-Replace column at `column-index` in `table` with `column-text`.
-`column-index` is the index of the column (starting at zero) and
-`column-text` is a list of text to be made into table-cell objects.
+Replace column at **`column-index`** in **`table`** with **`column-text`**.
+**`column-index`** is the index of the column (starting at zero) and
+**`column-text`** is a list of text to be made into table-cell objects.
 
 ```el
 ;; Given the following contents:
@@ -4308,7 +4300,7 @@ Replace column at `column-index` in `table` with `column-text`.
 
 #### om-table-clear-column `(column-index table)`
 
-Clear the column at `column-index` in `table`.
+Clear the column at **`column-index`** in **`table`**.
 
 ```el
 ;; Given the following contents:
@@ -4334,9 +4326,9 @@ Clear the column at `column-index` in `table`.
 
 #### om-table-replace-row `(row-index row-cells table)`
 
-Replace row at `row-index` in `table` with `row-cells`.
-`row-index` is the index of the row (starting at zero) and
-`row-cells` is a list of table-cell objects.
+Replace row at **`row-index`** in **`table`** with **`row-cells`**.
+**`row-index`** is the index of the row (starting at zero) and
+**`row-cells`** is a list of table-cell objects.
 
 ```el
 ;; Given the following contents:
@@ -4364,9 +4356,9 @@ Replace row at `row-index` in `table` with `row-cells`.
 
 #### om-table-replace-row! `(row-index row-text table)`
 
-Replace row at `row-index` in `table` with `row-text`.
-`row-index` is the index of the row (starting at zero) and
-`row-text` is a list of text to be made into table-cell objects.
+Replace row at **`row-index`** in **`table`** with **`row-text`**.
+**`row-index`** is the index of the row (starting at zero) and
+**`row-text`** is a list of text to be made into table-cell objects.
 
 ```el
 ;; Given the following contents:
@@ -4392,7 +4384,7 @@ Replace row at `row-index` in `table` with `row-text`.
 
 #### om-table-clear-row `(row-index table)`
 
-Clear the row at `row-index` in `table`.
+Clear the row at **`row-index`** in **`table`**.
 
 ```el
 ;; Given the following contents:
@@ -4418,7 +4410,7 @@ Clear the row at `row-index` in `table`.
 
 #### om-table-delete-row `(row-index table)`
 
-Delete the row at `row-index` in `table`.
+Delete the row at **`row-index`** in **`table`**.
 
 ```el
 ;; Given the following contents:
@@ -4448,7 +4440,7 @@ Delete the row at `row-index` in `table`.
 
 #### om-table-insert-column `(column-index column-cells table)`
 
-Insert `column-cells` at `column-index` in `table`.
+Insert **`column-cells`** at **`column-index`** in **`table`**.
 
 ```el
 ;; Given the following contents:
@@ -4476,7 +4468,7 @@ Insert `column-cells` at `column-index` in `table`.
 
 #### om-table-insert-column! `(column-index column-text table)`
 
-Insert `column-text` at `column-index` in `table`.
+Insert **`column-text`** at **`column-index`** in **`table`**.
 
 ```el
 ;; Given the following contents:
@@ -4502,7 +4494,7 @@ Insert `column-text` at `column-index` in `table`.
 
 #### om-table-insert-row `(row-index row table)`
 
-Insert `row` at `row-index` in `table`.
+Insert **`row`** at **`row-index`** in **`table`**.
 
 ```el
 ;; Given the following contents:
@@ -4541,7 +4533,7 @@ Insert `row` at `row-index` in `table`.
 
 #### om-table-insert-row! `(row-index row-text table)`
 
-Insert `row-text` at `row-index` in `table`.
+Insert **`row-text`** at **`row-index`** in **`table`**.
 
 ```el
 ;; Given the following contents:
@@ -4583,26 +4575,26 @@ Use pattern-matching to selectively perform operations on nodes in trees.
 
 #### om-match `(pattern node)`
 
-Return a list of all nodes matching `pattern` in `node`.
+Return a list of all nodes matching **`pattern`** in **`node`**.
 
-`pattern` is a list of form ([slicer [arg1] [arg2]] cond1 [cond2 ...]).
+**`pattern`** is a list of form `([slicer [arg1] [arg2]] cond1 [cond2 ...])`.
 
-'slicer' is an optional prefix to the pattern describing how many
+`slicer` is an optional prefix to the pattern describing how many
 and which matches to return. If not given, all matches are
 returned. Possible values are:
 
-- :first - return the first match
-- :last - return the last match
-- :nth `n` - return the nth match where `n` is an integer denoting the
-    index to return (starting at 0). It may be a negative number to
-    start counting at the end of the match list, in which case -1 is the
-    last index
-- :sub `a` `b` - return a sublist between indices `a` and `b`. `a` and `b` follow
-    the same rules as :nth
+- `:first` - return the first match
+- `:last` - return the last match
+- `:nth` `arg1` - return the nth match where `arg1` is an integer denoting
+    the index to return (starting at 0). It may be a negative number
+    to start counting at the end of the match list, in which case -1 is
+    the last index
+- `:sub` `arg1` `arg2` - return a sublist between indices `arg1` and `arg2`.
+    `arg1` and `arg2` follow the same rules as `:nth`
 
-'cond' denotes conditions that that match nodes in the parse
+`condx` denotes conditions that that match nodes in the parse
 tree. This first condition will select matches within the
-children of `node`, the next condition will select matches within
+children of **`node`**, the next condition will select matches within
 the matches from the first condition, and so on. The types of
 conditions are:
 
@@ -4612,22 +4604,23 @@ conditions are:
 - `index` - match when the node's index is `=` to `index` (an integer).
     The first index is zero. If `index` is negative, start counting
     backward from the end of children where -1 is the last node
-- (`op` `index`) - match when (`op` `node-index` `index`) returns t. `op` is
-    one of '<', '>', '<=', or '>='
+- `(op index)` - match when `(op node-index index)` returns t. `op` is
+    one of `<`, `>`, `<=`, or `>=` and `node-index` is the index of the
+    node being evaluated.
 - `plist` - match nodes with the same properties and values as `plist`
-- :many - match zero or more levels, must have at least one
+- `:many` - match zero or more levels, must have at least one
     sub-pattern after it
-- :many! - like :many but do not match within other matches
-- :any - always match exactly one node
+- `:many!` - like `:many` but do not match within other matches
+- `:any` - always match exactly one node
 
 Additionally, conditions may be further refined using boolean forms:
 
-- (:and c1 c2 [c3 ...]) - match when all conditions are true
-- (:or c1 c2 [c3 ...]) - match when at least one condition is true
-- (:not c) - match when condition is not true
+- `(:and c1 c2 [c3 ...])` - match when all conditions are true
+- `(:or c1 c2 [c3 ...])` - match when at least one condition is true
+- `(:not c)` - match when condition is not true
 
-The 'c' members in the forms above are one of any of the condition
-types except :many, :many!, and :any. Boolean forms may be
+The `cx` members in the forms above are one of any of the condition
+types except `:many`, `:many!`, and `:any`. Boolean forms may be
 nested within each other.
 
 ```el
@@ -4765,9 +4758,9 @@ nested within each other.
 
 #### om-match-delete `(pattern node)`
 
-Remove nodes matching `pattern` from `node` and return modified `node`.
+Remove nodes matching **`pattern`** from **`node`** and return modified **`node`**.
 
-`pattern` follows the same rules as [`om-match`](#om-match-pattern-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4800,11 +4793,11 @@ Remove nodes matching `pattern` from `node` and return modified `node`.
 
 #### om-match-extract `(pattern node)`
 
-Remove nodes matching `pattern` from `node`.
+Remove nodes matching **`pattern`** from **`node`**.
 Return cons cell where the car is a list of all removed nodes and
-the cdr is the modified `node`.
+the cdr is the modified **`node`**.
 
-`pattern` follows the same rules as [`om-match`](#om-match-pattern-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4822,11 +4815,11 @@ the cdr is the modified `node`.
 
 #### om-match-map `(pattern fun node)`
 
-Apply `fun` to nodes matching `pattern` in `node`.
-`fun` is a unary function that takes a node and returns a new node
+Apply **`fun`** to nodes matching **`pattern`** in **`node`**.
+**`fun`** is a unary function that takes a node and returns a new node
 which will replace the original.
 
-`pattern` follows the same rules as [`om-match`](#om-match-pattern-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4869,11 +4862,11 @@ which will replace the original.
 
 #### om-match-mapcat `(pattern fun node)`
 
-Apply `fun` to nodes matching `pattern` in `node`.
-`fun` is a unary function that takes a node and returns a list of new
+Apply **`fun`** to nodes matching **`pattern`** in **`node`**.
+**`fun`** is a unary function that takes a node and returns a list of new
 nodes which will be spliced in place of the original node.
 
-`pattern` follows the same rules as [`om-match`](#om-match-pattern-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4893,10 +4886,10 @@ nodes which will be spliced in place of the original node.
 
 #### om-match-replace `(pattern node* node)`
 
-Replace nodes matching `pattern` with `node`* within `node`.
-Return modified `node`.
+Replace nodes matching **`pattern`** with **`node*`** within **`node`**.
+Return modified **`node`**.
 
-`pattern` follows the same rules as [`om-match`](#om-match-pattern-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4912,10 +4905,10 @@ Return modified `node`.
 
 #### om-match-insert-before `(pattern node* node)`
 
-Insert `node`* before every node matching `pattern` in `node`.
-Return modified `node`.
+Insert **`node*`** before every node matching **`pattern`** in **`node`**.
+Return modified **`node`**.
 
-`pattern` follows the same rules as [`om-match`](#om-match-pattern-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4937,10 +4930,10 @@ Return modified `node`.
 
 #### om-match-insert-after `(pattern node* node)`
 
-Insert `node`* after every node matching `pattern` in `node`.
-Return modified `node`.
+Insert **`node*`** after every node matching **`pattern`** in **`node`**.
+Return modified **`node`**.
 
-`pattern` follows the same rules as [`om-match`](#om-match-pattern-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4962,12 +4955,12 @@ Return modified `node`.
 
 #### om-match-insert-within `(pattern index node* node)`
 
-Insert new `node`* at `index` into nodes matching `pattern` in `node`.
-Return modified `node`.
+Insert new **`node*`** at **`index`** into nodes matching **`pattern`** in **`node`**.
+Return modified **`node`**.
 
-`pattern` follows the same rules as [`om-match`](#om-match-pattern-node) with the exception
-that `pattern` may be nil. In this case `node`* will be inserted at `index`
-in the immediate, top level children of `node`.
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node) with the exception
+that **`pattern`** may be nil. In this case **`node*`** will be inserted at **`index`**
+in the immediate, top level children of **`node`**.
 
 ```el
 ;; Given the following contents:
@@ -4998,10 +4991,10 @@ in the immediate, top level children of `node`.
 
 #### om-match-splice-before `(pattern nodes* node)`
 
-Splice `nodes`* before every nodes matching `pattern` in `node`.
-Return modified `node`. `nodes`* is a list of nodes.
+Splice **`nodes*`** before every nodes matching **`pattern`** in **`node`**.
+Return modified **`node`**. **`nodes*`** is a list of nodes.
 
-`pattern` follows the same rules as [`om-match`](#om-match-pattern-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -5024,10 +5017,10 @@ Return modified `node`. `nodes`* is a list of nodes.
 
 #### om-match-splice-after `(pattern nodes* node)`
 
-Splice `nodes`* after every nodes matching `pattern` in `node`.
-Return modified `node`. `nodes`* is a list of nodes.
+Splice **`nodes*`** after every nodes matching **`pattern`** in **`node`**.
+Return modified **`node`**. **`nodes*`** is a list of nodes.
 
-`pattern` follows the same rules as [`om-match`](#om-match-pattern-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -5050,12 +5043,12 @@ Return modified `node`. `nodes`* is a list of nodes.
 
 #### om-match-splice-within `(pattern index nodes* node)`
 
-Splice new `nodes`* at `index` into nodes matching `pattern` in `node`.
-Return modified `node`. `nodes`* is a list of nodes.
+Splice new **`nodes*`** at **`index`** into nodes matching **`pattern`** in **`node`**.
+Return modified **`node`**. **`nodes*`** is a list of nodes.
 
-`pattern` follows the same rules as [`om-match`](#om-match-pattern-node) with the exception
-that `pattern` may be nil. In this case `nodes`* will be inserted at `index`
-in the immediate, top level children of `node`.
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node) with the exception
+that **`pattern`** may be nil. In this case **`nodes*`** will be inserted at **`index`**
+in the immediate, top level children of **`node`**.
 
 ```el
 ;; Given the following contents:
@@ -5086,8 +5079,8 @@ Map node manipulations into buffers.
 
 #### om-insert `(point node)`
 
-Convert `node` to a string and insert at `point` in the current buffer.
-Return `node`.
+Convert **`node`** to a string and insert at **`point`** in the current buffer.
+Return **`node`**.
 
 ```el
 ;; Given the following contents:
@@ -5113,7 +5106,7 @@ Return `node`.
 
 #### om-insert-tail `(point node)`
 
-Like [`om-insert`](#om-insert-point-node) but insert `node` at `point` and move to end of insertion.
+Like [`om-insert`](#om-insert-point-node) but insert **`node`** at **`point`** and move to end of insertion.
 
 ```el
 no examples :(
@@ -5124,9 +5117,9 @@ no examples :(
 
 #### om-update `(fun node)`
 
-Replace `node` in the current buffer with a new one. 
-`fun` is a function that takes `node` as its only argument and returns a
-modified `node`. This modified element is then written in place of the
+Replace **`node`** in the current buffer with a new one. 
+**`fun`** is a function that takes **`node`** as its only argument and returns a
+modified **`node`**. This modified element is then written in place of the
 old element in the current buffer.
 
 ```el
@@ -5160,8 +5153,8 @@ old element in the current buffer.
 
 #### om-update-object-at `(point fun)`
 
-Update object under `point` using `fun`.
-`fun` takes an object and returns a modified object
+Update object under **`point`** using **`fun`**.
+**`fun`** takes an object and returns a modified object
 
 ```el
 ;; Given the following contents:
@@ -5176,8 +5169,8 @@ Update object under `point` using `fun`.
 
 #### om-update-element-at `(point fun)`
 
-Update element under `point` using `fun`.
-`fun` takes an element and returns a modified element
+Update element under **`point`** using **`fun`**.
+**`fun`** takes an element and returns a modified element
 
 ```el
 ;; Given the following contents:
@@ -5195,8 +5188,8 @@ Update element under `point` using `fun`.
 
 #### om-update-table-row-at `(point fun)`
 
-Update table-row under `point` using `fun`.
-`fun` takes an table-row and returns a modified table-row
+Update table-row under **`point`** using **`fun`**.
+**`fun`** takes an table-row and returns a modified table-row
 
 ```el
 ;; Given the following contents:
@@ -5213,8 +5206,8 @@ Update table-row under `point` using `fun`.
 
 #### om-update-item-at `(point fun)`
 
-Update item under `point` using `fun`.
-`fun` takes an item and returns a modified item
+Update item under **`point`** using **`fun`**.
+**`fun`** takes an item and returns a modified item
 
 ```el
 ;; Given the following contents:
@@ -5229,8 +5222,8 @@ Update item under `point` using `fun`.
 
 #### om-update-headline-at `(point fun)`
 
-Update headline under `point` using `fun`.
-`fun` takes an headline and returns a modified headline
+Update headline under **`point`** using **`fun`**.
+**`fun`** takes an headline and returns a modified headline
 
 ```el
 ;; Given the following contents:
@@ -5245,8 +5238,8 @@ Update headline under `point` using `fun`.
 
 #### om-update-subtree-at `(point fun)`
 
-Update subtree under `point` using `fun`.
-`fun` takes an subtree and returns a modified subtree
+Update subtree under **`point`** using **`fun`**.
+**`fun`** takes an subtree and returns a modified subtree
 
 ```el
 ;; Given the following contents:
@@ -5268,7 +5261,7 @@ Update subtree under `point` using `fun`.
 
 #### om-fold `(node)`
 
-Fold the children of `node` if they exist.
+Fold the children of **`node`** if they exist.
 
 ```el
 no examples :(
@@ -5276,7 +5269,7 @@ no examples :(
 
 #### om-unfold `(node)`
 
-Unfold the children of `node` if they exist.
+Unfold the children of **`node`** if they exist.
 
 ```el
 no examples :(

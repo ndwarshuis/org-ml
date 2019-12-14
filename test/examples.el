@@ -1030,7 +1030,7 @@
       => nil)
 
     (defexamples-content om-set-property
-      "Set property PROP to VALUE in ELEM."
+      nil
 
       (:buffer "#+CALL: ktulu()")
       (->> (om-parse-this-element)
@@ -3355,7 +3355,7 @@
       (:buffer "1. [ ] one"
                "2. [X] two")
       (->> (om-parse-this-element)
-           (om-plain-list-set-type '-)
+           (om-plain-list-set-type 'unordered)
            (om-to-trimmed-string))
       => (:result "- [ ] one"
                   "- [X] two"))

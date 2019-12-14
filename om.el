@@ -819,8 +819,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
           (planning (list :pred #'om--is-valid-planning-timestamp-p
                           :type-desc "a zero-range, inactive timestamp object"))
           (ts-unit (list :pred #'om--is-valid-timestamp-unit-p
-                         :type-desc '("nil or a symbol from 'year' 'month'"
-                                      "'week' 'day', or 'hour'"))))
+                         :type-desc '("nil or a symbol from `year' `month'"
+                                      "`week' `day', or `hour'"))))
       `((babel-call (:call ,@ol-str :require t)
                     (:inside-header ,@plist)
                     (:arguments ,@slist-com)
@@ -912,10 +912,10 @@ These are also known as \"recursive objects\" in `org-element.el'")
                        :pred om--is-valid-item-bullet-p
                        :decode om--decode-item-bullet
                        :type-desc ("a positive integer (ordered)"
-                                   "or the symbol '-' (unordered)")
+                                   "or the symbol `-' (unordered)")
                        :require '-)
               (:checkbox :pred om--is-valid-item-checkbox-p
-                         :type-desc "nil or the symbols 'on', 'off', or 'trans'")
+                         :type-desc "nil or the symbols `on', `off', or `trans'")
               (:counter ,@pos-int-nil :shift om--shift-pos-integer)
               (:tag :pred om--is-valid-item-tag-p
                     :type-desc "a secondary string")
@@ -931,7 +931,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
         (line-break)
         (link (:path ,@ol-str :require t)
               (:format :pred om--is-valid-link-format-p
-                       :type-desc "the symbol 'plain', 'bracket' or 'angle'")
+                       :type-desc "the symbol `plain', `bracket' or `angle'")
               (:type :pred om--is-valid-link-type-p
                      ;; TODO make this desc better
                      :type-desc ("a oneline string from `org-link-types'"
@@ -977,7 +977,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
                                         "like (PERC) or (NUM DEN)"
                                         "which make [NUM/DEN] and"
                                         ;; TODO this is formatted weirdly
-                                        "[PERC %] respectively")
+                                        "[PERC%] respectively")
                             :require t))
         (strike-through)
         (subscript (:use-brackets-p ,@bool))
@@ -989,9 +989,9 @@ These are also known as \"recursive objects\" in `org-element.el'")
         (table-row (:type :const 'standard))
         (target (:value ,@ol-str :require t))
         (timestamp (:type :pred om--is-valid-timestamp-type-p
-                          :type-desc ("a symbol from 'inactive',"
-                                      "'active', 'inactive-ranged', or"
-                                      "'active-ranged'")
+                          :type-desc ("a symbol from `inactive',"
+                                      "`active', `inactive-ranged', or"
+                                      "`active-ranged'")
                           :require t)
                    (:year-start ,@pos-int :require t)
                    (:month-start ,@pos-int :require t)
@@ -1005,13 +1005,13 @@ These are also known as \"recursive objects\" in `org-element.el'")
                    (:minute-end ,@nn-int-nil)
                    (:repeater-type :pred om--is-valid-timestamp-repeater-type-p
                                    :type-desc ("nil or a symbol from"
-                                               "'catch-up', 'restart',"
-                                               "or 'cumulate'"))
+                                               "`catch-up', `restart',"
+                                               "or `cumulate'"))
                    (:repeater-unit ,@ts-unit)
                    (:repeater-value ,@pos-int-nil)
                    (:warning-type :pred om--is-valid-timestamp-warning-type-p
                                   :type-desc ("nil or a symbol from"
-                                              "'all' or 'first'"))
+                                              "`all' or `first'"))
                    (:warning-unit ,@ts-unit)
                    (:warning-value ,@pos-int-nil)
                    (:raw-value))
@@ -1741,14 +1741,14 @@ Optionally set POST-BLANK (a positive integer)."
                                                post-blank)
   "Build a timestamp object.
 
-TYPE is one if 'active' or 'inactive' (the range suffix will be added
-if an end time is supplied).
+TYPE is the symbol `active' or `inactive' (the range suffix will be
+added if an end time is supplied).
 
 START specifies the start time and is a list of integers in one of
 the following forms:
-- (year month day): short form
-- (year month day nil nil) short form
-- (year month day hour minute) long form
+- (YEAR MONTH DAY): short form
+- (YEAR MONTH DAY nil nil) short form
+- (YEAR MONTH DAY HOUR MINUTE) long form
 
 END (if supplied) will add the ending time, and follows the same
 formatting rules as START.
@@ -1780,14 +1780,15 @@ START and END follow the same rules as their respective arguments in
 CLOSED, DEADLINE, and SCHEDULED are lists with the following structure
 (brackets denote optional members):
 
-'(year minute day [hour] [min]
-  [&warning type value unit])
-  [&repeater type value unit])'
+(YEAR MINUTE DAY [HOUR] [MIN]
+ [&warning TYPE VALUE UNIT]
+ [&repeater TYPE VALUE UNIT])
 
-In terms of arguments supplied to `om-build-timestamp!', the
-first five members correspond to the list supplied as TIME, and the
-type/value/unit correspond to the lists supplied to WARNING and
-REPEATER. The order of warning and repeater does not matter."
+In terms of arguments supplied to `om-build-timestamp!', the first
+five members correspond to the list supplied as TIME, and the TYPE,
+VALUE, and UNIT fields correspond to the lists supplied to WARNING and
+REPEATER arguments. The order of warning and repeater does not
+matter."
   (om-build-planning
    :closed (om--planning-list-to-timestamp closed)
    :deadline (om--planning-list-to-timestamp deadline)
@@ -1798,9 +1799,9 @@ REPEATER. The order of warning and repeater does not matter."
                                                      keyvals)
   "Create a property drawer element.
 
-Each member in KEYVALS is a list of symbols like (key val), where each
-list will generate a node property in the property drawer like ':Key:
-Val'."
+Each member in KEYVALS is a list of symbols like (KEY VAL), where each
+list will generate a node property in the property drawer like \":key:
+val\"."
   (->> keyvals
        (--map (let ((key (symbol-name (car it)))
                     (val (symbol-name (cadr it))))
@@ -1819,11 +1820,11 @@ Val'."
 
 TITLE-TEXT is a oneline string for the title of the headline.
 
-PLANNING is a list like ('planning-type' 'args' ...) where
-'planning-type' is one of :closed, :deadline, or :scheduled, and
-'args' are the args supplied to any of the planning types in
+PLANNING is a list like (PLANNING-TYPE ARGS ...) where
+PLANNING-TYPE is one of `:closed', `:deadline', or `:scheduled', and
+ARGS are the args supplied to any of the planning types in
 `om-build-planning!'. Up to all three planning types can be used
-in the same list like (:closed args :deadline args :scheduled).
+in the same list like (:closed ARGS :deadline ARGS :scheduled ARGS).
 
 STATISTICS-COOKIE is a list following the same format as
 `om-build-statistics-cookie'.
@@ -2863,25 +2864,25 @@ format."
 
 (om--defun-node om-timestamp-set-type (type timestamp)
   "Set type of TIMESTAMP element to TYPE.
-TYPE can be either 'active' or 'inactive'."
+TYPE can be either `active' or `inactive'."
   (om--timestamp-set-type type timestamp))
 
 (om--defun-node om-timestamp-shift (n unit timestamp)
-  "Shift TIMESTAMP time by N UNITS.
+  "Shift TIMESTAMP time by N UNIT's.
 
 This function will move the start and end times together; therefore
 ranged inputs will always output ranged timestamps and same for
 non-ranged. To move the start and end time independently, use
 `om-timestamp-shift-start' or `om-timestamp-shift-end'.
 
-N is a positive or negative integer and UNIT is one of 'minute',
-'hour', 'day', 'month', or 'year'. Overflows will wrap around
-transparently; for instance, supplying 'minute' for UNIT and 90 for N
+N is a positive or negative integer and UNIT is one of `minute',
+`hour', `day', `month', or `year'. Overflows will wrap around
+transparently; for instance, supplying `minute' for UNIT and 90 for N
 will increase the hour property by 1 and the minute property by 30."
   (om--timestamp-shift-range n unit timestamp))
 
 (om--defun-node om-timestamp-shift-start (n unit timestamp)
-  "Shift TIMESTAMP start time by N UNITS.
+  "Shift TIMESTAMP start time by N UNIT's.
 
 N and UNIT behave the same as those in `om-timestamp-shift'.
 
@@ -2891,7 +2892,7 @@ behavior is not desired, use `om-timestamp-shift'."
   (om--timestamp-shift-start n unit timestamp))
 
 (om--defun-node om-timestamp-shift-end (n unit timestamp)
-  "Shift TIMESTAMP end time by N UNITS.
+  "Shift TIMESTAMP end time by N UNIT's.
 
 N and UNIT behave the same as those in `om-timestamp-shift'.
 
@@ -2922,7 +2923,7 @@ cannot contain any warnings or repeaters."
 ;; headline
 
 (om--defun-node om-headline-is-done-p (headline)
-  "Return t if HEADLINE element has a DONE todo keyword."
+  "Return t if HEADLINE element has a done todo keyword."
   (-> (om--get-property :todo-keyword headline)
       (member org-done-keywords)
       (and t)))
@@ -2992,8 +2993,8 @@ subheadlines will not be counted)."
 (om--defun-node om-planning-set-timestamp (prop planning-list planning)
   "Set the timestamp of PLANNING matching PROP.
 
-PROP is one of :closed, :deadline, or :scheduled. PLANNING-LIST is the
-same as that described in `om-build-planning!'."
+PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
+is the same as that described in `om-build-planning!'."
   (unless (memq prop '(:closed :deadline :scheduled))
     (error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
   (let ((ts (om--planning-list-to-timestamp planning-list)))
@@ -3003,8 +3004,9 @@ same as that described in `om-build-planning!'."
 (om--defun-node* om-planning-map-timestamp (prop fun planning)
   "Modify timestamp matching PROP in place in PLANNING using FUN.
 
-PROP is one of :closed, :deadline, or :scheduled. FUN must return a
-timestamp conforming to that described in `om-build-planning'.
+PROP is one of `:closed', `:deadline', or `:scheduled'. FUN must
+return a timestamp conforming to that described in
+`om-build-planning'.
 
 The only difference between using this function and using 
 `om-map-property' is that the former will silently no-op if PROP
@@ -3197,11 +3199,11 @@ This will throw an error if NODE is not a branch type."
 ;; read as "-")
 (om--defun-node om-plain-list-set-type (type plain-list)
   "Set the type of PLAIN-LIST greater element to TYPE.
-TYPE is '-', '+', or 'ordered'."
+TYPE is one of the symbols `unordered' or `ordered'."
   (cond
-   ((memq type '(+ -))
+   ((eq type 'unordered)
     (om--map-children*
-      (--map (om--set-property-strict :bullet type it) it) plain-list))
+      (--map (om--set-property-strict :bullet '- it) it) plain-list))
    ((eq type 'ordered)
     ;; NOTE the org-interpreter seems to use the correct, ordered
     ;; numbers if any number is set here. This behavior may not be
@@ -3214,7 +3216,7 @@ TYPE is '-', '+', or 'ordered'."
 
 (om--defun-node om-table-get-cell (row-index column-index table)
   "Return table-cell at ROW-INDEX and COLUMN-INDEX in TABLE element.
-H-lines do not count toward row indices, and all indices are
+Rule-type rows do not count toward row indices, and all indices are
 zero-indexed."
   (om--table-get-cell row-index column-index table))
 
@@ -3470,7 +3472,7 @@ for plain-list elements vs item elements."
   "Return element under POINT or nil if not on an element.
 
 This function will return every element available in `om-elements'
-with the exception of 'section', 'item', and 'table-row'. To
+with the exception of `section', `item', and `table-row'. To
 specifically parse these, use the functions `om-parse-section-at',
 `om-parse-item-at', and `om-parse-table-row-at'."
   (om--parse-element-at point))
@@ -3505,7 +3507,7 @@ the line."
   "Return headline tree under POINT or nil if not on a headline.
 POINT does not need to be on the headline itself. Only the headline
 and its section will be returned. To include subheadlines, use
-`om-parse-headline-subtree-at'."
+`om-parse-subtree-at'."
   (om--parse-headline-subtree-at point nil))
 
 (defun om-parse-subtree-at (point)
@@ -3840,22 +3842,22 @@ original children to be modified."
 (defun om-match (pattern node)
   "Return a list of all nodes matching PATTERN in NODE.
 
-PATTERN is a list of form ([slicer [arg1] [arg2]] cond1 [cond2 ...]).
+PATTERN is a list of form ([SLICER [ARG1] [ARG2]] COND1 [COND2 ...]).
 
-'slicer' is an optional prefix to the pattern describing how many
+SLICER is an optional prefix to the pattern describing how many
 and which matches to return. If not given, all matches are
 returned. Possible values are:
 
-- :first - return the first match
-- :last - return the last match
-- :nth N - return the nth match where N is an integer denoting the
-  index to return (starting at 0). It may be a negative number to
-  start counting at the end of the match list, in which case -1 is the
-  last index
-- :sub A B - return a sublist between indices A and B. A and B follow
-  the same rules as :nth
+- `:first' - return the first match
+- `:last' - return the last match
+- `:nth' ARG1 - return the nth match where ARG1 is an integer denoting
+  the index to return (starting at 0). It may be a negative number
+  to start counting at the end of the match list, in which case -1 is
+  the last index
+- `:sub' ARG1 ARG2 - return a sublist between indices ARG1 and ARG2.
+  ARG1 and ARG2 follow the same rules as `:nth'
 
-'cond' denotes conditions that that match nodes in the parse
+CONDX denotes conditions that that match nodes in the parse
 tree. This first condition will select matches within the
 children of NODE, the next condition will select matches within
 the matches from the first condition, and so on. The types of
@@ -3868,21 +3870,22 @@ conditions are:
   The first index is zero. If INDEX is negative, start counting
   backward from the end of children where -1 is the last node
 - (OP INDEX) - match when (OP NODE-INDEX INDEX) returns t. OP is
-  one of '<', '>', '<=', or '>='
+  one of `<', `>', `<=', or `>=' and NODE-INDEX is the index of the
+  node being evaluated.
 - PLIST - match nodes with the same properties and values as PLIST
-- :many - match zero or more levels, must have at least one
+- `:many' - match zero or more levels, must have at least one
   sub-pattern after it
-- :many! - like :many but do not match within other matches
-- :any - always match exactly one node
+- `:many!' - like `:many' but do not match within other matches
+- `:any' - always match exactly one node
 
 Additionally, conditions may be further refined using boolean forms:
 
-- (:and c1 c2 [c3 ...]) - match when all conditions are true
-- (:or c1 c2 [c3 ...]) - match when at least one condition is true
-- (:not c) - match when condition is not true
+- (:and C1 C2 [C3 ...]) - match when all conditions are true
+- (:or C1 C2 [C3 ...]) - match when at least one condition is true
+- (:not C) - match when condition is not true
 
-The 'c' members in the forms above are one of any of the condition
-types except :many, :many!, and :any. Boolean forms may be
+The CX members in the forms above are one of any of the condition
+types except `:many', `:many!', and `:any'. Boolean forms may be
 nested within each other."
   (om--verify node om--is-node-p)
   (om--match-slicer pattern node))
