@@ -186,11 +186,6 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
        (setq functions (cons ,desc functions)))
      ,@examples))
 
-(defun quote-and-downcase (string)
-  (format "`%s`" (downcase string)))
-
-(defun unquote-and-link (string)
-  (format-link (substring string 1 -1)))
 
 (defun format-link (string-name)
   (-let* ((name (intern string-name))
@@ -199,12 +194,96 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
         (format "[`%s`](#%s)" name (github-id name signature))
       (format "`%s`" name))))
 
-(defun format-docstring (docstring)
+(defun format-docstring-forms (docstring)
+  (cl-labels
+      ((find-matching-right
+        (p)
+        ;; return point of matching ")" or nil if not found
+        (ignore-errors
+          (save-excursion
+            (goto-char p)
+            (forward-sexp)
+            (1- (point)))))
+       (has-leading-function?
+        (string)
+        (->> (s-replace-regexp "(+" "" string)
+             (s-split " ")
+             (car)
+             (intern)
+             (fboundp)))
+       (has-all-cap-syms?
+        (string)
+        (->> (s-replace-regexp "[().,]" "" string)
+             (s-replace "[" "")
+             (s-replace "]" "")
+             (s-split " ")
+             (--remove (equal it ""))
+             (--all? (or (member it '("t" "nil"))
+                         (s-matches? "^[A-Z0-9\\-]+$" it)
+                         (s-matches? "^\\(:\\|&\\)[a-z0-9-]+$" it)))))
+       (is-form?
+        (string)
+        (or ;; (has-leading-function? string)
+         (has-all-cap-syms? string))))
+    (let (case-fold-search)
+      (with-temp-buffer
+        (insert docstring)
+        (goto-char (point-min))
+        (while (and (< (point) (point-max))
+                    (search-forward "(" nil t))
+          (-when-let (e (find-matching-right (1- (point))))
+            (when (is-form? (buffer-substring (point) e))
+              (downcase-region (point) e)
+              (goto-char (1- (point)))
+              (insert "`")
+              (goto-char (+ 2 e))
+              (insert "`")))
+          (unless (= (point) (point-max))
+            (forward-char)))
+        (buffer-string)))))
+
+(defun format-docstring-args (signature docstring)
+  (let ((sig-args (->> signature
+                       (--remove (memq it '(&optional &key &rest)))
+                       (--map (if (consp it) (car it) it))
+                       (-map #'symbol-name))))
+    (cl-flet
+        ((quote-and-downcase
+          (string)
+            ;; hack to work around % not being part of word boundaries
+          (let ((s (s-chop-suffix "%" (downcase string))))
+             (if (member s sig-args) (format "**`%s`**" s)
+               (format "`%s`" s)))))
+      (replace-regexp-in-string
+       "\\b\\(?3:[A-Z][A-Z-]*[0-9*]*\\)\\(\\*\\|%\\|\\b\\)"
+       ;; "[^A-Z0-9-]\\([A-Z0-9-]+\\)[^A-Z0-9-]"
+       #'quote-and-downcase docstring t nil 3))))
+
+(defun format-docstring-backquoted (docstring)
+  (cl-flet
+      ((unquote-and-link
+        (string)
+        (format-link (substring string 1 -1))))
+    (replace-regexp-in-string "`\\([^ \n]+\\)'" #'unquote-and-link docstring t)))
+
+(defun format-docstring-indent (docstring)
+  (replace-regexp-in-string "^  " "    " docstring))
+
+(defun format-docstring-strings (docstring)
+  (cl-flet
+      ((quote-string
+        (string)
+        (format "`%s`" string)))
+  (s-replace-regexp "\"[[:ascii:]]+?\"" #'quote-string docstring)))
+
+(defun format-docstring (signature docstring)
   (let (case-fold-search)
-    (--> docstring
-      (replace-regexp-in-string "\\b\\([A-Z][A-Z-]*[0-9]*\\)\\b" 'quote-and-downcase it t)
-      (replace-regexp-in-string "`\\([^ ]+\\)'" 'unquote-and-link it t)
-      (replace-regexp-in-string "^  " "    " it))))
+    (->> docstring
+         (format-docstring-strings)
+         (format-docstring-forms)
+         (format-docstring-args signature)
+         (format-docstring-backquoted)
+         (format-docstring-indent))))
 
 (defun function-to-md (function)
   (if (stringp function)
@@ -216,7 +295,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
       ;; (format "### %s `%s`\n\n%s\n\n%s"
               command-name
               signature
-              (format-docstring docstring)
+              (format-docstring signature docstring)
               ;; (mapconcat 'identity (-take 3 examples) "\n")))))
               (mapconcat 'identity examples "\n")))))
 
