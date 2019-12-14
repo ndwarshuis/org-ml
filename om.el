@@ -364,7 +364,6 @@ a non-existent index."
   (nth (om--convert-intra-index n list) list))
 
 (om--defun* om--map-first (fun list)
-  (om--verify fun functionp)
   (->> (cdr list) (cons (funcall fun (car list)))))
 
 (om--defun* om--map-last (fun list)
@@ -491,6 +490,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
 
 (defun om--is-type-p (type node)
   "Return t if NODE's type is `eq' to TYPE (a symbol)."
+  ;; TODO ensure type is valid?
   (eq (om--get-type node) type))
 
 (defun om--is-any-type-p (types node)
@@ -1097,7 +1097,6 @@ These are also known as \"recursive objects\" in `org-element.el'")
     (if filter-fun (funcall filter-fun value) value)))
 
 (om--defun* om--map-property-strict (prop fun node)
-  (om--verify fun functionp)
   (let ((value (funcall fun (om--get-property-strict prop node))))
     (om--set-property-strict prop value node)))
 
@@ -1319,7 +1318,6 @@ property list in NODE."
     (om--set-properties plist node)))
 
 (om--defun* om--map-property (prop fun node)
-  (om--verify fun functionp)
   (let ((value (funcall fun (om--get-property prop node))))
     (om--set-property prop value node)))
 
@@ -2495,36 +2493,30 @@ zero-indexed."
 
 ;;; PUBLIC TYPE FUNCTIONS
 
-(defun om-is-type-p (type node)
+(om--defun-node om-is-type-p (type node)
   "Return t if the type of NODE is TYPE (a symbol)."
-  (om--verify node om--is-node-p)
   (om--is-type-p type node))
 
-(defun om-is-any-type-p (types node)
+(om--defun-node om-is-any-type-p (types node)
   "Return t if the type of NODE is in TYPES (a list of symbols)."
-  (om--verify node om--is-node-p)
   (om--is-any-type-p types node))
 
-(defun om-is-element-p (node)
+(om--defun-node om-is-element-p (node)
   "Return t if NODE is an element class."
-  (om--verify node om--is-node-p)
   (om--is-any-type-p om-elements node))
 
-(defun om-is-branch-node-p (node)
+(om--defun-node om-is-branch-node-p (node)
   "Return t if NODE is a branch node."
-  (om--verify node om--is-node-p)
   (om--is-any-type-p om-branch-nodes node))
 
-(defun om-node-may-have-child-objects-p (node)
+(om--defun-node om-node-may-have-child-objects-p (node)
   "Return t if NODE is a branch node that may have child objects."
-  (om--verify node om--is-node-p)
   (om--is-any-type-p om-branch-nodes-permitting-child-objects node))
 
-(defun om-node-may-have-child-elements-p (node)
+(om--defun-node om-node-may-have-child-elements-p (node)
   "Return t if NODE is a branch node that may have child elements.
 Note this implies that NODE is also of class element since only
 elements may have other elements as children."
-  (om--verify node om--is-node-p)
   (om--is-any-type-p om-branch-elements-permitting-child-elements node))
 
 ;;; PUBLIC PROPERTY FUNCTIONS
@@ -2551,10 +2543,10 @@ elements may have other elements as children."
 
 ;; containing
 
-(defun om-contains-point-p (point node)
+(om--defun-node om-contains-point-p (point node)
   "Return t if POINT is within the boundaries of NODE."
   ;; TODO point should be a positive integer only
-  (om--verify node om--is-node-p point integerp)
+  (om--verify point integerp)
   (-let (((&plist :begin :end) (om--get-all-properties node)))
     (if (and (integerp begin) (integerp end))
         (<= begin point end)
@@ -2562,7 +2554,7 @@ elements may have other elements as children."
 
 ;; set
 
-(defun om-set-property (prop value node)
+(om--defun-node om-set-property (prop value node)
   "Set property PROP to VALUE of NODE.
 
 See builder functions for a list of properties and their rules for
@@ -2573,19 +2565,18 @@ each type."
 ;;      (om--format-alist-operations)
 ;;      (om--append-documentation 'om-set-property))
 
-(defun om-set-properties (plist node)
+(om--defun-node om-set-properties (plist node)
   "Set all properties of NODE to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that corresponds to the
 property list in NODE.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om--verify node om--is-node-p)
   (om--set-properties-strict plist node))
 
 ;; get
 
-(defun om-get-property (prop node)
+(om--defun-node om-get-property (prop node)
   "Return the value or property PROP of NODE.
 
 See builder functions for a list of properties and their rules for
@@ -2596,7 +2587,7 @@ each type."
 
 ;; map
 
-(om--defun* om-map-property (prop fun node)
+(om--defun-node* om-map-property (prop fun node)
   "Apply FUN to the value of property PROP of NODE.
 FUN is a unary function which takes the current value of PROP and
 returns a new value to which PROP will be set.
@@ -2605,26 +2596,26 @@ See builder functions for a list of properties and their rules for
 each type."
   (om--map-property-strict prop fun node))
 
-(defun om-map-properties (plist node)
+(om--defun-node om-map-properties (plist node)
   "Alter property values of NODE in place.
 PLIST is a property list where the keys are properties of NODE and
 its values are functions to be mapped to these properties.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om--verify node om--is-node-p)
   (om--map-properties-strict plist node))
 
 (defmacro om-map-properties* (plist node)
   "Anaphoric form of `om-map-properties'.
 PLIST is a property list where the keys are properties of NODE and
 its values are forms to be mapped to these properties."
+  (om--verify node om--is-node-p)
   `(let ((plist* (om--plist-map-values (lambda (form) `(lambda (it) ,form)) ',plist)))
     (om--map-properties-strict plist* ,node)))
 
 ;; toggle
 
-(defun om-toggle-property (prop node)
+(om--defun-node om-toggle-property (prop node)
   "Flip the value of property PROP of NODE.
 This function only applies to properties that are booleans.
 
@@ -2641,7 +2632,7 @@ The following elements and properties are supported:"
 
 ;; shift
 
-(defun om-shift-property (prop n node)
+(om--defun-node om-shift-property (prop n node)
   "Shift property PROP by N (an integer) units of NODE.
 This only applies the properties that are represented as integers.
 
@@ -2661,7 +2652,7 @@ The following elements and properties are supported:"
 
 ;; insert
 
-(defun om-insert-into-property (prop index string node)
+(om--defun-node om-insert-into-property (prop index string node)
   "Insert STRING into PROP at INDEX of NODE if not already there.
 This only applies to properties that are represented as lists of
 strings.
@@ -2685,7 +2676,7 @@ The following elements and properties are supported:"
 
 ;; remove
 
-(defun om-remove-from-property (prop string node)
+(om--defun-node om-remove-from-property (prop string node)
   "Remove STRING from PROP of NODE.
 This only applies to properties that are represented as lists of 
 strings.
@@ -2701,7 +2692,7 @@ and properties that may be used with this function."
 
 ;; plist-put
 
-(defun om-plist-put-property (prop key value node)
+(om--defun-node om-plist-put-property (prop key value node)
   "Insert KEY and VALUE pair into PROP of NODE.
 KEY is a keyword and VALUE is a symbol. This only applies to 
 properties that are represented as plists.
@@ -2719,7 +2710,7 @@ The following elements and properties are supported:."
 
 ;; plist-remove
 
-(defun om-plist-remove-property (prop key node)
+(om--defun-node om-plist-remove-property (prop key node)
   "Remove KEY and its value from PROP of NODE.
 KEY is a keyword. This only applies to properties that are
 represented as plists.
@@ -3022,10 +3013,10 @@ nil values."
 
 ;; generic
 
-(defun om-children-contain-point-p (point node)
+(om--defun-node om-children-contain-point-p (point node)
   "Return t if POINT is within the boundaries of NODE's children."
   ;; TODO point should be a positive integer only
-  (om--verify node om-is-branch-node-p point integerp)
+  (om--verify point integerp)
   (-let (((&plist :contents-begin :contents-end)
           (om--get-all-properties node)))
     (if (and (integerp contents-begin) (integerp contents-end))
@@ -3686,8 +3677,7 @@ This is meant to be used as input for functions such as
 `om-build-timestamp'."
   (->> (decode-time) (-select-by-indices '(1 2 3 4 5)) (reverse)))
 
-(defun om-get-type (node)
-  (om--verify node om--is-node-p)
+(om--defun-node om-get-type (node)
   (om--get-type node))
 
 ;;; generalized CRUD operations
@@ -3839,7 +3829,7 @@ original children to be modified."
             (-drop a*)))))))
     (_ (om--match-pattern nil nil pattern node))))
 
-(defun om-match (pattern node)
+(om--defun-node om-match (pattern node)
   "Return a list of all nodes matching PATTERN in NODE.
 
 PATTERN is a list of form ([SLICER [ARG1] [ARG2]] COND1 [COND2 ...]).
@@ -3887,7 +3877,6 @@ Additionally, conditions may be further refined using boolean forms:
 The CX members in the forms above are one of any of the condition
 types except `:many', `:many!', and `:any'. Boolean forms may be
 nested within each other."
-  (om--verify node om--is-node-p)
   (om--match-slicer pattern node))
 
 ;; find-parent
