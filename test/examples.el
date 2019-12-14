@@ -671,15 +671,7 @@
            (om-to-trimmed-string))
       => (:result "#+BEGIN_SRC :key val"
                   "  body"
-                  "#+END_SRC"))
-
-    (defexamples om-build-table-row-hline
-      (->>  (om-build-table
-             (om-build-table-row
-              (om-build-table-cell "text"))
-             (om-build-table-row-hline))
-            (om-to-trimmed-string)) => (:result "| text |"
-            "|------|")))
+                  "#+END_SRC")))
 
   (def-example-subgroup "Branch Elements with Child Objects"
     nil
@@ -789,124 +781,127 @@
       (->> (om-build-table-cell "cell")
            (om-build-table-row)
            (om-build-table)
-           (om-to-trimmed-string)) => "| cell |")
+           (om-to-trimmed-string)) => "| cell |"))
 
-    (def-example-subgroup "Miscellaneous Builders"
-      nil
+  (def-example-subgroup "Miscellaneous Builders"
+    nil
 
-      (defexamples om-build-timestamp-diary-sexp
-        (->> (om-build-timestamp-diary-sexp '(diary-float t 4 2))
-             (om-to-string))
-        => "<%%(diary-float t 4 2)>")
+    (defexamples om-build-table-row-hline
+      (->>  (om-build-table
+             (om-build-table-row
+              (om-build-table-cell "text"))
+             (om-build-table-row-hline))
+            (om-to-trimmed-string))
+      => (:result "| text |"
+                  "|------|"))
 
-      (defexamples om-build-table-row-hline
-        ;; TODO this example is pretty dumb
-        (->> (om-build-table-row-hline)
-             (om-to-trimmed-string))
-        => "|-"))
+    (defexamples om-build-timestamp-diary-sexp
+      (->> (om-build-timestamp-diary-sexp '(diary-float t 4 2))
+           (om-to-string))
+      => "<%%(diary-float t 4 2)>"))
 
-    (def-example-subgroup "Shorthand Builders"
-      "Build nodes with more convenient/shorter syntax."
+  (def-example-subgroup "Shorthand Builders"
+    "Build nodes with more convenient/shorter syntax."
 
-      (defexamples om-build-timestamp!
-        (->> (om-build-timestamp! 'inactive '(2019 1 1))
-             (om-to-string))
-        => "[2019-01-01 Tue]"
-        (->> (om-build-timestamp! 'inactive '(2019 1 1 12 0)
-                                       :warning '(all 1 day)
-                                       :repeater '(cumulate 1 month))
-             (om-to-string))
-        => "[2019-01-01 Tue 12:00 +1m -1d]"
-        (->> (om-build-timestamp! 'inactive '(2019 1 1)
-                                       :end '(2019 1 2))
-             (om-to-string))
-        => "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (defexamples om-build-timestamp!
+      (->> (om-build-timestamp! 'inactive '(2019 1 1))
+           (om-to-string))
+      => "[2019-01-01 Tue]"
+      (->> (om-build-timestamp! 'inactive '(2019 1 1 12 0)
+                                :warning '(all 1 day)
+                                :repeater '(cumulate 1 month))
+           (om-to-string))
+      => "[2019-01-01 Tue 12:00 +1m -1d]"
+      (->> (om-build-timestamp! 'inactive '(2019 1 1)
+                                :end '(2019 1 2))
+           (om-to-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]")
 
-      (defexamples om-build-clock!
-        (->> (om-build-clock! '(2019 1 1))
-             (om-to-trimmed-string))
-        => "CLOCK: [2019-01-01 Tue]"
-        (->> (om-build-clock! '(2019 1 1 12 0))
-             (om-to-trimmed-string))
-        => "CLOCK: [2019-01-01 Tue 12:00]"
-        (->> (om-build-clock! '(2019 1 1 12 0) :end '(2019 1 1 13 0))
-             (om-to-trimmed-string))
-        ;; TODO why does this make two individual timestamps?
-        => "CLOCK: [2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00] =>  1:00")
+    (defexamples om-build-clock!
+      (->> (om-build-clock! '(2019 1 1))
+           (om-to-trimmed-string))
+      => "CLOCK: [2019-01-01 Tue]"
+      (->> (om-build-clock! '(2019 1 1 12 0))
+           (om-to-trimmed-string))
+      => "CLOCK: [2019-01-01 Tue 12:00]"
+      (->> (om-build-clock! '(2019 1 1 12 0) :end '(2019 1 1 13 0))
+           (om-to-trimmed-string))
+      ;; TODO why does this make two individual timestamps?
+      => "CLOCK: [2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00] =>  1:00")
 
-      (defexamples om-build-planning!
-        (->> (om-build-planning! :closed '(2019 1 1))
-             (om-to-trimmed-string))
-        => "CLOSED: [2019-01-01 Tue]"
-        (->> (om-build-planning! :closed '(2019 1 1)
-                                      :scheduled '(2018 1 1))
-             (om-to-trimmed-string))
-        => "SCHEDULED: [2018-01-01 Mon] CLOSED: [2019-01-01 Tue]"
-        (->> (om-build-planning! :closed '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
-             (om-to-trimmed-string))
-        => "CLOSED: [2019-01-01 Tue +1m -1d]")
+    (defexamples om-build-planning!
+      (->> (om-build-planning! :closed '(2019 1 1))
+           (om-to-trimmed-string))
+      => "CLOSED: [2019-01-01 Tue]"
+      (->> (om-build-planning! :closed '(2019 1 1)
+                               :scheduled '(2018 1 1))
+           (om-to-trimmed-string))
+      => "SCHEDULED: [2018-01-01 Mon] CLOSED: [2019-01-01 Tue]"
+      (->> (om-build-planning! :closed '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
+           (om-to-trimmed-string))
+      => "CLOSED: [2019-01-01 Tue +1m -1d]")
 
-      (defexamples om-build-property-drawer!
-        (->> (om-build-property-drawer! '(key val))
-             (om-to-trimmed-string))
-        => (:result ":PROPERTIES:"
-                    ":key:      val"
-                    ":END:"))
+    (defexamples om-build-property-drawer!
+      (->> (om-build-property-drawer! '(key val))
+           (om-to-trimmed-string))
+      => (:result ":PROPERTIES:"
+                  ":key:      val"
+                  ":END:"))
 
-      (defexamples om-build-headline!
-        (->> (om-build-headline! :title-text "really impressive title")
-             (om-to-trimmed-string))
-        => "* really impressive title"
-        (->> (om-build-headline! :title-text "really impressive title"
-                                      :statistics-cookie '(0 9000))
-             (om-to-trimmed-string))
-        => "* really impressive title [0/9000]"
-        (->> (om-build-headline!
-              :title-text "really impressive title"
-              :properties '((key val))
-              :section-children (list (om-build-paragraph! "section text"))
-              (om-build-headline! :title-text "subhead"))
-             (om-to-trimmed-string))
-        => (:result "* really impressive title"
-                    ":PROPERTIES:"
-                    ":key:      val"
-                    ":END:"
-                    "section text"
-                    "** subhead")
-        )
+    (defexamples om-build-headline!
+      (->> (om-build-headline! :title-text "really impressive title")
+           (om-to-trimmed-string))
+      => "* really impressive title"
+      (->> (om-build-headline! :title-text "really impressive title"
+                               :statistics-cookie '(0 9000))
+           (om-to-trimmed-string))
+      => "* really impressive title [0/9000]"
+      (->> (om-build-headline!
+            :title-text "really impressive title"
+            :properties '((key val))
+            :section-children (list (om-build-paragraph! "section text"))
+            (om-build-headline! :title-text "subhead"))
+           (om-to-trimmed-string))
+      => (:result "* really impressive title"
+                  ":PROPERTIES:"
+                  ":key:      val"
+                  ":END:"
+                  "section text"
+                  "** subhead")
+      )
 
-      (defexamples om-build-item!
-        (->> (om-build-item!
-              :bullet 1
-              :tag "complicated *tag*"
-              :paragraph "petulant /frenzy/"
-              (om-build-plain-list
-               (om-build-item! :bullet '- :paragraph "below")))
-             (om-to-trimmed-string))
-        => (:result "1. complicated *tag* :: petulant /frenzy/"
-                    "   - below"))
+    (defexamples om-build-item!
+      (->> (om-build-item!
+            :bullet 1
+            :tag "complicated *tag*"
+            :paragraph "petulant /frenzy/"
+            (om-build-plain-list
+             (om-build-item! :bullet '- :paragraph "below")))
+           (om-to-trimmed-string))
+      => (:result "1. complicated *tag* :: petulant /frenzy/"
+                  "   - below"))
 
-      (defexamples om-build-paragraph!
-        (->> (om-build-paragraph! "stuff /with/ *formatting*" :post-blank 2)
-             (om-to-string))
-        => (:result "stuff /with/ *formatting*"
-                    ""
-                    ""
-                    "")
-        (->> (om-build-paragraph! "* stuff /with/ *formatting*")
-             (om-to-string))
-        !!> error)
+    (defexamples om-build-paragraph!
+      (->> (om-build-paragraph! "stuff /with/ *formatting*" :post-blank 2)
+           (om-to-string))
+      => (:result "stuff /with/ *formatting*"
+                  ""
+                  ""
+                  "")
+      (->> (om-build-paragraph! "* stuff /with/ *formatting*")
+           (om-to-string))
+      !!> error)
 
-      (defexamples om-build-table!
-        (->> (om-build-table! '("R" "A") '("G" "E"))
-             (om-to-trimmed-string))
-        => (:result "| R | A |"
-                    "| G | E |")
-        (->> (om-build-table! '("L" "O") 'hline '("V" "E"))
-             (om-to-trimmed-string))
-        => (:result "| L | O |"
-                    "|---+---|"
-                    "| V | E |")))))
+    (defexamples om-build-table!
+      (->> (om-build-table! '("R" "A") '("G" "E"))
+           (om-to-trimmed-string))
+      => (:result "| R | A |"
+                  "| G | E |")
+      (->> (om-build-table! '("L" "O") 'hline '("V" "E"))
+           (om-to-trimmed-string))
+      => (:result "| L | O |"
+                  "|---+---|"
+                  "| V | E |"))))
 
 (def-example-group "Type Predicates"
   "Test node types."
