@@ -792,7 +792,7 @@ Build new nodes.
 Build a code object node.
 
 The following properties are settable:
-- **`value`**: a oneline string
+- **`value`**: (required) a oneline string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -807,8 +807,8 @@ The following properties are settable:
 Build an entity object node.
 
 The following properties are settable:
-- **`name`**: a string that makes `org-entity-get` return non-nil
-- **`use-brackets-p`**: nil or t
+- **`name`**: (required) a string that makes `org-entity-get` return non-nil
+- **`use-brackets-p`**:  nil or t
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -823,10 +823,10 @@ The following properties are settable:
 Build an inline-babel-call object node.
 
 The following properties are settable:
-- **`call`**: a oneline string
-- **`inside-header`**: a plist
-- **`arguments`**: a list of oneline strings
-- **`end-header`**: a plist
+- **`call`**: (required) a oneline string
+- **`inside-header`**:  a plist
+- **`arguments`**:  a list of oneline strings
+- **`end-header`**:  a plist
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -853,9 +853,9 @@ The following properties are settable:
 Build an inline-src-block object node.
 
 The following properties are settable:
-- **`language`**: a oneline string
-- **`parameters`**: a plist
-- **`value`**: a oneline string
+- **`language`**: (required) a oneline string
+- **`parameters`**:  a plist
+- **`value`**: (default `""`) a oneline string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -893,7 +893,7 @@ The following properties are settable:
 Build a statistics-cookie object node.
 
 The following properties are settable:
-- **`value`**: a list of non-neg integers like `(perc)` or `(num den)` which make [`num`/`den`] and [`perc`%] respectively
+- **`value`**: (required) a list of non-neg integers like `(perc)` or `(num den)` which make [`num`/`den`] and [`perc`%] respectively
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -920,7 +920,7 @@ The following properties are settable:
 Build a target object node.
 
 The following properties are settable:
-- **`value`**: a oneline string
+- **`value`**: (required) a oneline string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -935,23 +935,23 @@ The following properties are settable:
 Build a timestamp object node.
 
 The following properties are settable:
-- **`type`**: a symbol from `inactive`, `active`, `inactive-ranged`, or `active-ranged`
-- **`year-start`**: a positive integer
-- **`month-start`**: a positive integer
-- **`day-start`**: a positive integer
-- **`year-end`**: a positive integer
-- **`month-end`**: a positive integer
-- **`day-end`**: a positive integer
-- **`hour-start`**: a non-negative integer or nil
-- **`minute-start`**: a non-negative integer or nil
-- **`hour-end`**: a non-negative integer or nil
-- **`minute-end`**: a non-negative integer or nil
-- **`repeater-type`**: nil or a symbol from `catch-up`, `restart`, or `cumulate`
-- **`repeater-unit`**: nil or a symbol from `year` `month` `week` `day`, or `hour`
-- **`repeater-value`**: a positive integer or nil
-- **`warning-type`**: nil or a symbol from `all` or `first`
-- **`warning-unit`**: nil or a symbol from `year` `month` `week` `day`, or `hour`
-- **`warning-value`**: a positive integer or nil
+- **`type`**: (required) a symbol from `inactive`, `active`, `inactive-ranged`, or `active-ranged`
+- **`year-start`**: (required) a positive integer
+- **`month-start`**: (required) a positive integer
+- **`day-start`**: (required) a positive integer
+- **`year-end`**: (required) a positive integer
+- **`month-end`**: (required) a positive integer
+- **`day-end`**: (required) a positive integer
+- **`hour-start`**:  a non-negative integer or nil
+- **`minute-start`**:  a non-negative integer or nil
+- **`hour-end`**:  a non-negative integer or nil
+- **`minute-end`**:  a non-negative integer or nil
+- **`repeater-type`**:  nil or a symbol from `catch-up`, `restart`, or `cumulate`
+- **`repeater-unit`**:  nil or a symbol from `year` `month` `week` `day`, or `hour`
+- **`repeater-value`**:  a positive integer or nil
+- **`warning-type`**:  nil or a symbol from `all` or `first`
+- **`warning-unit`**:  nil or a symbol from `year` `month` `week` `day`, or `hour`
+- **`warning-value`**:  a positive integer or nil
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -979,7 +979,7 @@ The following properties are settable:
 Build a verbatim object node.
 
 The following properties are settable:
-- **`value`**: a oneline string
+- **`value`**: (required) a oneline string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1012,7 +1012,7 @@ The following properties are settable:
 Build a footnote-reference object node with **`object-nodes`** as children.
 
 The following properties are settable:
-- **`label`**: a oneline string or nil
+- **`label`**:  a oneline string or nil
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1050,9 +1050,9 @@ The following properties are settable:
 Build a link object node with **`object-nodes`** as children.
 
 The following properties are settable:
-- **`path`**: a oneline string
-- **`format`**: the symbol `plain`, `bracket` or `angle`
-- **`type`**: a oneline string from `org-link-types` or `"coderef"`, `"custom-id"`, `"file"`, `"id"`, `"radio"`, or `"fuzzy"`
+- **`path`**: (required) a oneline string
+- **`format`**:  the symbol `plain`, `bracket` or `angle`
+- **`type`**: (default `"fuzzy"`) a oneline string from `org-link-types` or `"coderef"`, `"custom-id"`, `"file"`, `"id"`, `"radio"`, or `"fuzzy"`
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1105,7 +1105,7 @@ The following properties are settable:
 Build a superscript object node with **`object-nodes`** as children.
 
 The following properties are settable:
-- **`use-brackets-p`**: nil or t
+- **`use-brackets-p`**:  nil or t
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1120,7 +1120,7 @@ The following properties are settable:
 Build a subscript object node with **`object-nodes`** as children.
 
 The following properties are settable:
-- **`use-brackets-p`**: nil or t
+- **`use-brackets-p`**:  nil or t
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1169,10 +1169,10 @@ The following properties are settable:
 Build a babel-call element node.
 
 The following properties are settable:
-- **`call`**: a oneline string
-- **`inside-header`**: a plist
-- **`arguments`**: a list of oneline strings
-- **`end-header`**: a plist
+- **`call`**: (required) a oneline string
+- **`inside-header`**:  a plist
+- **`arguments`**:  a list of oneline strings
+- **`end-header`**:  a plist
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1199,7 +1199,7 @@ The following properties are settable:
 Build a clock element node.
 
 The following properties are settable:
-- **`value`**: an unranged, inactive timestamp with no warning or repeater
+- **`value`**: (required) an unranged, inactive timestamp with no warning or repeater
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1221,7 +1221,7 @@ The following properties are settable:
 Build a comment element node.
 
 The following properties are settable:
-- **`value`**: a oneline string
+- **`value`**: (required) a oneline string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1236,7 +1236,7 @@ The following properties are settable:
 Build a comment-block element node.
 
 The following properties are settable:
-- **`value`**: a oneline string
+- **`value`**: (default `""`) a oneline string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1258,7 +1258,7 @@ The following properties are settable:
 Build a diary-sexp element node.
 
 The following properties are settable:
-- **`value`**: a list form or nil
+- **`value`**:  a list form or nil
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1277,9 +1277,9 @@ The following properties are settable:
 Build an example-block element node.
 
 The following properties are settable:
-- **`preserve-indent`**: nil or t
-- **`switches`**: a list of oneline strings
-- **`value`**: a string
+- **`preserve-indent`**:  nil or t
+- **`switches`**:  a list of oneline strings
+- **`value`**: (default `""`) a string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1307,8 +1307,8 @@ The following properties are settable:
 Build an export-block element node.
 
 The following properties are settable:
-- **`type`**: a oneline string
-- **`value`**: a string
+- **`type`**: (required) a oneline string
+- **`value`**: (required) a string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1326,7 +1326,7 @@ The following properties are settable:
 Build a fixed-width element node.
 
 The following properties are settable:
-- **`value`**: a oneline string
+- **`value`**: (required) a oneline string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1356,8 +1356,8 @@ The following properties are settable:
 Build a keyword element node.
 
 The following properties are settable:
-- **`key`**: a oneline string
-- **`value`**: a oneline string
+- **`key`**: (required) a oneline string
+- **`value`**: (required) a oneline string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1372,7 +1372,7 @@ The following properties are settable:
 Build a latex-environment element node.
 
 The following properties are settable:
-- **`value`**: a list of strings like `(env body)` or `(env)`
+- **`value`**: (required) a list of strings like `(env body)` or `(env)`
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1389,8 +1389,8 @@ The following properties are settable:
 Build a node-property element node.
 
 The following properties are settable:
-- **`key`**: a oneline string
-- **`value`**: a oneline string
+- **`key`**: (required) a oneline string
+- **`value`**: (required) a oneline string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1405,9 +1405,9 @@ The following properties are settable:
 Build a planning element node.
 
 The following properties are settable:
-- **`closed`**: a zero-range, inactive timestamp object
-- **`deadline`**: a zero-range, inactive timestamp object
-- **`scheduled`**: a zero-range, inactive timestamp object
+- **`closed`**:  a zero-range, inactive timestamp object
+- **`deadline`**:  a zero-range, inactive timestamp object
+- **`scheduled`**:  a zero-range, inactive timestamp object
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1433,11 +1433,11 @@ The following properties are settable:
 Build a src-block element node.
 
 The following properties are settable:
-- **`value`**: a string
-- **`language`**: a string or nil
-- **`parameters`**: a plist
-- **`preserve-indent`**: nil or t
-- **`switches`**: a list of oneline strings
+- **`value`**: (default `""`) a string
+- **`language`**:  a string or nil
+- **`parameters`**:  a plist
+- **`preserve-indent`**:  nil or t
+- **`switches`**:  a list of oneline strings
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1550,7 +1550,7 @@ The following properties are settable:
 Build a drawer element node with **`element-nodes`** as children.
 
 The following properties are settable:
-- **`drawer-name`**: a oneline string
+- **`drawer-name`**: (required) a oneline string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1568,7 +1568,7 @@ The following properties are settable:
 Build a footnote-definition element node with **`element-nodes`** as children.
 
 The following properties are settable:
-- **`label`**: a oneline string
+- **`label`**: (required) a oneline string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1584,15 +1584,15 @@ The following properties are settable:
 Build a headline element node with **`element-nodes`** as children.
 
 The following properties are settable:
-- **`archivedp`**: nil or t
-- **`commentedp`**: nil or t
-- **`footnote-section-p`**: nil or t
-- **`level`**: a positive integer
-- **`pre-blank`**: a non-negative integer
-- **`priority`**: an integer between (inclusive) `org-highest-priority` and `org-lowest-priority`
-- **`tags`**: a string list
-- **`title`**: a secondary string
-- **`todo-keyword`**: a oneline string or nil
+- **`archivedp`**:  nil or t
+- **`commentedp`**:  nil or t
+- **`footnote-section-p`**:  nil or t
+- **`level`**:  a positive integer
+- **`pre-blank`**:  a non-negative integer
+- **`priority`**:  an integer between (inclusive) `org-highest-priority` and `org-lowest-priority`
+- **`tags`**:  a string list
+- **`title`**:  a secondary string
+- **`todo-keyword`**:  a oneline string or nil
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1636,10 +1636,10 @@ The following properties are settable:
 Build an item element node with **`element-nodes`** as children.
 
 The following properties are settable:
-- **`bullet`**: a positive integer (ordered) or the symbol `-` (unordered)
-- **`checkbox`**: nil or the symbols `on`, `off`, or `trans`
-- **`counter`**: a positive integer or nil
-- **`tag`**: a secondary string
+- **`bullet`**: (default `-`) a positive integer (ordered) or the symbol `-` (unordered)
+- **`checkbox`**:  nil or the symbols `on`, `off`, or `trans`
+- **`counter`**:  a positive integer or nil
+- **`tag`**:  a secondary string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1744,7 +1744,7 @@ The following properties are settable:
 Build a table element node with **`element-nodes`** as children.
 
 The following properties are settable:
-- **`tblfm`**: a list of oneline strings
+- **`tblfm`**:  a list of oneline strings
 - **`post-blank`**: a non-negative integer
 
 ```el

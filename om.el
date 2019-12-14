@@ -1233,11 +1233,21 @@ These are also known as \"recursive objects\" in `org-element.el'")
                                          (symbol-name)
                                          (s-chop-prefix ":")
                                          (s-upcase)))
+                                 (r (-->
+                                     (plist-get (cdr it) :require)
+                                     (pcase it
+                                      ((pred stringp)
+                                       (format "(default %S)" it))
+                                      (`(quote ,s)
+                                       (format "(default `%s')" s))
+                                      ((guard (eq it t))
+                                       "(required)")
+                                      (_ ""))))
                                  (d (plist-get (cdr it) :type-desc)))
                              (unless d
                                (error "No type-desc: %s %s" type p))
                              (->> (if (listp d) (s-join " " d) d)
-                                  (format "- %s: %s" p))))
+                                  (format "- %s: %s %s" p r))))
                     (s-join "\n"))))
               (concat
                (format "Build %s %s node" (om--prepend-article type) class)

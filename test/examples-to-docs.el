@@ -274,7 +274,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
       ((quote-string
         (string)
         (format "`%s`" string)))
-  (s-replace-regexp "\"[[:ascii:]]+?\"" #'quote-string docstring)))
+  (s-replace-regexp "\"[[:ascii:]]*?\"" #'quote-string docstring)))
 
 (defun format-docstring (signature docstring)
   (let (case-fold-search)
