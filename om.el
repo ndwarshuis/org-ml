@@ -1162,14 +1162,19 @@ These are also known as \"recursive objects\" in `org-element.el'")
   (defun om--kwd-to-sym (keyword)
     (->> (symbol-name keyword) (s-chop-prefix ":") (intern)))
 
+  (defun om--prepend-article (string)
+    (let ((a (--> (symbol-name string)
+                  (s-left 1 it)
+                  (if (member it '("a" "e" "i" "o" "u")) "an" "a"))))
+      (format "%s %s" a string)))
+
   (--each (--remove (eq 'plain-text (car it)) om--type-alist)
     (let* ((type (car it))
            (element? (memq type org-element-all-elements))
            (name (intern (format "om-build-%s" type)))
            (props (->> (cdr it)
                        (--remove (eq :post-blank (car it)))
-                       (-non-nil)))
-           (props (->> props
+                       (-non-nil)
                        (--group-by
                         (-let (((&plist :require :pred :const) (cdr it)))
                           (cond
@@ -1185,8 +1190,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
                                 (default (plist-get (cdr it) :require)))
                             (if default `(,prop ,default) prop)))))
            (rest-arg (cond
-                      ((memq type org-element-greater-elements) 'nodes)
-                      ((memq type org-element-object-containers) 'objs)))
+                      ((memq type org-element-greater-elements) 'element-nodes)
+                      ((memq type org-element-object-containers) 'object-nodes)))
            (args
             (let ((a `(,@pos-args &key ,@kw-args post-blank)))
               (if rest-arg `(,@a &rest ,rest-arg) a)))
@@ -1235,8 +1240,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
                                   (format "- %s: %s" p))))
                     (s-join "\n"))))
               (concat
-               ;; TODO use a/an here
-               (format "Build a %s %s" type class) end
+               (format "Build %s %s node" (om--prepend-article type) class)
+               end
                "\n\nThe following properties are settable:\n"
                prop "\n- POST-BLANK: a non-negative integer")))
            (builder

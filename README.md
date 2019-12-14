@@ -204,16 +204,16 @@ Build new nodes.
 
 ### Branch Objects
 
-* [om-build-bold](#om-build-bold-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-build-footnote-reference](#om-build-footnote-reference-key-label-post-blank-rest-objs) `(&key label post-blank &rest objs)`
-* [om-build-italic](#om-build-italic-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-build-link](#om-build-link-path-key-format-type-fuzzy-post-blank-rest-objs) `(path &key format (type "fuzzy") post-blank &rest objs)`
-* [om-build-radio-target](#om-build-radio-target-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-build-strike-through](#om-build-strike-through-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-build-superscript](#om-build-superscript-key-use-brackets-p-post-blank-rest-objs) `(&key use-brackets-p post-blank &rest objs)`
-* [om-build-subscript](#om-build-subscript-key-use-brackets-p-post-blank-rest-objs) `(&key use-brackets-p post-blank &rest objs)`
-* [om-build-table-cell](#om-build-table-cell-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-build-underline](#om-build-underline-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
+* [om-build-bold](#om-build-bold-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
+* [om-build-footnote-reference](#om-build-footnote-reference-key-label-post-blank-rest-object-nodes) `(&key label post-blank &rest object-nodes)`
+* [om-build-italic](#om-build-italic-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
+* [om-build-link](#om-build-link-path-key-format-type-fuzzy-post-blank-rest-object-nodes) `(path &key format (type "fuzzy") post-blank &rest object-nodes)`
+* [om-build-radio-target](#om-build-radio-target-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
+* [om-build-strike-through](#om-build-strike-through-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
+* [om-build-superscript](#om-build-superscript-key-use-brackets-p-post-blank-rest-object-nodes) `(&key use-brackets-p post-blank &rest object-nodes)`
+* [om-build-subscript](#om-build-subscript-key-use-brackets-p-post-blank-rest-object-nodes) `(&key use-brackets-p post-blank &rest object-nodes)`
+* [om-build-table-cell](#om-build-table-cell-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
+* [om-build-underline](#om-build-underline-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
 
 ### Leaf Elements
 
@@ -234,22 +234,22 @@ Build new nodes.
 
 ### Branch Elements with Child Objects
 
-* [om-build-paragraph](#om-build-paragraph-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-build-table-row](#om-build-table-row-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
-* [om-build-verse-block](#om-build-verse-block-key-post-blank-rest-objs) `(&key post-blank &rest objs)`
+* [om-build-paragraph](#om-build-paragraph-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
+* [om-build-table-row](#om-build-table-row-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
+* [om-build-verse-block](#om-build-verse-block-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
 
 ### Branch Elements with Child Elements
 
-* [om-build-center-block](#om-build-center-block-key-post-blank-rest-nodes) `(&key post-blank &rest nodes)`
-* [om-build-drawer](#om-build-drawer-drawer-name-key-post-blank-rest-nodes) `(drawer-name &key post-blank &rest nodes)`
-* [om-build-footnote-definition](#om-build-footnote-definition-label-key-post-blank-rest-nodes) `(label &key post-blank &rest nodes)`
-* [om-build-headline](#om-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-nodes) `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest nodes)`
-* [om-build-item](#om-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-nodes) `(&key (bullet '-) checkbox counter tag post-blank &rest nodes)`
-* [om-build-plain-list](#om-build-plain-list-key-post-blank-rest-nodes) `(&key post-blank &rest nodes)`
-* [om-build-property-drawer](#om-build-property-drawer-key-post-blank-rest-nodes) `(&key post-blank &rest nodes)`
-* [om-build-quote-block](#om-build-quote-block-key-post-blank-rest-nodes) `(&key post-blank &rest nodes)`
-* [om-build-section](#om-build-section-key-post-blank-rest-nodes) `(&key post-blank &rest nodes)`
-* [om-build-table](#om-build-table-key-tblfm-post-blank-rest-nodes) `(&key tblfm post-blank &rest nodes)`
+* [om-build-center-block](#om-build-center-block-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
+* [om-build-drawer](#om-build-drawer-drawer-name-key-post-blank-rest-element-nodes) `(drawer-name &key post-blank &rest element-nodes)`
+* [om-build-footnote-definition](#om-build-footnote-definition-label-key-post-blank-rest-element-nodes) `(label &key post-blank &rest element-nodes)`
+* [om-build-headline](#om-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-element-nodes) `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest element-nodes)`
+* [om-build-item](#om-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-element-nodes) `(&key (bullet '-) checkbox counter tag post-blank &rest element-nodes)`
+* [om-build-plain-list](#om-build-plain-list-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
+* [om-build-property-drawer](#om-build-property-drawer-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
+* [om-build-quote-block](#om-build-quote-block-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
+* [om-build-section](#om-build-section-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
+* [om-build-table](#om-build-table-key-tblfm-post-blank-rest-element-nodes) `(&key tblfm post-blank &rest element-nodes)`
 
 ### Miscellaneous Builders
 
@@ -789,7 +789,7 @@ Build new nodes.
 
 #### om-build-code `(value &key post-blank)`
 
-Build a code object.
+Build a code object node.
 
 The following properties are settable:
 - **`value`**: a oneline string
@@ -804,7 +804,7 @@ The following properties are settable:
 
 #### om-build-entity `(name &key use-brackets-p post-blank)`
 
-Build a entity object.
+Build an entity object node.
 
 The following properties are settable:
 - **`name`**: a string that makes `org-entity-get` return non-nil
@@ -820,7 +820,7 @@ The following properties are settable:
 
 #### om-build-inline-babel-call `(call &key inside-header arguments end-header post-blank)`
 
-Build a inline-babel-call object.
+Build an inline-babel-call object node.
 
 The following properties are settable:
 - **`call`**: a oneline string
@@ -850,7 +850,7 @@ The following properties are settable:
 
 #### om-build-inline-src-block `(language &key parameters (value "") post-blank)`
 
-Build a inline-src-block object.
+Build an inline-src-block object node.
 
 The following properties are settable:
 - **`language`**: a oneline string
@@ -875,7 +875,7 @@ The following properties are settable:
 
 #### om-build-line-break `(&key post-blank)`
 
-Build a line-break object.
+Build a line-break object node.
 
 The following properties are settable:
 
@@ -890,7 +890,7 @@ The following properties are settable:
 
 #### om-build-statistics-cookie `(value &key post-blank)`
 
-Build a statistics-cookie object.
+Build a statistics-cookie object node.
 
 The following properties are settable:
 - **`value`**: a list of non-neg integers like `(perc)` or `(num den)` which make [`num`/`den`] and [`perc`%] respectively
@@ -917,7 +917,7 @@ The following properties are settable:
 
 #### om-build-target `(value &key post-blank)`
 
-Build a target object.
+Build a target object node.
 
 The following properties are settable:
 - **`value`**: a oneline string
@@ -932,7 +932,7 @@ The following properties are settable:
 
 #### om-build-timestamp `(type year-start month-start day-start year-end month-end day-end &key hour-start minute-start hour-end minute-end repeater-type repeater-unit repeater-value warning-type warning-unit warning-value post-blank)`
 
-Build a timestamp object.
+Build a timestamp object node.
 
 The following properties are settable:
 - **`type`**: a symbol from `inactive`, `active`, `inactive-ranged`, or `active-ranged`
@@ -976,7 +976,7 @@ The following properties are settable:
 
 #### om-build-verbatim `(value &key post-blank)`
 
-Build a verbatim object.
+Build a verbatim object node.
 
 The following properties are settable:
 - **`value`**: a oneline string
@@ -992,9 +992,9 @@ The following properties are settable:
 
 ### Branch Objects
 
-#### om-build-bold `(&key post-blank &rest objs)`
+#### om-build-bold `(&key post-blank &rest object-nodes)`
 
-Build a bold object with **`objs`** as children.
+Build a bold object node with **`object-nodes`** as children.
 
 The following properties are settable:
 
@@ -1007,9 +1007,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-footnote-reference `(&key label post-blank &rest objs)`
+#### om-build-footnote-reference `(&key label post-blank &rest object-nodes)`
 
-Build a footnote-reference object with **`objs`** as children.
+Build a footnote-reference object node with **`object-nodes`** as children.
 
 The following properties are settable:
 - **`label`**: a oneline string or nil
@@ -1030,9 +1030,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-italic `(&key post-blank &rest objs)`
+#### om-build-italic `(&key post-blank &rest object-nodes)`
 
-Build a italic object with **`objs`** as children.
+Build an italic object node with **`object-nodes`** as children.
 
 The following properties are settable:
 
@@ -1045,9 +1045,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-link `(path &key format (type "fuzzy") post-blank &rest objs)`
+#### om-build-link `(path &key format (type "fuzzy") post-blank &rest object-nodes)`
 
-Build a link object with **`objs`** as children.
+Build a link object node with **`object-nodes`** as children.
 
 The following properties are settable:
 - **`path`**: a oneline string
@@ -1070,9 +1070,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-radio-target `(&key post-blank &rest objs)`
+#### om-build-radio-target `(&key post-blank &rest object-nodes)`
 
-Build a radio-target object with **`objs`** as children.
+Build a radio-target object node with **`object-nodes`** as children.
 
 The following properties are settable:
 
@@ -1085,9 +1085,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-strike-through `(&key post-blank &rest objs)`
+#### om-build-strike-through `(&key post-blank &rest object-nodes)`
 
-Build a strike-through object with **`objs`** as children.
+Build a strike-through object node with **`object-nodes`** as children.
 
 The following properties are settable:
 
@@ -1100,9 +1100,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-superscript `(&key use-brackets-p post-blank &rest objs)`
+#### om-build-superscript `(&key use-brackets-p post-blank &rest object-nodes)`
 
-Build a superscript object with **`objs`** as children.
+Build a superscript object node with **`object-nodes`** as children.
 
 The following properties are settable:
 - **`use-brackets-p`**: nil or t
@@ -1115,9 +1115,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-subscript `(&key use-brackets-p post-blank &rest objs)`
+#### om-build-subscript `(&key use-brackets-p post-blank &rest object-nodes)`
 
-Build a subscript object with **`objs`** as children.
+Build a subscript object node with **`object-nodes`** as children.
 
 The following properties are settable:
 - **`use-brackets-p`**: nil or t
@@ -1130,9 +1130,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-table-cell `(&key post-blank &rest objs)`
+#### om-build-table-cell `(&key post-blank &rest object-nodes)`
 
-Build a table-cell object with **`objs`** as children.
+Build a table-cell object node with **`object-nodes`** as children.
 
 The following properties are settable:
 
@@ -1146,9 +1146,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-underline `(&key post-blank &rest objs)`
+#### om-build-underline `(&key post-blank &rest object-nodes)`
 
-Build a underline object with **`objs`** as children.
+Build an underline object node with **`object-nodes`** as children.
 
 The following properties are settable:
 
@@ -1166,7 +1166,7 @@ The following properties are settable:
 
 #### om-build-babel-call `(call &key inside-header arguments end-header post-blank)`
 
-Build a babel-call element.
+Build a babel-call element node.
 
 The following properties are settable:
 - **`call`**: a oneline string
@@ -1196,7 +1196,7 @@ The following properties are settable:
 
 #### om-build-clock `(value &key post-blank)`
 
-Build a clock element.
+Build a clock element node.
 
 The following properties are settable:
 - **`value`**: an unranged, inactive timestamp with no warning or repeater
@@ -1218,7 +1218,7 @@ The following properties are settable:
 
 #### om-build-comment `(value &key post-blank)`
 
-Build a comment element.
+Build a comment element node.
 
 The following properties are settable:
 - **`value`**: a oneline string
@@ -1233,7 +1233,7 @@ The following properties are settable:
 
 #### om-build-comment-block `(&key (value "") post-blank)`
 
-Build a comment-block element.
+Build a comment-block element node.
 
 The following properties are settable:
 - **`value`**: a oneline string
@@ -1255,7 +1255,7 @@ The following properties are settable:
 
 #### om-build-diary-sexp `(&key value post-blank)`
 
-Build a diary-sexp element.
+Build a diary-sexp element node.
 
 The following properties are settable:
 - **`value`**: a list form or nil
@@ -1274,7 +1274,7 @@ The following properties are settable:
 
 #### om-build-example-block `(&key preserve-indent switches (value "") post-blank)`
 
-Build a example-block element.
+Build an example-block element node.
 
 The following properties are settable:
 - **`preserve-indent`**: nil or t
@@ -1304,7 +1304,7 @@ The following properties are settable:
 
 #### om-build-export-block `(type value &key post-blank)`
 
-Build a export-block element.
+Build an export-block element node.
 
 The following properties are settable:
 - **`type`**: a oneline string
@@ -1323,7 +1323,7 @@ The following properties are settable:
 
 #### om-build-fixed-width `(value &key post-blank)`
 
-Build a fixed-width element.
+Build a fixed-width element node.
 
 The following properties are settable:
 - **`value`**: a oneline string
@@ -1338,7 +1338,7 @@ The following properties are settable:
 
 #### om-build-horizontal-rule `(&key post-blank)`
 
-Build a horizontal-rule element.
+Build a horizontal-rule element node.
 
 The following properties are settable:
 
@@ -1353,7 +1353,7 @@ The following properties are settable:
 
 #### om-build-keyword `(key value &key post-blank)`
 
-Build a keyword element.
+Build a keyword element node.
 
 The following properties are settable:
 - **`key`**: a oneline string
@@ -1369,7 +1369,7 @@ The following properties are settable:
 
 #### om-build-latex-environment `(value &key post-blank)`
 
-Build a latex-environment element.
+Build a latex-environment element node.
 
 The following properties are settable:
 - **`value`**: a list of strings like `(env body)` or `(env)`
@@ -1386,7 +1386,7 @@ The following properties are settable:
 
 #### om-build-node-property `(key value &key post-blank)`
 
-Build a node-property element.
+Build a node-property element node.
 
 The following properties are settable:
 - **`key`**: a oneline string
@@ -1402,7 +1402,7 @@ The following properties are settable:
 
 #### om-build-planning `(&key closed deadline scheduled post-blank)`
 
-Build a planning element.
+Build a planning element node.
 
 The following properties are settable:
 - **`closed`**: a zero-range, inactive timestamp object
@@ -1430,7 +1430,7 @@ The following properties are settable:
 
 #### om-build-src-block `(&key (value "") language parameters preserve-indent switches post-blank)`
 
-Build a src-block element.
+Build a src-block element node.
 
 The following properties are settable:
 - **`value`**: a string
@@ -1475,9 +1475,9 @@ The following properties are settable:
 
 ### Branch Elements with Child Objects
 
-#### om-build-paragraph `(&key post-blank &rest objs)`
+#### om-build-paragraph `(&key post-blank &rest object-nodes)`
 
-Build a paragraph element with **`objs`** as children.
+Build a paragraph element node with **`object-nodes`** as children.
 
 The following properties are settable:
 
@@ -1490,9 +1490,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-table-row `(&key post-blank &rest objs)`
+#### om-build-table-row `(&key post-blank &rest object-nodes)`
 
-Build a table-row element with **`objs`** as children.
+Build a table-row element node with **`object-nodes`** as children.
 
 The following properties are settable:
 
@@ -1506,9 +1506,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-verse-block `(&key post-blank &rest objs)`
+#### om-build-verse-block `(&key post-blank &rest object-nodes)`
 
-Build a verse-block element with **`objs`** as children.
+Build a verse-block element node with **`object-nodes`** as children.
 
 The following properties are settable:
 
@@ -1527,9 +1527,9 @@ The following properties are settable:
 
 ### Branch Elements with Child Elements
 
-#### om-build-center-block `(&key post-blank &rest nodes)`
+#### om-build-center-block `(&key post-blank &rest element-nodes)`
 
-Build a center-block element with **`nodes`** as children.
+Build a center-block element node with **`element-nodes`** as children.
 
 The following properties are settable:
 
@@ -1545,9 +1545,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-drawer `(drawer-name &key post-blank &rest nodes)`
+#### om-build-drawer `(drawer-name &key post-blank &rest element-nodes)`
 
-Build a drawer element with **`nodes`** as children.
+Build a drawer element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`drawer-name`**: a oneline string
@@ -1563,9 +1563,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-footnote-definition `(label &key post-blank &rest nodes)`
+#### om-build-footnote-definition `(label &key post-blank &rest element-nodes)`
 
-Build a footnote-definition element with **`nodes`** as children.
+Build a footnote-definition element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`label`**: a oneline string
@@ -1579,9 +1579,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-headline `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest nodes)`
+#### om-build-headline `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest element-nodes)`
 
-Build a headline element with **`nodes`** as children.
+Build a headline element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`archivedp`**: nil or t
@@ -1631,9 +1631,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-item `(&key (bullet '-) checkbox counter tag post-blank &rest nodes)`
+#### om-build-item `(&key (bullet '-) checkbox counter tag post-blank &rest element-nodes)`
 
-Build a item element with **`nodes`** as children.
+Build an item element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`bullet`**: a positive integer (ordered) or the symbol `-` (unordered)
@@ -1670,9 +1670,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-plain-list `(&key post-blank &rest nodes)`
+#### om-build-plain-list `(&key post-blank &rest element-nodes)`
 
-Build a plain-list element with **`nodes`** as children.
+Build a plain-list element node with **`element-nodes`** as children.
 
 The following properties are settable:
 
@@ -1687,9 +1687,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-property-drawer `(&key post-blank &rest nodes)`
+#### om-build-property-drawer `(&key post-blank &rest element-nodes)`
 
-Build a property-drawer element with **`nodes`** as children.
+Build a property-drawer element node with **`element-nodes`** as children.
 
 The following properties are settable:
 
@@ -1705,9 +1705,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-quote-block `(&key post-blank &rest nodes)`
+#### om-build-quote-block `(&key post-blank &rest element-nodes)`
 
-Build a quote-block element with **`nodes`** as children.
+Build a quote-block element node with **`element-nodes`** as children.
 
 The following properties are settable:
 
@@ -1723,9 +1723,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-section `(&key post-blank &rest nodes)`
+#### om-build-section `(&key post-blank &rest element-nodes)`
 
-Build a section element with **`nodes`** as children.
+Build a section element node with **`element-nodes`** as children.
 
 The following properties are settable:
 
@@ -1739,9 +1739,9 @@ The following properties are settable:
 
 ```
 
-#### om-build-table `(&key tblfm post-blank &rest nodes)`
+#### om-build-table `(&key tblfm post-blank &rest element-nodes)`
 
-Build a table element with **`nodes`** as children.
+Build a table element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`tblfm`**: a list of oneline strings
@@ -1929,7 +1929,7 @@ created headline. The level of all members in **`subheadlines`** will
 automatically be adjusted to **`level`** + 1.
 
 All arguments not mentioned here follow the same rules as
-[`om-build-headline`](#om-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-nodes)
+[`om-build-headline`](#om-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-element-nodes)
 
 ```el
 (->> (om-build-headline! :title-text "really impressive title")
@@ -1964,7 +1964,7 @@ Build an item element.
 **`nodes`** contains the nodes that will go under this item after
 **`paragraph`**.
 
-All other arguments follow the same rules as [`om-build-item`](#om-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-nodes).
+All other arguments follow the same rules as [`om-build-item`](#om-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-element-nodes).
 
 ```el
 (->> (om-build-item! :bullet 1 :tag "complicated *tag*" :paragraph "petulant /frenzy/" (om-build-plain-list (om-build-item! :bullet '-
@@ -2004,7 +2004,7 @@ Build a table element.
 in a table cell or the symbol 'hline' which represents a horizontal
 line.
 
-All other arguments follow the same rules as [`om-build-table`](#om-build-table-key-tblfm-post-blank-rest-nodes).
+All other arguments follow the same rules as [`om-build-table`](#om-build-table-key-tblfm-post-blank-rest-element-nodes).
 
 ```el
 (->> (om-build-table! '("R" "A")
