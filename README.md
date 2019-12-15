@@ -383,21 +383,13 @@ Set, get, and map the children of branch nodes.
 ### Table
 
 * [om-table-get-cell](#om-table-get-cell-row-index-column-index-table) `(row-index column-index table)`
-* [om-table-replace-cell](#om-table-replace-cell-row-index-column-index-cell-table) `(row-index column-index cell table)`
-* [om-table-replace-cell!](#om-table-replace-cell-row-index-column-index-cell-text-table) `(row-index column-index cell-text table)`
-* [om-table-clear-cell](#om-table-clear-cell-row-index-column-index-table) `(row-index column-index table)`
 * [om-table-delete-column](#om-table-delete-column-column-index-table) `(column-index table)`
-* [om-table-replace-column](#om-table-replace-column-column-index-column-cells-table) `(column-index column-cells table)`
-* [om-table-replace-column!](#om-table-replace-column-column-index-column-text-table) `(column-index column-text table)`
-* [om-table-clear-column](#om-table-clear-column-column-index-table) `(column-index table)`
-* [om-table-replace-row](#om-table-replace-row-row-index-row-cells-table) `(row-index row-cells table)`
-* [om-table-replace-row!](#om-table-replace-row-row-index-row-text-table) `(row-index row-text table)`
-* [om-table-clear-row](#om-table-clear-row-row-index-table) `(row-index table)`
 * [om-table-delete-row](#om-table-delete-row-row-index-table) `(row-index table)`
-* [om-table-insert-column](#om-table-insert-column-column-index-column-cells-table) `(column-index column-cells table)`
 * [om-table-insert-column!](#om-table-insert-column-column-index-column-text-table) `(column-index column-text table)`
-* [om-table-insert-row](#om-table-insert-row-row-index-row-table) `(row-index row table)`
 * [om-table-insert-row!](#om-table-insert-row-row-index-row-text-table) `(row-index row-text table)`
+* [om-table-replace-cell!](#om-table-replace-cell-row-index-column-index-cell-text-table) `(row-index column-index cell-text table)`
+* [om-table-replace-column!](#om-table-replace-column-column-index-column-text-table) `(column-index column-text table)`
+* [om-table-replace-row!](#om-table-replace-row-row-index-row-text-table) `(row-index row-text table)`
 
 ## Node Matching
 
@@ -3936,9 +3928,8 @@ Unindent all items under the item at **`index`** in **`plain-list`**.
 
 #### om-table-get-cell `(row-index column-index table)`
 
-Return table-cell at **`row-index`** and **`column-index`** in **`table`** element.
-Rule-type rows do not count toward row indices, and all indices are
-zero-indexed.
+Return table-cell node at **`row-index`** and **`column-index`** in **`table`** node.
+Rule-type rows do not count toward row indices.
 
 ```el
 ;; Given the following contents:
@@ -3966,93 +3957,9 @@ zero-indexed.
 
 ```
 
-#### om-table-replace-cell `(row-index column-index cell table)`
-
-Replace a cell in **`table`** with **`cell`** (a table-cell element).
-**`row-index`** and **`column-index`** are zero-indexed integers pointing to the
-position of the cell to be replaced.
-
-```el
-;; Given the following contents:
-; | 1 | 2 |
-; |---+---|
-; | a | b |
-
-(->> (om-parse-this-element)
-     (om-table-replace-cell 0 0 (om-build-table-cell "2"))
-     (om-to-trimmed-string))
- ;; => "| 2 | 2 |
- ;      |---+---|
- ;      | a | b |"
-
-(->> (om-parse-this-element)
-     (om-table-replace-cell -1 -1 (om-build-table-cell "B"))
-     (om-to-trimmed-string))
- ;; => "| 1 | 2 |
- ;      |---+---|
- ;      | a | B |"
-
-```
-
-#### om-table-replace-cell! `(row-index column-index cell-text table)`
-
-Replace a cell in **`table`** with **`cell-text`**.
-**`cell-text`** is a string which will replace the children of the cell at
-**`row-index`** and **`column-index`** (zero-indexed integers).
-
-```el
-;; Given the following contents:
-; | 1 | 2 |
-; |---+---|
-; | a | b |
-
-(->> (om-parse-this-element)
-     (om-table-replace-cell! 0 0 "2")
-     (om-to-trimmed-string))
- ;; => "| 2 | 2 |
- ;      |---+---|
- ;      | a | b |"
-
-(->> (om-parse-this-element)
-     (om-table-replace-cell! -1 -1 "B")
-     (om-to-trimmed-string))
- ;; => "| 1 | 2 |
- ;      |---+---|
- ;      | a | B |"
-
-```
-
-#### om-table-clear-cell `(row-index column-index table)`
-
-Clear a cell in **`table`**.
-**`row-index`** and **`column-index`** are zero-indexed integers pointing to the
-position of the cell to be replaced.
-
-```el
-;; Given the following contents:
-; | 1 | 2 |
-; |---+---|
-; | a | b |
-
-(->> (om-parse-this-element)
-     (om-table-clear-cell 0 0)
-     (om-to-trimmed-string))
- ;; => "|   | 2 |
- ;      |---+---|
- ;      | a | b |"
-
-(->> (om-parse-this-element)
-     (om-table-clear-cell -1 -1)
-     (om-to-trimmed-string))
- ;; => "| 1 | 2 |
- ;      |---+---|
- ;      | a |   |"
-
-```
-
 #### om-table-delete-column `(column-index table)`
 
-Delete the column at **`column-index`** in **`table`**.
+Delete the column at **`column-index`** in **`table`** node.
 
 ```el
 ;; Given the following contents:
@@ -4083,177 +3990,9 @@ Delete the column at **`column-index`** in **`table`**.
 
 ```
 
-#### om-table-replace-column `(column-index column-cells table)`
-
-Replace column at **`column-index`** in **`table`** with **`column-cells`**.
-**`column-index`** is the index of the column (starting at zero) and
-**`column-cells`** is a list of table-cell objects.
-
-```el
-;; Given the following contents:
-; | a | b |
-; |---+---|
-; | c | d |
-
-(->> (om-parse-element-at 1)
-     (om-table-replace-column 0 (list (om-build-table-cell "A")
-				      (om-build-table-cell "B")))
-     (om-to-trimmed-string))
- ;; => "| A | b |
- ;      |---+---|
- ;      | B | d |"
-
-(->> (om-parse-element-at 1)
-     (om-table-replace-column -1 (list (om-build-table-cell "A")
-				       (om-build-table-cell "B")))
-     (om-to-trimmed-string))
- ;; => "| a | A |
- ;      |---+---|
- ;      | c | B |"
-
-```
-
-#### om-table-replace-column! `(column-index column-text table)`
-
-Replace column at **`column-index`** in **`table`** with **`column-text`**.
-**`column-index`** is the index of the column (starting at zero) and
-**`column-text`** is a list of text to be made into table-cell objects.
-
-```el
-;; Given the following contents:
-; | a | b |
-; |---+---|
-; | c | d |
-
-(->> (om-parse-element-at 1)
-     (om-table-replace-column! 0 '("A" "B"))
-     (om-to-trimmed-string))
- ;; => "| A | b |
- ;      |---+---|
- ;      | B | d |"
-
-(->> (om-parse-element-at 1)
-     (om-table-replace-column! -1 '("A" "B"))
-     (om-to-trimmed-string))
- ;; => "| a | A |
- ;      |---+---|
- ;      | c | B |"
-
-```
-
-#### om-table-clear-column `(column-index table)`
-
-Clear the column at **`column-index`** in **`table`**.
-
-```el
-;; Given the following contents:
-; | a | b |
-; |---+---|
-; | c | d |
-
-(->> (om-parse-element-at 1)
-     (om-table-clear-column 0)
-     (om-to-trimmed-string))
- ;; => "|   | b |
- ;      |---+---|
- ;      |   | d |"
-
-(->> (om-parse-element-at 1)
-     (om-table-clear-column -1)
-     (om-to-trimmed-string))
- ;; => "| a |   |
- ;      |---+---|
- ;      | c |   |"
-
-```
-
-#### om-table-replace-row `(row-index row-cells table)`
-
-Replace row at **`row-index`** in **`table`** with **`row-cells`**.
-**`row-index`** is the index of the row (starting at zero) and
-**`row-cells`** is a list of table-cell objects.
-
-```el
-;; Given the following contents:
-; | a | b |
-; |---+---|
-; | c | d |
-
-(->> (om-parse-element-at 1)
-     (om-table-replace-row 0 (om-build-table-row (om-build-table-cell "A")
-						 (om-build-table-cell "B")))
-     (om-to-trimmed-string))
- ;; => "| A | B |
- ;      |---+---|
- ;      | c | d |"
-
-(->> (om-parse-element-at 1)
-     (om-table-replace-row -1 (om-build-table-row (om-build-table-cell "A")
-						  (om-build-table-cell "B")))
-     (om-to-trimmed-string))
- ;; => "| a | b |
- ;      |---+---|
- ;      | A | B |"
-
-```
-
-#### om-table-replace-row! `(row-index row-text table)`
-
-Replace row at **`row-index`** in **`table`** with **`row-text`**.
-**`row-index`** is the index of the row (starting at zero) and
-**`row-text`** is a list of text to be made into table-cell objects.
-
-```el
-;; Given the following contents:
-; | a | b |
-; |---+---|
-; | c | d |
-
-(->> (om-parse-element-at 1)
-     (om-table-replace-row! 0 '("A" "B"))
-     (om-to-trimmed-string))
- ;; => "| A | B |
- ;      |---+---|
- ;      | c | d |"
-
-(->> (om-parse-element-at 1)
-     (om-table-replace-row! -1 '("A" "B"))
-     (om-to-trimmed-string))
- ;; => "| a | b |
- ;      |---+---|
- ;      | A | B |"
-
-```
-
-#### om-table-clear-row `(row-index table)`
-
-Clear the row at **`row-index`** in **`table`**.
-
-```el
-;; Given the following contents:
-; | a | b |
-; |---+---|
-; | c | d |
-
-(->> (om-parse-element-at 1)
-     (om-table-clear-row 0)
-     (om-to-trimmed-string))
- ;; => "|   |   |
- ;      |---+---|
- ;      | c | d |"
-
-(->> (om-parse-element-at 1)
-     (om-table-clear-row -1)
-     (om-to-trimmed-string))
- ;; => "| a | b |
- ;      |---+---|
- ;      |   |   |"
-
-```
-
 #### om-table-delete-row `(row-index table)`
 
-Delete the row at **`row-index`** in **`table`**.
+Delete the row at **`row-index`** in **`table`** node.
 
 ```el
 ;; Given the following contents:
@@ -4281,37 +4020,13 @@ Delete the row at **`row-index`** in **`table`**.
 
 ```
 
-#### om-table-insert-column `(column-index column-cells table)`
-
-Insert **`column-cells`** at **`column-index`** in **`table`**.
-
-```el
-;; Given the following contents:
-; | a | b |
-; |---+---|
-; | c | d |
-
-(->> (om-parse-element-at 1)
-     (om-table-insert-column 1 (list (om-build-table-cell "x")
-				     (om-build-table-cell "y")))
-     (om-to-trimmed-string))
- ;; => "| a | x | b |
- ;      |---+---+---|
- ;      | c | y | d |"
-
-(->> (om-parse-element-at 1)
-     (om-table-insert-column -1 (list (om-build-table-cell "x")
-				      (om-build-table-cell "y")))
-     (om-to-trimmed-string))
- ;; => "| a | b | x |
- ;      |---+---+---|
- ;      | c | d | y |"
-
-```
-
 #### om-table-insert-column! `(column-index column-text table)`
 
-Insert **`column-text`** at **`column-index`** in **`table`**.
+Insert **`column-text`** at **`column-index`** in **`table`** node.
+
+**`column-index`** is the index of the column and **`column-text`** is a list of
+strings to be made into table-cells to be inserted following the same
+syntax as `om-build-table-cell!`.
 
 ```el
 ;; Given the following contents:
@@ -4335,48 +4050,13 @@ Insert **`column-text`** at **`column-index`** in **`table`**.
 
 ```
 
-#### om-table-insert-row `(row-index row table)`
-
-Insert **`row`** at **`row-index`** in **`table`**.
-
-```el
-;; Given the following contents:
-; | a | b |
-; |---+---|
-; | c | d |
-
-(->> (om-parse-element-at 1)
-     (om-table-insert-row 1 (om-build-table-row (om-build-table-cell "x")
-						(om-build-table-cell "y")))
-     (om-to-trimmed-string))
- ;; => "| a | b |
- ;      | x | y |
- ;      |---+---|
- ;      | c | d |"
-
-(->> (om-parse-element-at 1)
-     (om-table-insert-row 2 (om-build-table-row (om-build-table-cell "x")
-						(om-build-table-cell "y")))
-     (om-to-trimmed-string))
- ;; => "| a | b |
- ;      |---+---|
- ;      | x | y |
- ;      | c | d |"
-
-(->> (om-parse-element-at 1)
-     (om-table-insert-row -1 (om-build-table-row (om-build-table-cell "x")
-						 (om-build-table-cell "y")))
-     (om-to-trimmed-string))
- ;; => "| a | b |
- ;      |---+---|
- ;      | c | d |
- ;      | x | y |"
-
-```
-
 #### om-table-insert-row! `(row-index row-text table)`
 
-Insert **`row-text`** at **`row-index`** in **`table`**.
+Insert **`row-text`** at **`row-index`** in **`table`** node.
+
+**`row-index`** is the index of the column and **`row-text`** is a list of strings
+to be made into table-cells to be inserted following the same syntax
+as `om-build-table-row!`.
 
 ```el
 ;; Given the following contents:
@@ -4407,6 +4087,123 @@ Insert **`row-text`** at **`row-index`** in **`table`**.
  ;      |---+---|
  ;      | c | d |
  ;      | x | y |"
+
+```
+
+#### om-table-replace-cell! `(row-index column-index cell-text table)`
+
+Replace a table-cell node in **`table`** node with **`cell-text`**.
+
+If **`cell-text`** is a string, it will replace the children of the
+table-cell at **`row-index`** and **`column-index`**. **`cell-text`** will be processed 
+the same as the argument given to `om-build-table-cell!`.
+
+If **`cell-text`** is nil, it will set the cell to an empty string.
+
+```el
+;; Given the following contents:
+; | 1 | 2 |
+; |---+---|
+; | a | b |
+
+(->> (om-parse-this-element)
+     (om-table-replace-cell! 0 0 "2")
+     (om-to-trimmed-string))
+ ;; => "| 2 | 2 |
+ ;      |---+---|
+ ;      | a | b |"
+
+(->> (om-parse-this-element)
+     (om-table-replace-cell! 0 0 nil)
+     (om-to-trimmed-string))
+ ;; => "|   | 2 |
+ ;      |---+---|
+ ;      | a | b |"
+
+(->> (om-parse-this-element)
+     (om-table-replace-cell! -1 -1 "B")
+     (om-to-trimmed-string))
+ ;; => "| 1 | 2 |
+ ;      |---+---|
+ ;      | a | B |"
+
+```
+
+#### om-table-replace-column! `(column-index column-text table)`
+
+Replace column at **`column-index`** in **`table`** node with **`column-text`**.
+
+If **`column-text`** is a list of strings, it will replace the table-cells
+at **`column-index`**. Each member of **`column-text`** will be processed the
+same as the argument given to `om-build-table-cell!`.
+
+If **`column-text`** is nil, it will clear all cells at **`column-index`**.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-parse-element-at 1)
+     (om-table-replace-column! 0 '("A" "B"))
+     (om-to-trimmed-string))
+ ;; => "| A | b |
+ ;      |---+---|
+ ;      | B | d |"
+
+(->> (om-parse-element-at 1)
+     (om-table-replace-column! 0 nil)
+     (om-to-trimmed-string))
+ ;; => "|   | b |
+ ;      |---+---|
+ ;      |   | d |"
+
+(->> (om-parse-element-at 1)
+     (om-table-replace-column! -1 '("A" "B"))
+     (om-to-trimmed-string))
+ ;; => "| a | A |
+ ;      |---+---|
+ ;      | c | B |"
+
+```
+
+#### om-table-replace-row! `(row-index row-text table)`
+
+Replace row at **`row-index`** in **`table`** node with **`row-text`**.
+
+If **`row-text`** is a list of strings, it will replace the cells at
+**`row-index`**. Each member of **`row-text`** will be processed the same as
+the argument given to `om-build-table-row!`.
+
+If **`row-text`** is nil, it will clear all cells at **`row-index`**.
+
+```el
+;; Given the following contents:
+; | a | b |
+; |---+---|
+; | c | d |
+
+(->> (om-parse-element-at 1)
+     (om-table-replace-row! 0 '("A" "B"))
+     (om-to-trimmed-string))
+ ;; => "| A | B |
+ ;      |---+---|
+ ;      | c | d |"
+
+(->> (om-parse-element-at 1)
+     (om-table-replace-row! 0 nil)
+     (om-to-trimmed-string))
+ ;; => "|   |   |
+ ;      |---+---|
+ ;      | c | d |"
+
+(->> (om-parse-element-at 1)
+     (om-table-replace-row! -1 '("A" "B"))
+     (om-to-trimmed-string))
+ ;; => "| a | b |
+ ;      |---+---|
+ ;      | A | B |"
 
 ```
 

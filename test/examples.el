@@ -3523,25 +3523,95 @@
       !!> error
       :end-hidden)
 
-    (defexamples-content om-table-replace-cell
+    (defexamples-content om-table-delete-column
       nil
-      (:buffer "| 1 | 2 |"
+      (:buffer "| a | b |"
                "|---+---|"
-               "| a | b |")
+               "| c | d |")
       (->> (om-parse-this-element)
-           (om-table-replace-cell
-            0 0 (om-build-table-cell "2"))
+           (om-table-delete-column 0)
            (om-to-trimmed-string))
-      => (:result "| 2 | 2 |"
-                  "|---+---|"
-                  "| a | b |")
+      => (:result "| b |"
+                  "|---|"
+                  "| d |")
       (->> (om-parse-this-element)
-           (om-table-replace-cell
-            -1 -1 (om-build-table-cell "B"))
+           (om-table-delete-column 1)
            (om-to-trimmed-string))
-      => (:result "| 1 | 2 |"
+      => (:result "| a |"
+                  "|---|"
+                  "| c |")
+      (->> (om-parse-this-element)
+           (om-table-delete-column -1)
+           (om-to-trimmed-string))
+      => (:result "| a |"
+                  "|---|"
+                  "| c |"))
+
+    (defexamples-content om-table-delete-row
+      nil
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
+      (->> (om-parse-this-element)
+           (om-table-delete-row 0)
+           (om-to-trimmed-string))
+      => (:result "|---+---|"
+                  "| c | d |")
+      (->> (om-parse-this-element)
+           (om-table-delete-row 1)
+           (om-to-trimmed-string))
+      => (:result "| a | b |"
+                  "| c | d |")
+      (->> (om-parse-this-element)
+           (om-table-delete-row -1)
+           (om-to-trimmed-string))
+      => (:result "| a | b |"
+                  "|---+---|"))
+
+    (defexamples-content om-table-insert-column!
+      nil
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
+      (->> (om-parse-this-element)
+           (om-table-insert-column! 1 '("x" "y"))
+           (om-to-trimmed-string))
+      => (:result "| a | x | b |"
+                  "|---+---+---|"
+                  "| c | y | d |")
+      (->> (om-parse-this-element)
+           (om-table-insert-column! -1 '("x" "y"))
+           (om-to-trimmed-string))
+      => (:result "| a | b | x |"
+                  "|---+---+---|"
+                  "| c | d | y |"))
+
+    (defexamples-content om-table-insert-row!
+      nil
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
+      (->> (om-parse-this-element)
+           (om-table-insert-row! 1 '("x" "y"))
+           (om-to-trimmed-string))
+      => (:result "| a | b |"
+                  "| x | y |"
                   "|---+---|"
-                  "| a | B |"))
+                  "| c | d |")
+      (->> (om-parse-this-element)
+           (om-table-insert-row! 2 '("x" "y"))
+           (om-to-trimmed-string))
+      => (:result "| a | b |"
+                  "|---+---|"
+                  "| x | y |"
+                  "| c | d |")
+      (->> (om-parse-this-element)
+           (om-table-insert-row! -1 '("x" "y"))
+           (om-to-trimmed-string))
+      => (:result "| a | b |"
+                  "|---+---|"
+                  "| c | d |"
+                  "| x | y |"))
 
     (defexamples-content om-table-replace-cell!
       nil
@@ -3555,304 +3625,65 @@
                   "|---+---|"
                   "| a | b |")
       (->> (om-parse-this-element)
+           (om-table-replace-cell! 0 0 nil)
+           (om-to-trimmed-string))
+      => (:result "|   | 2 |"
+                  "|---+---|"
+                  "| a | b |")
+      (->> (om-parse-this-element)
            (om-table-replace-cell! -1 -1 "B")
            (om-to-trimmed-string))
       => (:result "| 1 | 2 |"
                   "|---+---|"
                   "| a | B |"))
 
-    (defexamples-content om-table-clear-cell
-      nil
-      (:buffer "| 1 | 2 |"
-               "|---+---|"
-               "| a | b |")
-      (->> (om-parse-this-element)
-           (om-table-clear-cell 0 0)
-           (om-to-trimmed-string))
-      => (:result "|   | 2 |"
-                  "|---+---|"
-                  "| a | b |")
-      (->> (om-parse-this-element)
-           (om-table-clear-cell -1 -1)
-           (om-to-trimmed-string))
-      => (:result "| 1 | 2 |"
-                  "|---+---|"
-                  "| a |   |"))
-
-    (defexamples-content om-table-delete-column
-      nil
-      (:buffer "| a | b |"
-               "|---+---|"
-               "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-delete-column 0)
-           (om-to-trimmed-string))
-      => (:result "| b |"
-                  "|---|"
-                  "| d |")
-      (->> (om-parse-element-at 1)
-           (om-table-delete-column 1)
-           (om-to-trimmed-string))
-      => (:result "| a |"
-                  "|---|"
-                  "| c |")
-      (->> (om-parse-element-at 1)
-           (om-table-delete-column -1)
-           (om-to-trimmed-string))
-      => (:result "| a |"
-                  "|---|"
-                  "| c |"))
-
-    (defexamples-content om-table-replace-column
-      nil
-      (:buffer "| a | b |"
-               "|---+---|"
-               "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-replace-column
-            0 (list
-               (om-build-table-cell "A")
-               (om-build-table-cell "B")))
-           (om-to-trimmed-string))
-      => (:result "| A | b |"
-                  "|---+---|"
-                  "| B | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-replace-column
-            -1 (list
-                (om-build-table-cell "A")
-                (om-build-table-cell "B")))
-           (om-to-trimmed-string))
-      => (:result "| a | A |"
-                  "|---+---|"
-                  "| c | B |"))
-
     (defexamples-content om-table-replace-column!
       nil
       (:buffer "| a | b |"
                "|---+---|"
                "| c | d |")
-      (->> (om-parse-element-at 1)
+      (->> (om-parse-this-element)
            (om-table-replace-column! 0 '("A" "B"))
            (om-to-trimmed-string))
       => (:result "| A | b |"
                   "|---+---|"
                   "| B | d |")
-      (->> (om-parse-element-at 1)
+      (->> (om-parse-this-element)
+           (om-table-replace-column! 0 nil)
+           (om-to-trimmed-string))
+      => (:result "|   | b |"
+                  "|---+---|"
+                  "|   | d |")
+      (->> (om-parse-this-element)
            (om-table-replace-column! -1 '("A" "B"))
            (om-to-trimmed-string))
       => (:result "| a | A |"
                   "|---+---|"
                   "| c | B |"))
 
-    (defexamples-content om-table-clear-column
-      nil
-      (:buffer "| a | b |"
-               "|---+---|"
-               "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-clear-column 0)
-           (om-to-trimmed-string))
-      => (:result "|   | b |"
-                  "|---+---|"
-                  "|   | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-clear-column -1)
-           (om-to-trimmed-string))
-      => (:result "| a |   |"
-                  "|---+---|"
-                  "| c |   |"))
-
-    (defexamples-content om-table-replace-row
-      nil
-      (:buffer "| a | b |"
-               "|---+---|"
-               "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-replace-row
-            0 (om-build-table-row
-               (om-build-table-cell "A")
-               (om-build-table-cell "B")))
-           (om-to-trimmed-string))
-      => (:result "| A | B |"
-                  "|---+---|"
-                  "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-replace-row
-            -1 (om-build-table-row
-                (om-build-table-cell "A")
-                (om-build-table-cell "B")))
-           (om-to-trimmed-string))
-      => (:result "| a | b |"
-                  "|---+---|"
-                  "| A | B |"))
-
     (defexamples-content om-table-replace-row!
       nil
       (:buffer "| a | b |"
                "|---+---|"
                "| c | d |")
-      (->> (om-parse-element-at 1)
+      (->> (om-parse-this-element)
            (om-table-replace-row! 0 '("A" "B"))
            (om-to-trimmed-string))
       => (:result "| A | B |"
                   "|---+---|"
                   "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-replace-row! -1 '("A" "B"))
-           (om-to-trimmed-string))
-      => (:result "| a | b |"
-                  "|---+---|"
-                  "| A | B |"))
-
-    (defexamples-content om-table-clear-row
-      nil
-      (:buffer "| a | b |"
-               "|---+---|"
-               "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-clear-row 0)
+      (->> (om-parse-this-element)
+           (om-table-replace-row! 0 nil)
            (om-to-trimmed-string))
       => (:result "|   |   |"
                   "|---+---|"
                   "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-clear-row -1)
+      (->> (om-parse-this-element)
+           (om-table-replace-row! -1 '("A" "B"))
            (om-to-trimmed-string))
       => (:result "| a | b |"
                   "|---+---|"
-                  "|   |   |"))
-
-    (defexamples-content om-table-delete-row
-      nil
-      (:buffer "| a | b |"
-               "|---+---|"
-               "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-delete-row 0)
-           (om-to-trimmed-string))
-      => (:result "|---+---|"
-                  "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-delete-row 1)
-           (om-to-trimmed-string))
-      => (:result "| a | b |"
-                  "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-delete-row -1)
-           (om-to-trimmed-string))
-      => (:result "| a | b |"
-                  "|---+---|"))
-
-    (defexamples-content om-table-insert-column
-      nil
-      (:buffer "| a | b |"
-               "|---+---|"
-               "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-insert-column
-            1
-            (list
-             (om-build-table-cell "x")
-             (om-build-table-cell "y")))
-           (om-to-trimmed-string))
-      => (:result "| a | x | b |"
-                  "|---+---+---|"
-                  "| c | y | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-insert-column
-            -1
-            (list
-             (om-build-table-cell "x")
-             (om-build-table-cell "y")))
-           (om-to-trimmed-string))
-      => (:result "| a | b | x |"
-                  "|---+---+---|"
-                  "| c | d | y |"))
-
-    (defexamples-content om-table-insert-column!
-      nil
-      (:buffer "| a | b |"
-               "|---+---|"
-               "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-insert-column! 1 '("x" "y"))
-           (om-to-trimmed-string))
-      => (:result "| a | x | b |"
-                  "|---+---+---|"
-                  "| c | y | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-insert-column! -1 '("x" "y"))
-           (om-to-trimmed-string))
-      => (:result "| a | b | x |"
-                  "|---+---+---|"
-                  "| c | d | y |"))
-
-    (defexamples-content om-table-insert-row
-      nil
-      (:buffer "| a | b |"
-               "|---+---|"
-               "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-insert-row
-            1
-            (om-build-table-row
-             (om-build-table-cell "x")
-             (om-build-table-cell "y")))
-           (om-to-trimmed-string))
-      => (:result "| a | b |"
-                  "| x | y |"
-                  "|---+---|"
-                  "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-insert-row
-            2
-            (om-build-table-row
-             (om-build-table-cell "x")
-             (om-build-table-cell "y")))
-           (om-to-trimmed-string))
-      => (:result "| a | b |"
-                  "|---+---|"
-                  "| x | y |"
-                  "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-insert-row
-            -1
-            (om-build-table-row
-             (om-build-table-cell "x")
-             (om-build-table-cell "y")))
-           (om-to-trimmed-string))
-      => (:result "| a | b |"
-                  "|---+---|"
-                  "| c | d |"
-                  "| x | y |"))
-
-    (defexamples-content om-table-insert-row!
-      nil
-      (:buffer "| a | b |"
-               "|---+---|"
-               "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-insert-row! 1 '("x" "y"))
-           (om-to-trimmed-string))
-      => (:result "| a | b |"
-                  "| x | y |"
-                  "|---+---|"
-                  "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-insert-row! 2 '("x" "y"))
-           (om-to-trimmed-string))
-      => (:result "| a | b |"
-                  "|---+---|"
-                  "| x | y |"
-                  "| c | d |")
-      (->> (om-parse-element-at 1)
-           (om-table-insert-row! -1 '("x" "y"))
-           (om-to-trimmed-string))
-      => (:result "| a | b |"
-                  "|---+---|"
-                  "| c | d |"
-                  "| x | y |"))))
+                  "| A | B |"))))
 
 (def-example-group "Node Matching"
   "Use pattern-matching to selectively perform operations on nodes in trees."

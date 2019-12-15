@@ -3221,91 +3221,70 @@ TYPE is one of the symbols `unordered' or `ordered'."
 ;; table
 
 (om--defun-node om-table-get-cell (row-index column-index table)
-  "Return table-cell at ROW-INDEX and COLUMN-INDEX in TABLE element.
-Rule-type rows do not count toward row indices, and all indices are
-zero-indexed."
+  "Return table-cell node at ROW-INDEX and COLUMN-INDEX in TABLE node.
+Rule-type rows do not count toward row indices."
   (om--table-get-cell row-index column-index table))
 
-(om--defun-node om-table-replace-cell (row-index column-index cell table)
-  "Replace a cell in TABLE with CELL (a table-cell element).
-ROW-INDEX and COLUMN-INDEX are zero-indexed integers pointing to the
-position of the cell to be replaced."
-  (om--table-replace-cell row-index column-index cell table))
-
-(om--defun-node om-table-replace-cell! (row-index column-index cell-text
-                                              table)
-  "Replace a cell in TABLE with CELL-TEXT.
-CELL-TEXT is a string which will replace the children of the cell at
-ROW-INDEX and COLUMN-INDEX (zero-indexed integers)."
-  (let ((cell (om-build-table-cell! cell-text)))
-    (om--table-replace-cell row-index column-index cell table)))
-
-(om--defun-node om-table-clear-cell (row-index column-index table)
-  "Clear a cell in TABLE.
-ROW-INDEX and COLUMN-INDEX are zero-indexed integers pointing to the
-position of the cell to be replaced."
-  (let ((cell (om-build-table-cell " ")))
-    (om--table-replace-cell row-index column-index cell table)))
-
 (om--defun-node om-table-delete-row (row-index table)
-  "Delete the row at ROW-INDEX in TABLE."
+  "Delete the row at ROW-INDEX in TABLE node."
   (om--table-delete-row row-index table))
 
 (om--defun-node om-table-delete-column (column-index table)
-  "Delete the column at COLUMN-INDEX in TABLE."
+  "Delete the column at COLUMN-INDEX in TABLE node."
   (om--table-delete-column column-index table))
 
-(om--defun-node om-table-insert-column (column-index column-cells table)
-  "Insert COLUMN-CELLS at COLUMN-INDEX in TABLE."
-  (unless (--all? (om--is-type-p 'table-cell it) column-cells)
-    (error "All members of column must be table cells"))
-  (om--table-insert-column column-index column-cells table))
-
 (om--defun-node om-table-insert-column! (column-index column-text table)
-  "Insert COLUMN-TEXT at COLUMN-INDEX in TABLE."
+  "Insert COLUMN-TEXT at COLUMN-INDEX in TABLE node.
+
+COLUMN-INDEX is the index of the column and COLUMN-TEXT is a list of
+strings to be made into table-cells to be inserted following the same
+syntax as `om-build-table-cell!'."
   (let ((column (-map #'om-build-table-cell! column-text)))
     (om--table-insert-column column-index column table)))
 
-(om--defun-node om-table-clear-column (column-index table)
-  "Clear the column at COLUMN-INDEX in TABLE."
-  (om--table-clear-column column-index table))
-
-(om--defun-node om-table-insert-row (row-index row table)
-  "Insert ROW at ROW-INDEX in TABLE."
-  (om--table-insert-row row-index row table))
-
 (om--defun-node om-table-insert-row! (row-index row-text table)
-  "Insert ROW-TEXT at ROW-INDEX in TABLE."
-  (let ((row (om-build-table-row! row-text)))
-    (om--table-insert-row row-index row table)))
+  "Insert ROW-TEXT at ROW-INDEX in TABLE node.
 
-(om--defun-node om-table-clear-row (row-index table)
-  "Clear the row at ROW-INDEX in TABLE."
-  (om--table-clear-row row-index table))
+ROW-INDEX is the index of the column and ROW-TEXT is a list of strings
+to be made into table-cells to be inserted following the same syntax
+as `om-build-table-row!'."
+  (if (not row-text) (om--table-clear-row row-index table)
+    (let ((row (om-build-table-row! row-text)))
+      (om--table-insert-row row-index row table))))
 
-(om--defun-node om-table-replace-column (column-index column-cells table)
-  "Replace column at COLUMN-INDEX in TABLE with COLUMN-CELLS.
-COLUMN-INDEX is the index of the column (starting at zero) and
-COLUMN-CELLS is a list of table-cell objects."
-  (om--table-replace-column column-index column-cells table))
+(om--defun-node om-table-replace-cell! (row-index column-index
+                                                  cell-text table)
+  "Replace a table-cell node in TABLE node with CELL-TEXT.
+
+If CELL-TEXT is a string, it will replace the children of the
+table-cell at ROW-INDEX and COLUMN-INDEX. CELL-TEXT will be processed 
+the same as the argument given to `om-build-table-cell!'.
+
+If CELL-TEXT is nil, it will set the cell to an empty string."
+  (let ((cell (if cell-text (om-build-table-cell! cell-text)
+                (om-build-table-cell ""))))
+    (om--table-replace-cell row-index column-index cell table)))
 
 (om--defun-node om-table-replace-column! (column-index column-text table)
-  "Replace column at COLUMN-INDEX in TABLE with COLUMN-TEXT.
-COLUMN-INDEX is the index of the column (starting at zero) and
-COLUMN-TEXT is a list of text to be made into table-cell objects."
-  (let ((column-cells (-map #'om-build-table-cell! column-text)))
-    (om--table-replace-column column-index column-cells table)))
+  "Replace column at COLUMN-INDEX in TABLE node with COLUMN-TEXT.
 
-(om--defun-node om-table-replace-row (row-index row-cells table)
-  "Replace row at ROW-INDEX in TABLE with ROW-CELLS.
-ROW-INDEX is the index of the row (starting at zero) and
-ROW-CELLS is a list of table-cell objects."
-  (om--table-replace-row row-index row-cells table))
+If COLUMN-TEXT is a list of strings, it will replace the table-cells
+at COLUMN-INDEX. Each member of COLUMN-TEXT will be processed the
+same as the argument given to `om-build-table-cell!'.
+
+If COLUMN-TEXT is nil, it will clear all cells at COLUMN-INDEX."
+  (if (not column-text) (om--table-clear-column column-index table)
+    (let ((column-cells (-map #'om-build-table-cell! column-text)))
+      (om--table-replace-column column-index column-cells table))))
 
 (om--defun-node om-table-replace-row! (row-index row-text table)
-  "Replace row at ROW-INDEX in TABLE with ROW-TEXT.
-ROW-INDEX is the index of the row (starting at zero) and
-ROW-TEXT is a list of text to be made into table-cell objects."
+  "Replace row at ROW-INDEX in TABLE node with ROW-TEXT.
+
+If ROW-TEXT is a list of strings, it will replace the cells at
+ROW-INDEX. Each member of ROW-TEXT will be processed the same as
+the argument given to `om-build-table-row!'.
+
+If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
   (let ((row-cells (om-build-table-row! row-text)))
     (om--table-replace-row row-index row-cells table)))
 
