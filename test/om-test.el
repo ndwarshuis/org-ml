@@ -310,21 +310,21 @@
   (should-error (om--verify-rest-arg '("one")))
   (should-error (om--verify-rest-arg '((one)))))
 
-(ert-deftest om--make-optarg-let/valid ()
-  (should (equal (om--make-optarg-let 'one 0)
-                 '(one (nth 0 --opt-args))))
-  (should (equal (om--make-optarg-let '(one 1) 0)
-                 '(one (or (nth 0 --opt-args) 1)))))
+;; (ert-deftest om--make-optarg-let/valid ()
+;;   (should (equal (om--make-optarg-let 'one 0)
+;;                  '(one (nth 0 --opt-args))))
+;;   (should (equal (om--make-optarg-let '(one 1) 0)
+;;                  '(one (or (nth 0 --opt-args) 1)))))
 
-(ert-deftest om--make-optarg-let/error ()
-  ;; arg should be a symbol
-  (should-error (om--make-optarg-let 1 0))
-  (should-error (om--make-optarg-let "one" 0))
-  (should-error (om--make-optarg-let '(one) 0))
-  ;; TODO this doesn't work yet
-  ;; (should-error (om--make-optarg-let :one 0))
-  ;; wrong list length
-  (should-error (om--make-optarg-let '(one one 1) 0)))
+;; (ert-deftest om--make-optarg-let/error ()
+;;   ;; arg should be a symbol
+;;   (should-error (om--make-optarg-let 1 0))
+;;   (should-error (om--make-optarg-let "one" 0))
+;;   (should-error (om--make-optarg-let '(one) 0))
+;;   ;; TODO this doesn't work yet
+;;   ;; (should-error (om--make-optarg-let :one 0))
+;;   ;; wrong list length
+;;   (should-error (om--make-optarg-let '(one one 1) 0)))
 
 (ert-deftest om--make-kwarg-let/valid ()
   (should
@@ -353,33 +353,24 @@
   (should-error (om--make-kwarg-let "one"))
   (should-error (om--make-kwarg-let '(1))))
 
-(ert-deftest om--partition-rest-args/optargs ()
-  (should (equal '((one) nil nil) (om--partition-rest-args '(one) 1 nil nil)))
-  (should (equal '((one) nil nil) (om--partition-rest-args '(one) 1 '(:one) nil)))
-  (should (equal '((one) nil nil) (om--partition-rest-args '(one) 1 nil t)))
-  (should (equal '((one) nil nil) (om--partition-rest-args '(one) 1 '(:one) t))))
 
 (ert-deftest om--partition-rest-args/kwargs ()
-  (should (equal '(nil (:one one) nil) (om--partition-rest-args '(:one one) 0 '(:one) nil)))
-  (should (equal '(nil (:one one) nil) (om--partition-rest-args '(:one one) 0 '(:one) t))))
+  (should (equal '((:one one) nil) (om--partition-rest-args '(:one one) '(:one) nil)))
+  (should (equal '((:one one) nil) (om--partition-rest-args '(:one one) '(:one) t))))
+
 (ert-deftest om--partition-rest-args/restargs ()
-  (should (equal '(nil nil (one)) (om--partition-rest-args '(one) 0 nil t))))
-  ;; optargs + kwargs
+  (should (equal '(nil (one)) (om--partition-rest-args '(one) nil nil)))
+  (should (equal '(nil (one)) (om--partition-rest-args '(one) nil t)))
+  (should (equal '(nil (one two)) (om--partition-rest-args '(one two) nil t))))
 
 (ert-deftest om--partition-rest-args/combo ()
-  (should (equal '((one) (:two two) nil) (om--partition-rest-args '(one :two two) 1 '(:two) nil)))
-  ;; optargs + restargs
-  (should (equal '((one) nil (two)) (om--partition-rest-args '(one two) 1 nil t)))
-  ;; kwargs + restargs
-  (should (equal '(nil (:one one) (two)) (om--partition-rest-args '(:one one two) 0 '(:one) t))))
+  (should (equal '((:one one) (two)) (om--partition-rest-args '(:one one two) '(:one) t))))
 
 (ert-deftest om--partition-rest-args/error ()
   ;; invalid keywords
-  (should-error (om--partition-rest-args '(:one one) 0 '(:two) nil))
+  (should-error (om--partition-rest-args '(:one one) '(:two) nil))
   ;; too many arguments
-  (should-error (om--partition-rest-args '(one) 0 nil nil))
-  (should-error (om--partition-rest-args '(one two) 1 nil nil))
-  (should-error (om--partition-rest-args '(:one one two) 0 (:one) nil)))
+  (should-error (om--partition-rest-args '(:one one two) (:one) nil)))
 
 (ert-deftest om--match-filter/index ()
   (let ((contents '("one" "two" "three")))

@@ -61,18 +61,6 @@
     (if (and (>= 1 (length resarg)) (symbolp (car resarg)))
         (car resarg)
       (error "Rest argument must only have one member")))
-  
-  (defun om--make-optarg-let (optarg index)
-    (cl-flet
-        ((make-plist
-          (arg init)
-          (let* ((opt-get `(nth ,index --opt-args))
-                 (val (if init `(or ,opt-get ,init) opt-get)))
-            `(,arg ,val))))
-      (pcase optarg
-        (`(,arg ,init) (make-plist arg init))
-        ((and (pred symbolp) arg) (make-plist arg nil))
-        (_ (error "Invalid optional argument: %s" optarg)))))
 
   (defun om--make-kwarg-let (kwarg)
     "For each in KWARGS, return a plist."
@@ -95,24 +83,19 @@
          (make-plist arg nil nil))
         (_ (error "Invalid keyword argument: %s" kwarg)))))
 
-  (defun om--partition-rest-args (args opt-len kws use-rest?)
-    (if (= opt-len (length args)) (list args nil nil)
-      (-let [(optargs restargs)
-             (if (= 0 opt-len) (list nil args) (-split-at opt-len args))]
-        (if (not kws)
-            (if use-rest? (list optargs nil restargs)
-              (error "Too many arguments supplied"))
-          (-let* (((kwargs restargs)
-                   (->> (-partition-all 2 restargs)
-                        (--split-with (keywordp (car it)))))
-                  (restargs (apply #'append restargs)))
-            (-some->> (-difference (--map (car it) kwargs) kws)
-                      (error "Invalid keyword(s) found: %s"))
-            (when (-filter #'keywordp restargs)
-              (error "Keywords not allowed in rest arguments when kw-args used"))
-            (when (and restargs (not use-rest?))
-              (error "Too many arguments supplied"))
-            (list optargs (apply #'append kwargs) restargs))))))
+  (defun om--partition-rest-args (args kws use-rest?)
+    (if (not kws) (list nil args)
+      (-let* (((kwargs restargs)
+               (->> (-partition-all 2 args)
+                    (--split-with (keywordp (car it)))))
+              (restargs (apply #'append restargs)))
+        (-some->> (-difference (--map (car it) kwargs) kws)
+                  (error "Invalid keyword(s) found: %s"))
+        (when (-filter #'keywordp restargs)
+          (error "Keywords not allowed in rest arguments when kw-args used"))
+        (when (and restargs (not use-rest?))
+          (error "Too many arguments supplied"))
+        (list (apply #'append kwargs) restargs))))
 
   (defun om--make-header (body args)
     (let ((header (caar (macroexp-parse-body body))))
@@ -132,11 +115,8 @@
   (defun om--transform-lambda (args body name)
     "Transform ARGS and BODY to a block bound to NAME."
     (let* ((partargs (-partition-before-pred
-                      (lambda (it) (memq it '(&pos &rest &optional &key)))
+                      (lambda (it) (memq it '(&pos &rest &key)))
                       (cons '&pos args)))
-           (opt-lets
-            (->> (alist-get '&optional partargs)
-                 (--map-indexed (om--make-optarg-let it it-index))))
            (kw-lets (->> (alist-get '&key partargs)
                          (-map #'om--make-kwarg-let)))
            (rest-arg (->> (alist-get '&rest partargs)
@@ -148,22 +128,19 @@
                       (append `(cl-block ,name))))
            (pos-args (->> (alist-get '&pos partargs)
                           (om--verify-pos-args)))
-           (arg-form (if (not (or opt-lets kw-lets rest-arg))
+           (arg-form (if (not (or kw-lets rest-arg))
                          `(,@pos-args)
                        `(,@pos-args &rest --rest-args)))
            (let-forms
-            (when (or opt-lets rest-arg kw-lets)
-              (let ((opt-len (length opt-lets))
-                    (keys (-map #'car kw-lets))
-                    (rest-let (when rest-arg `((,rest-arg (nth 2 s)))))
-                    (lets (append opt-lets (-map #'cdr kw-lets)))
-                    (opt-setter (and opt-lets '((--opt-args (nth 0 s)))))
-                    (kw-setter (and kw-lets '((--kw-args (nth 1 s))))))
+            (when (or rest-arg kw-lets)
+              (let ((keys (-map #'car kw-lets))
+                    (rest-let (when rest-arg `((,rest-arg (nth 1 s)))))
+                    (lets (append (-map #'cdr kw-lets)))
+                    (kw-setter (and kw-lets '((--kw-args (nth 0 s))))))
                 ;; TODO there is probably a more efficient way to do this...
                 `((s (om--partition-rest-args
-                      --rest-args ,opt-len (quote ,keys)
+                      --rest-args (quote ,keys)
                       ,(and rest-arg t)))
-                  ,@opt-setter
                   ,@kw-setter
                   ,@rest-let
                   ,@lets)))))
@@ -179,7 +156,6 @@
     "Define NAME as a function.
 
    ((VAR [PRED])...
-    [&optional ((VAR [PRED]) [INITFORM])...]
     [&rest (VAR [PRED]]
     [&key (([KEYWORD] VAR) [[PRED] [INITFORM]])...])"
     ;; TODO wtf does this stuff do...???
