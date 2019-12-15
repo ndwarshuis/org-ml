@@ -195,12 +195,7 @@
     (let ((res (om--transform-lambda args body name)))
       `(defun ,name ,@res))))
 
-;;; MISC HELPER FUNCTIONS
-
-(defun om--construct (type props children)
-  "Make a new org element list structure of TYPE, PROPS, and CHILDREN.
-TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
-  `(,type ,props ,@children))
+;; BOILERPLATE MACROS
 
 (defmacro om--verify (&rest args)
   (let ((tests
@@ -218,22 +213,6 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
   `(unless (om--is-type-p ,type ,node)
      (error "Arg '%s' with value %s must be type '%s'"
             ',node ,node ',type)))
-
-(defun om--from-string (string)
-  "Convert STRING to org-element representation."
-  (with-temp-buffer
-    (insert string)
-    (-> (om-parse-this-buffer) (om--get-children) (car))))
-
-(defun om--build-secondary-string (string)
-  "Return a list of elements from STRING as a secondary string."
-  ;; fool parser to always parse objects, bold will parse to headlines
-  ;; because of the stars
-  (-when-let (ss (->> (om--from-string (concat " " string))
-                      (om--get-descendent '(0))
-                      (om--get-children)))
-    (if (equal (car ss) " ") (-drop 1 ss)
-      (om--map-first* (substring it 1) ss))))
 
 (defmacro om--defun-with-docstring-body (args &rest rest)
   ;; the third arg is a docstring if it is a string and there
@@ -372,6 +351,29 @@ a non-existent index."
 
 (om--defun* om--map-last (fun list)
   (->> (nreverse list) (om--map-first fun) (nreverse)))
+
+;;; MISC HELPER FUNCTIONS
+
+(defun om--construct (type props children)
+  "Make a new org element list structure of TYPE, PROPS, and CHILDREN.
+TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
+  `(,type ,props ,@children))
+
+(defun om--from-string (string)
+  "Convert STRING to org-element representation."
+  (with-temp-buffer
+    (insert string)
+    (-> (om-parse-this-buffer) (om--get-children) (car))))
+
+(defun om--build-secondary-string (string)
+  "Return a list of elements from STRING as a secondary string."
+  ;; fool parser to always parse objects, bold will parse to headlines
+  ;; because of the stars
+  (-when-let (ss (->> (om--from-string (concat " " string))
+                      (om--get-descendent '(0))
+                      (om--get-children)))
+    (if (equal (car ss) " ") (-drop 1 ss)
+      (om--map-first* (substring it 1) ss))))
 
 ;;; INTERNAL CONSTANTS
 
