@@ -3203,40 +3203,40 @@
     ;;        (om-headline-is-closed-p))
     ;;   => t)
 
-    ;; (defexamples-content om-headline-get-subheadlines
-    ;;   nil
-    ;;   (:buffer "* headline 1"
-    ;;             "sectional stuff"
-    ;;             "** headline 2"
-    ;;             "** headline 3")
-    ;;   (->> (om-parse-this-subtree)
-    ;;        (om-headline-get-subheadlines)
-    ;;        (-map #'om-to-trimmed-string))
-    ;;   => '("** headline 2" "** headline 3")
-    ;;   (:buffer "* headline 1"
-    ;;             "sectional stuff")
-    ;;   (->> (om-parse-this-subtree)
-    ;;        (om-headline-get-subheadlines)
-    ;;        (-map #'om-to-trimmed-string))
-    ;;   => nil)
+    (defexamples-content om-headline-get-subheadlines
+      nil
+      (:buffer "* headline 1"
+                "sectional stuff"
+                "** headline 2"
+                "** headline 3")
+      (->> (om-parse-this-subtree)
+           (om-headline-get-subheadlines)
+           (-map #'om-to-trimmed-string))
+      => '("** headline 2" "** headline 3")
+      (:buffer "* headline 1"
+                "sectional stuff")
+      (->> (om-parse-this-subtree)
+           (om-headline-get-subheadlines)
+           (-map #'om-to-trimmed-string))
+      => nil)
 
-    ;; (defexamples-content om-headline-get-section
-    ;;   nil
-    ;;   (:buffer "* headline 1"
-    ;;             "sectional stuff"
-    ;;             "** headline 2"
-    ;;             "** headline 3")
-    ;;   (->> (om-parse-this-subtree)
-    ;;        (om-headline-get-section)
-    ;;        (om-to-trimmed-string))
-    ;;   => "sectional stuff"
-    ;;   (:buffer "* headline 1"
-    ;;             "** headline 2"
-    ;;             "** headline 3")
-    ;;   (->> (om-parse-this-subtree)
-    ;;        (om-headline-get-section)
-    ;;        (om-to-trimmed-string))
-    ;;   => "")
+    (defexamples-content om-headline-get-section
+      nil
+      (:buffer "* headline 1"
+                "sectional stuff"
+                "** headline 2"
+                "** headline 3")
+      (->> (om-parse-this-subtree)
+           (om-headline-get-section)
+           (om-to-trimmed-string))
+      => "sectional stuff"
+      (:buffer "* headline 1"
+                "** headline 2"
+                "** headline 3")
+      (->> (om-parse-this-subtree)
+           (om-headline-get-section)
+           (om-to-trimmed-string))
+      => "")
 
     ;; (defexamples-content om-headline-get-drawer
     ;;   nil

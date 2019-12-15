@@ -3143,13 +3143,13 @@ This will throw an error if NODE is not a branch type."
 ;;
 ;; headline
 
-;; (om--defun-node om-headline-get-subheadlines (headline)
-;;   "Return list of subheadlines for HEADLINE element or nil if none."
-;;   (om--headline-get-subheadlines headline))
+(om--defun-node om-headline-get-subheadlines (headline)
+  "Return list of subheadline nodes for HEADLINE node or nil if none."
+  (om--headline-get-subheadlines headline))
 
-;; (om--defun-node om-headline-get-section (headline)
-;;   "Return section for headline HEADLINE element or nil if none."
-;;   (om--headline-get-section headline))
+(om--defun-node om-headline-get-section (headline)
+  "Return section node for headline HEADLINE node or nil if none."
+  (om--headline-get-section headline))
 
 ;; (om--defun-node om-headline-get-drawer (name headline)
 ;;   "Return the first drawer element in HEADLINE named NAME."

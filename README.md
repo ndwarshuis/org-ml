@@ -369,6 +369,8 @@ Set, get, and map the children of branch nodes.
 
 * [om-headline-update-item-statistics](#om-headline-update-item-statistics-headline) `(headline)`
 * [om-headline-update-todo-statistics](#om-headline-update-todo-statistics-headline) `(headline)`
+* [om-headline-get-subheadlines](#om-headline-get-subheadlines-headline) `(headline)`
+* [om-headline-get-section](#om-headline-get-section-headline) `(headline)`
 * [om-headline-indent-subheadline](#om-headline-indent-subheadline-index-headline) `(index headline)`
 * [om-headline-indent-subtree](#om-headline-indent-subtree-index-headline) `(index headline)`
 * [om-headline-unindent-subheadline](#om-headline-unindent-subheadline-index-child-index-headline) `(index child-index headline)`
@@ -3694,6 +3696,61 @@ subheadlines will not be counted).
  ;      ** irrelevant data
  ;      ** TODO good data
  ;      ** DONE bad data"
+
+```
+
+#### om-headline-get-subheadlines `(headline)`
+
+Return list of subheadline nodes for **`headline`** node or nil if none.
+
+```el
+;; Given the following contents:
+; * headline 1
+; sectional stuff
+; ** headline 2
+; ** headline 3
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-subheadlines)
+     (-map (function om-to-trimmed-string)))
+ ;; => '("** headline 2" "** headline 3")
+
+;; Given the following contents:
+; * headline 1
+; sectional stuff
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-subheadlines)
+     (-map (function om-to-trimmed-string)))
+ ;; => nil
+
+```
+
+#### om-headline-get-section `(headline)`
+
+Return section node for headline **`headline`** node or nil if none.
+
+```el
+;; Given the following contents:
+; * headline 1
+; sectional stuff
+; ** headline 2
+; ** headline 3
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-section)
+     (om-to-trimmed-string))
+ ;; => "sectional stuff"
+
+;; Given the following contents:
+; * headline 1
+; ** headline 2
+; ** headline 3
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-section)
+     (om-to-trimmed-string))
+ ;; => nil
 
 ```
 
