@@ -268,6 +268,8 @@ Build nodes with more convenient/shorter syntax.
 * [om-build-headline!](#om-build-headline-key-level-1-title-text-todo-keyword-tags-pre-blank-priority-commentedp-archivedp-post-blank-planning-properties-statistics-cookie-section-children-rest-subheadlines) `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning properties statistics-cookie section-children &rest subheadlines)`
 * [om-build-item!](#om-build-item-key-post-blank-bullet-checkbox-tag-paragraph-counter-rest-nodes) `(&key post-blank bullet checkbox tag paragraph counter &rest nodes)`
 * [om-build-paragraph!](#om-build-paragraph-string-key-post-blank) `(string &key post-blank)`
+* [om-build-table-cell!](#om-build-table-cell-string-key-post-blank) `(string &key post-blank)`
+* [om-build-table-row!](#om-build-table-row-string-list-key-post-blank) `(string-list &key post-blank)`
 * [om-build-table!](#om-build-table-key-tblfm-post-blank-rest-row-lists) `(&key tblfm post-blank &rest row-lists)`
 
 ## Type Predicates
@@ -1988,13 +1990,51 @@ Error
 
 ```
 
+#### om-build-table-cell! `(string &key post-blank)`
+
+Build a table-cell node.
+
+**`string`** is the text to be contained in the table cell. It must contain
+valid formatting.
+
+```el
+(->> (om-build-table-cell! "rage")
+     (om-to-trimmed-string))
+ ;; => "rage |"
+
+(->> (om-build-table-cell! "*rage*")
+     (om-to-trimmed-string))
+ ;; => "*rage* |"
+
+```
+
+#### om-build-table-row! `(string-list &key post-blank)`
+
+Build a table-row node.
+
+**`string-list`** is a list of strings to be contained in the table-cells
+within the table-row, or it is the symbol `hline` for a rule-typed
+table-row. If list of strings, each string follows the same rules as
+described in [`om-build-table-cell!`](#om-build-table-cell-string-key-post-blank).
+
+```el
+(->> (om-build-table-row! '("R" "A" "G" "E"))
+     (om-to-trimmed-string))
+ ;; => "| R | A | G | E |"
+
+(->> (om-build-table-row! 'hline)
+     (om-to-trimmed-string))
+ ;; => "|-"
+
+```
+
 #### om-build-table! `(&key tblfm post-blank &rest row-lists)`
 
-Build a table element.
+Build a table node.
 
-**`row-lists`** is a list of lists where each member is a string to be put
-in a table cell or the symbol 'hline' which represents a horizontal
-line.
+**`row-lists`** is a list of lists where each member is either a string
+to be put in a table cell or the symbol `hline` which represents
+a rule-typed table-row.
 
 All other arguments follow the same rules as [`om-build-table`](#om-build-table-key-tblfm-post-blank-rest-element-nodes).
 
@@ -3967,21 +4007,21 @@ Delete the column at **`column-index`** in **`table`** node.
 ; |---+---|
 ; | c | d |
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-delete-column 0)
      (om-to-trimmed-string))
  ;; => "| b |
  ;      |---|
  ;      | d |"
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-delete-column 1)
      (om-to-trimmed-string))
  ;; => "| a |
  ;      |---|
  ;      | c |"
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-delete-column -1)
      (om-to-trimmed-string))
  ;; => "| a |
@@ -4000,19 +4040,19 @@ Delete the row at **`row-index`** in **`table`** node.
 ; |---+---|
 ; | c | d |
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-delete-row 0)
      (om-to-trimmed-string))
  ;; => "|---+---|
  ;      | c | d |"
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-delete-row 1)
      (om-to-trimmed-string))
  ;; => "| a | b |
  ;      | c | d |"
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-delete-row -1)
      (om-to-trimmed-string))
  ;; => "| a | b |
@@ -4026,7 +4066,7 @@ Insert **`column-text`** at **`column-index`** in **`table`** node.
 
 **`column-index`** is the index of the column and **`column-text`** is a list of
 strings to be made into table-cells to be inserted following the same
-syntax as `om-build-table-cell!`.
+syntax as [`om-build-table-cell!`](#om-build-table-cell-string-key-post-blank).
 
 ```el
 ;; Given the following contents:
@@ -4034,14 +4074,14 @@ syntax as `om-build-table-cell!`.
 ; |---+---|
 ; | c | d |
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-insert-column! 1 '("x" "y"))
      (om-to-trimmed-string))
  ;; => "| a | x | b |
  ;      |---+---+---|
  ;      | c | y | d |"
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-insert-column! -1 '("x" "y"))
      (om-to-trimmed-string))
  ;; => "| a | b | x |
@@ -4056,7 +4096,7 @@ Insert **`row-text`** at **`row-index`** in **`table`** node.
 
 **`row-index`** is the index of the column and **`row-text`** is a list of strings
 to be made into table-cells to be inserted following the same syntax
-as `om-build-table-row!`.
+as [`om-build-table-row!`](#om-build-table-row-string-list-key-post-blank).
 
 ```el
 ;; Given the following contents:
@@ -4064,7 +4104,7 @@ as `om-build-table-row!`.
 ; |---+---|
 ; | c | d |
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-insert-row! 1 '("x" "y"))
      (om-to-trimmed-string))
  ;; => "| a | b |
@@ -4072,7 +4112,7 @@ as `om-build-table-row!`.
  ;      |---+---|
  ;      | c | d |"
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-insert-row! 2 '("x" "y"))
      (om-to-trimmed-string))
  ;; => "| a | b |
@@ -4080,7 +4120,7 @@ as `om-build-table-row!`.
  ;      | x | y |
  ;      | c | d |"
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-insert-row! -1 '("x" "y"))
      (om-to-trimmed-string))
  ;; => "| a | b |
@@ -4096,7 +4136,7 @@ Replace a table-cell node in **`table`** node with **`cell-text`**.
 
 If **`cell-text`** is a string, it will replace the children of the
 table-cell at **`row-index`** and **`column-index`**. **`cell-text`** will be processed 
-the same as the argument given to `om-build-table-cell!`.
+the same as the argument given to [`om-build-table-cell!`](#om-build-table-cell-string-key-post-blank).
 
 If **`cell-text`** is nil, it will set the cell to an empty string.
 
@@ -4135,7 +4175,7 @@ Replace column at **`column-index`** in **`table`** node with **`column-text`**.
 
 If **`column-text`** is a list of strings, it will replace the table-cells
 at **`column-index`**. Each member of **`column-text`** will be processed the
-same as the argument given to `om-build-table-cell!`.
+same as the argument given to [`om-build-table-cell!`](#om-build-table-cell-string-key-post-blank).
 
 If **`column-text`** is nil, it will clear all cells at **`column-index`**.
 
@@ -4145,21 +4185,21 @@ If **`column-text`** is nil, it will clear all cells at **`column-index`**.
 ; |---+---|
 ; | c | d |
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-replace-column! 0 '("A" "B"))
      (om-to-trimmed-string))
  ;; => "| A | b |
  ;      |---+---|
  ;      | B | d |"
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-replace-column! 0 nil)
      (om-to-trimmed-string))
  ;; => "|   | b |
  ;      |---+---|
  ;      |   | d |"
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-replace-column! -1 '("A" "B"))
      (om-to-trimmed-string))
  ;; => "| a | A |
@@ -4174,7 +4214,7 @@ Replace row at **`row-index`** in **`table`** node with **`row-text`**.
 
 If **`row-text`** is a list of strings, it will replace the cells at
 **`row-index`**. Each member of **`row-text`** will be processed the same as
-the argument given to `om-build-table-row!`.
+the argument given to [`om-build-table-row!`](#om-build-table-row-string-list-key-post-blank).
 
 If **`row-text`** is nil, it will clear all cells at **`row-index`**.
 
@@ -4184,21 +4224,21 @@ If **`row-text`** is nil, it will clear all cells at **`row-index`**.
 ; |---+---|
 ; | c | d |
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-replace-row! 0 '("A" "B"))
      (om-to-trimmed-string))
  ;; => "| A | B |
  ;      |---+---|
  ;      | c | d |"
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-replace-row! 0 nil)
      (om-to-trimmed-string))
  ;; => "|   |   |
  ;      |---+---|
  ;      | c | d |"
 
-(->> (om-parse-element-at 1)
+(->> (om-parse-this-element)
      (om-table-replace-row! -1 '("A" "B"))
      (om-to-trimmed-string))
  ;; => "| a | b |

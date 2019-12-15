@@ -898,6 +898,22 @@
            (om-to-string))
       !!> error)
 
+    (defexamples om-build-table-cell!
+      (->> (om-build-table-cell! "rage")
+           (om-to-trimmed-string))
+      => "rage |"
+      (->> (om-build-table-cell! "*rage*")
+           (om-to-trimmed-string))
+      => "*rage* |")
+
+    (defexamples om-build-table-row!
+      (->> (om-build-table-row! '("R" "A" "G" "E"))
+           (om-to-trimmed-string))
+      => "| R | A | G | E |"
+      (->> (om-build-table-row! 'hline)
+           (om-to-trimmed-string))
+      => "|-")
+
     (defexamples om-build-table!
       (->> (om-build-table! '("R" "A") '("G" "E"))
            (om-to-trimmed-string))
@@ -907,7 +923,10 @@
            (om-to-trimmed-string))
       => (:result "| L | O |"
                   "|---+---|"
-                  "| V | E |"))))
+                  "| V | E |"))
+
+
+    ))
 
 (def-example-group "Type Predicates"
   "Test node types."

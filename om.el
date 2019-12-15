@@ -227,9 +227,13 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 
 (defun om--build-secondary-string (string)
   "Return a list of elements from STRING as a secondary string."
-  (->> (om--from-string string)
-       (om--get-descendent '(0))
-       (om--get-children)))
+  ;; fool parser to always parse objects, bold will parse to headlines
+  ;; because of the stars
+  (-when-let (ss (->> (om--from-string (concat " " string))
+                      (om--get-descendent '(0))
+                      (om--get-children)))
+    (if (equal (car ss) " ") (-drop 1 ss)
+      (om--map-first* (substring it 1) ss))))
 
 (defmacro om--defun-with-docstring-body (args &rest rest)
   ;; the third arg is a docstring if it is a string and there
@@ -1916,7 +1920,7 @@ formatting (eg, text that will be formatted into objects)."
       (error "String could not be parsed to a paragraph: %s" string))))
 
 (om--defun-kw om-build-table-cell! (string &key post-blank)
-  "Build a table-cell object.
+  "Build a table-cell node.
 
 STRING is the text to be contained in the table cell. It must contain
 valid formatting."
@@ -1925,10 +1929,10 @@ valid formatting."
     (error "Could not create valid secondary string from '%s'" string)))
 
 (om--defun-kw om-build-table-row! (string-list &key post-blank)
-  "Build a table-row object.
+  "Build a table-row node.
 
 STRING-LIST is a list of strings to be contained in the table-cells
-within the table-row, or it is the symbol 'hline' for an H-Line-typed
+within the table-row, or it is the symbol `hline' for a rule-typed
 table-row. If list of strings, each string follows the same rules as
 described in `om-build-table-cell!'."
   (if (eq string-list 'hline)
@@ -1937,17 +1941,15 @@ described in `om-build-table-cell!'."
          (apply #'om-build-table-row :post-blank post-blank))))
 
 (om--defun-kw om-build-table! (&key tblfm post-blank &rest row-lists)
-  "Build a table element.
+  "Build a table node.
 
-ROW-LISTS is a list of lists where each member is a string to be put
-in a table cell or the symbol 'hline' which represents a horizontal
-line.
+ROW-LISTS is a list of lists where each member is either a string
+to be put in a table cell or the symbol `hline' which represents
+a rule-typed table-row.
 
 All other arguments follow the same rules as `om-build-table'."
   (->> (--map (om-build-table-row! it) row-lists)
-       (apply #'om-build-table
-              :tblfm tblfm
-              :post-blank post-blank)))
+       (apply #'om-build-table :tblfm tblfm :post-blank post-blank)))
 
 ;;; INTERNAL CHILDREN FUNCTIONS
 ;; operations on children of containers
