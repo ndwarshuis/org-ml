@@ -204,7 +204,12 @@
     (->> (om-parse-element-at 1)
          (om-get-type))
     => 'keyword
-    ;; TODO add latex env
+    (:buffer "\\begin{env}"
+             "body"
+             "\\end{env}")
+    (->> (om-parse-element-at 1)
+         (om-get-type))
+    => 'latex-environment
     (:buffer "* headline"
              ":PROPERTIES:"
              ":key: val"
