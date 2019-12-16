@@ -447,50 +447,65 @@
 
     (defexamples om-build-code
       (->> (om-build-code "text")
-           (om-to-trimmed-string)) => "~text~")
+           (om-to-trimmed-string))
+      => "~text~")
 
     (defexamples om-build-entity
       (->> (om-build-entity "gamma")
-           (om-to-trimmed-string)) => "\\gamma")
+           (om-to-trimmed-string))
+      => "\\gamma")
 
     (defexamples om-build-inline-babel-call
       (->> (om-build-inline-babel-call "name")
-           (om-to-trimmed-string)) => "call_name()"
+           (om-to-trimmed-string))
+      => "call_name()"
       (->> (om-build-inline-babel-call "name" :arguments '("n=4"))
-           (om-to-trimmed-string)) => "call_name(n=4)"
+           (om-to-trimmed-string))
+      => "call_name(n=4)"
       (->> (om-build-inline-babel-call "name" :inside-header '(:key val))
-           (om-to-trimmed-string)) => "call_name[:key val]()"
+           (om-to-trimmed-string))
+      => "call_name[:key val]()"
       (->> (om-build-inline-babel-call "name" :end-header '(:key val))
-           (om-to-trimmed-string)) => "call_name()[:key val]")
+           (om-to-trimmed-string))
+      => "call_name()[:key val]")
 
     (defexamples om-build-inline-src-block
       (->> (om-build-inline-src-block "lang")
            (om-to-trimmed-string))
+      
       => "src_lang{}"
       (->> (om-build-inline-src-block "lang" :value "value")
            (om-to-trimmed-string))
+      
       => "src_lang{value}"
       (->> (om-build-inline-src-block "lang" :value "value" :parameters '(:key val))
            (om-to-trimmed-string))
+      
       => "src_lang[:key val]{value}")
 
     (defexamples om-build-line-break
       (->> (om-build-line-break)
-           (om-to-trimmed-string)) => "\\\\")
+           (om-to-trimmed-string))
+      => "\\\\")
 
     (defexamples om-build-statistics-cookie
       (->> (om-build-statistics-cookie '(nil))
-           (om-to-trimmed-string)) => "[%]"
+           (om-to-trimmed-string))
+      => "[%]"
       (->> (om-build-statistics-cookie '(50))
-           (om-to-trimmed-string)) => "[50%]"
+           (om-to-trimmed-string))
+      => "[50%]"
       (->> (om-build-statistics-cookie '(1 3))
-           (om-to-trimmed-string)) => "[1/3]"
+           (om-to-trimmed-string))
+      => "[1/3]"
       (->> (om-build-statistics-cookie '(nil nil))
-           (om-to-trimmed-string)) => "[/]")
+           (om-to-trimmed-string))
+      => "[/]")
 
     (defexamples om-build-target
       (->> (om-build-target "text")
-           (om-to-trimmed-string)) => "<<text>>")
+           (om-to-trimmed-string))
+      => "<<text>>")
 
     (defexamples om-build-timestamp
       (->> (om-build-timestamp 'inactive 2019 1 15 2019 1 15)
@@ -507,72 +522,91 @@
 
     (defexamples om-build-verbatim
       (->> (om-build-verbatim "text")
-           (om-to-trimmed-string)) => "=text="))
+           (om-to-trimmed-string))
+      => "=text="))
 
   (def-example-subgroup "Branch Objects"
     nil
 
     (defexamples om-build-bold
       (->> (om-build-bold "text")
-           (om-to-trimmed-string)) => "*text*")
+           (om-to-trimmed-string))
+      => "*text*")
 
     (defexamples om-build-footnote-reference
       (->> (om-build-footnote-reference)
-           (om-to-trimmed-string)) => "[fn:]"
+           (om-to-trimmed-string))
+      => "[fn:]"
       (->> (om-build-footnote-reference :label "label")
-           (om-to-trimmed-string)) => "[fn:label]"
+           (om-to-trimmed-string))
+      => "[fn:label]"
       (->> (om-build-footnote-reference :label "label" "content")
-           (om-to-trimmed-string)) => "[fn:label:content]")
+           (om-to-trimmed-string))
+      => "[fn:label:content]")
 
     (defexamples om-build-italic
       (->> (om-build-italic "text")
-           (om-to-trimmed-string)) => "/text/")
+           (om-to-trimmed-string))
+      => "/text/")
 
     (defexamples om-build-link
       (->> (om-build-link "target")
-           (om-to-trimmed-string)) => "[[target]]"
+           (om-to-trimmed-string))
+      => "[[target]]"
       (->> (om-build-link "target" :type "file")
-           (om-to-trimmed-string)) => "[[file:target]]"
+           (om-to-trimmed-string))
+      => "[[file:target]]"
       (->> (om-build-link "target" "desc")
-           (om-to-trimmed-string)) => "[[target][desc]]")
+           (om-to-trimmed-string))
+      => "[[target][desc]]")
 
     (defexamples om-build-radio-target
       (->> (om-build-radio-target "text")
-           (om-to-trimmed-string)) => "<<<text>>>")
+           (om-to-trimmed-string))
+      => "<<<text>>>")
 
     (defexamples om-build-strike-through
       (->> (om-build-strike-through "text")
-           (om-to-trimmed-string)) => "+text+")
+           (om-to-trimmed-string))
+      => "+text+")
 
     (defexamples om-build-superscript
       (->> (om-build-superscript "text")
-           (om-to-trimmed-string)) => "^text")
+           (om-to-trimmed-string))
+      => "^text")
 
     (defexamples om-build-subscript
       (->> (om-build-subscript "text")
-           (om-to-trimmed-string)) => "_text")
+           (om-to-trimmed-string))
+      => "_text")
 
     (defexamples om-build-table-cell
       (->> (om-build-table-cell "text")
            (om-build-table-row)
-           (om-to-trimmed-string)) => "| text |")
+           (om-to-trimmed-string))
+      => "| text |")
 
     (defexamples om-build-underline
       (->> (om-build-underline "text")
-           (om-to-trimmed-string)) => "_text_"))
+           (om-to-trimmed-string))
+      => "_text_"))
 
   (def-example-subgroup "Leaf Elements"
     nil
 
     (defexamples om-build-babel-call
       (->> (om-build-babel-call "name")
-           (om-to-trimmed-string)) => "#+CALL: name()"
+           (om-to-trimmed-string))
+      => "#+CALL: name()"
       (->> (om-build-babel-call "name" :arguments '("arg=x"))
-           (om-to-trimmed-string)) => "#+CALL: name(arg=x)"
+           (om-to-trimmed-string))
+      => "#+CALL: name(arg=x)"
       (->> (om-build-babel-call "name" :inside-header '(:key val))
-           (om-to-trimmed-string)) => "#+CALL: name[:key val]()"
+           (om-to-trimmed-string))
+      => "#+CALL: name[:key val]()"
       (->> (om-build-babel-call "name" :end-header '(:key val))
-           (om-to-trimmed-string)) => "#+CALL: name() :key val")
+           (om-to-trimmed-string))
+      => "#+CALL: name() :key val")
 
     (defexamples om-build-clock
       (->> (om-build-clock (om-build-timestamp! 'inactive '(2019 1 1 0 0)))
@@ -602,9 +636,11 @@
 
     (defexamples om-build-diary-sexp
       (->> (om-build-diary-sexp)
-           (om-to-trimmed-string)) => "%%()"
+           (om-to-trimmed-string))
+      => "%%()"
       (->> (om-build-diary-sexp :value '(text))
-           (om-to-trimmed-string)) => "%%(text)")
+           (om-to-trimmed-string))
+      => "%%(text)")
 
     (defexamples om-build-example-block
       (->> (om-build-example-block)
@@ -624,39 +660,48 @@
 
     (defexamples om-build-export-block
       (->> (om-build-export-block "type" "value\n")
-           (om-to-trimmed-string)) => (:result "#+BEGIN_EXPORT type"
-           "value"
-           "#+END_EXPORT"))
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_EXPORT type"
+                  "value"
+                  "#+END_EXPORT"))
 
     (defexamples om-build-fixed-width
       (->> (om-build-fixed-width "text")
-           (om-to-trimmed-string)) => ": text")
+           (om-to-trimmed-string))
+      => ": text")
 
     (defexamples om-build-horizontal-rule
       (->> (om-build-horizontal-rule)
-           (om-to-trimmed-string)) => "-----")
+           (om-to-trimmed-string))
+      => "-----")
 
     (defexamples om-build-keyword
       (->> (om-build-keyword "FILETAGS" "tmsu")
-           (om-to-trimmed-string)) => "#+FILETAGS: tmsu")
+           (om-to-trimmed-string))
+      => "#+FILETAGS: tmsu")
 
     (defexamples om-build-latex-environment
       (->> (om-build-latex-environment '("env" "text"))
-           (om-to-trimmed-string)) => (:result "\\begin{env}"
-           "text"
-           "\\end{env}"))
+           (om-to-trimmed-string))
+      => (:result "\\begin{env}"
+                  "text"
+                  "\\end{env}"))
 
     (defexamples om-build-node-property
       (->> (om-build-node-property "key" "val")
-           (om-to-trimmed-string)) => ":key:      val")
+           (om-to-trimmed-string))
+      => ":key:      val")
 
     (defexamples om-build-planning
       (->> (om-build-planning :closed (om-build-timestamp! 'inactive '(2019 1 1)))
-           (om-to-trimmed-string)) => "CLOSED: [2019-01-01 Tue]"
+           (om-to-trimmed-string))
+      => "CLOSED: [2019-01-01 Tue]"
       (->> (om-build-planning :scheduled (om-build-timestamp! 'inactive '(2019 1 1)))
-           (om-to-trimmed-string)) => "SCHEDULED: [2019-01-01 Tue]"
+           (om-to-trimmed-string))
+      => "SCHEDULED: [2019-01-01 Tue]"
       (->> (om-build-planning :deadline (om-build-timestamp! 'inactive '(2019 1 1)))
-           (om-to-trimmed-string)) => "DEADLINE: [2019-01-01 Tue]")
+           (om-to-trimmed-string))
+      => "DEADLINE: [2019-01-01 Tue]")
 
     (defexamples om-build-src-block
       (->> (om-build-src-block)
@@ -714,87 +759,107 @@
     (defexamples om-build-center-block
       (->> (om-build-paragraph "text")
            (om-build-center-block)
-           (om-to-trimmed-string)) => (:result "#+BEGIN_CENTER"
-           "text"
-           "#+END_CENTER"))
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_CENTER"
+                  "text"
+                  "#+END_CENTER"))
 
     (defexamples om-build-drawer
       (->> (om-build-paragraph "text")
            (om-build-drawer "NAME")
-           (om-to-trimmed-string)) => (:result ":NAME:"
-           "text"
-           ":END:"))
+           (om-to-trimmed-string))
+      => (:result ":NAME:"
+                  "text"
+                  ":END:"))
 
     (defexamples om-build-footnote-definition
       (->> (om-build-paragraph "footnote contents")
            (om-build-footnote-definition "label")
-           (om-to-trimmed-string)) => "[fn:label] footnote contents")
+           (om-to-trimmed-string))
+      => "[fn:label] footnote contents")
 
     ;; TODO, need tags and archive example, cumbersome since these outputs
     ;; have lots of whitespace
     (defexamples om-build-headline
       (->> (om-build-headline)
-           (om-to-trimmed-string)) => "*"
+           (om-to-trimmed-string))
+      => "*"
       (->> (om-build-headline :title '("dummy"))
-           (om-to-trimmed-string)) => "* dummy"
+           (om-to-trimmed-string))
+      => "* dummy"
       (->> (om-build-headline :title '("dummy") :level 3)
-           (om-to-trimmed-string)) => "*** dummy"
+           (om-to-trimmed-string))
+      => "*** dummy"
       (->> (om-build-headline :title '("dummy") :todo-keyword "DONE")
-           (om-to-trimmed-string)) => "* DONE dummy"
+           (om-to-trimmed-string))
+      => "* DONE dummy"
       (->> (om-build-headline :title '("dummy") :priority ?A)
-           (om-to-trimmed-string)) => "* [#A] dummy"
+           (om-to-trimmed-string))
+      => "* [#A] dummy"
       (->> (om-build-headline :title '("dummy") :footnote-section-p t)
-           (om-to-trimmed-string)) => "* Footnotes"
+           (om-to-trimmed-string))
+      => "* Footnotes"
       (->> (om-build-headline :title '("dummy") :commentedp t)
-           (om-to-trimmed-string)) => "* COMMENT dummy")
+           (om-to-trimmed-string))
+      => "* COMMENT dummy")
 
     (defexamples om-build-item
       (->> (om-build-paragraph "item contents")
            (om-build-item)
-           (om-to-trimmed-string)) => "- item contents"
+           (om-to-trimmed-string))
+      => "- item contents"
       (->> (om-build-paragraph "item contents")
            (om-build-item :bullet 1)
-           (om-to-trimmed-string)) => "1. item contents"
+           (om-to-trimmed-string))
+      => "1. item contents"
       (->> (om-build-paragraph "item contents")
            (om-build-item :checkbox 'on)
-           (om-to-trimmed-string)) => "- [X] item contents"
+           (om-to-trimmed-string))
+      => "- [X] item contents"
       (->> (om-build-paragraph "item contents")
            (om-build-item :tag '("tmsu"))
-           (om-to-trimmed-string)) => "- tmsu :: item contents"
+           (om-to-trimmed-string))
+      => "- tmsu :: item contents"
       (->> (om-build-paragraph "item contents")
            (om-build-item :counter 10)
-           (om-to-trimmed-string)) => "- [@10] item contents")
+           (om-to-trimmed-string))
+      => "- [@10] item contents")
 
     (defexamples om-build-plain-list
       (->> (om-build-paragraph "item contents")
            (om-build-item)
            (om-build-plain-list)
-           (om-to-trimmed-string)) => "- item contents")
+           (om-to-trimmed-string))
+      => "- item contents")
 
     (defexamples om-build-property-drawer
       (->> (om-build-node-property "key" "val")
            (om-build-property-drawer)
-           (om-to-trimmed-string)) => (:result ":PROPERTIES:"
-           ":key:      val"
-           ":END:"))
+           (om-to-trimmed-string))
+      => (:result ":PROPERTIES:"
+                  ":key:      val"
+                  ":END:"))
 
     (defexamples om-build-quote-block
       (->> (om-build-paragraph "quoted stuff")
            (om-build-quote-block)
-           (om-to-trimmed-string)) => (:result "#+BEGIN_QUOTE"
-           "quoted stuff"
-           "#+END_QUOTE"))
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_QUOTE"
+                  "quoted stuff"
+                  "#+END_QUOTE"))
 
     (defexamples om-build-section
       (->> (om-build-paragraph "text")
            (om-build-section)
-           (om-to-trimmed-string)) => "text")
+           (om-to-trimmed-string))
+      => "text")
 
     (defexamples om-build-table
       (->> (om-build-table-cell "cell")
            (om-build-table-row)
            (om-build-table)
-           (om-to-trimmed-string)) => "| cell |"))
+           (om-to-trimmed-string))
+      => "| cell |"))
 
   (def-example-subgroup "Miscellaneous Builders"
     nil
@@ -880,8 +945,7 @@
                   ":key:      val"
                   ":END:"
                   "section text"
-                  "** subhead")
-      )
+                  "** subhead"))
 
     (defexamples om-build-item!
       (->> (om-build-item!
@@ -930,10 +994,7 @@
            (om-to-trimmed-string))
       => (:result "| L | O |"
                   "|---+---|"
-                  "| V | E |"))
-
-
-    ))
+                  "| V | E |"))))
 
 (def-example-group "Type Predicates"
   "Test node types."
