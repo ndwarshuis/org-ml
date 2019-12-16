@@ -778,8 +778,6 @@
            (om-to-trimmed-string))
       => "[fn:label] footnote contents")
 
-    ;; TODO, need tags and archive example, cumbersome since these outputs
-    ;; have lots of whitespace
     (defexamples om-build-headline
       (->> (om-build-headline)
            (om-to-trimmed-string))
@@ -1250,7 +1248,6 @@
            (om-to-trimmed-string))
       => "[fn:blacklabel] society"
 
-      ;; TODO test footnote section
       (:buffer "* dummy"
                "stuff")
       (->> (om-parse-this-element)
@@ -1266,6 +1263,13 @@
       => (:result "** TODO COMMENT [#A] smartie :tmsu:ARCHIVE:"
                   ""
                   "stuff")
+      :begin-hidden
+      (->> (om-parse-this-element)
+           (om-set-property :footnote-section-p t)
+           (om-to-trimmed-string))
+      => (:result "* Footnotes"
+                  "stuff")
+      :end-hidden
 
       (:buffer "call_kthulu()")
       (->> (om-parse-this-object)
