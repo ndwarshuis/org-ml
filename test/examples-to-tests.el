@@ -43,7 +43,12 @@
 
 (defmacro om--with-org-env (&rest body)
   ;; define convenient variables for the org-mode testing env
-  `(let ((org-tags-column 20))
+  `(let ((org-tags-column 20)
+         (org-todo-keywords '((sequence "TODO" "DONE")))
+         (org-archive-tag "ARCHIVE")
+         (org-lowest-priority ?C)
+         (org-highest-priority ?A)
+         (org-list-allow-alphabetical nil))
      (org-mode)
      ,@body))
 
