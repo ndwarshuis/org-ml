@@ -1306,7 +1306,7 @@
            (om-to-trimmed-string))
       => "#+kee: vahl"
 
-      ;; this is stupid, who would ever do this?
+      ;; TODO this is stupid, who would ever do this?
       (:buffer "\begin{env}"
                "body"
                "\end{env}")
@@ -1343,9 +1343,8 @@
                ":PROPERTIES:"
                ":KEY: VAL"
                ":END:")
-      ;; TODO need public function
       (->> (om-parse-this-headline)
-           (om--headline-get-node-properties)
+           (om-headline-get-node-properties)
            (-first-item)
            (om-set-property :key "kee")
            (om-set-property :value "vahl")
@@ -1354,9 +1353,8 @@
 
       (:buffer "* dummy"
                "CLOSED: [2019-01-01 Tue]")
-      ;; TODO need public function
       (->> (om-parse-this-headline)
-           (om--headline-get-planning)
+           (om-headline-get-planning)
            (om-set-property
             :closed (om-build-timestamp! 'inactive '(2019 1 2)))
            (om-to-trimmed-string))
@@ -1386,7 +1384,7 @@
 
       (:buffer "* dummy [50%]")
       (->> (om-parse-this-headline)
-           (om--headline-get-statistics-cookie)
+           (om-headline-get-statistics-cookie)
            (om-set-property :value '(0 5))
            (om-to-trimmed-string))
       => "[0/5]"

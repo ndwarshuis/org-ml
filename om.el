@@ -3130,9 +3130,19 @@ This will throw an error if NODE is not a branch type."
   "Return section node for headline HEADLINE node or nil if none."
   (om--headline-get-section headline))
 
-;; (om--defun-node om-headline-get-drawer (name headline)
-;;   "Return the first drawer element in HEADLINE named NAME."
-;;   (om--headline-get-drawer name headline))
+(om--defun-node om-headline-get-properties-drawer (headline)
+  "Return the properties drawer node in HEADLINE.
+If multiple are present (there shouldn't be) the first will be 
+returned."
+  (om--headline-get-properties-drawer headline))
+
+(om--defun-node om-headline-get-node-properties (headline)
+  "Return a list of node-properties nodes in HEADLINE or nil if none."
+  (om--headline-get-node-properties headline))
+
+(om--defun-node om-headline-get-planning (headline)
+  "Return the planning node in HEADLINE or nil if none."
+  (om--headline-get-planning headline))
 
 ;; (om--defun-node om-headline-is-closed-p (headline)
 ;;   "Return t if HEADLINE element is closed."

@@ -2271,6 +2271,27 @@ each type.
  ;; => "#+CALL: cthulhu[:cache no](x=4) :exports results"
 
 ;; Given the following contents:
+; call_kthulu()
+
+(->> (om-parse-this-object)
+     (om-set-property :call "cthulhu")
+     (om-set-property :inside-header '(:cache no))
+     (om-set-property :arguments '("x=4"))
+     (om-set-property :end-header '(:exports results))
+     (om-to-trimmed-string))
+ ;; => "call_cthulhu[:cache no](x=4)[:exports results]"
+
+;; Given the following contents:
+; src_emacs{(print 'yeah-boi)}
+
+(->> (om-parse-this-object)
+     (om-set-property :language "python")
+     (om-set-property :parameters '(:cache no))
+     (om-set-property :value "print \"yeah boi\"")
+     (om-to-trimmed-string))
+ ;; => "src_python[:cache no]{print \"yeah boi\"}"
+
+;; Given the following contents:
 ; - thing
 
 (->> (om-parse-this-item)
