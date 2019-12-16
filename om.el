@@ -702,6 +702,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
      (cdar)
      (-map #'string-to-number)))))
 
+;; TODO this will make quotes turn to (quote )
 (defun om--encode-diary-sexp-value (value)
   ;; assumes value is a form or nil
   (if value (format "%%%%%S" value) "%%()"))

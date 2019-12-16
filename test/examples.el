@@ -1180,7 +1180,11 @@
                   "still not here"
                   "#+END_COMMENT")
 
-      ;; TODO add diary-sexp
+      (:buffer "%%(print :valueble)")
+      (->> (om-parse-this-element)
+           (om-set-property :value '(print :invaluble))
+           (om-to-trimmed-string))
+      => "%%(print :invaluble)"
 
       (:buffer ":LOGBOOK:"
                ":END:")
