@@ -41,16 +41,19 @@
           (t
            (error "Invalid test case: %S" `(,actual ,sym ,expected))))))
 
-(defmacro defexamples (cmd &rest examples)
-  (let ((tests (->> (-partition 3 examples)
-                    (--map (apply #'example-to-should it)))))
-    `(ert-deftest ,cmd () ,@tests)))
-
 (defmacro om--with-org-env (&rest body)
   ;; define convenient variables for the org-mode testing env
   `(let ((org-tags-column 20))
      (org-mode)
      ,@body))
+
+(defmacro defexamples (cmd &rest examples)
+  (let ((tests (->> examples
+                    (remove :begin-hidden)
+                    (remove :end-hidden)
+                    (-partition 3)
+                    (--map (apply #'example-to-should it)))))
+    `(ert-deftest ,cmd () (om--with-org-env ,@tests))))
 
 (defmacro defexamples-content (cmd _docstring &rest args)
   (cl-flet

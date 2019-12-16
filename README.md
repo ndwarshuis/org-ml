@@ -1596,34 +1596,14 @@ The following properties are settable:
      (om-to-trimmed-string))
  ;; => "*"
 
-(->> (om-build-headline :title '("dummy"))
+(->> (om-build-headline :level 2 :title '("dummy")
+			 :tags '("tmsu"))
      (om-to-trimmed-string))
- ;; => "* dummy"
+ ;; => "** dummy            :tmsu:"
 
-(->> (om-build-headline :title '("dummy")
-			 :level 3)
+(->> (om-build-headline :todo-keyword "TODO" :archivedp t :commentedp t :priority 65)
      (om-to-trimmed-string))
- ;; => "*** dummy"
-
-(->> (om-build-headline :title '("dummy")
-			 :todo-keyword "DONE")
-     (om-to-trimmed-string))
- ;; => "* DONE dummy"
-
-(->> (om-build-headline :title '("dummy")
-			 :priority 65)
-     (om-to-trimmed-string))
- ;; => "* [#A] dummy"
-
-(->> (om-build-headline :title '("dummy")
-			 :footnote-section-p t)
-     (om-to-trimmed-string))
- ;; => "* Footnotes"
-
-(->> (om-build-headline :title '("dummy")
-			 :commentedp t)
-     (om-to-trimmed-string))
- ;; => "* COMMENT dummy"
+ ;; => "* TODO COMMENT [#A]  :ARCHIVE:"
 
 ```
 

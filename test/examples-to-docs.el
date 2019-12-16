@@ -114,23 +114,26 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
     (if (not (s-matches? "(fn .*)" doc)) doc
       (->> (s-lines doc) (-drop-last 2) (s-join "\n")))))
 
+(defun filter-hidden (args)
+  (->> (--split-when (eq it :end-hidden) args)
+       (--mapcat (--take-while (not (eq it :begin-hidden)) it))))
+
 (defmacro defexamples (cmd &rest examples)
   `(add-to-list 'functions
                 (list
                  ',cmd
                  (docs--signature ',cmd)
                  (format-doc ',cmd)
-                 (-map 'example-to-string (-partition 3 ',examples)))))
+                 (->> ',examples
+                      (filter-hidden)
+                      (-partition 3)
+                      (-map 'example-to-string)))))
 
 (defmacro defexamples-content (cmd docstring &rest args)
   `(cl-flet
        ((formatted-string?
          (list)
          (memq (and (listp list) (car list)) '(:buffer :comment)))
-        (filter-hidden
-         (args)
-         (->> (--split-when (eq it :end-hidden) args)
-              (--mapcat (--take-while (not (eq it :begin-hidden)) it))))
         (format-content
          (list)
          (->> (car list)

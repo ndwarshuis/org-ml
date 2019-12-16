@@ -784,24 +784,39 @@
       (->> (om-build-headline)
            (om-to-trimmed-string))
       => "*"
+      (->> (om-build-headline :level 2 :title '("dummy") :tags '("tmsu"))
+           (om-to-trimmed-string))
+      => "** dummy            :tmsu:"
+      (->> (om-build-headline :todo-keyword "TODO" :archivedp t
+                              :commentedp t :priority ?A)
+           (om-to-trimmed-string))
+      => "* TODO COMMENT [#A]  :ARCHIVE:"
+      :begin-hidden
+      (->> (om-build-headline :level 2)
+           (om-to-trimmed-string))
+      => "**"
       (->> (om-build-headline :title '("dummy"))
            (om-to-trimmed-string))
       => "* dummy"
-      (->> (om-build-headline :title '("dummy") :level 3)
+      (->> (om-build-headline :tags '("tmsu"))
            (om-to-trimmed-string))
-      => "*** dummy"
-      (->> (om-build-headline :title '("dummy") :todo-keyword "DONE")
+      => "*                   :tmsu:"
+      (->> (om-build-headline :todo-keyword "DONE")
            (om-to-trimmed-string))
-      => "* DONE dummy"
-      (->> (om-build-headline :title '("dummy") :priority ?A)
+      => "* DONE"
+      (->> (om-build-headline :priority ?A)
            (om-to-trimmed-string))
-      => "* [#A] dummy"
-      (->> (om-build-headline :title '("dummy") :footnote-section-p t)
+      => "* [#A]"
+      (->> (om-build-headline :footnote-section-p t)
            (om-to-trimmed-string))
       => "* Footnotes"
-      (->> (om-build-headline :title '("dummy") :commentedp t)
+      (->> (om-build-headline :commentedp t)
            (om-to-trimmed-string))
-      => "* COMMENT dummy")
+      => "* COMMENT"
+      (->> (om-build-headline :archivedp t)
+           (om-to-trimmed-string))
+      => "*                   :ARCHIVE:"
+      :end-hidden)
 
     (defexamples om-build-item
       (->> (om-build-paragraph "item contents")
