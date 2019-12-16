@@ -1244,7 +1244,7 @@
            (om-set-property :title '("smartie"))
            (om-set-property :todo-keyword "TODO")
            (om-to-trimmed-string))
-      => (:result "** TODO COMMENT [#A] smartie                                   :tmsu:ARCHIVE:"
+      => (:result "** TODO COMMENT [#A] smartie :tmsu:ARCHIVE:"
                   ""
                   "stuff")
 
@@ -2023,7 +2023,7 @@
       (->> (om-parse-this-headline)
            (om-toggle-property :archivedp)
            (om-to-trimmed-string))
-      => "* headline                                                          :ARCHIVE:"
+      => "* headline          :ARCHIVE:"
       (->> (om-parse-this-headline)
            (om-toggle-property :commentedp)
            (om-to-trimmed-string))
@@ -2171,11 +2171,11 @@
 
       :begin-hidden
 
-      (:buffer "* headline       :tag1:")
+      (:buffer "* headline          :tag1:")
       (->> (om-parse-this-headline)
            (om-insert-into-property :tags 0 "tag0")
            (om-to-trimmed-string))
-      => "* headline                                                        :tag0:tag1:"
+      => "* headline          :tag0:tag1:"
 
       (:buffer "#+BEGIN_EXAMPLE -n"
                "#+END_EXAMPLE")

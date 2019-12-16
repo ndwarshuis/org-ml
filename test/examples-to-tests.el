@@ -46,6 +46,12 @@
                     (--map (apply #'example-to-should it)))))
     `(ert-deftest ,cmd () ,@tests)))
 
+(defmacro om--with-org-env (&rest body)
+  ;; define convenient variables for the org-mode testing env
+  `(let ((org-tags-column 20))
+     (org-mode)
+     ,@body))
+
 (defmacro defexamples-content (cmd _docstring &rest args)
   (cl-flet
       ((make-test
@@ -57,10 +63,11 @@
                     (-partition 3)
                     (--map (apply #'example-to-should it)))))
           `(with-temp-buffer
-             (org-mode)
-             (when ,contents (insert ,contents))
-             (goto-char (point-min))
-             ,@tests))))
+             (om--with-org-env
+              ;; (org-mode)
+              (when ,contents (insert ,contents))
+              (goto-char (point-min))
+              ,@tests)))))
     (let ((body
            (->> args
                 (remove :begin-hidden)

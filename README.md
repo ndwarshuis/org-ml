@@ -3750,7 +3750,7 @@ Return section node for headline **`headline`** node or nil if none.
 (->> (om-parse-this-subtree)
      (om-headline-get-section)
      (om-to-trimmed-string))
- ;; => nil
+ ;; => ""
 
 ```
 
