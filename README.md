@@ -4344,7 +4344,8 @@ conditions are:
     backward from the end of children where -1 is the last node
 - `(op index)` - match when `(op node-index index)` returns t. `op` is
     one of `<`, `>`, `<=`, or `>=` and `node-index` is the index of the
-    node being evaluated.
+    node being evaluated. If `index` is negative, count from the last
+    node and evaluate `op`.
 - `plist` - match nodes with the same properties and values as `plist`
 - `:many` - match zero or more levels, must have at least one
     sub-pattern after it

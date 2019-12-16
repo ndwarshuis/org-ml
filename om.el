@@ -282,25 +282,27 @@
 (defun om--plist-remove (key plist)
   (->> (-partition 2 plist) (--remove (eq (car it) key)) (-flatten-n 1)))
 
-(defun om--convert-intra-index (n list)
+(defun om--convert-intra-index (n list &optional permit-error)
   (let* ((N (length list))
          (upper (1- N))
          (lower (- N)))
     (cond
      ((<= 0 n upper) n)
      ((>= -1 n lower) (+ N n))
-     (t (error "Index (%s) out of range; must be between %s and %s"
-               n lower upper)))))
+     (t (unless permit-error
+          (error "Index (%s) out of range; must be between %s and %s"
+                 n lower upper))))))
 
-(defun om--convert-inter-index (n list)
+(defun om--convert-inter-index (n list &optional permit-error)
   (let* ((N (length list))
          (upper N)
          (lower (- (- N) 1)))
     (cond
      ((<= 0 n upper) n)
      ((>= -1 n lower) (+ 1 N n))
-     (t (error "Index (%s) out of range; must be between %s and %s"
-               n lower upper)))))
+     (t (unless permit-error
+          (error "Index (%s) out of range; must be between %s and %s"
+                 n lower upper))))))
 
 (defun om--insert-at (n x list)
   "Like `-insert-at' but honors negative indices N.
@@ -3713,9 +3715,10 @@ original children to be modified."
     (`(,(and (or '< '<= '> '>=) f)
        ,(and (pred integerp) i))
      ;; TODO what if they give a negative index?
-     (->> children
-          (--map-indexed (when (funcall f it-index i) it))
-          (-non-nil)))
+     (-when-let (i* (om--convert-intra-index i children t))
+       (->> children
+            (--map-indexed (when (funcall f it-index i*) it))
+            (-non-nil))))
 
     ;; predicate
     ;; ((and (pred functionp) fun)
@@ -3846,7 +3849,8 @@ conditions are:
   backward from the end of children where -1 is the last node
 - (OP INDEX) - match when (OP NODE-INDEX INDEX) returns t. OP is
   one of `<', `>', `<=', or `>=' and NODE-INDEX is the index of the
-  node being evaluated.
+  node being evaluated. If INDEX is negative, count from the last
+  node and evaluate OP.
 - PLIST - match nodes with the same properties and values as PLIST
 - `:many' - match zero or more levels, must have at least one
   sub-pattern after it

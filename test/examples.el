@@ -1455,7 +1455,6 @@
 
       :end-hidden
 
-
       (:buffer "* not valuable")
       (:comment "Throw error when setting a property that doesn't exist")
       (->> (om-parse-this-headline)
