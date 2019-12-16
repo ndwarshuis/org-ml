@@ -65,7 +65,10 @@
     (->> (om-parse-object-at 1)
          (om-get-type))
     => 'line-break
-    ;; TODO add latex frag
+    (:buffer "$2+2=5$")
+    (->> (om-parse-object-at 1)
+         (om-get-type))
+    => 'latex-fragment
     (:buffer "[[path][desc]]")
     (->> (om-parse-object-at 1)
          (om-get-type))
