@@ -1441,9 +1441,20 @@
            (om-set-property :value "You totally are")
            (om-to-trimmed-string))
       => "=You totally are="
+
+      (:buffer "plain")
+      (->> (om-set-property :post-blank 1 "plain")
+           (om-to-string))
+      => "plain "
+
+      (:buffer "*not plain*")
+      (->> (om-parse-this-object)
+           (om-set-property :post-blank 1)
+           (om-to-string))
+      => "*not plain* "
+
       :end-hidden
 
-      ;; TODO add post-blank
 
       (:buffer "* not valuable")
       (:comment "Throw error when setting a property that doesn't exist")
