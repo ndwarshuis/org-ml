@@ -745,10 +745,10 @@
            (om-to-trimmed-string))
       => "| a |")
 
+    ;; TODO should add a comment here to explain that newlines are necessary
     (defexamples om-build-verse-block
       (->> (om-build-verse-block "text\n")
            (om-to-trimmed-string))
-      (:comment "The newline is necessary to put the ending on its own line")
       => (:result "#+BEGIN_VERSE"
                   "text"
                   "#+END_VERSE")))
