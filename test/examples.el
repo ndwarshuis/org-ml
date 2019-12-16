@@ -1505,7 +1505,10 @@
            (om-get-property :value))
       => "not here"
 
-      ;; TODO add diary-sexp
+      (:buffer "%%(print :hi)")
+      (->> (om-parse-this-element)
+           (om-get-property :value))
+      => '(print :hi)
 
       (:buffer ":LOGBOOK:"
                ":END:")
