@@ -3569,9 +3569,6 @@ Return **`timestamp`** node with start and end times forced to short format.
      (om-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
 
-;; Given the following contents:
-; [2019-01-01 Tue 12:00]
-
 ```
 
 #### om-timestamp-set-condensation `(flag timestamp)`
