@@ -2954,8 +2954,8 @@ return TIMESTAMP untouched regardless of FLAG.
 
 NOTE: the default for all timestamp functions in `om.el' is to favor 
 condensed format."
-  (if (and (om--timestamp-is-ranged-lowres-p timestamp)
-           (not (om--timestamp-is-ranged-p timestamp)))
+  (if (and (not (om--timestamp-is-ranged-lowres-p timestamp))
+           (om--timestamp-is-ranged-p timestamp))
       (om--timestamp-set-type-ranged (not flag) timestamp)
     timestamp))
 

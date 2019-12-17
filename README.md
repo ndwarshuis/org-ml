@@ -3603,7 +3603,7 @@ condensed format.
      (om-timestamp-set-condensation nil)
      (om-timestamp-set-condensation t)
      (om-to-trimmed-string))
- ;; => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
+ ;; => "[2019-01-01 Tue 12:00-13:00]"
 
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00]
