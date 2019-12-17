@@ -3579,12 +3579,12 @@ Return **`timestamp`** node with start and end times forced to short format.
 Return **`timestamp`** with condensation set to **`flag`**.
 
 If timestamp is ranged but not outside of one day, it may be condensed
-(**`flag`** is nil) to short format like [yyyy-mm-dd xxx hh:mm-hh:mm] or
-decondensed (**`flag`** is t) to long format [yyyy-mm-dd xxx
+(**`flag`** is t) to short format like [yyyy-mm-dd xxx hh:mm-hh:mm] or
+decondensed (**`flag`** is nil) to long format [yyyy-mm-dd xxx
 hh:mm]--[yyyy-mm-dd xxx hh:mm]. if these conditions are not met,
 return **`timestamp`** untouched regardless of **`flag`**.
 
-`note`: the default for all timestamp functions in `om.el` is to favor 
+Note: the default for all timestamp functions in `om.el` is to favor 
 condensed format.
 
 ```el
