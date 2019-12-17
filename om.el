@@ -2943,6 +2943,22 @@ behavior is not desired, use `om-timestamp-shift'."
                   (om--time-truncate))))
     (om--timestamp-set-double-time t1 t2 timestamp)))
 
+(om--defun-node om-timestamp-set-condensation (flag timestamp)
+  "Return TIMESTAMP with condensation set to FLAG.
+
+If timestamp is ranged but not outside of one day, it may be condensed
+(FLAG is nil) to short format like [YYYY-MM-DD XXX HH:mm-HH:mm] or
+decondensed (FLAG is t) to long format [YYYY-MM-DD XXX
+HH:mm]--[YYYY-MM-DD XXX HH:mm]. If these conditions are not met,
+return TIMESTAMP untouched regardless of FLAG.
+
+NOTE: the default for all timestamp functions in `om.el' is to favor 
+condensed format."
+  (if (and (om--timestamp-is-ranged-lowres-p timestamp)
+           (not (om--timestamp-is-ranged-p timestamp)))
+      (om--timestamp-set-type-ranged (not flag) timestamp)
+    timestamp))
+
 ;;; elements
 ;;
 ;; clock

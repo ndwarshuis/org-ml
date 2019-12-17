@@ -3033,7 +3033,31 @@
            (om-timestamp-truncate)
            (om-to-trimmed-string))
       => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-      (:buffer "[2019-01-01 Tue 12:00]"))))
+      (:buffer "[2019-01-01 Tue 12:00]"))
+
+    (defexamples-content om-timestamp-set-condensation
+      nil
+      (:buffer "[2019-01-01 Tue 12:00-13:00]")
+      (->> (om-parse-this-object)
+           (om-timestamp-set-condensation nil)
+           (om-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
+      (:buffer "[2019-01-01 Tue 12:00-13:00]")
+      (->> (om-parse-this-object)
+           (om-timestamp-set-condensation nil)
+           (om-timestamp-set-condensation t)
+           (om-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (om-parse-this-object)
+           (om-timestamp-set-condensation nil)
+           (om-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00]"
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (om-parse-this-object)
+           (om-timestamp-set-condensation nil)
+           (om-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]")))
 
 (def-example-group "Branch/Child Manipulation"
   "Set, get, and map the children of branch nodes."

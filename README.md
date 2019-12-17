@@ -353,6 +353,7 @@ Set, get, and map properties of nodes.
 * [om-timestamp-truncate-start](#om-timestamp-truncate-start-timestamp) `(timestamp)`
 * [om-timestamp-truncate-end](#om-timestamp-truncate-end-timestamp) `(timestamp)`
 * [om-timestamp-truncate](#om-timestamp-truncate-timestamp) `(timestamp)`
+* [om-timestamp-set-condensation](#om-timestamp-set-condensation-flag-timestamp) `(flag timestamp)`
 
 ## Branch/Child Manipulation
 
@@ -3570,6 +3571,55 @@ Return **`timestamp`** node with start and end times forced to short format.
 
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00]
+
+```
+
+#### om-timestamp-set-condensation `(flag timestamp)`
+
+Return **`timestamp`** with condensation set to **`flag`**.
+
+If timestamp is ranged but not outside of one day, it may be condensed
+(**`flag`** is nil) to short format like [`yyyy-mm-dd` `xxx` `hh`:mm-`hh`:mm] or
+decondensed (**`flag`** is t) to long format [`yyyy-mm-dd` `xxx`
+`hh`:mm]--[`yyyy-mm-dd` `xxx` `hh`:mm]. If these conditions are not met,
+return **`timestamp`** untouched regardless of **`flag`**.
+
+`note`: the default for all timestamp functions in `om.el` is to favor 
+condensed format.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00-13:00]
+
+(->> (om-parse-this-object)
+     (om-timestamp-set-condensation nil)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00-13:00]
+
+(->> (om-parse-this-object)
+     (om-timestamp-set-condensation nil)
+     (om-timestamp-set-condensation t)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(->> (om-parse-this-object)
+     (om-timestamp-set-condensation nil)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 12:00]"
+
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-02 Wed]
+
+(->> (om-parse-this-object)
+     (om-timestamp-set-condensation nil)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
 
 ```
 
