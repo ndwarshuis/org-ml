@@ -350,6 +350,9 @@ Set, get, and map properties of nodes.
 * [om-timestamp-shift-start](#om-timestamp-shift-start-n-unit-timestamp) `(n unit timestamp)`
 * [om-timestamp-shift-end](#om-timestamp-shift-end-n-unit-timestamp) `(n unit timestamp)`
 * [om-timestamp-toggle-active](#om-timestamp-toggle-active-timestamp) `(timestamp)`
+* [om-timestamp-truncate-start](#om-timestamp-truncate-start-timestamp) `(timestamp)`
+* [om-timestamp-truncate-end](#om-timestamp-truncate-end-timestamp) `(timestamp)`
+* [om-timestamp-truncate](#om-timestamp-truncate-timestamp) `(timestamp)`
 
 ## Branch/Child Manipulation
 
@@ -3479,6 +3482,94 @@ Toggle the active/inactive type of **`timestamp`** element.
      (om-timestamp-toggle-active)
      (om-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+```
+
+#### om-timestamp-truncate-start `(timestamp)`
+
+Return **`timestamp`** node with start time forced to short format.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(->> (om-parse-this-object)
+     (om-timestamp-truncate-start)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]--[2019-01-02 Wed 12:00]
+
+(->> (om-parse-this-object)
+     (om-timestamp-truncate-start)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]--[2019-01-02 Wed 12:00]"
+
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+(->> (om-parse-this-object)
+     (om-timestamp-truncate-start)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]"
+
+```
+
+#### om-timestamp-truncate-end `(timestamp)`
+
+Return **`timestamp`** node with end time forced to short format.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-02 Wed]
+
+(->> (om-parse-this-object)
+     (om-timestamp-truncate-end)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]
+
+(->> (om-parse-this-object)
+     (om-timestamp-truncate-end)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 12:00]--[2019-01-02 Wed]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(->> (om-parse-this-object)
+     (om-timestamp-truncate-end)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 12:00]"
+
+```
+
+#### om-timestamp-truncate `(timestamp)`
+
+Return **`timestamp`** node with start and end times forced to short format.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-02 Wed]
+
+(->> (om-parse-this-object)
+     (om-timestamp-truncate)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]
+
+(->> (om-parse-this-object)
+     (om-timestamp-truncate)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
 
 ```
 

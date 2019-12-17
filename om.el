@@ -1403,6 +1403,9 @@ FUN is a predicate function that takes one argument."
   (append (-take 3 (om--unixtime-to-time-long unixtime))
           '(nil nil)))
 
+(defun om--time-truncate (time)
+  (-take 3 time))
+
 (defun om--time-shift (n unit time)
   (cl-flet*
       ((get-shifts-short
@@ -2919,6 +2922,26 @@ behavior is not desired, use `om-timestamp-shift'."
 (om--defun-node om-timestamp-toggle-active (timestamp)
   "Toggle the active/inactive type of TIMESTAMP element."
   (om--timestamp-toggle-active timestamp))
+
+(om--defun-node om-timestamp-truncate-start (timestamp)
+  "Return TIMESTAMP node with start time forced to short format."
+  (let ((time (->> (om--timestamp-get-start-time timestamp)
+                   (om--time-truncate))))
+    (om--timestamp-set-start-time time timestamp)))
+
+(om--defun-node om-timestamp-truncate-end (timestamp)
+  "Return TIMESTAMP node with end time forced to short format."
+  (let ((time (->> (om--timestamp-get-end-time timestamp)
+                   (om--time-truncate))))
+    (om--timestamp-set-end-time time timestamp)))
+
+(om--defun-node om-timestamp-truncate (timestamp)
+  "Return TIMESTAMP node with start and end times forced to short format."
+  (let ((t1 (->> (om--timestamp-get-start-time timestamp)
+                    (om--time-truncate)))
+        (t2 (->> (om--timestamp-get-end-time timestamp)
+                  (om--time-truncate))))
+    (om--timestamp-set-double-time t1 t2 timestamp)))
 
 ;;; elements
 ;;
