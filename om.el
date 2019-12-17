@@ -2947,9 +2947,9 @@ behavior is not desired, use `om-timestamp-shift'."
   "Return TIMESTAMP with condensation set to FLAG.
 
 If timestamp is ranged but not outside of one day, it may be condensed
-(FLAG is nil) to short format like [YYYY-MM-DD XXX HH:mm-HH:mm] or
-decondensed (FLAG is t) to long format [YYYY-MM-DD XXX
-HH:mm]--[YYYY-MM-DD XXX HH:mm]. If these conditions are not met,
+(FLAG is nil) to short format like [yyyy-mm-dd xxx hh:mm-hh:mm] or
+decondensed (FLAG is t) to long format [yyyy-mm-dd xxx
+hh:mm]--[yyyy-mm-dd xxx hh:mm]. if these conditions are not met,
 return TIMESTAMP untouched regardless of FLAG.
 
 NOTE: the default for all timestamp functions in `om.el' is to favor 
