@@ -1208,7 +1208,7 @@ The following properties are settable:
 					  '(2019 1 1 0 0)
 					  :end '(2019 1 1 1 0)))
      (om-to-trimmed-string))
- ;; => "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00] =>  1:00"
+ ;; => "CLOCK: [2019-01-01 Tue 00:00-01:00] =>  1:00"
 
 ```
 
@@ -1829,7 +1829,7 @@ Build a clock object.
 (->> (om-build-clock! '(2019 1 1 12 0)
 		      :end '(2019 1 1 13 0))
      (om-to-trimmed-string))
- ;; => "CLOCK: [2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00] =>  1:00"
+ ;; => "CLOCK: [2019-01-01 Tue 12:00-13:00] =>  1:00"
 
 ```
 
@@ -3187,6 +3187,15 @@ Set start time of **`timestamp`** element to **`time`**.
      (om-to-trimmed-string))
  ;; => "[2019-01-01 Tue 10:00]--[2019-01-02 Wed]"
 
+;; Given the following contents:
+; [2019-01-02 Wed 12:00]
+
+;; If not a range and set within a day, use short format
+(->> (om-parse-this-object)
+     (om-timestamp-set-start-time '(2019 1 1 0 0))
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 00:00-12:00]"
+
 ```
 
 #### om-timestamp-set-end-time `(time timestamp)`
@@ -3213,6 +3222,15 @@ Set end time of **`timestamp`** element to **`time`**.
      (om-timestamp-set-end-time nil)
      (om-to-trimmed-string))
  ;; => "[2019-01-01 Tue]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+;; Use short range format
+(->> (om-parse-this-object)
+     (om-timestamp-set-end-time '(2019 1 1 13 0))
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 12:00-13:00]"
 
 ```
 
@@ -3263,12 +3281,20 @@ Set start and end time of **`timestamp`** to **`time1`** and **`time2`** respect
 ;; Given the following contents:
 ; [2019-01-01 Tue]--[2019-01-03 Wed]
 
-;; Output is not a range despite input being ranged
 (->> (om-parse-this-object)
      (om-timestamp-set-double-time '(2019 1 4)
 				   '(2019 1 5))
      (om-to-trimmed-string))
  ;; => "[2019-01-04 Fri]--[2019-01-05 Sat]"
+
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-03 Wed]
+
+(->> (om-parse-this-object)
+     (om-timestamp-set-double-time '(2019 1 1 0 0)
+				   '(2019 1 1 1 0))
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 00:00-01:00]"
 
 ```
 
@@ -3297,7 +3323,7 @@ format.
 (->> (om-parse-this-object)
      (om-timestamp-set-range 3)
      (om-to-trimmed-string))
- ;; => "[2019-01-01 Tue 00:00]--[2019-01-01 Tue 00:03]"
+ ;; => "[2019-01-01 Tue 00:00-00:03]"
 
 ;; Given the following contents:
 ; [2019-01-01 Tue]--[2019-01-03 Wed]
@@ -3385,6 +3411,11 @@ behavior is not desired, use [`om-timestamp-shift`](#om-timestamp-shift-n-unit-t
      (om-timestamp-shift-start -1 'year)
      (om-to-trimmed-string))
  ;; => "[2018-01-01 Mon 12:00]--[2019-01-01 Tue 12:00]"
+
+(->> (om-parse-this-object)
+     (om-timestamp-shift-start -1 'hour)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 11:00-12:00]"
 
 ;; Given the following contents:
 ; [2019-01-01 Tue]--[2019-01-03 Thu]

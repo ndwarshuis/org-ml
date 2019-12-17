@@ -723,7 +723,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
 (defun om--update-clock-duration (clock)
   (let* ((ts (om--get-property :value clock))
          (plist
-          (if (om--timestamp-is-ranged-fast-p ts)
+          ;; TODO this is redundant
+          (if (om--timestamp-is-ranged-p ts)
               (let* ((seconds (om--timestamp-get-range ts))
                      (h (-> seconds (/ 3600) (floor)))
                      (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
@@ -1473,6 +1474,9 @@ FUN is a predicate function that takes one argument."
 
 ;; timestamp (regular)
 
+;; TODO this currently is set up to not allow short-ranged timestamps
+;; like YYYY-MM-DD XXX HH:MM-HH:MM
+
 (defun om--timestamp-get-start-time (timestamp)
   (-let (((&plist :minute-start n :hour-start h :day-start d
                   :month-start m :year-start y)
@@ -1510,7 +1514,24 @@ FUN is a predicate function that takes one argument."
    (memq (om--get-property :type timestamp) '(active active-range)))
 
 (defun om--timestamp-is-ranged-p (timestamp)
+  ;; (not (equal (-take 3 (om--timestamp-get-start-time timestamp))
+              ;; (-take 3 (om--timestamp-get-end-time timestamp)))))
   (/= 0 (om--timestamp-get-range timestamp)))
+
+(defun om--timestamp-is-ranged-hhmm-p (timestamp)
+  (-let* (((l s) (-split-at 3 (om--timestamp-get-start-time timestamp)))
+          ((L S) (-split-at 3 (om--timestamp-get-end-time timestamp))))
+    ;; TODO what if one of the s's has a nil?
+    (and (equal l L) (not (equal s S)))))
+
+(defun om--timestamp-is-ranged-lowres-p (timestamp)
+  (-let* (((l s) (-split-at 3 (om--timestamp-get-start-time timestamp)))
+          ((L S) (-split-at 3 (om--timestamp-get-end-time timestamp))))
+    ;; lowres if Y/M/D is different and Min/Hour are the same
+    ;; but only if Min/Hour are both not nil
+    (and (not (equal l L)) (or (equal s S)
+                               (memq nil s)
+                               (memq nil S)))))
 
 (defun om--timestamp-start-is-long-p (timestamp)
   (->> (om--timestamp-get-start-time timestamp)
@@ -1588,10 +1609,13 @@ float-times, which assumes the :type property is valid."
                   (if long? (om--unixtime-to-time-long it)
                     (om--unixtime-to-time-short it)))))
     (->> (om--timestamp-set-end-time-nocheck t2 timestamp)
-         (om--timestamp-set-type-ranged (/= 0 range)))))
+         (om--timestamp-update-type-ranged))))
+         ;; (om--timestamp-set-type-ranged (/= 0 range)))))
 
 (defun om--timestamp-update-type-ranged (timestamp)
-  (-> (om--timestamp-is-ranged-p timestamp)
+  (-> (om--timestamp-is-ranged-lowres-p timestamp)
+      ;; (and (om--timestamp-is-ranged-p timestamp)
+           ;; (not (om--timestamp-is-ranged-hhmm-p timestamp)))
       (om--timestamp-set-type-ranged timestamp)))
 
 (defun om--timestamp-set-type-ranged (ranged? timestamp)
@@ -1607,7 +1631,9 @@ float-times, which assumes the :type property is valid."
     (om--map-property :type #'update-range timestamp)))
 
 (defun om--timestamp-set-type (type timestamp)
-  (let* ((range? (om--timestamp-is-ranged-p timestamp))
+  (let* ((range? (om--timestamp-is-ranged-lowres-p timestamp))
+                 ;; (and (om--timestamp-is-ranged-p timestamp)
+                      ;; (not (om--timestamp-is-ranged-hhmm-p timestamp))))
          (type* (cl-case type
                   (active (if range? 'active-range 'active))
                   (inactive (if range? 'inactive-range 'inactive))

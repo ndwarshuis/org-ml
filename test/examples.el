@@ -614,7 +614,7 @@
       => "CLOCK: [2019-01-01 Tue 00:00]"
       (->> (om-build-clock (om-build-timestamp! 'inactive '(2019 1 1 0 0) :end '(2019 1 1 1 0)))
            (om-to-trimmed-string))
-      => "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00] =>  1:00")
+      => "CLOCK: [2019-01-01 Tue 00:00-01:00] =>  1:00")
 
     (defexamples om-build-comment
       ;; TODO there is a bug that makes a blank string return a
@@ -918,7 +918,7 @@
       (->> (om-build-clock! '(2019 1 1 12 0) :end '(2019 1 1 13 0))
            (om-to-trimmed-string))
       ;; TODO why does this make two individual timestamps?
-      => "CLOCK: [2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00] =>  1:00")
+      => "CLOCK: [2019-01-01 Tue 12:00-13:00] =>  1:00")
 
     (defexamples om-build-planning!
       (->> (om-build-planning! :closed '(2019 1 1))
@@ -2777,7 +2777,13 @@
       (->> (om-parse-this-object)
            (om-timestamp-set-start-time '(2019 1 1 10 0))
            (om-to-trimmed-string))
-      => "[2019-01-01 Tue 10:00]--[2019-01-02 Wed]")
+      => "[2019-01-01 Tue 10:00]--[2019-01-02 Wed]"
+      (:buffer "[2019-01-02 Wed 12:00]")
+      (:comment "If not a range and set within a day, use short format")
+      (->> (om-parse-this-object)
+           (om-timestamp-set-start-time '(2019 1 1 0 0))
+           (om-to-trimmed-string))
+      => "[2019-01-01 Tue 00:00-12:00]")
 
     (defexamples-content om-timestamp-set-end-time
       nil
@@ -2792,7 +2798,13 @@
       (->> (om-parse-this-object)
            (om-timestamp-set-end-time nil)
            (om-to-trimmed-string))
-      => "[2019-01-01 Tue]")
+      => "[2019-01-01 Tue]"
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (:comment "Use short range format")
+      (->> (om-parse-this-object)
+           (om-timestamp-set-end-time '(2019 1 1 13 0))
+           (om-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00-13:00]")
 
     (defexamples-content om-timestamp-set-single-time
       nil
@@ -2818,11 +2830,15 @@
            (om-to-trimmed-string))
       => "[2019-01-02 Wed]--[2019-01-03 Thu]"
       (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
-      (:comment "Output is not a range despite input being ranged")
       (->> (om-parse-this-object)
            (om-timestamp-set-double-time '(2019 1 4) '(2019 1 5))
            (om-to-trimmed-string))
-      => "[2019-01-04 Fri]--[2019-01-05 Sat]")
+      => "[2019-01-04 Fri]--[2019-01-05 Sat]"
+      (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
+      (->> (om-parse-this-object)
+           (om-timestamp-set-double-time '(2019 1 1 0 0) '(2019 1 1 1 0))
+           (om-to-trimmed-string))
+      => "[2019-01-01 Tue 00:00-01:00]")
 
     (defexamples-content om-timestamp-set-range
       nil
@@ -2837,7 +2853,7 @@
       (->> (om-parse-this-object)
            (om-timestamp-set-range 3)
            (om-to-trimmed-string))
-      => "[2019-01-01 Tue 00:00]--[2019-01-01 Tue 00:03]"
+      => "[2019-01-01 Tue 00:00-00:03]"
       (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
       (:comment "Set range to 0 to remove end time")
       (->> (om-parse-this-object)
@@ -2916,6 +2932,10 @@
            (om-timestamp-shift-start -1 'year)
            (om-to-trimmed-string))
       => "[2018-01-01 Mon 12:00]--[2019-01-01 Tue 12:00]"
+      (->> (om-parse-this-object)
+           (om-timestamp-shift-start -1 'hour)
+           (om-to-trimmed-string))
+      => "[2019-01-01 Tue 11:00-12:00]"
       (:buffer "[2019-01-01 Tue]--[2019-01-03 Thu]")
       (:comment "Change only start time if a range")
       (->> (om-parse-this-object)
