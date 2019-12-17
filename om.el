@@ -2949,7 +2949,7 @@ behavior is not desired, use `om-timestamp-shift'."
 If timestamp is ranged but not outside of one day, it may be condensed
 (FLAG is t) to short format like [yyyy-mm-dd xxx hh:mm-hh:mm] or
 decondensed (FLAG is nil) to long format like [yyyy-mm-dd xxx
-hh:mm]--[yyyy-mm-dd xxx hh:mm]. if these conditions are not met,
+hh:mm]--[yyyy-mm-dd xxx hh:mm]. If these conditions are not met,
 return TIMESTAMP untouched regardless of FLAG.
 
 Note: the default for all timestamp functions in `om.el' is to favor 
