@@ -2645,23 +2645,23 @@
   (def-example-subgroup "Planning"
     nil
 
-    (defexamples-content om-planning-set-timestamp
+    (defexamples-content om-planning-set-timestamp!
       nil
       (:buffer "* dummy"
                "CLOSED: [2019-01-01 Tue]")
       (:comment "Change an existing timestamp in planning")
       (->> (om-parse-this-headline)
            (om--headline-get-planning)
-           (om-planning-set-timestamp
+           (om-planning-set-timestamp!
             :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
            (om-to-trimmed-string))
       => "CLOSED: [2019-01-02 Wed +2m -1d]"
       (:comment "Add a new timestamp and remove another")
       (->> (om-parse-this-headline)
            (om--headline-get-planning)
-           (om-planning-set-timestamp
+           (om-planning-set-timestamp!
             :deadline '(2112 1 1))
-           (om-planning-set-timestamp
+           (om-planning-set-timestamp!
             :closed nil)
            (om-to-trimmed-string))
       => "DEADLINE: [2112-01-01 Fri]"))

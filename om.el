@@ -2930,8 +2930,7 @@ subheadlines will not be counted)."
 
 ;; planning
 
-;; TODO this is shorthand
-(om--defun-node om-planning-set-timestamp (prop planning-list planning)
+(om--defun-node om-planning-set-timestamp! (prop planning-list planning)
   "Set the timestamp of PLANNING matching PROP.
 
 PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST

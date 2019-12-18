@@ -327,7 +327,7 @@ Set, get, and map properties of nodes.
 
 ### Planning
 
-* [om-planning-set-timestamp](#om-planning-set-timestamp-prop-planning-list-planning) `(prop planning-list planning)`
+* [om-planning-set-timestamp!](#om-planning-set-timestamp-prop-planning-list-planning) `(prop planning-list planning)`
 
 ### Statistics Cookie
 
@@ -2946,7 +2946,7 @@ Toggle the checked/unchecked state of **`item`** element.
 
 ### Planning
 
-#### om-planning-set-timestamp `(prop planning-list planning)`
+#### om-planning-set-timestamp! `(prop planning-list planning)`
 
 Set the timestamp of **`planning`** matching **`prop`**.
 
@@ -2961,15 +2961,15 @@ is the same as that described in [`om-build-planning!`](#om-build-planning-key-c
 ;; Change an existing timestamp in planning
 (->> (om-parse-this-headline)
      (om--headline-get-planning)
-     (om-planning-set-timestamp :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
+     (om-planning-set-timestamp! :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
      (om-to-trimmed-string))
  ;; => "CLOSED: [2019-01-02 Wed +2m -1d]"
 
 ;; Add a new timestamp and remove another
 (->> (om-parse-this-headline)
      (om--headline-get-planning)
-     (om-planning-set-timestamp :deadline '(2112 1 1))
-     (om-planning-set-timestamp :closed nil)
+     (om-planning-set-timestamp! :deadline '(2112 1 1))
+     (om-planning-set-timestamp! :closed nil)
      (om-to-trimmed-string))
  ;; => "DEADLINE: [2112-01-01 Fri]"
 
