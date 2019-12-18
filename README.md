@@ -328,7 +328,6 @@ Set, get, and map properties of nodes.
 ### Planning
 
 * [om-planning-set-timestamp](#om-planning-set-timestamp-prop-planning-list-planning) `(prop planning-list planning)`
-* [om-planning-map-timestamp](#om-planning-map-timestamp-prop-fun-planning) `(prop fun planning)`
 
 ### Statistics Cookie
 
@@ -2966,49 +2965,6 @@ is the same as that described in [`om-build-planning!`](#om-build-planning-key-c
      (om-planning-set-timestamp :closed nil)
      (om-to-trimmed-string))
  ;; => "DEADLINE: [2112-01-01 Fri]"
-
-```
-
-#### om-planning-map-timestamp `(prop fun planning)`
-
-Modify timestamp matching **`prop`** in place in **`planning`** using **`fun`**.
-
-**`prop`** is one of `:closed`, `:deadline`, or `:scheduled`. **`fun`** must
-return a timestamp conforming to that described in
-[`om-build-planning`](#om-build-planning-key-closed-deadline-scheduled-post-blank).
-
-The only difference between using this function and using 
-[`om-map-property`](#om-map-property-prop-fun-node) is that the former will silently no-op if **`prop`**
-is nil. The latter will throw an error unless **`fun`** is able to handle
-nil values.
-
-```el
-;; Given the following contents:
-; * dummy
-; CLOSED: [2019-01-01 Tue]
-
-;; Apply mapping function if timestamp exists
-(->> (om-parse-this-headline)
-     (om--headline-get-planning)
-     (om-planning-map-timestamp* :closed (om-timestamp-shift 1 'day
-							     it))
-     (om-to-trimmed-string))
- ;; => "CLOSED: [2019-01-02 Wed]"
-
-;; Do nothing if timestamp does not exist
-(->> (om-parse-this-headline)
-     (om--headline-get-planning)
-     (om-planning-map-timestamp* :deadline (om-timestamp-shift 1 'day
-							       it))
-     (om-to-trimmed-string))
- ;; => "CLOSED: [2019-01-01 Tue]"
-
-;; Throw error if new timestamp is not allowed
-(->> (om-parse-this-headline)
-     (om--headline-get-planning)
-     (om-planning-map-timestamp :closed (function om-timestamp-toggle-active))
-     (om-to-trimmed-string))
-Error
 
 ```
 

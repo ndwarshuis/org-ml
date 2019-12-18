@@ -2664,33 +2664,7 @@
            (om-planning-set-timestamp
             :closed nil)
            (om-to-trimmed-string))
-      => "DEADLINE: [2112-01-01 Fri]")
-
-    (defexamples-content om-planning-map-timestamp
-      nil
-      (:buffer "* dummy"
-               "CLOSED: [2019-01-01 Tue]")
-      (:comment "Apply mapping function if timestamp exists")
-      (->> (om-parse-this-headline)
-           (om--headline-get-planning)
-           (om-planning-map-timestamp*
-            :closed (om-timestamp-shift 1 'day it))
-           (om-to-trimmed-string))
-      => "CLOSED: [2019-01-02 Wed]"
-      (:comment "Do nothing if timestamp does not exist")
-      (->> (om-parse-this-headline)
-           (om--headline-get-planning)
-           (om-planning-map-timestamp*
-            :deadline (om-timestamp-shift 1 'day it))
-           (om-to-trimmed-string))
-      => "CLOSED: [2019-01-01 Tue]"
-      (:comment "Throw error if new timestamp is not allowed")
-      (->> (om-parse-this-headline)
-           (om--headline-get-planning)
-           (om-planning-map-timestamp
-            :closed #'om-timestamp-toggle-active)
-           (om-to-trimmed-string))
-      !!> error))
+      => "DEADLINE: [2112-01-01 Fri]"))
 
   (def-example-subgroup "Statistics Cookie"
     nil
