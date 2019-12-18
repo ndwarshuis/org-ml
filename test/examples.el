@@ -877,14 +877,14 @@
   (def-example-subgroup "Miscellaneous Builders"
     nil
 
-    (defexamples om-build-secondary-string
-      (->> (om-build-secondary-string "I'm plain")
+    (defexamples om-build-secondary-string!
+      (->> (om-build-secondary-string! "I'm plain")
            (-map #'om-get-type))
       => '(plain-text)
-      (->> (om-build-secondary-string "I'm *not* plain")
+      (->> (om-build-secondary-string! "I'm *not* plain")
            (-map #'om-get-type))
       => '(plain-text bold plain-text)
-      (->> (om-build-secondary-string "* I'm not an object")
+      (->> (om-build-secondary-string! "* I'm not an object")
            (-map #'om-get-type))
       !!> error)
 

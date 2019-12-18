@@ -2261,15 +2261,14 @@ Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-container-element 'table-row post-blank nil)
        (om--set-property :type 'rule)))
 
-;; TODO this is actually shorthand
-(defun om-build-secondary-string (string)
+;; shorthand builders
+
+(defun om-build-secondary-string! (string)
   "Build a secondary string (list of object nodes) from STRING.
 STRING is any string that contains a textual representation of
 object nodes. If this is not true, and error will be thrown."
   (om--verify string stringp)
   (om--build-secondary-string string))
-
-;; shorthand builders
 
 (om--defun-kw om-build-timestamp! (type start &key end
                                                repeater
