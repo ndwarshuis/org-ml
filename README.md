@@ -419,6 +419,7 @@ Use pattern-matching to selectively perform operations on nodes in trees.
 * [om-match-insert-before](#om-match-insert-before-pattern-node-node) `(pattern node* node)`
 * [om-match-insert-after](#om-match-insert-after-pattern-node-node) `(pattern node* node)`
 * [om-match-insert-within](#om-match-insert-within-pattern-index-node-node) `(pattern index node* node)`
+* [om-match-splice](#om-match-splice-pattern-nodes-node) `(pattern nodes* node)`
 * [om-match-splice-before](#om-match-splice-before-pattern-nodes-node) `(pattern nodes* node)`
 * [om-match-splice-after](#om-match-splice-after-pattern-nodes-node) `(pattern nodes* node)`
 * [om-match-splice-within](#om-match-splice-within-pattern-index-nodes-node) `(pattern index nodes* node)`
@@ -4880,6 +4881,31 @@ in the immediate, top level children of **`node`**.
  ;; => "* one
  ;      ** two
  ;      ** new
+ ;      ** three"
+
+```
+
+#### om-match-splice `(pattern nodes* node)`
+
+Splice nodes matching **`pattern`** in **`node`** with **`nodes*`**.
+Return modified **`node`**. **`nodes*`** is a list of nodes.
+
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
+
+```el
+;; Given the following contents:
+; * one
+; ** two
+; ** three
+
+(->> (om-parse-this-subtree)
+     (om-match-splice '(0)
+       (list (om-build-headline! :title-text "new0" :level 2)
+	     (om-build-headline! :title-text "new1" :level 2)))
+     (om-to-trimmed-string))
+ ;; => "* one
+ ;      ** new0
+ ;      ** new1
  ;      ** three"
 
 ```

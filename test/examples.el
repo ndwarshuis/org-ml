@@ -4185,7 +4185,21 @@ and here is even more *text4* and *text5*
                 "** new"
                 "** three"))
 
-  ;; add splice
+  (defexamples-content om-match-splice
+    nil
+    (:buffer "* one"
+             "** two"
+             "** three")
+    (->> (om-parse-this-subtree)
+         (om-match-splice '(0)
+           (list
+            (om-build-headline! :title-text "new0" :level 2)
+            (om-build-headline! :title-text "new1" :level 2)))
+         (om-to-trimmed-string))
+    => (:result "* one"
+                "** new0"
+                "** new1"
+                "** three"))
 
   (defexamples-content om-match-splice-before
     nil
