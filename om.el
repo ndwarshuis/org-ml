@@ -2081,6 +2081,7 @@ nested element to return."
 (defun om--headline-get-node-properties (headline)
   (-some->>
    (om--headline-get-properties-drawer headline)
+   (om--get-children)
    (--filter (om--is-type-p 'node-property it))))
 
 (defun om--headline-get-planning (headline)

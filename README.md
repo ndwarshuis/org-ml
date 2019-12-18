@@ -374,10 +374,13 @@ Set, get, and map the children of branch nodes.
 
 ### Headline
 
-* [om-headline-update-item-statistics](#om-headline-update-item-statistics-headline) `(headline)`
-* [om-headline-update-todo-statistics](#om-headline-update-todo-statistics-headline) `(headline)`
+* [om-headline-get-node-properties](#om-headline-get-node-properties-headline) `(headline)`
+* [om-headline-get-properties-drawer](#om-headline-get-properties-drawer-headline) `(headline)`
+* [om-headline-get-planning](#om-headline-get-planning-headline) `(headline)`
 * [om-headline-get-subheadlines](#om-headline-get-subheadlines-headline) `(headline)`
 * [om-headline-get-section](#om-headline-get-section-headline) `(headline)`
+* [om-headline-update-item-statistics](#om-headline-update-item-statistics-headline) `(headline)`
+* [om-headline-update-todo-statistics](#om-headline-update-todo-statistics-headline) `(headline)`
 * [om-headline-indent-subheadline](#om-headline-indent-subheadline-index-headline) `(index headline)`
 * [om-headline-indent-subtree](#om-headline-indent-subtree-index-headline) `(index headline)`
 * [om-headline-unindent-subheadline](#om-headline-unindent-subheadline-index-child-index-headline) `(index child-index headline)`
@@ -3766,6 +3769,141 @@ Error
 
 ### Headline
 
+#### om-headline-get-node-properties `(headline)`
+
+Return a list of node-properties nodes in **`headline`** or nil if none.
+
+```el
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :Effort:   1:00
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-get-node-properties)
+     (-map (function om-to-trimmed-string)))
+ ;; => '(":Effort:   1:00")
+
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-get-node-properties)
+     (-map (function om-to-trimmed-string)))
+ ;; => nil
+
+```
+
+#### om-headline-get-properties-drawer `(headline)`
+
+Return the properties drawer node in **`headline`**.
+If multiple are present (there shouldn't be) the first will be 
+returned.
+
+```el
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :Effort:   1:00
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-get-properties-drawer)
+     (om-to-trimmed-string))
+ ;; => ":PROPERTIES:
+ ;      :Effort:   1:00
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-get-properties-drawer)
+     (om-to-trimmed-string))
+ ;; => ""
+
+```
+
+#### om-headline-get-planning `(headline)`
+
+Return the planning node in **`headline`** or nil if none.
+
+```el
+;; Given the following contents:
+; * headline
+; CLOSED: [2019-01-01 Tue]
+
+(->> (om-parse-this-headline)
+     (om-headline-get-planning)
+     (om-to-trimmed-string))
+ ;; => "CLOSED: [2019-01-01 Tue]"
+
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-get-planning)
+     (om-to-trimmed-string))
+ ;; => ""
+
+```
+
+#### om-headline-get-subheadlines `(headline)`
+
+Return list of subheadline nodes for **`headline`** node or nil if none.
+
+```el
+;; Given the following contents:
+; * headline 1
+; sectional stuff
+; ** headline 2
+; ** headline 3
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-subheadlines)
+     (-map (function om-to-trimmed-string)))
+ ;; => '("** headline 2" "** headline 3")
+
+;; Given the following contents:
+; * headline 1
+; sectional stuff
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-subheadlines)
+     (-map (function om-to-trimmed-string)))
+ ;; => nil
+
+```
+
+#### om-headline-get-section `(headline)`
+
+Return section node for headline **`headline`** node or nil if none.
+
+```el
+;; Given the following contents:
+; * headline 1
+; sectional stuff
+; ** headline 2
+; ** headline 3
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-section)
+     (om-to-trimmed-string))
+ ;; => "sectional stuff"
+
+;; Given the following contents:
+; * headline 1
+; ** headline 2
+; ** headline 3
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-section)
+     (om-to-trimmed-string))
+ ;; => ""
+
+```
+
 #### om-headline-update-item-statistics `(headline)`
 
 Update the statistics cookie for **`headline`**.
@@ -3841,61 +3979,6 @@ subheadlines will not be counted).
  ;      ** irrelevant data
  ;      ** TODO good data
  ;      ** DONE bad data"
-
-```
-
-#### om-headline-get-subheadlines `(headline)`
-
-Return list of subheadline nodes for **`headline`** node or nil if none.
-
-```el
-;; Given the following contents:
-; * headline 1
-; sectional stuff
-; ** headline 2
-; ** headline 3
-
-(->> (om-parse-this-subtree)
-     (om-headline-get-subheadlines)
-     (-map (function om-to-trimmed-string)))
- ;; => '("** headline 2" "** headline 3")
-
-;; Given the following contents:
-; * headline 1
-; sectional stuff
-
-(->> (om-parse-this-subtree)
-     (om-headline-get-subheadlines)
-     (-map (function om-to-trimmed-string)))
- ;; => nil
-
-```
-
-#### om-headline-get-section `(headline)`
-
-Return section node for headline **`headline`** node or nil if none.
-
-```el
-;; Given the following contents:
-; * headline 1
-; sectional stuff
-; ** headline 2
-; ** headline 3
-
-(->> (om-parse-this-subtree)
-     (om-headline-get-section)
-     (om-to-trimmed-string))
- ;; => "sectional stuff"
-
-;; Given the following contents:
-; * headline 1
-; ** headline 2
-; ** headline 3
-
-(->> (om-parse-this-subtree)
-     (om-headline-get-section)
-     (om-to-trimmed-string))
- ;; => ""
 
 ```
 
