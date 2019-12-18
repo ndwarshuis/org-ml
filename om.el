@@ -380,9 +380,13 @@ and object containers and includes the 'plain-text' type.")
                           plain-list planning property-drawer
                           quote-block special-block
                           src-block table verse-block)))
+    ;; TODO center blocks can't be in themselves
     `((center-block ,@standard)
+      ;; TODO drawers can't be in themselves
       (drawer ,@standard)
+      ;; TODO dynamic blocks can't be in themselves
       (dynamic-block ,@standard)
+      ;; TODO cannot contain itself
       (footnote-definition ,@standard)
       ;; headlines and sections can only be in headlines
       (headline headline section)
@@ -391,6 +395,7 @@ and object containers and includes the 'plain-text' type.")
       (plain-list item)
       ;; node-properties can only be in property-drawers
       (property-drawer node-property)
+      ;; TODO cannot contain itself
       (quote-block ,@standard)
       (section ,@standard)
       (special-block ,@standard)
@@ -398,7 +403,7 @@ and object containers and includes the 'plain-text' type.")
       (table table-row)))
   "Alist of element restrictions for greater elements.")
 
-(defconst om-restrictions
+(defconst om-node-restrictions
   (append om-element-restrictions om-object-restrictions)
   "Alist of all restrictions for containers.")
 
@@ -2024,12 +2029,12 @@ nested element to return."
            illegal (s-join ", " (-map #'symbol-name types))))
   (om--set-children children node))
 
-(defun om--set-children-by-type (container-type children node)
+(defun om--set-children-by-type (branch-type children node)
   ;; TODO there may be additional restrictions, such as newlines
   ;; in strings not being allowed
-  (-if-let (types (alist-get container-type om-restrictions))
+  (-if-let (types (alist-get branch-type om-node-restrictions))
       (om--set-children-restricted types children node)
-    (error "Invalid container type requested: %s" container-type)))
+    (error "Invalid branch type requested: %s" branch-type)))
 
 ;; headline
 
