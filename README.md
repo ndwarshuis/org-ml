@@ -255,7 +255,7 @@ Build new nodes.
 
 * [om-build-secondary-string](#om-build-secondary-string-string) `(string)`
 * [om-build-table-row-hline](#om-build-table-row-hline-key-post-blank) `(&key post-blank)`
-* [om-build-timestamp-diary-sexp](#om-build-timestamp-diary-sexp-form-key-post-blank) `(form &key post-blank)`
+* [om-build-timestamp-diary](#om-build-timestamp-diary-form-key-post-blank) `(form &key post-blank)`
 
 ### Shorthand Builders
 
@@ -1776,13 +1776,13 @@ Optionally set **`post-blank`** (a positive integer).
 
 ```
 
-#### om-build-timestamp-diary-sexp `(form &key post-blank)`
+#### om-build-timestamp-diary `(form &key post-blank)`
 
 Build a diary-sexp timestamp element from **`form`**.
 Optionally set **`post-blank`** (a positive integer).
 
 ```el
-(->> (om-build-timestamp-diary-sexp '(diary-float t 4 2))
+(->> (om-build-timestamp-diary '(diary-float t 4 2))
      (om-to-string))
  ;; => "<%%(diary-float t 4 2)>"
 
@@ -3646,7 +3646,7 @@ condensed format.
 #### om-timestamp-diary-set-value `(form timestamp)`
 
 Set the value of **`timestamp`** node to **`form`**.
-**`timestamp`** must have a type `eq` to `diary`.
+**`timestamp`** must have a type `eq` to `diary`. **`form`** is a quoted list.
 
 ```el
 ;; Given the following contents:

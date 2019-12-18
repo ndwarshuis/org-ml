@@ -897,8 +897,8 @@
       => (:result "| text |"
                   "|------|"))
 
-    (defexamples om-build-timestamp-diary-sexp
-      (->> (om-build-timestamp-diary-sexp '(diary-float t 4 2))
+    (defexamples om-build-timestamp-diary
+      (->> (om-build-timestamp-diary '(diary-float t 4 2))
            (om-to-string))
       => "<%%(diary-float t 4 2)>"))
 

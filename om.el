@@ -1699,7 +1699,7 @@ float-times, which assumes the :type property is valid."
 
 ;; timestamp (diary sexp)
 
-(defun om--timestamp-set-diary-sexp (form timestamp)
+(defun om--timestamp-diary-set-value (form timestamp)
   (om--verify form listp)
   (om--set-property :raw-value (format "<%%%%%S>" form) timestamp))
 
@@ -1765,12 +1765,12 @@ float-times, which assumes the :type property is valid."
 
 ;; misc builders
 
-(om--defun-kw om-build-timestamp-diary-sexp (form &key post-blank)
+(om--defun-kw om-build-timestamp-diary (form &key post-blank)
   "Build a diary-sexp timestamp element from FORM.
 Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-object 'timestamp post-blank)
        (om--set-property :type 'diary)
-       (om--timestamp-set-diary-sexp form)
+       (om--timestamp-diary-set-value form)
        (om--set-properties-nil
         (list :repeater-type :repeater-unit :repeater-value
               :warning-type :warning-unit :warning-value :year-start
@@ -2989,11 +2989,11 @@ condensed format."
 
 (defun om-timestamp-diary-set-value (form timestamp)
   "Set the value of TIMESTAMP node to FORM.
-TIMESTAMP must have a type `eq' to `diary'."
+TIMESTAMP must have a type `eq' to `diary'. FORM is a quoted list."
   (unless (and (om--is-type-p 'timestamp timestamp)
                (om--property-is-eq-p :type 'diary timestamp))
     (error "Last argument must be a diary timestamp node"))
-  (om--timestamp-set-diary-sexp form timestamp))
+  (om--timestamp-diary-set-value form timestamp))
 
 ;;; elements
 ;;
