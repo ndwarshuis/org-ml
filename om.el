@@ -347,11 +347,12 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
   "Return a list of elements from STRING as a secondary string."
   ;; fool parser to always parse objects, bold will parse to headlines
   ;; because of the stars
-  (-when-let (ss (->> (om--from-string (concat " " string))
+  (-if-let (ss (->> (om--from-string (concat " " string))
                       (om--get-descendent '(0))
                       (om--get-children)))
-    (if (equal (car ss) " ") (-drop 1 ss)
-      (om--map-first* (substring it 1) ss))))
+      (if (equal (car ss) " ") (-drop 1 ss)
+        (om--map-first* (substring it 1) ss))
+    (error "Could not make secondary string from %S" string)))
 
 ;;; INTERNAL CONSTANTS
 
@@ -1759,6 +1760,13 @@ Optionally set POST-BLANK (a positive integer)."
 Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-container-element 'table-row post-blank nil)
        (om--set-property :type 'rule)))
+
+(defun om-build-secondary-string (string)
+  "Build a secondary string (list of object nodes) from STRING.
+STRING is any string that contains a textual representation of
+object nodes. If this is not true, and error will be thrown."
+  (om--verify string stringp)
+  (om--build-secondary-string string))
 
 ;;; shortcut builders
 

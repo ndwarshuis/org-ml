@@ -253,6 +253,7 @@ Build new nodes.
 
 ### Miscellaneous Builders
 
+* [om-build-secondary-string](#om-build-secondary-string-string) `(string)`
 * [om-build-table-row-hline](#om-build-table-row-hline-key-post-blank) `(&key post-blank)`
 * [om-build-timestamp-diary-sexp](#om-build-timestamp-diary-sexp-form-key-post-blank) `(form &key post-blank)`
 
@@ -1738,6 +1739,27 @@ The following properties are settable:
 
 
 ### Miscellaneous Builders
+
+#### om-build-secondary-string `(string)`
+
+Build a secondary string (list of object nodes) from **`string`**.
+**`string`** is any string that contains a textual representation of
+object nodes. If this is not true, and error will be thrown.
+
+```el
+(->> (om-build-secondary-string "I'm plain")
+     (-map (function om-get-type)))
+ ;; => '(plain-text)
+
+(->> (om-build-secondary-string "I'm *not* plain")
+     (-map (function om-get-type)))
+ ;; => '(plain-text bold plain-text)
+
+(->> (om-build-secondary-string "* I'm not an object")
+     (-map (function om-get-type)))
+Error
+
+```
 
 #### om-build-table-row-hline `(&key post-blank)`
 
