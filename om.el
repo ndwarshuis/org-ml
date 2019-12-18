@@ -2951,6 +2951,14 @@ behavior is not desired, use `om-timestamp-shift'."
   "Toggle the active/inactive type of TIMESTAMP element."
   (om--timestamp-toggle-active timestamp))
 
+(om--defun-timestamp om-timestamp-truncate (timestamp)
+  "Return TIMESTAMP node with start and end times forced to short format."
+  (let ((t1 (->> (om--timestamp-get-start-time timestamp)
+                    (om--time-truncate)))
+        (t2 (->> (om--timestamp-get-end-time timestamp)
+                  (om--time-truncate))))
+    (om--timestamp-set-double-time t1 t2 timestamp)))
+
 (om--defun-timestamp om-timestamp-truncate-start (timestamp)
   "Return TIMESTAMP node with start time forced to short format."
   (let ((time (->> (om--timestamp-get-start-time timestamp)
@@ -2962,14 +2970,6 @@ behavior is not desired, use `om-timestamp-shift'."
   (let ((time (->> (om--timestamp-get-end-time timestamp)
                    (om--time-truncate))))
     (om--timestamp-set-end-time time timestamp)))
-
-(om--defun-timestamp om-timestamp-truncate (timestamp)
-  "Return TIMESTAMP node with start and end times forced to short format."
-  (let ((t1 (->> (om--timestamp-get-start-time timestamp)
-                    (om--time-truncate)))
-        (t2 (->> (om--timestamp-get-end-time timestamp)
-                  (om--time-truncate))))
-    (om--timestamp-set-double-time t1 t2 timestamp)))
 
 (om--defun-timestamp om-timestamp-set-condensation (flag timestamp)
   "Return TIMESTAMP with condensation set to FLAG.

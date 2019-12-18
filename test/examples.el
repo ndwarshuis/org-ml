@@ -2970,6 +2970,19 @@
       => "<2019-01-01 Tue>--<2019-01-02 Wed>"
       :end-hidden)
 
+    (defexamples-content om-timestamp-truncate
+      nil
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (om-parse-this-object)
+           (om-timestamp-truncate)
+           (om-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]")
+      (->> (om-parse-this-object)
+           (om-timestamp-truncate)
+           (om-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]")
+
     (defexamples-content om-timestamp-truncate-start
       nil
       (:buffer "[2019-01-01 Tue 12:00]")
@@ -3005,19 +3018,6 @@
            (om-timestamp-truncate-end)
            (om-to-trimmed-string))
       => "[2019-01-01 Tue 12:00]")
-
-    (defexamples-content om-timestamp-truncate
-      nil
-      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-      (->> (om-parse-this-object)
-           (om-timestamp-truncate)
-           (om-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-      (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]")
-      (->> (om-parse-this-object)
-           (om-timestamp-truncate)
-           (om-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]")
 
     (defexamples-content om-timestamp-set-condensation
       nil
