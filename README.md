@@ -309,7 +309,6 @@ Set, get, and map properties of nodes.
 ### Clock
 
 * [om-clock-is-running-p](#om-clock-is-running-p-clock) `(clock)`
-* [om-clock-map-timestamp](#om-clock-map-timestamp-fun-clock) `(fun clock)`
 
 ### Headline
 
@@ -2736,31 +2735,6 @@ Return t if **`clock`** element is running (eg is open).
 (->> (om-parse-this-element)
      (om-clock-is-running-p))
  ;; => nil
-
-```
-
-#### om-clock-map-timestamp `(fun clock)`
-
-Apply **`fun`** to timestamp in **`clock`**.
-**`fun`** is a function that takes the current timestamp and returns
-a modified timestamp. The returned timestamp must be inactive and
-cannot contain any warnings or repeaters.
-
-```el
-;; Given the following contents:
-; CLOCK: [2019-01-01 Tue 00:00]
-
-(->> (om-parse-this-element)
-     (om-clock-map-timestamp* (om-timestamp-shift 1 'day
-						  it))
-     (om-to-trimmed-string))
- ;; => "CLOCK: [2019-01-02 Wed 00:00]"
-
-;; Throw error if new timestamp is not allowed
-(->> (om-parse-this-element)
-     (om-clock-map-timestamp* (om-timestamp-toggle-active it))
-     (om-to-trimmed-string))
-Error
 
 ```
 

@@ -3003,13 +3003,6 @@ TIMESTAMP must have a type `eq' to `diary'. FORM is a quoted list."
   "Return t if CLOCK element is running (eg is open)."
   (om--property-is-eq-p :status 'running clock))
 
-(om--defun-node* om-clock-map-timestamp (fun clock)
-  "Apply FUN to timestamp in CLOCK.
-FUN is a function that takes the current timestamp and returns
-a modified timestamp. The returned timestamp must be inactive and
-cannot contain any warnings or repeaters."
-  (om-map-property :value fun clock))
-
 ;; headline
 
 (om--defun-node om-headline-is-done-p (headline)

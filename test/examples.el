@@ -2516,23 +2516,7 @@
       (:buffer "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00")
       (->> (om-parse-this-element)
            (om-clock-is-running-p))
-      => nil)
-
-    (defexamples-content om-clock-map-timestamp
-      nil
-      ;; TODO add more unit tests for this
-      (:buffer "CLOCK: [2019-01-01 Tue 00:00]")
-      (->> (om-parse-this-element)
-           (om-clock-map-timestamp*
-             (om-timestamp-shift 1 'day it))
-           (om-to-trimmed-string))
-      => "CLOCK: [2019-01-02 Wed 00:00]"
-      (:comment "Throw error if new timestamp is not allowed")
-      (->> (om-parse-this-element)
-           (om-clock-map-timestamp*
-             (om-timestamp-toggle-active it))
-           (om-to-trimmed-string))
-      !!> error))
+      => nil))
 
   (def-example-subgroup "Headline"
     nil
