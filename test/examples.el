@@ -928,7 +928,6 @@
       => "CLOCK: [2019-01-01 Tue 12:00]"
       (->> (om-build-clock! '(2019 1 1 12 0) :end '(2019 1 1 13 0))
            (om-to-trimmed-string))
-      ;; TODO why does this make two individual timestamps?
       => "CLOCK: [2019-01-01 Tue 12:00-13:00] =>  1:00")
 
     (defexamples om-build-planning!
@@ -1596,7 +1595,6 @@
            (om-get-property :label))
       => "blacklabel"
 
-      ;; TODO test footnote section
       ;; TODO the priority should be parsable after "COMMENT"
       (:buffer "** TODO [#A] COMMENT dummy                                   :tmsu:ARCHIVE:"
                ""
@@ -1625,6 +1623,11 @@
       (->> (om-parse-this-element)
            (om-get-property :todo-keyword))
       => "TODO"
+
+      (:buffer "* Footnotes")
+      (->> (om-parse-this-element)
+           (om-get-property :footnote-section-p))
+      => t
 
       (:buffer "call_ktulu[:cache no](x=4)[:exports results]")
       (->> (om-parse-this-object)
@@ -1712,9 +1715,8 @@
                ":PROPERTIES:"
                ":KEY: VAL"
                ":END:")
-      ;; TODO need public function
       (->> (om-parse-this-headline)
-           (om--headline-get-node-properties)
+           (om-headline-get-node-properties)
            (-first-item)
            (om-get-property :key))
       => "KEY"
@@ -1726,9 +1728,8 @@
 
       (:buffer "* dummy"
                "CLOSED: [2019-01-01 Tue]")
-      ;; TODO need public function
       (->> (om-parse-this-headline)
-           (om--headline-get-planning)
+           (om-headline-get-planning)
            (om-get-property :closed)
            (om-to-string))
       => "[2019-01-01 Tue]"
@@ -1840,9 +1841,13 @@
       (->> (om-parse-this-object)
            (om-get-property :value))
       => "I am not a crook"
-      :end-hidden
 
-      ;; TODO add post-blank
+      (:buffer "*postable* ")
+      (->> (om-parse-this-object)
+           (om-get-property :post-blank))
+      => 1
+      
+      :end-hidden
 
       (:buffer "* not arguable")
       (:comment "Throw error when requesting a property that doesn't exist")
@@ -1861,7 +1866,11 @@
            (om-to-trimmed-string))
       => "#+CALL: KTULU()"
 
-      ;; TODO add clock
+      (:buffer "CLOCK: [2019-01-01 Tue 12:00]")
+      (->> (om-parse-this-element)
+           (om-map-property* :value (om-timestamp-shift-end 1 'hour it))
+           (om-to-trimmed-string))
+      => "CLOCK: [2019-01-01 Tue 12:00-13:00] =>  1:00"
 
       :end-hidden
       
@@ -1899,7 +1908,11 @@
                   "NOT HERE"
                   "#+END_COMMENT")
 
-      ;; TODO add diary-sexp
+      (:buffer "%%(diary-float t 1 -1)")
+      (->> (om-parse-this-element)
+           (om-map-property :value (om--map-last* (+ 2 it) it))
+           (om-to-trimmed-string))
+      => (:buffer "%%(diary-float t 1 1)")
 
       (:buffer ":LOGBOOK:"
                ":END:")
@@ -1959,7 +1972,11 @@
            (om-to-trimmed-string))
       => "[fn:BLACKLABEL] society"
 
-      ;; TODO add example for headline
+      (:buffer "* headline")
+      (->> (om-parse-this-headline)
+           (om-map-property* :title (-map #'s-upcase it))
+           (om-to-trimmed-string))
+      => "* HEADLINE"
 
       (:buffer "call_ktulu()")
       (->> (om-parse-this-object)
@@ -1967,7 +1984,11 @@
            (om-to-trimmed-string))
       => "call_KTULU()"
 
-      ;; TODO add example for inline src block
+      (:buffer "src_python{print \"hi\"}")
+      (->> (om-parse-this-object)
+           (om-map-property* :value (s-replace-regexp "\".*\"" #'s-upcase it))
+           (om-to-trimmed-string))
+      => "src_python{print \"HI\"}"
 
       (:buffer "- tag :: thing")
       (->> (om-parse-this-item)
@@ -1984,7 +2005,11 @@
 
       ;; TODO add examples for latex frag/env
 
-      ;; TODO add example for link
+      (:buffer "[[https://downloadmoreram.org][legit]]")
+      (->> (om-parse-this-object)
+           (om-map-property* :path (s-replace ".org" ".com" it))
+           (om-to-trimmed-string))
+      => "[[https://downloadmoreram.com][legit]]"
 
       (:buffer "{{{economics}}}")
       (->> (om-parse-this-object)
@@ -1996,9 +2021,8 @@
                ":PROPERTIES:"
                ":KEY: VAL"
                ":END:")
-      ;; TODO need public function
       (->> (om-parse-this-headline)
-           (om--headline-get-node-properties)
+           (om-headline-get-node-properties)
            (-first-item)
            (om-map-property :key (-partial #'s-prepend "OM_"))
            (om-map-property :value (-partial #'s-prepend "OM_"))
@@ -2101,7 +2125,6 @@
       !!> error)
 
     (defexamples-content om-shift-property
-      ;; TODO need to ensure that the min/max priorities are always the same
       nil
 
       (:buffer "* no priorities")
@@ -2484,9 +2507,6 @@
   (def-example-subgroup "Clock"
     nil
 
-    ;; TODO add get/set/shift duration
-    ;; TODO add get/set/shift start/end/single/double time
-
     (defexamples-content om-clock-is-running-p
       nil
       (:buffer "CLOCK: [2019-01-01 Tue 00:00]")
@@ -2694,25 +2714,21 @@
       nil
       (:buffer "* statistically significant [10/10]")
       (->> (om-parse-this-headline)
-           ;; TODO make public
            (om-headline-get-statistics-cookie)
            (om-statistics-cookie-is-complete-p))
       => t
       (:buffer "* statistically significant [1/10]")
       (->> (om-parse-this-headline)
-           ;; TODO make public
            (om-headline-get-statistics-cookie)
            (om-statistics-cookie-is-complete-p))
       => nil
       (:buffer "* statistically significant [100%]")
       (->> (om-parse-this-headline)
-           ;; TODO make public
            (om-headline-get-statistics-cookie)
            (om-statistics-cookie-is-complete-p))
       => t
       (:buffer "* statistically significant [33%]")
       (->> (om-parse-this-headline)
-           ;; TODO make public
            (om-headline-get-statistics-cookie)
            (om-statistics-cookie-is-complete-p))
       => nil))
@@ -4039,23 +4055,22 @@
               "queries.")
     (->> (om-parse-this-subtree)
          (om-match '(section paragraph bold))
-         (--map (om-to-trimmed-string it)))
-    => '("*text1*" "*text2*")
+         (--map (om-to-string it)))
+    => '("*text1* " "*text2*")
 
     (:comment "Use the keyword :any as a wildcard to match any "
               "element at a particular level.")
     (->> (om-parse-this-subtree)
          (om-match '(:any :any bold))
-         (--map (om-to-trimmed-string it)))
-    => '("*text1*" "*text2*")
-    ;; TODO not sure why an empty string comes out here
+         (--map (om-to-string it)))
+    => '("*text1* " "*text2*")
     (->> (om-parse-this-subtree)
          (om-match '(section paragraph :any))
-         (--map (om-to-trimmed-string it)))
-    => '("this is" "*text1*" "of" "*text2*" "")
+         (--map (om-to-string it)))
+    => '("this is " "*text1* " "of " "*text2*" "\n")
     (->> (om-parse-this-subtree)
          (om-match '(:any bold))
-         (--map (om-to-trimmed-string it)))
+         (--map (om-to-string it)))
     => nil
 
     (:comment "Use the keyword :many to match one or more levels "
@@ -4383,26 +4398,6 @@ and here is even more *text4* and *text5*
       $> (:result "* one"
                   "** two"
                   "*** three")))
-
-  ;; TODO should probably still test these
-
-  ;; (defexamples-content om-update-this-object
-  ;;   nil)
-
-  ;; (defexamples-content om-update-this-element
-  ;;   nil)
-  
-  ;; (defexamples-content om-update-this-table-row
-  ;;   nil)
-
-  ;; (defexamples-content om-update-this-item
-  ;;   nil)
-
-  ;; (defexamples-content om-update-this-headline
-  ;;   nil)
-
-  ;; (defexamples-content om-update-this-subtree
-  ;;   nil))
 
   (def-example-subgroup "Misc"
     nil
