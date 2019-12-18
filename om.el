@@ -826,9 +826,9 @@ These are also known as \"recursive objects\" in `org-element.el'")
                        :require t)
                (:status)
                (:duration))
-        (code (:value ,@ol-str :require t))
+        (code (:value ,@str :require t))
         (comment (:value ,@ol-str :require t))
-        (comment-block (:value ,@ol-str :decode s-trim-right :require ""))
+        (comment-block (:value ,@str :decode s-trim-right :require ""))
         (drawer (:drawer-name ,@ol-str :require t))
         (diary-sexp (:value :encode om--encode-diary-sexp-value
                             :pred om--is-valid-diary-sexp-value-p
@@ -897,7 +897,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
                            (:value))
         (inline-src-block (:language ,@ol-str :require t)
                           (:parameters ,@plist)
-                          (:value ,@ol-str :require ""))
+                          (:value ,@str :require ""))
         ;; (inlinetask)
         (italic)
         (item (:bullet :encode om--encode-item-bullet
@@ -949,6 +949,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
                   (:scheduled ,@planning))
         (property-drawer)
         (quote-block)
+        ;; TODO this should not have multiline strings in it
         (radio-target (:value))
         (section)
         (special-block (:type ,@ol-str :require t))
@@ -972,11 +973,13 @@ These are also known as \"recursive objects\" in `org-element.el'")
                                         "[PERC%] respectively")
                             :require t))
         (strike-through)
+        ;; TODO these should only allow multiline strings if bracketed
         (subscript (:use-brackets-p ,@bool))
         (superscript (:use-brackets-p ,@bool))
         (table (:tblfm ,@slist)
                (:type :const 'org)
                (:value))
+        ;; TODO this should not have multiline strings in it
         (table-cell)
         (table-row (:type :const 'standard))
         (target (:value ,@ol-str :require t))
@@ -1008,7 +1011,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
                    (:warning-value ,@pos-int-nil)
                    (:raw-value))
         (underline)
-        (verbatim (:value ,@ol-str :require t))
+        (verbatim (:value ,@str :require t))
         (verse-block)))))
 
 ;; add post-blank functions to all entries
@@ -2019,8 +2022,6 @@ nested element to return."
      (if children (append head children) head)))
 
 (defun om--set-children-restricted (types children node)
-  ;; TODO this should recursively dig up all types in children
-  ;; even if they are nested
   (-when-let (illegal (-some->> (-map #'om--get-type children)
                                 (--remove (memq it types))
                                 (-map #'symbol-name)

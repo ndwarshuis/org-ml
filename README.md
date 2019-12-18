@@ -793,7 +793,7 @@ Build new nodes.
 Build a code object node.
 
 The following properties are settable:
-- **`value`**: (required) a oneline string
+- **`value`**: (required) a string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -856,7 +856,7 @@ Build an inline-src-block object node.
 The following properties are settable:
 - **`language`**: (required) a oneline string
 - **`parameters`**:  a plist
-- **`value`**: (default `""`) a oneline string
+- **`value`**: (default `""`) a string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -980,7 +980,7 @@ The following properties are settable:
 Build a verbatim object node.
 
 The following properties are settable:
-- **`value`**: (required) a oneline string
+- **`value`**: (required) a string
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1237,7 +1237,7 @@ The following properties are settable:
 Build a comment-block element node.
 
 The following properties are settable:
-- **`value`**: (default `""`) a oneline string
+- **`value`**: (default `""`) a string
 - **`post-blank`**: a non-negative integer
 
 ```el
