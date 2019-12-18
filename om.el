@@ -41,9 +41,11 @@
 (require 'dash)
 (require 's)
 
-;;; BETTER CL-DEFUN
+;;; BOILERPLATE MACROS
+
+;; better cl-defun
 ;; some functions here require a clean way to use &rest and &key
-;; at the same time, which `cl-defun' does not do...let's roll our own
+;; at the same time, which `cl-defun' does not do...
 
 (eval-when-compile
   (defun om--symbol-to-keyword (symbol)
@@ -171,7 +173,7 @@
     (let ((res (om--transform-lambda args body name)))
       `(defun ,name ,@res))))
 
-;; BOILERPLATE MACROS
+;; defun which also makes anaphoric form
 
 (defmacro om--verify (&rest args)
   (let ((tests
@@ -184,11 +186,6 @@
                 (error "Arg %s with value %s failed predicate %s"
                        ',arg ,arg ',pred)))))))
     `(progn ,@tests)))
-
-(defmacro om--verify-type (node type)
-  `(unless (om--is-type-p ,type ,node)
-     (error "Arg '%s' with value %s must be type '%s'"
-            ',node ,node ',type)))
 
 (defmacro om--defun-with-docstring-body (args &rest rest)
   ;; the third arg is a docstring if it is a string and there
@@ -223,7 +220,13 @@
            (om--verify fun functionp)
            ,@body)))))
 
-;; TODO what if we want to accept nil?
+;; defun with runtime type checking
+
+(defmacro om--verify-type (node type)
+  `(unless (om--is-type-p ,type ,node)
+     (error "Arg '%s' with value %s must be type '%s'"
+            ',node ,node ',type)))
+
 (defmacro om--defun-test-node (arglist)
   (-let* ((type (-last-item arglist))
           (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
@@ -242,6 +245,8 @@
        ,`(om--defun-test-node ,arglist)
        ,@body)))
 
+;; combine type checking and anaphoric form generation
+
 (defmacro om--defun-node* (name arglist &rest args)
   (declare (doc-string 3) (indent 2))
   (om--defun-with-docstring-body args
@@ -249,6 +254,8 @@
        ,docstring
        ,`(om--defun-test-node ,arglist)
        ,@body)))
+
+;; defun for weirdly-typed nodes
 
 (defmacro om--defun-timestamp (name arglist &rest args)
   (declare (doc-string 3) (indent 2))
@@ -264,7 +271,7 @@
            (error ,msg))
          ,@body))))
 
-;;; LIST OPERATIONS (EXTENDING DASH)
+;;; LIST OPERATIONS (EXTENDING DASH.el)
 
 (defun om--pad-or-truncate (length pad list)
   (let ((blanks (- length (length list))))
@@ -346,6 +353,11 @@ a non-existent index."
 
 ;;; MISC HELPER FUNCTIONS
 
+(defun om--get-head (node)
+  "Return the type and properties cells of NODE."
+  (if (stringp node) node
+    (-take 2 node)))
+
 (defun om--construct (type props children)
   "Make a new org element list structure of TYPE, PROPS, and CHILDREN.
 TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
@@ -368,7 +380,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
         (om--map-first* (substring it 1) ss))
     (error "Could not make secondary string from %S" string)))
 
-;;; INTERNAL CONSTANTS
+;;; NODE SET AND RELATIONAL CONSTANTS
 
 (defconst om-object-restrictions
   (->> org-element-object-restrictions
@@ -420,8 +432,6 @@ and object containers and includes the 'plain-text' type.")
 (defconst om-node-restrictions
   (append om-element-restrictions om-object-restrictions)
   "Alist of all restrictions for containers.")
-
-;;; INTERNAL TYPE FUNCTIONS
 
 (defconst om-elements
   (cons 'org-data org-element-all-elements)
@@ -484,6 +494,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
   (->> org-element-object-restrictions
        (alist-get 'headline)
        (cons 'plain-text)))
+
+;;; INTERNAL TYPE FUNCTIONS
 
 (defalias 'om--get-type 'org-element-type)
 (defalias 'om--get-class 'org-element-class)
@@ -1034,6 +1046,104 @@ These are also known as \"recursive objects\" in `org-element.el'")
   (setq om--type-alist
         (--map (-snoc it post-blank-funs) om--type-alist)))
 
+;;; INTERNAL POLYMORPHIC PROPERTY FUNCTIONS
+
+;; property manipulation (non-strict)
+
+(defun om--get-property (prop node)
+  (if (and (stringp node) (eq prop :post-blank))
+      (length (car (s-match "[ ]*$" node)))
+    (org-element-property prop node)))
+
+(defun om--get-all-properties (node)
+  "Return the properties list of NODE."
+  (if (stringp node) (text-properties-at 0 node) (nth 1 node)))
+
+(defun om--get-parent (node)
+  "Return the parent of NODE."
+  (om--get-property :parent node))
+
+(defun om--get-parent-headline (node)
+  "Return the most immediate parent headline of NODE."
+  (-when-let (parent (om--get-parent node))
+    (if (om--is-type-p 'headline parent) parent
+      (om--get-parent-headline parent))))
+
+(defun om--set-property (prop value node)
+  "Set property PROP in element NODE to VALUE."
+  (if (stringp node)
+      (if (eq prop :post-blank)
+          (->> (s-trim-right node) (s-append (s-repeat value " ")))
+        (org-add-props node nil prop value))
+    (om--construct
+     (om--get-type node)
+     (plist-put (om--get-all-properties node) prop value)
+     (om--get-children node))))
+
+(defun om--set-properties (plist node)
+  "Set all properties in NODE to the values corresponding to PLIST.
+PLIST is a list of property-value pairs that correspond to the
+property list in NODE."
+  (if (om--is-plist-p plist)
+      (let ((props (om--get-all-properties node)))
+        (om--construct
+         (om--get-type node)
+         (->> (-partition 2 plist)
+              (--reduce-from (apply #'plist-put acc it) props))
+         (om--get-children node)))
+    (error "Not a plist: %S" plist)))
+
+(defun om--set-property-nil (prop node)
+  "Set property PROP to nil in NODE."
+  (om--set-property prop nil node))
+
+(defun om--set-properties-nil (props node)
+  "Set all properties PROPS to new in NODE."
+  (let ((plist (--mapcat (list it nil) props)))
+    (om--set-properties plist node)))
+
+(om--defun* om--map-property (prop fun node)
+  (let ((value (funcall fun (om--get-property prop node))))
+    (om--set-property prop value node)))
+
+(defun om--map-properties (plist node)
+  (cond
+   ((not plist) node)
+   ((om--is-plist-p plist)
+    (->> (om--map-property (nth 0 plist) (nth 1 plist) node)
+         (om--map-properties (-drop 2 plist))))
+   (t (error "Not a plist: %s" plist))))
+
+(defmacro om--map-properties* (plist node)
+  `(let ((plist*
+          (-map-indexed
+           (lambda (index item) (if (cl-evenp index) item `(lambda (it) ,item)))
+           ,plist)))
+     (om--map-properties new-plist ,node)))
+
+(defun om--property-is-nil-p (prop node)
+  "Return t if PROP in NODE is nil."
+  (not (om--get-property prop node)))
+
+(defun om--property-is-non-nil-p (prop node)
+  "Return t if PROP in NODE is not nil."
+  (if (om--get-property prop node) t))
+
+(defun om--property-is-eq-p (prop val node)
+  "Return t if PROP in NODE is `eq' to VAL."
+  (eq val (om--get-property prop node)))
+
+(defun om--property-is-equal-p (prop val node)
+  "Return t if PROP in NODE is `equal' to VAL."
+  (equal val (om--get-property prop node)))
+
+(om--defun* om--property-is-predicate-p (prop fun node)
+  "Return t if FUN applied to the value of PROP in NODE results not nil.
+FUN is a predicate function that takes one argument."
+  (and (funcall fun (om--get-property prop node)) t))
+
+;; property manipulation (strict)
+
 (defun om--get-strict-function (operation type prop)
   (-if-let (type-list (alist-get type om--type-alist))
       (-if-let (plist (alist-get prop type-list))
@@ -1117,7 +1227,49 @@ These are also known as \"recursive objects\" in `org-element.el'")
          (om--map-properties-strict (-drop 2 plist))))
    (t (error "Not a plist: %s" plist))))
 
-;;; BUILDER FUNCTIONS
+;; branch/child manipulation
+
+(defalias 'om--get-children 'org-element-contents)
+
+(defun om--get-descendent (indices node)
+  "Return the nested children of NODE as given by INDICES.
+INDICES is a list of integers specifying the index and level of the
+nested element to return."
+  (if (not indices) node
+    (->> (om--get-children node)
+         (nth (car indices))
+         (om--get-descendent (cdr indices)))))
+
+(defun om--is-childless-p (node)
+  "Return t if NODE has no children."
+  (not (om--get-children node)))
+
+(defun om--set-children (children node)
+   (let ((head (om--get-head node)))
+     (if children (append head children) head)))
+
+(om--defun* om--map-children (fun node)
+  (let ((children (om--get-children node)))
+    ;; TODO check the types of children after they are mapped?
+    (om--set-children (funcall fun children) node)))
+
+(defun om--set-children-restricted (types children node)
+  (-when-let (illegal (-some->> (-map #'om--get-type children)
+                                (--remove (memq it types))
+                                (-map #'symbol-name)
+                                (s-join ", ")))
+    (error "Illegal types found: %s; allowed types are: %s"
+           illegal (s-join ", " (-map #'symbol-name types))))
+  (om--set-children children node))
+
+(defun om--set-children-by-type (branch-type children node)
+  ;; TODO there may be additional restrictions, such as newlines
+  ;; in strings not being allowed
+  (-if-let (types (alist-get branch-type om-node-restrictions))
+      (om--set-children-restricted types children node)
+    (error "Invalid branch type requested: %s" branch-type)))
+
+;;; BASE BUILDER FUNCTIONS
 
 ;; build helpers
 
@@ -1161,7 +1313,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
        (om--build type post-blank)
        (om--set-children-by-type type nodes)))
 
-;; define all builders using this automated monstrosity
+;; define all base builders using this automated monstrosity
 
 (eval-when-compile
   (defun om--kwd-to-sym (keyword)
@@ -1276,102 +1428,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
                    builder)))
       (eval `(om--defun-kw ,name ,args ,doc ,body)))))
 
-;;; INTERNAL PROPERTY FUNCTIONS
-
-;;; generic
-
-;; (defalias 'om--get-property 'org-element-property)
-(defun om--get-property (prop node)
-  (if (and (stringp node) (eq prop :post-blank))
-      (length (car (s-match "[ ]*$" node)))
-    (org-element-property prop node)))
-
-(defun om--get-all-properties (node)
-  "Return the properties list of NODE."
-  (if (stringp node) (text-properties-at 0 node) (nth 1 node)))
-
-(defun om--get-parent (node)
-  "Return the parent of NODE."
-  (om--get-property :parent node))
-
-(defun om--get-parent-headline (node)
-  "Return the most immediate parent headline of NODE."
-  (-when-let (parent (om--get-parent node))
-    (if (om--is-type-p 'headline parent) parent
-      (om--get-parent-headline parent))))
-
-(defun om--set-property (prop value node)
-  "Set property PROP in element NODE to VALUE."
-  (if (stringp node)
-      (if (eq prop :post-blank)
-          (->> (s-trim-right node) (s-append (s-repeat value " ")))
-        (org-add-props node nil prop value))
-    (om--construct
-     (om--get-type node)
-     (plist-put (om--get-all-properties node) prop value)
-     (om--get-children node))))
-
-(defun om--set-properties (plist node)
-  "Set all properties in NODE to the values corresponding to PLIST.
-PLIST is a list of property-value pairs that correspond to the
-property list in NODE."
-  (if (om--is-plist-p plist)
-      (let ((props (om--get-all-properties node)))
-        (om--construct
-         (om--get-type node)
-         (->> (-partition 2 plist)
-              (--reduce-from (apply #'plist-put acc it) props))
-         (om--get-children node)))
-    (error "Not a plist: %S" plist)))
-
-(defun om--set-property-nil (prop node)
-  "Set property PROP to nil in NODE."
-  (om--set-property prop nil node))
-
-(defun om--set-properties-nil (props node)
-  "Set all properties PROPS to new in NODE."
-  (let ((plist (--mapcat (list it nil) props)))
-    (om--set-properties plist node)))
-
-(om--defun* om--map-property (prop fun node)
-  (let ((value (funcall fun (om--get-property prop node))))
-    (om--set-property prop value node)))
-
-(defun om--map-properties (plist node)
-  (cond
-   ((not plist) node)
-   ((om--is-plist-p plist)
-    (->> (om--map-property (nth 0 plist) (nth 1 plist) node)
-         (om--map-properties (-drop 2 plist))))
-   (t (error "Not a plist: %s" plist))))
-
-(defmacro om--map-properties* (plist node)
-  `(let ((plist*
-          (-map-indexed
-           (lambda (index item) (if (cl-evenp index) item `(lambda (it) ,item)))
-           ,plist)))
-     (om--map-properties new-plist ,node)))
-
-(defun om--property-is-nil-p (prop node)
-  "Return t if PROP in NODE is nil."
-  (not (om--get-property prop node)))
-
-(defun om--property-is-non-nil-p (prop node)
-  "Return t if PROP in NODE is not nil."
-  (if (om--get-property prop node) t))
-
-(defun om--property-is-eq-p (prop val node)
-  "Return t if PROP in NODE is `eq' to VAL."
-  (eq val (om--get-property prop node)))
-
-(defun om--property-is-equal-p (prop val node)
-  "Return t if PROP in NODE is `equal' to VAL."
-  (equal val (om--get-property prop node)))
-
-(om--defun* om--property-is-predicate-p (prop fun node)
-  "Return t if FUN applied to the value of PROP in NODE results not nil.
-FUN is a predicate function that takes one argument."
-  (and (funcall fun (om--get-property prop node)) t))
+;; INTERNAL NODE-SPECIFIC PROPERTY FUNCTIONS
 
 ;;; objects
 ;;
@@ -1698,18 +1755,6 @@ float-times, which assumes the :type property is valid."
 
 ;; item
 
-(defun om--item-is-unordered (item)
-  (and (member (om--get-property :bullet item) '("- " "+ ")) t))
-
-;; NOTE the org element parser currently does not honor 1) or a) type
-;; bullets
-(defun om--item-validate-counter (counter)
-  (if (integerp counter) counter
-    (let ((s (symbol-name counter)))
-      (when (s-matches? "^[a-zA-z]$" s)
-        (if org-list-allow-alphabetical counter
-          (error "Set `org-list-allow-alphabetical' to t to use alphabetical bullets"))))))
-
 ;; (defun om--item-set-tag! (raw-tag item)
 ;;   (-> (om--build-secondary-string raw-tag)
 ;;       (om--item-set-tag item)))
@@ -1732,295 +1777,9 @@ float-times, which assumes the :type property is valid."
                                 :warning (alist-get '&warning p)
                                 :repeater (alist-get '&repeater p)))))
 
-
-
-;; misc builders
-
-(om--defun-kw om-build-timestamp-diary (form &key post-blank)
-  "Build a diary-sexp timestamp element from FORM.
-Optionally set POST-BLANK (a positive integer)."
-  (->> (om--build-object 'timestamp post-blank)
-       (om--set-property :type 'diary)
-       (om--timestamp-diary-set-value form)
-       (om--set-properties-nil
-        (list :repeater-type :repeater-unit :repeater-value
-              :warning-type :warning-unit :warning-value :year-start
-              :month-start :day-start :hour-start :minute-start
-              :year-end :month-end :day-end :hour-end :minute-end))))
-
-(om--defun-kw om-build-table-row-hline (&key post-blank)
-  "Build a table-row element with the 'rule' type.
-Optionally set POST-BLANK (a positive integer)."
-  (->> (om--build-container-element 'table-row post-blank nil)
-       (om--set-property :type 'rule)))
-
-(defun om-build-secondary-string (string)
-  "Build a secondary string (list of object nodes) from STRING.
-STRING is any string that contains a textual representation of
-object nodes. If this is not true, and error will be thrown."
-  (om--verify string stringp)
-  (om--build-secondary-string string))
-
-;;; shortcut builders
-
-(om--defun-kw om-build-timestamp! (type start &key end
-                                               repeater
-                                               warning
-                                               post-blank)
-  "Build a timestamp object.
-
-TYPE is the symbol `active' or `inactive' (the range suffix will be
-added if an end time is supplied).
-
-START specifies the start time and is a list of integers in one of
-the following forms:
-- (YEAR MONTH DAY): short form
-- (YEAR MONTH DAY nil nil) short form
-- (YEAR MONTH DAY HOUR MINUTE) long form
-
-END (if supplied) will add the ending time, and follows the same
-formatting rules as START.
-
-REPEATER and WARNING are lists formatted as (TYPE VALUE UNIT) where
-the three members correspond to the :repeater/warning-type, -value,
-and -unit properties in `om-build-timestamp'.
-
-Building a diary sexp timestamp is not possible with this function."
-  (->> (om--build-object 'timestamp post-blank)
-       (om--timestamp-set-start-time-nocheck start)
-       (om--timestamp-set-end-time-nocheck end)
-       (om--timestamp-set-type type)
-       (om--timestamp-set-warning warning)
-       (om--timestamp-set-repeater repeater)
-       (om--set-property-nil :raw-value)))
-
-(om--defun-kw om-build-clock! (start &key end post-blank)
-  "Build a clock object.
-
-START and END follow the same rules as their respective arguments in
-`om-build-timestamp!'."
-  (let ((ts (om-build-timestamp! 'inactive start :end end)))
-    (om-build-clock ts :post-blank post-blank)))
-
-(om--defun-kw om-build-planning! (&key closed deadline
-                                              scheduled post-blank)
-  "Build a planning element using shorthand arguments.
-CLOSED, DEADLINE, and SCHEDULED are lists with the following structure
-(brackets denote optional members):
-
-(YEAR MINUTE DAY [HOUR] [MIN]
- [&warning TYPE VALUE UNIT]
- [&repeater TYPE VALUE UNIT])
-
-In terms of arguments supplied to `om-build-timestamp!', the first
-five members correspond to the list supplied as TIME, and the TYPE,
-VALUE, and UNIT fields correspond to the lists supplied to WARNING and
-REPEATER arguments. The order of warning and repeater does not
-matter."
-  (om-build-planning
-   :closed (om--planning-list-to-timestamp closed)
-   :deadline (om--planning-list-to-timestamp deadline)
-   :scheduled (om--planning-list-to-timestamp scheduled)
-   :post-blank post-blank))
-
-(om--defun-kw om-build-property-drawer! (&key post-blank &rest
-                                                     keyvals)
-  "Create a property drawer element.
-
-Each member in KEYVALS is a list of symbols like (KEY VAL), where each
-list will generate a node property in the property drawer like \":key:
-val\"."
-  (->> keyvals
-       (--map (let ((key (symbol-name (car it)))
-                    (val (symbol-name (cadr it))))
-                (om-build-node-property key val)))
-       (apply #'om-build-property-drawer :post-blank post-blank)))
-
-(om--defun-kw om-build-headline! (&key (level 1) title-text
-                                       todo-keyword tags pre-blank
-                                       priority commentedp archivedp
-                                       post-blank planning properties
-                                       statistics-cookie
-                                       section-children
-                                       &rest
-                                       subheadlines)
-  "Build a headline element.
-
-TITLE-TEXT is a oneline string for the title of the headline.
-
-PLANNING is a list like (PLANNING-TYPE ARGS ...) where
-PLANNING-TYPE is one of `:closed', `:deadline', or `:scheduled', and
-ARGS are the args supplied to any of the planning types in
-`om-build-planning!'. Up to all three planning types can be used
-in the same list like (:closed ARGS :deadline ARGS :scheduled ARGS).
-
-STATISTICS-COOKIE is a list following the same format as
-`om-build-statistics-cookie'.
-
-SECTION-CHILDREN is a list of elements that will go in the headline
-section.
-
-SUBHEADLINES contains zero or more headlines that will go under the
-created headline. The level of all members in SUBHEADLINES will
-automatically be adjusted to LEVEL + 1.
-
-All arguments not mentioned here follow the same rules as
-`om-build-headline'"
-  (let* ((planning (-some->>
-                    planning
-                    (apply #'om-build-planning!)))
-         (property-drawer (-some->>
-                           properties
-                           (apply #'om-build-property-drawer!)))
-         (section (-some->>
-                   (append `(,planning) `(,property-drawer) section-children)
-                   (-non-nil)
-                   (apply #'om-build-section)))
-         (nodes (->> subheadlines
-                     (--map (om--headline-set-level (1+ level) it))
-                     (append (list section))
-                     (-non-nil))))
-    (->> (apply #'om-build-headline
-                :todo-keyword todo-keyword
-                :level level
-                :tags tags
-                :post-blank post-blank
-                :pre-blank pre-blank
-                :priority priority
-                :commentedp commentedp
-                :archivedp archivedp
-                nodes)
-         (om--headline-set-title! title-text statistics-cookie))))
-
-(om--defun-kw om-build-item! (&key post-blank bullet checkbox
-                                          tag paragraph counter
-                                          &rest nodes)
-  "Build an item element.
-
-TAG is a string representing the tag.
-
-PARAGRAPH is a string that will be the initial text in the item.
-
-NODES contains the nodes that will go under this item after
-PARAGRAPH.
-
-All other arguments follow the same rules as `om-build-item'."
-  (let ((paragraph* (-some->> paragraph (om-build-paragraph!)))
-        (tag (-some->> tag (om--build-secondary-string))))
-    ;; TODO this restricts all subitems to plain lists...there are
-    ;; other things we can put into lists
-    (->> (append (list paragraph*) nodes)
-         (-non-nil)
-         (apply #'om-build-item
-                :post-blank post-blank
-                :bullet bullet
-                :checkbox checkbox
-                :counter counter
-                :tag tag))))
-
-(om--defun-kw om-build-paragraph! (string &key post-blank)
-  "Build a paragraph element.
-
-STRING is the text to be parsed into a paragraph. It must contain valid
-formatting (eg, text that will be formatted into objects)."
-  ;; TODO this can be simplified?
-  (let ((p (->> (om--from-string string)
-                (om--get-descendent '(0)))))
-    (if (om--is-type-p 'paragraph p)
-        (om--set-property-strict :post-blank (or post-blank 0) p)
-      (error "String could not be parsed to a paragraph: %s" string))))
-
-(om--defun-kw om-build-table-cell! (string &key post-blank)
-  "Build a table-cell node.
-
-STRING is the text to be contained in the table cell. It must contain
-valid formatting."
-  (-if-let (ss (om--build-secondary-string string))
-      (apply #'om-build-table-cell :post-blank post-blank ss)
-    (error "Could not create valid secondary string from '%s'" string)))
-
-(om--defun-kw om-build-table-row! (string-list &key post-blank)
-  "Build a table-row node.
-
-STRING-LIST is a list of strings to be contained in the table-cells
-within the table-row, or it is the symbol `hline' for a rule-typed
-table-row. If list of strings, each string follows the same rules as
-described in `om-build-table-cell!'."
-  (if (eq string-list 'hline)
-      (om-build-table-row-hline :post-blank post-blank)
-    (->> (-map #'om-build-table-cell! string-list)
-         (apply #'om-build-table-row :post-blank post-blank))))
-
-(om--defun-kw om-build-table! (&key tblfm post-blank &rest row-lists)
-  "Build a table node.
-
-ROW-LISTS is a list of lists where each member is either a string
-to be put in a table cell or the symbol `hline' which represents
-a rule-typed table-row.
-
-All other arguments follow the same rules as `om-build-table'."
-  (->> (--map (om-build-table-row! it) row-lists)
-       (apply #'om-build-table :tblfm tblfm :post-blank post-blank)))
-
-;;; INTERNAL CHILDREN FUNCTIONS
+;;; INTERNAL BRANCH/CHILD FUNCTIONS
 ;; operations on children of branch nodes
 
-;; generic
-
-(defalias 'om--get-children 'org-element-contents)
-
-(defun om--get-descendent (indices node)
-  "Return the nested children of NODE as given by INDICES.
-INDICES is a list of integers specifying the index and level of the
-nested element to return."
-  (if (not indices) node
-    (->> (om--get-children node)
-         (nth (car indices))
-         (om--get-descendent (cdr indices)))))
-
-(defun om--get-head (node)
-  "Return the type and properties cells of NODE."
-  (if (stringp node) node
-    (-take 2 node)))
-
-(defun om--is-childless-p (node)
-  "Return t if NODE has no children."
-  (not (om--get-children node)))
-
-(om--defun* om--map-children (fun node)
-  (let ((children (om--get-children node)))
-    ;; TODO check the types of children after they are mapped?
-    (om--set-children (funcall fun children) node)))
-
-(defun om--map-contained (pred fun node)
-  (om--map-children*
-   (--map-when (funcall pred it) (funcall fun it) it)
-   node))
-
-(defun om--map-contained-first (pred fun node)
-  (om--map-children*
-   (--map-first (funcall pred it) (funcall fun it) it)
-   node))
-
-(defun om--set-children (children node)
-   (let ((head (om--get-head node)))
-     (if children (append head children) head)))
-
-(defun om--set-children-restricted (types children node)
-  (-when-let (illegal (-some->> (-map #'om--get-type children)
-                                (--remove (memq it types))
-                                (-map #'symbol-name)
-                                (s-join ", ")))
-    (error "Illegal types found: %s; allowed types are: %s"
-           illegal (s-join ", " (-map #'symbol-name types))))
-  (om--set-children children node))
-
-(defun om--set-children-by-type (branch-type children node)
-  ;; TODO there may be additional restrictions, such as newlines
-  ;; in strings not being allowed
-  (-if-let (types (alist-get branch-type om-node-restrictions))
-      (om--set-children-restricted types children node)
-    (error "Invalid branch type requested: %s" branch-type)))
 
 ;; headline
 
@@ -2035,14 +1794,6 @@ nested element to return."
   (->> (om--get-property :title headline)
        (-last-item)
        (om--filter-type 'statistics-cookie)))
-
-(defun om--headline-get-drawer (name headline)
-  "Return first drawer with NAME in HEADLINE element or nil if none."
-  (om--verify name stringp)
-  (-some->>
-   (om--headline-get-section headline)
-   (--first (and (om--is-type-p 'drawer it)
-                 (om--property-is-equal-p :drawer-name name it)))))
 
 (defun om--headline-get-properties-drawer (headline)
   (-some->>
@@ -2060,16 +1811,17 @@ nested element to return."
             (om--get-children)
             (--first (om--is-type-p 'planning it))))
 
-(defun om--headline-get-path (headline)
-  "Return path of headline HEADLINE element as a list of strings."
-  (cl-labels
-      ((get-path
-        (hl)
-        (let ((title (om--get-property :raw-value hl)))
-          (-if-let (parent (om--get-parent-headline hl))
-              (cons title (get-path parent))
-            (list title)))))
-    (reverse (get-path headline))))
+;; TODO use this eventually...
+;; (defun om--headline-get-path (headline)
+;;   "Return path of headline HEADLINE element as a list of strings."
+;;   (cl-labels
+;;       ((get-path
+;;         (hl)
+;;         (let ((title (om--get-property :raw-value hl)))
+;;           (-if-let (parent (om--get-parent-headline hl))
+;;               (cons title (get-path parent))
+;;             (list title)))))
+;;     (reverse (get-path headline))))
 
 (defun om--headline-map-subheadlines (fun headline)
   (om--map-children
@@ -2084,22 +1836,22 @@ nested element to return."
         (t subheadlines))))
    headline))
 
-(defun om--map-or-build (map-fun build-fun pred-fun pos node)
-  (om--map-children
-   (lambda (children)
-     (-if-let (target (--first (funcall pred-fun it) children))
-         ;; TODO this is probably not the most efficient
-         (-replace target (funcall map-fun target) children)
-       (let ((pos
-              (cond
-               ((integerp pos)
-                pos)
-               ((functionp pos)
-                (or (--find-index (funcall pos it) children) 0))
-               (t (error "Invalid pos given: %S" pos))))
-             (new (funcall build-fun)))
-         (-insert-at pos new children))))
-   node))
+;; (defun om--map-or-build (map-fun build-fun pred-fun pos node)
+;;   (om--map-children
+;;    (lambda (children)
+;;      (-if-let (target (--first (funcall pred-fun it) children))
+;;          ;; TODO this is probably not the most efficient
+;;          (-replace target (funcall map-fun target) children)
+;;        (let ((pos
+;;               (cond
+;;                ((integerp pos)
+;;                 pos)
+;;                ((functionp pos)
+;;                 (or (--find-index (funcall pos it) children) 0))
+;;                (t (error "Invalid pos given: %S" pos))))
+;;              (new (funcall build-fun)))
+;;          (-insert-at pos new children))))
+;;    node))
 
 ;; (defmacro om--map-or-build-nested (map-form &rest args)
 ;;   ;; forms are of form (pred builder pos-fun)
@@ -2177,16 +1929,6 @@ nested element to return."
                           (list)))))
         (om--headline-set-statistics-cookie value headline))
     headline))
-
-;; item
-
-(defun om--item-get-sublist (item)
-  "Return plain-list under ITEM element or nil if none."
-  (-some->> (om--get-children item) (assoc 'plain-list)))
-
-(defun om--item-get-paragraph (item)
-  "Return paragraph under ITEM element or nil if none."
-  (-some->> (om--get-children item) (assoc 'paragraph)))
 
 ;; table
 
@@ -2497,7 +2239,244 @@ zero-indexed."
        (om--unindent-members index #'trim #'extract items))
      plain-list)))
 
+;;; COMPOSITE BUILDERS
+
+;; misc builders
+
+(om--defun-kw om-build-timestamp-diary (form &key post-blank)
+  "Build a diary-sexp timestamp element from FORM.
+Optionally set POST-BLANK (a positive integer)."
+  (->> (om--build-object 'timestamp post-blank)
+       (om--set-property :type 'diary)
+       (om--timestamp-diary-set-value form)
+       (om--set-properties-nil
+        (list :repeater-type :repeater-unit :repeater-value
+              :warning-type :warning-unit :warning-value :year-start
+              :month-start :day-start :hour-start :minute-start
+              :year-end :month-end :day-end :hour-end :minute-end))))
+
+(om--defun-kw om-build-table-row-hline (&key post-blank)
+  "Build a table-row element with the 'rule' type.
+Optionally set POST-BLANK (a positive integer)."
+  (->> (om--build-container-element 'table-row post-blank nil)
+       (om--set-property :type 'rule)))
+
+;; TODO this is actually shorthand
+(defun om-build-secondary-string (string)
+  "Build a secondary string (list of object nodes) from STRING.
+STRING is any string that contains a textual representation of
+object nodes. If this is not true, and error will be thrown."
+  (om--verify string stringp)
+  (om--build-secondary-string string))
+
+;; shorthand builders
+
+(om--defun-kw om-build-timestamp! (type start &key end
+                                               repeater
+                                               warning
+                                               post-blank)
+  "Build a timestamp object.
+
+TYPE is the symbol `active' or `inactive' (the range suffix will be
+added if an end time is supplied).
+
+START specifies the start time and is a list of integers in one of
+the following forms:
+- (YEAR MONTH DAY): short form
+- (YEAR MONTH DAY nil nil) short form
+- (YEAR MONTH DAY HOUR MINUTE) long form
+
+END (if supplied) will add the ending time, and follows the same
+formatting rules as START.
+
+REPEATER and WARNING are lists formatted as (TYPE VALUE UNIT) where
+the three members correspond to the :repeater/warning-type, -value,
+and -unit properties in `om-build-timestamp'.
+
+Building a diary sexp timestamp is not possible with this function."
+  (->> (om--build-object 'timestamp post-blank)
+       (om--timestamp-set-start-time-nocheck start)
+       (om--timestamp-set-end-time-nocheck end)
+       (om--timestamp-set-type type)
+       (om--timestamp-set-warning warning)
+       (om--timestamp-set-repeater repeater)
+       (om--set-property-nil :raw-value)))
+
+(om--defun-kw om-build-clock! (start &key end post-blank)
+  "Build a clock object.
+
+START and END follow the same rules as their respective arguments in
+`om-build-timestamp!'."
+  (let ((ts (om-build-timestamp! 'inactive start :end end)))
+    (om-build-clock ts :post-blank post-blank)))
+
+(om--defun-kw om-build-planning! (&key closed deadline
+                                              scheduled post-blank)
+  "Build a planning element using shorthand arguments.
+CLOSED, DEADLINE, and SCHEDULED are lists with the following structure
+(brackets denote optional members):
+
+(YEAR MINUTE DAY [HOUR] [MIN]
+ [&warning TYPE VALUE UNIT]
+ [&repeater TYPE VALUE UNIT])
+
+In terms of arguments supplied to `om-build-timestamp!', the first
+five members correspond to the list supplied as TIME, and the TYPE,
+VALUE, and UNIT fields correspond to the lists supplied to WARNING and
+REPEATER arguments. The order of warning and repeater does not
+matter."
+  (om-build-planning
+   :closed (om--planning-list-to-timestamp closed)
+   :deadline (om--planning-list-to-timestamp deadline)
+   :scheduled (om--planning-list-to-timestamp scheduled)
+   :post-blank post-blank))
+
+(om--defun-kw om-build-property-drawer! (&key post-blank &rest
+                                                     keyvals)
+  "Create a property drawer element.
+
+Each member in KEYVALS is a list of symbols like (KEY VAL), where each
+list will generate a node property in the property drawer like \":key:
+val\"."
+  (->> keyvals
+       (--map (let ((key (symbol-name (car it)))
+                    (val (symbol-name (cadr it))))
+                (om-build-node-property key val)))
+       (apply #'om-build-property-drawer :post-blank post-blank)))
+
+;; TODO should the properties be kept here? they don't go in a predefined place
+(om--defun-kw om-build-headline! (&key (level 1) title-text
+                                       todo-keyword tags pre-blank
+                                       priority commentedp archivedp
+                                       post-blank planning properties
+                                       statistics-cookie
+                                       section-children
+                                       &rest
+                                       subheadlines)
+  "Build a headline element.
+
+TITLE-TEXT is a oneline string for the title of the headline.
+
+PLANNING is a list like (PLANNING-TYPE ARGS ...) where
+PLANNING-TYPE is one of `:closed', `:deadline', or `:scheduled', and
+ARGS are the args supplied to any of the planning types in
+`om-build-planning!'. Up to all three planning types can be used
+in the same list like (:closed ARGS :deadline ARGS :scheduled ARGS).
+
+STATISTICS-COOKIE is a list following the same format as
+`om-build-statistics-cookie'.
+
+SECTION-CHILDREN is a list of elements that will go in the headline
+section.
+
+SUBHEADLINES contains zero or more headlines that will go under the
+created headline. The level of all members in SUBHEADLINES will
+automatically be adjusted to LEVEL + 1.
+
+All arguments not mentioned here follow the same rules as
+`om-build-headline'"
+  (let* ((planning (-some->>
+                    planning
+                    (apply #'om-build-planning!)))
+         (property-drawer (-some->>
+                           properties
+                           (apply #'om-build-property-drawer!)))
+         (section (-some->>
+                   (append `(,planning) `(,property-drawer) section-children)
+                   (-non-nil)
+                   (apply #'om-build-section)))
+         (nodes (->> subheadlines
+                     (--map (om--headline-set-level (1+ level) it))
+                     (append (list section))
+                     (-non-nil))))
+    (->> (apply #'om-build-headline
+                :todo-keyword todo-keyword
+                :level level
+                :tags tags
+                :post-blank post-blank
+                :pre-blank pre-blank
+                :priority priority
+                :commentedp commentedp
+                :archivedp archivedp
+                nodes)
+         (om--headline-set-title! title-text statistics-cookie))))
+
+(om--defun-kw om-build-item! (&key post-blank bullet checkbox
+                                          tag paragraph counter
+                                          &rest nodes)
+  "Build an item element.
+
+TAG is a string representing the tag.
+
+PARAGRAPH is a string that will be the initial text in the item.
+
+NODES contains the nodes that will go under this item after
+PARAGRAPH.
+
+All other arguments follow the same rules as `om-build-item'."
+  (let ((paragraph* (-some->> paragraph (om-build-paragraph!)))
+        (tag (-some->> tag (om--build-secondary-string))))
+    ;; TODO this restricts all subitems to plain lists...there are
+    ;; other things we can put into lists
+    (->> (append (list paragraph*) nodes)
+         (-non-nil)
+         (apply #'om-build-item
+                :post-blank post-blank
+                :bullet bullet
+                :checkbox checkbox
+                :counter counter
+                :tag tag))))
+
+(om--defun-kw om-build-paragraph! (string &key post-blank)
+  "Build a paragraph element.
+
+STRING is the text to be parsed into a paragraph. It must contain valid
+formatting (eg, text that will be formatted into objects)."
+  ;; TODO this can be simplified?
+  (let ((p (->> (om--from-string string)
+                (om--get-descendent '(0)))))
+    (if (om--is-type-p 'paragraph p)
+        (om--set-property-strict :post-blank (or post-blank 0) p)
+      (error "String could not be parsed to a paragraph: %s" string))))
+
+(om--defun-kw om-build-table-cell! (string &key post-blank)
+  "Build a table-cell node.
+
+STRING is the text to be contained in the table cell. It must contain
+valid formatting."
+  (-if-let (ss (om--build-secondary-string string))
+      (apply #'om-build-table-cell :post-blank post-blank ss)
+    (error "Could not create valid secondary string from '%s'" string)))
+
+(om--defun-kw om-build-table-row! (string-list &key post-blank)
+  "Build a table-row node.
+
+STRING-LIST is a list of strings to be contained in the table-cells
+within the table-row, or it is the symbol `hline' for a rule-typed
+table-row. If list of strings, each string follows the same rules as
+described in `om-build-table-cell!'."
+  (if (eq string-list 'hline)
+      (om-build-table-row-hline :post-blank post-blank)
+    (->> (-map #'om-build-table-cell! string-list)
+         (apply #'om-build-table-row :post-blank post-blank))))
+
+(om--defun-kw om-build-table! (&key tblfm post-blank &rest row-lists)
+  "Build a table node.
+
+ROW-LISTS is a list of lists where each member is either a string
+to be put in a table cell or the symbol `hline' which represents
+a rule-typed table-row.
+
+All other arguments follow the same rules as `om-build-table'."
+  (->> (--map (om-build-table-row! it) row-lists)
+       (apply #'om-build-table :tblfm tblfm :post-blank post-blank)))
+
+
 ;;; PUBLIC TYPE FUNCTIONS
+
+(om--defun-node om-get-type (node)
+  "Return the type of NODE."
+  (om--get-type node))
 
 (om--defun-node om-is-type-p (type node)
   "Return t if the type of NODE is TYPE (a symbol)."
@@ -3274,289 +3253,7 @@ This is a workaround for a bug.")
   "Like `om-to-string' but strip whitespace when returning NODE."
   (-some->> (om-to-string node) (s-trim)))
 
-;;; parsing functions
-
-;; point functions
-
-(defun om-parse-object-at (point)
-  "Return the object tree under POINT or nil if not on an object.
-
-If TYPE is supplied, only return nil if the object under point is
-not of that type. TYPE is a symbol from `om-objects'."
-  (save-excursion
-    (goto-char point)
-    (let* ((context (org-element-context))
-           (type (om--get-type context))
-           (offset (cond
-                    ((memq type '(superscript subscript)) -1)
-                    ((eq type 'table-cell) -1)
-                    (t 0)))
-           (nesting (cond
-                     ((memq type '(superscript subscript)) '(0 1))
-                     ((eq type 'table-cell) '(0 0 0))
-                     (t '(0 0)))))
-      (-let* (((&plist :begin :end) (om--get-all-properties context))
-              (tree (org-element--parse-elements (+ begin offset) end 'first-section
-                                                 nil nil nil nil)))
-        (--> (car tree)
-             (om--get-descendent nesting it)
-             (om--filter-types org-element-all-objects it)
-             (if type (om--filter-type type it) it))))))
-
-(defun om--parse-element-at (point &optional type)
-  "Return element immediately under POINT.
-For a list of all possible return types refer to
-`org-element-all-elements'; this will return everything in this list
-except 'section' which is ambiguous when referring to a single point.
-(see `om-parse-section-at').
-
-If TYPE is supplied, only return nil if the object under point is
-not of that type. TYPE is a symbol from `org-element-all-elements'.
-Furthermore, setting TYPE to 'table-row' will prefer table-row
-elements over table elements and likewise when setting TYPE to 'item'
-for plain-list elements vs item elements."
-  (save-excursion
-    (goto-char point)
-    (let*
-        ((node (org-element-at-point))
-         (elem-type (om--get-type node)))
-      (if (not
-           (memq elem-type (append org-element-greater-elements
-                                   org-element-object-containers)))
-          node
-        (-let* (((&plist :begin :end) (om--get-all-properties node))
-                (tree (car (org-element--parse-elements
-                            begin end 'first-section nil nil nil nil)))
-                (nesting (cl-case elem-type
-                           (headline nil)
-                           (table (if (eq type 'table-row) '(0 0) '(0)))
-                           (plain-list (if (eq type 'item) '(0 0) '(0)))
-                           (t '(0)))))
-          (--> (om--get-descendent nesting tree)
-               (if type (om--filter-type type it) it)))))))
-
-(defun om-parse-element-at (point)
-  "Return element under POINT or nil if not on an element.
-
-This function will return every element available in `om-elements'
-with the exception of `section', `item', and `table-row'. To
-specifically parse these, use the functions `om-parse-section-at',
-`om-parse-item-at', and `om-parse-table-row-at'."
-  (om--parse-element-at point))
-
-(defun om-parse-table-row-at (point)
-  "Return table-row element under POINT or nil if not on a table-row."
-  (save-excursion
-    (goto-char point)
-    (beginning-of-line)
-    (om--parse-element-at (point) 'table-row)))
-
-(defun om-parse-item-at (point)
-  "Return item element under POINT or nil if not on an item.
-This will return the item even if POINT is not at the beginning of
-the line."
-  (save-excursion
-    (goto-char point)
-    (beginning-of-line)
-    (om--parse-element-at (point) 'item)))
-
-(defun om--parse-headline-subtree-at (point subtree)
-  (save-excursion
-    (goto-char point)
-    (when (ignore-errors (org-back-to-heading))
-      (let ((b (point))
-            (e (if subtree (org-end-of-subtree)
-                 (or (outline-next-heading) (point-max)))))
-        (car (org-element--parse-elements b e 'first-section
-                                          nil nil nil nil))))))
-
-(defun om-parse-headline-at (point)
-  "Return headline tree under POINT or nil if not on a headline.
-POINT does not need to be on the headline itself. Only the headline
-and its section will be returned. To include subheadlines, use
-`om-parse-subtree-at'."
-  (om--parse-headline-subtree-at point nil))
-
-(defun om-parse-subtree-at (point)
-  "Return headline tree under POINT or nil if not on a headline.
-POINT does not need to be on the headline itself. Unlike
-`om-parse-headline-at', the returned tree will include
-subheadlines."
-  (om--parse-headline-subtree-at point t))
-
-(defun om-parse-section-at (point)
-  "Return tree of the section under POINT or nil if not on a section.
-If POINT is on or within a headline, return the section under that
-headline. If POINT is before the first headline (if any), return
-the section at the top of the org buffer."
-  (save-excursion
-    (goto-char point)
-    (om--get-descendent
-     '(0)
-     (condition-case nil
-         (progn
-           (org-back-to-heading)
-           ;; TODO this is redundant
-           (om--parse-headline-subtree-at point nil))
-       (error
-        (progn
-          (org-element--parse-elements
-           (point-min) (or (outline-next-heading) (point-max))
-           'first-section nil nil nil nil)))))))
-
-;; parse at current point
-
-(-> '(object element table-row item headline subtree section)
-    (--each
-        (let* ((name (intern (format "om-parse-this-%s" it)))
-               (call (intern (format "om-parse-%s-at" it)))
-               (doc (format "Call `%s' with the current point." call))
-               (body `(,call (point))))
-          (eval `(defun ,name () ,doc ,body)))))
-
-(defun om-parse-this-buffer ()
-  "Return org-data document tree for the current buffer.
-Contrary to the org-element specification, the org-data element
-returned from this function will have :begin and :end properties."
-  (let* ((c (om--get-children (org-element-parse-buffer)))
-         (b (if c (om--get-property :begin (-first-item c)) 1))
-         (e (if c (om--get-property :end (-last-item c)) 1)))
-    (om--construct 'org-data `(:begin ,b :end ,e) c)))
-
-;;; side effects
-
-;; write
-
-(om--defun-node om-insert (point node)
-  "Convert NODE to a string and insert at POINT in the current buffer.
-Return NODE."
-  (om--verify point integerp)
-  (save-excursion
-    (goto-char point)
-    (insert (om-to-string node)))
-  node)
-
-(om--defun-node om-insert-tail (point node)
-  "Like `om-insert' but insert NODE at POINT and move to end of insertion."
-  (om--verify point integerp)
-  (let ((s (om-to-string node)))
-    (save-excursion
-      (goto-char point)
-      (insert s))
-    (goto-char (+ point (length s))))
-  node)
-
-(defun om--apply-overlays (os)
-  (cl-flet
-      ((apply-overlays
-        (o)
-        (let* ((beg (plist-get o :start))
-               (end (plist-get o :end))
-               (props (plist-get o :props))
-               (o* (make-overlay beg end)))
-          (--each (-partition 2 props) (apply #'overlay-put o* it)))))
-    (-each os #'apply-overlays)))
-
-(om--defun-node* om-update (fun node)
-  "Replace NODE in the current buffer with a new one. 
-FUN is a function that takes NODE as its only argument and returns a
-modified NODE. This modified element is then written in place of the
-old element in the current buffer."
-  ;; if node is of type 'org-data' it will have no props
-  (let* ((begin (or (om--get-property :begin node) (point-min)))
-         (end (or (om--get-property :end node) (point-max)))
-         ;; get the outline overlays that make text invisible
-         (ov-cmd (->>
-                  (overlays-in begin end)
-                  (--filter (eq 'outline (overlay-get it 'invisible)))
-                  (--map (list :start (overlay-start it)
-                               :end (overlay-end it)
-                               :props (overlay-properties it)))
-                  (list 'apply 'om--apply-overlays))))
-    ;; hacky way to add overlays to undo tree
-    (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
-    (delete-region begin end)
-    (->> (funcall fun node) (om-insert begin))
-    nil))
-
-;; generate all update functions for corresponding parse functions
-;; since all take function args, also generate anaphoric forms
-(--each '(object element table-row item headline subtree section)
-  (let* ((update-at
-          (intern (format "om-update-%s-at" it)))
-         (update-this
-          (intern (format "om-update-this-%s" it)))
-         (update-at-doc
-          (-as-> (list "Update %1$s under POINT using FUN."
-                       "FUN takes an %1$s and returns a modified %1$s")
-                 fmt
-                 (s-join "\n" fmt)
-                 (format fmt it)))
-         (update-this-doc
-          (-as-> (list "Update %1$s under current point using FUN."
-                       "FUN takes an %1$s and returns a modified %1$s")
-                 fmt
-                 (s-join "\n" fmt)
-                 (format fmt it)))
-         (call (intern (format "om-parse-%s-at" it)))
-         (update-at-body `(om-update fun (,call point)))
-         (update-this-body `(,update-at (point) fun)))
-    (eval `(om--defun* ,update-at (point fun)
-             ,update-at-doc
-             ,update-at-body))
-    (eval `(om--defun* ,update-this (fun)
-             ,update-this-doc
-             ,update-this-body))))
-
-(om--defun* om-update-this-buffer (fun)
-  "Apply FUN to the contents of the current buffer.
-FUN is a unary function that takes a node of type 'org-data' and
-returns a modified node."
-  (om-update fun (om-parse-this-buffer)))
-
-;; fold
-;; TODO this will fold items improperly
-(defun om--flag-elem-contents (flag node)
-  (om--verify flag booleanp
-                   node om--is-node-p)
-  (-let (((&plist :contents-begin :contents-end)
-          (om--get-all-properties node)))
-    (outline-flag-region (1- contents-begin) (1- contents-end) flag)))
-
-(om--defun-node om-fold (node)
-  "Fold the children of NODE if they exist."
-  (om--flag-elem-contents t node))
-
-(om--defun-node om-unfold (node)
-  "Unfold the children of NODE if they exist."
-  (om--flag-elem-contents nil node))
-
-;;; misc functions
-
-(defun om-length (node)
-  "Return the character length of NODE."
-  (if (not node) 0
-    (let ((b (om--get-property :begin node))
-          (e (om--get-property :end node)))
-      (if (and b e) (- e b)
-        (error "Can't determine element length")))))
-
-(defun om-now ()
-  "Return list representing the current time without hours and minutes.
-This is meant to be used as input for functions such as
-`om-build-timestamp'."
-  (->> (decode-time) (-select-by-indices '(3 4 5)) (reverse)))
-
-(defun om-now-long ()
-  "Return list representing the current time with hours and minutes.
-This is meant to be used as input for functions such as
-`om-build-timestamp'."
-  (->> (decode-time) (-select-by-indices '(1 2 3 4 5)) (reverse)))
-
-(om--defun-node om-get-type (node)
-  (om--get-type node))
-
-;;; matching operations
+;;; PATTERN MATCHING
 
 (defmacro om--modify-children (node form)
   "Recursively modify the children of NODE using FORM.
@@ -4036,6 +3733,281 @@ from NODE using PATTERN. This function itself returns nil.
 PATTERN follows the same rules as `om-match'."
   (-when-let (targets (om-match pattern node))
       (--each targets (funcall fun it))))
+
+
+;;; BUFFER PARSING
+
+;; parse at specific point
+
+(defun om-parse-object-at (point)
+  "Return the object tree under POINT or nil if not on an object.
+
+If TYPE is supplied, only return nil if the object under point is
+not of that type. TYPE is a symbol from `om-objects'."
+  (save-excursion
+    (goto-char point)
+    (let* ((context (org-element-context))
+           (type (om--get-type context))
+           (offset (cond
+                    ((memq type '(superscript subscript)) -1)
+                    ((eq type 'table-cell) -1)
+                    (t 0)))
+           (nesting (cond
+                     ((memq type '(superscript subscript)) '(0 1))
+                     ((eq type 'table-cell) '(0 0 0))
+                     (t '(0 0)))))
+      (-let* (((&plist :begin :end) (om--get-all-properties context))
+              (tree (org-element--parse-elements (+ begin offset) end 'first-section
+                                                 nil nil nil nil)))
+        (--> (car tree)
+             (om--get-descendent nesting it)
+             (om--filter-types org-element-all-objects it)
+             (if type (om--filter-type type it) it))))))
+
+(defun om--parse-element-at (point &optional type)
+  "Return element immediately under POINT.
+For a list of all possible return types refer to
+`org-element-all-elements'; this will return everything in this list
+except 'section' which is ambiguous when referring to a single point.
+(see `om-parse-section-at').
+
+If TYPE is supplied, only return nil if the object under point is
+not of that type. TYPE is a symbol from `org-element-all-elements'.
+Furthermore, setting TYPE to 'table-row' will prefer table-row
+elements over table elements and likewise when setting TYPE to 'item'
+for plain-list elements vs item elements."
+  (save-excursion
+    (goto-char point)
+    (let*
+        ((node (org-element-at-point))
+         (elem-type (om--get-type node)))
+      (if (not
+           (memq elem-type (append org-element-greater-elements
+                                   org-element-object-containers)))
+          node
+        (-let* (((&plist :begin :end) (om--get-all-properties node))
+                (tree (car (org-element--parse-elements
+                            begin end 'first-section nil nil nil nil)))
+                (nesting (cl-case elem-type
+                           (headline nil)
+                           (table (if (eq type 'table-row) '(0 0) '(0)))
+                           (plain-list (if (eq type 'item) '(0 0) '(0)))
+                           (t '(0)))))
+          (--> (om--get-descendent nesting tree)
+               (if type (om--filter-type type it) it)))))))
+
+(defun om-parse-element-at (point)
+  "Return element under POINT or nil if not on an element.
+
+This function will return every element available in `om-elements'
+with the exception of `section', `item', and `table-row'. To
+specifically parse these, use the functions `om-parse-section-at',
+`om-parse-item-at', and `om-parse-table-row-at'."
+  (om--parse-element-at point))
+
+(defun om-parse-table-row-at (point)
+  "Return table-row element under POINT or nil if not on a table-row."
+  (save-excursion
+    (goto-char point)
+    (beginning-of-line)
+    (om--parse-element-at (point) 'table-row)))
+
+(defun om-parse-item-at (point)
+  "Return item element under POINT or nil if not on an item.
+This will return the item even if POINT is not at the beginning of
+the line."
+  (save-excursion
+    (goto-char point)
+    (beginning-of-line)
+    (om--parse-element-at (point) 'item)))
+
+(defun om--parse-headline-subtree-at (point subtree)
+  (save-excursion
+    (goto-char point)
+    (when (ignore-errors (org-back-to-heading))
+      (let ((b (point))
+            (e (if subtree (org-end-of-subtree)
+                 (or (outline-next-heading) (point-max)))))
+        (car (org-element--parse-elements b e 'first-section
+                                          nil nil nil nil))))))
+
+(defun om-parse-headline-at (point)
+  "Return headline tree under POINT or nil if not on a headline.
+POINT does not need to be on the headline itself. Only the headline
+and its section will be returned. To include subheadlines, use
+`om-parse-subtree-at'."
+  (om--parse-headline-subtree-at point nil))
+
+(defun om-parse-subtree-at (point)
+  "Return headline tree under POINT or nil if not on a headline.
+POINT does not need to be on the headline itself. Unlike
+`om-parse-headline-at', the returned tree will include
+subheadlines."
+  (om--parse-headline-subtree-at point t))
+
+(defun om-parse-section-at (point)
+  "Return tree of the section under POINT or nil if not on a section.
+If POINT is on or within a headline, return the section under that
+headline. If POINT is before the first headline (if any), return
+the section at the top of the org buffer."
+  (save-excursion
+    (goto-char point)
+    (om--get-descendent
+     '(0)
+     (condition-case nil
+         (progn
+           (org-back-to-heading)
+           ;; TODO this is redundant
+           (om--parse-headline-subtree-at point nil))
+       (error
+        (progn
+          (org-element--parse-elements
+           (point-min) (or (outline-next-heading) (point-max))
+           'first-section nil nil nil nil)))))))
+
+;; parse at current point
+
+(-> '(object element table-row item headline subtree section)
+    (--each
+        (let* ((name (intern (format "om-parse-this-%s" it)))
+               (call (intern (format "om-parse-%s-at" it)))
+               (doc (format "Call `%s' with the current point." call))
+               (body `(,call (point))))
+          (eval `(defun ,name () ,doc ,body)))))
+
+(defun om-parse-this-buffer ()
+  "Return org-data document tree for the current buffer.
+Contrary to the org-element specification, the org-data element
+returned from this function will have :begin and :end properties."
+  (let* ((c (om--get-children (org-element-parse-buffer)))
+         (b (if c (om--get-property :begin (-first-item c)) 1))
+         (e (if c (om--get-property :end (-last-item c)) 1)))
+    (om--construct 'org-data `(:begin ,b :end ,e) c)))
+
+;;; BUFFER SIDE EFFECTS
+
+;; insert
+
+(om--defun-node om-insert (point node)
+  "Convert NODE to a string and insert at POINT in the current buffer.
+Return NODE."
+  (om--verify point integerp)
+  (save-excursion
+    (goto-char point)
+    (insert (om-to-string node)))
+  node)
+
+(om--defun-node om-insert-tail (point node)
+  "Like `om-insert' but insert NODE at POINT and move to end of insertion."
+  (om--verify point integerp)
+  (let ((s (om-to-string node)))
+    (save-excursion
+      (goto-char point)
+      (insert s))
+    (goto-char (+ point (length s))))
+  node)
+
+;; update
+
+(defun om--apply-overlays (os)
+  (cl-flet
+      ((apply-overlays
+        (o)
+        (let* ((beg (plist-get o :start))
+               (end (plist-get o :end))
+               (props (plist-get o :props))
+               (o* (make-overlay beg end)))
+          (--each (-partition 2 props) (apply #'overlay-put o* it)))))
+    (-each os #'apply-overlays)))
+
+(om--defun-node* om-update (fun node)
+  "Replace NODE in the current buffer with a new one. 
+FUN is a function that takes NODE as its only argument and returns a
+modified NODE. This modified element is then written in place of the
+old element in the current buffer."
+  ;; if node is of type 'org-data' it will have no props
+  (let* ((begin (or (om--get-property :begin node) (point-min)))
+         (end (or (om--get-property :end node) (point-max)))
+         ;; get the outline overlays that make text invisible
+         (ov-cmd (->>
+                  (overlays-in begin end)
+                  (--filter (eq 'outline (overlay-get it 'invisible)))
+                  (--map (list :start (overlay-start it)
+                               :end (overlay-end it)
+                               :props (overlay-properties it)))
+                  (list 'apply 'om--apply-overlays))))
+    ;; hacky way to add overlays to undo tree
+    (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
+    (delete-region begin end)
+    (->> (funcall fun node) (om-insert begin))
+    nil))
+
+;; generate all update functions for corresponding parse functions
+;; since all take function args, also generate anaphoric forms
+(--each '(object element table-row item headline subtree section)
+  (let* ((update-at
+          (intern (format "om-update-%s-at" it)))
+         (update-this
+          (intern (format "om-update-this-%s" it)))
+         (update-at-doc
+          (-as-> (list "Update %1$s under POINT using FUN."
+                       "FUN takes an %1$s and returns a modified %1$s")
+                 fmt
+                 (s-join "\n" fmt)
+                 (format fmt it)))
+         (update-this-doc
+          (-as-> (list "Update %1$s under current point using FUN."
+                       "FUN takes an %1$s and returns a modified %1$s")
+                 fmt
+                 (s-join "\n" fmt)
+                 (format fmt it)))
+         (call (intern (format "om-parse-%s-at" it)))
+         (update-at-body `(om-update fun (,call point)))
+         (update-this-body `(,update-at (point) fun)))
+    (eval `(om--defun* ,update-at (point fun)
+             ,update-at-doc
+             ,update-at-body))
+    (eval `(om--defun* ,update-this (fun)
+             ,update-this-doc
+             ,update-this-body))))
+
+(om--defun* om-update-this-buffer (fun)
+  "Apply FUN to the contents of the current buffer.
+FUN is a unary function that takes a node of type 'org-data' and
+returns a modified node."
+  (om-update fun (om-parse-this-buffer)))
+
+;; fold
+
+;; TODO this will fold items improperly
+(defun om--flag-elem-contents (flag node)
+  (om--verify flag booleanp
+                   node om--is-node-p)
+  (-let (((&plist :contents-begin :contents-end)
+          (om--get-all-properties node)))
+    (outline-flag-region (1- contents-begin) (1- contents-end) flag)))
+
+(om--defun-node om-fold (node)
+  "Fold the children of NODE if they exist."
+  (om--flag-elem-contents t node))
+
+(om--defun-node om-unfold (node)
+  "Unfold the children of NODE if they exist."
+  (om--flag-elem-contents nil node))
+
+;;; MISC FUNCTIONS
+
+(defun om-now ()
+  "Return list representing the current time without hours and minutes.
+This is meant to be used as input for functions such as
+`om-build-timestamp'."
+  (->> (decode-time) (-select-by-indices '(3 4 5)) (reverse)))
+
+(defun om-now-long ()
+  "Return list representing the current time with hours and minutes.
+This is meant to be used as input for functions such as
+`om-build-timestamp'."
+  (->> (decode-time) (-select-by-indices '(1 2 3 4 5)) (reverse)))
 
 (provide 'om)
 ;;; om.el ends here
