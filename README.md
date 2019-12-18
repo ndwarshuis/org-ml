@@ -339,6 +339,7 @@ Set, get, and map properties of nodes.
 * [om-timestamp-get-end-time](#om-timestamp-get-end-time-timestamp) `(timestamp)`
 * [om-timestamp-is-active-p](#om-timestamp-is-active-p-timestamp) `(timestamp)`
 * [om-timestamp-is-ranged-p](#om-timestamp-is-ranged-p-timestamp) `(timestamp)`
+* [om-timestamp-set-condensation](#om-timestamp-set-condensation-flag-timestamp) `(flag timestamp)`
 * [om-timestamp-set-start-time](#om-timestamp-set-start-time-time-timestamp) `(time timestamp)`
 * [om-timestamp-set-end-time](#om-timestamp-set-end-time-time-timestamp) `(time timestamp)`
 * [om-timestamp-set-single-time](#om-timestamp-set-single-time-time-timestamp) `(time timestamp)`
@@ -352,7 +353,9 @@ Set, get, and map properties of nodes.
 * [om-timestamp-truncate](#om-timestamp-truncate-timestamp) `(timestamp)`
 * [om-timestamp-truncate-start](#om-timestamp-truncate-start-timestamp) `(timestamp)`
 * [om-timestamp-truncate-end](#om-timestamp-truncate-end-timestamp) `(timestamp)`
-* [om-timestamp-set-condensation](#om-timestamp-set-condensation-flag-timestamp) `(flag timestamp)`
+
+### Timestamp (diary)
+
 * [om-timestamp-diary-set-value](#om-timestamp-diary-set-value-form-timestamp) `(form timestamp)`
 
 ## Branch/Child Manipulation
@@ -3122,6 +3125,55 @@ Return t if **`timestamp`** is ranged.
 
 ```
 
+#### om-timestamp-set-condensation `(flag timestamp)`
+
+Return **`timestamp`** with condensation set to **`flag`**.
+
+If timestamp is ranged but not outside of one day, it may be condensed
+(**`flag`** is t) to short format like [yyyy-mm-dd xxx hh:mm-hh:mm] or
+decondensed (**`flag`** is nil) to long format like [yyyy-mm-dd xxx
+hh:mm]--[yyyy-mm-dd xxx hh:mm]. If these conditions are not met,
+return **`timestamp`** untouched regardless of **`flag`**.
+
+Note: the default for all timestamp functions in `om.el` is to favor 
+condensed format.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00-13:00]
+
+(->> (om-parse-this-object)
+     (om-timestamp-set-condensation nil)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00-13:00]
+
+(->> (om-parse-this-object)
+     (om-timestamp-set-condensation nil)
+     (om-timestamp-set-condensation t)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 12:00-13:00]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(->> (om-parse-this-object)
+     (om-timestamp-set-condensation nil)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue 12:00]"
+
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-02 Wed]
+
+(->> (om-parse-this-object)
+     (om-timestamp-set-condensation nil)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+```
+
 #### om-timestamp-set-start-time `(time timestamp)`
 
 Set start time of **`timestamp`** element to **`time`**.
@@ -3524,54 +3576,8 @@ Return **`timestamp`** node with end time forced to short format.
 
 ```
 
-#### om-timestamp-set-condensation `(flag timestamp)`
 
-Return **`timestamp`** with condensation set to **`flag`**.
-
-If timestamp is ranged but not outside of one day, it may be condensed
-(**`flag`** is t) to short format like [yyyy-mm-dd xxx hh:mm-hh:mm] or
-decondensed (**`flag`** is nil) to long format like [yyyy-mm-dd xxx
-hh:mm]--[yyyy-mm-dd xxx hh:mm]. If these conditions are not met,
-return **`timestamp`** untouched regardless of **`flag`**.
-
-Note: the default for all timestamp functions in `om.el` is to favor 
-condensed format.
-
-```el
-;; Given the following contents:
-; [2019-01-01 Tue 12:00-13:00]
-
-(->> (om-parse-this-object)
-     (om-timestamp-set-condensation nil)
-     (om-to-trimmed-string))
- ;; => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
-
-;; Given the following contents:
-; [2019-01-01 Tue 12:00-13:00]
-
-(->> (om-parse-this-object)
-     (om-timestamp-set-condensation nil)
-     (om-timestamp-set-condensation t)
-     (om-to-trimmed-string))
- ;; => "[2019-01-01 Tue 12:00-13:00]"
-
-;; Given the following contents:
-; [2019-01-01 Tue 12:00]
-
-(->> (om-parse-this-object)
-     (om-timestamp-set-condensation nil)
-     (om-to-trimmed-string))
- ;; => "[2019-01-01 Tue 12:00]"
-
-;; Given the following contents:
-; [2019-01-01 Tue]--[2019-01-02 Wed]
-
-(->> (om-parse-this-object)
-     (om-timestamp-set-condensation nil)
-     (om-to-trimmed-string))
- ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-
-```
+### Timestamp (diary)
 
 #### om-timestamp-diary-set-value `(form timestamp)`
 
