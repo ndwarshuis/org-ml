@@ -355,6 +355,7 @@ Set, get, and map properties of nodes.
 * [om-timestamp-truncate-end](#om-timestamp-truncate-end-timestamp) `(timestamp)`
 * [om-timestamp-truncate](#om-timestamp-truncate-timestamp) `(timestamp)`
 * [om-timestamp-set-condensation](#om-timestamp-set-condensation-flag-timestamp) `(flag timestamp)`
+* [om-timestamp-diary-set-value](#om-timestamp-diary-set-value-form-timestamp) `(form timestamp)`
 
 ## Branch/Child Manipulation
 
@@ -3639,6 +3640,22 @@ condensed format.
      (om-timestamp-set-condensation nil)
      (om-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+```
+
+#### om-timestamp-diary-set-value `(form timestamp)`
+
+Set the value of **`timestamp`** node to **`form`**.
+**`timestamp`** must have a type `eq` to `diary`.
+
+```el
+;; Given the following contents:
+; <%%(diary-float t 4 2)>
+
+(->> (om-parse-this-object)
+     (om-timestamp-diary-set-value '(diary-float 1 3 2))
+     (om-to-string))
+ ;; => "<%%(diary-float 1 3 2)>"
 
 ```
 

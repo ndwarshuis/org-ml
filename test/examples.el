@@ -3067,7 +3067,15 @@
       (->> (om-parse-this-object)
            (om-timestamp-set-condensation nil)
            (om-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]")))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]")
+
+    (defexamples-content om-timestamp-diary-set-value
+      nil
+      (:buffer "<%%(diary-float t 4 2)>")
+      (->> (om-parse-this-object)
+           (om-timestamp-diary-set-value '(diary-float 1 3 2))
+           (om-to-string))
+      => "<%%(diary-float 1 3 2)>")))
 
 (def-example-group "Branch/Child Manipulation"
   "Set, get, and map the children of branch nodes."

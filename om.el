@@ -250,6 +250,20 @@
        ,`(om--defun-test-node ,arglist)
        ,@body)))
 
+(defmacro om--defun-timestamp (name arglist &rest args)
+  (declare (doc-string 3) (indent 2))
+  (om--defun-with-docstring-body args
+    (let* ((last (-last-item arglist))
+           (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
+           (msg (format "%s must be a non-diary timestamp node" pre)))
+      `(defun ,name ,arglist
+         ,docstring
+         (unless
+             (and (om--is-type-p 'timestamp ,last)
+                  (not (om--property-is-eq-p :type 'diary ,last)))
+           (error ,msg))
+         ,@body))))
+
 ;;; LIST OPERATIONS (EXTENDING DASH)
 
 (defun om--pad-or-truncate (length pad list)
@@ -2784,109 +2798,109 @@ and properties that may be used with this function."
 
 ;; timestamp
 
-;; (om--defun-node om-timestamp-get-start-timestamp (timestamp)
+;; (om--defun-timestamp om-timestamp-get-start-timestamp (timestamp)
 ;;   "Return the start of TIMESTAMP as a timestamp element.
 ;; If not a range, this will simply return TIMESTAMP unmodified."
 ;;   (om--timestamp-get-start-timestamp timestamp))
 
-;; (om--defun-node om-timestamp-get-end-timestamp (timestamp)
+;; (om--defun-timestamp om-timestamp-get-end-timestamp (timestamp)
 ;;   "Return the end of TIMESTAMP as a timestamp element.
 ;; If not a range, return nil."
 ;;   (and (om--timestamp-is-ranged-fast-p timestamp)
 ;;        (om--timestamp-get-end-timestamp timestamp)))
 
-(om--defun-node om-timestamp-get-start-time (timestamp)
+(om--defun-timestamp om-timestamp-get-start-time (timestamp)
   "Return the time list of TIMESTAMP or start time if a range.
 The return value will be a list as specified by the TIME argument in
 `om-build-timestamp!'."
   (om--timestamp-get-start-time timestamp))
 
-(om--defun-node om-timestamp-get-end-time (timestamp)
+(om--defun-timestamp om-timestamp-get-end-time (timestamp)
   "Return the end time list of TIMESTAMP end or nil if not a range.
 The return value will be a list as specified by the TIME argument in
 `om-build-timestamp!'."
   (and (om--timestamp-is-ranged-fast-p timestamp)
        (om--timestamp-get-end-time timestamp)))
 
-(om--defun-node om-timestamp-get-range (timestamp)
+(om--defun-timestamp om-timestamp-get-range (timestamp)
   "Return the range of TIMESTAMP in seconds as an integer.
 If non-ranged, this function will return 0. If ranged but
 the start time is in the future relative to end the time, return
 a negative integer."
   (om--timestamp-get-range timestamp))
 
-(om--defun-node om-timestamp-is-active-p (timestamp)
+(om--defun-timestamp om-timestamp-is-active-p (timestamp)
   "Return t if TIMESTAMP is active."
   (or (om--property-is-eq-p :type 'active timestamp)
       (om--property-is-eq-p :type 'active-range timestamp)))
 
-;; (om--defun-node om-timestamp-is-inactive-p (timestamp)
+;; (om--defun-timestamp om-timestamp-is-inactive-p (timestamp)
 ;;   "Return t if TIMESTAMP node is inactive."
 ;;   (or (om--property-is-eq-p :type 'inactive timestamp)
 ;;       (om--property-is-eq-p :type 'inactive-range timestamp)))
 
-(om--defun-node om-timestamp-is-ranged-p (timestamp)
+(om--defun-timestamp om-timestamp-is-ranged-p (timestamp)
   "Return t if TIMESTAMP is ranged."
   (or (om--property-is-eq-p :type 'active-range timestamp)
       (om--property-is-eq-p :type 'inactive-range timestamp)))
 
 ;; TODO not sure how I feel about these :(
-;; (om--defun-node om-timestamp-start-is-less-than-p (unixtime timestamp)
+;; (om--defun-timestamp om-timestamp-start-is-less-than-p (unixtime timestamp)
 ;;   "Return t if TIMESTAMP start time is less than UNIXTIME."
 ;;   (om--timestamp-start-is-less-than-p unixtime timestamp))
 
-;; (om--defun-node om-timestamp-start-is-greater-than-p (unixtime timestamp)
+;; (om--defun-timestamp om-timestamp-start-is-greater-than-p (unixtime timestamp)
 ;;   "Return t if TIMESTAMP start time is greater than UNIXTIME."
 ;;   (om--timestamp-start-is-greater-than-p unixtime timestamp))
 
-;; (om--defun-node om-timestamp-start-is-equal-to-p (unixtime timestamp)
+;; (om--defun-timestamp om-timestamp-start-is-equal-to-p (unixtime timestamp)
 ;;   "Return t if TIMESTAMP start time is equal to UNIXTIME."
 ;;   (om--timestamp-start-is-equal-to-p unixtime timestamp))
 
 ;; TODO what happens if not a range?
-;; (om--defun-node om-timestamp-end-is-less-than-p (unixtime timestamp)
+;; (om--defun-timestamp om-timestamp-end-is-less-than-p (unixtime timestamp)
 ;;   "Return t if TIMESTAMP end time is less than UNIXTIME."
 ;;   (om--timestamp-end-is-less-than-p unixtime timestamp))
 
-;; (om--defun-node om-timestamp-end-is-greater-than-p (unixtime timestamp)
+;; (om--defun-timestamp om-timestamp-end-is-greater-than-p (unixtime timestamp)
 ;;   "Return t if TIMESTAMP end time is greater than UNIXTIME."
 ;;   (om--timestamp-end-is-greater-than-p unixtime timestamp))
 
-;; (om--defun-node om-timestamp-end-is-equal-to-p (unixtime timestamp)
+;; (om--defun-timestamp om-timestamp-end-is-equal-to-p (unixtime timestamp)
 ;;   "Return t if TIMESTAMP end time is equal to UNIXTIME."
 ;;   (om--timestamp-end-is-equal-to-p unixtime timestamp))
 
-(om--defun-node om-timestamp-range-contains-p (unixtime timestamp)
+(om--defun-timestamp om-timestamp-range-contains-p (unixtime timestamp)
   "Return t if UNIXTIME is between start and end of TIMESTAMP node."
   (let ((ut1 (om--timestamp-get-start-unixtime timestamp))
         (ut2 (om--timestamp-get-end-unixtime timestamp)))
     (< ut1 unixtime ut2)))
 
-(om--defun-node om-timestamp-set-start-time (time timestamp)
+(om--defun-timestamp om-timestamp-set-start-time (time timestamp)
   "Set start time of TIMESTAMP element to TIME.
 TIME is a list analogous to the same argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-start-time time timestamp))
 
-(om--defun-node om-timestamp-set-end-time (time timestamp)
+(om--defun-timestamp om-timestamp-set-end-time (time timestamp)
   "Set end time of TIMESTAMP element to TIME.
 TIME is a list analogous to the same argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-end-time time timestamp))
 
-(om--defun-node om-timestamp-set-single-time (time timestamp)
+(om--defun-timestamp om-timestamp-set-single-time (time timestamp)
   "Set start time of TIMESTAMP to TIME, and remove the end time.
 TIME is a list analogous to the same argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-single-time time timestamp))
 
-(om--defun-node om-timestamp-set-double-time (time1 time2 timestamp)
+(om--defun-timestamp om-timestamp-set-double-time (time1 time2 timestamp)
   "Set start and end time of TIMESTAMP to TIME1 and TIME2 respectively.
 TIME1 and TIME2 are lists analogous to the TIME argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-double-time time1 time2 timestamp))
 
-(om--defun-node om-timestamp-set-range (range timestamp)
+(om--defun-timestamp om-timestamp-set-range (range timestamp)
   "Set the RANGE of TIMESTAMP.
 If TIMESTAMP is ranged, keep start time the same and adjust the end
 time. If not, make a new end time. The units for RANGE are in minutes
@@ -2894,12 +2908,12 @@ if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format."
   (om--timestamp-set-range range timestamp))
 
-(om--defun-node om-timestamp-set-type (type timestamp)
+(om--defun-timestamp om-timestamp-set-type (type timestamp)
   "Set type of TIMESTAMP element to TYPE.
 TYPE can be either `active' or `inactive'."
   (om--timestamp-set-type type timestamp))
 
-(om--defun-node om-timestamp-shift (n unit timestamp)
+(om--defun-timestamp om-timestamp-shift (n unit timestamp)
   "Shift TIMESTAMP time by N UNIT's.
 
 This function will move the start and end times together; therefore
@@ -2913,7 +2927,7 @@ transparently; for instance, supplying `minute' for UNIT and 90 for N
 will increase the hour property by 1 and the minute property by 30."
   (om--timestamp-shift-range n unit timestamp))
 
-(om--defun-node om-timestamp-shift-start (n unit timestamp)
+(om--defun-timestamp om-timestamp-shift-start (n unit timestamp)
   "Shift TIMESTAMP start time by N UNIT's.
 
 N and UNIT behave the same as those in `om-timestamp-shift'.
@@ -2923,7 +2937,7 @@ the shifted start time and the end time as that of TIMESTAMP. If this
 behavior is not desired, use `om-timestamp-shift'."
   (om--timestamp-shift-start n unit timestamp))
 
-(om--defun-node om-timestamp-shift-end (n unit timestamp)
+(om--defun-timestamp om-timestamp-shift-end (n unit timestamp)
   "Shift TIMESTAMP end time by N UNIT's.
 
 N and UNIT behave the same as those in `om-timestamp-shift'.
@@ -2933,23 +2947,23 @@ the shifted end time and the start time as that of TIMESTAMP. If this
 behavior is not desired, use `om-timestamp-shift'."
   (om--timestamp-shift-end n unit timestamp))
 
-(om--defun-node om-timestamp-toggle-active (timestamp)
+(om--defun-timestamp om-timestamp-toggle-active (timestamp)
   "Toggle the active/inactive type of TIMESTAMP element."
   (om--timestamp-toggle-active timestamp))
 
-(om--defun-node om-timestamp-truncate-start (timestamp)
+(om--defun-timestamp om-timestamp-truncate-start (timestamp)
   "Return TIMESTAMP node with start time forced to short format."
   (let ((time (->> (om--timestamp-get-start-time timestamp)
                    (om--time-truncate))))
     (om--timestamp-set-start-time time timestamp)))
 
-(om--defun-node om-timestamp-truncate-end (timestamp)
+(om--defun-timestamp om-timestamp-truncate-end (timestamp)
   "Return TIMESTAMP node with end time forced to short format."
   (let ((time (->> (om--timestamp-get-end-time timestamp)
                    (om--time-truncate))))
     (om--timestamp-set-end-time time timestamp)))
 
-(om--defun-node om-timestamp-truncate (timestamp)
+(om--defun-timestamp om-timestamp-truncate (timestamp)
   "Return TIMESTAMP node with start and end times forced to short format."
   (let ((t1 (->> (om--timestamp-get-start-time timestamp)
                     (om--time-truncate)))
@@ -2957,7 +2971,7 @@ behavior is not desired, use `om-timestamp-shift'."
                   (om--time-truncate))))
     (om--timestamp-set-double-time t1 t2 timestamp)))
 
-(om--defun-node om-timestamp-set-condensation (flag timestamp)
+(om--defun-timestamp om-timestamp-set-condensation (flag timestamp)
   "Return TIMESTAMP with condensation set to FLAG.
 
 If timestamp is ranged but not outside of one day, it may be condensed
@@ -2972,6 +2986,14 @@ condensed format."
            (om--timestamp-is-ranged-p timestamp))
       (om--timestamp-set-type-ranged (not flag) timestamp)
     timestamp))
+
+(defun om-timestamp-diary-set-value (form timestamp)
+  "Set the value of TIMESTAMP node to FORM.
+TIMESTAMP must have a type `eq' to `diary'."
+  (unless (and (om--is-type-p 'timestamp timestamp)
+               (om--property-is-eq-p :type 'diary timestamp))
+    (error "Last argument must be a diary timestamp node"))
+  (om--timestamp-set-diary-sexp form timestamp))
 
 ;;; elements
 ;;
