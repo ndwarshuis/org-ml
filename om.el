@@ -1117,10 +1117,6 @@ These are also known as \"recursive objects\" in `org-element.el'")
          (om--map-properties-strict (-drop 2 plist))))
    (t (error "Not a plist: %s" plist))))
 
-;; (defmacro om--map-properties-strict* (plist elem)
-;;   (let ((plist (om--plist-map-values (lambda (form) `(lambda (it) ,form)) plist)))
-;;     `(om--map-properties-strict ,plist ,elem)))
-
 ;;; BUILDER FUNCTIONS
 
 ;; build helpers
@@ -1303,10 +1299,6 @@ These are also known as \"recursive objects\" in `org-element.el'")
   (-when-let (parent (om--get-parent node))
     (if (om--is-type-p 'headline parent) parent
       (om--get-parent-headline parent))))
-
-;; (defun om--get-parent-item (node)
-;;   "Return the parent item element for NODE."
-;;   (om-match-parent node :many 'item))
 
 (defun om--set-property (prop value node)
   "Set property PROP in element NODE to VALUE."
@@ -1500,9 +1492,6 @@ FUN is a predicate function that takes one argument."
 
 ;; timestamp (regular)
 
-;; TODO this currently is set up to not allow short-ranged timestamps
-;; like YYYY-MM-DD XXX HH:MM-HH:MM
-
 (defun om--timestamp-get-start-time (timestamp)
   (-let (((&plist :minute-start n :hour-start h :day-start d
                   :month-start m :year-start y)
@@ -1540,15 +1529,7 @@ FUN is a predicate function that takes one argument."
    (memq (om--get-property :type timestamp) '(active active-range)))
 
 (defun om--timestamp-is-ranged-p (timestamp)
-  ;; (not (equal (-take 3 (om--timestamp-get-start-time timestamp))
-              ;; (-take 3 (om--timestamp-get-end-time timestamp)))))
   (/= 0 (om--timestamp-get-range timestamp)))
-
-(defun om--timestamp-is-ranged-hhmm-p (timestamp)
-  (-let* (((l s) (-split-at 3 (om--timestamp-get-start-time timestamp)))
-          ((L S) (-split-at 3 (om--timestamp-get-end-time timestamp))))
-    ;; TODO what if one of the s's has a nil?
-    (and (equal l L) (not (equal s S)))))
 
 (defun om--timestamp-is-ranged-lowres-p (timestamp)
   (-let* (((l s) (-split-at 3 (om--timestamp-get-start-time timestamp)))
@@ -1636,12 +1617,9 @@ float-times, which assumes the :type property is valid."
                     (om--unixtime-to-time-short it)))))
     (->> (om--timestamp-set-end-time-nocheck t2 timestamp)
          (om--timestamp-update-type-ranged))))
-         ;; (om--timestamp-set-type-ranged (/= 0 range)))))
 
 (defun om--timestamp-update-type-ranged (timestamp)
   (-> (om--timestamp-is-ranged-lowres-p timestamp)
-      ;; (and (om--timestamp-is-ranged-p timestamp)
-           ;; (not (om--timestamp-is-ranged-hhmm-p timestamp)))
       (om--timestamp-set-type-ranged timestamp)))
 
 (defun om--timestamp-set-type-ranged (ranged? timestamp)
@@ -1658,8 +1636,6 @@ float-times, which assumes the :type property is valid."
 
 (defun om--timestamp-set-type (type timestamp)
   (let* ((range? (om--timestamp-is-ranged-lowres-p timestamp))
-                 ;; (and (om--timestamp-is-ranged-p timestamp)
-                      ;; (not (om--timestamp-is-ranged-hhmm-p timestamp))))
          (type* (cl-case type
                   (active (if range? 'active-range 'active))
                   (inactive (if range? 'inactive-range 'inactive))
@@ -1704,12 +1680,7 @@ float-times, which assumes the :type property is valid."
   (om--set-property :raw-value (format "<%%%%%S>" form) timestamp))
 
 ;;; elements
-
-;; clock
-
-;; (defun om--clock-map-timestamp (fun clock)
-;;   (->> (om--map-property :value fun clock)))
-
+;;
 ;; headline
 
 (defun om--headline-set-title! (string stat-ckie headline)
@@ -1992,7 +1963,7 @@ All other arguments follow the same rules as `om-build-table'."
        (apply #'om-build-table :tblfm tblfm :post-blank post-blank)))
 
 ;;; INTERNAL CHILDREN FUNCTIONS
-;; operations on children of containers
+;; operations on children of branch nodes
 
 ;; generic
 
@@ -2113,12 +2084,6 @@ nested element to return."
         (t subheadlines))))
    headline))
 
-;; (defun om-headline-map-node-property (key fun headline)
-;;   (om--verify key stringp headline om-is-headline-p)
-;;   (om-match-map-first*
-;;    `(section property-drawer (:and node-property (:key ,key)))
-;;     (om--node-property-map-value fun it) headline))
-
 (defun om--map-or-build (map-fun build-fun pred-fun pos node)
   (om--map-children
    (lambda (children)
@@ -2136,21 +2101,21 @@ nested element to return."
          (-insert-at pos new children))))
    node))
 
-(defmacro om--map-or-build-nested (map-form &rest args)
-  ;; forms are of form (pred builder pos-fun)
-  (declare (indent 1))
-  (let* ((node (-last-item args))
-         (forms (-drop-last 1 args))
-         (first (car args))
-         (rem (cdr forms))
-         (pred-fun `(lambda (it) ,(nth 0 first)))
-         (build-fun `(lambda () (->> ,@(nreverse (--map (nth 1 it) forms)))))
-         (pos-fun `(lambda (it) ,(nth 2 first)))
-         (map-fun
-          (if (not rem) `(lambda (it) ,map-form)
-            `(lambda (inner)
-               (om--map-or-build-nested ,map-form ,@rem inner)))))
-    `(om--map-or-build ,map-fun ,build-fun ,pred-fun ,pos-fun ,node)))
+;; (defmacro om--map-or-build-nested (map-form &rest args)
+;;   ;; forms are of form (pred builder pos-fun)
+;;   (declare (indent 1))
+;;   (let* ((node (-last-item args))
+;;          (forms (-drop-last 1 args))
+;;          (first (car args))
+;;          (rem (cdr forms))
+;;          (pred-fun `(lambda (it) ,(nth 0 first)))
+;;          (build-fun `(lambda () (->> ,@(nreverse (--map (nth 1 it) forms)))))
+;;          (pos-fun `(lambda (it) ,(nth 2 first)))
+;;          (map-fun
+;;           (if (not rem) `(lambda (it) ,map-form)
+;;             `(lambda (inner)
+;;                (om--map-or-build-nested ,map-form ,@rem inner)))))
+;;     `(om--map-or-build ,map-fun ,build-fun ,pred-fun ,pos-fun ,node)))
 
 (defun om--headline-subtree-shift-level (n headline)
   (->> (om--headline-shift-level n headline)
@@ -2215,18 +2180,6 @@ nested element to return."
 
 ;; item
 
-;; (defun om--item-get-level (item)
-;;   "Return the level of ITEM element item (1 indexed)."
-;;   (cl-labels
-;;       ((get-level
-;;         (item acc)
-;;         (let ((parent (->> (om--get-property :parent item)
-;;                            (om--get-property :parent))))
-;;           (if (om-item-p parent)
-;;               (get-level parent (+ 1 acc))
-;;             acc))))
-;;     (get-level item 1)))
-
 (defun om--item-get-sublist (item)
   "Return plain-list under ITEM element or nil if none."
   (-some->> (om--get-children item) (assoc 'plain-list)))
@@ -2240,8 +2193,6 @@ nested element to return."
 (defun om--table-pad-or-truncate (length list)
   (let ((pad (om-build-table-cell "")))
     (om--pad-or-truncate length pad list)))
-
-;; TODO if I feel like being super extra I can add pivot operators :)
 
 (defun om--table-delete-column (index table)
   (om--verify index integerp)
@@ -2265,7 +2216,6 @@ nested element to return."
         (row new-cell)
         (if (om--property-is-eq-p :type 'rule row) row
           (om--map-children
-           ;; (lambda (cells) (om--insert-at index new-cell cells))
            (lambda (cells) (funcall fun new-cell cells))
            row)))
        (map-rows
@@ -2577,27 +2527,7 @@ elements may have other elements as children."
 
 ;;; PUBLIC PROPERTY FUNCTIONS
 
-(defun om--append-documentation (fun string)
-  (--> (documentation fun)
-       (concat it "\n" string)
-       (function-put fun 'function-documentation it)))
-
-(defun om--get-type-alist-operation (op)
-  (->> om--type-alist
-       (--map (cons (car it) (--filter (plist-get (cdr it) op) (cdr it))))
-       (-filter #'cdr)))
-
-(defun om--format-alist-operations (ops)
-  (->> ops
-       (--map (cons (car it) (-map #'car (cdr it))))
-       (--map (format "\n%s\n%s"
-                      (car it)
-                      (s-join "\n" (--map (format "- %S" it) (cdr it)))))
-       (s-join "\n")))
-
 ;;; polymorphic
-
-;; containing
 
 (om--defun-node om-contains-point-p (point node)
   "Return t if POINT is within the boundaries of NODE."
@@ -2608,18 +2538,12 @@ elements may have other elements as children."
         (<= begin point end)
       (error "Node boundaries are not defined"))))
 
-;; set
-
 (om--defun-node om-set-property (prop value node)
   "Set property PROP to VALUE of NODE.
 
 See builder functions for a list of properties and their rules for
 each type."
   (om--set-property-strict prop value node))
-
-;; (->> (om--get-type-alist-operation :set)
-;;      (om--format-alist-operations)
-;;      (om--append-documentation 'om-set-property))
 
 (om--defun-node om-set-properties (plist node)
   "Set all properties of NODE to the values corresponding to PLIST.
@@ -2630,18 +2554,13 @@ See builder functions for a list of properties and their rules for
 each type."
   (om--set-properties-strict plist node))
 
-;; get
-
+;; TODO add plural version of this...
 (om--defun-node om-get-property (prop node)
   "Return the value or property PROP of NODE.
 
 See builder functions for a list of properties and their rules for
 each type."
   (om--get-property-strict prop node))
-
-;; TODO add plural version of this...
-
-;; map
 
 (om--defun-node* om-map-property (prop fun node)
   "Apply FUN to the value of property PROP of NODE.
@@ -2669,8 +2588,6 @@ its values are forms to be mapped to these properties."
   `(let ((plist* (om--plist-map-values (lambda (form) `(lambda (it) ,form)) ',plist)))
     (om--map-properties-strict plist* ,node)))
 
-;; toggle
-
 (om--defun-node om-toggle-property (prop node)
   "Flip the value of property PROP of NODE.
 This function only applies to properties that are booleans.
@@ -2682,12 +2599,6 @@ The following elements and properties are supported:"
         (om--map-property-strict prop #'not node)
       (error "Not a toggle-able property"))))
 
-(->> (om--get-type-alist-operation :toggle)
-     (om--format-alist-operations)
-     (om--append-documentation 'om-toggle-property))
-
-;; shift
-
 (om--defun-node om-shift-property (prop n node)
   "Shift property PROP by N (an integer) units of NODE.
 This only applies the properties that are represented as integers.
@@ -2698,15 +2609,6 @@ The following elements and properties are supported:"
     (if fun
         (om--map-property-strict* prop (funcall fun n it) node)
       (error "Not a shiftable property"))))
-
-(->> (om--get-type-alist-operation :shift)
-     (--map (cons (car it) (--remove (eq :post-blank (car it)) (cdr it))))
-     (-filter #'cdr)
-     (om--format-alist-operations)
-     (concat "\nall elements\n- :post-blank\n")
-     (om--append-documentation 'om-shift-property))
-
-;; insert
 
 (om--defun-node om-insert-into-property (prop index string node)
   "Insert STRING into PROP at INDEX of NODE if not already there.
@@ -2726,12 +2628,6 @@ The following elements and properties are supported:"
         (error "Property '%s' in node of type '%s' is not a string-list"
                prop type)))))
 
-(->> (om--get-type-alist-operation :string-list)
-     (om--format-alist-operations)
-     (om--append-documentation 'om-insert-into-property))
-
-;; remove
-
 (om--defun-node om-remove-from-property (prop string node)
   "Remove STRING from PROP of NODE.
 This only applies to properties that are represented as lists of 
@@ -2746,8 +2642,6 @@ and properties that may be used with this function."
       (error "Property '%s' in node of type '%s' is not a string-list"
              prop type))))
 
-;; plist-put
-
 (om--defun-node om-plist-put-property (prop key value node)
   "Insert KEY and VALUE pair into PROP of NODE.
 KEY is a keyword and VALUE is a symbol. This only applies to 
@@ -2759,12 +2653,6 @@ The following elements and properties are supported:."
     (if flag
         (om--map-property-strict* prop (plist-put it key value) node)
       (error "Not a plist property"))))
-
-(->> (om--get-type-alist-operation :plist)
-     (om--format-alist-operations)
-     (om--append-documentation 'om-plist-put-property))
-
-;; plist-remove
 
 (om--defun-node om-plist-remove-property (prop key node)
   "Remove KEY and its value from PROP of NODE.
@@ -2779,36 +2667,54 @@ and properties that may be used with this function."
         (om--map-property-strict* prop (om--plist-remove key it) node)
       (error "Not a plist property"))))
 
-;;; generic
+;;; polymorphic (documentation)
 
-;; TODO do these even work?
+(defun om--append-documentation (fun string)
+  (--> (documentation fun)
+       (concat it "\n" string)
+       (function-put fun 'function-documentation it)))
 
+(defun om--get-type-alist-operation (op)
+  (->> om--type-alist
+       (--map (cons (car it) (--filter (plist-get (cdr it) op) (cdr it))))
+       (-filter #'cdr)))
+
+(defun om--format-alist-operations (ops)
+  (->> ops
+       (--map (cons (car it) (-map #'car (cdr it))))
+       (--map (format "\n%s\n%s"
+                      (car it)
+                      (s-join "\n" (--map (format "- %S" it) (cdr it)))))
+       (s-join "\n")))
+
+(->> (om--get-type-alist-operation :toggle)
+     (om--format-alist-operations)
+     (om--append-documentation 'om-toggle-property))
+
+(->> (om--get-type-alist-operation :shift)
+     (--map (cons (car it) (--remove (eq :post-blank (car it)) (cdr it))))
+     (-filter #'cdr)
+     (om--format-alist-operations)
+     (concat "\nall elements\n- :post-blank\n")
+     (om--append-documentation 'om-shift-property))
+
+(->> (om--get-type-alist-operation :string-list)
+     (om--format-alist-operations)
+     (om--append-documentation 'om-insert-into-property))
+
+(->> (om--get-type-alist-operation :plist)
+     (om--format-alist-operations)
+     (om--append-documentation 'om-plist-put-property))
 
 ;;; objects
 ;;
 ;; statistics-cookie
-
-;; TODO make a test for this?
-(om--defun-node om-headline-get-statistics-cookie (headline)
-  "Return the statistics cookie object from HEADLINE if it exists."
-  (om--headline-get-statistics-cookie headline))
 
 (om--defun-node om-statistics-cookie-is-complete-p (statistics-cookie)
   "Return t is STATISTICS-COOKIE element is complete."
   (om--statistics-cookie-is-complete-p statistics-cookie))
 
 ;; timestamp
-
-;; (om--defun-timestamp om-timestamp-get-start-timestamp (timestamp)
-;;   "Return the start of TIMESTAMP as a timestamp element.
-;; If not a range, this will simply return TIMESTAMP unmodified."
-;;   (om--timestamp-get-start-timestamp timestamp))
-
-;; (om--defun-timestamp om-timestamp-get-end-timestamp (timestamp)
-;;   "Return the end of TIMESTAMP as a timestamp element.
-;; If not a range, return nil."
-;;   (and (om--timestamp-is-ranged-fast-p timestamp)
-;;        (om--timestamp-get-end-timestamp timestamp)))
 
 (om--defun-timestamp om-timestamp-get-start-time (timestamp)
   "Return the time list of TIMESTAMP or start time if a range.
@@ -2835,41 +2741,10 @@ a negative integer."
   (or (om--property-is-eq-p :type 'active timestamp)
       (om--property-is-eq-p :type 'active-range timestamp)))
 
-;; (om--defun-timestamp om-timestamp-is-inactive-p (timestamp)
-;;   "Return t if TIMESTAMP node is inactive."
-;;   (or (om--property-is-eq-p :type 'inactive timestamp)
-;;       (om--property-is-eq-p :type 'inactive-range timestamp)))
-
 (om--defun-timestamp om-timestamp-is-ranged-p (timestamp)
   "Return t if TIMESTAMP is ranged."
   (or (om--property-is-eq-p :type 'active-range timestamp)
       (om--property-is-eq-p :type 'inactive-range timestamp)))
-
-;; TODO not sure how I feel about these :(
-;; (om--defun-timestamp om-timestamp-start-is-less-than-p (unixtime timestamp)
-;;   "Return t if TIMESTAMP start time is less than UNIXTIME."
-;;   (om--timestamp-start-is-less-than-p unixtime timestamp))
-
-;; (om--defun-timestamp om-timestamp-start-is-greater-than-p (unixtime timestamp)
-;;   "Return t if TIMESTAMP start time is greater than UNIXTIME."
-;;   (om--timestamp-start-is-greater-than-p unixtime timestamp))
-
-;; (om--defun-timestamp om-timestamp-start-is-equal-to-p (unixtime timestamp)
-;;   "Return t if TIMESTAMP start time is equal to UNIXTIME."
-;;   (om--timestamp-start-is-equal-to-p unixtime timestamp))
-
-;; TODO what happens if not a range?
-;; (om--defun-timestamp om-timestamp-end-is-less-than-p (unixtime timestamp)
-;;   "Return t if TIMESTAMP end time is less than UNIXTIME."
-;;   (om--timestamp-end-is-less-than-p unixtime timestamp))
-
-;; (om--defun-timestamp om-timestamp-end-is-greater-than-p (unixtime timestamp)
-;;   "Return t if TIMESTAMP end time is greater than UNIXTIME."
-;;   (om--timestamp-end-is-greater-than-p unixtime timestamp))
-
-;; (om--defun-timestamp om-timestamp-end-is-equal-to-p (unixtime timestamp)
-;;   "Return t if TIMESTAMP end time is equal to UNIXTIME."
-;;   (om--timestamp-end-is-equal-to-p unixtime timestamp))
 
 (om--defun-timestamp om-timestamp-range-contains-p (unixtime timestamp)
   "Return t if UNIXTIME is between start and end of TIMESTAMP node."
@@ -3006,6 +2881,10 @@ TIMESTAMP must have a type `eq' to `diary'. FORM is a quoted list."
 
 ;; headline
 
+(om--defun-node om-headline-get-statistics-cookie (headline)
+  "Return the statistics cookie object from HEADLINE if it exists."
+  (om--headline-get-statistics-cookie headline))
+
 (om--defun-node om-headline-is-done-p (headline)
   "Return t if HEADLINE element has a done todo keyword."
   (-> (om--get-property :todo-keyword headline)
@@ -3020,7 +2899,6 @@ TIMESTAMP must have a type `eq' to `diary'. FORM is a quoted list."
   "Return t if HEADLINE element is commented."
   (om--property-is-non-nil-p :commentedp headline))
 
-;; TODO refactor this to be in terms of property-list functions
 (om--defun-node om-headline-has-tag-p (tag headline)
   "Return t if HEADLINE element is tagged with TAG."
   (if (member tag (om--get-property :tags headline)) t))
@@ -3074,6 +2952,7 @@ subheadlines will not be counted)."
 
 ;; planning
 
+;; TODO this is shorthand
 (om--defun-node om-planning-set-timestamp (prop planning-list planning)
   "Set the timestamp of PLANNING matching PROP.
 
@@ -3084,9 +2963,9 @@ is the same as that described in `om-build-planning!'."
   (let ((ts (om--planning-list-to-timestamp planning-list)))
     (om--set-property-strict prop ts planning)))
 
-;;; PUBLIC CHILDREN FUNCTIONS
+;;; PUBLIC BRANCH/CHILD FUNCTIONS
 
-;; generic
+;; polymorphic
 
 (om--defun-node om-children-contain-point-p (point node)
   "Return t if POINT is within the boundaries of NODE's children."
@@ -3098,9 +2977,9 @@ is the same as that described in `om-build-planning!'."
         (<= contents-begin point contents-end)
       (error "Node boundaries are not defined"))))
 
+;; TODO refactor all these in the -defun-node macro with new 'branch-node' arg
 (defun om-get-children (node)
   "Return the children of NODE as a list."
-  ;; TODO use private predicate here...
   (om--verify node om-is-branch-node-p)
   (om--get-children node))
 
@@ -3108,7 +2987,6 @@ is the same as that described in `om-build-planning!'."
   "Set the children of NODE to CHILDREN.
 CHILDREN is a list of nodes; the types permitted in this list depend
 on the type of NODE."
-  ;; TODO use private predicate here...
   (om--verify node om-is-branch-node-p)
   (let ((type (om--get-type node)))
     (om--set-children-by-type type children node)))
@@ -3117,21 +2995,14 @@ on the type of NODE."
   "Apply FUN to the children of NODE. 
 FUN is a function that takes the current children as a list and
 returns a modified children as a list."
-  ;; TODO use private predicate here...
   (om--verify node om-is-branch-node-p)
   (om--map-children fun node))
 
 (defun om-is-childless-p (node)
   "Return t if NODE is empty.
 This will throw an error if NODE is not a branch type."
-  ;; TODO use private predicate here...
   (om--verify node om-is-branch-node-p)
   (om--is-childless-p node))
-
-;; (defun om-contents-contains-point-p (point node)
-;;   "Return t if integer POINT is within the beginning and end of NODE's children."
-;;   (<= (om--get-property :contents-begin node) point
-;;       (om--get-property :contents-end node)))
 
 ;; (defun om--wrap (type args)
 ;;   (-> (format "om-build-%s" type) (intern) (apply args)))
@@ -3189,14 +3060,6 @@ This will throw an error if NODE is not a branch type."
 ;;   "Remove all recursive formatting from NODE."
 ;;   (om-remove-formatting org-element-all-objects node))
 
-;; objects
-;;
-;; link
-
-;; TODO add shortcut function for this
-(om--defun-node om-link-set-description (desc link)
-  (om--set-children-by-type 'link desc link))
-
 ;; elements
 ;;
 ;; headline
@@ -3222,51 +3085,6 @@ returned."
 (om--defun-node om-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
   (om--headline-get-planning headline))
-
-;; (om--defun-node om-headline-is-closed-p (headline)
-;;   "Return t if HEADLINE element is closed."
-;;   (and (->> (om--headline-get-planning headline)
-;;             (om--get-property :closed))
-;;        t))
-
-;; (om--defun-node om-headline-is-deadlined-p (headline)
-;;   "Return t if HEADLINE element has a deadline."
-;;   (and (->> (om--headline-get-planning headline)
-;;             (om--get-property :deadline))
-;;        t))
-
-;; (om--defun-node om-headline-is-scheduled-p (headline)
-;;   "Return t if HEADLINE element is scheduled."
-;;   (and (->> (om--headline-get-planning headline)
-;;             (om--get-property :scheduled))
-;;        t))
-
-;; (om--defun-node om-headline-set-section (section headline)
-;;   "Set the section of HEADLINE to SECTION."
-;;   (om--headline-set-section section headline))
-
-;; (om--defun-node om-headline-set-planning (planning headline)
-;;   "Set the planning of HEADLINE to PLANNING."
-;;   (om--headline-set-planning section headline))
-
-;; (om--defun-node om-set-planning (planning-plist headline)
-;;   (let ((keys (om--plist-get-keys planning-plist)))
-;;     (--> (om--plist-get-vals planning-plist)
-;;          (--map (-some->> it (om-build-timestamp 'inactive)) it)
-;;          (-interleave keys it)
-;;          (om-set-properties it headline))))
-
-;; item
-
-;; (defun om-item-get-paragraph (item)
-;;   "Return the paragraph immediately within ITEM or nil if none."
-;;   (om--verify item om-is-item-p)
-;;   (om--item-get-paragraph item))
-
-;; (defun om-item-get-sublist (item)
-;;   "Return the plain-list immediately within ITEM or nil if none."
-;;   (om--verify item om-is-item-p)
-;;   (om--item-get-sublist item))
 
 ;; plain-list
 
@@ -3409,13 +3227,6 @@ This will not move the children under the item at CHILD-INDEX."
           superscript subscript table-cell underline)
   "Elements/objects that will be blank if printed and empty.")
 
-(defun om-is-zero-length-p (node)
-  "Return t if NODE will print as a blank string."
-  (-if-let (children (om--get-children node))
-      (-all? #'om-is-zero-length-p children)
-    (and (om--is-any-type-p om--rm-if-empty node)
-         (om--is-childless-p node))))
-
 (defconst om--blank-if-empty
   '(center-block drawer dynamic-block property-drawer quote-block
                  special-block verse-block)
@@ -3443,6 +3254,7 @@ This is a workaround for a bug.")
 
 (defun om-to-string (node)
   "Return NODE as an interpreted string without text properties."
+  ;; TODO verify node (or nil)
   (->> node
        ;; some objects and greater elements should be removed if blank
        ;; table and plain list will error, and the others make no
@@ -3744,7 +3556,7 @@ This is meant to be used as input for functions such as
 (om--defun-node om-get-type (node)
   (om--get-type node))
 
-;;; generalized CRUD operations
+;;; matching operations
 
 (defmacro om--modify-children (node form)
   "Recursively modify the children of NODE using FORM.
@@ -3763,8 +3575,6 @@ original children to be modified."
               (--map (rec it))
               (om--construct type (nth 1 node)))))))
      (rec ,node)))
-
-;; find
 
 (defun om--match-filter (pattern children)
   (pcase pattern
@@ -3893,6 +3703,8 @@ original children to be modified."
             (-take b*)
             (-drop a*)))))))
     (_ (om--match-pattern nil nil pattern node))))
+
+;; match
 
 (om--defun-node om-match (pattern node)
   "Return a list of all nodes matching PATTERN in NODE.
@@ -4195,17 +4007,6 @@ in the immediate, top level children of NODE."
               (om--splice-at it nodes* index)))
         node)
     (om--splice-at node nodes* index)))
-
-;; (defun om-match-delete-in-place (node query &rest queries)
-;;   (let ((begin (om--get-property :begin node))
-;;         (end (om--get-property :end node))
-;;         (new-text (-> (apply #'om-match-delete node query queries)
-;;                       (org-element-interpret-data)
-;;                       (s-trim))))
-;;     (delete-region begin end)
-;;     (save-excursion
-;;       (goto-char begin)
-;;       (insert new-text))))
 
 ;; misc
 
