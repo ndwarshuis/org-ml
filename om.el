@@ -178,6 +178,29 @@ These are also known as \"recursive objects\" in `org-element.el'")
   "Return t is LIST is a branch node."
   (om--is-any-type-p om-branch-nodes list))
 
+;;; INTERNAL PREDICATES
+
+(defun om--is-oneline-string-p (x)
+  (and (stringp x) (not (s-contains? "\n" x))))
+
+(defun om--is-oneline-string-or-nil-p (x)
+  (or (null x) (om--is-oneline-string-p x)))
+
+(defun om--is-non-neg-integer-p (x)
+  (and (integerp x) (<= 0 x)))
+
+(defun om--is-non-neg-integer-or-nil-p (x)
+  (or (null x) (om--is-non-neg-integer-p x)))
+
+(defun om--is-pos-integer-p (x)
+  (and (integerp x) (< 0 x)))
+
+(defun om--is-pos-integer-or-nil-p (x)
+  (or (null x) (om--is-pos-integer-p x)))
+
+(defun om--is-string-list-p (x)
+  (or (null x) (and (listp x) (-all? #'om--is-oneline-string-p x))))
+
 ;;; BOILERPLATE MACROS
 
 ;; better cl-defun
@@ -530,29 +553,6 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 (defun om--filter-types (types node)
   "Return NODE if it is one of TYPES or nil otherwise."
   (and (om--is-any-type-p types node) node))
-
-;; property value predicates
-
-(defun om--is-oneline-string-p (x)
-  (and (stringp x) (not (s-contains? "\n" x))))
-
-(defun om--is-oneline-string-or-nil-p (x)
-  (or (null x) (om--is-oneline-string-p x)))
-
-(defun om--is-non-neg-integer-p (x)
-  (and (integerp x) (<= 0 x)))
-
-(defun om--is-non-neg-integer-or-nil-p (x)
-  (or (null x) (om--is-non-neg-integer-p x)))
-
-(defun om--is-pos-integer-p (x)
-  (and (integerp x) (< 0 x)))
-
-(defun om--is-pos-integer-or-nil-p (x)
-  (or (null x) (om--is-pos-integer-p x)))
-
-(defun om--is-string-list-p (x)
-  (or (null x) (and (listp x) (-all? #'om--is-oneline-string-p x))))
 
 ;; property value predicates (type specific)
 
