@@ -382,11 +382,6 @@ These are also known as \"recursive objects\" in `org-element.el'")
 
 ;; defun with runtime type checking
 
-;; (defmacro om--verify-type (node type)
-;;   `(unless (om--is-type-p ,type ,node)
-;;      (error "Arg '%s' with value %s must be type '%s'"
-;;             ',node ,node ',type)))
-
 (defmacro om--defun-test-node (arglist)
   (-let* ((type (-last-item arglist))
           (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
