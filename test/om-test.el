@@ -353,7 +353,6 @@
   (should-error (om--make-kwarg-let "one"))
   (should-error (om--make-kwarg-let '(1))))
 
-
 (ert-deftest om--partition-rest-args/kwargs ()
   (should (equal '((:one one) nil) (om--partition-rest-args '(:one one) '(:one) nil)))
   (should (equal '((:one one) nil) (om--partition-rest-args '(:one one) '(:one) t))))
@@ -370,7 +369,9 @@
   ;; invalid keywords
   (should-error (om--partition-rest-args '(:one one) '(:two) nil))
   ;; too many arguments
-  (should-error (om--partition-rest-args '(:one one two) (:one) nil)))
+  (should-error (om--partition-rest-args '(:one one two) (:one) nil))
+  ;; multiple keywords
+  (should-error (om--partition-rest-args '(:one one :one three two) (:one) nil)))
 
 (ert-deftest om--match-filter/index ()
   (let ((contents '(0 1 2 3 4 5)))

@@ -251,10 +251,27 @@ These are also known as \"recursive objects\" in `org-element.el'")
                (->> (-partition-all 2 args)
                     (--split-with (keywordp (car it)))))
               (restargs (apply #'append restargs)))
+        ;; ensure only valid keywords are used
         (-some->> (-difference (--map (car it) kwargs) kws)
+                  (--map (format "%S" it))
+                  (s-join ", ")
                   (error "Invalid keyword(s) found: %s"))
-        (when (-filter #'keywordp restargs)
-          (error "Keywords not allowed in rest arguments when kw-args used"))
+        ;; ensure keywords are only used once per call
+        (-some->> (-group-by #'car kwargs)
+                  (--filter (< 1 (length (cdr it))))
+                  (--map (format "%S" (car it)))
+                  (s-join ", ")
+                  (error "Keyword(s) used multiple times: %s"))
+        ;; ensure that keyword pairs are only used immediately after
+        ;; positional arguments
+        (-some->>
+         (-filter #'keywordp restargs)
+         (--map (format "%S" (car it)))
+         (s-join ", ")
+         (error (s-join " "
+                        '("Keyword-value pairs must be immediately"
+                          "after positional arguments. These keywords"
+                          "were interpreted as rest arguments: %s"))))
         (when (and restargs (not use-rest?))
           (error "Too many arguments supplied"))
         (list (apply #'append kwargs) restargs))))
