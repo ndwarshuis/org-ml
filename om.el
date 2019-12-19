@@ -2020,17 +2020,6 @@ automatically if TIMESTAMP is ranged."
    (om--headline-get-section headline)
    (--first (om--is-type-p 'property-drawer it))))
 
-(defun om--headline-get-node-properties (headline)
-  (-some->>
-   (om--headline-get-properties-drawer headline)
-   (om--get-children)
-   (--filter (om--is-type-p 'node-property it))))
-
-(defun om--headline-get-planning (headline)
-  (-some->> (om--headline-get-section headline)
-            (om--get-children)
-            (--first (om--is-type-p 'planning it))))
-
 (defun om--headline-map-subheadlines (fun headline)
   (om--map-children
    (lambda (children)
@@ -2144,22 +2133,6 @@ automatically if TIMESTAMP is ranged."
   (let ((pad (om-build-table-cell "")))
     (om--pad-or-truncate length pad list)))
 
-(defun om--table-delete-column (index table)
-  (om--verify index integerp)
-  (cl-flet*
-      ((delete-cell
-        (cells)
-        (om--remove-at index cells))
-       (map-row 
-        (row)
-        (if (om--property-is-eq-p :type 'rule row) row
-          (om--map-children #'delete-cell row))))
-    (om--map-children* (-map #'map-row it) table)))
-
-(defun om--table-delete-row (index table)
-  (om--verify index integerp)
-  (om--map-children* (om--remove-at index it) table))
-
 (defun om--column-map-down-rows (fun column table)
   (cl-flet*
       ((zip-into-rows
@@ -2177,40 +2150,10 @@ automatically if TIMESTAMP is ranged."
              (-zip-with #'zip-into-rows rows))))
     (om--map-children #'map-rows table)))
 
-(defun om--table-insert-column (index column table)
-  (om--verify index integerp)
-  (om--column-map-down-rows
-   (lambda (new-cell cells) (om--insert-at index new-cell cells))
-   column
-   table))
-
-(defun om--table-insert-row (index row table)
-  (om--verify index integerp)
-  (let ((row (if (om--property-is-eq-p :type 'rule row) row
-               (let ((width (om--table-get-width table)))
-                 (om--map-children*
-                  (om--table-pad-or-truncate width it)
-                  row)))))
-    (om--map-children* (om--insert-at index row it) table)))
-
-(defun om--table-get-column (column table)
-  (-some->> (om--get-children table)
-            (--filter (om--property-is-eq-p :type 'standard it))
-            (--map (->> (om--get-children it)
-                        (om--nth column)))))
-
 (defun om--table-get-row (row table)
   (-some->> (om--get-children table)
             (--filter (om--property-is-eq-p :type 'standard it))
             (om--nth row)))
-
-(defun om--table-get-cell (row column table)
-  "Return table-cell element at ROW and COLUMN indices in TABLE element.
-Hlines do not count toward row indices, and all indices are
-zero-indexed."
-  (-some->> (om--table-get-row row table)
-            (om--get-children)
-            (om--nth column)))
 
 (defun om--table-replace-column (index column table)
   (om--verify index integerp)
@@ -2234,9 +2177,6 @@ zero-indexed."
                    (om--replace-at column-index cell it)))))
     (om--table-replace-row row-index row table)))
 
-(defun om--table-clear-cell (row-index column-index table)
-  (om--table-replace-cell row-index column-index (om-build-table-cell " ") table))
-
 (defun om--table-clear-row (index table)
   ;; this assumes the blank cell will be padded with other blank cells
   (om--table-replace-row index (om-build-table-row (om-build-table-cell " ")) table))
@@ -2244,9 +2184,6 @@ zero-indexed."
 (defun om--table-clear-column (index table)
   ;; this assumes the blank cell will be padded with other blank cells
   (om--table-replace-column index (list (om-build-table-cell "")) table))
-
-(defun om--table-get-height (table)
-  (length (om--get-children table)))
 
 (defun om--table-get-width (table)
   (->> (om--get-children table)
@@ -3272,11 +3209,16 @@ returned."
 
 (om--defun-node om-headline-get-node-properties (headline)
   "Return a list of node-properties nodes in HEADLINE or nil if none."
-  (om--headline-get-node-properties headline))
+  (-some->>
+   (om--headline-get-properties-drawer headline)
+   (om--get-children)
+   (--filter (om--is-type-p 'node-property it))))
 
 (om--defun-node om-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
-  (om--headline-get-planning headline))
+  (-some->> (om--headline-get-section headline)
+            (om--get-children)
+            (--first (om--is-type-p 'planning it))))
 
 (om--defun-node om-headline-get-path (headline)
   "Return tree path of HEADLINE node.
@@ -3317,15 +3259,28 @@ TYPE is one of the symbols `unordered' or `ordered'."
 (om--defun-node om-table-get-cell (row-index column-index table)
   "Return table-cell node at ROW-INDEX and COLUMN-INDEX in TABLE node.
 Rule-type rows do not count toward row indices."
-  (om--table-get-cell row-index column-index table))
+  ;; TODO verify
+  (-some->> (om--table-get-row row-index table)
+            (om--get-children)
+            (om--nth column-index)))
 
 (om--defun-node om-table-delete-row (row-index table)
   "Delete the row at ROW-INDEX in TABLE node."
-  (om--table-delete-row row-index table))
+  (om--verify row-index integerp)
+  (om--map-children* (om--remove-at row-index it) table))
 
 (om--defun-node om-table-delete-column (column-index table)
   "Delete the column at COLUMN-INDEX in TABLE node."
-  (om--table-delete-column column-index table))
+  (om--verify column-index integerp)
+  (cl-flet*
+      ((delete-cell
+        (cells)
+        (om--remove-at column-index cells))
+       (map-row 
+        (row)
+        (if (om--property-is-eq-p :type 'rule row) row
+          (om--map-children #'delete-cell row))))
+    (om--map-children* (-map #'map-row it) table)))
 
 (om--defun-node om-table-insert-column! (column-index column-text table)
   "Insert COLUMN-TEXT at COLUMN-INDEX in TABLE node.
@@ -3333,8 +3288,12 @@ Rule-type rows do not count toward row indices."
 COLUMN-INDEX is the index of the column and COLUMN-TEXT is a list of
 strings to be made into table-cells to be inserted following the same
 syntax as `om-build-table-cell!'."
+  (om--verify column-index integerp)
   (let ((column (-map #'om-build-table-cell! column-text)))
-    (om--table-insert-column column-index column table)))
+    (om--column-map-down-rows
+     (lambda (new-cell cells) (om--insert-at column-index new-cell cells))
+     column
+     table)))
 
 (om--defun-node om-table-insert-row! (row-index row-text table)
   "Insert ROW-TEXT at ROW-INDEX in TABLE node.
@@ -3342,9 +3301,16 @@ syntax as `om-build-table-cell!'."
 ROW-INDEX is the index of the column and ROW-TEXT is a list of strings
 to be made into table-cells to be inserted following the same syntax
 as `om-build-table-row!'."
+  ;; TODO refactor this...
+  (om--verify row-index integerp)
   (if (not row-text) (om--table-clear-row row-index table)
     (let ((row (om-build-table-row! row-text)))
-      (om--table-insert-row row-index row table))))
+      (let ((row (if (om--property-is-eq-p :type 'rule row) row
+                   (let ((width (om--table-get-width table)))
+                     (om--map-children*
+                       (om--table-pad-or-truncate width it)
+                       row)))))
+        (om--map-children* (om--insert-at row-index row it) table)))))
 
 (om--defun-node om-table-replace-cell! (row-index column-index
                                                   cell-text table)
@@ -4208,8 +4174,6 @@ returns a modified node."
 
 ;; TODO this will fold items improperly
 (defun om--flag-elem-contents (flag node)
-  (om--verify flag booleanp
-                   node om--is-node-p)
   (-let (((&plist :contents-begin :contents-end)
           (om--get-all-properties node)))
     (outline-flag-region (1- contents-begin) (1- contents-end) flag)))
