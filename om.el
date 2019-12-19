@@ -41,6 +41,143 @@
 (require 'dash)
 (require 's)
 
+;;; NODE SET AND RELATIONAL CONSTANTS
+
+(defconst om-object-restrictions
+  (->> org-element-object-restrictions
+       ;; remove non-objects
+       (--remove (memq (car it) '(inlinetask item headline keyword)))
+       ;; add plain-text type
+       (--map-when (not (eq (car it) 'table-row)) (-snoc it 'plain-text)))
+  "Alist of object restrictions for object containers.
+Unlike `org-element-object-restrictions', this only includes objects
+and object containers and includes the 'plain-text' type.")
+
+(defconst om-element-restrictions
+  ;; TODO add inlinetask
+  ;; this includes all elements except those that are restricted
+  ;; (see comments below)
+  (let ((standard '(babel-call center-block clock comment
+                          comment-block diary-sexp drawer
+                          dynamic-block example-block
+                          export-block fixed-width footnote-definition
+                          horizontal-rule
+                          keyword latex-environment
+                          paragraph
+                          plain-list planning property-drawer
+                          quote-block special-block
+                          src-block table verse-block)))
+    ;; TODO center blocks can't be in themselves
+    `((center-block ,@standard)
+      ;; TODO drawers can't be in themselves
+      (drawer ,@standard)
+      ;; TODO dynamic blocks can't be in themselves
+      (dynamic-block ,@standard)
+      ;; TODO cannot contain itself
+      (footnote-definition ,@standard)
+      ;; headlines and sections can only be in headlines
+      (headline headline section)
+      (item ,@standard)
+      ;; items can only be in plain-lists
+      (plain-list item)
+      ;; node-properties can only be in property-drawers
+      (property-drawer node-property)
+      ;; TODO cannot contain itself
+      (quote-block ,@standard)
+      (section ,@standard)
+      (special-block ,@standard)
+      ;; table-rows can only be in tables
+      (table table-row)))
+  "Alist of element restrictions for greater elements.")
+
+(defconst om-node-restrictions
+  (append om-element-restrictions om-object-restrictions)
+  "Alist of all restrictions for containers.")
+
+(defconst om-elements
+  (cons 'org-data org-element-all-elements)
+  "List of all element types including 'org-data'.")
+
+(defconst om-objects
+  (cons 'plain-text org-element-all-objects)
+  "List of all object types including 'plain-text'.")
+
+(defconst om-nodes
+  (append om-elements om-objects)
+  "List of all node types.")
+
+(defvaralias 'om-branch-nodes-permitting-child-objects
+  'org-element-object-containers
+  "List of node types that can have objects as children.
+These are also known as \"object containers\" in `org-element.el'")
+
+(defconst om-branch-elements-permitting-child-objects
+  (-intersection om-branch-nodes-permitting-child-objects om-elements)
+  "List of element types that can have objects as children.")
+
+(defconst om-branch-elements-permitting-child-elements
+  (cons 'org-data org-element-greater-elements)
+  "List of element types that can have elements as children.
+These are also known as \"greater elements\" in `org-element.el'")
+
+(defconst om-branch-elements
+  (append om-branch-elements-permitting-child-objects
+          om-branch-elements-permitting-child-elements)
+  "List of element types that can have children.")
+
+(defvaralias 'om-branch-objects
+  'org-element-recursive-objects
+  "List of object types that can have objects as children.
+These are also known as \"recursive objects\" in `org-element.el'")
+
+(defconst om-branch-nodes
+  (append om-branch-elements om-branch-objects)
+  "List of node types that can have children.")
+
+(defconst om-leaf-elements
+  (-difference om-elements om-branch-elements)
+  "List of element types that are leaves.")
+
+(defconst om-leaf-objects
+  (-difference om-objects om-branch-objects)
+  "List of object types that are leaves.")
+
+(defconst om-node-leaves
+  (append om-leaf-objects om-leaf-elements)
+  "List of node types that are leaves.")
+
+(defconst om--item-tag-restrictions
+  (->> org-element-object-restrictions
+       (alist-get 'item)
+       (cons 'plain-text)))
+
+(defconst om--headline-title-restrictions
+  (->> org-element-object-restrictions
+       (alist-get 'headline)
+       (cons 'plain-text)))
+
+;;; INTERNAL TYPE FUNCTIONS
+
+(defalias 'om--get-type 'org-element-type)
+;; (defalias 'om--get-class 'org-element-class)
+
+(defun om--is-type-p (type node)
+  "Return t if NODE's type is `eq' to TYPE (a symbol)."
+  ;; TODO ensure type is valid?
+  (eq (om--get-type node) type))
+
+(defun om--is-any-type-p (types node)
+  "Return t if NODE's type is any in TYPES (a list of symbols)."
+  (if (memq (om--get-type node) types) t))
+
+(defun om--is-node-p (list)
+  "Return t is LIST is a node."
+  (om--is-any-type-p om-nodes list))
+
+(defun om--is-branch-node-p (list)
+  "Return t is LIST is a branch node."
+  (om--is-any-type-p om-branch-nodes list))
+
 ;;; BOILERPLATE MACROS
 
 ;; better cl-defun
@@ -222,18 +359,20 @@
 
 ;; defun with runtime type checking
 
-(defmacro om--verify-type (node type)
-  `(unless (om--is-type-p ,type ,node)
-     (error "Arg '%s' with value %s must be type '%s'"
-            ',node ,node ',type)))
+;; (defmacro om--verify-type (node type)
+;;   `(unless (om--is-type-p ,type ,node)
+;;      (error "Arg '%s' with value %s must be type '%s'"
+;;             ',node ,node ',type)))
 
 (defmacro om--defun-test-node (arglist)
   (-let* ((type (-last-item arglist))
           (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
           ((post test)
-           (if (eq type 'node)
-               '("node" (om--is-node-p))
-             `(,(format "node of type %s" type) (om--is-type-p ',type))))
+           (cl-case type
+             (node '("node" (om--is-node-p)))
+             (branch-node '("branch node" (om--is-branch-node-p)))
+             (t `(,(format "node of type %s" type)
+                  (om--is-type-p ',type)))))
           (msg (format "%s must be a %s" pre post)))
     `(unless (,@test ,type) (error ,msg))))
 
@@ -380,138 +519,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
         (om--map-first* (substring it 1) ss))
     (error "Could not make secondary string from %S" string)))
 
-;;; NODE SET AND RELATIONAL CONSTANTS
-
-(defconst om-object-restrictions
-  (->> org-element-object-restrictions
-       ;; remove non-objects
-       (--remove (memq (car it) '(inlinetask item headline keyword)))
-       ;; add plain-text type
-       (--map-when (not (eq (car it) 'table-row)) (-snoc it 'plain-text)))
-  "Alist of object restrictions for object containers.
-Unlike `org-element-object-restrictions', this only includes objects
-and object containers and includes the 'plain-text' type.")
-
-(defconst om-element-restrictions
-  ;; TODO add inlinetask
-  ;; this includes all elements except those that are restricted
-  ;; (see comments below)
-  (let ((standard '(babel-call center-block clock comment
-                          comment-block diary-sexp drawer
-                          dynamic-block example-block
-                          export-block fixed-width footnote-definition
-                          horizontal-rule
-                          keyword latex-environment
-                          paragraph
-                          plain-list planning property-drawer
-                          quote-block special-block
-                          src-block table verse-block)))
-    ;; TODO center blocks can't be in themselves
-    `((center-block ,@standard)
-      ;; TODO drawers can't be in themselves
-      (drawer ,@standard)
-      ;; TODO dynamic blocks can't be in themselves
-      (dynamic-block ,@standard)
-      ;; TODO cannot contain itself
-      (footnote-definition ,@standard)
-      ;; headlines and sections can only be in headlines
-      (headline headline section)
-      (item ,@standard)
-      ;; items can only be in plain-lists
-      (plain-list item)
-      ;; node-properties can only be in property-drawers
-      (property-drawer node-property)
-      ;; TODO cannot contain itself
-      (quote-block ,@standard)
-      (section ,@standard)
-      (special-block ,@standard)
-      ;; table-rows can only be in tables
-      (table table-row)))
-  "Alist of element restrictions for greater elements.")
-
-(defconst om-node-restrictions
-  (append om-element-restrictions om-object-restrictions)
-  "Alist of all restrictions for containers.")
-
-(defconst om-elements
-  (cons 'org-data org-element-all-elements)
-  "List of all element types including 'org-data'.")
-
-(defconst om-objects
-  (cons 'plain-text org-element-all-objects)
-  "List of all object types including 'plain-text'.")
-
-(defconst om-nodes
-  (append om-elements om-objects)
-  "List of all node types.")
-
-(defvaralias 'om-branch-nodes-permitting-child-objects
-  'org-element-object-containers
-  "List of node types that can have objects as children.
-These are also known as \"object containers\" in `org-element.el'")
-
-(defconst om-branch-elements-permitting-child-objects
-  (-intersection om-branch-nodes-permitting-child-objects om-elements)
-  "List of element types that can have objects as children.")
-
-(defconst om-branch-elements-permitting-child-elements
-  (cons 'org-data org-element-greater-elements)
-  "List of element types that can have elements as children.
-These are also known as \"greater elements\" in `org-element.el'")
-
-(defconst om-branch-elements
-  (append om-branch-elements-permitting-child-objects
-          om-branch-elements-permitting-child-elements)
-  "List of element types that can have children.")
-
-(defvaralias 'om-branch-objects
-  'org-element-recursive-objects
-  "List of object types that can have objects as children.
-These are also known as \"recursive objects\" in `org-element.el'")
-
-(defconst om-branch-nodes
-  (append om-branch-elements om-branch-objects)
-  "List of node types that can have children.")
-
-(defconst om-leaf-elements
-  (-difference om-elements om-branch-elements)
-  "List of element types that are leaves.")
-
-(defconst om-leaf-objects
-  (-difference om-objects om-branch-objects)
-  "List of object types that are leaves.")
-
-(defconst om-node-leaves
-  (append om-leaf-objects om-leaf-elements)
-  "List of node types that are leaves.")
-
-(defconst om--item-tag-restrictions
-  (->> org-element-object-restrictions
-       (alist-get 'item)
-       (cons 'plain-text)))
-
-(defconst om--headline-title-restrictions
-  (->> org-element-object-restrictions
-       (alist-get 'headline)
-       (cons 'plain-text)))
-
-;;; INTERNAL TYPE FUNCTIONS
-
-(defalias 'om--get-type 'org-element-type)
-(defalias 'om--get-class 'org-element-class)
-
-(defun om--is-node-p (list)
-  "Return t is LIST is a node."
-  (om--is-any-type-p om-nodes list))
-
-(defun om--is-type-p (type node)
-  "Return t if NODE's type is `eq' to TYPE (a symbol)."
-  ;; TODO ensure type is valid?
-  (eq (om--get-type node) type))
-
-(defun om--is-any-type-p (types node)
-  "Return t if NODE's type is any in TYPES (a list of symbols)."
-  (if (memq (om--get-type node) types) t))
+;;; STRICT PROPERTY CHECKING
 
 ;; filters
 
@@ -2458,7 +2466,6 @@ All other arguments follow the same rules as `om-build-table'."
   (->> (--map (om-build-table-row! it) row-lists)
        (apply #'om-build-table :tblfm tblfm :post-blank post-blank)))
 
-
 ;;; PUBLIC TYPE FUNCTIONS
 
 (om--defun-node om-get-type (node)
@@ -2479,7 +2486,7 @@ All other arguments follow the same rules as `om-build-table'."
 
 (om--defun-node om-is-branch-node-p (node)
   "Return t if NODE is a branch node."
-  (om--is-any-type-p om-branch-nodes node))
+  (om--is-branch-node-p node))
 
 (om--defun-node om-node-may-have-child-objects-p (node)
   "Return t if NODE is a branch node that may have child objects."
@@ -2932,42 +2939,37 @@ is the same as that described in `om-build-planning!'."
 
 ;; polymorphic
 
-(om--defun-node om-children-contain-point-p (point node)
-  "Return t if POINT is within the boundaries of NODE's children."
+(om--defun-node om-children-contain-point-p (point branch-node)
+  "Return t if POINT is within the boundaries of BRANCH-NODE's children."
   ;; TODO point should be a positive integer only
   (om--verify point integerp)
   (-let (((&plist :contents-begin :contents-end)
-          (om--get-all-properties node)))
+          (om--get-all-properties branch-node)))
     (if (and (integerp contents-begin) (integerp contents-end))
         (<= contents-begin point contents-end)
       (error "Node boundaries are not defined"))))
 
-;; TODO refactor all these in the -defun-node macro with new 'branch-node' arg
-(defun om-get-children (node)
-  "Return the children of NODE as a list."
-  (om--verify node om-is-branch-node-p)
-  (om--get-children node))
+(om--defun-node om-get-children (branch-node)
+  "Return the children of BRANCH-NODE as a list."
+  (om--get-children branch-node))
 
-(defun om-set-children (children node)
-  "Set the children of NODE to CHILDREN.
+(om--defun-node om-set-children (children branch-node)
+  "Set the children of BRANCH-NODE to CHILDREN.
 CHILDREN is a list of nodes; the types permitted in this list depend
 on the type of NODE."
-  (om--verify node om-is-branch-node-p)
-  (let ((type (om--get-type node)))
-    (om--set-children-by-type type children node)))
+  (let ((type (om--get-type branch-node)))
+    (om--set-children-by-type type children branch-node)))
 
-(om--defun* om-map-children (fun node)
-  "Apply FUN to the children of NODE. 
+(om--defun-node* om-map-children (fun branch-node)
+  "Apply FUN to the children of BRANCH-NODE. 
 FUN is a function that takes the current children as a list and
 returns a modified children as a list."
-  (om--verify node om-is-branch-node-p)
-  (om--map-children fun node))
+  (om--map-children fun branch-node))
 
-(defun om-is-childless-p (node)
-  "Return t if NODE is empty.
-This will throw an error if NODE is not a branch type."
-  (om--verify node om-is-branch-node-p)
-  (om--is-childless-p node))
+(om--defun-node om-is-childless-p (branch-node)
+  "Return t if BRANCH-NODE is empty.
+This will throw an error if BRANCH-NODE is not a branch type."
+  (om--is-childless-p branch-node))
 
 ;; (defun om--wrap (type args)
 ;;   (-> (format "om-build-%s" type) (intern) (apply args)))
