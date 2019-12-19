@@ -323,5 +323,20 @@ function will simply return the point of the next headline."
                (not (cl-intersection neg-tags-list heading-tags :test 'equal)))
           (om-skip-heading)))))
 
+;;; MISC FUNCTIONS
+
+(defun om-now ()
+  "Return list representing the current time without hours and minutes.
+This is meant to be used as input for functions such as
+`om-build-timestamp'."
+  (->> (decode-time) (-select-by-indices '(3 4 5)) (reverse)))
+
+(defun om-now-long ()
+  "Return list representing the current time with hours and minutes.
+This is meant to be used as input for functions such as
+`om-build-timestamp'."
+  (->> (decode-time) (-select-by-indices '(1 2 3 4 5)) (reverse)))
+
+
 (provide 'om)
 ;;; om.el ends here
