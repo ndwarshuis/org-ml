@@ -149,17 +149,18 @@ These are also known as \"recursive objects\" in `org-element.el'")
 (defconst om--item-tag-restrictions
   (->> org-element-object-restrictions
        (alist-get 'item)
-       (cons 'plain-text)))
+       (cons 'plain-text))
+  "List of nodes which may be used in item node tag properties.")
 
 (defconst om--headline-title-restrictions
   (->> org-element-object-restrictions
        (alist-get 'headline)
-       (cons 'plain-text)))
+       (cons 'plain-text))
+  "List of nodes which may be used in item headline title properties.")
 
 ;;; INTERNAL TYPE FUNCTIONS
 
 (defalias 'om--get-type 'org-element-type)
-;; (defalias 'om--get-class 'org-element-class)
 
 (defun om--is-type-p (type node)
   "Return t if NODE's type is `eq' to TYPE (a symbol)."
@@ -181,24 +182,31 @@ These are also known as \"recursive objects\" in `org-element.el'")
 ;;; INTERNAL PREDICATES
 
 (defun om--is-oneline-string-p (x)
+  "Return t if X is a string with no newlines."
   (and (stringp x) (not (s-contains? "\n" x))))
 
 (defun om--is-oneline-string-or-nil-p (x)
+  "Return t if X is a string with no newlines or nil."
   (or (null x) (om--is-oneline-string-p x)))
 
 (defun om--is-non-neg-integer-p (x)
+  "Return t if X is a non-negative integer."
   (and (integerp x) (<= 0 x)))
 
 (defun om--is-non-neg-integer-or-nil-p (x)
+  "Return t if X is a non-negative integer or nil."
   (or (null x) (om--is-non-neg-integer-p x)))
 
 (defun om--is-pos-integer-p (x)
+  "Return t if X is a positive integer."
   (and (integerp x) (< 0 x)))
 
 (defun om--is-pos-integer-or-nil-p (x)
+  "Return t if X is a positive integer or nil."
   (or (null x) (om--is-pos-integer-p x)))
 
 (defun om--is-string-list-p (x)
+  "Return t if X is a list of strings without newlines or nil."
   (or (null x) (and (listp x) (-all? #'om--is-oneline-string-p x))))
 
 ;;; BOILERPLATE MACROS
@@ -216,16 +224,19 @@ These are also known as \"recursive objects\" in `org-element.el'")
            (intern))))
 
   (defun om--verify-pos-args (pos-args)
+    "Return POS-ARGS if it is not a list of all symbols or nil, else throw error."
     (if (-all? #'symbolp pos-args) pos-args
       (error "All positional arguments must be symbols")))
 
-  (defun om--verify-rest-arg (resarg)
-    (if (and (>= 1 (length resarg)) (symbolp (car resarg)))
-        (car resarg)
+  (defun om--verify-rest-arg (rest-arg)
+    "Return REST-ARG if it a list with only one symbol or nil, else throw error."
+    (if (and (>= 1 (length rest-arg)) (symbolp (car rest-arg)))
+        (car rest-arg)
       (error "Rest argument must only have one member")))
 
   (defun om--make-kwarg-let (kwarg)
-    "For each in KWARGS, return a plist."
+    ;; TODO add more docs here
+    "Return plist for KWARG."
     (cl-flet
         ((make-plist
           (arg kw init)
@@ -246,11 +257,16 @@ These are also known as \"recursive objects\" in `org-element.el'")
         (_ (error "Invalid keyword argument: %s" kwarg)))))
 
   (defun om--throw-kw-error (msg keywords)
+    "Throw an error with MSG with formatted list of KEYWORDS."
     (->> (--map (format "%S" it) keywords)
          (s-join ", ")
          (error (concat msg ": %s"))))
 
   (defun om--partition-rest-args (args kws use-rest?)
+    "Return cons cell with ARGS partitioned into keyword and rest arguments.
+KWS is a list of valid keywords to use when deciding which in ARGS
+is a keyword-value pair, and USE-REST? is a boolean that determines
+if rest arguments are to be considered at all."
     (if (not kws) (list nil args)
       (-let* (((kwargs restargs)
                (->> (-partition-all 2 args)
@@ -278,6 +294,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
         (list (apply #'append kwargs) restargs))))
 
   (defun om--make-header (body args)
+    ;; TODO explain this better...but first actually understand it :/
+    "Return a valid header from BODY and ARGS."
     (let ((header (caar (macroexp-parse-body body))))
       ;; Macro expansion can take place in the middle of
       ;; apparently harmless computation, so it should not
@@ -335,9 +353,23 @@ These are also known as \"recursive objects\" in `org-element.el'")
   (defmacro om--defun-kw (name args &rest body)
     "Define NAME as a function.
 
-   ((VAR [PRED])...
-    [&rest (VAR [PRED]]
-    [&key (([KEYWORD] VAR) [[PRED] [INITFORM]])...])"
+This is like `cl-defun' except it allows &key to be used in
+conjunction with &rest without freaking out. Args can be specified
+using the following syntax:
+
+(VAR ... [&key (([KEYWORD] VAR) [INITFORM])...] [&rest VAR])
+
+where VAR is a symbol for the variable identifier, KEYWORD is a
+keyword that will be used to specify VAR in a function call, and
+INITFORM is an atom or form that will be the default value for keyword
+VAR if it is not give in a function call.
+
+When calling functions defined with this, keywords can be given in any
+order as long as they are after all positional arguments, and rest
+arguments will be interpreted as anything not belonging to a key-val
+pair (but only if &rest was used to define the function). This implies
+that keywords may not be used as values for the rest argument in
+function calls."
     ;; TODO wtf does this stuff do...???
     (declare (debug
               ;; Same as defun but use cl-lambda-list.
@@ -354,6 +386,11 @@ These are also known as \"recursive objects\" in `org-element.el'")
 ;; defun which also makes anaphoric form
 
 (defmacro om--verify (&rest args)
+  "Return type-checking form from ARGS.
+ARGS is a list of ARGUMENT-PREDICATE pairs, where ARGUMENT is a
+symbol matching an argument in the function's signature, and
+PREDICATE tests the value bound to ARGUMENT after a function call.
+If PREDICATE fails, print a generic error message."
   (let ((tests
          (->>
           (-partition 2 args)
@@ -366,6 +403,10 @@ These are also known as \"recursive objects\" in `org-element.el'")
     `(progn ,@tests)))
 
 (defmacro om--defun-with-docstring-body (args &rest rest)
+  "Return a form that splits ARGS into `docstring' and `body'.
+`docstring' is bound to the docstring if it exists, and `body' is
+bound to all forms after the docstring. These two symbols are
+available to any computations present in REST."
   ;; the third arg is a docstring if it is a string and there
   ;; is at least one thing after it to be the body
   (declare (indent 1))
@@ -376,6 +417,13 @@ These are also known as \"recursive objects\" in `org-element.el'")
      ,@rest))
 
 (defmacro om--defun* (name arglist &rest args)
+  "Return a function definition for NAME, ARGLIST, and ARGS.
+This will also make a mirrored anaphoric form macro definition. This
+assumes that `fun' represents a unary function which will be used
+somewhere in the definition's body. When making the anaphoric form,
+`fun' will be replaced by the symbol `form', and `form' will be
+wrapped in a lambda call binding the unary argument to the symbol
+`it'."
   (declare (doc-string 3) (indent 2))
   (om--defun-with-docstring-body args
     (-let* ((name* (intern (format "%s*" name)))
@@ -401,6 +449,12 @@ These are also known as \"recursive objects\" in `org-element.el'")
 ;; defun with runtime type checking
 
 (defmacro om--defun-test-node (arglist)
+  "Return a type-checking form based on ARGLIST.
+ARGLIST is a list of symbols from a function definition's signature,
+and the type checker will use a predicate based solely on the
+symbol's name. This will only make a type checker for the last
+argument in arglist, and assumes that argument will be bound to a
+node."
   (-let* ((type (-last-item arglist))
           (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
           ((post test)
@@ -413,6 +467,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
     `(unless (,@test ,type) (error ,msg))))
 
 (defmacro om--defun-node (name arglist &rest args)
+  "Return a function definition for NAME, ARGLIST, and ARGS.
+Will insert a type checker according to `om--defun-test-node'."
   (declare (doc-string 3) (indent 2))
   (om--defun-with-docstring-body args
     `(defun ,name ,arglist
@@ -423,6 +479,10 @@ These are also known as \"recursive objects\" in `org-element.el'")
 ;; combine type checking and anaphoric form generation
 
 (defmacro om--defun-node* (name arglist &rest args)
+  "Return a function definition for NAME, ARGLIST, and ARGS.
+Will insert a type checker according to `om--defun-test-node' and will
+make an anaphoric form according to `om--defun*' (the same assumptions
+apply)."
   (declare (doc-string 3) (indent 2))
   (om--defun-with-docstring-body args
     `(om--defun* ,name ,arglist
@@ -433,6 +493,9 @@ These are also known as \"recursive objects\" in `org-element.el'")
 ;; defun for weirdly-typed nodes
 
 (defmacro om--defun-timestamp (name arglist &rest args)
+  "Return a function definition for NAME, ARGLIST, and ARGS.
+Will insert a type checker that will ensure the last argument in
+ARGLIST is a timestamp node with a non-diary type."
   (declare (doc-string 3) (indent 2))
   (om--defun-with-docstring-body args
     (let* ((last (-last-item arglist))
@@ -449,20 +512,27 @@ These are also known as \"recursive objects\" in `org-element.el'")
 ;;; LIST OPERATIONS (EXTENDING DASH.el)
 
 (defun om--pad-or-truncate (length pad list)
+  "Return padded or truncated list starting from LIST.
+
+If length of LIST is greater than LENGTH, truncate LIST to LENGTH
+and return. If LIST is longer than LENGTH, add PAD to the end
+of LIST until it's length equals LENGTH and return. Do nothing if
+length of LIST is equal to LENGTH initially."
   (let ((blanks (- length (length list))))
     (if (< blanks 0) (-slice list 0 (1- length))
       (append list (-repeat blanks pad)))))
 
 (defun om--plist-get-keys (plist)
+  "Get the keys for PLIST."
   (-slice plist 0 nil 2))
 
 (defun om--plist-get-vals (plist)
+  "Get the values for PLIST."
   (-slice plist 1 nil 2))
 
-(defun om--plist-non-nil (plist)
-  (->> (-partition 2 plist) (-filter #'cadr) (apply #'append)))
-
 (defun om--plist-map-values (fun plist)
+  "Map FUN over over the values in PLIST.
+FUN is a unary function that returns a modified value."
   (let ((keys (om--plist-get-keys plist)))
     (->> (om--plist-get-vals plist)
          (--map (funcall fun it))
@@ -476,9 +546,23 @@ These are also known as \"recursive objects\" in `org-element.el'")
    (-all? #'symbolp (-slice obj 0 nil 2))))
 
 (defun om--plist-remove (key plist)
+  "Return PLIST with KEY and its value removed."
   (->> (-partition 2 plist) (--remove (eq (car it) key)) (-flatten-n 1)))
 
 (defun om--convert-intra-index (n list &optional permit-error)
+  "Return absolute index given N and LIST.
+
+The absolute index to be returned will be a positive integer that will
+select each member analogously to `nth'.
+
+N is relative index where positions in LIST are given by the following:
+- 0: first member
+- 1: second member (and so on)
+- -1: last member
+- -2: penultimate member (and so on)
+
+If N refers to a non-existent member, trigger an out-of-bounds error
+unless PERMIT-ERROR is t."
   (let* ((N (length list))
          (upper (1- N))
          (lower (- N)))
@@ -490,6 +574,19 @@ These are also known as \"recursive objects\" in `org-element.el'")
                  n lower upper))))))
 
 (defun om--convert-inter-index (n list &optional permit-error)
+  "Return absolute index given N and LIST.
+
+The absolute index to be returned will be a positive integer that will
+select the space between each member analogously to `-insert-at'.
+
+N is relative index where positions in LIST are given by the following:
+- 0: before first member
+- 1: before second member (and so on)
+- -1: after last member
+- -2: after penultimate member (and so on)
+
+If N refers to a non-existent member, trigger an out-of-bounds error
+unless PERMIT-ERROR is t."
   (let* ((N (length list))
          (upper N)
          (lower (- (- N) 1)))
@@ -501,29 +598,33 @@ These are also known as \"recursive objects\" in `org-element.el'")
                  n lower upper))))))
 
 (defun om--insert-at (n x list)
-  "Like `-insert-at' but honors negative indices N.
-Negative indices count from the end of the list, with -1 inserting
-X after the last element in LIST. Will give an error if N refers to
-a non-existent index."
+  "Like `-insert-at' but can insert X at negative indices N in LIST.
+See `om--convert-inter-index' for the meaning of N."
   (-insert-at (om--convert-inter-index n list) x list))
 
 (defun om--remove-at (n list)
-  "Like `-remove-at' but honors negative indices N.
-Negative indices count from the end of the list, with -1 inserting
-X after the last element in LIST. Will give an error if N refers to
-a non-existent index."
+  "Like `-remove-at' but honors negative indices N in LIST.
+See `om--convert-intra-index' for the meaning of N."
   (-remove-at (om--convert-intra-index n list) list))
 
 (defun om--replace-at (n x list)
+  "Like `-replace-at' but can substitute X at negative indices N in LIST.
+See `om--convert-intra-index' for the meaning of N."
   (-replace-at (om--convert-intra-index n list) x list))
 
 (defun om--nth (n list)
+  "Like `nth' but honors negative indices N in LIST.
+See `om--convert-intra-index' for the meaning of N."
   (nth (om--convert-intra-index n list) list))
 
 (om--defun* om--map-first (fun list)
+  "Return LIST with FUN applied to the first member.
+FUN is a unary function that returns a modified member."
   (->> (cdr list) (cons (funcall fun (car list)))))
 
 (om--defun* om--map-last (fun list)
+  "Return LIST with FUN applied to the last member.
+FUN is a unary function that returns a modified member."
   (->> (nreverse list) (om--map-first fun) (nreverse)))
 
 ;;; MISC HELPER FUNCTIONS
@@ -570,64 +671,26 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 ;; property value predicates (type specific)
 
 (defun om--is-valid-link-format-p (x)
+  "Return t if X is an allowed value for a link node format property."
   (memq x '(nil plain angle bracket)))
 
 (defun om--is-valid-link-type-p (x)
+  "Return t if X is an allowed value for a link node type property."
   ;; TODO allow nil here for fuzzy?
   (->> '("coderef" "custom-id" "file" "id" "radio" "fuzzy")
        (append (org-link-types))
        (member x)))
 
 (defun om--is-valid-item-checkbox-p (x)
+  "Return t if X is an allowed value for an item node checkbox property."
   (memq x '(nil on off trans)))
 
 (defun om--is-valid-item-tag-p (x)
+  "Return t if X is an allowed value for an item node tag property."
   (--all? (om--is-any-type-p om--item-tag-restrictions it) x))
 
-(defun om--is-valid-clock-timestamp-p (x)
-  (and (om--is-type-p 'timestamp x)
-       (om--property-is-predicate-p :type
-         (lambda (it) (memq it '(inactive inactive-range))) x)
-       (om--property-is-nil-p :repeater-type x)))
-
-(defun om--is-valid-planning-timestamp-p (x)
-  (or (null x) (and (om--is-type-p 'timestamp x)
-                    (om--property-is-eq-p :type 'inactive x))))
-
-(defun om--is-valid-entity-name-p (x)
-  (org-entity-get x))
-
-(defun om--is-valid-headline-tags-p (x)
-  (and (-all? #'om--is-oneline-string-p x)
-       (not (member org-archive-tag x))))
-
-(defun om--is-valid-headline-priority-p (x)
-  (or (null x) (and (integerp x)
-                    (>= org-lowest-priority x org-highest-priority))))
-
-(defun om--is-valid-headline-title-p (x)
-  (--all? (om--is-any-type-p om--headline-title-restrictions it) x))
-
-(defun om--is-valid-timestamp-type-p (x)
-  ;; TODO allow diary here?
-  (memq x '(inactive inactive-range active active-range)))
-
-(defun om--is-valid-timestamp-repeater-type-p (x)
-  (memq x '(nil catch-up restart cumulate)))
-
-(defun om--is-valid-timestamp-warning-type-p (x)
-  (memq x '(nil all first)))
-
-(defun om--is-valid-timestamp-unit-p (x)
-  (memq x '(nil year month week day hour)))
-
-(defun om--is-valid-latex-environment-value-p (x)
-  (pcase x
-    ((or `(,(pred om--is-oneline-string-p))
-         `(,(pred om--is-oneline-string-p) ,(pred stringp)))
-     t)))
-
 (defun om--is-valid-item-bullet-p (x)
+  "Return t if X is an allowed value for a item node bullet property."
   ;; NOTE org mode 9.1.9 has the following limitations:
   ;; - "+" will be converted to "-" when interpreted
   ;; - "1)" will be converted to "1." when interpreted
@@ -637,7 +700,62 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
   ;; use in this library because...org element is inconsistent
   (pcase x ((or '- (pred integerp)) t)))
 
+(defun om--is-valid-clock-timestamp-p (x)
+  "Return t if X is an allowed value for a clock node value property."
+  (and (om--is-type-p 'timestamp x)
+       (om--property-is-predicate-p :type
+         (lambda (it) (memq it '(inactive inactive-range))) x)
+       (om--property-is-nil-p :repeater-type x)))
+
+(defun om--is-valid-planning-timestamp-p (x)
+  "Return t if X is an allowed value for a planning node timestamp property."
+  (or (null x) (and (om--is-type-p 'timestamp x)
+                    (om--property-is-eq-p :type 'inactive x))))
+
+(defun om--is-valid-entity-name-p (x)
+  "Return t if X is an allowed value for an entity node name property."
+  (org-entity-get x))
+
+(defun om--is-valid-headline-tags-p (x)
+  "Return t if X is an allowed value for a headline node tags property."
+  (and (-all? #'om--is-oneline-string-p x)
+       (not (member org-archive-tag x))))
+
+(defun om--is-valid-headline-priority-p (x)
+  "Return t if X is an allowed value for a headline node priority property."
+  (or (null x) (and (integerp x)
+                    (>= org-lowest-priority x org-highest-priority))))
+
+(defun om--is-valid-headline-title-p (x)
+  "Return t if X is an allowed value for a headline node title property."
+  (--all? (om--is-any-type-p om--headline-title-restrictions it) x))
+
+(defun om--is-valid-timestamp-type-p (x)
+  "Return t if X is an allowed value for a timestamp node type property."
+  ;; TODO allow diary here?
+  (memq x '(inactive inactive-range active active-range)))
+
+(defun om--is-valid-timestamp-repeater-type-p (x)
+  "Return t if X is an allowed value for a timestamp node repeater-type property."
+  (memq x '(nil catch-up restart cumulate)))
+
+(defun om--is-valid-timestamp-warning-type-p (x)
+  "Return t if X is an allowed value for a timestamp node warning-type property."
+  (memq x '(nil all first)))
+
+(defun om--is-valid-timestamp-unit-p (x)
+  "Return t if X is an allowed value for a timestamp node unit property."
+  (memq x '(nil year month week day hour)))
+
+(defun om--is-valid-latex-environment-value-p (x)
+  "Return t if X is an allowed value for a latex-environment node value property."
+  (pcase x
+    ((or `(,(pred om--is-oneline-string-p))
+         `(,(pred om--is-oneline-string-p) ,(pred stringp)))
+     t)))
+
 (defun om--is-valid-statistics-cookie-value-p (x)
+  "Return t if X is an allowed value for a statistics-cookie node value property."
   (pcase x
     ((or `(nil) `(nil nil)) t)
     (`(,(and (pred integerp) percent))
@@ -649,53 +767,71 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
           (<= numerator denominator)))))
 
 (defun om--is-valid-diary-sexp-value-p (x)
+  "Return t if X is an allowed value for a diary-sexp node value property."
   (or (null x) (listp x)))
 
 ;; encode/decode (general)
 
 (defun om--decode-boolean (bool)
+  "Return BOOL as either t or nil."
   (and bool t))
 
 (defun om--encode-string-or-nil (string)
+  "Return STRING as either itself or \"\" if nil."
   (if (null string) "" string))
 
 (defun om--encode-string-list-delim (string-list delim)
+  "Return STRING-LIST as string joined by DELIM."
   (-some->> string-list (s-join delim)))
 
 (defun om--decode-string-list-delim (string delim)
+  "Return STRING as list of strings split by DELIM."
   (-some->> string (s-split delim)))
 
 (defun om--encode-string-list-space-delim (string-list)
+  "Return STRING-LIST as string joined by spaces."
   (om--encode-string-list-delim string-list " "))
 
 (defun om--decode-string-list-space-delim (string)
+  "Return STRING as list of strings split by spaces."
   (om--decode-string-list-delim string " "))
 
 (defun om--encode-string-list-comma-delim (string-list)
+  "Return STRING-LIST as string joined by commas."
   (om--encode-string-list-delim string-list ","))
 
 (defun om--decode-string-list-comma-delim (string)
+  "Return STRING as list of strings split by commas."
   (om--decode-string-list-delim string ","))
 
 (defun om--encode-plist (plist)
+  "Return PLIST as string joined by spaces."
   (-some->> (--map (format "%S" it) plist) (s-join " ")))
 
 (defun om--decode-plist (string)
+  "Return STRING as plist split by spaces."
   (-map #'intern (om--decode-string-list-space-delim string)))
 
 ;; encode/decode (type specific)
 
 (defun om--encode-latex-environment-value (value)
+  "Return VALUE as a string representing a latex-environment.
+VALUE is a list conforming to `om--is-valid-latex-environment-value-p'."
   (-let (((env body) value))
     (if body (format "\\begin{%1$s}\n%2$s\n\\end{%1$s}" env body)
       (format "\\begin{%1$s}\n\\end{%1$s}" env))))
 
 (defun om--decode-latex-environment-value (value)
+  "Return VALUE as a list representing a latex-environment.
+The return value is a list conforming to
+`om--is-valid-latex-environment-value-p'."
   ;; TODO ensure that the output is correct?
   (let ((m (car (s-match-strings-all "\\\\begin{\\(.+\\)}\n\\(.*\\)\n?\\\\end{\\(.+\\)}" value))))
     (list (nth 1 m) (nth 2 m))))
 
 (defun om--encode-item-bullet (bullet)
+  "Return BULLET as a formatted string.
+BULLET must conform to `om--is-valid-item-bullet-p'."
   ;; NOTE see `om--is-valid-item-bullet-p' for org mode limitations
   ;; relating to this function
   ;; assume bullet conforms to pcase statement below
@@ -705,6 +841,8 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
     (_ (error "This should not happen"))))
 
 (defun om--decode-item-bullet (bullet)
+  "Return BULLET as a symbol from a formatted string.
+Return value will conform to `om--is-valid-item-bullet-p'."
   ;; NOTE this must conform to the full range of item bullets since
   ;; anything could be parsed from an org file. Anything "invalid"
   ;; should be converted to it's closest "element legal" bullet
@@ -724,13 +862,13 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
                     (+ -64))
           (error "Invalid bullet found: %s" bullet)))))
 
-(defun om--decode-item-tag (tag)
-  (om--build-secondary-string tag))
-
 (defun om--decode-headline-tags (tags)
+  "Return TAGS with `org-archive-tag' removed."
   (remove org-archive-tag tags))
 
 (defun om--encode-statistics-cookie-value (value)
+  "Return VALUE as formatted string representing the cookie.
+VALUE must conform to `om--is-valid-statistics-cookie-value-p'."
   ;; assumes value is a list conforming to pcase statement below
   (cl-flet
       ((mk-stat
@@ -746,6 +884,8 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
     (format "[%s]" (mk-stat value))))
 
 (defun om--decode-statistics-cookie-value (value)
+  "Return VALUE as a list representing the cookie.
+Return value will conform to `om--is-valid-statistics-cookie-value-p'."
   (cond
    ((equal "[%]" value) '(nil))
    ((equal "[/]" value) '(nil nil))
@@ -759,21 +899,29 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 
 ;; TODO this will make quotes turn to (quote )
 (defun om--encode-diary-sexp-value (value)
+  "Return VALUE as a string.
+VALUE must conform to `om--is-valid-diary-sexp-value-p'."
   ;; assumes value is a form or nil
   (if value (format "%%%%%S" value) "%%()"))
 
 (defun om--decode-diary-sexp-value (value)
+  "Return VALUE as a form.
+Return value will conform to `om--is-valid-diary-sexp-value-p'."
   (->> (s-chop-prefix "%%" value) (read)))
 
 ;; cis-update functions
 
 (defun om--update-macro-value (macro)
+  "Return MACRO node with its value property updated.
+This will be based on MACRO's key and value properties."
   (let* ((k (om--get-property :key macro))
          (as (om--get-property :args macro))
          (v (if as (format "%s(%s)" k (s-join "," as)) k)))
     (om--set-property :value (format "{{{%s}}}" v) macro)))
 
 (defun om--update-clock-duration (clock)
+  "Return CLOCK node with its duration and status properties updated.
+This will be based on CLOCK's value property."
   (let* ((ts (om--get-property :value clock))
          (plist
           ;; TODO this is redundant
@@ -786,6 +934,8 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
     (om--set-properties plist clock)))
 
 (defun om--update-headline-tags (headline)
+  "Return HEADLINE node with its tags updated.
+This will be based on HEADLINE's archivedp property."
   (cl-flet
       ((add-archive-tag-maybe
         (tags)
@@ -797,16 +947,25 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 ;; shifters
 
 (defun om--shift-pos-integer (n x)
+  "Return X shifted by N (both are integers).
+If the value to return is less than 1, return 1."
   (when x
     (let ((x* (+ x n)))
       (if (< 0 x*) x* 1))))
 
 (defun om--shift-non-neg-integer (n x)
+  "Return X shifted by N (both are integers).
+If the value to return is less than 0, return 0."
   (when x
     (let ((x* (+ x n)))
       (if (<= 0 x*) x* 0))))
 
 (defun om--shift-headline-priority (n priority)
+  "Return PRIORITY shifted by N (an integer).
+If the final value is outside the bounds of `org-highest-priority'
+and `org-lowest-priority', return as if cycling and wrapping
+between the priority bounds until the return value is inside the
+bounds."
   (when priority
     (let ((diff (1+ (- org-lowest-priority org-highest-priority)))
           (offset (- priority org-highest-priority)))
@@ -1072,6 +1231,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 ;; property manipulation (non-strict)
 
 (defun om--get-property (prop node)
+  "Return PROP from NODE."
   (if (and (stringp node) (eq prop :post-blank))
       (length (car (s-match "[ ]*$" node)))
     (org-element-property prop node)))
@@ -1085,13 +1245,13 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
   (om--get-property :parent node))
 
 (defun om--get-parent-headline (node)
-  "Return the most immediate parent headline of NODE."
+  "Return the most immediate parent headline node of NODE."
   (-when-let (parent (om--get-parent node))
     (if (om--is-type-p 'headline parent) parent
       (om--get-parent-headline parent))))
 
 (defun om--set-property (prop value node)
-  "Set property PROP in element NODE to VALUE."
+  "Set PROP in NODE to VALUE."
   (if (stringp node)
       (if (eq prop :post-blank)
           (->> (s-trim-right node) (s-append (s-repeat value " ")))
@@ -1115,32 +1275,46 @@ property list in NODE."
     (error "Not a plist: %S" plist)))
 
 (defun om--set-property-nil (prop node)
-  "Set property PROP to nil in NODE."
+  "Set PROP to nil in NODE."
   (om--set-property prop nil node))
 
 (defun om--set-properties-nil (props node)
-  "Set all properties PROPS to new in NODE."
+  "Set all PROPS to new in NODE."
   (let ((plist (--mapcat (list it nil) props)))
     (om--set-properties plist node)))
 
 (om--defun* om--map-property (prop fun node)
+  "Return NODE with FUN applied to the value in PROP.
+FUN is a unary function that returns a modified value."
   (let ((value (funcall fun (om--get-property prop node))))
     (om--set-property prop value node)))
 
-(defun om--map-properties (plist node)
-  (cond
-   ((not plist) node)
-   ((om--is-plist-p plist)
-    (->> (om--map-property (nth 0 plist) (nth 1 plist) node)
-         (om--map-properties (-drop 2 plist))))
-   (t (error "Not a plist: %s" plist))))
+;; (defun om--map-properties (plist node)
+;;   "Return NODE with modified property values.
 
-(defmacro om--map-properties* (plist node)
-  `(let ((plist*
-          (-map-indexed
-           (lambda (index item) (if (cl-evenp index) item `(lambda (it) ,item)))
-           ,plist)))
-     (om--map-properties new-plist ,node)))
+;; PLIST is a property list where the keys are properties in NODE
+;; to change and the values are unary functions that will be
+;; applied to current property values and return modified property
+;; values."
+;;   (cond
+;;    ((not plist) node)
+;;    ((om--is-plist-p plist)
+;;     (->> (om--map-property (nth 0 plist) (nth 1 plist) node)
+;;          (om--map-properties (-drop 2 plist))))
+;;    (t (error "Not a plist: %s" plist))))
+
+;; (defmacro om--map-properties* (plist node)
+;;   "Return NODE with modified property values.
+
+;; PLIST is a property list where the keys are properties in NODE
+;; to change and the values are forms that will be applied to current
+;; property values and return modified property values. In each form
+;; `it' is bound to the current property value."
+;;   `(let ((plist*
+;;           (-map-indexed
+;;            (lambda (index item) (if (cl-evenp index) item `(lambda (it) ,item)))
+;;            ,plist)))
+;;      (om--map-properties new-plist ,node)))
 
 (defun om--property-is-nil-p (prop node)
   "Return t if PROP in NODE is nil."
@@ -1188,6 +1362,9 @@ FUN is a predicate function that takes one argument."
     (if (listp desc) (s-join " " desc) desc)))
 
 (defun om--set-property-strict (prop value node)
+  "Return NODE with PROP set to VALUE.
+
+Will validate and encode VALUE is valid according to `om--type-alist'."
   (let* ((type (om--get-type node))
          (pred (om--get-strict-function :pred type prop)))
     (if (funcall pred value)
@@ -1201,6 +1378,12 @@ FUN is a predicate function that takes one argument."
              prop type (om--get-type-desc type prop) value))))
 
 (defun om--set-properties-strict (plist node)
+  "Set all properties in NODE to the values corresponding to PLIST.
+
+PLIST is a list of property-value pairs that correspond to the
+property list in NODE.
+
+Will validate and encode VALUE is valid according to `om--type-alist'."
   (cl-flet
       ((filter
         (acc keyval type)
@@ -1231,16 +1414,32 @@ FUN is a predicate function that takes one argument."
       (error "Not a plist: %S" plist))))
 
 (defun om--get-property-strict (prop node)
+  "Return the value of PROP in NODE.
+
+Will decode value according to `om--type-alist'."
   (let ((filter-fun (-> (om--get-type node)
                         (om--get-getter-function prop)))
         (value (om--get-property prop node)))
     (if filter-fun (funcall filter-fun value) value)))
 
 (om--defun* om--map-property-strict (prop fun node)
+  "Return NODE with FUN applied to the value in PROP.
+
+FUN is a unary function that returns a modified value.
+
+Will validate/encode/decode value according to `om--type-alist'."
   (let ((value (funcall fun (om--get-property-strict prop node))))
     (om--set-property-strict prop value node)))
 
 (defun om--map-properties-strict (plist node)
+  "Return NODE with modified property values.
+
+PLIST is a property list where the keys are properties in NODE
+to change and the values are unary functions that will be
+applied to current property values and return modified property
+values.
+
+Will validate/encode/decode value according to `om--type-alist'."
   (cond
    ((not plist) node)
    ((om--is-plist-p plist)
@@ -1266,15 +1465,23 @@ nested element to return."
   (not (om--get-children node)))
 
 (defun om--set-children (children node)
+  "Return NODE with children set to CHILDREN."
    (let ((head (om--get-head node)))
      (if children (append head children) head)))
 
 (om--defun* om--map-children (fun node)
+  "Return NODE with FUN applied to its children.
+
+FUN is a unary function that takes a list of children and returns
+a modified list of children."
   (let ((children (om--get-children node)))
     ;; TODO check the types of children after they are mapped?
     (om--set-children (funcall fun children) node)))
 
 (defun om--set-children-restricted (types children node)
+  "Return NODE with children set to CHILDREN.
+
+If any node in CHILDREN has a type not in TYPES, throw an error."
   (-when-let (illegal (-some->> (-map #'om--get-type children)
                                 (--remove (memq it types))
                                 (-map #'symbol-name)
@@ -1283,7 +1490,12 @@ nested element to return."
            illegal (s-join ", " (-map #'symbol-name types))))
   (om--set-children children node))
 
+;; TODO the type argument is silly
 (defun om--set-children-by-type (branch-type children node)
+  "Return NODE with children set to CHILDREN.
+
+If any node in CHILDREN has a type that is not allowed for
+BRANCH-TYPE, throw an error."
   ;; TODO there may be additional restrictions, such as newlines
   ;; in strings not being allowed
   (-if-let (types (alist-get branch-type om-node-restrictions))
@@ -1315,32 +1527,41 @@ nested element to return."
   (--mapcat (list it nil) props))
 
 (defun om--build (type post-blank props)
+  "Return a new node assembled from TYPE, POST-BLANK, and PROPS.
+TYPE is a symbol, POST-BLANK is a postive integer, and PROPS is a
+plist of properties for the node."
   (->> (om--set-property-strict :post-blank (or post-blank 0) `(,type nil))
        (om--set-properties-nil props)))
 
 (defun om--build-object (type post-blank)
+  "Return a new object-typed node from TYPE and POST-BLANK."
   (om--build type post-blank om--object-properties))
 
-(defun om--build-recursive-object (type post-blank objs)
+(defun om--build-recursive-object (type post-blank children)
+  "Return a new branch object-typed node from TYPE, POST-BLANK, and CHILDREN."
   (->> om--recursive-object-properties
        (om--build type post-blank)
-       (om--set-children-by-type type objs)))
+       (om--set-children-by-type type children)))
 
 (defun om--build-element (type post-blank)
+  "Return a new element-typed node from TYPE and POST-BLANK."
   (om--build type post-blank om--element-properties))
 
-(defun om--build-container-element (type post-blank nodes)
+(defun om--build-container-element (type post-blank children)
+  "Return a new branch element-typed node from TYPE, POST-BLANK, and CHILDREN."
   (->> om--container-element-properties
        (om--build type post-blank)
-       (om--set-children-by-type type nodes)))
+       (om--set-children-by-type type children)))
 
 ;; define all base builders using this automated monstrosity
 
 (eval-when-compile
   (defun om--kwd-to-sym (keyword)
+    "Return KEYWORD as a string with no leading colon."
     (->> (symbol-name keyword) (s-chop-prefix ":") (intern)))
 
   (defun om--prepend-article (string)
+    "Return STRING starting with \"a\" or \"an\" depending on first word."
     (let ((a (--> (symbol-name string)
                   (s-left 1 it)
                   (if (member it '("a" "e" "i" "o" "u")) "an" "a"))))
@@ -1455,20 +1676,10 @@ nested element to return."
 ;;
 ;; statistics-cookie
 
-(defun om--statistics-cookie-is-complete-p (statistics-cookie)
-  (let ((val (om--get-property :value statistics-cookie)))
-    (or (-some->>
-         (s-match "\\([[:digit:]]+\\)%" val)
-         (nth 1)
-         (string-to-number)
-         (= 100))
-        (-some->>
-         (s-match "\\([[:digit:]]+\\)/\\([[:digit:]]+\\)" val)
-         (-drop 1)
-         (-map #'string-to-number)
-         (apply #'=)))))
-
 (defun om--statistics-cookie-get-format (statistics-cookie)
+  "Return format of STATISTICS-COOKIE as a symbol.
+If fractional cookie, return `fraction'; if percentage cookie return
+`percent', else throw error (which should never happen)."
   (let ((value (om--get-property :value statistics-cookie)))
     (cond ((s-contains? "/" value) 'fraction)
           ((s-contains? "%" value) 'percent)
@@ -1477,12 +1688,15 @@ nested element to return."
 ;; timestamp (auxiliary functions)
 
 (defun om--time-is-long-p (time)
+  "Return t if TIME is a long format time list."
   (pcase time
     (`(,(pred integerp) ,(pred integerp) ,(pred integerp)
        ,(pred integerp) ,(pred integerp))
      t)))
 
 (defun om--time-to-unixtime (time)
+  "Return the unix time (integer seconds) of time list TIME.
+This depends on `current-time-zone'."
   (let ((encoded
          (if (om--time-is-long-p time)
              (apply #'encode-time 0 (nreverse time))
@@ -1490,16 +1704,23 @@ nested element to return."
     (round (float-time encoded))))
 
 (defun om--unixtime-to-time-long (unixtime)
+  "Return the long time list of UNIXTIME."
   (nreverse (-slice (decode-time unixtime) 1 6)))
 
 (defun om--unixtime-to-time-short (unixtime)
+  "Return the short time list of UNIXTIME."
   (append (-take 3 (om--unixtime-to-time-long unixtime))
           '(nil nil)))
 
 (defun om--time-truncate (time)
+  "Return the short time format of TIME regardless of input format."
   (-take 3 time))
 
 (defun om--time-shift (n unit time)
+  "Return modified time list TIME shifted N UNIT's.
+
+UNIT is one of `day', `week', `month', `year', `minute', or `hour'.
+N is an integer."
   (cl-flet*
       ((get-shifts-short
         (n unit)
@@ -1533,6 +1754,8 @@ nested element to return."
              (nreverse))))))
 
 (defun om--time-format-props (time suffix)
+  "Return plist representation of time list TIME.
+SUFFIX is either `start' or `end'."
   (let* ((props (->> '(year month day hour minute)
                      (--map (intern (format ":%s-%s" it suffix)))))
          (time* (pcase time
@@ -1556,6 +1779,11 @@ nested element to return."
     (-interleave props time*)))
 
 (defun om--decorator-format (dec dtype valid-types)
+  "Return plist representing a timestamp warning or repeater (decorators).
+
+DEC is a list like (TYPE VALUE UNIT) of the decorator, DTYPE is either
+`warning' or `repeater', and VALID-TYPES are the allowed values for
+TYPE given in DEC."
   (let ((props (->> '(type value unit)
                     (--map (intern (format ":%s-%s" dtype it))))))
     (if (not dec) (om--init-properties props)
@@ -1571,45 +1799,44 @@ nested element to return."
 ;; timestamp (regular)
 
 (defun om--timestamp-get-start-time (timestamp)
+  "Return the time list of the start time in TIMESTAMP."
   (-let (((&plist :minute-start n :hour-start h :day-start d
                   :month-start m :year-start y)
           (om--get-all-properties timestamp)))
     `(,y ,m ,d ,h ,n)))
 
 (defun om--timestamp-get-end-time (timestamp)
+  "Return the time list of the end time in TIMESTAMP."
   (-let (((&plist :minute-end n :hour-end h :day-end d
                   :month-end m :year-end y)
           (om--get-all-properties timestamp)))
     `(,y ,m ,d ,h ,n)))
 
-(defun om--timestamp-get-start-timestamp (timestamp)
-  (if (not (om--timestamp-is-ranged-fast-p timestamp)) timestamp
-    (om--timestamp-set-end-time nil timestamp)))
-
-(defun om--timestamp-get-end-timestamp (timestamp)
-  (when (om--timestamp-is-ranged-fast-p timestamp)
-    (-> (om--timestamp-get-end-time timestamp)
-        (om--timestamp-set-single-time timestamp))))
-
 (defun om--timestamp-get-start-unixtime (timestamp)
+  "Return the unixtime of the start time in TIMESTAMP."
   (->> (om--timestamp-get-start-time timestamp)
        (om--time-to-unixtime)))
 
 (defun om--timestamp-get-end-unixtime (timestamp)
+  "Return the unixtime of the end time in TIMESTAMP."
   (->> (om--timestamp-get-end-time timestamp)
        (om--time-to-unixtime)))
 
 (defun om--timestamp-get-range (timestamp)
+  "Return the range of TIMESTAMP in seconds."
   (- (om--timestamp-get-end-unixtime timestamp)
      (om--timestamp-get-start-unixtime timestamp)))
 
 (defun om--timestamp-is-active-p (timestamp)
-   (memq (om--get-property :type timestamp) '(active active-range)))
+  "Return t if TIMESTAMP is an active type."
+  (memq (om--get-property :type timestamp) '(active active-range)))
 
 (defun om--timestamp-is-ranged-p (timestamp)
+  "Return t if TIMESTAMP has a range greater than 0 seconds."
   (/= 0 (om--timestamp-get-range timestamp)))
 
 (defun om--timestamp-is-ranged-lowres-p (timestamp)
+  "Return t if TIMESTAMP is range according to only year, month, and day."
   (-let* (((l s) (-split-at 3 (om--timestamp-get-start-time timestamp)))
           ((L S) (-split-at 3 (om--timestamp-get-end-time timestamp))))
     ;; lowres if Y/M/D is different and Min/Hour are the same
@@ -1618,50 +1845,18 @@ nested element to return."
                                (memq nil s)
                                (memq nil S)))))
 
-(defun om--timestamp-start-is-long-p (timestamp)
-  (->> (om--timestamp-get-start-time timestamp)
-       (om--time-is-long-p)))
-
-(defun om--timestamp-end-is-long-p (timestamp)
-  (->> (om--timestamp-get-end-time timestamp)
-       (om--time-is-long-p)))
-
-(defun om--timestamp-start-is-less-than-p (unixtime timestamp)
-  (< (om--timestamp-get-start-unixtime timestamp) unixtime))
-
-(defun om--timestamp-start-is-greater-than-p (unixtime timestamp)
-  (> (om--timestamp-get-start-unixtime timestamp) unixtime))
-
-(defun om--timestamp-start-is-equal-to-p (unixtime timestamp)
-  (= (om--timestamp-get-start-unixtime timestamp) unixtime))
-
-(defun om--timestamp-end-is-less-than-p (unixtime timestamp)
-  (< (om--timestamp-get-end-unixtime timestamp) unixtime))
-
-(defun om--timestamp-end-is-greater-than-p (unixtime timestamp)
-  (> (om--timestamp-get-end-unixtime timestamp) unixtime))
-
-(defun om--timestamp-end-is-equal-to-p (unixtime timestamp)
-  (= (om--timestamp-get-end-unixtime timestamp) unixtime))
-
-(defun om--timestamp-is-ranged-fast-p (timestamp)
-  "Like `om--timestamp-is-ranged-p' but faster.
-This only looks at TIMESTAMP's :type property rather than computing
-float-times, which assumes the :type property is valid."
-  (memq (om--get-property :type timestamp)
-        '(active-range inactive-range)))
-
 (defun om--timestamp-set-start-time-nocheck (time timestamp)
-  "Set the start TIME of TIMESTAMP."
+  "Set the start TIME of TIMESTAMP. Does not set type."
   (let ((time* (om--time-format-props time 'start)))
       (om--set-properties time* timestamp)))
 
 (defun om--timestamp-set-start-time (time timestamp)
+  "Return TIMESTAMP with start time properties set according to time list TIME."
   (->> (om--timestamp-set-start-time-nocheck time timestamp)
        (om--timestamp-update-type-ranged)))
 
 (defun om--timestamp-set-end-time-nocheck (time timestamp)
-  "Set the end TIME of TIMESTAMP."
+  "Set the end TIME of TIMESTAMP. Does not set type."
   (if time
       (-> (om--time-format-props time 'end)
           (om--set-properties timestamp))
@@ -1670,22 +1865,25 @@ float-times, which assumes the :type property is valid."
         (om--set-properties timestamp))))
 
 (defun om--timestamp-set-end-time (time timestamp)
+  "Return TIMESTAMP with end time properties set according to time list TIME."
   (let ((ts* (om--timestamp-set-end-time-nocheck time timestamp)))
     (if time (om--timestamp-update-type-ranged ts*)
       (om--timestamp-set-type-ranged nil ts*))))
 
 (defun om--timestamp-set-single-time (time timestamp)
-  "Set the start TIME of TIMESTAMP."
+  "Return TIMESTAMP with start/end properties set to time list TIME."
   (->> (om--timestamp-set-start-time-nocheck time timestamp)
        (om--timestamp-set-end-time-nocheck time)
        (om--timestamp-set-type-ranged nil)))
 
 (defun om--timestamp-set-double-time (time1 time2 timestamp)
+  "Return TIMESTAMP with start and end properties set to time lists TIME1 and TIME2."
   (->> (om--timestamp-set-start-time-nocheck time1 timestamp)
        (om--timestamp-set-end-time-nocheck time2)
        (om--timestamp-update-type-ranged)))
 
 (defun om--timestamp-set-range (range timestamp)
+  "Return TIMESTAMP with end time shifted to RANGE seconds from start time."
   (let* ((start (om--timestamp-get-start-time timestamp))
          (long? (om--time-is-long-p start))
          (range (* range (if long? 60 86400)))
@@ -1697,10 +1895,12 @@ float-times, which assumes the :type property is valid."
          (om--timestamp-update-type-ranged))))
 
 (defun om--timestamp-update-type-ranged (timestamp)
+  "Return TIMESTAMP with updated type based on if it is ranged."
   (-> (om--timestamp-is-ranged-lowres-p timestamp)
       (om--timestamp-set-type-ranged timestamp)))
 
 (defun om--timestamp-set-type-ranged (ranged? timestamp)
+  "Return TIMESTAMP with type set according to RANGED?."
   (cl-flet
       ((update-range
        (type)
@@ -1713,6 +1913,9 @@ float-times, which assumes the :type property is valid."
     (om--map-property :type #'update-range timestamp)))
 
 (defun om--timestamp-set-type (type timestamp)
+  "Return TIMESTAMP with type property set to TYPE.
+TYPE is `active' or `inactive'; the ranged suffix will be added
+automatically if TIMESTAMP is ranged."
   (let* ((range? (om--timestamp-is-ranged-lowres-p timestamp))
          (type* (cl-case type
                   (active (if range? 'active-range 'active))
@@ -1721,39 +1924,35 @@ float-times, which assumes the :type property is valid."
     (om--set-property :type type* timestamp)))
 
 (defun om--timestamp-set-warning (warning timestamp)
+  "Return TIMESTAMP with warning properties set to WARNING list."
   (let ((types '(all first)))
     (-> (om--decorator-format warning 'warning types)
         (om--set-properties timestamp))))
 
 (defun om--timestamp-set-repeater (repeater timestamp)
+  "Return TIMESTAMP with warning properties set to REPEATER list."
   (let ((types '(catch-up restart cumulate)))
     (-> (om--decorator-format repeater 'repeater types)
         (om--set-properties timestamp))))
 
 (defun om--timestamp-shift-start (n unit timestamp)
+  "Return TIMESTAMP with start time shifted N UNIT's."
   (let ((time* (->> (om--timestamp-get-start-time timestamp)
                     (om--time-shift n unit))))
     (->> (om--timestamp-set-start-time time* timestamp)
          (om--timestamp-update-type-ranged))))
 
 (defun om--timestamp-shift-end (n unit timestamp)
+  "Return TIMESTAMP with end time shifted N UNIT's."
   (let ((time* (->> (om--timestamp-get-end-time timestamp)
                     (om--time-shift n unit))))
     (->> (om--timestamp-set-end-time time* timestamp)
          (om--timestamp-update-type-ranged))))
 
-(defun om--timestamp-shift-range (n unit timestamp)
-  (->> (om--timestamp-shift-start n unit timestamp)
-       (om--timestamp-shift-end n unit)))
-
-(defun om--timestamp-toggle-active (timestamp)
-  (--> (om--timestamp-is-active-p timestamp)
-       (if it 'inactive 'active)
-       (om--timestamp-set-type it timestamp)))
-
 ;; timestamp (diary sexp)
 
 (defun om--timestamp-diary-set-value (form timestamp)
+  "Return TIMESTAMP with raw-value set to FORM."
   (om--verify form listp)
   (om--set-property :raw-value (format "<%%%%%S>" form) timestamp))
 
@@ -2698,7 +2897,17 @@ and properties that may be used with this function."
 
 (om--defun-node om-statistics-cookie-is-complete-p (statistics-cookie)
   "Return t is STATISTICS-COOKIE element is complete."
-  (om--statistics-cookie-is-complete-p statistics-cookie))
+  (let ((val (om--get-property :value statistics-cookie)))
+    (or (-some->>
+         (s-match "\\([[:digit:]]+\\)%" val)
+         (nth 1)
+         (string-to-number)
+         (= 100))
+        (-some->>
+         (s-match "\\([[:digit:]]+\\)/\\([[:digit:]]+\\)" val)
+         (-drop 1)
+         (-map #'string-to-number)
+         (apply #'=)))))
 
 ;; timestamp
 
@@ -2712,7 +2921,7 @@ The return value will be a list as specified by the TIME argument in
   "Return the end time list of TIMESTAMP end or nil if not a range.
 The return value will be a list as specified by the TIME argument in
 `om-build-timestamp!'."
-  (and (om--timestamp-is-ranged-fast-p timestamp)
+  (and (om--timestamp-is-ranged-p timestamp)
        (om--timestamp-get-end-time timestamp)))
 
 (om--defun-timestamp om-timestamp-get-range (timestamp)
@@ -2787,7 +2996,8 @@ N is a positive or negative integer and UNIT is one of `minute',
 `hour', `day', `month', or `year'. Overflows will wrap around
 transparently; for instance, supplying `minute' for UNIT and 90 for N
 will increase the hour property by 1 and the minute property by 30."
-  (om--timestamp-shift-range n unit timestamp))
+  (->> (om--timestamp-shift-start n unit timestamp)
+       (om--timestamp-shift-end n unit)))
 
 (om--defun-timestamp om-timestamp-shift-start (n unit timestamp)
   "Shift TIMESTAMP start time by N UNIT's.
@@ -2811,7 +3021,9 @@ behavior is not desired, use `om-timestamp-shift'."
 
 (om--defun-timestamp om-timestamp-toggle-active (timestamp)
   "Toggle the active/inactive type of TIMESTAMP element."
-  (om--timestamp-toggle-active timestamp))
+  (--> (om--timestamp-is-active-p timestamp)
+       (if it 'inactive 'active)
+       (om--timestamp-set-type it timestamp)))
 
 (om--defun-timestamp om-timestamp-truncate (timestamp)
   "Return TIMESTAMP node with start and end times forced to short format."
