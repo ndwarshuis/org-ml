@@ -366,11 +366,11 @@ Set, get, and map the children of branch nodes.
 
 ### Generic
 
-* [om-children-contain-point-p](#om-children-contain-point-p-point-node) `(point node)`
-* [om-get-children](#om-get-children-node) `(node)`
-* [om-set-children](#om-set-children-children-node) `(children node)`
-* [om-map-children](#om-map-children-fun-node) `(fun node)`
-* [om-is-childless-p](#om-is-childless-p-node) `(node)`
+* [om-children-contain-point-p](#om-children-contain-point-p-point-branch-node) `(point branch-node)`
+* [om-get-children](#om-get-children-branch-node) `(branch-node)`
+* [om-set-children](#om-set-children-children-branch-node) `(children branch-node)`
+* [om-map-children](#om-map-children-fun-branch-node) `(fun branch-node)`
+* [om-is-childless-p](#om-is-childless-p-branch-node) `(branch-node)`
 
 ### Headline
 
@@ -3609,9 +3609,9 @@ Set, get, and map the children of branch nodes.
 
 ### Generic
 
-#### om-children-contain-point-p `(point node)`
+#### om-children-contain-point-p `(point branch-node)`
 
-Return t if **`point`** is within the boundaries of **`node`**`s children.
+Return t if **`point`** is within the boundaries of **`branch-node`**`s children.
 
 ```el
 ;; Given the following contents:
@@ -3628,9 +3628,9 @@ Return t if **`point`** is within the boundaries of **`node`**`s children.
 
 ```
 
-#### om-get-children `(node)`
+#### om-get-children `(branch-node)`
 
-Return the children of **`node`** as a list.
+Return the children of **`branch-node`** as a list.
 
 ```el
 ;; Given the following contents:
@@ -3662,11 +3662,11 @@ Error
 
 ```
 
-#### om-set-children `(children node)`
+#### om-set-children `(children branch-node)`
 
-Set the children of **`node`** to **`children`**.
+Set the children of **`branch-node`** to **`children`**.
 **`children`** is a list of nodes; the types permitted in this list depend
-on the type of **`node`**.
+on the type of `node`.
 
 ```el
 ;; Given the following contents:
@@ -3699,9 +3699,9 @@ Error
 
 ```
 
-#### om-map-children `(fun node)`
+#### om-map-children `(fun branch-node)`
 
-Apply **`fun`** to the children of **`node`**. 
+Apply **`fun`** to the children of **`branch-node`**. 
 **`fun`** is a function that takes the current children as a list and
 returns a modified children as a list.
 
@@ -3737,10 +3737,10 @@ Error
 
 ```
 
-#### om-is-childless-p `(node)`
+#### om-is-childless-p `(branch-node)`
 
-Return t if **`node`** is empty.
-This will throw an error if **`node`** is not a branch type.
+Return t if **`branch-node`** is empty.
+This will throw an error if **`branch-node`** is not a branch type.
 
 ```el
 ;; Given the following contents:
