@@ -1960,16 +1960,24 @@ automatically if TIMESTAMP is ranged."
 ;;
 ;; headline
 
-(defun om--headline-set-title! (string stat-ckie headline)
-  (let ((ss (om--build-secondary-string string)))
-    (if (not stat-ckie)
+(defun om--headline-set-title! (title-text statistics-cookie headline)
+  "Return HEADLINE node with modified title property.
+
+TITLE-TEXT is the text used for the title (without todo keywords,
+priorities, or comment flags) and STATISTICS-COOKIE is a value
+to be used in setting the statistics cookie that conforms to
+`om--is-valid-statistics-cookie-value-p'."
+  (let ((ss (om--build-secondary-string title-text)))
+    (if (not statistics-cookie)
         (om--set-property-strict :title ss headline)
       (let ((ss* (om--map-last*
                   (om--set-property :post-blank 1 it) ss))
-            (sc (om-build-statistics-cookie stat-ckie)))
+            (sc (om-build-statistics-cookie statistics-cookie)))
         (om--set-property-strict :title (-snoc ss* sc) headline)))))
 
 (defun om--headline-shift-level (n headline)
+  "Return HEADLINE node with the level property shifted by N.
+If the level is less then one after shifting, set level to one."
   (om--verify n integerp)
   (om--map-property* :level (om--shift-pos-integer n it) headline))
 
@@ -1980,6 +1988,10 @@ automatically if TIMESTAMP is ranged."
 ;;       (om--item-set-tag item)))
 
 (defun om--item-toggle-checkbox (item)
+  "Return ITEM node with its checkbox state flipped.
+This only affects item nodes with checkboxes in the `on' or `off'
+states; return ITEM node unchanged if the checkbox property is `trans'
+or nil."
   (cl-case (om--get-property :checkbox item)
     ((or trans nil) item)
     ('on (om--set-property :checkbox 'off item))
@@ -1989,13 +2001,15 @@ automatically if TIMESTAMP is ranged."
 ;; planning
 
 (defun om--planning-list-to-timestamp (planning-list)
+  "Return timestamp node from PLANNING-LIST.
+See `om-build-planning!' for syntax of PLANNING-LIST."
   (when planning-list
     (let* ((p (-partition-before-pred
                (lambda (it) (memq it '(&warning &repeater)))
                planning-list)))
       (om-build-timestamp! 'inactive (car p)
-                                :warning (alist-get '&warning p)
-                                :repeater (alist-get '&repeater p)))))
+                           :warning (alist-get '&warning p)
+                           :repeater (alist-get '&repeater p)))))
 
 ;;; INTERNAL BRANCH/CHILD FUNCTIONS
 ;; operations on children of branch nodes
@@ -2004,23 +2018,31 @@ automatically if TIMESTAMP is ranged."
 ;; headline
 
 (defun om--headline-get-subheadlines (headline)
+  "Return list of child headline nodes within HEADLINE node."
   (-some->> (om--get-children headline)
             (--filter (om--is-type-p 'headline it))))
 
 (defun om--headline-get-section (headline)
+  "Return child section node within HEADLINE node."
   (-some->> (om--get-children headline) (assoc 'section)))
 
 (defun om--headline-get-statistics-cookie (headline)
+  "Return statistics-cookie node within HEADLINE node."
   (->> (om--get-property :title headline)
        (-last-item)
        (om--filter-type 'statistics-cookie)))
 
 (defun om--headline-get-properties-drawer (headline)
+  "Return child properties-drawer node within HEADLINE node."
   (-some->>
    (om--headline-get-section headline)
    (--first (om--is-type-p 'property-drawer it))))
 
 (defun om--headline-map-subheadlines (fun headline)
+  "Return HEADLINE node with child headline nodes modified by FUN.
+
+FUN is a unary function that takes a list of headlines and returns
+a modified list of headlines."
   (om--map-children
    (lambda (children)
      (let ((section (assoc 'section children))
@@ -2067,6 +2089,10 @@ automatically if TIMESTAMP is ranged."
 ;;     `(om--map-or-build ,map-fun ,build-fun ,pred-fun ,pos-fun ,node)))
 
 (defun om--headline-subtree-shift-level (n headline)
+  "Return HEADLINE node with its level shifted by N.
+Also shift all HEADLINE node's child headline nodes by N.
+If the final shifted level is less one, set level to one (for parent
+and child nodes)."
   (->> (om--headline-shift-level n headline)
        (om--headline-map-subheadlines
         (lambda (headlines)
@@ -2102,6 +2128,9 @@ automatically if TIMESTAMP is ranged."
 ;;     headline))
 
 (defun om--headline-set-statistics-cookie (value headline)
+  "Return HEADLINE node with statistics cookie set by VALUE.
+VALUE is a list conforming to `om--is-valid-statistics-cookie-value-p'
+or nil to erase the statistics cookie if present."
   (om--map-property*
    :title
    (let ((last? (om--is-type-p 'statistics-cookie (-last-item it))))
@@ -2116,6 +2145,11 @@ automatically if TIMESTAMP is ranged."
    headline))
 
 (defun om--headline-set-statistics-cookie-fraction (done total headline)
+  "Return HEADLINE node with statistics cookie set by DONE and TOTAL.
+
+DONE and TOTAL are integers representing the numerator and denominator
+respectively of the statistics-cookie's fractional value. Both must
+be greater than zero, and DONE must be less than or equal to TOTAL."
   (-if-let (cookie (om--headline-get-statistics-cookie headline))
       (let* ((format (om--statistics-cookie-get-format cookie))
              (value (if (eq 'fraction format) `(,done ,total)
@@ -2129,11 +2163,23 @@ automatically if TIMESTAMP is ranged."
 
 ;; table
 
+(defun om--table-get-width (table)
+  (->> (om--get-children table)
+       (--map (length (om--get-children it)))
+       (-max)))
+
 (defun om--table-pad-or-truncate (length list)
+  "Pad or truncate LIST of table-cell nodes by LENGTH.
+Behavior is the same as `om--pad-or-truncate' where the padded value
+is a blank table-cell node."
   (let ((pad (om-build-table-cell "")))
     (om--pad-or-truncate length pad list)))
 
-(defun om--column-map-down-rows (fun column table)
+(defun om--column-map-down-rows (fun column-index table)
+  "Return TABLE node with FUN applied down the rows at COLUMN-INDEX.
+
+FUN is a unary function that takes a table-cell node and returns
+a modified table-cell node."
   (cl-flet*
       ((zip-into-rows
         (row new-cell)
@@ -2145,21 +2191,24 @@ automatically if TIMESTAMP is ranged."
         (rows)
         (->> rows
              (--find-indices (om--property-is-eq-p :type 'rule it))
-             (--reduce-from (-insert-at it nil acc) column)
+             (--reduce-from (-insert-at it nil acc) column-index)
              (om--table-pad-or-truncate (length rows))
              (-zip-with #'zip-into-rows rows))))
     (om--map-children #'map-rows table)))
 
-(defun om--table-get-row (row table)
+(defun om--table-get-row (row-index table)
+  "Return the table-row node at ROW-INDEX within TABLE.
+Rule-type table-row nodes do not factor when counting the index."
   (-some->> (om--get-children table)
             (--filter (om--property-is-eq-p :type 'standard it))
-            (om--nth row)))
+            (om--nth row-index)))
 
-(defun om--table-replace-column (index column table)
-  (om--verify index integerp)
+(defun om--table-replace-column (column-index column-cells table)
+  "Return TABLE with COLUMN-CELLS in place of original cells at COLUMN-INDEX."
+  (om--verify column-index integerp)
   (om--column-map-down-rows
-   (lambda (new-cell cells) (om--replace-at index new-cell cells))
-   column
+   (lambda (new-cell cells) (om--replace-at column-index new-cell cells))
+   column-cells
    table))
 
 ;; TODO this is not dry...
@@ -2185,11 +2234,6 @@ automatically if TIMESTAMP is ranged."
   ;; this assumes the blank cell will be padded with other blank cells
   (om--table-replace-column index (list (om-build-table-cell "")) table))
 
-(defun om--table-get-width (table)
-  (->> (om--get-children table)
-       (--map (length (om--get-children it)))
-       (-max)))
-
 ;;; INTERNAL INDENTATION
 
 ;;; helper functions
@@ -2199,12 +2243,15 @@ automatically if TIMESTAMP is ranged."
 ;; is usually true but makes a really hard error to catch when it
 ;; fails
 (defun om--indent-after (indent-fun index node)
+  "Return NODE with INDENT-FUN applied to all child nodes after INDEX."
   (unless (and (integerp index) (<= 0 index))
     (error "Index must be non-negative integer"))
   (if (< index (1- (length (om--get-children node))))
       (->> (funcall indent-fun (1+ index) node)
            (om--indent-after indent-fun index))
     node))
+
+;; TODO this is confusing as hell, I can't even read it :(
 
 (defun om--indent-members (fun index members)
   (unless (and (integerp index) (< 0 index))
@@ -2228,6 +2275,9 @@ automatically if TIMESTAMP is ranged."
 ;; headline
 
 (defun om--headline-set-level (level headline)
+  "Return HEADLINE node with its level set to LEVEL.
+Additionally set all child headline nodes to be (+ 1 level) for
+first layer, (+ 2 level for second, and so on."
   (->> (om--set-property-strict :level level headline)
        (om--map-children*
          (--map (om--headline-set-level (1+ level) it) it))))
