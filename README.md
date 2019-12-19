@@ -379,6 +379,7 @@ Set, get, and map the children of branch nodes.
 * [om-headline-get-planning](#om-headline-get-planning-headline) `(headline)`
 * [om-headline-get-subheadlines](#om-headline-get-subheadlines-headline) `(headline)`
 * [om-headline-get-section](#om-headline-get-section-headline) `(headline)`
+* [om-headline-get-path](#om-headline-get-path-headline) `(headline)`
 * [om-headline-update-item-statistics](#om-headline-update-item-statistics-headline) `(headline)`
 * [om-headline-update-todo-statistics](#om-headline-update-todo-statistics-headline) `(headline)`
 * [om-headline-indent-subheadline](#om-headline-indent-subheadline-index-headline) `(index headline)`
@@ -3902,6 +3903,39 @@ Return section node for headline **`headline`** node or nil if none.
      (om-headline-get-section)
      (om-to-trimmed-string))
  ;; => ""
+
+```
+
+#### om-headline-get-path `(headline)`
+
+Return tree path of **`headline`** node.
+The return value is a list of headline titles (including that from
+**`headline`**) leading to the root node.
+
+```el
+;; Given the following contents:
+; * one
+; ** two
+; *** three
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-subheadlines)
+     (car)
+     (om-headline-get-path))
+ ;; => '("one" "two")
+
+;; Given the following contents:
+; * one
+; ** two
+; *** three
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-subheadlines)
+     (car)
+     (om-headline-get-subheadlines)
+     (car)
+     (om-headline-get-path))
+ ;; => '("one" "two" "three")
 
 ```
 

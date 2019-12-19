@@ -3359,6 +3359,27 @@
            (om-to-trimmed-string))
       => "")
 
+    (defexamples-content om-headline-get-path
+      nil
+      (:buffer "* one"
+                "** two"
+                "*** three")
+      (->> (om-parse-this-subtree)
+           (om-headline-get-subheadlines)
+           (car)
+           (om-headline-get-path))
+      => '("one" "two")
+      (:buffer "* one"
+                "** two"
+                "*** three")
+      (->> (om-parse-this-subtree)
+           (om-headline-get-subheadlines)
+           (car)
+           (om-headline-get-subheadlines)
+           (car)
+           (om-headline-get-path))
+      => '("one" "two" "three"))
+
     (defexamples-content om-headline-update-item-statistics
       nil
       (:buffer "* statistically significant [/]"
@@ -3440,17 +3461,6 @@
                   "** irrelevant data"
                   "** TODO good data"
                   "** DONE bad data"))
-
-    ;; (defexamples-content om-headline-get-path
-    ;;   nil
-    ;;   (:buffer "* one"
-    ;;             "** two"
-    ;;             "*** three")
-    ;;   (--> (om-parse-this-subtree)
-    ;;        (om-match-first it 'headline)
-    ;;        (om-headline-get-path it)
-    ;;        (om-to-trimmed-string it))
-    ;;   => '("one"))
 
     (defexamples-content om-headline-indent-subheadline
       nil

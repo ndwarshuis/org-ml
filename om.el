@@ -1811,18 +1811,6 @@ float-times, which assumes the :type property is valid."
             (om--get-children)
             (--first (om--is-type-p 'planning it))))
 
-;; TODO use this eventually...
-;; (defun om--headline-get-path (headline)
-;;   "Return path of headline HEADLINE element as a list of strings."
-;;   (cl-labels
-;;       ((get-path
-;;         (hl)
-;;         (let ((title (om--get-property :raw-value hl)))
-;;           (-if-let (parent (om--get-parent-headline hl))
-;;               (cons title (get-path parent))
-;;             (list title)))))
-;;     (reverse (get-path headline))))
-
 (defun om--headline-map-subheadlines (fun headline)
   (om--map-children
    (lambda (children)
@@ -3062,6 +3050,20 @@ returned."
 (om--defun-node om-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
   (om--headline-get-planning headline))
+
+(om--defun-node om-headline-get-path (headline)
+  "Return tree path of HEADLINE node.
+The return value is a list of headline titles (including that from
+HEADLINE) leading to the root node."
+  (cl-labels
+      ((get-path
+        (hl)
+        (let ((title (om--get-property :raw-value hl)))
+          (-if-let (parent (om--get-parent-headline hl))
+              (cons title (get-path parent))
+            (list title)))))
+    (reverse (get-path headline))))
+
 
 ;; plain-list
 
