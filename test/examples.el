@@ -1721,7 +1721,7 @@
            (om-get-property :key))
       => "KEY"
       (->> (om-parse-this-headline)
-           (om--headline-get-node-properties)
+           (om-headline-get-node-properties)
            (-first-item)
            (om-get-property :value))
       => "VAL"
@@ -1759,7 +1759,7 @@
 
       (:buffer "* dummy [50%]")
       (->> (om-parse-this-headline)
-           (om--headline-get-statistics-cookie)
+           (om-headline-get-statistics-cookie)
            (om-get-property :value))
       => '(50)
 
@@ -2596,7 +2596,7 @@
                "- [X] three"
                "- [-] four")
       (->> (om-parse-this-element)
-           (om--get-children)
+           (om-get-children)
            (-map #'om-item-is-unchecked-p))
       => '(nil t nil nil))
 
@@ -2607,7 +2607,7 @@
                "- [X] three"
                "- [-] four")
       (->> (om-parse-this-element)
-           (om--get-children)
+           (om-get-children)
            (-map #'om-item-is-checked-p))
       => '(nil nil t nil))
 
@@ -2618,7 +2618,7 @@
                "- [X] three"
                "- [-] four")
       (->> (om-parse-this-element)
-           (om--get-children)
+           (om-get-children)
            (-map #'om-item-is-trans-p))
       => '(nil nil nil t))
     
@@ -2651,14 +2651,14 @@
                "CLOSED: [2019-01-01 Tue]")
       (:comment "Change an existing timestamp in planning")
       (->> (om-parse-this-headline)
-           (om--headline-get-planning)
+           (om-headline-get-planning)
            (om-planning-set-timestamp!
             :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
            (om-to-trimmed-string))
       => "CLOSED: [2019-01-02 Wed +2m -1d]"
       (:comment "Add a new timestamp and remove another")
       (->> (om-parse-this-headline)
-           (om--headline-get-planning)
+           (om-headline-get-planning)
            (om-planning-set-timestamp!
             :deadline '(2112 1 1))
            (om-planning-set-timestamp!
@@ -3163,7 +3163,7 @@
                ":TWO: two"
                ":END:")
       (->> (om-parse-this-headline)
-           (om--headline-get-properties-drawer)
+           (om-headline-get-properties-drawer)
            (om-get-children)
            (-map #'om-get-type))
       => '(node-property node-property) 
@@ -3715,23 +3715,23 @@
                "| a | b | c |")
       (->> (om-parse-this-element)
            (om-table-get-cell 0 0)
-           (om--get-children)
+           (om-get-children)
            (car))
       => "1"
       (->> (om-parse-this-element)
            (om-table-get-cell 1 1)
-           (om--get-children)
+           (om-get-children)
            (car))
       => "b"
       (->> (om-parse-this-element)
            (om-table-get-cell -1 -1)
-           (om--get-children)
+           (om-get-children)
            (car))
       => "c"
       :begin-hidden
       (->> (om-parse-this-element)
            (om-table-get-cell 0 3)
-           (om--get-children)
+           (om-get-children)
            (car))
       !!> error
       :end-hidden)

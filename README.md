@@ -2869,7 +2869,7 @@ Return t if **`item`** element is unchecked.
 ; - [-] four
 
 (->> (om-parse-this-element)
-     (om--get-children)
+     (om-get-children)
      (-map (function om-item-is-unchecked-p)))
  ;; => '(nil t nil nil)
 
@@ -2887,7 +2887,7 @@ Return t if **`item`** element is checked.
 ; - [-] four
 
 (->> (om-parse-this-element)
-     (om--get-children)
+     (om-get-children)
      (-map (function om-item-is-checked-p)))
  ;; => '(nil nil t nil)
 
@@ -2905,7 +2905,7 @@ Return t if **`item`** element is transitional.
 ; - [-] four
 
 (->> (om-parse-this-element)
-     (om--get-children)
+     (om-get-children)
      (-map (function om-item-is-trans-p)))
  ;; => '(nil nil nil t)
 
@@ -2961,14 +2961,14 @@ is the same as that described in [`om-build-planning!`](#om-build-planning-key-c
 
 ;; Change an existing timestamp in planning
 (->> (om-parse-this-headline)
-     (om--headline-get-planning)
+     (om-headline-get-planning)
      (om-planning-set-timestamp! :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
      (om-to-trimmed-string))
  ;; => "CLOSED: [2019-01-02 Wed +2m -1d]"
 
 ;; Add a new timestamp and remove another
 (->> (om-parse-this-headline)
-     (om--headline-get-planning)
+     (om-headline-get-planning)
      (om-planning-set-timestamp! :deadline '(2112 1 1))
      (om-planning-set-timestamp! :closed nil)
      (om-to-trimmed-string))
@@ -4299,19 +4299,19 @@ Rule-type rows do not count toward row indices.
 
 (->> (om-parse-this-element)
      (om-table-get-cell 0 0)
-     (om--get-children)
+     (om-get-children)
      (car))
  ;; => "1"
 
 (->> (om-parse-this-element)
      (om-table-get-cell 1 1)
-     (om--get-children)
+     (om-get-children)
      (car))
  ;; => "b"
 
 (->> (om-parse-this-element)
      (om-table-get-cell -1 -1)
-     (om--get-children)
+     (om-get-children)
      (car))
  ;; => "c"
 
