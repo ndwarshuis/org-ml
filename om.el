@@ -4026,30 +4026,29 @@ PATTERN follows the same rules as `om-match'."
 
 (defun om--parse-element-at (point &optional type)
   "Return element node immediately under POINT.
-For a list of all possible return types refer to
-`org-element-all-elements'; this will return everything in this list
-except 'section' which is ambiguous when referring to a single point.
+For a list of all possible return types refer to `om-elements'; this 
+will return everything in this list except 'section' which is 
+ambiguous when referring to a single point.
 \(see `om-parse-section-at').
 
-If TYPE is supplied, only return nil if the object under point is
-not of that type. TYPE is a symbol from `org-element-all-elements'.
-Furthermore, setting TYPE to 'table-row' will prefer table-row
-elements over table elements and likewise when setting TYPE to 'item'
-for plain-list elements vs item elements."
+If TYPE is supplied, only return nil if the object under point is not
+of that type. TYPE is a symbol from `om-elements'. Furthermore,
+setting TYPE to 'table-row' will prefer table-row elements over table
+elements and likewise when setting TYPE to 'item' for plain-list
+elements vs item elements."
   (save-excursion
     (goto-char point)
     (let*
         ((node (org-element-at-point))
-         (elem-type (om--get-type node)))
-      (if (not
-           ;; TODO refactor
-           (memq elem-type (append org-element-greater-elements
-                                   org-element-object-containers)))
-          node
+         (node-type (om--get-type node)))
+      ;; NOTE this will not filter by type if it is a leaf node
+      (if (not (memq node-type om-branch-nodes)) node
+        ;; need to parse again if branch-node since
+        ;; `org-element-at-point' does not parse children
         (-let* (((&plist :begin :end) (om--get-all-properties node))
                 (tree (car (org-element--parse-elements
                             begin end 'first-section nil nil nil nil)))
-                (nesting (cl-case elem-type
+                (nesting (cl-case node-type
                            (headline nil)
                            (table (if (eq type 'table-row) '(0 0) '(0)))
                            (plain-list (if (eq type 'item) '(0 0) '(0)))
