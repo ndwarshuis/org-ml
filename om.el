@@ -1044,8 +1044,6 @@ bounds."
                        :type-desc "a string that makes `org-entity-get' return non-nil"
                        :require t)
                 (:use-brackets-p ,@bool)
-                ;; TODO these are useful just part of the list that
-                ;; `org-entity-get' returns, might as well use them
                 (:latex)
                 (:latex-math-p)
                 (:html)
@@ -2605,8 +2603,6 @@ PARAGRAPH.
 All other arguments follow the same rules as `om-build-item'."
   (let ((paragraph* (-some->> paragraph (om-build-paragraph!)))
         (tag (-some->> tag (om--build-secondary-string))))
-    ;; TODO this restricts all subitems to plain lists...there are
-    ;; other things we can put into lists
     (->> (append (list paragraph*) children)
          (-non-nil)
          (apply #'om-build-item
