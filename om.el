@@ -652,10 +652,14 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
   ;; fool parser to always parse objects, bold will parse to headlines
   ;; because of the stars
   (-if-let (ss (->> (om--from-string (concat " " string))
-                      (om--get-descendent '(0))
-                      (om--get-children)))
-      (if (equal (car ss) " ") (-drop 1 ss)
-        (om--map-first* (substring it 1) ss))
+                    (om--get-descendent '(0))
+                    (om--get-children)))
+      (cond
+       ((--any? (om--is-any-type-p om-elements it) ss)
+        (error "Secondary string must only contain objects"))
+       ((equal (car ss) " ")
+        (-drop 1 ss))
+       (t (om--map-first* (substring it 1) ss)))
     (error "Could not make secondary string from %S" string)))
 
 ;;; STRICT PROPERTY CHECKING
@@ -2581,12 +2585,8 @@ All arguments not mentioned here follow the same rules as
 
 STRING is the text to be parsed into a paragraph and must contain 
 valid textual representations of object nodes."
-  ;; TODO this can be simplified?
-  (let ((p (->> (om--from-string string)
-                (om--get-descendent '(0)))))
-    (if (om--is-type-p 'paragraph p)
-        (om--set-property-strict :post-blank (or post-blank 0) p)
-      (error "String could not be parsed to a paragraph: %s" string))))
+  (let ((ss (om--build-secondary-string string)))
+    (apply #'om-build-paragraph :post-blank (or post-blank 0) ss)))
 
 (om--defun-kw om-build-item! (&key post-blank bullet checkbox
                                           tag paragraph counter
