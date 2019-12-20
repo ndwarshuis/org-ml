@@ -4005,24 +4005,17 @@ PATTERN follows the same rules as `om-match'."
   "Return object node under POINT or nil if not on an object."
   (save-excursion
     (goto-char point)
-    (let* ((context (org-element-context))
-           (type (om--get-type context))
-           (offset (cond
-                    ((memq type '(superscript subscript)) -1)
-                    ((eq type 'table-cell) -1)
-                    (t 0)))
-           (nesting (cond
-                     ((memq type '(superscript subscript)) '(0 1))
-                     ((eq type 'table-cell) '(0 0 0))
-                     (t '(0 0)))))
-      (-let* (((&plist :begin :end) (om--get-all-properties context))
-              (tree (org-element--parse-elements (+ begin offset) end 'first-section
-                                                 nil nil nil nil)))
-        (--> (car tree)
-             (om--get-descendent nesting it)
-             ;; TODO refactor
-             (om--filter-types org-element-all-objects it)
-             (if type (om--filter-type type it) it))))))
+    (-let* ((context (org-element-context))
+            ((offset nesting) (cl-case (om--get-type context)
+                                ((superscript subscript) '(-1 (0 1)))
+                                (table-cell '(-1 (0 0 0)))
+                                (t '(0 (0 0)))))
+            ((&plist :begin :end) (om--get-all-properties context))
+            (tree (org-element--parse-elements
+                   (+ begin offset) end 'first-section nil nil nil nil)))
+      (->> (car tree)
+           (om--get-descendent nesting)
+           (om--filter-types om-objects)))))
 
 (defun om--parse-element-at (point &optional type)
   "Return element node immediately under POINT.
