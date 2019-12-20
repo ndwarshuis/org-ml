@@ -959,8 +959,9 @@
       => "* really impressive title [0/9000]"
       (->> (om-build-headline!
             :title-text "really impressive title"
-            :properties '((key val))
-            :section-children (list (om-build-paragraph! "section text"))
+            :section-children
+            (list (om-build-property-drawer! '(key val))
+                                    (om-build-paragraph! "section text"))
             (om-build-headline! :title-text "subhead"))
            (om-to-trimmed-string))
       => (:result "* really impressive title"

@@ -2525,11 +2525,10 @@ like \":key: val\"."
                 (om-build-node-property key val)))
        (apply #'om-build-property-drawer :post-blank post-blank)))
 
-;; TODO should the properties be kept here? they don't go in a predefined place
 (om--defun-kw om-build-headline! (&key (level 1) title-text
                                        todo-keyword tags pre-blank
                                        priority commentedp archivedp
-                                       post-blank planning properties
+                                       post-blank planning
                                        statistics-cookie
                                        section-children
                                        &rest
@@ -2557,11 +2556,8 @@ automatically be adjusted to LEVEL + 1.
 All arguments not mentioned here follow the same rules as
 `om-build-headline'"
   (let* ((planning (-some->> planning (apply #'om-build-planning!)))
-         (property-drawer (-some->>
-                           properties
-                           (apply #'om-build-property-drawer!)))
          (section (-some->>
-                   (append `(,planning) `(,property-drawer) section-children)
+                   (append `(,planning) section-children)
                    (-non-nil)
                    (apply #'om-build-section)))
          (nodes (->> subheadlines
