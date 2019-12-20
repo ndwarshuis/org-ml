@@ -164,7 +164,8 @@ These are also known as \"recursive objects\" in `org-element.el'")
 
 (defun om--is-type-p (type node)
   "Return t if NODE's type is `eq' to TYPE (a symbol)."
-  ;; TODO ensure type is valid?
+  (unless (memq type om-nodes)
+    (error "Invalid type requested: %s" type))
   (eq (om--get-type node) type))
 
 (defun om--is-any-type-p (types node)
