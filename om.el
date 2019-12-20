@@ -1908,16 +1908,12 @@ TYPE given in DEC."
          (t (error "Invalid timestamp type: %s" type)))))
     (om--map-property :type #'update-range timestamp)))
 
-(defun om--timestamp-set-type (type timestamp)
-  "Return TIMESTAMP with type property set to TYPE.
-TYPE is `active' or `inactive'; the ranged suffix will be added
-automatically if TIMESTAMP is ranged."
-  (let* ((range? (om--timestamp-is-ranged-lowres-p timestamp))
-         (type* (cl-case type
-                  (active (if range? 'active-range 'active))
-                  (inactive (if range? 'inactive-range 'inactive))
-                  (t (error "Invalid timestamp type: %s" type)))))
-    (om--set-property :type type* timestamp)))
+(defun om--timestamp-set-active (flag timestamp)
+  "Return TIMESTAMP with active type if FLAG is t."
+  (let* ((type (if (om--timestamp-is-ranged-lowres-p timestamp)
+                   (if flag 'active-range 'inactive-range)
+                 (if flag 'active 'inactive))))
+    (om--set-property :type type timestamp)))
 
 (defun om--timestamp-set-warning (warning timestamp)
   "Return TIMESTAMP with warning properties set to WARNING list."
@@ -1992,7 +1988,7 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
     (let* ((p (-partition-before-pred
                (lambda (it) (memq it '(&warning &repeater)))
                planning-list)))
-      (om-build-timestamp! 'inactive (car p)
+      (om-build-timestamp! (car p)
                            :warning (alist-get '&warning p)
                            :repeater (alist-get '&repeater p)))))
 
@@ -2454,14 +2450,9 @@ throw an error."
   (om--verify string stringp)
   (om--build-secondary-string string))
 
-(om--defun-kw om-build-timestamp! (type start &key end
-                                               repeater
-                                               warning
-                                               post-blank)
+(om--defun-kw om-build-timestamp! (start &key end active repeater
+                                         warning post-blank)
   "Return a new timestamp node.
-
-TYPE is the symbol `active' or `inactive' (the range suffix will be
-added if an end time is supplied).
 
 START specifies the start time and is a list of integers in one of
 the following forms:
@@ -2472,6 +2463,10 @@ the following forms:
 END (if supplied) will add the ending time, and follows the same
 formatting rules as START.
 
+ACTIVE is a boolean where t signifies the type is `active', else 
+`inactive' (the range suffix will be added if an end time is
+supplied).
+
 REPEATER and WARNING are lists formatted as (TYPE VALUE UNIT) where
 the three members correspond to the :repeater/warning-type, -value,
 and -unit properties in `om-build-timestamp'.
@@ -2480,7 +2475,7 @@ Building a diary sexp timestamp is not possible with this function."
   (->> (om--build-object 'timestamp post-blank)
        (om--timestamp-set-start-time-nocheck start)
        (om--timestamp-set-end-time-nocheck end)
-       (om--timestamp-set-type type)
+       (om--timestamp-set-active active)
        (om--timestamp-set-warning warning)
        (om--timestamp-set-repeater repeater)
        (om--set-property-nil :raw-value)))
@@ -2490,7 +2485,7 @@ Building a diary sexp timestamp is not possible with this function."
 
 START and END follow the same rules as their respective arguments in
 `om-build-timestamp!'."
-  (let ((ts (om-build-timestamp! 'inactive start :end end)))
+  (let ((ts (om-build-timestamp! start :end end)))
     (om-build-clock ts :post-blank post-blank)))
 
 (om--defun-kw om-build-planning! (&key closed deadline scheduled
@@ -2963,12 +2958,9 @@ if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format."
   (om--timestamp-set-range range timestamp))
 
-;; TODO make this behave like a boolean
-(om--defun-timestamp om-timestamp-set-type (type timestamp)
-  "Return TIMESTAMP node with type property set to TYPE.
-TYPE can be either `active' or `inactive' (the ranged suffix will be
-automatically added based on if TIMESTAMP is a range)."
-  (om--timestamp-set-type type timestamp))
+(om--defun-timestamp om-timestamp-set-active (flag timestamp)
+  "Return TIMESTAMP node with active type if FLAG is t."
+  (om--timestamp-set-active flag timestamp))
 
 (om--defun-timestamp om-timestamp-shift (n unit timestamp)
   "Return TIMESTAMP node with time shifted by N UNIT's.
@@ -3007,9 +2999,9 @@ behavior is not desired, use `om-timestamp-shift'."
 
 (om--defun-timestamp om-timestamp-toggle-active (timestamp)
   "Return TIMESTAMP node with its active/inactive type flipped."
-  (--> (om--timestamp-is-active-p timestamp)
-       (if it 'inactive 'active)
-       (om--timestamp-set-type it timestamp)))
+  (-> (om--timestamp-is-active-p timestamp)
+      (not)
+      (om--timestamp-set-active timestamp)))
 
 (om--defun-timestamp om-timestamp-truncate (timestamp)
   "Return TIMESTAMP node with start/end times forced to short format."

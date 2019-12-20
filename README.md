@@ -262,11 +262,11 @@ Build new nodes.
 
 Build nodes with more convenient/shorter syntax.
 
-* [om-build-timestamp!](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank) `(type start &key end repeater warning post-blank)`
+* [om-build-timestamp!](#om-build-timestamp-start-key-end-active-repeater-warning-post-blank) `(start &key end active repeater warning post-blank)`
 * [om-build-clock!](#om-build-clock-start-key-end-post-blank) `(start &key end post-blank)`
 * [om-build-planning!](#om-build-planning-key-closed-deadline-scheduled-post-blank) `(&key closed deadline scheduled post-blank)`
 * [om-build-property-drawer!](#om-build-property-drawer-key-post-blank-rest-keyvals) `(&key post-blank &rest keyvals)`
-* [om-build-headline!](#om-build-headline-key-level-1-title-text-todo-keyword-tags-pre-blank-priority-commentedp-archivedp-post-blank-planning-properties-statistics-cookie-section-children-rest-subheadlines) `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning properties statistics-cookie section-children &rest subheadlines)`
+* [om-build-headline!](#om-build-headline-key-level-1-title-text-todo-keyword-tags-pre-blank-priority-commentedp-archivedp-post-blank-planning-statistics-cookie-section-children-rest-subheadlines) `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning statistics-cookie section-children &rest subheadlines)`
 * [om-build-item!](#om-build-item-key-post-blank-bullet-checkbox-tag-paragraph-counter-rest-children) `(&key post-blank bullet checkbox tag paragraph counter &rest children)`
 * [om-build-paragraph!](#om-build-paragraph-string-key-post-blank) `(string &key post-blank)`
 * [om-build-table-cell!](#om-build-table-cell-string-key-post-blank) `(string &key post-blank)`
@@ -345,7 +345,7 @@ Set, get, and map properties of nodes.
 * [om-timestamp-set-single-time](#om-timestamp-set-single-time-time-timestamp) `(time timestamp)`
 * [om-timestamp-set-double-time](#om-timestamp-set-double-time-time1-time2-timestamp) `(time1 time2 timestamp)`
 * [om-timestamp-set-range](#om-timestamp-set-range-range-timestamp) `(range timestamp)`
-* [om-timestamp-set-type](#om-timestamp-set-type-type-timestamp) `(type timestamp)`
+* [om-timestamp-set-active](#om-timestamp-set-active-flag-timestamp) `(flag timestamp)`
 * [om-timestamp-shift](#om-timestamp-shift-n-unit-timestamp) `(n unit timestamp)`
 * [om-timestamp-shift-start](#om-timestamp-shift-start-n-unit-timestamp) `(n unit timestamp)`
 * [om-timestamp-shift-end](#om-timestamp-shift-end-n-unit-timestamp) `(n unit timestamp)`
@@ -1208,13 +1208,11 @@ The following properties are settable:
 - **`post-blank`**: a non-negative integer
 
 ```el
-(->> (om-build-clock (om-build-timestamp! 'inactive
-					  '(2019 1 1 0 0)))
+(->> (om-build-clock (om-build-timestamp! '(2019 1 1 0 0)))
      (om-to-trimmed-string))
  ;; => "CLOCK: [2019-01-01 Tue 00:00]"
 
-(->> (om-build-clock (om-build-timestamp! 'inactive
-					  '(2019 1 1 0 0)
+(->> (om-build-clock (om-build-timestamp! '(2019 1 1 0 0)
 					  :end '(2019 1 1 1 0)))
      (om-to-trimmed-string))
  ;; => "CLOCK: [2019-01-01 Tue 00:00-01:00] =>  1:00"
@@ -1416,18 +1414,15 @@ The following properties are settable:
 - **`post-blank`**: a non-negative integer
 
 ```el
-(->> (om-build-planning :closed (om-build-timestamp! 'inactive
-						     '(2019 1 1)))
+(->> (om-build-planning :closed (om-build-timestamp! '(2019 1 1)))
      (om-to-trimmed-string))
  ;; => "CLOSED: [2019-01-01 Tue]"
 
-(->> (om-build-planning :scheduled (om-build-timestamp! 'inactive
-							'(2019 1 1)))
+(->> (om-build-planning :scheduled (om-build-timestamp! '(2019 1 1)))
      (om-to-trimmed-string))
  ;; => "SCHEDULED: [2019-01-01 Tue]"
 
-(->> (om-build-planning :deadline (om-build-timestamp! 'inactive
-						       '(2019 1 1)))
+(->> (om-build-planning :deadline (om-build-timestamp! '(2019 1 1)))
      (om-to-trimmed-string))
  ;; => "DEADLINE: [2019-01-01 Tue]"
 
@@ -1798,12 +1793,9 @@ Optionally set **`post-blank`** (a positive integer).
 
 Build nodes with more convenient/shorter syntax.
 
-#### om-build-timestamp! `(type start &key end repeater warning post-blank)`
+#### om-build-timestamp! `(start &key end active repeater warning post-blank)`
 
 Return a new timestamp node.
-
-**`type`** is the symbol `active` or `inactive` (the range suffix will be
-added if an end time is supplied).
 
 **`start`** specifies the start time and is a list of integers in one of
 the following forms:
@@ -1814,6 +1806,10 @@ the following forms:
 **`end`** (if supplied) will add the ending time, and follows the same
 formatting rules as **`start`**.
 
+**`active`** is a boolean where t signifies the type is `active`, else 
+`inactive` (the range suffix will be added if an end time is
+supplied).
+
 **`repeater`** and **`warning`** are lists formatted as `(type value unit)` where
 the three members correspond to the :repeater/warning-type, -value,
 and -unit properties in [`om-build-timestamp`](#om-build-timestamp-type-year-start-month-start-day-start-year-end-month-end-day-end-key-hour-start-minute-start-hour-end-minute-end-repeater-type-repeater-unit-repeater-value-warning-type-warning-unit-warning-value-post-blank).
@@ -1821,20 +1817,17 @@ and -unit properties in [`om-build-timestamp`](#om-build-timestamp-type-year-sta
 Building a diary sexp timestamp is not possible with this function.
 
 ```el
-(->> (om-build-timestamp! 'inactive
-			  '(2019 1 1))
+(->> (om-build-timestamp! '(2019 1 1))
      (om-to-string))
  ;; => "[2019-01-01 Tue]"
 
-(->> (om-build-timestamp! 'inactive
-			  '(2019 1 1 12 0)
-			  :warning '(all 1 day)
+(->> (om-build-timestamp! '(2019 1 1 12 0)
+			  :active t :warning '(all 1 day)
 			  :repeater '(cumulate 1 month))
      (om-to-string))
- ;; => "[2019-01-01 Tue 12:00 +1m -1d]"
+ ;; => "<2019-01-01 Tue 12:00 +1m -1d>"
 
-(->> (om-build-timestamp! 'inactive
-			  '(2019 1 1)
+(->> (om-build-timestamp! '(2019 1 1)
 			  :end '(2019 1 2))
      (om-to-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
@@ -1846,7 +1839,7 @@ Building a diary sexp timestamp is not possible with this function.
 Return a new clock node.
 
 **`start`** and **`end`** follow the same rules as their respective arguments in
-[`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+[`om-build-timestamp!`](#om-build-timestamp-start-key-end-active-repeater-warning-post-blank).
 
 ```el
 (->> (om-build-clock! '(2019 1 1))
@@ -1875,7 +1868,7 @@ Return a new planning node.
  [&warning type value unit]
  [&repeater type value unit])`
 
-In terms of arguments supplied to [`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank), the first
+In terms of arguments supplied to [`om-build-timestamp!`](#om-build-timestamp-start-key-end-active-repeater-warning-post-blank), the first
 five members correspond to the list supplied as `time`, and the `type`,
 `value`, and `unit` fields correspond to the lists supplied to `warning` and
 `repeater` arguments. The order of warning and repeater does not
@@ -1914,7 +1907,7 @@ like `":key: val"`.
 
 ```
 
-#### om-build-headline! `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning properties statistics-cookie section-children &rest subheadlines)`
+#### om-build-headline! `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning statistics-cookie section-children &rest subheadlines)`
 
 Return a new headline node.
 
@@ -1948,8 +1941,8 @@ All arguments not mentioned here follow the same rules as
      (om-to-trimmed-string))
  ;; => "* really impressive title [0/9000]"
 
-(->> (om-build-headline! :title-text "really impressive title" :properties '((key val))
-			  :section-children (list (om-build-paragraph! "section text"))
+(->> (om-build-headline! :title-text "really impressive title" :section-children (list (om-build-property-drawer! '(key val))
+										       (om-build-paragraph! "section text"))
 			  (om-build-headline! :title-text "subhead"))
      (om-to-trimmed-string))
  ;; => "* really impressive title
@@ -3040,7 +3033,7 @@ Return t is **`statistics-cookie`** node is complete.
 
 Return the time list for start time of **`timestamp`** node.
 The return value will be a list as specified by the `time` argument in
-[`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+[`om-build-timestamp!`](#om-build-timestamp-start-key-end-active-repeater-warning-post-blank).
 
 ```el
 ;; Given the following contents:
@@ -3070,7 +3063,7 @@ The return value will be a list as specified by the `time` argument in
 
 Return the end time list for end time of **`timestamp`** or nil if not a range.
 The return value will be a list as specified by the `time` argument in
-[`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+[`om-build-timestamp!`](#om-build-timestamp-start-key-end-active-repeater-warning-post-blank).
 
 ```el
 ;; Given the following contents:
@@ -3198,7 +3191,7 @@ condensed format.
 
 Return **`timestamp`** node with start time set to **`time`**.
 **`time`** is a list analogous to the same argument specified in
-[`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+[`om-build-timestamp!`](#om-build-timestamp-start-key-end-active-repeater-warning-post-blank).
 
 ```el
 ;; Given the following contents:
@@ -3231,7 +3224,7 @@ Return **`timestamp`** node with start time set to **`time`**.
 
 Return **`timestamp`** node with end time set to **`time`**.
 **`time`** is a list analogous to the same argument specified in
-[`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+[`om-build-timestamp!`](#om-build-timestamp-start-key-end-active-repeater-warning-post-blank).
 
 ```el
 ;; Given the following contents:
@@ -3267,7 +3260,7 @@ Return **`timestamp`** node with end time set to **`time`**.
 
 Return **`timestamp`** node with start and end times set to **`time`**.
 **`time`** is a list analogous to the same argument specified in
-[`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+[`om-build-timestamp!`](#om-build-timestamp-start-key-end-active-repeater-warning-post-blank).
 
 ```el
 ;; Given the following contents:
@@ -3294,7 +3287,7 @@ Return **`timestamp`** node with start and end times set to **`time`**.
 
 Return **`timestamp`** node with start and end times set to **`time1`** and **`time2`** respectively.
 **`time1`** and **`time2`** are lists analogous to the `time` argument specified in
-[`om-build-timestamp!`](#om-build-timestamp-type-start-key-end-repeater-warning-post-blank).
+[`om-build-timestamp!`](#om-build-timestamp-start-key-end-active-repeater-warning-post-blank).
 
 ```el
 ;; Given the following contents:
@@ -3365,20 +3358,26 @@ format.
 
 ```
 
-#### om-timestamp-set-type `(type timestamp)`
+#### om-timestamp-set-active `(flag timestamp)`
 
-Return **`timestamp`** node with type property set to **`type`**.
-**`type`** can be either `active` or `inactive` (the ranged suffix will be
-automatically added based on if **`timestamp`** is a range).
+Return **`timestamp`** node with active type if **`flag`** is t.
 
 ```el
 ;; Given the following contents:
 ; [2019-01-01 Tue]
 
 (->> (om-parse-this-object)
-     (om-timestamp-set-type 'active)
+     (om-timestamp-set-active t)
      (om-to-trimmed-string))
  ;; => "<2019-01-01 Tue>"
+
+;; Given the following contents:
+; <2019-01-01 Tue>
+
+(->> (om-parse-this-object)
+     (om-timestamp-set-active nil)
+     (om-to-trimmed-string))
+ ;; => "[2019-01-01 Tue]"
 
 ```
 

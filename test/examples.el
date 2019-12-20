@@ -609,10 +609,10 @@
       => "#+CALL: name() :key val")
 
     (defexamples om-build-clock
-      (->> (om-build-clock (om-build-timestamp! 'inactive '(2019 1 1 0 0)))
+      (->> (om-build-clock (om-build-timestamp! '(2019 1 1 0 0)))
            (om-to-trimmed-string))
       => "CLOCK: [2019-01-01 Tue 00:00]"
-      (->> (om-build-clock (om-build-timestamp! 'inactive '(2019 1 1 0 0) :end '(2019 1 1 1 0)))
+      (->> (om-build-clock (om-build-timestamp! '(2019 1 1 0 0) :end '(2019 1 1 1 0)))
            (om-to-trimmed-string))
       => "CLOCK: [2019-01-01 Tue 00:00-01:00] =>  1:00")
 
@@ -693,13 +693,13 @@
       => ":key:      val")
 
     (defexamples om-build-planning
-      (->> (om-build-planning :closed (om-build-timestamp! 'inactive '(2019 1 1)))
+      (->> (om-build-planning :closed (om-build-timestamp! '(2019 1 1)))
            (om-to-trimmed-string))
       => "CLOSED: [2019-01-01 Tue]"
-      (->> (om-build-planning :scheduled (om-build-timestamp! 'inactive '(2019 1 1)))
+      (->> (om-build-planning :scheduled (om-build-timestamp! '(2019 1 1)))
            (om-to-trimmed-string))
       => "SCHEDULED: [2019-01-01 Tue]"
-      (->> (om-build-planning :deadline (om-build-timestamp! 'inactive '(2019 1 1)))
+      (->> (om-build-planning :deadline (om-build-timestamp! '(2019 1 1)))
            (om-to-trimmed-string))
       => "DEADLINE: [2019-01-01 Tue]")
 
@@ -906,16 +906,16 @@
     "Build nodes with more convenient/shorter syntax."
 
     (defexamples om-build-timestamp!
-      (->> (om-build-timestamp! 'inactive '(2019 1 1))
+      (->> (om-build-timestamp! '(2019 1 1))
            (om-to-string))
       => "[2019-01-01 Tue]"
-      (->> (om-build-timestamp! 'inactive '(2019 1 1 12 0)
+      (->> (om-build-timestamp! '(2019 1 1 12 0)
+                                :active t
                                 :warning '(all 1 day)
                                 :repeater '(cumulate 1 month))
            (om-to-string))
-      => "[2019-01-01 Tue 12:00 +1m -1d]"
-      (->> (om-build-timestamp! 'inactive '(2019 1 1)
-                                :end '(2019 1 2))
+      => "<2019-01-01 Tue 12:00 +1m -1d>"
+      (->> (om-build-timestamp! '(2019 1 1) :end '(2019 1 2))
            (om-to-string))
       => "[2019-01-01 Tue]--[2019-01-02 Wed]")
 
@@ -1162,8 +1162,7 @@
       (:buffer "CLOCK: [2019-01-01 Tue]")
       (->> (om-parse-this-element)
            (om-set-property
-            :value (om-build-timestamp!
-                    'inactive '(2019 1 1) :end '(2019 1 2)))
+            :value (om-build-timestamp! '(2019 1 1) :end '(2019 1 2)))
            (om-to-trimmed-string))
       => "CLOCK: [2019-01-01 Tue]--[2019-01-02 Wed] => 24:00"
 
@@ -1367,7 +1366,7 @@
       (->> (om-parse-this-headline)
            (om-headline-get-planning)
            (om-set-property
-            :closed (om-build-timestamp! 'inactive '(2019 1 2)))
+            :closed (om-build-timestamp! '(2019 1 2)))
            (om-to-trimmed-string))
       => "CLOSED: [2019-01-02 Wed]"
 
@@ -2871,13 +2870,18 @@
            (om-to-trimmed-string))
       => "[2019-01-01 Tue]")
 
-    (defexamples-content om-timestamp-set-type
+    (defexamples-content om-timestamp-set-active
       nil
       (:buffer "[2019-01-01 Tue]")
       (->> (om-parse-this-object)
-           (om-timestamp-set-type 'active)
+           (om-timestamp-set-active t)
            (om-to-trimmed-string))
-      => "<2019-01-01 Tue>")
+      => "<2019-01-01 Tue>"
+      (:buffer "<2019-01-01 Tue>")
+      (->> (om-parse-this-object)
+           (om-timestamp-set-active nil)
+           (om-to-trimmed-string))
+      => "[2019-01-01 Tue]")
 
     (defexamples-content om-timestamp-shift
       nil
