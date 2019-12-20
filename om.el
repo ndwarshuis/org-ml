@@ -343,6 +343,8 @@ if rest arguments are to be considered at all."
                   ,@kw-setter
                   ,@rest-let
                   ,@lets)))))
+      ;; TODO throw error/warning if &key is not used, otherwise
+      ;; better to just use defun
       ;; mercilessly stolen from cl--transform-whatever
       `(,arg-form
         ,header
@@ -350,7 +352,6 @@ if rest arguments are to be considered at all."
           let-forms
           (macroexp-progn `(,body))))))
 
-  ;; TODO catch duplicate keys
   (defmacro om--defun-kw (name args &rest body)
     "Define NAME as a function.
 
@@ -677,7 +678,6 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 
 (defun om--is-valid-link-type-p (x)
   "Return t if X is an allowed value for a link node type property."
-  ;; TODO allow nil here for fuzzy?
   (->> '("coderef" "custom-id" "file" "id" "radio" "fuzzy")
        (append (org-link-types))
        (member x)))
@@ -733,7 +733,6 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 
 (defun om--is-valid-timestamp-type-p (x)
   "Return t if X is an allowed value for a timestamp node type property."
-  ;; TODO allow diary here?
   (memq x '(inactive inactive-range active active-range)))
 
 (defun om--is-valid-timestamp-repeater-type-p (x)
@@ -826,15 +825,12 @@ VALUE is a list conforming to `om--is-valid-latex-environment-value-p'."
   "Return VALUE as a list representing a latex-environment.
 The return value is a list conforming to
 `om--is-valid-latex-environment-value-p'."
-  ;; TODO ensure that the output is correct?
   (let ((m (car (s-match-strings-all "\\\\begin{\\(.+\\)}\n\\(.*\\)\n?\\\\end{\\(.+\\)}" value))))
     (list (nth 1 m) (nth 2 m))))
 
 (defun om--encode-item-bullet (bullet)
   "Return BULLET as a formatted string.
 BULLET must conform to `om--is-valid-item-bullet-p'."
-  ;; NOTE see `om--is-valid-item-bullet-p' for org mode limitations
-  ;; relating to this function
   ;; assume bullet conforms to pcase statement below
   (pcase bullet
     ('- "- ")
@@ -870,7 +866,6 @@ Return value will conform to `om--is-valid-item-bullet-p'."
 (defun om--encode-statistics-cookie-value (value)
   "Return VALUE as formatted string representing the cookie.
 VALUE must conform to `om--is-valid-statistics-cookie-value-p'."
-  ;; assumes value is a list conforming to pcase statement below
   (cl-flet
       ((mk-stat
         (v)
@@ -902,7 +897,6 @@ Return value will conform to `om--is-valid-statistics-cookie-value-p'."
 (defun om--encode-diary-sexp-value (value)
   "Return VALUE as a string.
 VALUE must conform to `om--is-valid-diary-sexp-value-p'."
-  ;; assumes value is a form or nil
   (if value (format "%%%%%S" value) "%%()"))
 
 (defun om--decode-diary-sexp-value (value)
