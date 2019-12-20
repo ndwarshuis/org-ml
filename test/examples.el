@@ -3678,7 +3678,7 @@
                   "  - three"
                   "- four"))
     
-    (defexamples-content om-plain-list-unindent-items
+    (defexamples-content om-plain-list-unindent-item-tree
       nil
       (:buffer "- one"
                "- two"
@@ -3687,7 +3687,7 @@
                "  - three"
                "- four")
       (->> (om-parse-element-at 1)
-           (om-plain-list-unindent-items 1)
+           (om-plain-list-unindent-item-tree 1)
            (om-to-trimmed-string))
       => (:result "- one"
                   "- two"
@@ -3696,7 +3696,7 @@
                   "- three"
                   "- four")
       (->> (om-parse-element-at 1)
-           (om-plain-list-unindent-items 2)
+           (om-plain-list-unindent-item-tree 2)
            (om-to-trimmed-string))
       => (:result "- one"
                   "- two"
