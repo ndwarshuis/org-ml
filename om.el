@@ -918,11 +918,10 @@ This will be based on MACRO's key and value properties."
   "Return CLOCK node with its duration and status properties updated.
 This will be based on CLOCK's value property."
   (let* ((ts (om--get-property :value clock))
+         (seconds (om--timestamp-get-range ts))
          (plist
-          ;; TODO this is redundant
-          (if (om--timestamp-is-ranged-p ts)
-              (let* ((seconds (om--timestamp-get-range ts))
-                     (h (-> seconds (/ 3600) (floor)))
+          (if (< 0 seconds)
+              (let* ((h (-> seconds (/ 3600) (floor)))
                      (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
                 `(:duration ,(format "%2d:%02d" h m) :status running))
             '(:duration nil :status closed))))
