@@ -4559,7 +4559,7 @@ If **`column-text`** is nil, it will clear all cells at **`column-index`**.
 
 #### om-table-replace-row! `(row-index row-text table)`
 
-Return **`table`** node with the column at **`row-index`** replaced by **`row-text`**.
+Return **`table`** node with the row at **`row-index`** replaced by **`row-text`**.
 
 If **`row-text`** is a list of strings, it will replace the cells at
 **`row-index`**. Each member of **`row-text`** will be processed the same as

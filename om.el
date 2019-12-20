@@ -2128,7 +2128,7 @@ or nil to erase the statistics cookie if present."
        (om--map-last* (om--set-property-strict :value value it) it))
       ((and last? (not value))
        (-drop-last 1 it))
-      (value 
+      (value
        (-snoc it (om-build-statistics-cookie value)))
       (t it)))
    headline))
@@ -2202,28 +2202,29 @@ Rule-type table-row nodes do not factor when counting the index."
    column-cells
    table))
 
-;; TODO this is not dry...
-(defun om--table-replace-row (index row table)
-  (om--verify index integerp)
-  (let ((row (if (om--property-is-eq-p :type 'rule row) row
-               (let ((width (om--table-get-width table)))
-                 (om--map-children*
-                  (om--table-pad-or-truncate width it) row)))))
-    (om--map-children* (om--replace-at index row it) table)))
+(defun om--table-row-pad-maybe (table table-row)
+  "Return TABLE-ROW with row truncated or padded.
+See `om--table-pad-or-truncate' for how padding and truncation is
+performed. TABLE is used to get the table width."
+  (if (om--property-is-eq-p :type 'rule table-row) table-row
+    (let ((width (om--table-get-width table)))
+      (om--map-children*
+        (om--table-pad-or-truncate width it)
+        table-row))))
 
-(defun om--table-replace-cell (row-index column-index cell table)
-  (let ((row (->> (om--table-get-row row-index table)
-                  (om--map-children*
-                   (om--replace-at column-index cell it)))))
-    (om--table-replace-row row-index row table)))
+(defun om--table-replace-row (row-index table-row table)
+  "Return TABLE node with row at ROW-INDEX replaced by TABLE-ROW."
+  (om--verify row-index integerp)
+  (let ((table-row (om--table-row-pad-maybe table table-row)))
+    (om--map-children* (om--replace-at row-index table-row it) table)))
 
-(defun om--table-clear-row (index table)
-  ;; this assumes the blank cell will be padded with other blank cells
-  (om--table-replace-row index (om-build-table-row! '(" ")) table))
+(defun om--table-clear-row (row-index table)
+  "Return TABLE with table-cells in row at ROW-INDEX filled with blanks."
+  (om--table-replace-row row-index (om-build-table-row! '(" ")) table))
 
-(defun om--table-clear-column (index table)
-  ;; this assumes the blank cell will be padded with other blank cells
-  (om--table-replace-column index (list (om-build-table-cell "")) table))
+(defun om--table-clear-column (column-index table)
+  "Return TABLE with table-cells in column at COLUMN-INDEX filled with blanks."
+  (om--table-replace-column column-index `(,(om-build-table-cell " ")) table))
 
 ;;; INTERNAL INDENTATION
 
@@ -3376,16 +3377,11 @@ syntax as `om-build-table-cell!'."
 ROW-INDEX is the index of the column and ROW-TEXT is a list of strings
 to be made into table-cells to be inserted following the same syntax
 as `om-build-table-row!'."
-  ;; TODO refactor this...
   (om--verify row-index integerp)
   (if (not row-text) (om--table-clear-row row-index table)
-    (let ((row (om-build-table-row! row-text)))
-      (let ((row (if (om--property-is-eq-p :type 'rule row) row
-                   (let ((width (om--table-get-width table)))
-                     (om--map-children*
-                       (om--table-pad-or-truncate width it)
-                       row)))))
-        (om--map-children* (om--insert-at row-index row it) table)))))
+    (let ((row (->> (om-build-table-row! row-text)
+                    (om--table-row-pad-maybe table))))
+      (om--map-children* (om--insert-at row-index row it) table))))
 
 (om--defun-node om-table-replace-cell! (row-index column-index
                                                   cell-text table)
@@ -3396,9 +3392,12 @@ table-cell at ROW-INDEX and COLUMN-INDEX in TABLE. CELL-TEXT will be
 processed the same as the argument given to `om-build-table-cell!'.
 
 If CELL-TEXT is nil, it will set the cell to an empty string."
-  (let ((cell (if cell-text (om-build-table-cell! cell-text)
-                (om-build-table-cell ""))))
-    (om--table-replace-cell row-index column-index cell table)))
+  (let* ((cell (if cell-text (om-build-table-cell! cell-text)
+                 (om-build-table-cell "")))
+         (row (->> (om--table-get-row row-index table)
+                   (om--map-children*
+                     (om--replace-at column-index cell it)))))
+    (om--table-replace-row row-index row table)))
 
 (om--defun-node om-table-replace-column! (column-index column-text table)
   "Return TABLE node with the column at COLUMN-INDEX replaced by COLUMN-TEXT.
@@ -3413,7 +3412,7 @@ If COLUMN-TEXT is nil, it will clear all cells at COLUMN-INDEX."
       (om--table-replace-column column-index column-cells table))))
 
 (om--defun-node om-table-replace-row! (row-index row-text table)
-  "Return TABLE node with the column at ROW-INDEX replaced by ROW-TEXT.
+  "Return TABLE node with the row at ROW-INDEX replaced by ROW-TEXT.
 
 If ROW-TEXT is a list of strings, it will replace the cells at
 ROW-INDEX. Each member of ROW-TEXT will be processed the same as
