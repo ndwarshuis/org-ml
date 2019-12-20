@@ -2217,7 +2217,7 @@ Rule-type table-row nodes do not factor when counting the index."
 
 (defun om--table-clear-row (index table)
   ;; this assumes the blank cell will be padded with other blank cells
-  (om--table-replace-row index (om-build-table-row (om-build-table-cell " ")) table))
+  (om--table-replace-row index (om-build-table-row! '(" ")) table))
 
 (defun om--table-clear-column (index table)
   ;; this assumes the blank cell will be padded with other blank cells
