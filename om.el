@@ -2153,6 +2153,8 @@ be greater than zero, and DONE must be less than or equal to TOTAL."
 ;; table
 
 (defun om--table-get-width (table)
+  "Return the width of TABLE as an integer.
+This effectively is the maximum of all table-row lengths."
   (->> (om--get-children table)
        (--map (length (om--get-children it)))
        (-max)))
