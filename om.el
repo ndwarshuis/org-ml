@@ -3667,14 +3667,12 @@ See `om-match' for full description of PATTERN."
     ;; relative index
     (`(,(and (or '< '<= '> '>=) f)
        ,(and (pred integerp) i))
-     ;; TODO what if they give a negative index?
      (-when-let (i* (om--convert-intra-index i children t))
        (->> children
             (--map-indexed (when (funcall f it-index i*) it))
             (-non-nil))))
 
     ;; predicate
-    ;; ((and (pred functionp) fun)
     (`(:pred . (,p . nil))
      (--filter (funcall p it) children))
 
