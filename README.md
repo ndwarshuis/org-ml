@@ -2762,13 +2762,13 @@ Return t if **`clock`** element is running (eg is open).
 Return replacement string or symbol for **`entity`** node.
 
 **`key`** is one of:
-- :latex (the entity's latex representation)
-- :latex-math-p (t if the latex representation requires math mode,
+- `:latex` (the entity's latex representation)
+- `:latex-math-p` (t if the latex representation requires math mode,
     nil otherwise)
-- :html (the entity's html representation)
-- :ascii (the entity's ascii representation)
-- :latin1 (the entity's Latin1 representation)
-- :utf-8 (the entity's utf8 representation)
+- `:html` (the entity's html representation)
+- `:ascii` (the entity's ascii representation)
+- `:latin1` (the entity's Latin1 representation)
+- `:utf-8` (the entity's utf8 representation)
 
 Any other keys will trigger an error.
 
