@@ -3655,14 +3655,14 @@ See `om-match' for full description of PATTERN."
     ;; function (may be accidentally in pattern
     (`(function . ,_)
      (error "'function' not allowed in pattern"))
-    
-    ;; index
-    ((and (pred integerp) index)
-     (-some-> (om--nth index children t) (list)))
 
     ;; type
     ((and (pred (lambda (y) (memq y om-nodes))) type)
      (--filter (om--is-type-p type it) children))
+    
+    ;; index
+    ((and (pred integerp) index)
+     (-some-> (om--nth index children t) (list)))
 
     ;; relative index
     (`(,(and (or '< '<= '> '>=) f)
