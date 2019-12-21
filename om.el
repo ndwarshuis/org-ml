@@ -1973,6 +1973,41 @@ If the level is less then one after shifting, set level to one."
   (om--verify n integerp)
   (om--map-property* :level (om--shift-pos-integer n it) headline))
 
+(defun om--headline-set-statistics-cookie (value headline)
+  "Return HEADLINE node with statistics cookie set by VALUE.
+VALUE is a list conforming to `om--is-valid-statistics-cookie-value-p'
+or nil to erase the statistics cookie if present."
+  (om--map-property*
+   :title
+   (let ((last? (om--is-type-p 'statistics-cookie (-last-item it))))
+     (cond
+      ((and last? value)
+       (om--map-last* (om--set-property-strict :value value it) it))
+      ((and last? (not value))
+       (-drop-last 1 it))
+      (value
+       (-snoc it (om-build-statistics-cookie value)))
+      (t it)))
+   headline))
+
+(defun om--headline-set-statistics-cookie-fraction (done total headline)
+  "Return HEADLINE node with statistics cookie set by DONE and TOTAL.
+
+DONE and TOTAL are integers representing the numerator and denominator
+respectively of the statistics-cookie's fractional value. Both must
+be greater than zero, and DONE must be less than or equal to TOTAL."
+  (-if-let (cookie (om--headline-get-statistics-cookie headline))
+      (let* ((format (om--statistics-cookie-get-format cookie))
+             (value (if (eq 'fraction format) `(,done ,total)
+                      (-> (float done)
+                          (/ total)
+                          (* 100)
+                          (round)
+                          (list)))))
+        (om--headline-set-statistics-cookie value headline))
+    headline))
+
+
 ;; item
 
 ;; (defun om--item-set-tag! (raw-tag item)
@@ -1994,7 +2029,6 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
 
 ;;; INTERNAL BRANCH/CHILD FUNCTIONS
 ;; operations on children of branch nodes
-
 
 ;; headline
 
@@ -2080,6 +2114,14 @@ and child nodes)."
           (--map (om--headline-subtree-shift-level n it)
                  headlines)))))
 
+(defun om--headline-set-level (level headline)
+  "Return HEADLINE node with its level set to LEVEL.
+Additionally set all child headline nodes to be (+ 1 level) for
+first layer, (+ 2 level for second, and so on."
+  (->> (om--set-property-strict :level level headline)
+       (om--map-children*
+         (--map (om--headline-set-level (1+ level) it) it))))
+
 ;; (defun om--headline-set-section (section headline)
 ;;   (let ((subheadlines (om--headline-get-subheadlines headline)))
 ;;     (om--set-children (cons section subheadlines) headline)))
@@ -2107,40 +2149,6 @@ and child nodes)."
 ;;     ((om-is-section-p it) (om-build-section) 0)
 ;;     ((om-is-planning-p it) (apply #'om-build-planning planning) 0)
 ;;     headline))
-
-(defun om--headline-set-statistics-cookie (value headline)
-  "Return HEADLINE node with statistics cookie set by VALUE.
-VALUE is a list conforming to `om--is-valid-statistics-cookie-value-p'
-or nil to erase the statistics cookie if present."
-  (om--map-property*
-   :title
-   (let ((last? (om--is-type-p 'statistics-cookie (-last-item it))))
-     (cond
-      ((and last? value)
-       (om--map-last* (om--set-property-strict :value value it) it))
-      ((and last? (not value))
-       (-drop-last 1 it))
-      (value
-       (-snoc it (om-build-statistics-cookie value)))
-      (t it)))
-   headline))
-
-(defun om--headline-set-statistics-cookie-fraction (done total headline)
-  "Return HEADLINE node with statistics cookie set by DONE and TOTAL.
-
-DONE and TOTAL are integers representing the numerator and denominator
-respectively of the statistics-cookie's fractional value. Both must
-be greater than zero, and DONE must be less than or equal to TOTAL."
-  (-if-let (cookie (om--headline-get-statistics-cookie headline))
-      (let* ((format (om--statistics-cookie-get-format cookie))
-             (value (if (eq 'fraction format) `(,done ,total)
-                      (-> (float done)
-                          (/ total)
-                          (* 100)
-                          (round)
-                          (list)))))
-        (om--headline-set-statistics-cookie value headline))
-    headline))
 
 ;; table
 
@@ -2218,57 +2226,77 @@ performed. TABLE is used to get the table width."
   "Return TABLE with table-cells in column at COLUMN-INDEX filled with blanks."
   (om--table-replace-column column-index `(,(om-build-table-cell " ")) table))
 
-;;; INTERNAL INDENTATION
+;;; INTERNAL INDENTATION AND UNINDENTATION
 
-;;; helper functions
+;;; indentation
 
-;; TODO this is a bit sketchy...it depends on the indentation
-;; function to make the children list one element shorter, which
-;; is usually true but makes a really hard error to catch when it
-;; fails
-(defun om--indent-after (indent-fun index node)
-  "Return NODE with INDENT-FUN applied to all child nodes after INDEX."
-  (unless (and (integerp index) (<= 0 index))
-    (error "Index must be non-negative integer"))
-  (if (< index (1- (length (om--get-children node))))
-      (->> (funcall indent-fun (1+ index) node)
-           (om--indent-after indent-fun index))
-    node))
+;; high level steps to indent
+;;
+;; Assume an abstract tree thing like this:
+;; - 0.
+;; - 1.
+;;   - 1.0
+;; - 2.
+;;
+;; We wish to indent 1. There are two cases:
+;; 1. indent only 1.
+;; 2. indent 1. and 1.1 along with it
+;;
+;; In both cases, make 1.0 a child of 0. Remove 1.0 from the
+;; top-level list and leave 1.0 and 2. untouched
+;;
+;; In case 2, this is all that is needed since 1.0 is already a child
+;; of 1. and will "autoindent" as 1. itself is moved.
+;;
+;; To make it "stay in place," as in case 1, remove 1.0 as a child of
+;; 1., append it to the end of the list containing 2., and set this
+;; list (with both 1. and 1.0.) as the child of 0.
+;;
+;; parameters for indenting:
+;; - index of target to indent (1 in above example)
 
-;; TODO this is confusing as hell, I can't even read it :(
+;; TODO throw error when index out of range???
 
-(defun om--indent-members (fun index members)
+(defun om--indent-members (fun index tree)
+  "Return TREE with member at INDEX indented.
+FUN is a binary function that takes the members of TREE immediately
+before INDEX (called 'head') and the item at INDEX to be indented
+\(called 'target'). It maps over the last item of 'head' and sets the
+target as its child, or appends it to the end of its children if they
+exist."
   (unless (and (integerp index) (< 0 index))
     (error "Cannot indent topmost item at this level"))
-  (-let* (((head tail) (-split-at index members))
+  (-let* (((head tail) (-split-at index tree))
           (target (-first-item tail))
           (head* (om--map-last* (funcall fun target it) head)))
     (append head* (-drop 1 tail))))
 
-(defun om--unindent-members (index parent-fun unindent-fun list)
-  (unless (and (integerp index) (<= 0 index))
-    (error "Index must be non-negative integer"))
-  (-let* (((head tail) (-split-at index list))
-          (parent (-first-item tail))
-          (parent* (funcall parent-fun parent))
-          (unindented (funcall unindent-fun parent)))
-    (append head (list parent*) unindented (-drop 1 tail))))
-
-;;; elements functions
-
 ;; headline
 
-(defun om--headline-set-level (level headline)
-  "Return HEADLINE node with its level set to LEVEL.
-Additionally set all child headline nodes to be (+ 1 level) for
-first layer, (+ 2 level for second, and so on."
-  (->> (om--set-property-strict :level level headline)
-       (om--map-children*
-         (--map (om--headline-set-level (1+ level) it) it))))
-
-;; TODO throw error when index out of range
+(defun om--headline-indent-subheadline (index headline)
+  "Return HEADLINE node with child headline node at INDEX indented.
+This will not indent children under the headline node at INDEX."
+  (cl-flet
+      ((append-indented
+        (target-headline parent-headline)
+        (let ((target-headline*
+               (->> target-headline
+                    (om--headline-map-subheadlines #'ignore)
+                    (om--headline-shift-level 1)))
+              (headlines-in-target
+               (om--headline-get-subheadlines target-headline)))
+          (om--map-children
+           (lambda (children)
+             (append children (list target-headline*) headlines-in-target))
+           parent-headline))))
+    (om--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om--indent-members #'append-indented index subheadlines))
+     headline)))
 
 (defun om--headline-indent-subtree (index headline)
+  "Return HEADLINE node with child headline node at INDEX indented.
+This will indent children under the headline node at INDEX."
   (cl-flet
       ((append-indented
         (target-headline parent-headline)
@@ -2283,74 +2311,11 @@ first layer, (+ 2 level for second, and so on."
        (om--indent-members #'append-indented index subheadlines))
      headline)))
 
-(defun om--headline-indent-subheadline (index headline)
-  (cl-flet
-      ((append-indented
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (->> target-headline
-                    (om--headline-map-subheadlines #'ignore)
-                    (om--headline-shift-level 1)))
-              (headlines-in-target
-               (om--headline-get-subheadlines target-headline))) 
-          (om--map-children
-           (lambda (children)
-             (append children (list target-headline*) headlines-in-target))
-           parent-headline))))
-    (om--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om--indent-members #'append-indented index subheadlines))
-     headline)))
-
-(defun om--headline-unindent-subheadline (index child-index headline)
-  (cl-flet
-      ((trim
-        (parent)
-        (om--headline-map-subheadlines
-         (lambda (subheadlines) (-take child-index subheadlines))
-         parent))
-       (extract
-        (parent)
-        (->> (om--indent-after #'om-headline-indent-subtree
-                                    child-index parent)
-             (om--get-children)
-             (-drop child-index)
-             (--map (om--headline-subtree-shift-level -1 it)))))
-    (om--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om--unindent-members index #'trim #'extract subheadlines))
-     headline)))
-
-(defun om--headline-unindent-subtree (index headline)
-  (cl-flet
-      ((trim
-        (parent)
-        (om--headline-map-subheadlines #'ignore parent))
-       (extract
-        (parent)
-        (->> (om--get-children parent)
-             (--map (om--headline-subtree-shift-level -1 it)))))
-    (om--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om--unindent-members index #'trim #'extract subheadlines))
-     headline)))
-
 ;; plain-list
 
-(defun om--plain-list-indent-item-tree (index plain-list)
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item* (om-build-plain-list target-item)))
-          (om--map-children
-           (lambda (item-children) (append item-children (list target-item*)))
-           parent-item))))
-    (om--map-children
-     (lambda (items)
-       (om--indent-members #'append-indented index items))
-     plain-list)))
-
 (defun om--plain-list-indent-item (index plain-list)
+  "Return PLAIN-LIST node with child item node at INDEX indented.
+This will not indent children under the item node at INDEX."
   (cl-flet
       ((append-indented
         (target-item parent-item)
@@ -2373,7 +2338,148 @@ first layer, (+ 2 level for second, and so on."
        (om--indent-members #'append-indented index items))
      plain-list)))
 
+(defun om--plain-list-indent-item-tree (index plain-list)
+  "Return PLAIN-LIST node with child item node at INDEX indented.
+This will indent children under the item node at INDEX."
+  (cl-flet
+      ((append-indented
+        (target-item parent-item)
+        (let ((target-item* (om-build-plain-list target-item)))
+          (om--map-children
+           (lambda (item-children) (append item-children (list target-item*)))
+           parent-item))))
+    (om--map-children
+     (lambda (items)
+       (om--indent-members #'append-indented index items))
+     plain-list)))
+
+;;: internal unindentation (tree)
+
+;; high level steps to unindent a tree
+;;
+;; Assume an abstract tree thing like this:
+;; - 0.
+;; - 1.
+;;   - 1.0.
+;;   - 1.1.
+;;     - 1.1.0.
+;;   - 1.2.
+;; - 2.
+;;
+;; We want to unindent everything under 1. So just take all children
+;; of 1. and splice them into the top-level list between 1. and 2.
+;; In this case 1.1.0 will remain a child of 1.1 but it will be
+;; unindented as well because its parent is being unindented
+;;
+;; parameters for unindenting a tree:
+;; - the index whose children are to be unindented
+
+(defun om--unindent-members (index trim-fun extract-fun tree)
+  "Return TREE with children under INDEX unindented.
+TRIM-FUN is a unary function that is applied to the child list
+under INDEX and returns a modified child list with the unindented
+members removed. EXTRACT-FUN is a unary function that is applied to
+the child list under INDEX and returns the unindented children that
+will be spliced after INDEX."
+  (unless (and (integerp index) (<= 0 index))
+    (error "Index must be non-negative integer"))
+  (-let* (((head tail) (-split-at index tree))
+          (parent (-first-item tail))
+          (parent* (funcall trim-fun parent))
+          (unindented (funcall extract-fun parent)))
+    (append head (list parent*) unindented (-drop 1 tail))))
+
+(defun om--headline-unindent-subtree (index headline)
+  "Return HEADLINE node with all child headline nodes at INDEX unindented."
+  (cl-flet
+      ((trim
+        (parent)
+        (om--headline-map-subheadlines #'ignore parent))
+       (extract
+        (parent)
+        (->> (om--get-children parent)
+             (--map (om--headline-subtree-shift-level -1 it)))))
+    (om--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om--unindent-members index #'trim #'extract subheadlines))
+     headline)))
+
+(defun om--plain-list-unindent-items (index plain-list)
+  "Return PLAIN-LIST node with all child item nodes at INDEX unindented."
+  (cl-flet
+      ((trim
+        (parent)
+        (om--map-children
+         (lambda (children)
+           (--remove-first (om--is-type-p 'plain-list it) children))
+         parent))
+       (extract
+        (parent)
+        (->> (om--get-children parent)
+             (--first (om--is-type-p 'plain-list it))
+             (om--get-children))))
+    (om--map-children
+     (lambda (items)
+       (om--unindent-members index #'trim #'extract items))
+     plain-list)))
+
+;;; internal unindentation (single target)
+
+;; high level steps to unindent a single item
+;;
+;; Assume an abstract tree thing like this:
+;; - 0.
+;; - 1.
+;;   - 1.0.
+;;   - 1.1.
+;;     - 1.1.0.
+;;   - 1.2.
+;; - 2.
+;; 
+;; We want to unindent 1.1. First, indent everything after 1.1 (in
+;; this case only 1.2, which will be appended to the list starting
+;; with 1.1.0). Then move 1.1 (with 2.3 as child) between 2.0 and 3.0
+;; in the toplevel list.
+;;
+;; parameters for unindenting:
+;; - parent index (in this case 1 for 1.)
+;; - child index (in this case 1 for 1.1)
+
+;; TODO this is a bit sketchy...it depends on the indentation
+;; function to make the children list one element shorter, which
+;; is usually true but makes a really hard error to catch when it
+;; fails
+(defun om--indent-after (indent-fun index node)
+  "Return NODE with INDENT-FUN applied to all child nodes after INDEX."
+  (unless (and (integerp index) (<= 0 index))
+    (error "Index must be non-negative integer"))
+  (if (< index (1- (length (om--get-children node))))
+      (->> (funcall indent-fun (1+ index) node)
+           (om--indent-after indent-fun index))
+    node))
+
+(defun om--headline-unindent-subheadline (index child-index headline)
+  "Return HEADLINE with child headline at CHILD-INDEX under INDEX unindented."
+  (cl-flet
+      ((trim
+        (parent)
+        (om--headline-map-subheadlines
+         (lambda (subheadlines) (-take child-index subheadlines))
+         parent))
+       (extract
+        (parent)
+        (->> (om--indent-after #'om-headline-indent-subtree
+                                    child-index parent)
+             (om--get-children)
+             (-drop child-index)
+             (--map (om--headline-subtree-shift-level -1 it)))))
+    (om--headline-map-subheadlines
+     (lambda (subheadlines)
+       (om--unindent-members index #'trim #'extract subheadlines))
+     headline)))
+
 (defun om--plain-list-unindent-item (index child-index plain-list)
+  "Return PLAIN-LIST with child item at CHILD-INDEX under INDEX unindented."
   (cl-flet
       ((trim
         (parent)
@@ -2395,24 +2501,6 @@ first layer, (+ 2 level for second, and so on."
                                 child-index)
          (om--get-children)
          (-drop child-index))))
-    (om--map-children
-     (lambda (items)
-       (om--unindent-members index #'trim #'extract items))
-     plain-list)))
-
-(defun om--plain-list-unindent-items (index plain-list)
-  (cl-flet
-      ((trim
-        (parent)
-        (om--map-children
-         (lambda (children)
-           (--remove-first (om--is-type-p 'plain-list it) children))
-         parent))
-       (extract
-        (parent)
-        (->> (om--get-children parent)
-             (--first (om--is-type-p 'plain-list it))
-             (om--get-children))))
     (om--map-children
      (lambda (items)
        (om--unindent-members index #'trim #'extract items))
@@ -4001,6 +4089,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;; parse at specific point
 
+;; TODO add test for plain-text parsing
 (defun om-parse-object-at (point)
   "Return object node under POINT or nil if not on an object."
   (save-excursion
