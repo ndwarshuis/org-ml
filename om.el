@@ -415,6 +415,7 @@ available to any computations present in REST."
   ;; the third arg is a docstring if it is a string and there
   ;; is at least one thing after it to be the body
   (declare (indent 1))
+  ;; TODO is this a macro leak?
   `(-let (((docstring body)
            (if (and (stringp (car ,args)) (< 1 (length ,args)))
                (list (car ,args) (-drop 1 ,args))
@@ -2826,8 +2827,9 @@ each type."
 PLIST is a property list where the keys are properties of NODE and
 its values are forms to be mapped to these properties."
   (om--verify node om--is-node-p)
-  `(let ((plist* (om--plist-map-values (lambda (form) `(lambda (it) ,form)) ',plist)))
-    (om--map-properties-strict plist* ,node)))
+  (let ((p (make-symbol "plist*")))
+    `(let ((,p (om--plist-map-values (lambda (form) `(lambda (it) ,form)) ',plist)))
+       (om--map-properties-strict ,p ,node))))
 
 (om--defun-node om-toggle-property (prop node)
   "Return NODE with the value of PROP flipped.
@@ -3614,17 +3616,18 @@ FORM is a form that returns a list of elements or objects as the
 new children, and the variable 'it' is available to represent the
 original children to be modified."
   (declare (indent 1))
-  `(cl-labels
-       ((rec
-         (node)
-         (let ((type (om--get-type node)))
-           (if (eq type 'plain-text) node
-             (->>
-              (om--get-children node)
-              (funcall (lambda (it) ,form))
-              (--map (rec it))
-              (om--construct type (nth 1 node)))))))
-     (rec ,node)))
+  (let ((y (make-symbol "type")))
+    `(cl-labels
+         ((rec
+           (node)
+           (let ((,y (om--get-type node)))
+             (if (eq ,y 'plain-text) node
+               (->>
+                (om--get-children node)
+                (funcall (lambda (it) ,form))
+                (--map (rec it))
+                (om--construct ,y (nth 1 node)))))))
+       (rec ,node))))
 
 (defun om--match-filter (pattern children)
   "Filter CHILDREN based on PATTERN.
