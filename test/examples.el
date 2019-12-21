@@ -2518,6 +2518,31 @@
            (om-clock-is-running-p))
       => nil))
 
+  (def-example-subgroup "Entity"
+    nil
+
+    (defexamples-content om-entity-get-replacement
+      nil
+      (:buffer "\\pi{}")
+      (->> (om-parse-this-object)
+           (om-entity-get-replacement :latex))
+      => "\\pi"
+      (->> (om-parse-this-object)
+           (om-entity-get-replacement :latex-math-p))
+      => t
+      (->> (om-parse-this-object)
+           (om-entity-get-replacement :html))
+      => "&pi;"
+      (->> (om-parse-this-object)
+           (om-entity-get-replacement :ascii))
+      => "pi"
+      (->> (om-parse-this-object)
+           (om-entity-get-replacement :latin1))
+      => "pi"
+      (->> (om-parse-this-object)
+           (om-entity-get-replacement :utf-8))
+      => "π"))
+
   (def-example-subgroup "Headline"
     nil
 

@@ -310,6 +310,10 @@ Set, get, and map properties of nodes.
 
 * [om-clock-is-running-p](#om-clock-is-running-p-clock) `(clock)`
 
+### Entity
+
+* [om-entity-get-replacement](#om-entity-get-replacement-key-entity) `(key entity)`
+
 ### Headline
 
 * [om-headline-is-done-p](#om-headline-is-done-p-headline) `(headline)`
@@ -2747,6 +2751,54 @@ Return t if **`clock`** element is running (eg is open).
 (->> (om-parse-this-element)
      (om-clock-is-running-p))
  ;; => nil
+
+```
+
+
+### Entity
+
+#### om-entity-get-replacement `(key entity)`
+
+Return replacement string or symbol for **`entity`** node.
+
+**`key`** is one of:
+- :latex (the entity's latex representation)
+- :latex-math-p (t if the latex representation requires math mode,
+    nil otherwise)
+- :html (the entity's html representation)
+- :ascii (the entity's `ascii` representation)
+- :latin1 (the entity's Latin1 representation)
+- :utf-8 (the entity's `utf8` representation)
+
+Any other keys will trigger an error.
+
+```el
+;; Given the following contents:
+; \pi{}
+
+(->> (om-parse-this-object)
+     (om-entity-get-replacement :latex))
+ ;; => "\\pi"
+
+(->> (om-parse-this-object)
+     (om-entity-get-replacement :latex-math-p))
+ ;; => t
+
+(->> (om-parse-this-object)
+     (om-entity-get-replacement :html))
+ ;; => "&pi;"
+
+(->> (om-parse-this-object)
+     (om-entity-get-replacement :ascii))
+ ;; => "pi"
+
+(->> (om-parse-this-object)
+     (om-entity-get-replacement :latin1))
+ ;; => "pi"
+
+(->> (om-parse-this-object)
+     (om-entity-get-replacement :utf-8))
+ ;; => "π"
 
 ```
 

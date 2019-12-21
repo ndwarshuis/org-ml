@@ -2960,6 +2960,29 @@ and properties that may be used with this function."
 
 ;;; objects
 ;;
+;; entity
+
+(om--defun-node om-entity-get-replacement (key entity)
+  "Return replacement string or symbol for ENTITY node.
+
+KEY is one of:
+- :latex (the entity's latex representation)
+- :latex-math-p (t if the latex representation requires math mode,
+  nil otherwise)
+- :html (the entity's html representation)
+- :ascii (the entity's ASCII representation)
+- :latin1 (the entity's Latin1 representation)
+- :utf-8 (the entity's UTF8 representation)
+
+Any other keys will trigger an error."
+  (-if-let (index (-elem-index key (list :latex :latex-math-p :html
+                                         :ascii :latin1 :utf-8)))
+      (->> (om--get-property-strict :name entity)
+           (org-entity-get)
+           (cdr)
+           (nth index))
+    (error "Invalid encoding requested: %s" index)))
+
 ;; statistics-cookie
 
 (om--defun-node om-statistics-cookie-is-complete-p (statistics-cookie)
