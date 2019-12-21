@@ -3665,12 +3665,12 @@ See `om-match' for full description of PATTERN."
      (-some-> (om--nth index children t) (list)))
 
     ;; relative index
-    (`(,(and (or '< '<= '> '>=) f)
-       ,(and (pred integerp) i))
+    (`(,(and (or '< '<= '> '>=) f) ,(and (pred integerp) i))
      (-when-let (i* (om--convert-intra-index i children t))
-       (->> children
-            (--map-indexed (when (funcall f it-index i*) it))
-            (-non-nil))))
+       (->> (--iterate (1+ it) 0 (length children))
+            (-zip-with #'cons children)
+            (--filter (funcall f (cdr it) i*))
+            (-map #'car))))
 
     ;; predicate
     (`(:pred . (,p . nil))
