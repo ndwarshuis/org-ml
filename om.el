@@ -3683,13 +3683,13 @@ See `om-match' for full description of PATTERN."
 
     ;; or
     (`(:or . ,(and (pred and) p))
-     (->> (--mapcat (om--match-filter it children) p)
-          (-distinct)))
+     (--reduce-from (-union acc (om--match-filter it children)) nil p))
 
     ;; and
     (`(:and . ,(and (pred and) p))
-     (->> (--map (om--match-filter it children) p)
-          (-reduce #'-intersection)))
+     (--reduce-from (-intersection acc (om--match-filter it children))
+                    (om--match-filter (car p) children)
+                    (cdr p)))
 
     ;; properties
     ;; NOTE: this must go last if we don't want :and/:or/:not to
