@@ -3517,7 +3517,7 @@
                   "** four"
                   "*** four"))
 
-    (defexamples-content om-headline-unindent-subtree
+    (defexamples-content om-headline-unindent-all-subheadlines
       nil
       (:buffer "* one"
                "** two"
@@ -3526,7 +3526,7 @@
                "*** four"
                "*** four")
       (->> (om-parse-element-at 1)
-           (om-headline-unindent-subtree 1)
+           (om-headline-unindent-all-subheadlines 1)
            (om-to-trimmed-string))
       => (:result "* one"
                   "** two"
@@ -3683,7 +3683,7 @@
                   "  - three"
                   "- four"))
     
-    (defexamples-content om-plain-list-unindent-item-tree
+    (defexamples-content om-plain-list-unindent-all-items
       nil
       (:buffer "- one"
                "- two"
@@ -3692,7 +3692,7 @@
                "  - three"
                "- four")
       (->> (om-parse-element-at 1)
-           (om-plain-list-unindent-item-tree 1)
+           (om-plain-list-unindent-all-items 1)
            (om-to-trimmed-string))
       => (:result "- one"
                   "- two"
@@ -3701,7 +3701,7 @@
                   "- three"
                   "- four")
       (->> (om-parse-element-at 1)
-           (om-plain-list-unindent-item-tree 2)
+           (om-plain-list-unindent-all-items 2)
            (om-to-trimmed-string))
       => (:result "- one"
                   "- two"

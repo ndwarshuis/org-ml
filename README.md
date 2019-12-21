@@ -385,7 +385,7 @@ Set, get, and map the children of branch nodes.
 * [om-headline-indent-subheadline](#om-headline-indent-subheadline-index-headline) `(index headline)`
 * [om-headline-indent-subtree](#om-headline-indent-subtree-index-headline) `(index headline)`
 * [om-headline-unindent-subheadline](#om-headline-unindent-subheadline-index-child-index-headline) `(index child-index headline)`
-* [om-headline-unindent-subtree](#om-headline-unindent-subtree-index-headline) `(index headline)`
+* [om-headline-unindent-all-subheadlines](#om-headline-unindent-all-subheadlines-index-headline) `(index headline)`
 
 ### Plain List
 
@@ -393,7 +393,7 @@ Set, get, and map the children of branch nodes.
 * [om-plain-list-indent-item](#om-plain-list-indent-item-index-plain-list) `(index plain-list)`
 * [om-plain-list-indent-item-tree](#om-plain-list-indent-item-tree-index-plain-list) `(index plain-list)`
 * [om-plain-list-unindent-item](#om-plain-list-unindent-item-index-child-index-plain-list) `(index child-index plain-list)`
-* [om-plain-list-unindent-item-tree](#om-plain-list-unindent-item-tree-index-plain-list) `(index plain-list)`
+* [om-plain-list-unindent-all-items](#om-plain-list-unindent-all-items-index-plain-list) `(index plain-list)`
 
 ### Table
 
@@ -4084,9 +4084,8 @@ indented headline node's children.
 
 #### om-headline-unindent-subheadline `(index child-index headline)`
 
-Return **`headline`** node with child headline at **`index`** unindented.
-Unlike [`om-headline-unindent-subheadline`](#om-headline-unindent-subheadline-index-child-index-headline) this will not unindent the
-unindented headline node's children.
+Return **`headline`** node with a child headline under **`index`** unindented.
+The specific child headline to unindent is selected by **`child-index`**.
 
 ```el
 ;; Given the following contents:
@@ -4109,11 +4108,9 @@ unindented headline node's children.
 
 ```
 
-#### om-headline-unindent-subtree `(index headline)`
+#### om-headline-unindent-all-subheadlines `(index headline)`
 
-Return **`headline`** node with child headline at **`index`** unindented.
-Unlike [`om-headline-unindent-subheadline`](#om-headline-unindent-subheadline-index-child-index-headline) this will also unindent the
-unindented headline node's children.
+Return **`headline`** node with all child headlines under **`index`** unindented.
 
 ```el
 ;; Given the following contents:
@@ -4125,7 +4122,7 @@ unindented headline node's children.
 ; *** four
 
 (->> (om-parse-element-at 1)
-     (om-headline-unindent-subtree 1)
+     (om-headline-unindent-all-subheadlines 1)
      (om-to-trimmed-string))
  ;; => "* one
  ;      ** two
@@ -4229,9 +4226,8 @@ node's children.
 
 #### om-plain-list-unindent-item `(index child-index plain-list)`
 
-Return **`plain-list`** node with child item at **`index`** unindented.
-Unlike `om-item-indent-item-tree` this will not unindent the
-unindented item node's children.
+Return **`plain-list`** node with a child item under **`index`** unindented.
+The specific child item to unindent is selected by **`child-index`**.
 
 ```el
 ;; Given the following contents:
@@ -4274,11 +4270,9 @@ unindented item node's children.
 
 ```
 
-#### om-plain-list-unindent-item-tree `(index plain-list)`
+#### om-plain-list-unindent-all-items `(index plain-list)`
 
-Return **`plain-list`** node with child item at **`index`** unindented.
-Unlike `om-item-indent-item` this will also unindent the unindented
-item node's children.
+Return **`plain-list`** node with all child items under **`index`** unindented.
 
 ```el
 ;; Given the following contents:
@@ -4290,7 +4284,7 @@ item node's children.
 ; - four
 
 (->> (om-parse-element-at 1)
-     (om-plain-list-unindent-item-tree 1)
+     (om-plain-list-unindent-all-items 1)
      (om-to-trimmed-string))
  ;; => "- one
  ;      - two
@@ -4300,7 +4294,7 @@ item node's children.
  ;      - four"
 
 (->> (om-parse-element-at 1)
-     (om-plain-list-unindent-item-tree 2)
+     (om-plain-list-unindent-all-items 2)
      (om-to-trimmed-string))
  ;; => "- one
  ;      - two

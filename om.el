@@ -2389,7 +2389,7 @@ will be spliced after INDEX."
           (unindented (funcall extract-fun parent)))
     (append head (list parent*) unindented (-drop 1 tail))))
 
-(defun om--headline-unindent-subtree (index headline)
+(defun om--headline-unindent-all-subheadlines (index headline)
   "Return HEADLINE node with all child headline nodes at INDEX unindented."
   (cl-flet
       ((trim
@@ -2404,7 +2404,7 @@ will be spliced after INDEX."
        (om--unindent-members index #'trim #'extract subheadlines))
      headline)))
 
-(defun om--plain-list-unindent-items (index plain-list)
+(defun om--plain-list-unindent-all-items (index plain-list)
   "Return PLAIN-LIST node with all child item nodes at INDEX unindented."
   (cl-flet
       ((trim
@@ -3488,7 +3488,7 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
   (let ((row-cells (om-build-table-row! row-text)))
     (om--table-replace-row row-index row-cells table)))
 
-;; PUBLIC INDENTATION FUNCTIONS
+;;; PUBLIC INDENTATION FUNCTIONS
 
 ;; headline
 
@@ -3504,16 +3504,13 @@ Unlike `om-headline-indent-subtree' this will not indent the
 indented headline node's children."
   (om--headline-indent-subheadline index headline))
 
-(om--defun-node om-headline-unindent-subtree (index headline)
-  "Return HEADLINE node with child headline at INDEX unindented.
-Unlike `om-headline-unindent-subheadline' this will also unindent the
-unindented headline node's children."
-  (om--headline-unindent-subtree index headline))
+(om--defun-node om-headline-unindent-all-subheadlines (index headline)
+  "Return HEADLINE node with all child headlines under INDEX unindented."
+  (om--headline-unindent-all-subheadlines index headline))
 
 (om--defun-node om-headline-unindent-subheadline (index child-index headline)
-  "Return HEADLINE node with child headline at INDEX unindented.
-Unlike `om-headline-unindent-subheadline' this will not unindent the
-unindented headline node's children."
+  "Return HEADLINE node with a child headline under INDEX unindented.
+The specific child headline to unindent is selected by CHILD-INDEX."
   (om--headline-unindent-subheadline index child-index headline))
 
 ;; plain-list
@@ -3530,16 +3527,13 @@ Unlike `om-item-indent-item-tree' this will not indent the indented
 item node's children."
   (om--plain-list-indent-item index plain-list))
 
-(om--defun-node om-plain-list-unindent-item-tree (index plain-list)
-  "Return PLAIN-LIST node with child item at INDEX unindented.
-Unlike `om-item-indent-item' this will also unindent the unindented
-item node's children."
-  (om--plain-list-unindent-items index plain-list))
+(om--defun-node om-plain-list-unindent-all-items (index plain-list)
+  "Return PLAIN-LIST node with all child items under INDEX unindented."
+  (om--plain-list-unindent-all-items index plain-list))
 
 (om--defun-node om-plain-list-unindent-item (index child-index plain-list)
-  "Return PLAIN-LIST node with child item at INDEX unindented.
-Unlike `om-item-indent-item-tree' this will not unindent the
-unindented item node's children."
+  "Return PLAIN-LIST node with a child item under INDEX unindented.
+The specific child item to unindent is selected by CHILD-INDEX."
   (om--plain-list-unindent-item index child-index plain-list))
 
 ;;; printing functions
