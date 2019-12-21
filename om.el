@@ -235,7 +235,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
         (car rest-arg)
       (error "Rest argument must only have one member")))
 
-  (defun om--make-kwarg-let (kwarg)
+  (defun om--make-kwarg-let (kws-sym kwarg)
     ;; TODO add more docs here
     "Return plist for KWARG."
     (cl-flet
@@ -244,7 +244,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
           (when (and kw (not (keywordp kw)))
             (error "Must use keyword for kw-arg, not %s" kw))
           (let* ((kw (or kw (om--symbol-to-keyword arg)))
-                 (kw-get `(cadr (plist-member --kw-args ',kw)))
+                 (kw-get `(cadr (plist-member ,kws-sym ',kw)))
                  (val (if init `(or ,kw-get ,init) kw-get)))
             (cons kw `(,arg ,val)))))
       (pcase kwarg
@@ -257,42 +257,69 @@ These are also known as \"recursive objects\" in `org-element.el'")
          (make-plist arg nil nil))
         (_ (error "Invalid keyword argument: %s" kwarg)))))
 
-  (defun om--throw-kw-error (msg keywords)
+  (defun om--throw-kw-error (msg kws)
     "Throw an error with MSG with formatted list of KEYWORDS."
-    (->> (--map (format "%S" it) keywords)
-         (s-join ", ")
-         (error (concat msg ": %s"))))
+    (when kws
+      (->> (-map #'symbol-name kws)
+           (s-join ", ")
+           (error (concat msg ": %s")))))
 
-  ;; TODO this should return a form
-  (defun om--partition-rest-args (args kws use-rest?)
-    "Return cons cell with ARGS partitioned into keyword and rest arguments.
-KWS is a list of valid keywords to use when deciding which in ARGS
-is a keyword-value pair, and USE-REST? is a boolean that determines
-if rest arguments are to be considered."
-    (-let* (((kwargs restargs)
-             (->> (-partition-all 2 args)
-                  (--split-with (keywordp (car it)))))
-            (restargs (apply #'append restargs)))
-      ;; ensure only valid keywords are used
-      (-some->>
-       (-difference (--map (car it) kwargs) kws)
-       (om--throw-kw-error "Invalid keyword(s) found"))
-      ;; ensure keywords are only used once per call
-      (-some->>
-       (-group-by #'car kwargs)
-       (--filter (< 1 (length (cdr it))))
-       (om--throw-kw-error "Keyword(s) used multiple times"))
-      ;; ensure that keyword pairs are only used immediately after
-      ;; positional arguments
-      (-some->>
-       (-filter #'keywordp restargs)
-       (om--throw-kw-error
-        (s-join " " '("Keyword-value pairs must be immediately"
-                      "after positional arguments. These keywords"
-                      "were interpreted as rest arguments"))))
-      (when (and restargs (not use-rest?))
-        (error "Too many arguments supplied"))
-      (list (apply #'append kwargs) restargs)))
+  (defun om--partition-rest-args (args)
+    "Partition ARGS into two keyword and rest argument lists.
+The keyword list is determined by partitioning all keyword-value
+pairs until this pattern is broken. Whatever is left is put into the
+rest list. Return a list like (KEYARGS RESTARGS)."
+    (->> (-partition-all 2 args)
+         (--split-with (keywordp (car it)))))
+
+  (defmacro om--make-rest-partition-form (argsym kws use-rest?)
+    "Return a form that will partition the args in ARGSYM.
+ARGSYM is a symbol which is bound to the rest argument list of a
+function call. KWS is a list of valid keywords to use when deciding
+which in the argument values is a keyword-value pair, and USE-REST?
+is a boolean that determines if rest arguments are to be considered."
+    ;; these `make-symbol' calls probably aren't necessary but they
+    ;; ensure the let bindings are leak-proof
+    (let* ((p (make-symbol "--part"))
+           (k (make-symbol "--kpart"))
+           (y (make-symbol "--keys"))
+           (r (make-symbol "--rpart"))
+           (inv-msg "Invalid keyword(s) found")
+           (dup-msg "Keyword(s) used multiple times")
+           (rest-msg
+            (s-join " " '("Keyword-value pairs must be immediately"
+                          "after positional arguments. These keywords"
+                          "were interpreted as rest arguments")))
+           (tests
+            ;; ensure that all keywords are valid
+            `((->> (-difference ,y ',kws)
+                   (om--throw-kw-error ,inv-msg))
+              ;; ensure keywords are only used once per call
+              (->> (-group-by #'identity ,y)
+                   (--filter (< 2 (length it)))
+                   (om--throw-kw-error ,dup-msg))
+              ;; ensure that keyword pairs are only used
+              ;; immediately after positional arguments
+              (->> (-filter #'keywordp ,r)
+                   (om--throw-kw-error ,rest-msg))))
+           ;; if rest arguments are used but not allowed in function
+           ;; call, throw error
+           (tests (if use-rest? tests
+                    (-snoc
+                     tests
+                     `(when ,r
+                        (error "Too many arguments supplied")))))
+           ;; return a cons cell of (KEY REST) argument values or
+           ;; just KEY if rest is not used in the function call
+           (return (if (not use-rest?) `(apply #'append ,k)
+                     `(cons (apply #'append ,k)
+                            (apply #'append ,r)))))
+      `(let* ((,p (om--partition-rest-args ,argsym))
+              (,k (car ,p))
+              (,y (-map #'car ,k))
+              (,r (cadr ,p)))
+         ,@tests
+         ,return)))
 
   (defun om--make-header (body args)
     ;; TODO explain this better...but first actually understand it :/
@@ -311,42 +338,49 @@ if rest arguments are to be considered."
                (help--docstring-quote)
                (help-add-fundoc-usage header))))))
 
-  (defun om--transform-lambda (args body name)
-    "Transform ARGS and BODY to a block bound to NAME."
+  (defun om--transform-lambda (arglist body name)
+    "Make a form for a keyword/rest composite function definition.
+ARGLIST is the argument signature. BODY is the function body. NAME
+is the NAME of the function definition.
+
+This acts much like `cl-defun' except that it only considers &rest
+and &key slots. The way the final function call will work beneath the
+surface is that all positional arguments will be bound to their
+symbols in ARGLIST (analogous to `defun' and `cl-defun'), and the key
+and rest arguments will be captured in one rest argument to be
+partitioned on the fly into key and rest bindings that can be used
+in BODY."
     ;; assume &key will always be present if this function is called
-    (let* ((partargs (-partition-before-pred
+    (let* ((a (make-symbol "--arg-cell"))
+           (k (make-symbol "--kw-args"))
+           (kr (make-symbol "--key-and-rest-args"))
+           (partargs (-partition-before-pred
                       (lambda (it) (memq it '(&pos &rest &key)))
-                      (cons '&pos args)))
-           ;; TODO throw error if no kws defined
-           (kw-lets (->> (alist-get '&key partargs)
-                         (-map #'om--make-kwarg-let)))
-           (rest-arg (->> (alist-get '&rest partargs)
-                          (om--verify-rest-arg)))
-           (header (om--make-header body args))
-           (body (->> (macroexp-parse-body body)
-                      (cdr)
-                      (append `(cl-block ,name))))
+                      (cons '&pos arglist)))
            (pos-args (->> (alist-get '&pos partargs)
                           (om--verify-pos-args)))
-           (arg-form (if (not (or kw-lets rest-arg))
-                         `(,@pos-args)
-                       `(,@pos-args &rest --rest-args)))
+           (kw-alist (->> (alist-get '&key partargs)
+                         (--map (om--make-kwarg-let k it))))
+           (rest-arg (->> (alist-get '&rest partargs)
+                          (om--verify-rest-arg)))
+           (kws (-map #'car kw-alist))
+           (kw-lets (-map #'cdr kw-alist))
+           (arg-form `(,@pos-args &rest ,kr))
+           (header (om--make-header body arglist))
            (let-forms
-            (when (or rest-arg kw-lets)
-              (let ((keys (-map #'car kw-lets))
-                    (rest-let (when rest-arg `((,rest-arg (nth 1 s)))))
-                    (lets (append (-map #'cdr kw-lets)))
-                    (kw-setter (and kw-lets '((--kw-args (nth 0 s))))))
-                ;; TODO there is probably a more efficient way to do this...
-                `((s (om--partition-rest-args
-                      --rest-args (quote ,keys)
-                      ,(and rest-arg t)))
-                  ,@kw-setter
-                  ,@rest-let
-                  ,@lets)))))
-      ;; TODO throw error/warning if &key is not used, otherwise
-      ;; better to just use defun
-      ;; mercilessly stolen from cl--transform-whatever
+            (if rest-arg
+                `((,a (om--make-rest-partition-form ,kr ,kws t))
+                  (,k (car ,a))
+                  (,rest-arg (cdr ,a))
+                  ,@kw-lets)
+              `((,k (om--make-rest-partition-form ,kr ,kws nil))
+                ,@kw-lets)))
+           (body (->> (macroexp-parse-body body)
+                      (cdr)
+                      (append `(cl-block ,name)))))
+      ;; if &key is used but no keywords are actually used, slap the
+      ;; programmer in the face
+      (unless kw-alist (error "No keywords used"))
       `(,arg-form
         ,header
         ,(macroexp-let*

@@ -328,17 +328,17 @@
 
 (ert-deftest om--make-kwarg-let/valid ()
   (should
-   (equal (om--make-kwarg-let 'one)
-          '(:one one (cadr (plist-member --kw-args (quote :one))))))
+   (equal (om--make-kwarg-let 'k 'one)
+          '(:one one (cadr (plist-member k (quote :one))))))
   (should
-   (equal (om--make-kwarg-let '((:two one)))
-          '(:two one (cadr (plist-member --kw-args (quote :two))))))
+   (equal (om--make-kwarg-let 'k '((:two one)))
+          '(:two one (cadr (plist-member k (quote :two))))))
   (should
-   (equal (om--make-kwarg-let '(one 1))
-          '(:one one (or (cadr (plist-member --kw-args (quote :one))) 1))))
+   (equal (om--make-kwarg-let 'k '(one 1))
+          '(:one one (or (cadr (plist-member k (quote :one))) 1))))
   (should
-   (equal (om--make-kwarg-let '((:two one) 1))
-          '(:two one (or (cadr (plist-member --kw-args (quote :two))) 1)))))
+   (equal (om--make-kwarg-let 'k '((:two one) 1))
+          '(:two one (or (cadr (plist-member k (quote :two))) 1)))))
 
 (ert-deftest om--make-kwarg-let/error ()
   ;; list too long
@@ -353,25 +353,25 @@
   (should-error (om--make-kwarg-let "one"))
   (should-error (om--make-kwarg-let '(1))))
 
-(ert-deftest om--partition-rest-args/kwargs ()
-  (should (equal '((:one one) nil) (om--partition-rest-args '(:one one) '(:one) nil)))
-  (should (equal '((:one one) nil) (om--partition-rest-args '(:one one) '(:one) t))))
+;; (ert-deftest om--make-rest-partition-form/kwargs ()
+;;   (should (equal '((:one one) nil) (om--make-rest-partition-form '(:one one) '(:one) nil)))
+;;   (should (equal '((:one one) nil) (om--make-rest-partition-form '(:one one) '(:one) t))))
 
-(ert-deftest om--partition-rest-args/restargs ()
-  ;; (should (equal '(nil (one)) (om--partition-rest-args '(one) nil nil)))
-  (should (equal '(nil (one)) (om--partition-rest-args '(one) nil t)))
-  (should (equal '(nil (one two)) (om--partition-rest-args '(one two) nil t))))
+(ert-deftest om--make-rest-partition-form/restargs ()
+  ;; (should (equal '(nil (one)) (om--make-rest-partition-form '(one) nil nil)))
+  (should (equal '(nil . (one)) (om--make-rest-partition-form '(one) nil t)))
+  (should (equal '(nil . (one two)) (om--make-rest-partition-form '(one two) nil t))))
 
-(ert-deftest om--partition-rest-args/combo ()
-  (should (equal '((:one one) (two)) (om--partition-rest-args '(:one one two) '(:one) t))))
+;; (ert-deftest om--make-rest-partition-form/combo ()
+;;   (should (equal '((:one one) (two)) (om--make-rest-partition-form '(:one one two) '(:one) t))))
 
-(ert-deftest om--partition-rest-args/error ()
+(ert-deftest om--make-rest-partition-form/error ()
   ;; invalid keywords
-  (should-error (om--partition-rest-args '(:one one) '(:two) nil))
+  (should-error (om--make-rest-partition-form '(:one one) '(:two) nil))
   ;; too many arguments
-  (should-error (om--partition-rest-args '(:one one two) (:one) nil))
+  (should-error (om--make-rest-partition-form '(:one one two) (:one) nil))
   ;; multiple keywords
-  (should-error (om--partition-rest-args '(:one one :one three two) (:one) nil)))
+  (should-error (om--make-rest-partition-form '(:one one :one three two) (:one) nil)))
 
 (ert-deftest om--match-filter/index ()
   (let ((contents '(0 1 2 3 4 5)))
