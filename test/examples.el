@@ -2546,6 +2546,14 @@
   (def-example-subgroup "Headline"
     nil
 
+    (defexamples-content om-headline-set-title!
+      nil
+      (:buffer "* really impressive title")
+      (->> (om-parse-this-headline)
+           (om-headline-set-title! "really *impressive* title" '(2 3))
+           (om-to-trimmed-string))
+      => "* really *impressive* title [2/3]")
+
     (defexamples-content om-headline-is-done-p
       nil
       (:buffer "* TODO darn")

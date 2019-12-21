@@ -316,6 +316,7 @@ Set, get, and map properties of nodes.
 
 ### Headline
 
+* [om-headline-set-title!](#om-headline-set-title-title-text-stats-cookie-value-headline) `(title-text stats-cookie-value headline)`
 * [om-headline-is-done-p](#om-headline-is-done-p-headline) `(headline)`
 * [om-headline-has-tag-p](#om-headline-has-tag-p-tag-headline) `(tag headline)`
 * [om-headline-get-statistics-cookie](#om-headline-get-statistics-cookie-headline) `(headline)`
@@ -2800,6 +2801,26 @@ Any other keys will trigger an error.
 
 ### Headline
 
+#### om-headline-set-title! `(title-text stats-cookie-value headline)`
+
+Return **`headline`** node with title set with **`title-text`** and **`stats-cookie-value`**.
+
+**`title-text`** is a string to be parsed into object nodes for the title
+via [`om-build-secondary-string!`](#om-build-secondary-string-string) (see that function for restrictions)
+and **`stats-cookie-value`** is a list described in 
+[`om-build-statistics-cookie`](#om-build-statistics-cookie-value-key-post-blank).
+
+```el
+;; Given the following contents:
+; * really impressive title
+
+(->> (om-parse-this-headline)
+     (om-headline-set-title! "really *impressive* title" '(2 3))
+     (om-to-trimmed-string))
+ ;; => "* really *impressive* title [2/3]"
+
+```
+
 #### om-headline-is-done-p `(headline)`
 
 Return t if **`headline`** node has a done todo-keyword.
@@ -3765,6 +3786,7 @@ Return a list of node-properties nodes in **`headline`** or nil if none.
 #### om-headline-get-properties-drawer `(headline)`
 
 Return the properties drawer node in **`headline`**.
+
 If multiple are present (there shouldn't be) the first will be 
 returned.
 
@@ -3874,6 +3896,7 @@ Return section node for headline **`headline`** node or nil if none.
 #### om-headline-get-path `(headline)`
 
 Return tree path of **`headline`** node.
+
 The return value is a list of headline titles (including that from
 **`headline`**) leading to the root node.
 
@@ -3907,6 +3930,7 @@ The return value is a list of headline titles (including that from
 #### om-headline-update-item-statistics `(headline)`
 
 Return **`headline`** node with updated statistics cookie via items.
+
 The percent/fraction will be computed as the number of checked items
 over the number of items with checkboxes (non-checkbox items will
 not be considered).
@@ -3946,6 +3970,7 @@ not be considered).
 #### om-headline-update-todo-statistics `(headline)`
 
 Return **`headline`** node with updated statistics cookie via subheadlines.
+
 The percent/fraction will be computed as the number of done
 subheadlines over the number of todo subheadlines (eg non-todo
 subheadlines will not be counted).

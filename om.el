@@ -3181,38 +3181,12 @@ TIMESTAMP must have a type `eq' to `diary'. FORM is a quoted list."
 (om--defun-node om-headline-set-title! (title-text stats-cookie-value
                                                    headline)
   "Return HEADLINE node with title set with TITLE-TEXT and STATS-COOKIE-VALUE.
+
 TITLE-TEXT is a string to be parsed into object nodes for the title
 via `om-build-secondary-string!' (see that function for restrictions)
 and STATS-COOKIE-VALUE is a list described in 
 `om-build-statistics-cookie'."
   (om--headline-set-title! title-text stats-cookie-value headline))
-
-(om--defun-node om-headline-update-item-statistics (headline)
-  "Return HEADLINE node with updated statistics cookie via items.
-The percent/fraction will be computed as the number of checked items
-over the number of items with checkboxes (non-checkbox items will
-not be considered)."
-  (let* ((items
-          (->> (om--headline-get-section headline)
-               (om--get-children)
-               (--filter (om-is-type-p 'plain-list it))
-               (-mapcat #'om--get-children)
-               (--remove (om--property-is-nil-p :checkbox it))))
-         (done (length (--filter (om--property-is-eq-p :checkbox 'on it)
-                                 items)))
-         (total (length items)))
-    (om--headline-set-statistics-cookie-fraction done total headline)))
-
-(om--defun-node om-headline-update-todo-statistics (headline)
-  "Return HEADLINE node with updated statistics cookie via subheadlines.
-The percent/fraction will be computed as the number of done
-subheadlines over the number of todo subheadlines (eg non-todo
-subheadlines will not be counted)."
-  (let* ((subtodo (->> (om--headline-get-subheadlines headline)
-                       (--filter (om--get-property :todo-keyword it))))
-         (done (length (-filter #'om-headline-is-done-p subtodo)))
-         (total (length subtodo)))
-    (om--headline-set-statistics-cookie-fraction done total headline)))
 
 ;; item
 
@@ -3345,6 +3319,7 @@ returns a modified list of children."
 
 (om--defun-node om-headline-get-properties-drawer (headline)
   "Return the properties drawer node in HEADLINE.
+
 If multiple are present (there shouldn't be) the first will be 
 returned."
   (om--headline-get-properties-drawer headline))
@@ -3364,6 +3339,7 @@ returned."
 
 (om--defun-node om-headline-get-path (headline)
   "Return tree path of HEADLINE node.
+
 The return value is a list of headline titles (including that from
 HEADLINE) leading to the root node."
   (cl-labels
@@ -3375,6 +3351,34 @@ HEADLINE) leading to the root node."
             (list title)))))
     (reverse (get-path headline))))
 
+(om--defun-node om-headline-update-item-statistics (headline)
+  "Return HEADLINE node with updated statistics cookie via items.
+
+The percent/fraction will be computed as the number of checked items
+over the number of items with checkboxes (non-checkbox items will
+not be considered)."
+  (let* ((items
+          (->> (om--headline-get-section headline)
+               (om--get-children)
+               (--filter (om-is-type-p 'plain-list it))
+               (-mapcat #'om--get-children)
+               (--remove (om--property-is-nil-p :checkbox it))))
+         (done (length (--filter (om--property-is-eq-p :checkbox 'on it)
+                                 items)))
+         (total (length items)))
+    (om--headline-set-statistics-cookie-fraction done total headline)))
+
+(om--defun-node om-headline-update-todo-statistics (headline)
+  "Return HEADLINE node with updated statistics cookie via subheadlines.
+
+The percent/fraction will be computed as the number of done
+subheadlines over the number of todo subheadlines (eg non-todo
+subheadlines will not be counted)."
+  (let* ((subtodo (->> (om--headline-get-subheadlines headline)
+                       (--filter (om--get-property :todo-keyword it))))
+         (done (length (-filter #'om-headline-is-done-p subtodo)))
+         (total (length subtodo)))
+    (om--headline-set-statistics-cookie-fraction done total headline)))
 
 ;; plain-list
 
