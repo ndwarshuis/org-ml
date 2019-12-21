@@ -2970,9 +2970,9 @@ KEY is one of:
 - :latex-math-p (t if the latex representation requires math mode,
   nil otherwise)
 - :html (the entity's html representation)
-- :ascii (the entity's ASCII representation)
+- :ascii (the entity's ascii representation)
 - :latin1 (the entity's Latin1 representation)
-- :utf-8 (the entity's UTF8 representation)
+- :utf-8 (the entity's utf8 representation)
 
 Any other keys will trigger an error."
   (-if-let (index (-elem-index key (list :latex :latex-math-p :html
