@@ -3678,8 +3678,8 @@ See `om-match' for full description of PATTERN."
 
     ;; not
     (`(:not . (,p . nil))
-     (->> (om--match-filter p children)
-          (-difference children)))
+     (let ((found (om--match-filter p children)))
+       (--filter (not (-contains? found it)) children)))
 
     ;; or
     (`(:or . ,(and (pred and) p))
