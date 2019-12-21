@@ -441,20 +441,15 @@ If PREDICATE fails, print a generic error message."
                        ',arg ,arg ',pred)))))))
     `(progn ,@tests)))
 
-(defmacro om--defun-with-docstring-body (args &rest rest)
-  "Return a form that splits ARGS into `docstring' and `body'.
-`docstring' is bound to the docstring if it exists, and `body' is
-bound to all forms after the docstring. These two symbols are
-available to any computations present in REST."
-  ;; the third arg is a docstring if it is a string and there
-  ;; is at least one thing after it to be the body
-  (declare (indent 1))
-  ;; TODO is this a macro leak?
-  `(-let (((docstring body)
-           (if (and (stringp (car ,args)) (< 1 (length ,args)))
-               (list (car ,args) (-drop 1 ,args))
-             (list nil ,args))))
-     ,@rest))
+(eval-when-compile
+  (defun om--partition-docstring-body (args)
+    "Return ARGS as a partitioned list like (DOCSTRING BODY).
+If the car of ARGS is a string and the cdr of ARGS is non-nil,
+the car of ARGS becomes DOCSTRING, otherwise it is nil. Anything
+that isn't DOCSTRING is BODY."
+    (if (and (stringp (car args)) (< 1 (length args)))
+        (list (car args) (cdr args))
+      (list nil args))))
 
 (defmacro om--defun* (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
@@ -465,26 +460,26 @@ somewhere in the definition's body. When making the anaphoric form,
 wrapped in a lambda call binding the unary argument to the symbol
 `it'."
   (declare (doc-string 3) (indent 2))
-  (om--defun-with-docstring-body args
-    (-let* ((name* (intern (format "%s*" name)))
-            (arglist* (-replace 'fun 'form arglist))
-            (docstring* (format "Anaphoric form of `%s'." name))
-            (funargs (--map (if (eq it 'form) '(lambda (it) (\, form))
-                              (cons '\, (list it)))
-                            arglist*))
-            (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
-            (indent* `(declare (indent ,(-elem-index 'form arglist*)))))
-      `(progn
-         (defmacro ,name* ,arglist*
-           ,docstring*
-           ,indent*
-           (om--verify form listp)
-           ,body*)
-         (defun ,name ,arglist
-           ,docstring
-           ,indent*
-           (om--verify fun functionp)
-           ,@body)))))
+  (-let* (((docstring body) (om--partition-docstring-body args))
+          (name* (intern (format "%s*" name)))
+          (arglist* (-replace 'fun 'form arglist))
+          (docstring* (format "Anaphoric form of `%s'." name))
+          (funargs (--map (if (eq it 'form) '(lambda (it) (\, form))
+                            (cons '\, (list it)))
+                          arglist*))
+          (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
+          (indent* `(declare (indent ,(-elem-index 'form arglist*)))))
+    `(progn
+       (defmacro ,name* ,arglist*
+         ,docstring*
+         ,indent*
+         (om--verify form listp)
+         ,body*)
+       (defun ,name ,arglist
+         ,docstring
+         ,indent*
+         (om--verify fun functionp)
+         ,@body))))
 
 ;; defun with runtime type checking
 
@@ -510,7 +505,7 @@ node."
   "Return a function definition for NAME, ARGLIST, and ARGS.
 Will insert a type checker according to `om--defun-test-node'."
   (declare (doc-string 3) (indent 2))
-  (om--defun-with-docstring-body args
+  (-let (((docstring body) (om--partition-docstring-body args)))
     `(defun ,name ,arglist
        ,docstring
        ,`(om--defun-test-node ,arglist)
@@ -524,7 +519,7 @@ Will insert a type checker according to `om--defun-test-node' and will
 make an anaphoric form according to `om--defun*' (the same assumptions
 apply)."
   (declare (doc-string 3) (indent 2))
-  (om--defun-with-docstring-body args
+  (-let (((docstring body) (om--partition-docstring-body args)))
     `(om--defun* ,name ,arglist
        ,docstring
        ,`(om--defun-test-node ,arglist)
@@ -537,17 +532,17 @@ apply)."
 Will insert a type checker that will ensure the last argument in
 ARGLIST is a timestamp node with a non-diary type."
   (declare (doc-string 3) (indent 2))
-  (om--defun-with-docstring-body args
-    (let* ((last (-last-item arglist))
-           (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
-           (msg (format "%s must be a non-diary timestamp node" pre)))
-      `(defun ,name ,arglist
-         ,docstring
-         (unless
-             (and (om--is-type-p 'timestamp ,last)
-                  (not (om--property-is-eq-p :type 'diary ,last)))
-           (error ,msg))
-         ,@body))))
+  (-let* (((docstring body) (om--partition-docstring-body args))
+          (last (-last-item arglist))
+          (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
+          (msg (format "%s must be a non-diary timestamp node" pre)))
+    `(defun ,name ,arglist
+       ,docstring
+       (unless
+           (and (om--is-type-p 'timestamp ,last)
+                (not (om--property-is-eq-p :type 'diary ,last)))
+         (error ,msg))
+       ,@body)))
 
 ;;; LIST OPERATIONS (EXTENDING DASH.el)
 
