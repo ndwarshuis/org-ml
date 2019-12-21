@@ -2552,7 +2552,7 @@ the following forms:
 END (if supplied) will add the ending time, and follows the same
 formatting rules as START.
 
-ACTIVE is a boolean where t signifies the type is `active', else 
+ACTIVE is a boolean where t signifies the type is `active', else
 `inactive' (the range suffix will be added if an end time is
 supplied).
 
