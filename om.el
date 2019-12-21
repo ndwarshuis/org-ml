@@ -352,7 +352,7 @@ if rest arguments are to be considered at all."
           let-forms
           (macroexp-progn `(,body))))))
 
-  (defmacro om--defun-kw (name args &rest body)
+  (defmacro om--defun-kw (name arglist &rest body)
     "Define NAME as a function.
 
 This is like `cl-defun' except it allows &key to be used in
@@ -382,8 +382,10 @@ function calls."
                        def-body))
              (doc-string 3)
              (indent 2))
-    (let ((res (om--transform-lambda args body name)))
-      `(defun ,name ,@res))))
+    (if (memq '&key arglist)
+        (let ((res (om--transform-lambda arglist body name)))
+          `(defun ,name ,@res))
+      `(defun ,name ,arglist ,@body))))
 
 ;; defun which also makes anaphoric form
 
