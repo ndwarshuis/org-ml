@@ -2613,39 +2613,6 @@
     nil
 
     ;; TODO add shortcut tag setter
-
-    (defexamples-content om-item-is-unchecked-p
-      nil
-      (:buffer "- one"
-               "- [ ] two"
-               "- [X] three"
-               "- [-] four")
-      (->> (om-parse-this-element)
-           (om-get-children)
-           (-map #'om-item-is-unchecked-p))
-      => '(nil t nil nil))
-
-    (defexamples-content om-item-is-checked-p
-      nil
-      (:buffer "- one"
-               "- [ ] two"
-               "- [X] three"
-               "- [-] four")
-      (->> (om-parse-this-element)
-           (om-get-children)
-           (-map #'om-item-is-checked-p))
-      => '(nil nil t nil))
-
-    (defexamples-content om-item-is-trans-p
-      nil
-      (:buffer "- one"
-               "- [ ] two"
-               "- [X] three"
-               "- [-] four")
-      (->> (om-parse-this-element)
-           (om-get-children)
-           (-map #'om-item-is-trans-p))
-      => '(nil nil nil t))
     
     (defexamples-content om-item-toggle-checkbox
       nil

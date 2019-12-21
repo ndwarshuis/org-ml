@@ -3206,7 +3206,8 @@ not be considered)."
                (--filter (om-is-type-p 'plain-list it))
                (-mapcat #'om--get-children)
                (--remove (om--property-is-nil-p :checkbox it))))
-         (done (length (-filter #'om-item-is-checked-p items)))
+         (done (length (--filter (om--property-is-eq-p :checkbox 'on it)
+                                 items)))
          (total (length items)))
     (om--headline-set-statistics-cookie-fraction done total headline)))
 
@@ -3222,18 +3223,6 @@ subheadlines will not be counted)."
     (om--headline-set-statistics-cookie-fraction done total headline)))
 
 ;; item
-
-(om--defun-node om-item-is-checked-p (item)
-  "Return t if ITEM node is checked."
-  (om--property-is-eq-p :checkbox 'on item))
-
-(om--defun-node om-item-is-unchecked-p (item)
-  "Return t if ITEM node is unchecked."
-  (om--property-is-eq-p :checkbox 'off item))
-
-(om--defun-node om-item-is-trans-p (item)
-  "Return t if ITEM node is transitional."
-  (om--property-is-eq-p :checkbox 'trans item))
 
 (om--defun-node om-item-toggle-checkbox (item)
   "Return ITEM node with its checkbox state flipped.
