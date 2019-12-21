@@ -614,10 +614,12 @@ See `om--convert-intra-index' for the meaning of N."
 See `om--convert-intra-index' for the meaning of N."
   (-replace-at (om--convert-intra-index n list) x list))
 
-(defun om--nth (n list)
+(defun om--nth (n list &optional permit-error)
   "Like `nth' but honors negative indices N in LIST.
-See `om--convert-intra-index' for the meaning of N."
-  (nth (om--convert-intra-index n list) list))
+See `om--convert-intra-index' for the meaning of N.
+If PERMIT-ERROR is t, do not throw out-of-bounds errors."
+  (-when-let (i (om--convert-intra-index n list permit-error))
+    (nth i list)))
 
 (om--defun* om--map-first (fun list)
   "Return LIST with FUN applied to the first member.
@@ -3656,11 +3658,7 @@ See `om-match' for full description of PATTERN."
     
     ;; index
     ((and (pred integerp) index)
-     (-some->
-      (if (< index 0)
-          (nth (- (* -1 index) 1) (nreverse children))
-        (nth index children))
-      (list)))
+     (-some-> (om--nth index children t) (list)))
 
     ;; type
     ((and (pred (lambda (y) (memq y om-nodes))) type)
