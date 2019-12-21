@@ -324,9 +324,6 @@ Set, get, and map properties of nodes.
 
 ### Item
 
-* [om-item-is-unchecked-p](#om-item-is-unchecked-p-item) `(item)`
-* [om-item-is-checked-p](#om-item-is-checked-p-item) `(item)`
-* [om-item-is-trans-p](#om-item-is-trans-p-item) `(item)`
 * [om-item-toggle-checkbox](#om-item-toggle-checkbox-item) `(item)`
 
 ### Planning
@@ -1810,7 +1807,7 @@ the following forms:
 **`end`** (if supplied) will add the ending time, and follows the same
 formatting rules as **`start`**.
 
-**`active`** is a boolean where t signifies the type is `active`, else 
+**`active`** is a boolean where t signifies the type is `active`, else
 `inactive` (the range suffix will be added if an end time is
 supplied).
 
@@ -2913,60 +2910,6 @@ Return the statistics cookie node from **`headline`** if it exists.
 
 
 ### Item
-
-#### om-item-is-unchecked-p `(item)`
-
-Return t if **`item`** node is unchecked.
-
-```el
-;; Given the following contents:
-; - one
-; - [ ] two
-; - [X] three
-; - [-] four
-
-(->> (om-parse-this-element)
-     (om-get-children)
-     (-map (function om-item-is-unchecked-p)))
- ;; => '(nil t nil nil)
-
-```
-
-#### om-item-is-checked-p `(item)`
-
-Return t if **`item`** node is checked.
-
-```el
-;; Given the following contents:
-; - one
-; - [ ] two
-; - [X] three
-; - [-] four
-
-(->> (om-parse-this-element)
-     (om-get-children)
-     (-map (function om-item-is-checked-p)))
- ;; => '(nil nil t nil)
-
-```
-
-#### om-item-is-trans-p `(item)`
-
-Return t if **`item`** node is transitional.
-
-```el
-;; Given the following contents:
-; - one
-; - [ ] two
-; - [X] three
-; - [-] four
-
-(->> (om-parse-this-element)
-     (om-get-children)
-     (-map (function om-item-is-trans-p)))
- ;; => '(nil nil nil t)
-
-```
 
 #### om-item-toggle-checkbox `(item)`
 
