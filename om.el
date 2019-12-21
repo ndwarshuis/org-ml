@@ -1173,7 +1173,6 @@ bounds."
                             :type-desc ("a list of non-neg integers"
                                         "like (PERC) or (NUM DEN)"
                                         "which make [NUM/DEN] and"
-                                        ;; TODO this is formatted weirdly
                                         "[PERC%] respectively")
                             :require t))
         (strike-through)
