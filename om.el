@@ -3174,14 +3174,6 @@ TIMESTAMP must have a type `eq' to `diary'. FORM is a quoted list."
       (member org-done-keywords)
       (and t)))
 
-(om--defun-node om-headline-is-archived-p (headline)
-  "Return t if HEADLINE node is archived."
-  (om--property-is-non-nil-p :archivedp headline))
-
-(om--defun-node om-headline-is-commented-p (headline)
-  "Return t if HEADLINE node is commented."
-  (om--property-is-non-nil-p :commentedp headline))
-
 (om--defun-node om-headline-has-tag-p (tag headline)
   "Return t if HEADLINE node is tagged with TAG."
   (if (member tag (om--get-property :tags headline)) t))

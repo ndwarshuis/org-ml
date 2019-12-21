@@ -2557,28 +2557,6 @@
            (om-headline-is-done-p))
       => t)
 
-    (defexamples-content om-headline-is-archived-p
-      nil
-      (:buffer "* dummy")
-      (->> (om-parse-this-headline)
-           (om-headline-is-archived-p))
-      => nil
-      (:buffer "* dummy                                                             :ARCHIVE:")
-      (->> (om-parse-this-headline)
-           (om-headline-is-archived-p))
-      => t)
-
-    (defexamples-content om-headline-is-commented-p
-      nil
-      (:buffer "* dummy")
-      (->> (om-parse-this-headline)
-           (om-headline-is-commented-p))
-      => nil
-      (:buffer "* COMMENT dummy")
-      (->> (om-parse-this-headline)
-           (om-headline-is-commented-p))
-      => t)
-
     (defexamples-content om-headline-has-tag-p
       nil
       (:buffer "* dummy")

@@ -317,8 +317,6 @@ Set, get, and map properties of nodes.
 ### Headline
 
 * [om-headline-is-done-p](#om-headline-is-done-p-headline) `(headline)`
-* [om-headline-is-archived-p](#om-headline-is-archived-p-headline) `(headline)`
-* [om-headline-is-commented-p](#om-headline-is-commented-p-headline) `(headline)`
 * [om-headline-has-tag-p](#om-headline-has-tag-p-tag-headline) `(tag headline)`
 * [om-headline-get-statistics-cookie](#om-headline-get-statistics-cookie-headline) `(headline)`
 
@@ -2819,48 +2817,6 @@ Return t if **`headline`** node has a done todo-keyword.
 
 (->> (om-parse-this-headline)
      (om-headline-is-done-p))
- ;; => t
-
-```
-
-#### om-headline-is-archived-p `(headline)`
-
-Return t if **`headline`** node is archived.
-
-```el
-;; Given the following contents:
-; * dummy
-
-(->> (om-parse-this-headline)
-     (om-headline-is-archived-p))
- ;; => nil
-
-;; Given the following contents:
-; * dummy                                                             :ARCHIVE:
-
-(->> (om-parse-this-headline)
-     (om-headline-is-archived-p))
- ;; => t
-
-```
-
-#### om-headline-is-commented-p `(headline)`
-
-Return t if **`headline`** node is commented.
-
-```el
-;; Given the following contents:
-; * dummy
-
-(->> (om-parse-this-headline)
-     (om-headline-is-commented-p))
- ;; => nil
-
-;; Given the following contents:
-; * COMMENT dummy
-
-(->> (om-parse-this-headline)
-     (om-headline-is-commented-p))
  ;; => t
 
 ```
