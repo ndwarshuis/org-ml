@@ -2702,9 +2702,7 @@ All other arguments follow the same rules as `om-build-item'."
 STRING is the text to be contained in the table-cell node. It must
 contain valid textual representations of objects that are allowed in
 table-cell nodes."
-  (-if-let (ss (om--build-secondary-string string))
-      (apply #'om-build-table-cell :post-blank post-blank ss)
-    (error "Could not create valid secondary string from '%s'" string)))
+  (apply #'om-build-table-cell (om--build-secondary-string string)))
 
 (defun om-build-table-row! (row-list)
   "Return a new table-row node.
@@ -2713,10 +2711,9 @@ ROW-LIST is a list of strings to be built into table-cell nodes via
 `om-build-table-cell!' (see that function for restrictions).
 Alternatively, ROW-LIST may the symbol `hline' instead of a string to
 create a rule-typed table-row."
-  (if (eq row-list 'hline)
-      (om-build-table-row-hline :post-blank post-blank)
+  (if (eq row-list 'hline) (om-build-table-row-hline)
     (->> (-map #'om-build-table-cell! row-list)
-         (apply #'om-build-table-row :post-blank post-blank))))
+         (apply #'om-build-table-row))))
 
 (om--defun-kw om-build-table! (&key tblfm post-blank &rest row-lists)
   "Return a new table node.
