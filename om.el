@@ -263,36 +263,36 @@ These are also known as \"recursive objects\" in `org-element.el'")
          (s-join ", ")
          (error (concat msg ": %s"))))
 
+  ;; TODO this should return a form
   (defun om--partition-rest-args (args kws use-rest?)
     "Return cons cell with ARGS partitioned into keyword and rest arguments.
 KWS is a list of valid keywords to use when deciding which in ARGS
 is a keyword-value pair, and USE-REST? is a boolean that determines
-if rest arguments are to be considered at all."
-    (if (not kws) (list nil args)
-      (-let* (((kwargs restargs)
-               (->> (-partition-all 2 args)
-                    (--split-with (keywordp (car it)))))
-              (restargs (apply #'append restargs)))
-        ;; ensure only valid keywords are used
-        (-some->>
-         (-difference (--map (car it) kwargs) kws)
-         (om--throw-kw-error "Invalid keyword(s) found"))
-        ;; ensure keywords are only used once per call
-        (-some->>
-         (-group-by #'car kwargs)
-         (--filter (< 1 (length (cdr it))))
-         (om--throw-kw-error "Keyword(s) used multiple times"))
-        ;; ensure that keyword pairs are only used immediately after
-        ;; positional arguments
-        (-some->>
-         (-filter #'keywordp restargs)
-         (om--throw-kw-error
-          (s-join " " '("Keyword-value pairs must be immediately"
-                        "after positional arguments. These keywords"
-                        "were interpreted as rest arguments"))))
-        (when (and restargs (not use-rest?))
-          (error "Too many arguments supplied"))
-        (list (apply #'append kwargs) restargs))))
+if rest arguments are to be considered."
+    (-let* (((kwargs restargs)
+             (->> (-partition-all 2 args)
+                  (--split-with (keywordp (car it)))))
+            (restargs (apply #'append restargs)))
+      ;; ensure only valid keywords are used
+      (-some->>
+       (-difference (--map (car it) kwargs) kws)
+       (om--throw-kw-error "Invalid keyword(s) found"))
+      ;; ensure keywords are only used once per call
+      (-some->>
+       (-group-by #'car kwargs)
+       (--filter (< 1 (length (cdr it))))
+       (om--throw-kw-error "Keyword(s) used multiple times"))
+      ;; ensure that keyword pairs are only used immediately after
+      ;; positional arguments
+      (-some->>
+       (-filter #'keywordp restargs)
+       (om--throw-kw-error
+        (s-join " " '("Keyword-value pairs must be immediately"
+                      "after positional arguments. These keywords"
+                      "were interpreted as rest arguments"))))
+      (when (and restargs (not use-rest?))
+        (error "Too many arguments supplied"))
+      (list (apply #'append kwargs) restargs)))
 
   (defun om--make-header (body args)
     ;; TODO explain this better...but first actually understand it :/
@@ -313,15 +313,16 @@ if rest arguments are to be considered at all."
 
   (defun om--transform-lambda (args body name)
     "Transform ARGS and BODY to a block bound to NAME."
+    ;; assume &key will always be present if this function is called
     (let* ((partargs (-partition-before-pred
                       (lambda (it) (memq it '(&pos &rest &key)))
                       (cons '&pos args)))
+           ;; TODO throw error if no kws defined
            (kw-lets (->> (alist-get '&key partargs)
                          (-map #'om--make-kwarg-let)))
            (rest-arg (->> (alist-get '&rest partargs)
                           (om--verify-rest-arg)))
            (header (om--make-header body args))
-           ;; (car (macroexp-parse-body body)))
            (body (->> (macroexp-parse-body body)
                       (cdr)
                       (append `(cl-block ,name))))
