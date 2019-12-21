@@ -269,8 +269,8 @@ Build nodes with more convenient/shorter syntax.
 * [om-build-headline!](#om-build-headline-key-level-1-title-text-todo-keyword-tags-pre-blank-priority-commentedp-archivedp-post-blank-planning-statistics-cookie-section-children-rest-subheadlines) `(&key (level 1) title-text todo-keyword tags pre-blank priority commentedp archivedp post-blank planning statistics-cookie section-children &rest subheadlines)`
 * [om-build-item!](#om-build-item-key-post-blank-bullet-checkbox-tag-paragraph-counter-rest-children) `(&key post-blank bullet checkbox tag paragraph counter &rest children)`
 * [om-build-paragraph!](#om-build-paragraph-string-key-post-blank) `(string &key post-blank)`
-* [om-build-table-cell!](#om-build-table-cell-string-key-post-blank) `(string &key post-blank)`
-* [om-build-table-row!](#om-build-table-row-row-list-key-post-blank) `(row-list &key post-blank)`
+* [om-build-table-cell!](#om-build-table-cell-string) `(string)`
+* [om-build-table-row!](#om-build-table-row-row-list) `(row-list)`
 * [om-build-table!](#om-build-table-key-tblfm-post-blank-rest-row-lists) `(&key tblfm post-blank &rest row-lists)`
 
 ## Type Predicates
@@ -2003,7 +2003,7 @@ Error
 
 ```
 
-#### om-build-table-cell! `(string &key post-blank)`
+#### om-build-table-cell! `(string)`
 
 Return a new table-cell node.
 
@@ -2022,12 +2022,12 @@ table-cell nodes.
 
 ```
 
-#### om-build-table-row! `(row-list &key post-blank)`
+#### om-build-table-row! `(row-list)`
 
 Return a new table-row node.
 
 **`row-list`** is a list of strings to be built into table-cell nodes via 
-[`om-build-table-cell!`](#om-build-table-cell-string-key-post-blank) (see that function for restrictions).
+[`om-build-table-cell!`](#om-build-table-cell-string) (see that function for restrictions).
 Alternatively, **`row-list`** may the symbol `hline` instead of a string to
 create a rule-typed table-row.
 
@@ -2047,7 +2047,7 @@ create a rule-typed table-row.
 Return a new table node.
 
 **`row-lists`** is a list of lists where each member list will be converted
-to a table-row node via [`om-build-table-row!`](#om-build-table-row-row-list-key-post-blank) (see that function for
+to a table-row node via [`om-build-table-row!`](#om-build-table-row-row-list) (see that function for
 restrictions).
 
 All other arguments follow the same rules as [`om-build-table`](#om-build-table-key-tblfm-post-blank-rest-element-nodes).
@@ -4460,7 +4460,7 @@ Return **`table`** node with **`column-text`** inserted at **`column-index`**.
 
 **`column-index`** is the index of the column and **`column-text`** is a list of
 strings to be made into table-cells to be inserted following the same
-syntax as [`om-build-table-cell!`](#om-build-table-cell-string-key-post-blank).
+syntax as [`om-build-table-cell!`](#om-build-table-cell-string).
 
 ```el
 ;; Given the following contents:
@@ -4490,7 +4490,7 @@ Return **`table`** node with **`row-text`** inserted at **`row-index`**.
 
 **`row-index`** is the index of the column and **`row-text`** is a list of strings
 to be made into table-cells to be inserted following the same syntax
-as [`om-build-table-row!`](#om-build-table-row-row-list-key-post-blank).
+as [`om-build-table-row!`](#om-build-table-row-row-list).
 
 ```el
 ;; Given the following contents:
@@ -4530,7 +4530,7 @@ Return **`table`** node with a table-cell node replaced by **`cell-text`**.
 
 If **`cell-text`** is a string, it will replace the children of the
 table-cell at **`row-index`** and **`column-index`** in **`table`**. **`cell-text`** will be
-processed the same as the argument given to [`om-build-table-cell!`](#om-build-table-cell-string-key-post-blank).
+processed the same as the argument given to [`om-build-table-cell!`](#om-build-table-cell-string).
 
 If **`cell-text`** is nil, it will set the cell to an empty string.
 
@@ -4569,7 +4569,7 @@ Return **`table`** node with the column at **`column-index`** replaced by **`col
 
 If **`column-text`** is a list of strings, it will replace the table-cells
 at **`column-index`**. Each member of **`column-text`** will be processed the
-same as the argument given to [`om-build-table-cell!`](#om-build-table-cell-string-key-post-blank).
+same as the argument given to [`om-build-table-cell!`](#om-build-table-cell-string).
 
 If **`column-text`** is nil, it will clear all cells at **`column-index`**.
 
@@ -4608,7 +4608,7 @@ Return **`table`** node with the row at **`row-index`** replaced by **`row-text`
 
 If **`row-text`** is a list of strings, it will replace the cells at
 **`row-index`**. Each member of **`row-text`** will be processed the same as
-the argument given to [`om-build-table-row!`](#om-build-table-row-row-list-key-post-blank).
+the argument given to [`om-build-table-row!`](#om-build-table-row-row-list).
 
 If **`row-text`** is nil, it will clear all cells at **`row-index`**.
 

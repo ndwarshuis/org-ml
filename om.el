@@ -2696,8 +2696,7 @@ All other arguments follow the same rules as `om-build-item'."
                 :counter counter
                 :tag tag))))
 
-;; TODO does post-blank even make sense for this?
-(om--defun-kw om-build-table-cell! (string &key post-blank)
+(defun om-build-table-cell! (string)
   "Return a new table-cell node.
 
 STRING is the text to be contained in the table-cell node. It must
@@ -2707,8 +2706,7 @@ table-cell nodes."
       (apply #'om-build-table-cell :post-blank post-blank ss)
     (error "Could not create valid secondary string from '%s'" string)))
 
-;; TODO does post-blank even make sense for this?
-(om--defun-kw om-build-table-row! (row-list &key post-blank)
+(defun om-build-table-row! (row-list)
   "Return a new table-row node.
 
 ROW-LIST is a list of strings to be built into table-cell nodes via 
