@@ -3675,7 +3675,7 @@ original children to be modified."
                 (om--construct ,y (nth 1 node)))))))
        (rec ,node))))
 
-(defun om--match-filter (pattern children)
+(defun om--match-filter (count pattern children)
   "Filter CHILDREN based on PATTERN.
 See `om-match' for full description of PATTERN."
   (pcase pattern
@@ -3709,21 +3709,21 @@ See `om-match' for full description of PATTERN."
 
     ;; not
     (`(:not . (,p . nil))
-     (let ((found (om--match-filter p children)))
+     (let ((found (om--match-filter count p children)))
        (om--filter-while t (not (member it found)) children)))
 
     ;; or
     (`(:or . ,(and (pred and) p))
      (om--reduce-from-while
       t
-      (-union acc (om--match-filter it children)) nil p))
+      (-union acc (om--match-filter count it children)) nil p))
 
     ;; and
     (`(:and . ,(and (pred and) p))
      (om--reduce-from-while
       t
-      (-intersection acc (om--match-filter it children))
-      (om--match-filter (car p) children)
+      (-intersection acc (om--match-filter count it children))
+      (om--match-filter count (car p) children)
       (cdr p)))
 
     ;; properties
@@ -3747,29 +3747,43 @@ See `om-match' for full description of PATTERN."
       (`(,(and p (guard (memq p '(:first :last :nth :slice)))) . ,_)
        (error "Slicer detected: %s" p))
       (`(:many! . (,p . nil))
-       (let ((found (om--match-filter p children)))
+       (let ((found (om--match-filter count p children)))
+         ;; TODO put this in terms of reduce...
          (->> (-difference children found)
-              (--mapcat (om--match-pattern reverse? count `(:many! ,p) it))
+              (om--reduce-from-while
+               t
+               (append acc (om--match-pattern reverse? count `(:many! ,p) it))
+               nil)
               (append found))))
       (`(:many! . ,_)
        (error "Query with :many! must have one target"))
       (`(:many . (,p . nil))
-       (let ((found (om--match-filter p children))
+       (let ((found (om--match-filter count p children))
              (p* (list :many p)))
          (->> children
-              (--mapcat (om--match-pattern reverse? count p* it))
+              (om--reduce-from-while
+               t
+               (append acc (om--match-pattern reverse? count p* it))
+               nil)
               (append found))))
       (`(:many . ,_)
        (error "Query with :many must have one target"))
       (`(:any . ,(and (pred and) ps))
-       (--mapcat (om--match-pattern reverse? count ps it) children))
+       (om--reduce-from-while
+        t
+        (append acc (om--match-pattern reverse? count ps it))
+        nil
+        children))
       (`(:any . nil)
        children)
       (`(,p . nil)
-       (om--match-filter p children))
+       (om--match-filter count p children))
       (`(,p . ,ps)
-       (->> (om--match-filter p children)
-            (--mapcat (om--match-pattern reverse? count ps it))))
+       (->> (om--match-filter count p children)
+            (om--reduce-from-while
+             t
+             (append acc (om--match-pattern reverse? count ps it))
+             nil)))
       (_ (error "Invalid query")))))
 
 ;; TODO this is inefficient
