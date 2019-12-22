@@ -3725,10 +3725,15 @@ See `om-match' for full description of PATTERN."
 
     ;; not
     (`(:not . (,p . nil))
-     (let ((match-acc (om--match-filter count p match-acc children)))
+     ;; NOTE: need to reset count here in order to get all matches
+     ;; and then negate them
+     ;; TODO this is inefficient, better way is to reduce through
+     ;; children, test if one thing matches, and skip that one...and
+     ;; do that until count is reached if ever
+     (let ((match* (om--match-filter nil p nil children)))
        (->> (om--filter-while
              (om--maybe-shorter-than count acc)
-             (not (member it match-acc))
+             (not (member it match*))
              children)
             (append match-acc))))
 
@@ -3742,9 +3747,14 @@ See `om-match' for full description of PATTERN."
 
     ;; and
     (`(:and . ,(and (pred and) p))
+     ;; NOTE: we reset the counter and accumulator here since we don't
+     ;; know how many of the nested matches will be used when applied
+     ;; to the intersection command
      (->> 
       (om--reduce-from-while
-       (om--maybe-shorter-than count acc)
+       ;; if accumulator is 0, stop because (intersection nil anything)
+       ;; is always nil
+       (or (= 0 (length acc)) (om--maybe-shorter-than count acc))
        (-intersection acc (om--match-filter nil it nil children))
        (om--match-filter nil (car p) nil children)
        (cdr p))
