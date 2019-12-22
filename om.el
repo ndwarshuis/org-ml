@@ -3826,11 +3826,14 @@ See `om-match' for full description of PATTERN."
 (defun om--match-slicer (pattern node)
   (pcase pattern
     (`(:first . ,ps)
-     (-take 1 (om--match-pattern nil 1 ps nil node)))
+     ;; (-take 1 (om--match-pattern nil 1 ps nil node)))
+     (om--match-pattern nil 1 ps nil node))
     (`(:last . ,ps)
-     (-take 1 (om--match-pattern t 1 ps nil node)))
+     (om--match-pattern t 1 ps nil node))
     (`(:nth . (,(and (pred integerp) n) . ,ps))
-     (if (< n 0) (reverse (om--match-pattern t (abs n) ps nil node))
+     (if (< n 0)
+         ;; TODO this will return non-nil even when out of range
+         (list (nth n (reverse (om--match-pattern t (abs n) ps nil node))))
        (list (nth n (om--match-pattern nil (1+ n) ps nil node)))))
     (`(:sub
        . (,(and (pred integerp) a)
