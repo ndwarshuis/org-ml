@@ -664,6 +664,23 @@ FUN is a unary function that returns a modified member."
 FUN is a unary function that returns a modified member."
   (->> (nreverse list) (om--map-first fun) (nreverse)))
 
+(defmacro om--reduce-from-while (pred form initial-value list)
+  "Like `--reduce-from' but only reduce LIST while PRED is t.
+FORM and INITIAL-VALUE work the same way. The exposed symbols `it' and
+`acc' carry the same meaning as well."
+  `(let ((acc ,initial-value))
+     (--each-while ,list ,pred (setq acc ,form))
+     acc))
+
+(defmacro om--filter-while (pred form list)
+  "Like `--filter' but stop filtering LIST after PRED is nil.
+The meaning of FORM does not change. Unlike `--filter' this function
+exposes `acc' to represent all intermediate values of the filtered
+list in addition to `it' (who's meaning is unchanged)."
+  `(let (acc)
+     (--each-while ,list ,pred (when ,form (!cons it acc)))
+     (nreverse acc)))
+
 ;;; MISC HELPER FUNCTIONS
 
 (defun om--get-head (node)
@@ -3672,7 +3689,7 @@ See `om-match' for full description of PATTERN."
 
     ;; type
     ((and (pred (lambda (y) (memq y om-nodes))) type)
-     (--filter (om--is-type-p type it) children))
+     (om--filter-while t (om--is-type-p type it) children))
     
     ;; index
     ((and (pred integerp) index)
@@ -3683,27 +3700,31 @@ See `om-match' for full description of PATTERN."
      (-when-let (i* (om--convert-intra-index i children t))
        (->> (--iterate (1+ it) 0 (length children))
             (-zip-with #'cons children)
-            (--filter (funcall f (cdr it) i*))
+            (om--filter-while t (funcall f (cdr it) i*))
             (-map #'car))))
 
     ;; predicate
     (`(:pred . (,p . nil))
-     (--filter (funcall p it) children))
+     (om--filter-while t (funcall p it) children))
 
     ;; not
     (`(:not . (,p . nil))
      (let ((found (om--match-filter p children)))
-       (--filter (not (-contains? found it)) children)))
+       (om--filter-while t (not (member it found)) children)))
 
     ;; or
     (`(:or . ,(and (pred and) p))
-     (--reduce-from (-union acc (om--match-filter it children)) nil p))
+     (om--reduce-from-while
+      t
+      (-union acc (om--match-filter it children)) nil p))
 
     ;; and
     (`(:and . ,(and (pred and) p))
-     (--reduce-from (-intersection acc (om--match-filter it children))
-                    (om--match-filter (car p) children)
-                    (cdr p)))
+     (om--reduce-from-while
+      t
+      (-intersection acc (om--match-filter it children))
+      (om--match-filter (car p) children)
+      (cdr p)))
 
     ;; properties
     ;; NOTE: this must go last if we don't want :and/:or/:not to
