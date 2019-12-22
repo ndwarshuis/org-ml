@@ -4027,12 +4027,43 @@
          (--map (om-to-trimmed-string it)))
     => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
 
+    ;; these should do the same thing as :many above
+    (->> (om-parse-this-subtree)
+         (om-match '(:many! bold))
+         (--map (om-to-trimmed-string it)))
+    => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
+
     (->> (om-parse-this-subtree)
          (om-match '(headline :many! headline))
          (--map (om-to-trimmed-string it)))
     => '("*** headline three
 and here is even more *text4* and *text5*
 **** headline 4")
+
+    (:buffer "* headline one"
+             "** headline two"
+             "this is *text1* of *text2*"
+             "** headline two.five"
+             "here is more *text3*"
+             "** headline three"
+             "and here is even more *text4* and *text5*")
+    (->> (om-parse-this-subtree)
+         (om-match '(headline section paragraph bold))
+         (--map (om-to-trimmed-string it)))
+    => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
+    (->> (om-parse-this-subtree)
+         (om-match '(:any section paragraph bold))
+         (--map (om-to-trimmed-string it)))
+    => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
+
+    (:buffer "- [ ] tag :: one"
+             "- [X] tag :: two"
+             "- [X] tag :: three")
+    (->> (om-parse-this-element)
+         (om-match '(:first (:and (:checkbox on) (:tag '("tag")))))
+         (--map (om-to-trimmed-string it)))
+    => '("- [X] tag :: two")
+
     :end-hidden)
 
   (defexamples-content om-match-delete
