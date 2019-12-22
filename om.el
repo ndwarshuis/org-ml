@@ -3748,7 +3748,6 @@ See `om-match' for full description of PATTERN."
        (error "Slicer detected: %s" p))
       (`(:many! . (,p . nil))
        (let ((found (om--match-filter count p children)))
-         ;; TODO put this in terms of reduce...
          (->> (-difference children found)
               (om--reduce-from-while
                t
