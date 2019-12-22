@@ -3747,24 +3747,23 @@ See `om-match' for full description of PATTERN."
       (`(,(and p (guard (memq p '(:first :last :nth :slice)))) . ,_)
        (error "Slicer detected: %s" p))
       (`(:many! . (,p . nil))
-       (let ((found (om--match-filter count p children)))
-         (->> (-difference children found)
-              (om--reduce-from-while
-               t
-               (append acc (om--match-pattern reverse? count `(:many! ,p) it))
-               nil)
-              (append found))))
+       (let ((found (om--match-filter count p children))
+             (p* `(:many! ,p)))
+         (om--reduce-from-while
+          t
+          (append acc (om--match-pattern reverse? count p* it))
+          found
+          (-difference children found))))
       (`(:many! . ,_)
        (error "Query with :many! must have one target"))
       (`(:many . (,p . nil))
        (let ((found (om--match-filter count p children))
              (p* (list :many p)))
-         (->> children
-              (om--reduce-from-while
-               t
-               (append acc (om--match-pattern reverse? count p* it))
-               nil)
-              (append found))))
+         (om--reduce-from-while
+          t
+          (append acc (om--match-pattern reverse? count p* it))
+          found
+          children)))
       (`(:many . ,_)
        (error "Query with :many must have one target"))
       (`(:any . ,(and (pred and) ps))
@@ -3778,11 +3777,11 @@ See `om-match' for full description of PATTERN."
       (`(,p . nil)
        (om--match-filter count p children))
       (`(,p . ,ps)
-       (->> (om--match-filter count p children)
-            (om--reduce-from-while
-             t
-             (append acc (om--match-pattern reverse? count ps it))
-             nil)))
+       (om--reduce-from-while
+        t
+        (append acc (om--match-pattern reverse? count ps it))
+        nil
+        (om--match-filter count p children)))
       (_ (error "Invalid query")))))
 
 ;; TODO this is inefficient
