@@ -3727,9 +3727,9 @@ See `om-match' for full description of PATTERN."
     (`(:not . (,p . nil))
      ;; NOTE: need to reset count here in order to get all matches
      ;; and then negate them
-     ;; TODO this is inefficient, better way is to reduce through
-     ;; children, test if one thing matches, and skip that one...and
-     ;; do that until count is reached if ever
+     ;; TODO this is inefficient, the only way to do this is to
+     ;; make a version of this function one step down that tests if
+     ;; one child matches
      (let ((match* (om--match-filter nil p nil children)))
        (->> (om--filter-while
              (om--maybe-shorter-than count acc)
@@ -3820,13 +3820,12 @@ See `om-match' for full description of PATTERN."
         (om--match-pattern reverse? count ps acc it)
         match-acc
         (om--match-filter count p match-acc children)))
-      (_ (error "Invalid query")))))
+      (_ (error "Invalid pattern: %s" pattern)))))
 
 ;; TODO this is inefficient
 (defun om--match-slicer (pattern node)
   (pcase pattern
     (`(:first . ,ps)
-     ;; (-take 1 (om--match-pattern nil 1 ps nil node)))
      (om--match-pattern nil 1 ps nil node))
     (`(:last . ,ps)
      (om--match-pattern t 1 ps nil node))
