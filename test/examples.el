@@ -4060,7 +4060,7 @@ and here is even more *text4* and *text5*
              "- [X] tag :: two"
              "- [X] tag :: three")
     (->> (om-parse-this-element)
-         (om-match '(:first (:and (:checkbox on) (:tag '("tag")))))
+         (om-match '(:first (:and (:checkbox on :tag ("tag")))))
          (--map (om-to-trimmed-string it)))
     => '("- [X] tag :: two")
 

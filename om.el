@@ -672,23 +672,14 @@ FORM and INITIAL-VALUE work the same way. The exposed symbols `it' and
      (--each-while ,list ,pred (setq acc ,form))
      acc))
 
-(defmacro om--filter-while (pred form list)
-  "Like `--filter' but stop filtering LIST after PRED is nil.
-The meaning of FORM does not change. Unlike `--filter' this function
-exposes `acc' to represent all intermediate values of the filtered
-list in addition to `it' (who's meaning is unchanged)."
-  `(let (acc)
-     (--each-while ,list ,pred (when ,form (!cons it acc)))
-     (nreverse acc)))
-
-(defmacro om--reverse-filter-while (pred form list)
-  "Like `--filter' filter LIST while PRED is t and reverse the output.
-The meaning of FORM does not change. Unlike `--filter' this function
-exposes `acc' to represent all intermediate values of the filtered
-list in addition to `it' (who's meaning is unchanged)."
-  `(let (acc)
-     (--each-while ,list ,pred (when ,form (!cons it acc)))
-     acc))
+(defmacro om--each-while (list pred &rest body)
+  "Like `--each-while' but bind LIST's right index to `it-rindex'.
+BODY and PRED have the same meaning."
+  (declare (indent 2))
+  `(let ((it-rindex (- (length ,list))))
+     (--each-while ,list ,pred
+       ,@body
+       (setq it-rindex (1+ it-rindex)))))
 
 ;;; MISC HELPER FUNCTIONS
 
@@ -3688,40 +3679,14 @@ original children to be modified."
   "Return t if LIST is longer than N. If N is nil always return t."
   (if n (< (length list) n) t))
 
-(defun om--truncate-front-maybe (n list)
-  "Return LIST truncated to N from the front if N is non-nil."
-  (if (not n) list
-    (let ((diff (- (length list) n)))
-      (if (< 0 diff) (-drop diff list) list))))
-
-(defmacro om--match-filter-pred (form end? count children)
-  "Return form to filter CHILDREN using predicated FORM.
-The from will return all matches in reverse order, and will
-terminate the search when the number of accumulated matches equals
-COUNT (if ever). If END? is supplied, start the filter iteration
-at the end of CHILDREN instead of the front. The current child is
-denoted with `it'"
-  (declare (indent 1))
-  `(--> ,children
-        (if ,end? (reverse it) it)
-        (om--reverse-filter-while
-         (om--maybe-shorter-than ,count acc)
-         ,form
-         it)
-        (if ,end? (reverse it) it)))
-
 (defun om--all-props-match-p (plist node)
   "Return t if all key-value pairs in PLIST are in NODE."
   (->> (-partition 2 (om--get-all-properties node))
        (-difference (-partition 2 plist))
        (not)))
 
-(defun om--match-filter (end? count pattern match-acc children)
-  "Return CHILDREN matching PATTERN in MATCH-ACC.
-MATCH-ACC is a list or nil holding all current previous matches.
-See `om--match-filter-pred' for an explanation of COUNT and END?.
-See `om-match' for full description of PATTERN; this function does
-not operate on the slicers."
+(defun om--make-match-form (pattern)
+  "Return a Lisp form equivalent to PATTERN."
   (pcase pattern
     ;; quote (may be accidentally in pattern
     (`(quote . ,_)
@@ -3733,76 +3698,65 @@ not operate on the slicers."
 
     ;; type
     ((and (pred (lambda (y) (memq y om-nodes))) type)
-     (-> (om--match-filter-pred (om--is-type-p type it)
-           end? count children)
-          (append match-acc)))
+     `(om--is-type-p ',type it))
     
     ;; index
     ((and (pred integerp) index)
-     (if (not (om--maybe-shorter-than count match-acc)) match-acc
-       (-if-let (match (om--nth index children t))
-           (cons match match-acc)
-         match-acc)))
+     `(= ,index ,(if (< index 0) 'it-rindex 'it-index)))
 
     ;; relative index
-    (`(,(and (or '< '<= '> '>=) f) ,(and (pred integerp) i))
-     (-if-let (i* (om--convert-intra-index i children t))
-         (--> (--iterate (1+ it) 0 (length children))
-              (-zip-with #'cons children it)
-              (om--match-filter-pred (funcall f (cdr it) i*)
-                end? count it)
-              (-map #'car it)
-              (append it match-acc))
-       match-acc))
+    (`(,(and (or '< '<= '> '>=) op) ,(and (pred integerp) index))
+     `(funcall #',op ,(if (< index 0) 'it-rindex 'it-index) ,index))
 
     ;; predicate
-    (`(:pred . (,p . nil))
-     (-> (om--match-filter-pred (funcall p it)
-           end? count children)
-          (append match-acc)))
+    (`(:pred . (,pred . nil))
+     `(funcall #',pred it))
 
-    ;; TODO these three compound switches could probably be made
-    ;; more efficient
     ;; not
     (`(:not . (,p . nil))
-     (let ((match* (om--match-filter nil nil p nil children)))
-       (-> (om--match-filter-pred (not (member it match*))
-             end? count children)
-           (append match-acc))))
-
-    ;; or
-    (`(:or . ,(and (pred and) p))
-     (let ((matches
-            (om--reduce-from-while
-             (om--maybe-shorter-than count acc)
-             (-union acc (om--match-filter end? count it nil children))
-             nil p)))
-       (-> (om--match-filter-pred (member it matches)
-             end? count children)
-           (append match-acc))))
+     `(not ,(om--make-match-form p)))
 
     ;; and
     (`(:and . ,(and (pred and) p))
-     (let ((matches
-            ;; if accumulator is 0, stop because (intersection nil
-            ;; anything) is always nil
-            (om--reduce-from-while
-             (or (= 0 (length acc)) (om--maybe-shorter-than count acc))
-             (-intersection acc (om--match-filter end? nil it nil children))
-             (om--match-filter end? nil (car p) nil children)
-             (cdr p))))
-       (-> (om--match-filter-pred (member it matches)
-             end? count children)
-           (append match-acc))))
+     `(and ,@(-map #'om--make-match-form p)))
+
+    ;; or
+    (`(:or . ,(and (pred and) p))
+     `(or ,@(-map #'om--make-match-form p)))
 
     ;; properties
-    ;; NOTE: this must go last if we don't want :and/:or/:not to
+    ;; NOTE: this must go last if we don't want :pred/:and/:or/:not to
     ;; be interpreted as a plist
     ((and (pred om--is-plist-p) plist)
-     (-> (om--match-filter-pred (om--all-props-match-p plist it)
-           end? count children)
-         (append match-acc)))
+     `(om--all-props-match-p ',plist it))
     (_ (error "Invalid pattern: %s" pattern))))
+
+(defun om--reverse-filter-to (limit pred list)
+  "Return filtered LIST up to length LIMIT using PRED.
+PRED is a ternary function that takes the list member, its index, and
+its reverse index (counting backward from the end starting at -1) and
+returns t if the list member matches and should be kept. Once LIMIT
+matches are reached, stop computation and return filtered list
+in the reverse order in which matches were found."
+  (let (acc)
+    (om--each-while list (om--maybe-shorter-than limit acc)
+      (when (funcall pred it it-index it-rindex) (!cons it acc)))
+    acc))
+
+(defun om--match-filter (end? limit pattern match-acc children)
+  "Return CHILDREN matching PATTERN in MATCH-ACC.
+MATCH-ACC is a list or nil holding all current previous matches.
+See `om--match-filter-pred' for an explanation of LIMIT and END?.
+See `om-match' for full description of PATTERN; this function does
+not operate on the slicers."
+  (let ((limit (when limit (- limit (length match-acc))))
+        (pred `(lambda (it it-index it-rindex)
+                 ,(om--make-match-form pattern))))
+    (--> children
+         (if end? (reverse it) it)
+         (om--reverse-filter-to limit pred it)
+         (if end? (reverse it) it)
+         (append it match-acc))))
 
 (defun om--match-pattern (end? count pattern match-acc node)
   "Return list of nodes matching PATTERN in the children of NODE.
@@ -3879,10 +3833,10 @@ See `om-match' for full description of PATTERN."
     (`(:last . ,ps)
      (om--match-pattern-init t 1 ps node))
     (`(:nth . (,(and (pred integerp) n) . ,ps))
-     (if (< n 0)
-         ;; TODO this will return non-nil even when out of range
-         (list (nth n (reverse (om--match-pattern-init t (abs n) ps node))))
-       (list (nth n (om--match-pattern-init nil (1+ n) ps node)))))
+     (-some->
+      (if (>= n 0) (nth n (om--match-pattern-init nil (1+ n) ps node))
+        (nth n (reverse (om--match-pattern-init t (abs n) ps node))))
+      (list)))
     (`(:sub
        . (,(and (pred integerp) a)
           . (,(and (pred integerp) b)
@@ -3897,11 +3851,9 @@ See `om-match' for full description of PATTERN."
         (t
          (let ((a* (if (< a 0) (1- (abs a)) a))
                (b* (if (< b 0) (abs b) (1+ b) )))
-           (->>
-            (if (<= 0 sum) (om--match-pattern-init nil b* ps node)
-              (reverse (om--match-pattern-init t b* ps node)))
-            (-take b*)
-            (-drop a*)))))))
+           (->> (if (<= 0 sum) (om--match-pattern-init nil b* ps node)
+                  (reverse (om--match-pattern-init t b* ps node)))
+                (-drop a*)))))))
     (_ (om--match-pattern-init nil nil pattern node))))
 
 ;; match
