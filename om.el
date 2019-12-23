@@ -3731,7 +3731,7 @@ original children to be modified."
      `(om--all-props-match-p ',plist it))
     (_ (error "Invalid pattern: %s" pattern))))
 
-(defun om--reverse-filter-to (limit pred list)
+(defun om--reverse-filter-with-limit (limit pred list)
   "Return filtered LIST up to length LIMIT using PRED.
 PRED is a ternary function that takes the list member, its index, and
 its reverse index (counting backward from the end starting at -1) and
@@ -3749,14 +3749,13 @@ MATCH-ACC is a list or nil holding all current previous matches.
 See `om--match-filter-pred' for an explanation of LIMIT and END?.
 See `om-match' for full description of PATTERN; this function does
 not operate on the slicers."
-  (let ((limit (when limit (- limit (length match-acc))))
-        (pred `(lambda (it it-index it-rindex)
-                 ,(om--make-match-form pattern))))
-    (--> children
-         (if end? (reverse it) it)
-         (om--reverse-filter-to limit pred it)
-         (if end? (reverse it) it)
-         (append it match-acc))))
+  (let* ((limit (when limit (- limit (length match-acc))))
+         (pred `(lambda (it it-index it-rindex)
+                  ,(om--make-match-form pattern)))
+         (acc (->> (if end? (reverse children) children)
+                   (om--reverse-filter-with-limit limit pred))))
+    (when end? (nreverse acc))
+    (append acc match-acc)))
 
 (defmacro om--reduce-from-with-limit (limit form initial-value list)
   "Like `--reduce-from' but return LIST that is LIMIT or shorter.
