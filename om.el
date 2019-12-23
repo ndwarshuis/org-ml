@@ -3758,10 +3758,19 @@ not operate on the slicers."
          (if end? (reverse it) it)
          (append it match-acc))))
 
-(defun om--match-pattern (end? count pattern match-acc node)
+(defmacro om--reduce-from-with-limit (limit form initial-value list)
+  "Like `--reduce-from' but return LIST that is LIMIT or shorter.
+Stop computation when accumulator reaches LIMIT. INITIAL-VALUE and
+FORM have the same meaning."
+  (declare (indent 1))
+  `(om--reduce-from-while
+   (om--maybe-shorter-than ,limit acc)
+   ,form ,initial-value ,list))
+
+(defun om--match-pattern (end? limit pattern match-acc node)
   "Return list of nodes matching PATTERN in the children of NODE.
 MATCH-ACC is a list or nil holding all current previous matches.
-See `om--match-filter-pred' for an explanation of COUNT and END?.
+See `om--match-filter-pred' for an explanation of LIMIT and END?.
 See `om-match' for full description of PATTERN; this function does
 not operate on the slicers."
   (let ((children (om--get-children node)))
@@ -3769,44 +3778,39 @@ not operate on the slicers."
       (`(,(and p (guard (memq p '(:first :last :nth :slice)))) . ,_)
        (error "Slicer detected: %s" p))
       (`(:many! . (,p . nil))
-       (let ((match-acc (om--match-filter end? count p match-acc children))
+       (let ((match-acc (om--match-filter end? limit p match-acc children))
              (p* `(:many! ,p)))
-         (om--reduce-from-while
-          (om--maybe-shorter-than count acc)
-          (om--match-pattern end? count p* acc it)
-          match-acc
-          (-difference children match-acc))))
+         (om--reduce-from-with-limit limit
+           (om--match-pattern end? limit p* acc it)
+           match-acc
+           (-difference children match-acc))))
       (`(:many! . ,_)
        (error "Query with :many! must have one target"))
       (`(:many . (,p . nil))
-       (let ((match-acc (om--match-filter end? count p match-acc children))
+       (let ((match-acc (om--match-filter end? limit p match-acc children))
              (p* (list :many p)))
-         (om--reduce-from-while
-          (om--maybe-shorter-than count acc)
-          (om--match-pattern end? count p* acc it)
-          match-acc children)))
+         (om--reduce-from-with-limit limit
+           (om--match-pattern end? limit p* acc it)
+           match-acc children)))
       (`(:many . ,_)
        (error "Query with :many must have one target"))
       (`(:any . ,(and (pred and) ps))
-       (om--reduce-from-while
-        (om--maybe-shorter-than count acc)
-        (om--match-pattern end? count ps acc it)
-        match-acc children))
+       (om--reduce-from-with-limit limit
+         (om--match-pattern end? limit ps acc it)
+         match-acc children))
       (`(:any . nil)
-       (om--reduce-from-while
-        (om--maybe-shorter-than count acc)
-        (cons it acc)
-        match-acc children))
+       (om--reduce-from-with-limit limit
+         (cons it acc)
+         match-acc children))
       (`(,p . nil)
-       (om--match-filter end? count p match-acc children))
+       (om--match-filter end? limit p match-acc children))
       (`(,p . ,ps)
-       (om--reduce-from-while
-        (om--maybe-shorter-than count acc)
-        (om--match-pattern end? count ps acc it)
-        match-acc
-        ;; NOTE: reverse the output here since the children need
-        ;; to be in the correct order for the reduce
-        (reverse (om--match-filter end? count p nil children))))
+       (om--reduce-from-with-limit limit
+         (om--match-pattern end? limit ps acc it)
+         match-acc
+         ;; NOTE: reverse the output here since the children need
+         ;; to be in the correct order for the reduce
+         (reverse (om--match-filter end? limit p nil children))))
       (_ (error "Invalid pattern: %s" pattern)))))
 
 (defun om--match-pattern-init (end? count pattern node)
