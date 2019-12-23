@@ -3761,13 +3761,10 @@ not operate on the slicers."
            end? count children)
           (append match-acc)))
 
+    ;; TODO these three compound switches could probably be made
+    ;; more efficient
     ;; not
     (`(:not . (,p . nil))
-     ;; NOTE: need to reset count here in order to get all matches
-     ;; and then negate them
-     ;; TODO this is inefficient, the only way to do this is to
-     ;; make a version of this function one step down that tests if
-     ;; one child matches
      (let ((match* (om--match-filter nil nil p nil children)))
        (-> (om--match-filter-pred (not (member it match*))
              end? count children)
@@ -3775,27 +3772,28 @@ not operate on the slicers."
 
     ;; or
     (`(:or . ,(and (pred and) p))
-     (--> (om--reduce-from-while
-           (om--maybe-shorter-than count acc)
-           (-union acc (om--match-filter end? count it acc children))
-           nil p)
-          (om--truncate-front-maybe count it)
-          (append it match-acc)))
+     (let ((matches
+            (om--reduce-from-while
+             (om--maybe-shorter-than count acc)
+             (-union acc (om--match-filter end? count it nil children))
+             nil p)))
+       (-> (om--match-filter-pred (member it matches)
+             end? count children)
+           (append match-acc))))
 
     ;; and
     (`(:and . ,(and (pred and) p))
-     ;; NOTE: we reset the counter and accumulator here since we don't
-     ;; know how many of the nested matches will be used when applied
-     ;; to the intersection command
-     (--> (om--reduce-from-while
-           ;; if accumulator is 0, stop because (intersection nil
-           ;; anything) is always nil
-           (or (= 0 (length acc)) (om--maybe-shorter-than count acc))
-           (-intersection acc (om--match-filter end? nil it nil children))
-           (om--match-filter end? nil (car p) nil children)
-           (cdr p))
-          (om--truncate-front-maybe count it)
-          (append it match-acc)))
+     (let ((matches
+            ;; if accumulator is 0, stop because (intersection nil
+            ;; anything) is always nil
+            (om--reduce-from-while
+             (or (= 0 (length acc)) (om--maybe-shorter-than count acc))
+             (-intersection acc (om--match-filter end? nil it nil children))
+             (om--match-filter end? nil (car p) nil children)
+             (cdr p))))
+       (-> (om--match-filter-pred (member it matches)
+             end? count children)
+           (append match-acc))))
 
     ;; properties
     ;; NOTE: this must go last if we don't want :and/:or/:not to

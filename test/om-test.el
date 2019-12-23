@@ -447,7 +447,7 @@
                          nil children)
                         (--map (om-to-trimmed-string it)))
                    ;; TODO this is wrong, paragraph should be last
-                   '("paragraph" "* DONE headline2" "* TODO headline1")))
+                   '("* DONE headline2" "* TODO headline1" "paragraph")))
     (should (equal (->> (om--match-filter
                          nil nil
                          '(:and headline (:todo-keyword "DONE"))
