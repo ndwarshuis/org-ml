@@ -3842,21 +3842,17 @@ FORM have the same meaning."
     ;;
     ;; :sub - search until B matches found, drop A+1, and return
     (`(:sub . (,a . (,b . ,ps)))
-     (unless (and (integerp a) (integerp b))
+     (cond
+      ((not (and (integerp a) (integerp b)))
        (error ":sub arguments must be an integers"))
-     (let* ((sum (+ a b))
-            (asum (abs sum)))
-       (cond
-        ((or (< asum a) (< asum b))
-         (error "Both indices must be on the same side of zero"))
-        ;; TODO this is kinda confusing, flip the negative indices
-        ;; so the leftmost is always first
-        ((< (abs b) (abs a))
-         (error "Second index must be further from zero than first"))
-        (t
-         (if (<= 0 sum)
-             `(-drop ,a ,(om--match-make-body-form nil (1+ b) ps))
-           `(-drop-last ,(1- (abs a)) ,(om--match-make-body-form t (- b) ps)))))))
+      ((> a b)
+       (error ":sub left index must be less than right index"))
+      ((and (<= 0 a) (<= 0 b))
+       `(-drop ,a ,(om--match-make-body-form nil (1+ b) ps)))
+      ((and (< a 0) (< b 0))
+       `(-drop-last ,(1- (- b)) ,(om--match-make-body-form t (- a) ps)))
+      (t
+       (error "Both indices must be on the same side of zero"))))
     ;;
     ;; no slicer - search without limit and return all
     (ps (om--match-make-body-form nil nil ps))))
