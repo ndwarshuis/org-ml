@@ -3732,10 +3732,6 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;;
       (p (error "Invalid pattern: %s" p)))))
 
-(defun om--flatten-children (node)
-  (->> (reverse (om--get-children-indexed node))
-       (--mapcat (cons it (om--flatten-children (cdr it))))))
-
 (defun om--match-make-inner-body-form (end? limit patterns)
   (let* ((accum '(cons (cdr it) acc))
          (get-children
