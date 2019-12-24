@@ -3732,6 +3732,10 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;;
       (p (error "Invalid pattern: %s" p)))))
 
+(defun om--flatten-children (node)
+  (->> (reverse (om--get-children-indexed node))
+       (--mapcat (cons it (om--flatten-children (cdr it))))))
+
 (defun om--match-make-inner-body-form (end? limit patterns)
   (let* ((accum '(cons (cdr it) acc))
          (get-children
@@ -3746,14 +3750,13 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;;
       ;; :many!
       (`(:many! . (,p . nil))
-       (let ((pred (om--match-make-pred-form p)))
+       (let ((pred (om--match-make-pred-form p))
+             (callback `(get-many acc ,get-children)))
          `(cl-labels
               ((get-many
                 (acc children)
-                (,@reduce
-                 (if ,pred ,accum (get-many acc ,get-children))
-                 acc children)))
-            (get-many acc ,get-children))))
+                (,@reduce (if ,pred ,accum ,callback) acc children)))
+            ,callback)))
       ;;
       ;; :many! should only have one pattern after it
       (`(:many! . ,_)
@@ -3761,22 +3764,12 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;;
       ;; :many
       (`(:many . (,p . nil))
-       (let* ((pred (om--match-make-pred-form p))
-              (inner
-               (if (not end?)
-                   `(let ((acc (if ,pred ,accum acc)))
-                      (get-many acc ,get-children))
-                 ;; need to check if the acc is full before
-                 ;; checking/adding the node at this level
-                 (let ((pred (if (not limit) pred
-                               `(and (< (length acc) ,limit) ,pred))))
-                   `(let ((acc (get-many acc ,get-children)))
-                      (if ,pred ,accum acc))))))
+       (let ((pred (om--match-make-pred-form p)))
          `(cl-labels
-              ((get-many
-                (acc children)
-                (,@reduce ,inner acc children)))
-            (get-many acc ,get-children))))
+              ((flatten-children
+                (indexed-node)
+                (--mapcat (cons it (flatten-children it)) ,get-children)))
+            (,@reduce (if ,pred ,accum acc) acc (flatten-children it)))))
       ;;
       ;; :many should only have one pattern after it
       (`(:many . ,_)
@@ -3795,6 +3788,7 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       (`(,p . nil)
        (let ((pred (om--match-make-pred-form p)))
          `(,@reduce (if ,pred ,accum acc) acc ,get-children)))
+      ;;
       ;; predicate (with patterns after)
       (`(,p . ,ps)
        (let ((pred (om--match-make-pred-form p))
