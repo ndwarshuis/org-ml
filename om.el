@@ -3751,7 +3751,7 @@ FORM have the same meaning."
          (reduce `(om--reduce-from-with-limit ,limit)))
     (pcase patterns
       ;; slicers should not be here
-      (`(,(and p (guard (memq p '(:first :last :nth :slice)))) . ,_)
+      (`(,(or :first :last :nth :slice) . ,_)
        (error "Slicers can only appear at the front of patterns"))
       ;;
       ;; :many!
