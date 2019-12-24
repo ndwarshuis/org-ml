@@ -664,23 +664,6 @@ FUN is a unary function that returns a modified member."
 FUN is a unary function that returns a modified member."
   (->> (nreverse list) (om--map-first fun) (nreverse)))
 
-(defmacro om--reduce-from-while (pred form initial-value list)
-  "Like `--reduce-from' but only reduce LIST while PRED is t.
-FORM and INITIAL-VALUE work the same way. The exposed symbols `it' and
-`acc' carry the same meaning as well."
-  `(let ((acc ,initial-value))
-     (om--each-while ,list ,pred (setq acc ,form))
-     acc))
-
-(defmacro om--each-while (list pred &rest body)
-  "Like `--each-while' but bind LIST's right index to `it-rindex'.
-BODY and PRED have the same meaning."
-  (declare (indent 2))
-  `(let ((it-rindex (- (length ,list))))
-     (--each-while ,list ,pred
-       ,@body
-       (setq it-rindex (1+ it-rindex)))))
-
 ;;; MISC HELPER FUNCTIONS
 
 (defun om--get-head (node)
@@ -3656,6 +3639,46 @@ empty."
 
 ;;; PATTERN MATCHING
 
+(defmacro om--each-while (list pred &rest body)
+  "Like `--each-while' but bind LIST's right index to `it-rindex'.
+BODY and PRED have the same meaning."
+  (declare (indent 2))
+  `(let ((it-rindex (- (length ,list))))
+     (--each-while ,list ,pred
+       ,@body
+       (setq it-rindex (1+ it-rindex)))))
+
+(defmacro om--reduce-from (form initial-value list)
+  "Like `--reduce-from' but expose right index as `it-rindex'.
+FORM and INITIAL-VALUE work the same way. The exposed symbols `it',
+`acc', and `it-index' carry the same meaning as well."
+  `(let ((acc ,initial-value)
+         (it-rindex (- (length ,list))))
+     (--each ,list (setq acc ,form it-rindex (1+ it-rindex)))
+     acc))
+
+(defmacro om--reduce-from-while (pred form initial-value list)
+  "Like `--reduce-from' but only reduce LIST while PRED is t.
+FORM and INITIAL-VALUE work the same way. The exposed symbols `it' and
+`acc' carry the same meaning as well."
+  `(let ((acc ,initial-value)
+         (it-rindex (- (length ,list))))
+     (--each-while ,list ,pred (setq acc ,form it-rindex (1+ it-rindex)))
+     acc))
+
+;; ;; TODO this can be optimized, right now we do more work by:
+;; ;; - indexing search iterate the whole list and return one thing
+;; ;; - recording the left and right index no matter what
+;; ;; - checking for limit even when limit is nil
+;; (defmacro om--reduce-from-with-limit (limit form initial-value list)
+;;   "Like `--reduce-from' but return LIST that is LIMIT or shorter.
+;; Stop computation when accumulator reaches LIMIT. INITIAL-VALUE and
+;; FORM have the same meaning."
+;;   (declare (indent 1))
+;;   `(om--reduce-from-while
+;;    (om--maybe-shorter-than ,limit acc)
+;;    ,form ,initial-value ,list))
+
 (defmacro om--modify-children (node form)
   "Recursively modify the children of NODE using FORM.
 FORM is a form that returns a list of elements or objects as the
@@ -3732,23 +3755,11 @@ original children to be modified."
     ;;
     (p (error "Invalid pattern: %s" p))))
 
-;; TODO this can be optimized, right now we do more work by:
-;; - indexing search iterate the whole list and return one thing
-;; - recording the left and right index no matter what
-;; - checking for limit even when limit is nil
-(defmacro om--reduce-from-with-limit (limit form initial-value list)
-  "Like `--reduce-from' but return LIST that is LIMIT or shorter.
-Stop computation when accumulator reaches LIMIT. INITIAL-VALUE and
-FORM have the same meaning."
-  (declare (indent 1))
-  `(om--reduce-from-while
-   (om--maybe-shorter-than ,limit acc)
-   ,form ,initial-value ,list))
-
 (defun om--match-make-inner-body-form (end? limit patterns)
   (let* ((get-children (if end? '(reverse (om--get-children it))
                          '(om--get-children it)))
-         (reduce `(om--reduce-from-with-limit ,limit)))
+         (reduce (if (not limit) '(om--reduce-from)
+                   `(om--reduce-from-while (< (length acc) ,limit)))))
     (pcase patterns
       ;; slicers should not be here
       (`(,(or :first :last :nth :slice) . ,_)
@@ -3781,6 +3792,7 @@ FORM have the same meaning."
                    `(let ((acc (get-many acc ,get-children)))
                       ;; need to check if the acc is full before
                       ;; checking/adding the node at this level
+                      ;; (< (length acc) limit)
                       (if (and (om--maybe-shorter-than ,limit acc)
                                ,pred)
                           (cons it acc)
