@@ -3639,45 +3639,19 @@ empty."
 
 ;;; PATTERN MATCHING
 
-(defmacro om--each-while (list pred &rest body)
-  "Like `--each-while' but bind LIST's right index to `it-rindex'.
-BODY and PRED have the same meaning."
-  (declare (indent 2))
-  `(let ((it-rindex (- (length ,list))))
-     (--each-while ,list ,pred
-       ,@body
-       (setq it-rindex (1+ it-rindex)))))
-
-(defmacro om--reduce-from (form initial-value list)
-  "Like `--reduce-from' but expose right index as `it-rindex'.
-FORM and INITIAL-VALUE work the same way. The exposed symbols `it',
-`acc', and `it-index' carry the same meaning as well."
-  `(let ((acc ,initial-value)
-         (it-rindex (- (length ,list))))
-     (--each ,list (setq acc ,form it-rindex (1+ it-rindex)))
-     acc))
+(defun om--get-children-indexed (node)
+  "Return list of children from NODE (it any) with index annotations."
+  (let* ((children (om--get-children node))
+         (len (- (length children))))
+    (--map-indexed (cons `(,it-index . ,(+ len it-index)) it) children)))
 
 (defmacro om--reduce-from-while (pred form initial-value list)
   "Like `--reduce-from' but only reduce LIST while PRED is t.
-FORM and INITIAL-VALUE work the same way. The exposed symbols `it' and
-`acc' carry the same meaning as well."
-  `(let ((acc ,initial-value)
-         (it-rindex (- (length ,list))))
-     (--each-while ,list ,pred (setq acc ,form it-rindex (1+ it-rindex)))
+FORM and INITIAL-VALUE work the same way, and the exposed symbols `it'
+and `acc' carry the same meaning."
+  `(let ((acc ,initial-value))
+     (--each-while ,list ,pred (setq acc ,form))
      acc))
-
-;; ;; TODO this can be optimized, right now we do more work by:
-;; ;; - indexing search iterate the whole list and return one thing
-;; ;; - recording the left and right index no matter what
-;; ;; - checking for limit even when limit is nil
-;; (defmacro om--reduce-from-with-limit (limit form initial-value list)
-;;   "Like `--reduce-from' but return LIST that is LIMIT or shorter.
-;; Stop computation when accumulator reaches LIMIT. INITIAL-VALUE and
-;; FORM have the same meaning."
-;;   (declare (indent 1))
-;;   `(om--reduce-from-while
-;;    (om--maybe-shorter-than ,limit acc)
-;;    ,form ,initial-value ,list))
 
 (defmacro om--modify-children (node form)
   "Recursively modify the children of NODE using FORM.
@@ -3698,10 +3672,6 @@ original children to be modified."
                 (om--construct ,y (nth 1 node)))))))
        (rec ,node))))
 
-(defun om--maybe-shorter-than (n list)
-  "Return t if LIST is longer than N. If N is nil always return t."
-  (if n (< (length list) n) t))
-
 (defun om--all-props-match-p (plist node)
   "Return t if all key-value pairs in PLIST are in NODE."
   (->> (-partition 2 (om--get-all-properties node))
@@ -3709,56 +3679,65 @@ original children to be modified."
        (not)))
 
 (defun om--match-make-pred-form (pattern)
-  "Return a Lisp form equivalent to PATTERN."
-  (pcase pattern
-    ;; quote (may be accidentally in pattern
-    (`(quote . ,_)
-     (error "'quote' not allowed in pattern"))
-    ;;
-    ;; function (may be accidentally in pattern
-    (`(function . ,_)
-     (error "'function' not allowed in pattern"))
-    ;;
-    ;; type
-    ((and (pred (lambda (y) (memq y om-nodes))) type)
-     `(om--is-type-p ',type it))
-    ;; 
-    ;; index
-    ((and (pred integerp) index)
-     `(= ,index ,(if (< index 0) 'it-rindex 'it-index)))
-    ;; 
-    ;; relative index
-    (`(,(and (or '< '<= '> '>=) op) ,(and (pred integerp) index))
-     `(funcall #',op ,(if (< index 0) 'it-rindex 'it-index) ,index))
-    ;; 
-    ;; predicate
-    (`(:pred . (,pred . nil))
-     `(funcall #',pred it))
-    ;; 
-    ;; not
-    (`(:not . (,p . nil))
-     `(not ,(om--match-make-pred-form p)))
-    ;; 
-    ;; and
-    (`(:and . ,(and (pred and) p))
-     `(and ,@(-map #'om--match-make-pred-form p)))
-    ;; 
-    ;; or
-    (`(:or . ,(and (pred and) p))
-     `(or ,@(-map #'om--match-make-pred-form p)))
-    ;;
-    ;; properties
-    ;; NOTE: this must go last if we don't want :pred/:and/:or/:not to
-    ;; be interpreted as a plist
-    ((and (pred om--is-plist-p) plist)
-     `(om--all-props-match-p ',plist it))
-    ;;
-    (p (error "Invalid pattern: %s" p))))
+  "Return a Lisp form equivalent to PATTERN.
+Assume that `it' is a symbol bound to a list of the form
+\((INDEX RINDEX) . NODE) where NODE is the node being matched to
+PATTERN, INDEX is the INDEX of NODE, and RINDEX is the right-index
+of NODE (starting at -1 on the rightmost side of the children list)."
+  (let ((it-node '(cdr it))
+        (it-lindex '(caar it))
+        (it-rindex '(cdar it)))
+    (pcase pattern
+      ;; quote (may be accidentally in pattern
+      (`(quote . ,_)
+       (error "'quote' not allowed in pattern"))
+      ;;
+      ;; function (may be accidentally in pattern
+      (`(function . ,_)
+       (error "'function' not allowed in pattern"))
+      ;;
+      ;; type
+      ((and (pred (lambda (y) (memq y om-nodes))) type)
+       `(om--is-type-p ',type ,it-node))
+      ;; 
+      ;; index
+      ((and (pred integerp) index)
+       `(= ,index ,(if (< index 0) it-rindex it-lindex)))
+      ;; 
+      ;; relative index
+      (`(,(and (or '< '<= '> '>=) op) ,(and (pred integerp) index))
+       `(funcall #',op ,(if (< index 0) it-rindex it-lindex) ,index))
+      ;; 
+      ;; predicate
+      (`(:pred . (,pred . nil))
+       `(funcall #',pred ,it-node))
+      ;; 
+      ;; not
+      (`(:not . (,p . nil))
+       `(not ,(om--match-make-pred-form p)))
+      ;; 
+      ;; and
+      (`(:and . ,(and (pred and) p))
+       `(and ,@(-map #'om--match-make-pred-form p)))
+      ;; 
+      ;; or
+      (`(:or . ,(and (pred and) p))
+       `(or ,@(-map #'om--match-make-pred-form p)))
+      ;;
+      ;; properties
+      ;; NOTE: this must go last if we don't want :pred/:and/:or/:not
+      ;; to be interpreted as a plist
+      ((and (pred om--is-plist-p) plist)
+       `(om--all-props-match-p ',plist ,it-node))
+      ;;
+      (p (error "Invalid pattern: %s" p)))))
 
 (defun om--match-make-inner-body-form (end? limit patterns)
-  (let* ((get-children (if end? '(reverse (om--get-children it))
-                         '(om--get-children it)))
-         (reduce (if (not limit) '(om--reduce-from)
+  (let* ((accum '(cons (cdr it) acc))
+         (get-children
+          (if (not end?) '(om--get-children-indexed (cdr it))
+            '(reverse (om--get-children-indexed (cdr it)))))
+         (reduce (if (not limit) '(--reduce-from)
                    `(om--reduce-from-while (< (length acc) ,limit)))))
     (pcase patterns
       ;; slicers should not be here
@@ -3772,7 +3751,7 @@ original children to be modified."
               ((get-many
                 (acc children)
                 (,@reduce
-                 (if ,pred (cons it acc) (get-many acc ,get-children))
+                 (if ,pred ,accum (get-many acc ,get-children))
                  acc children)))
             (get-many acc ,get-children))))
       ;;
@@ -3785,14 +3764,14 @@ original children to be modified."
        (let* ((pred (om--match-make-pred-form p))
               (inner
                (if (not end?)
-                   `(let ((acc (if ,pred (cons it acc) acc)))
+                   `(let ((acc (if ,pred ,accum acc)))
                       (get-many acc ,get-children))
                  ;; need to check if the acc is full before
                  ;; checking/adding the node at this level
                  (let ((pred (if (not limit) pred
                                `(and (< (length acc) ,limit) ,pred))))
                    `(let ((acc (get-many acc ,get-children)))
-                      (if ,pred (cons it acc) acc))))))
+                      (if ,pred ,accum acc))))))
          `(cl-labels
               ((get-many
                 (acc children)
@@ -3805,7 +3784,7 @@ original children to be modified."
       ;;
       ;; :any (last pattern)
       (`(:any . nil)
-       `(,@reduce (cons it acc) acc ,get-children))
+       `(,@reduce ,accum acc ,get-children))
       ;;
       ;; :any (with patterns after)
       (`(:any . ,ps)
@@ -3815,7 +3794,7 @@ original children to be modified."
       ;; predicate (last pattern)
       (`(,p . nil)
        (let ((pred (om--match-make-pred-form p)))
-         `(,@reduce (if ,pred (cons it acc) acc) acc ,get-children)))
+         `(,@reduce (if ,pred ,accum acc) acc ,get-children)))
       ;; predicate (with patterns after)
       (`(,p . ,ps)
        (let ((pred (om--match-make-pred-form p))
@@ -3865,7 +3844,7 @@ original children to be modified."
 
 (defun om--match-make-lambda-form (patterns)
   (let ((body (om--make-make-slicer-form patterns)))
-    `(lambda (it) (let (acc) ,body))))
+    `(lambda (it) (let ((it (cons nil it)) (acc)) ,body))))
 
 ;; match
 
