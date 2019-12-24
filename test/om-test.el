@@ -409,56 +409,56 @@
 ;;     ;; limit return and start from end
 ;;     (should (equal (om--match-filter-pred (symbolp it) t 2 children) '(c b)))))
 
-(ert-deftest om--match-filter/type ()
-  (let ((children (->> (om-build-paragraph! "*1* /2/ *3*")
-                       (om-get-children))))
-    (should (equal (->> (om--match-filter nil nil 'bold nil children)
-                        (--map (om-to-string it)))
-                   '("*3*" "*1* ")))
-    (should (equal (->> (om--match-filter nil nil 'italic nil children)
-                        (--map (om-to-string it)))
-                   '("/2/ ")))
-    (should-not (->> (om--match-filter nil nil 'underline nil children)
-                     (--map (om-to-string it))))))
+;; (ert-deftest om--match-filter/type ()
+;;   (let ((children (->> (om-build-paragraph! "*1* /2/ *3*")
+;;                        (om-get-children))))
+;;     (should (equal (->> (om--match-filter nil nil 'bold nil children)
+;;                         (--map (om-to-string it)))
+;;                    '("*3*" "*1* ")))
+;;     (should (equal (->> (om--match-filter nil nil 'italic nil children)
+;;                         (--map (om-to-string it)))
+;;                    '("/2/ ")))
+;;     (should-not (->> (om--match-filter nil nil 'underline nil children)
+;;                      (--map (om-to-string it))))))
 
-(ert-deftest om--match-filter/property ()
-  (let ((children
-         (list (om-build-item :checkbox 'off :tag '("one"))
-               (om-build-item :checkbox 'on :tag '("two"))
-               (om-build-item :checkbox 'on :tag '("three")))))
-    (should (equal (->> (om--match-filter nil nil '(:checkbox off) nil children)
-                        (--map (om-to-trimmed-string it)))
-                   '("- [ ] one ::")))
-    (should (equal (->> (om--match-filter nil nil '(:checkbox on) nil children)
-                        (--map (om-to-trimmed-string it)))
-                   '("- [X] three ::" "- [X] two ::")))
-    (should-not (->> (om--match-filter nil nil '(:checkbox trans) nil children)
-                     (--map (om-to-trimmed-string it))))))
+;; (ert-deftest om--match-filter/property ()
+;;   (let ((children
+;;          (list (om-build-item :checkbox 'off :tag '("one"))
+;;                (om-build-item :checkbox 'on :tag '("two"))
+;;                (om-build-item :checkbox 'on :tag '("three")))))
+;;     (should (equal (->> (om--match-filter nil nil '(:checkbox off) nil children)
+;;                         (--map (om-to-trimmed-string it)))
+;;                    '("- [ ] one ::")))
+;;     (should (equal (->> (om--match-filter nil nil '(:checkbox on) nil children)
+;;                         (--map (om-to-trimmed-string it)))
+;;                    '("- [X] three ::" "- [X] two ::")))
+;;     (should-not (->> (om--match-filter nil nil '(:checkbox trans) nil children)
+;;                      (--map (om-to-trimmed-string it))))))
 
-(ert-deftest om--match-filter/compound ()
-  (let ((children
-         (list
-          (om-build-section (om-build-paragraph "paragraph"))
-          (om-build-headline :title '("headline1") :todo-keyword "TODO")
-          (om-build-headline :title '("headline2") :todo-keyword "DONE"))))
-    (should (equal (->> (om--match-filter
-                         nil nil
-                         '(:or section headline)
-                         nil children)
-                        (--map (om-to-trimmed-string it)))
-                   ;; TODO this is wrong, paragraph should be last
-                   '("* DONE headline2" "* TODO headline1" "paragraph")))
-    (should (equal (->> (om--match-filter
-                         nil nil
-                         '(:and headline (:todo-keyword "DONE"))
-                         nil children)
-                        (--map (om-to-trimmed-string it)))
-                   '("* DONE headline2")))
-    (should-not (->> (om--match-filter
-                      nil nil
-                      '(:and headline (:todo-keyword "CANC"))
-                      nil children)
-                     (--map (om-to-trimmed-string it))))))
+;; (ert-deftest om--match-filter/compound ()
+;;   (let ((children
+;;          (list
+;;           (om-build-section (om-build-paragraph "paragraph"))
+;;           (om-build-headline :title '("headline1") :todo-keyword "TODO")
+;;           (om-build-headline :title '("headline2") :todo-keyword "DONE"))))
+;;     (should (equal (->> (om--match-filter
+;;                          nil nil
+;;                          '(:or section headline)
+;;                          nil children)
+;;                         (--map (om-to-trimmed-string it)))
+;;                    ;; TODO this is wrong, paragraph should be last
+;;                    '("* DONE headline2" "* TODO headline1" "paragraph")))
+;;     (should (equal (->> (om--match-filter
+;;                          nil nil
+;;                          '(:and headline (:todo-keyword "DONE"))
+;;                          nil children)
+;;                         (--map (om-to-trimmed-string it)))
+;;                    '("* DONE headline2")))
+;;     (should-not (->> (om--match-filter
+;;                       nil nil
+;;                       '(:and headline (:todo-keyword "CANC"))
+;;                       nil children)
+;;                      (--map (om-to-trimmed-string it))))))
 
 (ert-deftest om--match-filter/error ()
   (should-error (om--match-filter "no-strings" t))
