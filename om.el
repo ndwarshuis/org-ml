@@ -3774,31 +3774,25 @@ original children to be modified."
                 (,@reduce
                  (if ,pred (cons it acc) (get-many acc ,get-children))
                  acc children)))
-            (get-many nil ,get-children))))
+            (get-many acc ,get-children))))
       ;;
       ;; :many! should only have one pattern after it
       (`(:many! . ,_)
        (error "Pattern with :many! must have one target"))
       ;;
-      ;; TODO this is confusing, better way to do it would be to
-      ;; flatten all children (in order) and sort from there
-      ;; if an indexing function is requested, flatten and
-      ;; annotate with indexing information
       ;; :many
       (`(:many . (,p . nil))
        (let* ((pred (om--match-make-pred-form p))
               (inner
-               (if end?
+               (if (not end?)
+                   `(let ((acc (if ,pred (cons it acc) acc)))
+                      (get-many acc ,get-children))
+                 ;; need to check if the acc is full before
+                 ;; checking/adding the node at this level
+                 (let ((pred (if (not limit) pred
+                               `(and (< (length acc) ,limit) ,pred))))
                    `(let ((acc (get-many acc ,get-children)))
-                      ;; need to check if the acc is full before
-                      ;; checking/adding the node at this level
-                      ;; (< (length acc) limit)
-                      (if (and (om--maybe-shorter-than ,limit acc)
-                               ,pred)
-                          (cons it acc)
-                        acc))
-                 `(let ((acc (if ,pred (cons it acc) acc)))
-                    (get-many acc ,get-children)))))
+                      (if ,pred (cons it acc) acc))))))
          `(cl-labels
               ((get-many
                 (acc children)
