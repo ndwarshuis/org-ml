@@ -3765,11 +3765,13 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;;
       ;; :many
       (`(:many . (,p . nil))
-       (let ((pred (om--match-make-pred-form p)))
+       (let ((pred (om--match-make-pred-form p))
+             (callback (if end? '(-snoc (flatten-children it) it)
+                         '(cons it (flatten-children it)))))
          `(cl-labels
               ((flatten-children
                 (indexed-node)
-                (--mapcat (cons it (flatten-children it)) ,get-children)))
+                (--mapcat ,callback ,get-children)))
             (,@reduce (if ,pred ,accum acc) acc (flatten-children it)))))
       ;;
       ;; :many should only have one pattern after it
