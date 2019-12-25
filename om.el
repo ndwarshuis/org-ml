@@ -3688,6 +3688,11 @@ of NODE (starting at -1 on the rightmost side of the children list)."
         (it-lindex '(caar it))
         (it-rindex '(cdar it)))
     (pcase pattern
+      ;;
+      ;; pattern should not be nil
+      (`nil
+       (error "Pattern cannot be nil"))
+      ;;
       ;; quote (may be accidentally in pattern
       (`(quote . ,_)
        (error "'quote' not allowed in pattern"))
