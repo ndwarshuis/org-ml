@@ -3946,7 +3946,7 @@
     ;; - `om--match-make-condition-form' is correct for all VALID
     ;;   condition combinations (the error cases are tested in
     ;;   `om-test.el')
-    ;; - the single and multiple non-wildcard condition paths in
+    ;; - the single and multiple condition paths in
     ;;   `om--match-make-inner-pattern-form' are correct
     
     (:buffer "* one"
