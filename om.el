@@ -3812,8 +3812,8 @@ of NODE (starting at -1 on the rightmost side of the children list)."
      (unless (integerp n)
        (error ":nth argument must be an integer"))
      (if (<= 0 n)
-         `(-take-last 1 ,(om--match-make-body-form nil (1+ n) ps))
-       `(-take 1 ,(om--match-make-body-form t (- n) ps))))
+         `(-drop ,n ,(om--match-make-body-form nil (1+ n) ps))
+       `(-drop-last ,(1- (- n)) ,(om--match-make-body-form t (- n) ps))))
     ;;
     ;; :sub - search until B matches found, drop A+1, and return
     (`(:sub . (,a . (,b . ,ps)))
