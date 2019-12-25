@@ -573,12 +573,12 @@ FUN is a unary function that returns a modified value."
          (--map (funcall fun it))
          (-interleave keys))))
 
-(defun om--is-plist-p (obj)
-  "Return t if OBJ is a plist."
+(defun om--is-plist-p (list)
+  "Return t if LIST is a plist."
   (and
-   (listp obj)
-   (cl-evenp (length obj))
-   (-all? #'symbolp (-slice obj 0 nil 2))))
+   (listp list)
+   (cl-evenp (length list))
+   (-all? #'keywordp (-slice list 0 nil 2))))
 
 (defun om--plist-remove (key plist)
   "Return PLIST with KEY and its value removed."
