@@ -411,19 +411,19 @@ Set, get, and map the children of branch nodes.
 
 Use pattern-matching to selectively perform operations on nodes in trees.
 
-* [om-match](#om-match-patterns-node) `(patterns node)`
-* [om-match-delete](#om-match-delete-patterns-node) `(patterns node)`
-* [om-match-extract](#om-match-extract-patterns-node) `(patterns node)`
-* [om-match-map](#om-match-map-patterns-fun-node) `(patterns fun node)`
-* [om-match-mapcat](#om-match-mapcat-patterns-fun-node) `(patterns fun node)`
-* [om-match-replace](#om-match-replace-patterns-node-node) `(patterns node* node)`
-* [om-match-insert-before](#om-match-insert-before-patterns-node-node) `(patterns node* node)`
-* [om-match-insert-after](#om-match-insert-after-patterns-node-node) `(patterns node* node)`
-* [om-match-insert-within](#om-match-insert-within-patterns-index-node-node) `(patterns index node* node)`
-* [om-match-splice](#om-match-splice-patterns-nodes-node) `(patterns nodes* node)`
-* [om-match-splice-before](#om-match-splice-before-patterns-nodes-node) `(patterns nodes* node)`
-* [om-match-splice-after](#om-match-splice-after-patterns-nodes-node) `(patterns nodes* node)`
-* [om-match-splice-within](#om-match-splice-within-patterns-index-nodes-node) `(patterns index nodes* node)`
+* [om-match](#om-match-pattern-node) `(pattern node)`
+* [om-match-delete](#om-match-delete-pattern-node) `(pattern node)`
+* [om-match-extract](#om-match-extract-pattern-node) `(pattern node)`
+* [om-match-map](#om-match-map-pattern-fun-node) `(pattern fun node)`
+* [om-match-mapcat](#om-match-mapcat-pattern-fun-node) `(pattern fun node)`
+* [om-match-replace](#om-match-replace-pattern-node-node) `(pattern node* node)`
+* [om-match-insert-before](#om-match-insert-before-pattern-node-node) `(pattern node* node)`
+* [om-match-insert-after](#om-match-insert-after-pattern-node-node) `(pattern node* node)`
+* [om-match-insert-within](#om-match-insert-within-pattern-index-node-node) `(pattern index node* node)`
+* [om-match-splice](#om-match-splice-pattern-nodes-node) `(pattern nodes* node)`
+* [om-match-splice-before](#om-match-splice-before-pattern-nodes-node) `(pattern nodes* node)`
+* [om-match-splice-after](#om-match-splice-after-pattern-nodes-node) `(pattern nodes* node)`
+* [om-match-splice-within](#om-match-splice-within-pattern-index-nodes-node) `(pattern index nodes* node)`
 
 ## Buffer Side Effects
 
@@ -4571,13 +4571,13 @@ If **`row-text`** is nil, it will clear all cells at **`row-index`**.
 
 Use pattern-matching to selectively perform operations on nodes in trees.
 
-#### om-match `(patterns node)`
+#### om-match `(pattern node)`
 
-Return a list of child nodes matching **`patterns`** in **`node`**.
+Return a list of child nodes matching **`pattern`** in **`node`**.
 
-**`patterns`** is a list of form `([slicer [arg1] [arg2]] cond1 [cond2 ...])`.
+**`pattern`** is a list of form `([slicer [arg1] [arg2]] cond1 [cond2 ...])`.
 
-`slicer` is an optional prefix to the patterns describing how many
+`slicer` is an optional prefix to the pattern describing how many
 and which matches to return. If not given, all matches are
 returned. Possible values are:
 
@@ -4608,7 +4608,7 @@ conditions are:
     node and evaluate `op`.
 - `plist` - match nodes with the same properties and values as `plist`
 - `:many` - match zero or more levels, must have at least one
-    sub-patterns after it
+    sub-pattern after it
 - `:many!` - like `:many` but do not match within other matches
 - `:any` - always match exactly one node
 
@@ -4684,11 +4684,11 @@ nested within each other.
 
 ```
 
-#### om-match-delete `(patterns node)`
+#### om-match-delete `(pattern node)`
 
-Return **`node`** without children matching **`patterns`**.
+Return **`node`** without children matching **`pattern`**.
 
-**`patterns`** follows the same rules as [`om-match`](#om-match-patterns-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4719,13 +4719,13 @@ Return **`node`** without children matching **`patterns`**.
 
 ```
 
-#### om-match-extract `(patterns node)`
+#### om-match-extract `(pattern node)`
 
-Remove nodes matching **`patterns`** from **`node`**.
+Remove nodes matching **`pattern`** from **`node`**.
 Return cons cell where the car is a list of all removed nodes and
 the cdr is the modified **`node`**.
 
-**`patterns`** follows the same rules as [`om-match`](#om-match-patterns-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4741,13 +4741,13 @@ the cdr is the modified **`node`**.
 
 ```
 
-#### om-match-map `(patterns fun node)`
+#### om-match-map `(pattern fun node)`
 
-Return **`node`** with **`fun`** applied to children matching **`patterns`**.
+Return **`node`** with **`fun`** applied to children matching **`pattern`**.
 **`fun`** is a unary function that takes a node and returns a new node
 which will replace the original.
 
-**`patterns`** follows the same rules as [`om-match`](#om-match-patterns-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4788,13 +4788,13 @@ which will replace the original.
 
 ```
 
-#### om-match-mapcat `(patterns fun node)`
+#### om-match-mapcat `(pattern fun node)`
 
-Return **`node`** with **`fun`** applied to children matching **`patterns`**.
+Return **`node`** with **`fun`** applied to children matching **`pattern`**.
 **`fun`** is a unary function that takes a node and returns a list of new
 nodes which will be spliced in place of the original node.
 
-**`patterns`** follows the same rules as [`om-match`](#om-match-patterns-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4812,11 +4812,11 @@ nodes which will be spliced in place of the original node.
 
 ```
 
-#### om-match-replace `(patterns node* node)`
+#### om-match-replace `(pattern node* node)`
 
-Return **`node`** with **`node*`** in place of children matching **`patterns`**.
+Return **`node`** with **`node*`** in place of children matching **`pattern`**.
 
-**`patterns`** follows the same rules as [`om-match`](#om-match-patterns-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4830,11 +4830,11 @@ Return **`node`** with **`node*`** in place of children matching **`patterns`**.
 
 ```
 
-#### om-match-insert-before `(patterns node* node)`
+#### om-match-insert-before `(pattern node* node)`
 
-Return **`node`** with **`node*`** inserted before children matching **`patterns`**.
+Return **`node`** with **`node*`** inserted before children matching **`pattern`**.
 
-**`patterns`** follows the same rules as [`om-match`](#om-match-patterns-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4854,11 +4854,11 @@ Return **`node`** with **`node*`** inserted before children matching **`patterns
 
 ```
 
-#### om-match-insert-after `(patterns node* node)`
+#### om-match-insert-after `(pattern node* node)`
 
-Return **`node`** with **`node*`** inserted after children matching **`patterns`**.
+Return **`node`** with **`node*`** inserted after children matching **`pattern`**.
 
-**`patterns`** follows the same rules as [`om-match`](#om-match-patterns-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4878,12 +4878,12 @@ Return **`node`** with **`node*`** inserted after children matching **`patterns`
 
 ```
 
-#### om-match-insert-within `(patterns index node* node)`
+#### om-match-insert-within `(pattern index node* node)`
 
-Return **`node`** with **`node*`** inserted at **`index`** in children matching **`patterns`**.
+Return **`node`** with **`node*`** inserted at **`index`** in children matching **`pattern`**.
 
-**`patterns`** follows the same rules as [`om-match`](#om-match-patterns-node) with the exception
-that **`patterns`** may be nil. In this case **`node*`** will be inserted at **`index`**
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node) with the exception
+that **`pattern`** may be nil. In this case **`node*`** will be inserted at **`index`**
 in the immediate, top level children of **`node`**.
 
 ```el
@@ -4913,12 +4913,12 @@ in the immediate, top level children of **`node`**.
 
 ```
 
-#### om-match-splice `(patterns nodes* node)`
+#### om-match-splice `(pattern nodes* node)`
 
-Return **`node`** with **`nodes*`** spliced in place of children matching **`patterns`**.
+Return **`node`** with **`nodes*`** spliced in place of children matching **`pattern`**.
 **`nodes*`** is a list of nodes.
 
-**`patterns`** follows the same rules as [`om-match`](#om-match-patterns-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4938,12 +4938,12 @@ Return **`node`** with **`nodes*`** spliced in place of children matching **`pat
 
 ```
 
-#### om-match-splice-before `(patterns nodes* node)`
+#### om-match-splice-before `(pattern nodes* node)`
 
-Return **`node`** with **`nodes*`** spliced before children matching **`patterns`**.
+Return **`node`** with **`nodes*`** spliced before children matching **`pattern`**.
 **`nodes*`** is a list of nodes.
 
-**`patterns`** follows the same rules as [`om-match`](#om-match-patterns-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4964,12 +4964,12 @@ Return **`node`** with **`nodes*`** spliced before children matching **`patterns
 
 ```
 
-#### om-match-splice-after `(patterns nodes* node)`
+#### om-match-splice-after `(pattern nodes* node)`
 
-Return **`node`** with **`nodes*`** spliced after children matching **`patterns`**.
+Return **`node`** with **`nodes*`** spliced after children matching **`pattern`**.
 **`nodes*`** is a list of nodes.
 
-**`patterns`** follows the same rules as [`om-match`](#om-match-patterns-node).
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
 
 ```el
 ;; Given the following contents:
@@ -4990,13 +4990,13 @@ Return **`node`** with **`nodes*`** spliced after children matching **`patterns`
 
 ```
 
-#### om-match-splice-within `(patterns index nodes* node)`
+#### om-match-splice-within `(pattern index nodes* node)`
 
-Return **`node`** with **`nodes*`** spliced at **`index`** in children matching **`patterns`**.
+Return **`node`** with **`nodes*`** spliced at **`index`** in children matching **`pattern`**.
 **`nodes*`** is a list of nodes.
 
-**`patterns`** follows the same rules as [`om-match`](#om-match-patterns-node) with the exception
-that **`patterns`** may be nil. In this case **`nodes*`** will be inserted at **`index`**
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node) with the exception
+that **`pattern`** may be nil. In this case **`nodes*`** will be inserted at **`index`**
 in the immediate, top level children of **`node`**.
 
 ```el
