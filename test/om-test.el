@@ -18,59 +18,6 @@
       ;; (print p2)
       (should-not (or (-difference p1 p2) (-difference p2 p1))))))
 
-(defmacro match-should-equal (node result &rest patterns)
-  (declare (indent 2))
-  (let ((tests (--map 
-                `(should (equal ,result
-                                (->> (om-match ',it ,node)
-                                     (-map #'om-to-trimmed-string))))
-                patterns)))
-    `(progn ,@tests)))
-
-(defmacro match-slicer-should-equal (node expected pattern)
-  (declare (indent 1))
-  `(progn
-     ;; first match
-     (match-should-equal node (-take 1 ,expected)
-       (:first ,@pattern) (:nth 0 ,@pattern)
-       (:sub 0 0 ,@pattern))
-     ;; last match
-     (match-should-equal node (-take-last 1 ,expected)
-       (:last ,@pattern) (:nth -1 ,@pattern)
-       (:sub -1 -1 ,@pattern))
-     ;; nth match positive
-     (match-should-equal node (list (nth 1 ,expected))
-       (:nth 1 ,@pattern) (:sub 1 1 ,@pattern))
-     ;; nth match negative
-     (match-should-equal node (list (nth 1 (reverse ,expected)))
-       (:nth -2 ,@pattern) (:sub -2 -2 ,@pattern))
-     ;; out of range positive
-     (match-should-equal node nil
-       (:nth 100 ,@pattern) (:sub 100 100 ,@pattern))
-     ;; out of range negative
-     (match-should-equal node nil
-       (:nth -100 ,@pattern) (:sub -100 -100 ,@pattern))
-     ;; bounded to out of range
-     (match-should-equal node ,expected 
-       (:sub 0 100 ,@pattern) (:sub -100 -1 ,@pattern))
-     ;; zero-bounded finite positive
-     (match-should-equal node (-take 2 ,expected)
-       (:sub 0 1 ,@pattern))
-     ;; zero-bounded finite negative
-     (match-should-equal node (-take-last 2 ,expected)
-       (:sub -2 -1 ,@pattern))
-     ;; floating finite positive
-     (match-should-equal node (-drop 1 (-take 3 ,expected))
-       (:sub 1 2 ,@pattern))
-     ;; floating finite negative
-     (match-should-equal node (-drop-last 1 (-take-last 3 ,expected))
-       (:sub -3 -2 ,@pattern))
-     ;; floating out of range positive
-     (match-should-equal node (-drop 1 ,expected)
-       (:sub 1 100 ,@pattern))
-     ;; floating out of range negative
-     (match-should-equal node (-drop-last 1 ,expected)
-       (:sub -100 -2 ,@pattern))))
 
 ;; objects
 
@@ -427,7 +374,15 @@
   ;; multiple keywords
   (should-error (om--make-rest-partition-form '(:one one :one three two) (:one) nil)))
 
+;;; MATCH FRAMEWORK TESTING
+
+;; These are test for `om-match' and friends. Proceed with caution :)
+
 (ert-deftest om--match-make-pred-form/error ()
+  ;; Ensure `om--match-make-pred-form' will error when it supposed to
+  ;; do so. All errors (in theory) should be tested here so that
+  ;; we don't need to bother testing them anywhere else when we test
+  ;; functions higher in the framework
   (unless (fboundp 'om--match-make-pred-form)
     (error "Function not defined"))
   ;; quoted
@@ -466,6 +421,13 @@
   (should-error (om--match-make-pred-form :1)))
 
 (ert-deftest om--match-make-inner-body-form/error ()
+  ;; Ensure `om--match-make-inner-form' will error when it supposed to
+  ;; do so. All errors (in theory) should be tested here so that
+  ;; we don't need to bother testing them anywhere else when we test
+  ;; functions higher in the framework
+  ;;
+  ;; Assume that all invalid patterns at the predicate level will be
+  ;; caught by `om--match-make-pred-form/error'
   (unless (fboundp 'om--match-make-inner-body-form)
     (error "Function no defined"))
   ;; slicers present
@@ -490,6 +452,14 @@
   (should-error (om--match-make-inner-body-form '(:swaggart))))
 
 (ert-deftest om--make-make-slicer-form ()
+  ;; Ensure `om--match-make-inner-form' will error when it supposed to
+  ;; do so. All errors (in theory) should be tested here so that
+  ;; we don't need to bother testing them anywhere else when we test
+  ;; functions higher in the framework
+  ;;
+  ;; Assume that all invalid patterns at the predicate and wildcard
+  ;; level will be caught by `om--match-make-pred-form/error' and
+  ;; `om--match-make-inner-body-form/error'
   (unless (fboundp 'om--make-make-slicer-form)
     (error "Function no defined"))
   ;; slicers by themselves
@@ -512,7 +482,94 @@
   ;; sub with nothing after it
   (should-error (om--make-make-slicer-form '(:sub 1 2))))
 
+(defmacro match-should-equal (node result &rest patterns)
+  "Return form to test if all PATTERNS applied NODE return RESULT."
+  (declare (indent 2))
+  (let ((tests (--map
+                `(should (equal ,result
+                                (->> (om-match ',it ,node)
+                                     (-map #'om-to-trimmed-string))))
+                patterns)))
+    `(progn ,@tests)))
+
+(defmacro match-slicer-should-equal (node expected pattern)
+  "Return form to test if PATTERN applied to NODE works with all slicers.
+EXPECTED is a list of matches returned using PATTERN if no slicer is
+applied."
+  (declare (indent 1))
+  ;; The basic behavior of slicers can be put in terms of -drop(-last)
+  ;; and -take-(last). Additionally, some slicing operations have
+  ;; multiple syntactical representations. Ensure equality of all
+  ;; these specifications here
+  `(progn
+     ;; these slicers have multiple equivalent expressions
+     ;;
+     ;; first match
+     (match-should-equal node (-take 1 ,expected)
+       (:first ,@pattern) (:nth 0 ,@pattern)
+       (:sub 0 0 ,@pattern))
+     ;; last match
+     (match-should-equal node (-take-last 1 ,expected)
+       (:last ,@pattern) (:nth -1 ,@pattern)
+       (:sub -1 -1 ,@pattern))
+     ;; nth match positive
+     (match-should-equal node (-drop 1 (-take 2 ,expected))
+       (:nth 1 ,@pattern) (:sub 1 1 ,@pattern))
+     ;; nth match negative
+     (match-should-equal node (-drop-last 1 (-take-last 2 ,expected))
+       (:nth -2 ,@pattern) (:sub -2 -2 ,@pattern))
+     ;; out of range positive
+     (match-should-equal node nil
+       (:nth 100 ,@pattern) (:sub 100 100 ,@pattern))
+     ;; out of range negative
+     (match-should-equal node nil
+       (:nth -100 ,@pattern) (:sub -100 -100 ,@pattern))
+     ;; bounded to out of range
+     (match-should-equal node ,expected 
+       (:sub 0 100 ,@pattern) (:sub -100 -1 ,@pattern))
+     ;;
+     ;; these slicers can only be expressed one way
+     ;;
+     ;; zero-bounded finite positive
+     (match-should-equal node (-take 2 ,expected)
+       (:sub 0 1 ,@pattern))
+     ;; zero-bounded finite negative
+     (match-should-equal node (-take-last 2 ,expected)
+       (:sub -2 -1 ,@pattern))
+     ;; floating finite positive
+     (match-should-equal node (-drop 1 (-take 3 ,expected))
+       (:sub 1 2 ,@pattern))
+     ;; floating finite negative
+     (match-should-equal node (-drop-last 1 (-take-last 3 ,expected))
+       (:sub -3 -2 ,@pattern))
+     ;; floating out of range positive
+     (match-should-equal node (-drop 1 ,expected)
+       (:sub 1 100 ,@pattern))
+     ;; floating out of range negative
+     (match-should-equal node (-drop-last 1 ,expected)
+       (:sub -100 -2 ,@pattern))))
+
+;; Here we test the following pattern combinations
+;; - multi-level predicate
+;; - :any + predicate
+;; - predicate + :any
+;; - :many
+;; - :many!
+;;
+;; The reason for choosing these combinations is that all of them
+;; combined should hit each of the valid form-building switches in
+;; `om--match-make-inner-body-form'. Since the behavior of these
+;; depends on the value of `LIMIT' and `END?' and these are set
+;; depending on the slicer, testing these combinations with
+;; all reasonable slicer combination should ensure that every path
+;; with every combination of `LIMIT' and `END?' is tested. Note this
+;; assumes that `om--match-make-pred-form' is working correctly as
+;; the following test only use a few combinations in this function.
+;; However, `om--match-make-pred-form' is independent of the chosen
+;; slicer so this should not matter
+
 (ert-deftest om-match/slicer-predicate ()
+  ;; test the single/multiple predicate path with all slicers
   (let ((node (->> (s-join "\n"
                            '("* one"
                              "** TODO two"
@@ -528,18 +585,23 @@
       '("2" "3" "4" "5") (headline section))))
 
 (ert-deftest om-match/slicer-any-first ()
+  ;; test the :any + predicate path with all slicers
   (let ((node (om-build-paragraph!
                "*_1_* */2/* _*3*_ _/4/_ /*5*/ /_6_/")))
     (match-slicer-should-equal node
       '("/2/" "*3*" "/4/" "*5*") (:any (:or bold italic)))))
 
 (ert-deftest om-match/slicer-any-last ()
+  ;; test the predicate + :any path with all slicers
   (let ((node (om-build-paragraph!
                "*_1_* */2/* _*3*_ _/4/_ /*5*/ /_6_/")))
     (match-slicer-should-equal node
       '("_1_" "/2/" "*5*" "_6_") ((:or bold italic) :any))))
 
 (ert-deftest om-match/slicer-many ()
+  ;; Test the :many and :many! paths with all slicers. Here the node
+  ;; is chosen such that some values are nested and thus :many will
+  ;; return them but :many! will not
   (let ((node (->> (s-join "\n"
                            '("* one"
                              "- 1"
@@ -560,9 +622,5 @@
                      "- 8\n  - 9")))
     (match-slicer-should-equal node expected (:many item))
     (match-slicer-should-equal node expected! (:many! item))))
-
-(defmacro om-test--file-headline (path index)
-  `(om-test-with-file
-    ,path (nth ,index (om-test-parse-all-headlines))))
 
 ;;; om-test.el ends here

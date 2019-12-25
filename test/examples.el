@@ -3941,9 +3941,14 @@
 
     :begin-hidden
 
-    ;; predicate tests
-    ;;
-
+    ;; Test all predicate combinations here. These tests ensure that:
+    ;; - `om--match-make-pred-form' is correct for all VALID pattern
+    ;;   combinations (the error cases are tested in `om-test.el')
+    ;; - the single and multiple predicate paths in
+    ;;   `om--match-make-inner-body-form' are correct
+    ;; - the ordering is for the above two pathways is correct (which
+    ;;   we do by testing nodes that have multiple children)
+    
     (:buffer "* one"
              "** TODO two"
              "2"
@@ -4074,7 +4079,21 @@
          (--map (om-to-trimmed-string it)))
     => '("2" "5")
 
-    ;; wildcard tests
+    ;; Test the remaining paths of `om--match-make-inner-body-form'
+    ;; These test cases ensure that:
+    ;; - the :any + predicate path is correct
+    ;; - the predicate + :any path is correct
+    ;; - the :many path is correct
+    ;; - the :many! path is correct
+    ;; - the ordering of each above path is correct (assumed because
+    ;;   the tests contain nodes with multiple children that have a
+    ;;   defined order to be preserved)
+    ;;
+    ;; Note that all error cases are tested in `om-test.el'
+    ;;
+    ;; Also note that we assume `om--match-make-pred-form' is
+    ;; independent of `om--match-make-inner-body-form' which liberates
+    ;; us from testing all predicate patterns again below.
 
     ;; :any (first)
     (:buffer "*_1_* */2/* _*3*_ _/4/_ /*5*/ /_6_/")
@@ -4121,7 +4140,7 @@
          (--map (om-to-trimmed-string it)))
     => '("- 1" "- 2\n  - 3")
 
-    ;; slicer tests (see `om-test.el')
+    ;; slicer tests are not here, see `om-test.el'
 
     :end-hidden)
 
