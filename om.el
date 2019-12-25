@@ -3775,14 +3775,11 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       (`(:or . ,(and (pred and) p))
        `(or ,@(-map #'om--match-make-condition-form p)))
       ;;
-      ;; properties
-      ;; NOTE: this must go last if we don't want :pred/:and/:or/:not
-      ;; to be interpreted as a plist
-      ;; TODO limit this to one property and use the strict functions
-      ;; to ensure user if assaulted by emacs if they choose the wrong
       ;; property
-      ((and (pred om--is-plist-p) plist)
-       `(om--all-props-match-p ',plist ,it-node))
+      ;; NOTE: this must go last if we don't want :pred/:and/:or/:not
+      ;; to be interpreted as a property
+      (`(,(and (pred keywordp) prop) . (,val . nil))
+       `(equal (om--get-property-strict ,prop ,it-node) ,val))
       ;;
       (p (error "Invalid condition: %s" p)))))
 
@@ -3960,7 +3957,9 @@ The types of atomic conditions are:
 - (OP INDEX) - match when (OP NODE-INDEX INDEX) returns t. OP is
   one of `<', `>', `<=', or `>=' and NODE-INDEX is the index of the
   node being evaluated
-- PLIST - match nodes with the same properties and values as PLIST
+- (PROP VAL) - match nodes whose property PROP (a keyword) is `equal'
+  to VAL; VAL is obtained by evaluating `om-get-property' with PROP
+  and the current node; if PROP is invalid, an error will be thrown
 - (:pred PRED) - match when PRED evaluates to t; PRED is a symbol for
   a unary function that takes the current node as its argument
 

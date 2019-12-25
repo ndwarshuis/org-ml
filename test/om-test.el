@@ -413,8 +413,10 @@
   (should-error (om--match-make-condition-form '(:or)))
   ;; or with nonsense
   (should-error (om--match-make-condition-form '(:or bold "2")))
-  ;; plist with symbols instead of keywords
-  (should-error (om--match-make-condition-form '(tags '("hi") :todo-keyword "TODO")))
+  ;; properties with symbols instead of keywords
+  (should-error (om--match-make-condition-form '(tags '("hi"))))
+  ;; multiple properties
+  (should-error (om--match-make-condition-form '(:tags '("hi") :todo-keyword "DONE")))
   ;; just wrong...
   (should-error (om--match-make-condition-form nil))
   (should-error (om--match-make-condition-form "1"))

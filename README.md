@@ -4615,7 +4615,9 @@ The types of atomic conditions are:
 - `(op index)` - match when `(op node-index index)` returns t. `op` is
     one of `<`, `>`, `<=`, or `>=` and `node-index` is the index of the
     node being evaluated
-- `plist` - match nodes with the same properties and values as `plist`
+- `(prop val)` - match nodes whose property `prop` (a keyword) is `equal`
+    to `val`; `val` is obtained by evaluating [`om-get-property`](#om-get-property-prop-node) with `prop`
+    and the current node; if `prop` is invalid, an error will be thrown
 - `(:pred pred)` - match when `pred` evaluates to t; `pred` is a symbol for
     a unary function that takes the current node as its argument
 
