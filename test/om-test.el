@@ -376,80 +376,80 @@
 
 ;;; MATCH FRAMEWORK TESTING
 
-;; These are test for `om-match' and friends. Proceed with caution :)
+;; These are tests for `om-match' and friends. Proceed with caution :)
 
-(ert-deftest om--match-make-pred-form/error ()
-  ;; Ensure `om--match-make-pred-form' will error when it supposed to
-  ;; do so. All errors (in theory) should be tested here so that
-  ;; we don't need to bother testing them anywhere else when we test
-  ;; functions higher in the framework
-  (unless (fboundp 'om--match-make-pred-form)
+(ert-deftest om--match-make-condition-form/error ()
+  ;; Ensure `om--match-make-condition-form' will error when it
+  ;; supposed to do so. All errors (in theory) should be tested here
+  ;; so that we don't need to bother testing them anywhere else when
+  ;; we test functions higher in the framework
+  (unless (fboundp 'om--match-make-condition-form)
     (error "Function not defined"))
   ;; quoted
-  (should-error (om--match-make-pred-form '(quote bold)))
-  (should-error (om--match-make-pred-form '(function bold)))
+  (should-error (om--match-make-condition-form '(quote bold)))
+  (should-error (om--match-make-condition-form '(function bold)))
   ;; invalid type
-  (should-error (om--match-make-pred-form 'protoss))
+  (should-error (om--match-make-condition-form 'protoss))
   ;; invalid operator
-  (should-error (om--match-make-pred-form '(= 1)))
-  (should-error (om--match-make-pred-form '(=/ 1)))
+  (should-error (om--match-make-condition-form '(= 1)))
+  (should-error (om--match-make-condition-form '(=/ 1)))
   ;; valid operator with non-integer
-  (should-error (om--match-make-pred-form '(< "1")))
+  (should-error (om--match-make-condition-form '(< "1")))
   ;; valid operator with too many arguments
-  (should-error (om--match-make-pred-form '(< 1 2)))
+  (should-error (om--match-make-condition-form '(< 1 2)))
   ;; pred with no arguments
-  (should-error (om--match-make-pred-form '(:pred)))
+  (should-error (om--match-make-condition-form '(:pred)))
   ;; pred with too many arguments
-  (should-error (om--match-make-pred-form '(:pred stringp integerp)))
+  (should-error (om--match-make-condition-form '(:pred stringp integerp)))
   ;; not with no arguments
-  (should-error (om--match-make-pred-form '(:not)))
+  (should-error (om--match-make-condition-form '(:not)))
   ;; not with too many arguments
-  (should-error (om--match-make-pred-form '(:not 1 3)))
+  (should-error (om--match-make-condition-form '(:not 1 3)))
   ;; and with no arguments
-  (should-error (om--match-make-pred-form '(:and)))
+  (should-error (om--match-make-condition-form '(:and)))
   ;; and with nonsense
-  (should-error (om--match-make-pred-form '(:and bold "2")))
+  (should-error (om--match-make-condition-form '(:and bold "2")))
   ;; or with no arguments
-  (should-error (om--match-make-pred-form '(:or)))
+  (should-error (om--match-make-condition-form '(:or)))
   ;; or with nonsense
-  (should-error (om--match-make-pred-form '(:or bold "2")))
+  (should-error (om--match-make-condition-form '(:or bold "2")))
   ;; plist with symbols instead of keywords
-  (should-error (om--match-make-pred-form '(tags '("hi") :todo-keyword "TODO")))
+  (should-error (om--match-make-condition-form '(tags '("hi") :todo-keyword "TODO")))
   ;; just wrong...
-  (should-error (om--match-make-pred-form nil))
-  (should-error (om--match-make-pred-form "1"))
-  (should-error (om--match-make-pred-form :1)))
+  (should-error (om--match-make-condition-form nil))
+  (should-error (om--match-make-condition-form "1"))
+  (should-error (om--match-make-condition-form :1)))
 
-(ert-deftest om--match-make-inner-body-form/error ()
+(ert-deftest om--match-make-inner-pattern-form/error ()
   ;; Ensure `om--match-make-inner-form' will error when it supposed to
   ;; do so. All errors (in theory) should be tested here so that
   ;; we don't need to bother testing them anywhere else when we test
   ;; functions higher in the framework
   ;;
-  ;; Assume that all invalid patterns at the predicate level will be
-  ;; caught by `om--match-make-pred-form/error'
-  (unless (fboundp 'om--match-make-inner-body-form)
+  ;; Assume that all invalid patterns at the condition level will be
+  ;; caught by `om--match-make-condition-form/error'
+  (unless (fboundp 'om--match-make-inner-pattern-form)
     (error "Function no defined"))
   ;; slicers present
-  (should-error (om--match-make-inner-body-form '(:first bold)))
-  (should-error (om--match-make-inner-body-form '(:last bold)))
-  (should-error (om--match-make-inner-body-form '(:nth bold)))
-  (should-error (om--match-make-inner-body-form '(:sub bold)))
-  (should-error (om--match-make-inner-body-form '(bold :first)))
-  (should-error (om--match-make-inner-body-form '(bold :last)))
-  (should-error (om--match-make-inner-body-form '(bold :nth)))
-  (should-error (om--match-make-inner-body-form '(bold :sub)))
+  (should-error (om--match-make-inner-pattern-form '(:first bold)))
+  (should-error (om--match-make-inner-pattern-form '(:last bold)))
+  (should-error (om--match-make-inner-pattern-form '(:nth bold)))
+  (should-error (om--match-make-inner-pattern-form '(:sub bold)))
+  (should-error (om--match-make-inner-pattern-form '(bold :first)))
+  (should-error (om--match-make-inner-pattern-form '(bold :last)))
+  (should-error (om--match-make-inner-pattern-form '(bold :nth)))
+  (should-error (om--match-make-inner-pattern-form '(bold :sub)))
   ;; :many by itself
-  (should-error (om--match-make-inner-body-form '(:many)))
+  (should-error (om--match-make-inner-pattern-form '(:many)))
   ;; :many with too many arguments
-  (should-error (om--match-make-inner-body-form '(:many bold italic)))
+  (should-error (om--match-make-inner-pattern-form '(:many bold italic)))
   ;; :many! by itself
-  (should-error (om--match-make-inner-body-form '(:many!)))
+  (should-error (om--match-make-inner-pattern-form '(:many!)))
   ;; :many! with too many arguments
-  (should-error (om--match-make-inner-body-form '(:many! bold italic)))
+  (should-error (om--match-make-inner-pattern-form '(:many! bold italic)))
   ;; just wrong...
-  (should-error (om--match-make-inner-body-form nil))
-  (should-error (om--match-make-inner-body-form '(:swaggart))))
+  (should-error (om--match-make-inner-pattern-form nil))
+  (should-error (om--match-make-inner-pattern-form '(:swaggart))))
 
 (ert-deftest om--make-make-slicer-form ()
   ;; Ensure `om--match-make-inner-form' will error when it supposed to
@@ -458,8 +458,8 @@
   ;; functions higher in the framework
   ;;
   ;; Assume that all invalid patterns at the predicate and wildcard
-  ;; level will be caught by `om--match-make-pred-form/error' and
-  ;; `om--match-make-inner-body-form/error'
+  ;; level will be caught by `om--match-make-condition-form/error' and
+  ;; `om--match-make-inner-pattern-form/error'
   (unless (fboundp 'om--make-make-slicer-form)
     (error "Function no defined"))
   ;; slicers by themselves
@@ -498,7 +498,7 @@ EXPECTED is a list of matches returned using PATTERN if no slicer is
 applied."
   (declare (indent 1))
   ;; The basic behavior of slicers can be put in terms of -drop(-last)
-  ;; and -take-(last). Additionally, some slicing operations have
+  ;; and -take(-last). Additionally, some slicing operations have
   ;; multiple syntactical representations. Ensure equality of all
   ;; these specifications here
   `(progn
@@ -525,7 +525,7 @@ applied."
      (match-should-equal node nil
        (:nth -100 ,@pattern) (:sub -100 -100 ,@pattern))
      ;; bounded to out of range
-     (match-should-equal node ,expected 
+     (match-should-equal node ,expected
        (:sub 0 100 ,@pattern) (:sub -100 -1 ,@pattern))
      ;;
      ;; these slicers can only be expressed one way
@@ -550,26 +550,26 @@ applied."
        (:sub -100 -2 ,@pattern))))
 
 ;; Here we test the following pattern combinations
-;; - multi-level predicate
-;; - :any + predicate
-;; - predicate + :any
+;; - multi-level condition
+;; - :any + condition
+;; - condition + :any
 ;; - :many
 ;; - :many!
 ;;
 ;; The reason for choosing these combinations is that all of them
 ;; combined should hit each of the valid form-building switches in
-;; `om--match-make-inner-body-form'. Since the behavior of these
+;; `om--match-make-inner-pattern-form'. Since the behavior of these
 ;; depends on the value of `LIMIT' and `END?' and these are set
-;; depending on the slicer, testing these combinations with
-;; all reasonable slicer combination should ensure that every path
-;; with every combination of `LIMIT' and `END?' is tested. Note this
-;; assumes that `om--match-make-pred-form' is working correctly as
-;; the following test only use a few combinations in this function.
-;; However, `om--match-make-pred-form' is independent of the chosen
-;; slicer so this should not matter
+;; depending on the slicer, testing these combinations with all
+;; reasonable slicer combination should ensure that every path with
+;; every combination of `LIMIT' and `END?' is tested. Note this
+;; assumes that `om--match-make-condition-form' is working correctly
+;; as the following test only use a few combinations in this function.
+;; However, `om--match-make-condition-form' is independent of the
+;; chosen slicer so this should not matter
 
 (ert-deftest om-match/slicer-predicate ()
-  ;; test the single/multiple predicate path with all slicers
+  ;; test the single/multiple condition path with all slicers
   (let ((node (->> (s-join "\n"
                            '("* one"
                              "** TODO two"
@@ -585,14 +585,14 @@ applied."
       '("2" "3" "4" "5") (headline section))))
 
 (ert-deftest om-match/slicer-any-first ()
-  ;; test the :any + predicate path with all slicers
+  ;; test the :any + condition path with all slicers
   (let ((node (om-build-paragraph!
                "*_1_* */2/* _*3*_ _/4/_ /*5*/ /_6_/")))
     (match-slicer-should-equal node
       '("/2/" "*3*" "/4/" "*5*") (:any (:or bold italic)))))
 
 (ert-deftest om-match/slicer-any-last ()
-  ;; test the predicate + :any path with all slicers
+  ;; test the condition + :any path with all slicers
   (let ((node (om-build-paragraph!
                "*_1_* */2/* _*3*_ _/4/_ /*5*/ /_6_/")))
     (match-slicer-should-equal node

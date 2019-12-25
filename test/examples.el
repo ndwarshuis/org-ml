@@ -3941,13 +3941,13 @@
 
     :begin-hidden
 
-    ;; Test all predicate combinations here. These tests ensure that:
-    ;; - `om--match-make-pred-form' is correct for all VALID pattern
-    ;;   combinations (the error cases are tested in `om-test.el')
-    ;; - the single and multiple predicate paths in
-    ;;   `om--match-make-inner-body-form' are correct
-    ;; - the ordering is for the above two pathways is correct (which
-    ;;   we do by testing nodes that have multiple children)
+    ;; Test all atomic and compound condition combinations here.
+    ;; These tests ensure that:
+    ;; - `om--match-make-condition-form' is correct for all VALID
+    ;;   condition combinations (the error cases are tested in
+    ;;   `om-test.el')
+    ;; - the single and multiple non-wildcard condition paths in
+    ;;   `om--match-make-inner-pattern-form' are correct
     
     (:buffer "* one"
              "** TODO two"
@@ -4079,10 +4079,10 @@
          (--map (om-to-trimmed-string it)))
     => '("2" "5")
 
-    ;; Test the remaining paths of `om--match-make-inner-body-form'
+    ;; Test the remaining paths of `om--match-make-inner-pattern-form'
     ;; These test cases ensure that:
-    ;; - the :any + predicate path is correct
-    ;; - the predicate + :any path is correct
+    ;; - the :any + condition path is correct
+    ;; - the condition + :any path is correct
     ;; - the :many path is correct
     ;; - the :many! path is correct
     ;; - the ordering of each above path is correct (assumed because
@@ -4091,9 +4091,9 @@
     ;;
     ;; Note that all error cases are tested in `om-test.el'
     ;;
-    ;; Also note that we assume `om--match-make-pred-form' is
-    ;; independent of `om--match-make-inner-body-form' which liberates
-    ;; us from testing all predicate patterns again below.
+    ;; Also note that we assume `om--match-make-condition-form' is
+    ;; independent of `om--match-make-inner-pattern-form' which
+    ;; liberates us from testing all predicate patterns again below.
 
     ;; :any (first)
     (:buffer "*_1_* */2/* _*3*_ _/4/_ /*5*/ /_6_/")

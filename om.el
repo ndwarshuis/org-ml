@@ -3645,13 +3645,14 @@ empty."
 ;; function for searching filesystems.
 
 ;; Patterns are composed of the following parts:
-;; forms - match a node based on its type, properties, and index
-;; wildcards - keywords that match nodes independent of type,
-;;   properties and index
-;; slicers - keywords with arguments limit the returned results to
-;;   a size with boundaries (for instance, the 3rd through 5th results)
+;; conditions - match a node based on its type, properties, and index
+;; wildcards - keywords that match one of more nodes regardless of
+;;   type, properties, and index
+;; slicers - keywords with arguments that limit the returned match
+;;   list to a subset all matches (such as first match or 2nd - 5th
+;;   matches)
 ;;
-;; Of the above, only forms are required in the pattern
+;; Of the above, only conditions are required in the pattern
 
 ;; When a pattern is fed into any of the match functions, it will
 ;; first be 'compiled' into a lambda function that will walk through
@@ -3664,7 +3665,7 @@ empty."
 ;; necessary for negative index matching.
 
 ;; This data structure ensures that any child has the information
-;; necessary for a matching form to determine if a match is successful
+;; necessary for a condition form to determine if a match is successful
 ;; (if this data structure wasn't used, index matching would fail as
 ;; it would require knowledge of the entire list when the match is
 ;; made)
@@ -3680,7 +3681,7 @@ empty."
 ;; tricks are possible/easier with the indexed-children data structure
 ;; described above as it ensures that indexing information is
 ;; preserved even when the children are reversed, and ensures that
-;; matching can be made on one child node at a time which guarantees
+;; matching can be made on one child node at a time, which guarantees
 ;; the limit will never be overshot.
 
 (defun om--get-children-indexed (node)
@@ -3722,28 +3723,29 @@ original children to be modified."
        (-difference (-partition 2 plist))
        (not)))
 
-(defun om--match-make-pred-form (pattern-form)
-  "Return a Lisp form equivalent to PATTERN-FORM.
+(defun om--match-make-condition-form (condition)
+  "Return a Lisp form equivalent to CONDITION.
 Assume that `it' is a symbol bound to a list of the form
 \((INDEX RINDEX) . NODE) where NODE is the node being matched to
-PATTERN-FORM, INDEX is the INDEX of NODE, and RINDEX is the right-index
+CONDITION, INDEX is the INDEX of NODE, and RINDEX is the right-index
 of NODE (starting at -1 on the rightmost side of the children list)."
+  ;; initialize some 'accessor' forms
   (let ((it-node '(cdr it))
         (it-lindex '(caar it))
         (it-rindex '(cdar it)))
-    (pcase pattern-form
+    (pcase condition
       ;;
-      ;; pattern-form should not be nil
+      ;; condition should not be nil
       (`nil
-       (error "Pattern-form cannot be nil"))
+       (error "Condition cannot be nil"))
       ;;
-      ;; quote is invalid (may be accidentally in pattern-form)
+      ;; quote is invalid (may be accidentally in condition)
       (`(quote . ,_)
-       (error "'quote' not allowed in pattern-form"))
+       (error "'quote' not allowed in condition"))
       ;;
-      ;; function is invalid (may be accidentally in pattern-form)
+      ;; function is invalid (may be accidentally in condition)
       (`(function . ,_)
-       (error "'function' not allowed in pattern-form"))
+       (error "'function' not allowed in condition"))
       ;;
       ;; type
       ((and (pred (lambda (y) (memq y om-nodes))) type)
@@ -3763,15 +3765,15 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;; 
       ;; not
       (`(:not . (,p . nil))
-       `(not ,(om--match-make-pred-form p)))
+       `(not ,(om--match-make-condition-form p)))
       ;; 
       ;; and
       (`(:and . ,(and (pred and) p))
-       `(and ,@(-map #'om--match-make-pred-form p)))
+       `(and ,@(-map #'om--match-make-condition-form p)))
       ;; 
       ;; or
       (`(:or . ,(and (pred and) p))
-       `(or ,@(-map #'om--match-make-pred-form p)))
+       `(or ,@(-map #'om--match-make-condition-form p)))
       ;;
       ;; properties
       ;; NOTE: this must go last if we don't want :pred/:and/:or/:not
@@ -3782,15 +3784,15 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ((and (pred om--is-plist-p) plist)
        `(om--all-props-match-p ',plist ,it-node))
       ;;
-      (p (error "Invalid pattern-form: %s" p)))))
+      (p (error "Invalid condition: %s" p)))))
 
-(defun om--match-make-inner-body-form (end? limit pattern)
+(defun om--match-make-inner-pattern-form (end? limit pattern)
   "Return matching form for PATTERN.
 END? is a boolean describing if the search should be made in reverse.
 If t, reverse all children when obtaining from any given node. LIMIT
 is an integer or nil describing the number of matches at which the
 search should terminate. If nil, don't perform any checks and
-terminate only when the entire tree is search within PATTERN."
+terminate only when the entire tree is searched within PATTERN."
   (let* ((accum '(cons (cdr it) acc))
          (get-children
           (if (not end?) '(om--get-children-indexed (cdr it))
@@ -3804,8 +3806,8 @@ terminate only when the entire tree is search within PATTERN."
       ;;
       ;; :many! - if node matches add to accumulator, if not descend
       ;;   into node's children and keep searching
-      (`(:many! . (,p . nil))
-       (let ((pred (om--match-make-pred-form p))
+      (`(:many! . (,condition . nil))
+       (let ((pred (om--match-make-condition-form condition))
              (callback `(get-many acc ,get-children)))
          `(cl-labels
               ((get-many
@@ -3815,8 +3817,8 @@ terminate only when the entire tree is search within PATTERN."
       ;;
       ;; :many - flatten all children into a giant list and walk
       ;;   through list, adding children to accumulator if they match
-      (`(:many . (,p . nil))
-       (let ((pred (om--match-make-pred-form p))
+      (`(:many . (,condition . nil))
+       (let ((pred (om--match-make-condition-form condition))
              (callback (if end? '(-snoc (flatten-children it) it)
                          '(cons it (flatten-children it)))))
          `(cl-labels
@@ -3825,40 +3827,40 @@ terminate only when the entire tree is search within PATTERN."
                 (--mapcat ,callback ,get-children)))
             (,@reduce (if ,pred ,accum acc) acc (flatten-children it)))))
       ;;
-      ;; :many and :many! should only have one pattern after them
-      (`(,(and (or :many :many!) p) . ,_)
-       (error "Exactly one subpattern should follow %s" p))
+      ;; :many and :many! should only have one condition after them
+      (`(,(and (or :many :many!) wildcard) . ,_)
+       (error "Exactly one condition should follow %s" wildcard))
       ;;
-      ;; :any (last subpattern) - add all nodes to accumulator
+      ;; :any (at end of pattern) - add all nodes to accumulator
       (`(:any . nil)
        `(,@reduce ,accum acc ,get-children))
       ;;
-      ;; :any (with subpattern after) - descend into the children
+      ;; :any (with subpatterns after) - descend into the children
       ;;   of all nodes and continue searching
       (`(:any . ,ps)
-       (let ((inner (om--match-make-inner-body-form end? limit ps)))
+       (let ((inner (om--match-make-inner-pattern-form end? limit ps)))
          `(,@reduce ,inner acc ,get-children)))
       ;;
-      ;; predicate (last subpattern) - add node to accumulator if
+      ;; condition (at end of pattern) - add node to accumulator if
       ;;   it matches
-      (`(,p . nil)
-       (let ((pred (om--match-make-pred-form p)))
+      (`(,condition . nil)
+       (let ((pred (om--match-make-condition-form condition)))
          `(,@reduce (if ,pred ,accum acc) acc ,get-children)))
       ;;
-      ;; predicate (with subpattern after) - descend into the children
-      ;;   of matching nodes and continue searching
-      (`(,p . ,ps)
-       (let ((pred (om--match-make-pred-form p))
-             (inner (om--match-make-inner-body-form end? limit ps)))
+      ;; condition (with subpatterns after) - descend into the
+      ;;   children of matching nodes and continue searching
+      (`(,condition . ,ps)
+       (let ((pred (om--match-make-condition-form condition))
+             (inner (om--match-make-inner-pattern-form end? limit ps)))
          `(,@reduce (if ,pred ,inner acc) acc ,get-children)))
       ;;
       (ps (error "Invalid pattern: %s" ps)))))
 
-(defun om--match-make-body-form (end? limit patterns)
-  "Return non-slicer matching form for PATTERNS.
-See `om--match-make-inner-body-form' for meaning of END? and LIMIT
+(defun om--match-make-pattern-form (end? limit pattern)
+  "Return non-slicer matching form for PATTERN.
+See `om--match-make-inner-pattern-form' for meaning of END? and LIMIT
 which are passed directly through this function."
-  (let ((body (om--match-make-inner-body-form end? limit patterns)))
+  (let ((body (om--match-make-inner-pattern-form end? limit pattern)))
     ;; NOTE: the accumulator is assembled in reverse due to the nature
     ;; of linked lists. Consing to the front is a linear operation,
     ;; while appending to the back is a quadratic operation since the
@@ -3868,28 +3870,28 @@ which are passed directly through this function."
     ;; reversed if `END?' is t (meaning backward order)
     (if end? body `(reverse ,body))))
 
-(defun om--make-make-slicer-form (patterns)
-  "Return matching form with slicer operations for PATTERNS."
-  (pcase patterns
+(defun om--make-make-slicer-form (pattern)
+  "Return matching form with slicer operations for PATTERN."
+  (pcase pattern
     ;; :first - search until one match found and return that
     (`(:first . ,ps)
-     (om--match-make-body-form nil 1 ps))
+     (om--match-make-pattern-form nil 1 ps))
     ;;
     ;; :last - search backwards until one match found and return that
     (`(:last . ,ps)
-     (om--match-make-body-form t 1 ps))
+     (om--match-make-pattern-form t 1 ps))
     ;;
-    ;; :nth - search until N matches found and return Nth
-    ;;   note that nil will be returned if N refers to anything
-    ;;   outside the results list
+    ;; :nth - search until N matches found and return Nth; note that
+    ;;   nil will be returned if N refers to anything outside the
+    ;;   results list
     (`(:nth . (,n . ,ps))
      (unless (integerp n)
        (error ":nth argument must be an integer"))
      (if (<= 0 n)
-         `(-drop ,n ,(om--match-make-body-form nil (1+ n) ps))
-       `(-drop-last ,(1- (- n)) ,(om--match-make-body-form t (- n) ps))))
+         `(-drop ,n ,(om--match-make-pattern-form nil (1+ n) ps))
+       `(-drop-last ,(1- (- n)) ,(om--match-make-pattern-form t (- n) ps))))
     ;;
-    ;; :sub - search until B matches found, drop A+1, and return
+    ;; :sub - search until B matches found, drop A+1, and return;
     ;;   note that if B is longer than the results then all results
     ;;   will be dropped and nil will be ultimately returned
     (`(:sub . (,a . (,b . ,ps)))
@@ -3899,18 +3901,18 @@ which are passed directly through this function."
       ((> a b)
        (error ":sub left index must be less than right index"))
       ((and (<= 0 a) (<= 0 b))
-       `(-drop ,a ,(om--match-make-body-form nil (1+ b) ps)))
+       `(-drop ,a ,(om--match-make-pattern-form nil (1+ b) ps)))
       ((and (< a 0) (< b 0))
-       `(-drop-last ,(1- (- b)) ,(om--match-make-body-form t (- a) ps)))
+       `(-drop-last ,(1- (- b)) ,(om--match-make-pattern-form t (- a) ps)))
       (t
        (error "Both indices must be on the same side of zero"))))
     ;;
     ;; no slicer - search without limit and return all
-    (ps (om--match-make-body-form nil nil ps))))
+    (ps (om--match-make-pattern-form nil nil ps))))
 
-(defun om--match-make-lambda-form (patterns)
-  "Return callable lambda form for PATTERNS."
-  (let ((body (om--make-make-slicer-form patterns)))
+(defun om--match-make-lambda-form (pattern)
+  "Return callable lambda form for PATTERN."
+  (let ((body (om--make-make-slicer-form pattern)))
     `(lambda (it) (let ((it (cons nil it)) (acc)) ,body))))
 
 ;; match
