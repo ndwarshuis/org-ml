@@ -3717,12 +3717,6 @@ original children to be modified."
                 (om--construct ,y (nth 1 node)))))))
        (rec ,node))))
 
-(defun om--all-props-match-p (plist node)
-  "Return t if all key-value pairs in PLIST are in NODE."
-  (->> (-partition 2 (om--get-all-properties node))
-       (-difference (-partition 2 plist))
-       (not)))
-
 (defun om--match-make-condition-form (condition)
   "Return a Lisp form equivalent to CONDITION.
 Assume that `it' is a symbol bound to a list of the form
