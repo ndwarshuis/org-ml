@@ -3920,52 +3920,67 @@ which are passed directly through this function."
 (om--defun-node om-match (pattern node)
   "Return a list of child nodes matching PATTERN in NODE.
 
-PATTERN is a list of form ([SLICER [ARG1] [ARG2]] COND1 [COND2 ...]).
+PATTERN is a list of form ([SLICER [ARG1] [ARG2]] SUB1 [SUB2 ...]).
 
 SLICER is an optional prefix to the pattern describing how many
-and which matches to return. If not given, all matches are
-returned. Possible values are:
+and which matches to return. If not given, all matches are returned.
+Possible values are:
 
 - `:first' - return the first match
 - `:last' - return the last match
 - `:nth' ARG1 - return the nth match where ARG1 is an integer denoting
-  the index to return (starting at 0). It may be a negative number
+  the index to return (starting at 0). ARG1 may be a negative number
   to start counting at the end of the match list, in which case -1 is
-  the last index
+  the last index. Using 0 and -1 for ARG1 is equivalent to using
+  `:first' and `:last' respectively
 - `:sub' ARG1 ARG2 - return a sublist between indices ARG1 and ARG2.
-  ARG1 and ARG2 follow the same rules as `:nth'
+  ARG1 may not be greater than ARG2, and both must either be
+  non-negative integers or negative integers. In the case of negative
+  integers, the indices refer to the same counterparts as described in
+  `:nth'. If ARG1 and ARG2 are equal, this slicer has the same
+  behavior as `:nth'. 
 
-CONDX denotes conditions that that match nodes in the parse
-tree. This first condition will select matches within the
-children of NODE, the next condition will select matches within
-the matches from the first condition, and so on. The types of
-conditions are:
+SUBX denotes subpatterns that that match nodes in the parse tree.
+Subpatterns may either be wildcards or conditions.
 
-- PRED - match when PRED evaluates to t; PRED is a unary function that
-  takes the current node as its argument
+Conditions match exactly one level of the node tree being searched
+based on the node's type (the symbol returned by `om-get-type'),
+properties (the value returned by `om-get-property' for a valid
+property keyword), and index (the position of the node in the list
+returned by `om-get-children'). For index, both left indices (where
+zero refers to the left end of the list) and right indices (where -1
+refers to the right end of the list) are understood. Conditions may
+either be atomic or compound, where compound conditions are themselves 
+composed of atomic or compound conditions. 
+
+The types of atomic conditions are:
+
 - TYPE - match when the node's type is `eq' to TYPE (a symbol)
-- INDEX - match when the node's index is `=' to INDEX (an integer).
-  The first index is zero. If INDEX is negative, start counting
-  backward from the end of children where -1 is the last node
+- INDEX - match when the node's index is `=' to INDEX (an integer)
 - (OP INDEX) - match when (OP NODE-INDEX INDEX) returns t. OP is
   one of `<', `>', `<=', or `>=' and NODE-INDEX is the index of the
-  node being evaluated. If INDEX is negative, count from the last
-  node and evaluate OP.
+  node being evaluated
 - PLIST - match nodes with the same properties and values as PLIST
-- `:many' - match zero or more levels, must have at least one
-  sub-pattern after it
-- `:many!' - like `:many' but do not match within other matches
-- `:any' - always match exactly one node
+- (:pred PRED) - match when PRED evaluates to t; PRED is a symbol for
+  a unary function that takes the current node as its argument
 
-Additionally, conditions may be further refined using boolean forms:
+Compound conditions start with an operator followed by their component
+conditions. In the syntax below, CX refers to a condition. The types
+of compound conditions are:
 
 - (:and C1 C2 [C3 ...]) - match when all conditions are true
 - (:or C1 C2 [C3 ...]) - match when at least one condition is true
 - (:not C) - match when condition is not true
 
-The CX members in the forms above are one of any of the condition
-types except `:many', `:many!', and `:any'. Boolean forms may be
-nested within each other."
+In addition to conditions, SUBX may be a wildcard keyword to match
+nodes independent of their type, properties, and index. The types of
+wildcards are:
+
+- `:any' - always match exactly one node
+- `:many' SUB - match SUB to nodes that are zero or more levels down
+  in the tree; SUB is a subpattern of either a condition or the `:any'
+  wildcard; only one subpattern is allowed after `:many'
+- `:many!' SUB - like `:many' but do not match within other matches"
   (let ((match-fun (om--match-make-lambda-form pattern)))
     (funcall match-fun node)))
 
