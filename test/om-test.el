@@ -18,6 +18,60 @@
       ;; (print p2)
       (should-not (or (-difference p1 p2) (-difference p2 p1))))))
 
+(defmacro match-should-equal (node result &rest patterns)
+  (declare (indent 2))
+  (let ((tests (--map 
+                `(should (equal ,result
+                                (->> (om-match ',it ,node)
+                                     (-map #'om-to-trimmed-string))))
+                patterns)))
+    `(progn ,@tests)))
+
+(defmacro match-slicer-should-equal (node expected pattern)
+  (declare (indent 1))
+  `(progn
+     ;; first match
+     (match-should-equal node (-take 1 ,expected)
+       (:first ,@pattern) (:nth 0 ,@pattern)
+       (:sub 0 0 ,@pattern))
+     ;; last match
+     (match-should-equal node (-take-last 1 ,expected)
+       (:last ,@pattern) (:nth -1 ,@pattern)
+       (:sub -1 -1 ,@pattern))
+     ;; nth match positive
+     (match-should-equal node (list (nth 1 ,expected))
+       (:nth 1 ,@pattern) (:sub 1 1 ,@pattern))
+     ;; nth match negative
+     (match-should-equal node (list (nth 1 (reverse ,expected)))
+       (:nth -2 ,@pattern) (:sub -2 -2 ,@pattern))
+     ;; out of range positive
+     (match-should-equal node nil
+       (:nth 100 ,@pattern) (:sub 100 100 ,@pattern))
+     ;; out of range negative
+     (match-should-equal node nil
+       (:nth -100 ,@pattern) (:sub -100 -100 ,@pattern))
+     ;; bounded to out of range
+     (match-should-equal node ,expected 
+       (:sub 0 100 ,@pattern) (:sub -100 -1 ,@pattern))
+     ;; zero-bounded finite positive
+     (match-should-equal node (-take 2 ,expected)
+       (:sub 0 1 ,@pattern))
+     ;; zero-bounded finite negative
+     (match-should-equal node (-take-last 2 ,expected)
+       (:sub -2 -1 ,@pattern))
+     ;; floating finite positive
+     (match-should-equal node (-drop 1 (-take 3 ,expected))
+       (:sub 1 2 ,@pattern))
+     ;; floating finite negative
+     (match-should-equal node (-drop-last 1 (-take-last 3 ,expected))
+       (:sub -3 -2 ,@pattern))
+     ;; floating out of range positive
+     (match-should-equal node (-drop 1 ,expected)
+       (:sub 1 100 ,@pattern))
+     ;; floating out of range negative
+     (match-should-equal node (-drop-last 1 ,expected)
+       (:sub -100 -2 ,@pattern))))
+
 ;; objects
 
 (defun om--compare-object-props (elem string)
@@ -373,120 +427,142 @@
   ;; multiple keywords
   (should-error (om--make-rest-partition-form '(:one one :one three two) (:one) nil)))
 
-;; (ert-deftest om--match-filter/index ()
-;;   (let ((contents '(0 1 2 3 4 5)))
-;;     (should (equal (om--match-filter 0 contents) '(0)))
-;;     (should (equal (om--match-filter '(> 0) contents) '(1 2 3 4 5)))
-;;     (should (equal (om--match-filter '(>= 1) contents) '(1 2 3 4 5)))
-;;     (should (equal (om--match-filter '(< 2) contents) '(0 1)))
-;;     (should (equal (om--match-filter '(<= 1) contents) '(0 1)))
-;;     (should (equal (om--match-filter '(> -2) contents) '(5)))
-;;     (should (equal (om--match-filter '(>= -1) contents) '(5)))
-;;     (should (equal (om--match-filter '(< -1) contents) '(0 1 2 3 4)))
-;;     (should (equal (om--match-filter '(<= -2) contents) '(0 1 2 3 4)))
-;;     (should (equal (om--match-filter -1 contents) '(5)))
-;;     (should-not (om--match-filter 6 contents))
-;;     (should-not (om--match-filter -7 contents))
-;;     (should-not (om--match-filter '(< 0) contents))
-;;     (should-not (om--match-filter '(> -1) contents))))
+(ert-deftest om--match-make-pred-form/error ()
+  (unless (fboundp 'om--match-make-pred-form)
+    (error "Function not defined"))
+  ;; quoted
+  (should-error (om--match-make-pred-form '(quote bold)))
+  (should-error (om--match-make-pred-form '(function bold)))
+  ;; invalid type
+  (should-error (om--match-make-pred-form 'protoss))
+  ;; invalid operator
+  (should-error (om--match-make-pred-form '(= 1)))
+  (should-error (om--match-make-pred-form '(=/ 1)))
+  ;; valid operator with non-integer
+  (should-error (om--match-make-pred-form '(< "1")))
+  ;; valid operator with too many arguments
+  (should-error (om--match-make-pred-form '(< 1 2)))
+  ;; pred with no arguments
+  (should-error (om--match-make-pred-form '(:pred)))
+  ;; pred with too many arguments
+  (should-error (om--match-make-pred-form '(:pred stringp integerp)))
+  ;; not with no arguments
+  (should-error (om--match-make-pred-form '(:not)))
+  ;; not with too many arguments
+  (should-error (om--match-make-pred-form '(:not 1 3)))
+  ;; and with no arguments
+  (should-error (om--match-make-pred-form '(:and)))
+  ;; and with nonsense
+  (should-error (om--match-make-pred-form '(:and bold "2")))
+  ;; or with no arguments
+  (should-error (om--match-make-pred-form '(:or)))
+  ;; or with nonsense
+  (should-error (om--match-make-pred-form '(:or bold "2")))
+  ;; plist with symbols instead of keywords
+  (should-error (om--match-make-pred-form '(tags '("hi") :todo-keyword "TODO")))
+  ;; just wrong...
+  (should-error (om--match-make-pred-form nil))
+  (should-error (om--match-make-pred-form "1"))
+  (should-error (om--match-make-pred-form :1)))
 
-;; (ert-deftest om--match-filter-pred ()
-;;   (let ((children '(1 a 2 b 3 c)))
-;;     ;; always return list in reverse
-;;     ;; return everything if predicate is always true
-;;     (should (equal (om--match-filter-pred t nil nil children) '(c 3 b 2 a 1)))
-;;     (should (equal (om--match-filter-pred t t nil children) '(c 3 b 2 a 1)))
-;;     ;; return nothing if the predicate is always false
-;;     (should-not (om--match-filter-pred (stringp it) nil nil children))
-;;     (should-not (om--match-filter-pred (stringp it) nil 1 children))
-;;     (should-not (om--match-filter-pred (stringp it) t 1 children))
-;;     (should-not (om--match-filter-pred (stringp it) t nil children))
-;;     ;; filter selectively
-;;     (should (equal (om--match-filter-pred (integerp it) nil nil children) '(3 2 1)))
-;;     (should (equal (om--match-filter-pred (symbolp it) nil nil children) '(c b a)))
-;;     ;; limit return
-;;     (should (equal (om--match-filter-pred (symbolp it) nil 2 children) '(b a)))
-;;     ;; limit return and start from end
-;;     (should (equal (om--match-filter-pred (symbolp it) t 2 children) '(c b)))))
+(ert-deftest om--match-make-inner-body-form/error ()
+  (unless (fboundp 'om--match-make-inner-body-form)
+    (error "Function no defined"))
+  ;; slicers present
+  (should-error (om--match-make-inner-body-form '(:first bold)))
+  (should-error (om--match-make-inner-body-form '(:last bold)))
+  (should-error (om--match-make-inner-body-form '(:nth bold)))
+  (should-error (om--match-make-inner-body-form '(:sub bold)))
+  (should-error (om--match-make-inner-body-form '(bold :first)))
+  (should-error (om--match-make-inner-body-form '(bold :last)))
+  (should-error (om--match-make-inner-body-form '(bold :nth)))
+  (should-error (om--match-make-inner-body-form '(bold :sub)))
+  ;; :many by itself
+  (should-error (om--match-make-inner-body-form '(:many)))
+  ;; :many with too many arguments
+  (should-error (om--match-make-inner-body-form '(:many bold italic)))
+  ;; :many! by itself
+  (should-error (om--match-make-inner-body-form '(:many!)))
+  ;; :many! with too many arguments
+  (should-error (om--match-make-inner-body-form '(:many! bold italic)))
+  ;; just wrong...
+  (should-error (om--match-make-inner-body-form nil))
+  (should-error (om--match-make-inner-body-form '(:swaggart))))
 
-;; (ert-deftest om--match-filter/type ()
-;;   (let ((children (->> (om-build-paragraph! "*1* /2/ *3*")
-;;                        (om-get-children))))
-;;     (should (equal (->> (om--match-filter nil nil 'bold nil children)
-;;                         (--map (om-to-string it)))
-;;                    '("*3*" "*1* ")))
-;;     (should (equal (->> (om--match-filter nil nil 'italic nil children)
-;;                         (--map (om-to-string it)))
-;;                    '("/2/ ")))
-;;     (should-not (->> (om--match-filter nil nil 'underline nil children)
-;;                      (--map (om-to-string it))))))
+(ert-deftest om--make-make-slicer-form ()
+  (unless (fboundp 'om--make-make-slicer-form)
+    (error "Function no defined"))
+  ;; slicers by themselves
+  (should-error (om--make-make-slicer-form '(:first)))
+  (should-error (om--make-make-slicer-form '(:last)))
+  (should-error (om--make-make-slicer-form '(:nth)))
+  (should-error (om--make-make-slicer-form '(:sub)))
+  ;; nth with non-integer
+  (should-error (om--make-make-slicer-form '(:nth "1" bold)))
+  ;; nth with integer but nothing after
+  (should-error (om--make-make-slicer-form '(:nth 1)))
+  ;; sub with non-integers
+  (should-error (om--make-make-slicer-form '(:sub "1" 2 bold)))
+  (should-error (om--make-make-slicer-form '(:sub 1 "2" bold)))
+  ;; sub with flipped integers
+  (should-error (om--make-make-slicer-form '(:sub 2 1 bold)))
+  (should-error (om--make-make-slicer-form '(:sub -1 -2 bold)))
+  ;; sub with split integers
+  (should-error (om--make-make-slicer-form '(:sub -1 2 bold)))
+  ;; sub with nothing after it
+  (should-error (om--make-make-slicer-form '(:sub 1 2))))
 
-;; (ert-deftest om--match-filter/property ()
-;;   (let ((children
-;;          (list (om-build-item :checkbox 'off :tag '("one"))
-;;                (om-build-item :checkbox 'on :tag '("two"))
-;;                (om-build-item :checkbox 'on :tag '("three")))))
-;;     (should (equal (->> (om--match-filter nil nil '(:checkbox off) nil children)
-;;                         (--map (om-to-trimmed-string it)))
-;;                    '("- [ ] one ::")))
-;;     (should (equal (->> (om--match-filter nil nil '(:checkbox on) nil children)
-;;                         (--map (om-to-trimmed-string it)))
-;;                    '("- [X] three ::" "- [X] two ::")))
-;;     (should-not (->> (om--match-filter nil nil '(:checkbox trans) nil children)
-;;                      (--map (om-to-trimmed-string it))))))
+(ert-deftest om-match/slicer-predicate ()
+  (let ((node (->> (s-join "\n"
+                           '("* one"
+                             "** TODO two"
+                             "2"
+                             "** COMMENT three"
+                             "3"
+                             "** four"
+                             "4"
+                             "** DONE five"
+                             "5"))
+                   (om--from-string))))
+    (match-slicer-should-equal node
+      '("2" "3" "4" "5") (headline section))))
 
-;; (ert-deftest om--match-filter/compound ()
-;;   (let ((children
-;;          (list
-;;           (om-build-section (om-build-paragraph "paragraph"))
-;;           (om-build-headline :title '("headline1") :todo-keyword "TODO")
-;;           (om-build-headline :title '("headline2") :todo-keyword "DONE"))))
-;;     (should (equal (->> (om--match-filter
-;;                          nil nil
-;;                          '(:or section headline)
-;;                          nil children)
-;;                         (--map (om-to-trimmed-string it)))
-;;                    ;; TODO this is wrong, paragraph should be last
-;;                    '("* DONE headline2" "* TODO headline1" "paragraph")))
-;;     (should (equal (->> (om--match-filter
-;;                          nil nil
-;;                          '(:and headline (:todo-keyword "DONE"))
-;;                          nil children)
-;;                         (--map (om-to-trimmed-string it)))
-;;                    '("* DONE headline2")))
-;;     (should-not (->> (om--match-filter
-;;                       nil nil
-;;                       '(:and headline (:todo-keyword "CANC"))
-;;                       nil children)
-;;                      (--map (om-to-trimmed-string it))))))
+(ert-deftest om-match/slicer-any-first ()
+  (let ((node (om-build-paragraph!
+               "*_1_* */2/* _*3*_ _/4/_ /*5*/ /_6_/")))
+    (match-slicer-should-equal node
+      '("/2/" "*3*" "/4/" "*5*") (:any (:or bold italic)))))
 
-(ert-deftest om--match-filter/error ()
-  (should-error (om--match-filter "no-strings" t))
-  (should-error (om--match-filter :no-keywords t))
-  ;; these should not be by themselves
-  (should-error (om--match-filter '(<) t))
-  (should-error (om--match-filter '(<=) t))
-  (should-error (om--match-filter '(>) t))
-  (should-error (om--match-filter '(>=) t))
-  (should-error (om--match-filter '(:and) t))
-  (should-error (om--match-filter '(:or) t))
-  ;; numeric operators must be followed by integer
-  (should-error (om--match-filter '(< 1.0) t))
-  (should-error (om--match-filter '(< 'no-symbols) t))
-  (should-error (om--match-filter '(< :no-keywords) t))
-  (should-error (om--match-filter '(< "no-string") t))
-  ;; only one index allowed
-  (should-error (om--match-filter '(< 1 2) t)))
+(ert-deftest om-match/slicer-any-last ()
+  (let ((node (om-build-paragraph!
+               "*_1_* */2/* _*3*_ _/4/_ /*5*/ /_6_/")))
+    (match-slicer-should-equal node
+      '("_1_" "/2/" "*5*" "_6_") ((:or bold italic) :any))))
+
+(ert-deftest om-match/slicer-many ()
+  (let ((node (->> (s-join "\n"
+                           '("* one"
+                             "- 1"
+                             "- 2"
+                             "  - 3"
+                             "** two"
+                             "- 4"
+                             "- 5"
+                             "  - 6"
+                             "** three"
+                             "- 7"
+                             "- 8"
+                             "  - 9"))
+                   (om--from-string)))
+        (expected '("- 1" "- 2\n  - 3" "- 3" "- 4" "- 5\n  - 6"
+                    "- 6" "- 7" "- 8\n  - 9" "- 9"))
+        (expected! '("- 1" "- 2\n  - 3" "- 4" "- 5\n  - 6" "- 7"
+                     "- 8\n  - 9")))
+    (match-slicer-should-equal node expected (:many item))
+    (match-slicer-should-equal node expected! (:many! item))))
 
 (defmacro om-test--file-headline (path index)
   `(om-test-with-file
     ,path (nth ,index (om-test-parse-all-headlines))))
-
-(ert-deftest om-find/error ()
-  (let ((dummy (om-build-headline :title '("dummy"))))
-    ;; TODO test invalid types
-    ;; (should-error (om-find dummy 'invalid))
-    (should-error (om-find '(:many) dummy))
-    (should-error (om-find '(:many section paragraph) dummy))))
 
 ;;; om-test.el ends here

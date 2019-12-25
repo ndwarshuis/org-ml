@@ -3941,128 +3941,187 @@
 
     :begin-hidden
 
-    (:buffer "* headline one"
-             "** TODO headline two"
-             "** COMMENT headline three"
-             "** headline four")
+    ;; predicate tests
+    ;;
 
-    (:comment "Use a symbol to match a type, in this case all "
-              "headlines.")
+    (:buffer "* one"
+             "** TODO two"
+             "2"
+             "** COMMENT three"
+             "3"
+             "** four"
+             "4"
+             "** DONE five"
+             "5")
+    
+    ;; type
     (->> (om-parse-this-subtree)
-         (om-match '(headline))
+         (om-match '(headline section))
          (--map (om-to-trimmed-string it)))
-    => '("** TODO headline two"
-         "** COMMENT headline three"
-         "** headline four")
-
+    => '("2" "3" "4" "5")
     (->> (om-parse-this-subtree)
-         (om-match '(1))
-         (--map (om-to-trimmed-string it)))
-    => '("** COMMENT headline three")
-    (->> (om-parse-this-subtree)
-         (om-match '(-1))
-         (--map (om-to-trimmed-string it)))
-    => '("** headline four")
-    (->> (om-parse-this-subtree)
-         (om-match '(3))
+         (om-match '(headline table))
          (--map (om-to-trimmed-string it)))
     => nil
 
+    ;; index
     (->> (om-parse-this-subtree)
-         (om-match '((> 0)))
+         (om-match '(0 section))
          (--map (om-to-trimmed-string it)))
-    => '("** COMMENT headline three" "** headline four")
+    => '("2")
     (->> (om-parse-this-subtree)
-         (om-match '((>= 1)))
+         (om-match '(-1 section))
          (--map (om-to-trimmed-string it)))
-    => '("** COMMENT headline three" "** headline four")
-
-    (:comment "Use a plist to match based on an elements properties.")
+    => '("5")
     (->> (om-parse-this-subtree)
-         (om-match '((:todo-keyword "TODO")))
+         (om-match '(4 section))
          (--map (om-to-trimmed-string it)))
-    => '("** TODO headline two")
+    => nil
     (->> (om-parse-this-subtree)
-         (om-match '((:todo-keyword nil)))
-         (--map (om-to-trimmed-string it)))
-    => '("** COMMENT headline three" "** headline four")
-    (->> (om-parse-this-subtree)
-         (om-match '((:todo-keyword "DONE")))
+         (om-match '(-5 section))
          (--map (om-to-trimmed-string it)))
     => nil
 
-    (:buffer "* headline one"
-             "this is *text1* of *text2*"
-             "** headline two"
-             "here is more *text3*"
-             "*** headline three"
-             "and here is even more *text4* and *text5*"
-             "**** headline 4")
-    (:comment "Specify multiple levels of matching using multiple "
-              "queries.")
+    ;; relative index
     (->> (om-parse-this-subtree)
-         (om-match '(section paragraph bold))
-         (--map (om-to-string it)))
-    => '("*text1* " "*text2*")
-
-    (:comment "Use the keyword :any as a wildcard to match any "
-              "element at a particular level.")
+         (om-match '((> 0) section))
+         (--map (om-to-trimmed-string it)))
+    => '("3" "4" "5")
     (->> (om-parse-this-subtree)
-         (om-match '(:any :any bold))
-         (--map (om-to-string it)))
-    => '("*text1* " "*text2*")
+         (om-match '((>= 1) section))
+         (--map (om-to-trimmed-string it)))
+    => '("3" "4" "5")
     (->> (om-parse-this-subtree)
-         (om-match '(section paragraph :any))
-         (--map (om-to-string it)))
-    => '("this is " "*text1* " "of " "*text2*" "\n")
+         (om-match '((<= -2) section))
+         (--map (om-to-trimmed-string it)))
+    => '("2" "3" "4")
     (->> (om-parse-this-subtree)
-         (om-match '(:any bold))
-         (--map (om-to-string it)))
+         (om-match '((< -1) section))
+         (--map (om-to-trimmed-string it)))
+    => '("2" "3" "4")
+    (->> (om-parse-this-subtree)
+         (om-match '((< 0) section))
+         (--map (om-to-trimmed-string it)))
+    => nil
+    (->> (om-parse-this-subtree)
+         (om-match '((> 3) section))
+         (--map (om-to-trimmed-string it)))
+    => nil
+    (->> (om-parse-this-subtree)
+         (om-match '((> -1) section))
+         (--map (om-to-trimmed-string it)))
+    => nil
+    (->> (om-parse-this-subtree)
+         (om-match '((< -4) section))
+         (--map (om-to-trimmed-string it)))
     => nil
 
-    (:comment "Use the keyword :many to match one or more levels "
-              "of any element.")
+    ;; properties
     (->> (om-parse-this-subtree)
-         (om-match '(:many bold))
+         (om-match '((:todo-keyword "TODO") section))
          (--map (om-to-trimmed-string it)))
-    => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
+    => '("2")
+    (->> (om-parse-this-subtree)
+         (om-match '((:todo-keyword nil) section))
+         (--map (om-to-trimmed-string it)))
+    => '("3" "4")
+    (->> (om-parse-this-subtree)
+         (om-match '((:todo-keyword "DONE") section))
+         (--map (om-to-trimmed-string it)))
+    => '("5")
 
-    ;; these should do the same thing as :many above
+    ;; pred
     (->> (om-parse-this-subtree)
-         (om-match '(:many! bold))
+         (om-match '((:pred om-headline-is-done-p) section))
          (--map (om-to-trimmed-string it)))
-    => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
+    => '("5")
+    (->> (om-parse-this-subtree)
+         (om-match '((:pred stringp) section)) ; silly but proves my point
+         (--map (om-to-trimmed-string it)))
+    => nil
 
+    ;; :not
     (->> (om-parse-this-subtree)
-         (om-match '(headline :many! headline))
+         (om-match '((:not (:todo-keyword nil)) section))
          (--map (om-to-trimmed-string it)))
-    => '("*** headline three
-and here is even more *text4* and *text5*
-**** headline 4")
+    => '("2" "5")
+    (->> (om-parse-this-subtree)
+         (om-match '((:not headline) section))
+         (--map (om-to-trimmed-string it)))
+    => nil
+    
+    ;; :and
+    (->> (om-parse-this-subtree)
+         (om-match '((:and (< 2) (:todo-keyword nil)) section))
+         (--map (om-to-trimmed-string it)))
+    => '("3")
+    (->> (om-parse-this-subtree)
+         (om-match '((:and (:archivedp t) (:todo-keyword nil)) section))
+         (--map (om-to-trimmed-string it)))
+    => nil
 
-    (:buffer "* headline one"
-             "** headline two"
-             "this is *text1* of *text2*"
-             "** headline two.five"
-             "here is more *text3*"
-             "** headline three"
-             "and here is even more *text4* and *text5*")
+    ;; :or
     (->> (om-parse-this-subtree)
-         (om-match '(headline section paragraph bold))
+         (om-match '((:or (:todo-keyword "DONE") (:todo-keyword "TODO")) section))
          (--map (om-to-trimmed-string it)))
-    => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
+    => '("2" "5")
     (->> (om-parse-this-subtree)
-         (om-match '(:any section paragraph bold))
+         (om-match '((:or (:archivedp t) (:todo-keyword "NEXT")) section))
          (--map (om-to-trimmed-string it)))
-    => '("*text1*" "*text2*" "*text3*" "*text4*" "*text5*")
+    => nil
+    (->> (om-parse-this-subtree)
+         (om-match '((:or (:todo-keyword "DONE") (:todo-keyword "TODO")) section))
+         (--map (om-to-trimmed-string it)))
+    => '("2" "5")
 
-    (:buffer "- [ ] tag :: one"
-             "- [X] tag :: two"
-             "- [X] tag :: three")
+    ;; wildcard tests
+
+    ;; :any (first)
+    (:buffer "*_1_* */2/* _*3*_ _/4/_ /*5*/ /_6_/")
+
     (->> (om-parse-this-element)
-         (om-match '(:first (:and (:checkbox on :tag ("tag")))))
+         (om-match '(:any (:or bold italic)))
          (--map (om-to-trimmed-string it)))
-    => '("- [X] tag :: two")
+    
+    ;; :any (last)
+    => '("/2/" "*3*" "/4/" "*5*")
+    (->> (om-parse-this-element)
+         (om-match '((:or bold italic) :any))
+         (--map (om-to-trimmed-string it)))
+    => '("_1_" "/2/" "*5*" "_6_")
+
+    ;; :many/:many!
+    (:buffer "* one"
+             "- 1"
+             "- 2"
+             "  - 3"
+             "** two"
+             "- 4"
+             "- 5"
+             "  - 6"
+             "** three"
+             "- 7"
+             "- 8"
+             "  - 9")
+    (->> (om-parse-this-element)
+         (om-match '(:many item))
+         (--map (om-to-trimmed-string it)))
+    => '("- 1" "- 2\n  - 3" "- 3" "- 4" "- 5\n  - 6" "- 6" "- 7"
+         "- 8\n  - 9" "- 9")
+    (->> (om-parse-this-element)
+         (om-match '(section plain-list :many item))
+         (--map (om-to-trimmed-string it)))
+    => '("- 1" "- 2\n  - 3" "- 3")
+    (->> (om-parse-this-element)
+         (om-match '(:many! item))
+         (--map (om-to-trimmed-string it)))
+    => '("- 1" "- 2\n  - 3" "- 4" "- 5\n  - 6" "- 7" "- 8\n  - 9")
+    (->> (om-parse-this-element)
+         (om-match '(section plain-list :many! item))
+         (--map (om-to-trimmed-string it)))
+    => '("- 1" "- 2\n  - 3")
+
+    ;; slicer tests (see `om-test.el')
 
     :end-hidden)
 
