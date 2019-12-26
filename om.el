@@ -2218,39 +2218,6 @@ a modified list of headlines."
         (t subheadlines))))
    headline))
 
-;; (defun om--map-or-build (map-fun build-fun pred-fun pos node)
-;;   (om--map-children
-;;    (lambda (children)
-;;      (-if-let (target (--first (funcall pred-fun it) children))
-;;          ;; TODO this is probably not the most efficient
-;;          (-replace target (funcall map-fun target) children)
-;;        (let ((pos
-;;               (cond
-;;                ((integerp pos)
-;;                 pos)
-;;                ((functionp pos)
-;;                 (or (--find-index (funcall pos it) children) 0))
-;;                (t (error "Invalid pos given: %S" pos))))
-;;              (new (funcall build-fun)))
-;;          (-insert-at pos new children))))
-;;    node))
-
-;; (defmacro om--map-or-build-nested (map-form &rest args)
-;;   ;; forms are of form (pred builder pos-fun)
-;;   (declare (indent 1))
-;;   (let* ((node (-last-item args))
-;;          (forms (-drop-last 1 args))
-;;          (first (car args))
-;;          (rem (cdr forms))
-;;          (pred-fun `(lambda (it) ,(nth 0 first)))
-;;          (build-fun `(lambda () (->> ,@(nreverse (--map (nth 1 it) forms)))))
-;;          (pos-fun `(lambda (it) ,(nth 2 first)))
-;;          (map-fun
-;;           (if (not rem) `(lambda (it) ,map-form)
-;;             `(lambda (inner)
-;;                (om--map-or-build-nested ,map-form ,@rem inner)))))
-;;     `(om--map-or-build ,map-fun ,build-fun ,pred-fun ,pos-fun ,node)))
-
 (defun om--headline-subtree-shift-level (n headline)
   "Return HEADLINE node with its level shifted by N.
 Also shift all HEADLINE node's child headline nodes by N.
@@ -2269,34 +2236,6 @@ first layer, (+ 2 level for second, and so on."
   (->> (om--set-property-strict :level level headline)
        (om--map-children*
          (--map (om--headline-set-level (1+ level) it) it))))
-
-;; (defun om--headline-set-section (section headline)
-;;   (let ((subheadlines (om--headline-get-subheadlines headline)))
-;;     (om--set-children (cons section subheadlines) headline)))
-
-;; (defun om--headline-set-property-drawer (property-drawer headline)
-;;   (om--headline-set-section (om-build-section property-drawer)))
-
-;; (defun om--headline-set-node-property (key value headline)
-;;   (om--map-or-build-nested (om--set-property-strict :value value it)
-;;     ((om-is-section-p it)
-;;      (om-build-section)
-;;      0)
-;;     ((om-is-property-drawer-p it)
-;;      (om-build-property-drawer)
-;;      (-if-let (i (-find-index (om-is-planning-p it) it)) ((1+ i) it)))
-;;     ((and (om-is-node-property-p it)
-;;           (om--property-is-equal-p :value key it))
-;;      (om-build-node-property key value)
-;;      0)
-;;     headline))
-
-;; (defun om--headline-set-planning (planning headline)
-;;   ;; TODO what if we give this a nil?
-;;   (om--map-or-build-nested (om--set-property-strict :value value it)
-;;     ((om-is-section-p it) (om-build-section) 0)
-;;     ((om-is-planning-p it) (apply #'om-build-planning planning) 0)
-;;     headline))
 
 ;;; table
 
