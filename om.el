@@ -520,32 +520,52 @@ wrapped in a lambda call binding the unary argument to the symbol
 
 ;;; defun with runtime type checking
 
-(defmacro om--defun-test-node (arglist)
-  "Return a type-checking form based on ARGLIST.
+(eval-when-compile
+  (defun om--defun-make-type-check-form (type-check)
+    (-let* (((type arg) type-check)
+            ((pred desc)
+             (cl-case type
+               (:int '(integerp "integer"))
+               (:p-int '(om--is-pos-integer-p "positive integer"))
+               (:nn-int '(om--is-non-neg-integer-p "non-negative integer"))))
+            (msg (format "Argument '%s' must be a %s: Got %%s" arg desc)))
+      `(unless (funcall #',pred ,arg) (error ,msg ,arg))))
+
+  (defun om--defun-test-node (arglist)
+    "Return a type-checking form based on ARGLIST.
 ARGLIST is a list of symbols from a function definition's signature,
 and the type checker will use a predicate based solely on the
 symbol's name. This will only make a type checker for the last
 argument in arglist, and assumes that argument will be bound to a
 node."
-  (-let* ((type (-last-item arglist))
-          (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
-          ((post test)
-           (cl-case type
-             (node '("node" (om--is-node-p)))
-             (branch-node '("branch node" (om--is-branch-node-p)))
-             (t `(,(format "node of type %s" type)
-                  (om--is-type-p ',type)))))
-          (msg (format "%s must be a %s" pre post)))
-    `(unless (,@test ,type) (error ,msg))))
+    (-let* ((type-checks (-some->>
+                          (-drop-last 1 arglist)
+                          (-filter #'listp)
+                          (-map #'om--defun-make-type-check-form)))
+            (type (-last-item arglist))
+            (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
+            ((post test)
+             (cl-case type
+               (node '("node" (om--is-node-p)))
+               (branch-node '("branch node" (om--is-branch-node-p)))
+               (t `(,(format "node of type %s" type)
+                    (om--is-type-p ',type)))))
+            (msg (format "%s must be a %s" pre post)))
+      `(,@type-checks (unless (,@test ,type) (error ,msg)))))
+
+  (defun om--defun-normalize-arglist (arglist)
+    (--map (if (listp it) (cadr it) it) arglist)))
 
 (defmacro om--defun-node (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
 Will insert a type checker according to `om--defun-test-node'."
   (declare (doc-string 3) (indent 2))
-  (-let (((docstring body) (om--partition-docstring-body args)))
+  (-let (((docstring body) (om--partition-docstring-body args))
+         (type-checks (om--defun-test-node arglist))
+         (arglist (om--defun-normalize-arglist arglist)))
     `(defun ,name ,arglist
        ,docstring
-       ,`(om--defun-test-node ,arglist)
+       ,@type-checks
        ,@body)))
 
 ;;; combine type checking and anaphoric form generation
@@ -556,10 +576,12 @@ Will insert a type checker according to `om--defun-test-node' and will
 make an anaphoric form according to `om--defun*' (the same assumptions
 apply)."
   (declare (doc-string 3) (indent 2))
-  (-let (((docstring body) (om--partition-docstring-body args)))
+  (-let (((docstring body) (om--partition-docstring-body args))
+         (type-checks (om--defun-test-node arglist))
+         (arglist (om--defun-normalize-arglist arglist)))
     `(om--defun* ,name ,arglist
        ,docstring
-       ,`(om--defun-test-node ,arglist)
+       ,@type-checks
        ,@body)))
 
 ;;; defun for weirdly-typed nodes
@@ -2858,10 +2880,9 @@ elements may have other elements as children."
 
 ;;; polymorphic
 
-(om--defun-node om-contains-point-p (point node)
+(om--defun-node om-contains-point-p ((:p-int point) node)
   "Return t if POINT is within the boundaries of NODE."
   ;; TODO point should be a positive integer only
-  (om--verify point integerp)
   (-let (((&plist :begin :end) (om--get-all-properties node)))
     (if (and (integerp begin) (integerp end))
         (<= begin point end)
@@ -3313,10 +3334,8 @@ is the same as that described in `om-build-planning!'."
 
 ;;; polymorphic
 
-(om--defun-node om-children-contain-point-p (point branch-node)
+(om--defun-node om-children-contain-point-p ((:p-int point) branch-node)
   "Return t if POINT is within the boundaries of BRANCH-NODE's children."
-  ;; TODO point should be a positive integer only
-  (om--verify point integerp)
   (-let (((&plist :contents-begin :contents-end)
           (om--get-all-properties branch-node)))
     (if (and (integerp contents-begin) (integerp contents-end))
@@ -3495,22 +3514,20 @@ TYPE is one of the symbols `unordered' or `ordered'."
 
 ;;; table
 
-(om--defun-node om-table-get-cell (row-index column-index table)
+(om--defun-node om-table-get-cell ((:int row-index)
+                                   (:int column-index) table)
   "Return table-cell node at ROW-INDEX and COLUMN-INDEX in TABLE node.
 Rule-type rows do not count toward row indices."
-  ;; TODO verify
   (-some->> (om--table-get-row row-index table)
             (om--get-children)
             (om--nth column-index)))
 
-(om--defun-node om-table-delete-row (row-index table)
+(om--defun-node om-table-delete-row ((:int row-index) table)
   "Return TABLE node with row at ROW-INDEX deleted."
-  (om--verify row-index integerp)
   (om--map-children* (om--remove-at row-index it) table))
 
-(om--defun-node om-table-delete-column (column-index table)
+(om--defun-node om-table-delete-column ((:int column-index) table)
   "Return TABLE node with column at COLUMN-INDEX deleted."
-  (om--verify column-index integerp)
   (cl-flet*
       ((delete-cell
         (cells)
@@ -3521,33 +3538,33 @@ Rule-type rows do not count toward row indices."
           (om--map-children #'delete-cell row))))
     (om--map-children* (-map #'map-row it) table)))
 
-(om--defun-node om-table-insert-column! (column-index column-text table)
+(om--defun-node om-table-insert-column! ((:int column-index)
+                                         column-text table)
   "Return TABLE node with COLUMN-TEXT inserted at COLUMN-INDEX.
 
 COLUMN-INDEX is the index of the column and COLUMN-TEXT is a list of
 strings to be made into table-cells to be inserted following the same
 syntax as `om-build-table-cell!'."
-  (om--verify column-index integerp)
   (let ((column (-map #'om-build-table-cell! column-text)))
     (om--column-map-down-rows
      (lambda (new-cell cells) (om--insert-at column-index new-cell cells))
      column
      table)))
 
-(om--defun-node om-table-insert-row! (row-index row-text table)
+(om--defun-node om-table-insert-row! ((:int row-index) row-text table)
   "Return TABLE node with ROW-TEXT inserted at ROW-INDEX.
 
 ROW-INDEX is the index of the column and ROW-TEXT is a list of strings
 to be made into table-cells to be inserted following the same syntax
 as `om-build-table-row!'."
-  (om--verify row-index integerp)
   (if (not row-text) (om--table-clear-row row-index table)
     (let ((row (->> (om-build-table-row! row-text)
                     (om--table-row-pad-maybe table))))
       (om--map-children* (om--insert-at row-index row it) table))))
 
-(om--defun-node om-table-replace-cell! (row-index column-index
-                                                  cell-text table)
+(om--defun-node om-table-replace-cell! ((:int row-index)
+                                        (:int column-index)
+                                        cell-text table)
   "Return TABLE node with a table-cell node replaced by CELL-TEXT.
 
 If CELL-TEXT is a string, it will replace the children of the
@@ -3562,7 +3579,8 @@ If CELL-TEXT is nil, it will set the cell to an empty string."
                      (om--replace-at column-index cell it)))))
     (om--table-replace-row row-index row table)))
 
-(om--defun-node om-table-replace-column! (column-index column-text table)
+(om--defun-node om-table-replace-column! ((:int column-index)
+                                          column-text table)
   "Return TABLE node with the column at COLUMN-INDEX replaced by COLUMN-TEXT.
 
 If COLUMN-TEXT is a list of strings, it will replace the table-cells
@@ -3574,7 +3592,7 @@ If COLUMN-TEXT is nil, it will clear all cells at COLUMN-INDEX."
     (let ((column-cells (-map #'om-build-table-cell! column-text)))
       (om--table-replace-column column-index column-cells table))))
 
-(om--defun-node om-table-replace-row! (row-index row-text table)
+(om--defun-node om-table-replace-row! ((:int row-index) row-text table)
   "Return TABLE node with the row at ROW-INDEX replaced by ROW-TEXT.
 
 If ROW-TEXT is a list of strings, it will replace the cells at
@@ -4398,18 +4416,16 @@ returned from this function will have :begin and :end properties."
 
 ;;; insert
 
-(om--defun-node om-insert (point node)
+(om--defun-node om-insert ((:p-int point) node)
   "Convert NODE to a string and insert at POINT in the current buffer.
 Return NODE."
-  (om--verify point integerp)
   (save-excursion
     (goto-char point)
     (insert (om-to-string node)))
   node)
 
-(om--defun-node om-insert-tail (point node)
+(om--defun-node om-insert-tail ((:p-int point) node)
   "Like `om-insert' but insert NODE at POINT and move to end of insertion."
-  (om--verify point integerp)
   (let ((s (om-to-string node)))
     (save-excursion
       (goto-char point)
