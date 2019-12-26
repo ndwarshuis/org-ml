@@ -137,7 +137,7 @@ These are also known as \"recursive objects\" in `org-element.el'")
   (append om-branch-elements om-branch-objects)
   "List of node types that can have children.")
 
-;;; NODE CHILD TYPE RESTRICTIONS
+;;; BRANCH NODE CHILD TYPE RESTRICTIONS
 
 ;; `org-element.el' specifies which object nodes may be children of
 ;; other object nodes but does not have the same thing for element
