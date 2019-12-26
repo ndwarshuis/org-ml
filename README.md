@@ -1958,10 +1958,10 @@ All arguments not mentioned here follow the same rules as
 
 Return a new item node.
 
-**`tag`** is a string representing the tag (make with 
+**`tag`** is a string representing the tag (make with
 [`om-build-secondary-string!`](#om-build-secondary-string-string)) .
 
-**`paragraph`** is a string that will be the initial text in the item 
+**`paragraph`** is a string that will be the initial text in the item
 (made with [`om-build-paragraph!`](#om-build-paragraph-string-key-post-blank)).
 
 **`children`** contains the nodes that will go under this item after
@@ -1982,7 +1982,7 @@ All other arguments follow the same rules as [`om-build-item`](#om-build-item-ke
 
 Return a new paragraph node from **`string`**.
 
-**`string`** is the text to be parsed into a paragraph and must contain 
+**`string`** is the text to be parsed into a paragraph and must contain
 valid textual representations of object nodes.
 
 ```el
@@ -2022,7 +2022,7 @@ table-cell nodes.
 
 Return a new table-row node.
 
-**`row-list`** is a list of strings to be built into table-cell nodes via 
+**`row-list`** is a list of strings to be built into table-cell nodes via
 [`om-build-table-cell!`](#om-build-table-cell-string) (see that function for restrictions).
 Alternatively, **`row-list`** may the symbol `hline` instead of a string to
 create a rule-typed table-row.
@@ -2609,7 +2609,7 @@ Error
 
 Return **`node`** with **`string`** removed from **`prop`** if present.
 
-This only applies to properties that are represented as lists of 
+This only applies to properties that are represented as lists of
 strings.
 
 See [`om-insert-into-property`](#om-insert-into-property-prop-index-string-node) for a list of supported elements
@@ -2642,7 +2642,7 @@ Error
 
 Return **`node`** with **`value`** corresponding to **`key`** inserted into **`prop`**.
 
-**`key`** is a keyword and **`value`** is a symbol. This only applies to 
+**`key`** is a keyword and **`value`** is a symbol. This only applies to
 properties that are represented as plists.
 
 The following elements and properties are supported:.
@@ -2807,7 +2807,7 @@ Return **`headline`** node with title set with **`title-text`** and **`stats-coo
 
 **`title-text`** is a string to be parsed into object nodes for the title
 via [`om-build-secondary-string!`](#om-build-secondary-string-string) (see that function for restrictions)
-and **`stats-cookie-value`** is a list described in 
+and **`stats-cookie-value`** is a list described in
 [`om-build-statistics-cookie`](#om-build-statistics-cookie-value-key-post-blank).
 
 ```el
@@ -3120,7 +3120,7 @@ decondensed (**`flag`** is nil) to long format like [yyyy-mm-dd xxx
 hh:mm]--[yyyy-mm-dd xxx hh:mm]. If these conditions are not met,
 return **`timestamp`** untouched regardless of **`flag`**.
 
-Note: the default for all timestamp functions in `om.el` is to favor 
+Note: the default for all timestamp functions in `om.el` is to favor
 condensed format.
 
 ```el
@@ -3787,7 +3787,7 @@ Return a list of node-properties nodes in **`headline`** or nil if none.
 
 Return the properties drawer node in **`headline`**.
 
-If multiple are present (there shouldn't be) the first will be 
+If multiple are present (there shouldn't be) the first will be
 returned.
 
 ```el
@@ -4593,7 +4593,7 @@ Possible values are:
     non-negative integers or negative integers. In the case of negative
     integers, the indices refer to the same counterparts as described in
     `:nth`. If `arg1` and `arg2` are equal, this slicer has the same
-    behavior as `:nth`. 
+    behavior as `:nth`.
 
 `subx` denotes subpatterns that that match nodes in the parse tree.
 Subpatterns may either be wildcards or conditions.
@@ -4605,8 +4605,8 @@ property keyword), and index (the position of the node in the list
 returned by [`om-get-children`](#om-get-children-branch-node)). For index, both left indices (where
 zero refers to the left end of the list) and right indices (where -1
 refers to the right end of the list) are understood. Conditions may
-either be atomic or compound, where compound conditions are themselves 
-composed of atomic or compound conditions. 
+either be atomic or compound, where compound conditions are themselves
+composed of atomic or compound conditions.
 
 The types of atomic conditions are:
 
@@ -5083,7 +5083,7 @@ no examples :(
 
 #### om-update `(fun node)`
 
-Replace **`node`** in the current buffer with a new one. 
+Replace **`node`** in the current buffer with a new one.
 **`fun`** is a unary function that takes **`node`** and returns a modified **`node`**.
 This modified node is then written in place of the old node in the
 current buffer.
