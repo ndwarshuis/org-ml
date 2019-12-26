@@ -3291,11 +3291,10 @@ and STATS-COOKIE-VALUE is a list described in
 This only affects item nodes with checkboxes in the `on' or `off'
 states; return ITEM node unchanged if the checkbox property is `trans'
 or nil."
-  ;; TODO make this strict?
-  (cl-case (om--get-property :checkbox item)
+  (cl-case (om--get-property-strict :checkbox item)
     ((or trans nil) item)
-    ('on (om--set-property :checkbox 'off item))
-    ('off (om--set-property :checkbox 'on item))
+    ('on (om--set-property-strict :checkbox 'off item))
+    ('off (om--set-property-strict :checkbox 'on item))
     (t (error "This should not happen"))))
 
 ;; planning
