@@ -1640,7 +1640,7 @@ BRANCH-TYPE, throw an error."
 
 ;;; BASE BUILDER FUNCTIONS
 
-;; build helpers
+;;; build helpers
 
 (defconst om--object-properties
   '(:begin :end :parent)
@@ -1688,6 +1688,8 @@ plist of properties for the node."
   (->> om--container-element-properties
        (om--build type post-blank)
        (om--set-children-by-type type children)))
+
+;;; base builders
 
 ;; define all base builders using this automated monstrosity
 
@@ -1806,7 +1808,7 @@ plist of properties for the node."
                    builder)))
       (eval `(om--defun-kw ,name ,args ,doc ,body)))))
 
-;; INTERNAL NODE-SPECIFIC PROPERTY FUNCTIONS
+;; INTERNAL TYPE-SPECIFIC PROPERTY FUNCTIONS
 
 ;;; object nodes
 ;;
@@ -2160,10 +2162,9 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
                            :warning (alist-get '&warning p)
                            :repeater (alist-get '&repeater p)))))
 
-;;; INTERNAL BRANCH/CHILD FUNCTIONS
-;; operations on children of branch nodes
+;;; INTERNAL TYPE-SPECIFIC BRANCH/CHILD FUNCTIONS
 
-;; headline
+;;; headline
 
 (defun om--headline-get-subheadlines (headline)
   "Return list of child headline nodes within HEADLINE node."
@@ -2283,7 +2284,7 @@ first layer, (+ 2 level for second, and so on."
 ;;     ((om-is-planning-p it) (apply #'om-build-planning planning) 0)
 ;;     headline))
 
-;; table
+;;; table
 
 (defun om--table-get-width (table)
   "Return the width of TABLE as an integer.
@@ -2643,6 +2644,11 @@ will be spliced after INDEX."
 
 ;;; misc builders
 
+;; these are nodes that cannot and should not be built with
+;; the 'normal' build functions because they are too weird. TBH they
+;; should probably be their own types but that's not what
+;; `org-element.el' does
+
 (om--defun-kw om-build-timestamp-diary (form &key post-blank)
   "Return a new diary-sexp timestamp node from FORM.
 Optionally set POST-BLANK (a positive integer)."
@@ -2662,6 +2668,10 @@ Optionally set POST-BLANK (a positive integer)."
        (om--set-property :type 'rule)))
 
 ;;; shorthand builders
+
+;; These function offer a shorter and more convenient way of building
+;; nodes. They all end in '!' (and all associated functions later
+;; that replicate their syntax here do the same)
 
 (defun om-build-secondary-string! (string)
   "Return a secondary string (list of object nodes) from STRING.
@@ -3044,7 +3054,7 @@ and properties that may be used with this function."
         (om--map-property-strict* prop (om--plist-remove key it) node)
       (error "Not a plist property"))))
 
-;;; polymorphic (documentation)
+;; update polymorphic property function documentation
 
 (defun om--append-documentation (fun string)
   "Append STRING to the docstring of FUN."
@@ -3087,7 +3097,7 @@ and properties that may be used with this function."
      (om--format-alist-operations)
      (om--append-documentation 'om-plist-put-property))
 
-;;; objects
+;;; object nodes
 ;;
 ;; entity
 
@@ -3287,7 +3297,7 @@ TIMESTAMP must have a type `eq' to `diary'. FORM is a quoted list."
     (error "Last argument must be a diary timestamp node"))
   (om--timestamp-diary-set-value form timestamp))
 
-;;; elements
+;;; element nodes
 ;;
 ;; clock
 
@@ -3349,7 +3359,7 @@ is the same as that described in `om-build-planning!'."
 
 ;;; PUBLIC BRANCH/CHILD FUNCTIONS
 
-;; polymorphic
+;;; polymorphic
 
 (om--defun-node om-children-contain-point-p (point branch-node)
   "Return t if POINT is within the boundaries of BRANCH-NODE's children."
@@ -3438,9 +3448,7 @@ returns a modified list of children."
 ;;   "Remove all recursive formatting from NODE."
 ;;   (om-remove-formatting org-element-all-objects node))
 
-;; elements
-;;
-;; headline
+;;; headline
 
 (om--defun-node om-headline-get-subheadlines (headline)
   "Return list of subheadline nodes for HEADLINE node or nil if none."
@@ -3513,7 +3521,7 @@ subheadlines will not be counted)."
          (total (length subtodo)))
     (om--headline-set-statistics-cookie-fraction done total headline)))
 
-;; plain-list
+;;; plain-list
 
 ;; TODO there seems to be a bug in the org-interpeter that prevents
 ;; "+" bullets from being recognized (as of org-9.1.9 they are simply
@@ -3533,7 +3541,7 @@ TYPE is one of the symbols `unordered' or `ordered'."
       (--map (om--set-property-strict :bullet 1 it) it) plain-list))
    (t (error "Invalid type: %s" type))))
 
-;; table
+;;; table
 
 (om--defun-node om-table-get-cell (row-index column-index table)
   "Return table-cell node at ROW-INDEX and COLUMN-INDEX in TABLE node.
@@ -3627,7 +3635,7 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
 
 ;;; PUBLIC INDENTATION FUNCTIONS
 
-;; headline
+;;; headline
 
 (om--defun-node om-headline-indent-subtree (index headline)
   "Return HEADLINE node with child headline at INDEX indented.
@@ -3650,7 +3658,7 @@ indented headline node's children."
 The specific child headline to unindent is selected by CHILD-INDEX."
   (om--headline-unindent-subheadline index child-index headline))
 
-;; plain-list
+;;; plain-list
 
 (om--defun-node om-plain-list-indent-item-tree (index plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
@@ -3673,7 +3681,18 @@ item node's children."
 The specific child item to unindent is selected by CHILD-INDEX."
   (om--plain-list-unindent-item index child-index plain-list))
 
-;;; printing functions
+;;; PRINTING FUNCTIONS
+
+;; For the most part, printing a node only involves
+;; `org-element-interpret-data', except that this function is buggy
+;; and fails in several ways when branch nodes are childless:
+;; - printing the string 'nil' where there should be a blank string
+;; - printing the node when it should not be printed at all
+;; - throwing an error when blank
+
+;; To get around this, we need some workarounds... :/
+
+;;; printing workaround functions
 
 (defun om--set-blank-children (node)
   "Set the children of NODE to a blank string (\"\")."
@@ -3714,16 +3733,18 @@ empty."
         node)
     (om--map-children* (-map #'om--blank it) node)))
 
+;;; print functions
+
 (defun om-to-string (node)
   "Return NODE as an interpreted string without text properties."
   ;; TODO verify node (or nil)
   (->> node
-       ;; some objects and greater elements should be removed if blank
-       ;; table and plain list will error, and the others make no
-       ;; sense if they are empty. This is an org mode bug, they
+       ;; Some objects and greater elements should be removed if
+       ;; blank. Table and plain list will error, and the others make
+       ;; no sense if they are empty. This is an org mode bug, they
        ;; should not be printed by the interpreter by default
        (om--clean)
-       ;; some greater elements will print "nil" in their children if
+       ;; Some greater elements will print "nil" in their children if
        ;; they are empty. This is likely an org bug, since it means
        ;; that the element <-> string conversion is not 100%
        ;; reproducible. The workaround for this is to set the children
@@ -3797,24 +3818,6 @@ and `acc' carry the same meaning."
      (--each-while ,list ,pred (setq acc ,form))
      acc))
 
-(defmacro om--modify-children (node form)
-  "Recursively modify the children of NODE using FORM.
-FORM is a form that returns a list of elements or objects as the
-new children, and the variable 'it' is available to represent the
-original children to be modified."
-  (declare (indent 1))
-  (let ((y (make-symbol "type")))
-    `(cl-labels
-         ((rec
-           (node)
-           (let ((,y (om--get-type node)))
-             (if (eq ,y 'plain-text) node
-               (->>
-                (om--get-children node)
-                (funcall (lambda (it) ,form))
-                (--map (rec it))
-                (om--construct ,y (nth 1 node)))))))
-       (rec ,node))))
 
 (defun om--match-make-condition-form (condition)
   "Return a Lisp form equivalent to CONDITION.
@@ -4005,7 +4008,7 @@ which are passed directly through this function."
   (let ((body (om--make-make-slicer-form pattern)))
     `(lambda (it) (let ((it (cons nil it)) (acc)) ,body))))
 
-;; match
+;;; match
 
 (om--defun-node om-match (pattern node)
   "Return a list of child nodes matching PATTERN in NODE.
@@ -4076,6 +4079,31 @@ wildcards are:
   (let ((match-fun (om--match-make-lambda-form pattern)))
     (funcall match-fun node)))
 
+;;; generalized tree modification
+
+;; this macro provides the means of using a list of matches returned
+;; from `om--match' for other operations that use the match list
+;; as targets for modifying the original tree
+
+(defmacro om--modify-children (node form)
+  "Recursively modify the children of NODE using FORM.
+FORM is a form that returns a list of elements or objects as the
+new children, and the variable 'it' is available to represent the
+original children to be modified."
+  (declare (indent 1))
+  (let ((y (make-symbol "type")))
+    `(cl-labels
+         ((rec
+           (node)
+           (let ((,y (om--get-type node)))
+             (if (eq ,y 'plain-text) node
+               (->>
+                (om--get-children node)
+                (funcall (lambda (it) ,form))
+                (--map (rec it))
+                (om--construct ,y (nth 1 node)))))))
+       (rec ,node))))
+
 ;; find-parent
 
 ;; (defun om-match-parent-query (parent query)
@@ -4125,7 +4153,7 @@ wildcards are:
 ;;                (om-match-parent qs)))
 ;;           (_ (error "Invalid query")))))))
 
-;; delete
+;;; delete
 
 (defun om--delete-targets (node targets)
   "Return NODE without children in TARGETS (a list of nodes)."
@@ -4140,7 +4168,7 @@ PATTERN follows the same rules as `om-match'."
       (om--delete-targets node targets)
     node))
 
-;; extract
+;;; extract
 
 (defun om-match-extract (pattern node)
   "Remove nodes matching PATTERN from NODE.
@@ -4152,7 +4180,7 @@ PATTERN follows the same rules as `om-match'."
       (cons targets (om--delete-targets node targets))
     node))
 
-;; map
+;;; map
 
 (om--defun* om-match-map (pattern fun node)
   "Return NODE with FUN applied to children matching PATTERN.
@@ -4165,7 +4193,7 @@ PATTERN follows the same rules as `om-match'."
         (--map-when (member it targets) (funcall fun it) it))
     node))
 
-;; mapcat
+;;; mapcat
 
 (om--defun* om-match-mapcat (pattern fun node)
   "Return NODE with FUN applied to children matching PATTERN.
@@ -4180,7 +4208,7 @@ PATTERN follows the same rules as `om-match'."
                   it))
     node))
 
-;; replace
+;;; replace
 
 (defun om-match-replace (pattern node* node)
   "Return NODE with NODE* in place of children matching PATTERN.
@@ -4192,7 +4220,7 @@ PATTERN follows the same rules as `om-match'."
         (--map-when (member it targets) node* it))
     node))
 
-;; insert-before
+;;; insert-before
 
 (defun om-match-insert-before (pattern node* node)
   "Return NODE with NODE* inserted before children matching PATTERN.
@@ -4204,7 +4232,7 @@ PATTERN follows the same rules as `om-match'."
         (--mapcat (if (member it targets) (list node* it) (list it)) it))
     node))
 
-;; insert-after
+;;; insert-after
 
 (defun om-match-insert-after (pattern node* node)
   "Return NODE with NODE* inserted after children matching PATTERN.
@@ -4216,7 +4244,7 @@ PATTERN follows the same rules as `om-match'."
         (--mapcat (if (member it targets) (list it node*) (list it)) it))
     node))
 
-;; insert-within
+;;; insert-within
 
 ;; TODO this is a silly function, refactor it out
 (defun om--normalize-insert-index (index list)
@@ -4252,7 +4280,7 @@ in the immediate, top level children of NODE."
         node)
     (om--insert-in node node* index)))
 
-;; splice
+;;; splice
 
 (defun om-match-splice (pattern nodes* node)
   "Return NODE with NODES* spliced in place of children matching PATTERN.
@@ -4265,7 +4293,7 @@ PATTERN follows the same rules as `om-match'."
         (--mapcat (if (member it targets) nodes* (list it)) it))
     node))
 
-;; splice-before
+;;; splice-before
 
 (defun om-match-splice-before (pattern nodes* node)
   "Return NODE with NODES* spliced before children matching PATTERN.
@@ -4281,7 +4309,7 @@ PATTERN follows the same rules as `om-match'."
                   it))
     node))
 
-;; splice-after
+;;; splice-after
 
 (defun om-match-splice-after (pattern nodes* node)
   "Return NODE with NODES* spliced after children matching PATTERN.
@@ -4294,7 +4322,7 @@ PATTERN follows the same rules as `om-match'."
         (--mapcat (if (member it targets) (cons it nodes*) (list it)) it))
     node))
 
-;; splice-within
+;;; splice-within
 
 (defun om--splice-at (node nodes* index)
   "Return NODE with NODES* spliced at INDEX."
@@ -4324,7 +4352,7 @@ in the immediate, top level children of NODE."
         node)
     (om--splice-at node nodes* index)))
 
-;; misc
+;;; misc
 
 ;; (defun om-clean (node)
 ;;   "Recursively remove all empty elements from NODE.
@@ -4342,7 +4370,7 @@ in the immediate, top level children of NODE."
 ;;                  (append (list type (nth 1 node))))))))
 ;;     (clean-rec node)))
 
-;; side-effects
+;;; side-effects
 
 (defun om-match-do (pattern fun node)
   "Like `om-match-map' but for side effects only.
@@ -4355,7 +4383,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; BUFFER PARSING
 
-;; parse at specific point
+;;; parse at specific point
 
 ;; TODO add test for plain-text parsing
 (defun om-parse-object-at (point)
@@ -4480,7 +4508,7 @@ the section at the top of the org buffer."
            (point-min) (or (outline-next-heading) (point-max))
            'first-section nil nil nil nil)))))))
 
-;; parse at current point
+;;; parse at current point
 
 (-> '(object element table-row item headline subtree section)
     (--each
@@ -4501,7 +4529,7 @@ returned from this function will have :begin and :end properties."
 
 ;;; BUFFER SIDE EFFECTS
 
-;; insert
+;;; insert
 
 (om--defun-node om-insert (point node)
   "Convert NODE to a string and insert at POINT in the current buffer.
@@ -4522,7 +4550,7 @@ Return NODE."
     (goto-char (+ point (length s))))
   node)
 
-;; update
+;;; update
 
 (defun om--apply-overlays (os)
   "Apply overlays OS to the current buffer."
@@ -4593,7 +4621,7 @@ FUN is a unary function that takes a node of type 'org-data' and
 returns a modified node."
   (om-update fun (om-parse-this-buffer)))
 
-;; fold
+;;; fold
 
 ;; TODO this will fold items improperly
 (defun om--flag-elem-contents (flag node)
@@ -4612,4 +4640,3 @@ returns a modified node."
 
 (provide 'om)
 ;;; om.el ends here
-
