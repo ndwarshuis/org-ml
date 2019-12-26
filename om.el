@@ -510,12 +510,14 @@ wrapped in a lambda call binding the unary argument to the symbol
        (defmacro ,name* ,arglist*
          ,docstring*
          ,indent*
-         (om--verify form listp)
+         (unless (listp form)
+           (error "Argument 'form' must be a form: Got %S" form))
          ,body*)
        (defun ,name ,arglist
          ,docstring
          ,indent*
-         (om--verify fun functionp)
+         (unless (functionp fun)
+           (error "Argument 'fun' must be a function: Got %S" fun))
          ,@body))))
 
 ;;; defun with runtime type checking
