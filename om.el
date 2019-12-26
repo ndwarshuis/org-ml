@@ -4432,13 +4432,11 @@ the section at the top of the org buffer."
      (condition-case nil
          (progn
            (org-back-to-heading)
-           ;; TODO this is redundant
            (om--parse-headline-subtree-at point nil))
        (error
-        (progn
-          (org-element--parse-elements
-           (point-min) (or (outline-next-heading) (point-max))
-           'first-section nil nil nil nil)))))))
+        (org-element--parse-elements
+         (point-min) (or (outline-next-heading) (point-max))
+         'first-section nil nil nil nil))))))
 
 ;;; parse at current point
 
