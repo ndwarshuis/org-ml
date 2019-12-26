@@ -458,7 +458,7 @@ function calls."
           `(defun ,name ,@res))
       `(defun ,name ,arglist ,@body))))
 
-;; defun which also makes anaphoric form
+;;; defun which also makes anaphoric form
 
 (defmacro om--verify (&rest args)
   "Return type-checking form from ARGS.
@@ -518,7 +518,7 @@ wrapped in a lambda call binding the unary argument to the symbol
          (om--verify fun functionp)
          ,@body))))
 
-;; defun with runtime type checking
+;;; defun with runtime type checking
 
 (defmacro om--defun-test-node (arglist)
   "Return a type-checking form based on ARGLIST.
@@ -548,7 +548,7 @@ Will insert a type checker according to `om--defun-test-node'."
        ,`(om--defun-test-node ,arglist)
        ,@body)))
 
-;; combine type checking and anaphoric form generation
+;;; combine type checking and anaphoric form generation
 
 (defmacro om--defun-node* (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
@@ -562,7 +562,7 @@ apply)."
        ,`(om--defun-test-node ,arglist)
        ,@body)))
 
-;; defun for weirdly-typed nodes
+;;; defun for weirdly-typed nodes
 
 (defmacro om--defun-timestamp (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
