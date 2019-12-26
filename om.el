@@ -527,9 +527,15 @@ wrapped in a lambda call binding the unary argument to the symbol
     (-let* (((type arg) type-check)
             ((pred desc)
              (cl-case type
+               (:bool '(booleanp "boolean"))
+               (:kw '(keywordp "keyword"))
                (:int '(integerp "integer"))
                (:p-int '(om--is-pos-integer-p "positive integer"))
-               (:nn-int '(om--is-non-neg-integer-p "non-negative integer"))))
+               (:nn-int '(om--is-non-neg-integer-p "non-negative integer"))
+               (:node '(om--is-node-p "node"))
+               (:nodes '((lambda (it) (-all? #'om--is-node-p it))
+                         "list of nodes"))
+               (t (error "Invalid type checker flag used: %s" type))))
             (msg (format "Argument '%s' must be a %s: Got %%s" arg desc)))
       `(unless (funcall #',pred ,arg) (error ,msg ,arg))))
 
@@ -588,12 +594,18 @@ apply)."
 
 ;;; defun for weirdly-typed nodes
 
+;; TODO this can probably be refactored...
 (defmacro om--defun-timestamp (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
 Will insert a type checker that will ensure the last argument in
 ARGLIST is a timestamp node with a non-diary type."
   (declare (doc-string 3) (indent 2))
   (-let* (((docstring body) (om--partition-docstring-body args))
+          (type-checks (-some->>
+                        (-drop-last 1 arglist)
+                        (-filter #'listp)
+                        (-map #'om--defun-make-type-check-form)))
+          (arglist (om--defun-normalize-arglist arglist))
           (last (-last-item arglist))
           (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
           (msg (format "%s must be a non-diary timestamp node" pre)))
@@ -603,6 +615,7 @@ ARGLIST is a timestamp node with a non-diary type."
            (and (om--is-type-p 'timestamp ,last)
                 (not (om--property-is-eq-p :type 'diary ,last)))
          (error ,msg))
+       ,@type-checks
        ,@body)))
 
 ;;; LIST OPERATIONS (EXTENDING DASH.el)
@@ -2884,7 +2897,6 @@ elements may have other elements as children."
 
 (om--defun-node om-contains-point-p ((:p-int point) node)
   "Return t if POINT is within the boundaries of NODE."
-  ;; TODO point should be a positive integer only
   (-let (((&plist :begin :end) (om--get-all-properties node)))
     (if (and (integerp begin) (integerp end))
         (<= begin point end)
@@ -3003,7 +3015,7 @@ and properties that may be used with this function."
       (error "Property '%s' in node of type '%s' is not a string-list"
              prop type))))
 
-(om--defun-node om-plist-put-property (prop key value node)
+(om--defun-node om-plist-put-property (prop (:kw key) value node)
   "Return NODE with VALUE corresponding to KEY inserted into PROP.
 
 KEY is a keyword and VALUE is a symbol. This only applies to
@@ -3016,7 +3028,7 @@ The following elements and properties are supported:."
         (om--map-property-strict* prop (plist-put it key value) node)
       (error "Not a plist property"))))
 
-(om--defun-node om-plist-remove-property (prop key node)
+(om--defun-node om-plist-remove-property (prop (:kw key) node)
   "Return NODE with KEY and its corresponding value removed from PROP.
 
 KEY is a keyword. This only applies to properties that are
@@ -3184,11 +3196,11 @@ if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format."
   (om--timestamp-set-range range timestamp))
 
-(om--defun-timestamp om-timestamp-set-active (flag timestamp)
+(om--defun-timestamp om-timestamp-set-active ((:bool flag) timestamp)
   "Return TIMESTAMP node with active type if FLAG is t."
   (om--timestamp-set-active flag timestamp))
 
-(om--defun-timestamp om-timestamp-shift (n unit timestamp)
+(om--defun-timestamp om-timestamp-shift ((:int n) unit timestamp)
   "Return TIMESTAMP node with time shifted by N UNIT's.
 
 This function will move the start and end times together; therefore
@@ -3203,7 +3215,7 @@ will increase the hour property by 1 and the minute property by 30."
   (->> (om--timestamp-shift-start n unit timestamp)
        (om--timestamp-shift-end n unit)))
 
-(om--defun-timestamp om-timestamp-shift-start (n unit timestamp)
+(om--defun-timestamp om-timestamp-shift-start ((:int n) unit timestamp)
   "Return TIMESTAMP node with start time shifted by N UNIT's.
 
 N and UNIT behave the same as those in `om-timestamp-shift'.
@@ -3213,7 +3225,7 @@ the shifted start time and the end time as that of TIMESTAMP. If this
 behavior is not desired, use `om-timestamp-shift'."
   (om--timestamp-shift-start n unit timestamp))
 
-(om--defun-timestamp om-timestamp-shift-end (n unit timestamp)
+(om--defun-timestamp om-timestamp-shift-end ((:int n) unit timestamp)
   "Return TIMESTAMP node with end time shifted by N UNIT's.
 
 N and UNIT behave the same as those in `om-timestamp-shift'.
@@ -3249,7 +3261,8 @@ behavior is not desired, use `om-timestamp-shift'."
                    (om--time-truncate))))
     (om--timestamp-set-end-time time timestamp)))
 
-(om--defun-timestamp om-timestamp-set-condensation (flag timestamp)
+(om--defun-timestamp om-timestamp-set-condensation ((:bool flag)
+                                                    timestamp)
   "Return TIMESTAMP with condensation set to FLAG.
 
 If timestamp is ranged but not outside of one day, it may be condensed
@@ -3609,46 +3622,54 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
 
 ;;; headline
 
-(om--defun-node om-headline-indent-subtree (index headline)
+;; TODO change type checker here when negative integers are allowed
+(om--defun-node om-headline-indent-subtree ((:nn-int index) headline)
   "Return HEADLINE node with child headline at INDEX indented.
 Unlike `om-headline-indent-subheadline' this will also indent the
 indented headline node's children."
   (om--headline-indent-subtree index headline))
 
-(om--defun-node om-headline-indent-subheadline (index headline)
+(om--defun-node om-headline-indent-subheadline ((:nn-int index)
+                                                headline)
   "Return HEADLINE node with child headline at INDEX indented.
 Unlike `om-headline-indent-subtree' this will not indent the
 indented headline node's children."
   (om--headline-indent-subheadline index headline))
 
-(om--defun-node om-headline-unindent-all-subheadlines (index headline)
+(om--defun-node om-headline-unindent-all-subheadlines ((:nn-int index)
+                                                       headline)
   "Return HEADLINE node with all child headlines under INDEX unindented."
   (om--headline-unindent-all-subheadlines index headline))
 
-(om--defun-node om-headline-unindent-subheadline (index child-index headline)
+(om--defun-node om-headline-unindent-subheadline ((:nn-int index)
+                                                  (:nn-int child-index)
+                                                  headline)
   "Return HEADLINE node with a child headline under INDEX unindented.
 The specific child headline to unindent is selected by CHILD-INDEX."
   (om--headline-unindent-subheadline index child-index headline))
 
 ;;; plain-list
 
-(om--defun-node om-plain-list-indent-item-tree (index plain-list)
+(om--defun-node om-plain-list-indent-item-tree ((:nn-int index) plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `om-item-indent-item' this will also indent the indented item
 node's children."
   (om--plain-list-indent-item-tree index plain-list))
 
-(om--defun-node om-plain-list-indent-item (index plain-list)
+(om--defun-node om-plain-list-indent-item ((:nn-int index) plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `om-item-indent-item-tree' this will not indent the indented
 item node's children."
   (om--plain-list-indent-item index plain-list))
 
-(om--defun-node om-plain-list-unindent-all-items (index plain-list)
+(om--defun-node om-plain-list-unindent-all-items ((:nn-int index)
+                                                  plain-list)
   "Return PLAIN-LIST node with all child items under INDEX unindented."
   (om--plain-list-unindent-all-items index plain-list))
 
-(om--defun-node om-plain-list-unindent-item (index child-index plain-list)
+(om--defun-node om-plain-list-unindent-item ((:nn-int index)
+                                             (:nn-int child-index)
+                                             plain-list)
   "Return PLAIN-LIST node with a child item under INDEX unindented.
 The specific child item to unindent is selected by CHILD-INDEX."
   (om--plain-list-unindent-item index child-index plain-list))
@@ -3707,6 +3728,7 @@ empty."
 
 ;;; print functions
 
+;; TODO these should allow node or nil
 (defun om-to-string (node)
   "Return NODE as an interpreted string without text properties."
   (->> node
@@ -4081,7 +4103,7 @@ original children to be modified."
   (om--modify-children node
     (--remove (member it targets) it)))
 
-(defun om-match-delete (pattern node)
+(om--defun-node om-match-delete (pattern node)
   "Return NODE without children matching PATTERN.
 
 PATTERN follows the same rules as `om-match'."
@@ -4091,7 +4113,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; extract
 
-(defun om-match-extract (pattern node)
+(om--defun-node om-match-extract (pattern node)
   "Remove nodes matching PATTERN from NODE.
 Return cons cell where the car is a list of all removed nodes and
 the cdr is the modified NODE.
@@ -4103,7 +4125,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; map
 
-(om--defun* om-match-map (pattern fun node)
+(om--defun-node* om-match-map (pattern fun node)
   "Return NODE with FUN applied to children matching PATTERN.
 FUN is a unary function that takes a node and returns a new node
 which will replace the original.
@@ -4116,7 +4138,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; mapcat
 
-(om--defun* om-match-mapcat (pattern fun node)
+(om--defun-node* om-match-mapcat (pattern fun node)
   "Return NODE with FUN applied to children matching PATTERN.
 FUN is a unary function that takes a node and returns a list of new
 nodes which will be spliced in place of the original node.
@@ -4131,7 +4153,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; replace
 
-(defun om-match-replace (pattern node* node)
+(om--defun-node om-match-replace (pattern (:node node*) node)
   "Return NODE with NODE* in place of children matching PATTERN.
 
 PATTERN follows the same rules as `om-match'."
@@ -4143,7 +4165,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; insert-before
 
-(defun om-match-insert-before (pattern node* node)
+(om--defun-node om-match-insert-before (pattern (:node node*) node)
   "Return NODE with NODE* inserted before children matching PATTERN.
 
 PATTERN follows the same rules as `om-match'."
@@ -4155,7 +4177,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; insert-after
 
-(defun om-match-insert-after (pattern node* node)
+(om--defun-node om-match-insert-after (pattern (:node node*) node)
   "Return NODE with NODE* inserted after children matching PATTERN.
 
 PATTERN follows the same rules as `om-match'."
@@ -4174,7 +4196,8 @@ PATTERN follows the same rules as `om-match'."
    (nth 1 node)
    (om--insert-at index node* (om--get-children node) t)))
 
-(defun om-match-insert-within (pattern index node* node)
+(om--defun-node om-match-insert-within (pattern (:int index)
+                                                (:node node*) node)
   "Return NODE with NODE* inserted at INDEX in children matching PATTERN.
 
 PATTERN follows the same rules as `om-match' with the exception
@@ -4191,7 +4214,7 @@ in the immediate, top level children of NODE."
 
 ;;; splice
 
-(defun om-match-splice (pattern nodes* node)
+(om--defun-node om-match-splice (pattern (:nodes nodes*) node)
   "Return NODE with NODES* spliced in place of children matching PATTERN.
 NODES* is a list of nodes.
 
@@ -4204,7 +4227,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; splice-before
 
-(defun om-match-splice-before (pattern nodes* node)
+(om--defun-node om-match-splice-before (pattern (:nodes nodes*) node)
   "Return NODE with NODES* spliced before children matching PATTERN.
 NODES* is a list of nodes.
 
@@ -4220,7 +4243,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; splice-after
 
-(defun om-match-splice-after (pattern nodes* node)
+(om--defun-node om-match-splice-after (pattern (:nodes nodes*) node)
   "Return NODE with NODES* spliced after children matching PATTERN.
 NODES* is a list of nodes.
 
@@ -4243,7 +4266,8 @@ PATTERN follows the same rules as `om-match'."
         (-insert-at 1 nodes* it)
         (apply #'append it))))
 
-(defun om-match-splice-within (pattern index nodes* node)
+(om--defun-node om-match-splice-within (pattern (:int index)
+                                                (:nodes nodes*) node)
   "Return NODE with NODES* spliced at INDEX in children matching PATTERN.
 NODES* is a list of nodes.
 
@@ -4261,7 +4285,7 @@ in the immediate, top level children of NODE."
 
 ;;; side-effects
 
-(defun om-match-do (pattern fun node)
+(om--defun-node* om-match-do (pattern fun node)
   "Like `om-match-map' but for side effects only.
 FUN is a unary function that has side effects and is applied to the
 matches from NODE using PATTERN. This function itself returns nil.
