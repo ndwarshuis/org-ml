@@ -3751,7 +3751,6 @@ empty."
 
 (defun om-to-string (node)
   "Return NODE as an interpreted string without text properties."
-  ;; TODO verify node (or nil)
   (->> node
        ;; Some objects and greater elements should be removed if
        ;; blank. Table and plain list will error, and the others make
