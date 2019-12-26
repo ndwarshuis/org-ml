@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2019  Nathan Dwarshuis
 
-;; Author: Nathan Dwarshuis <natedwarshuis@gmail.com>
+;; Author: Nathan Dwarshuis <ndwar@yavin4.ch>
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/om.el
 ;; Package-Requires: ((emacs "26.1") (dash "2.15") (s "1.12"))
