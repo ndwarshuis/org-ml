@@ -2957,7 +2957,7 @@ The following elements and properties are supported:"
         (om--map-property-strict prop #'not node)
       (error "Not a toggle-able property"))))
 
-(om--defun-node om-shift-property (prop n node)
+(om--defun-node om-shift-property (prop (:int n) node)
   "Return NODE with PROP shifted by N (an integer).
 
 This only applies the properties that are represented as integers.
@@ -2969,7 +2969,7 @@ The following elements and properties are supported:"
         (om--map-property-strict* prop (funcall fun n it) node)
       (error "Not a shiftable property"))))
 
-(om--defun-node om-insert-into-property (prop index string node)
+(om--defun-node om-insert-into-property (prop (:int index) string node)
   "Return NODE with STRING inserted at INDEX into PROP.
 
 This only applies to properties that are represented as lists of
