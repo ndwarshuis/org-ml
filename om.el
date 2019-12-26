@@ -4113,55 +4113,6 @@ original children to be modified."
                 (om--construct ,y (nth 1 node)))))))
        (rec ,node))))
 
-;; find-parent
-
-;; (defun om-match-parent-query (parent query)
-;;   (pcase query
-;;     ;; type
-;;     ((and (pred symbolp) type)
-;;      ;; TODO check for valid type?
-;;      (and (om--is-type-p type parent) parent))
-;;     ;; compound (or)
-;;     ;; (`(:or . ,(and (pred and) q)))
-;;     ;; compound (and)
-;;     ;; (`(:and . ,(and (pred and) q)))
-;;     ;; properties (must go after compound)
-;;     ((pred om--is-plist-p)
-;;      (cl-flet
-;;          ((all-props-match?
-;;            (node props)
-;;            (->> (-slice props 0 nil 2)
-;;                 (--map (equal (plist-get props it)
-;;                               (om--get-property it node)))
-;;                 (-none? #'null))))
-;;        (and (all-props-match? parent query) parent)))
-;;     (_ (error "Invalid query: %s" query))))
-
-;; (defun om-match-parent (node &rest queries)
-;;   ;; TODO validate node (should be any valid element or object)
-;;   (unless node (error "No element given"))
-;;   ;; the non-nil is required for cases where we may get
-;;   ;; a nil for queries instead of no argument
-;;   (let ((queries (-non-nil queries)))
-;;     (when queries
-;;       (let ((parent (om--get-parent node)))
-;;         (pcase queries
-;;           (`(:many . (,q . nil))
-;;            (or (om-match-parent-query parent q)
-;;                (om-match-parent parent q)))
-;;           (`(:many . ,_)
-;;            (error "Query with :many must have one target"))
-;;           (`(:any . ,(and (pred and) qs))
-;;            (om-match-parent parent q))
-;;           (`(:any . nil)
-;;            (error "Query with :any must have at least one target"))
-;;           (`(,q . nil)
-;;            (om-match-parent-query parent q))
-;;           (`(,q . ,qs)
-;;            (-> (om-match-parent-query parent q)
-;;                (om-match-parent qs)))
-;;           (_ (error "Invalid query")))))))
-
 ;;; delete
 
 (defun om--delete-targets (node targets)
