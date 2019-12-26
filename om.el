@@ -167,14 +167,10 @@ the car.")
                           plain-list planning property-drawer
                           quote-block special-block
                           src-block table verse-block)))
-    ;; TODO center blocks can't be in themselves
-    `((center-block ,@standard)
-      ;; TODO drawers can't be in themselves
-      (drawer ,@standard)
-      ;; TODO dynamic blocks can't be in themselves
-      (dynamic-block ,@standard)
-      ;; TODO cannot contain itself
-      (footnote-definition ,@standard)
+    `((center-block ,@(remove 'center-block standard))
+      (drawer ,@(remove 'drawer standard))
+      (dynamic-block ,@(remove 'dynamic-block standard))
+      (footnote-definition ,@(remove 'footnote-definition standard))
       ;; headlines and sections can only be in headlines
       (headline headline section)
       (item ,@standard)
@@ -182,8 +178,7 @@ the car.")
       (plain-list item)
       ;; node-properties can only be in property-drawers
       (property-drawer node-property)
-      ;; TODO cannot contain itself
-      (quote-block ,@standard)
+      (quote-block ,@(remove 'quote-block standard))
       (section ,@standard)
       (special-block ,@standard)
       ;; table-rows can only be in tables
