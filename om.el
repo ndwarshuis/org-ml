@@ -158,30 +158,29 @@ the car.")
   ;; this includes all elements except those that are restricted
   ;; (see comments below)
   (let ((standard '(babel-call center-block clock comment
-                          comment-block diary-sexp drawer
-                          dynamic-block example-block
-                          export-block fixed-width footnote-definition
-                          horizontal-rule
-                          keyword latex-environment
-                          paragraph
-                          plain-list planning property-drawer
-                          quote-block special-block
-                          src-block table verse-block)))
+                               comment-block diary-sexp drawer
+                               dynamic-block example-block
+                               export-block fixed-width
+                               footnote-definition horizontal-rule
+                               keyword latex-environment paragraph
+                               plain-list planning property-drawer
+                               quote-block special-block src-block
+                               table verse-block)))
     `((center-block ,@(remove 'center-block standard))
       (drawer ,@(remove 'drawer standard))
       (dynamic-block ,@(remove 'dynamic-block standard))
       (footnote-definition ,@(remove 'footnote-definition standard))
-      ;; headlines and sections can only be in headlines
+      ;; headlines can only have headlines and sections
       (headline headline section)
       (item ,@standard)
-      ;; items can only be in plain-lists
+      ;; plain-lists can only have items
       (plain-list item)
-      ;; node-properties can only be in property-drawers
+      ;; property-drawers can only have node-properties
       (property-drawer node-property)
       (quote-block ,@(remove 'quote-block standard))
       (section ,@standard)
       (special-block ,@standard)
-      ;; table-rows can only be in tables
+      ;; tables can only have table-rows
       (table table-row)))
   "Alist of element node type restrictions for element branch nodes.
 The types in the cdr of each entry may be children of the type held at
