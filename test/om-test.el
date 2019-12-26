@@ -378,6 +378,10 @@
 
 ;; These are tests for `om-match' and friends. Proceed with caution :)
 
+(defmacro should-error-arg (form)
+  "Make an ert error form to test if FORM signals an `arg-type-error'."
+  `(should-error ,form :type 'arg-type-error))
+
 (ert-deftest om--match-make-condition-form/error ()
   ;; Ensure `om--match-make-condition-form' will error when it
   ;; supposed to do so. All errors (in theory) should be tested here
@@ -385,42 +389,43 @@
   ;; we test functions higher in the framework
   (unless (fboundp 'om--match-make-condition-form)
     (error "Function not defined"))
-  ;; quoted
-  (should-error (om--match-make-condition-form '(quote bold)))
-  (should-error (om--match-make-condition-form '(function bold)))
-  ;; invalid type
-  (should-error (om--match-make-condition-form 'protoss))
-  ;; invalid operator
-  (should-error (om--match-make-condition-form '(= 1)))
-  (should-error (om--match-make-condition-form '(=/ 1)))
-  ;; valid operator with non-integer
-  (should-error (om--match-make-condition-form '(< "1")))
-  ;; valid operator with too many arguments
-  (should-error (om--match-make-condition-form '(< 1 2)))
-  ;; pred with no arguments
-  (should-error (om--match-make-condition-form '(:pred)))
-  ;; pred with too many arguments
-  (should-error (om--match-make-condition-form '(:pred stringp integerp)))
-  ;; not with no arguments
-  (should-error (om--match-make-condition-form '(:not)))
-  ;; not with too many arguments
-  (should-error (om--match-make-condition-form '(:not 1 3)))
-  ;; and with no arguments
-  (should-error (om--match-make-condition-form '(:and)))
-  ;; and with nonsense
-  (should-error (om--match-make-condition-form '(:and bold "2")))
-  ;; or with no arguments
-  (should-error (om--match-make-condition-form '(:or)))
-  ;; or with nonsense
-  (should-error (om--match-make-condition-form '(:or bold "2")))
-  ;; properties with symbols instead of keywords
-  (should-error (om--match-make-condition-form '(tags '("hi"))))
-  ;; multiple properties
-  (should-error (om--match-make-condition-form '(:tags '("hi") :todo-keyword "DONE")))
-  ;; just wrong...
-  (should-error (om--match-make-condition-form nil))
-  (should-error (om--match-make-condition-form "1"))
-  (should-error (om--match-make-condition-form :1)))
+  (let ((fun #'om--match-make-condition-form))
+    ;; quoted
+    (should-error-arg (funcall fun '(quote bold)))
+    (should-error-arg (funcall fun '(function bold)))
+    ;; invalid type
+    (should-error-arg (funcall fun 'protoss))
+    ;; invalid operator
+    (should-error-arg (funcall fun '(= 1)))
+    (should-error-arg (funcall fun '(=/ 1)))
+    ;; valid operator with non-integer
+    (should-error-arg (funcall fun '(< "1")))
+    ;; valid operator with too many arguments
+    (should-error-arg (funcall fun '(< 1 2)))
+    ;; pred with no arguments
+    (should-error-arg (funcall fun '(:pred)))
+    ;; pred with too many arguments
+    (should-error-arg (funcall fun '(:pred stringp integerp)))
+    ;; not with no arguments
+    (should-error-arg (funcall fun '(:not)))
+    ;; not with too many arguments
+    (should-error-arg (funcall fun '(:not 1 3)))
+    ;; and with no arguments
+    (should-error-arg (funcall fun '(:and)))
+    ;; and with nonsense
+    (should-error-arg (funcall fun '(:and bold "2")))
+    ;; or with no arguments
+    (should-error-arg (funcall fun '(:or)))
+    ;; or with nonsense
+    (should-error-arg (funcall fun '(:or bold "2")))
+    ;; properties with symbols instead of keywords
+    (should-error-arg (funcall fun '(tags '("hi"))))
+    ;; multiple properties
+    (should-error-arg (funcall fun '(:tags '("hi") :todo-keyword "DONE")))
+    ;; just wrong...
+    (should-error-arg (funcall fun nil))
+    (should-error-arg (funcall fun "1"))
+    (should-error-arg (funcall fun :1))))
 
 (ert-deftest om--match-make-inner-pattern-form/error ()
   ;; Ensure `om--match-make-inner-form' will error when it supposed to
@@ -428,30 +433,34 @@
   ;; we don't need to bother testing them anywhere else when we test
   ;; functions higher in the framework
   ;;
-  ;; Assume that all invalid patterns at the condition level will be
-  ;; caught by `om--match-make-condition-form/error'
+  ;; Assume:
+  ;; - all invalid patterns at the condition level will be caught by
+  ;;   `om--match-make-condition-form/error'.
+  ;; - these error paths are independent of `END?' and `LIMIT' so
+  ;;   set them both to nil
   (unless (fboundp 'om--match-make-inner-pattern-form)
-    (error "Function no defined"))
-  ;; slicers present
-  (should-error (om--match-make-inner-pattern-form '(:first bold)))
-  (should-error (om--match-make-inner-pattern-form '(:last bold)))
-  (should-error (om--match-make-inner-pattern-form '(:nth bold)))
-  (should-error (om--match-make-inner-pattern-form '(:sub bold)))
-  (should-error (om--match-make-inner-pattern-form '(bold :first)))
-  (should-error (om--match-make-inner-pattern-form '(bold :last)))
-  (should-error (om--match-make-inner-pattern-form '(bold :nth)))
-  (should-error (om--match-make-inner-pattern-form '(bold :sub)))
-  ;; :many by itself
-  (should-error (om--match-make-inner-pattern-form '(:many)))
-  ;; :many with too many arguments
-  (should-error (om--match-make-inner-pattern-form '(:many bold italic)))
-  ;; :many! by itself
-  (should-error (om--match-make-inner-pattern-form '(:many!)))
-  ;; :many! with too many arguments
-  (should-error (om--match-make-inner-pattern-form '(:many! bold italic)))
-  ;; just wrong...
-  (should-error (om--match-make-inner-pattern-form nil))
-  (should-error (om--match-make-inner-pattern-form '(:swaggart))))
+    (error "Function not defined"))
+  (let ((fun (-partial #'om--match-make-inner-pattern-form nil nil)))
+    ;; slicers present
+    (should-error-arg (funcall fun '(:first bold)))
+    (should-error-arg (funcall fun '(:last bold)))
+    (should-error-arg (funcall fun '(:nth bold)))
+    (should-error-arg (funcall fun '(:sub bold)))
+    (should-error-arg (funcall fun '(bold :first)))
+    (should-error-arg (funcall fun '(bold :last)))
+    (should-error-arg (funcall fun '(bold :nth)))
+    (should-error-arg (funcall fun '(bold :sub)))
+    ;; :many by itself
+    (should-error-arg (funcall fun '(:many)))
+    ;; :many with too many arguments
+    (should-error-arg (funcall fun '(:many bold italic)))
+    ;; :many! by itself
+    (should-error-arg (funcall fun '(:many!)))
+    ;; :many! with too many arguments
+    (should-error-arg (funcall fun '(:many! bold italic)))
+    ;; just wrong...
+    (should-error-arg (funcall fun nil))
+    (should-error-arg (funcall fun '(:swaggart)))))
 
 (ert-deftest om--make-make-slicer-form ()
   ;; Ensure `om--match-make-inner-form' will error when it supposed to
@@ -463,26 +472,27 @@
   ;; level will be caught by `om--match-make-condition-form/error' and
   ;; `om--match-make-inner-pattern-form/error'
   (unless (fboundp 'om--make-make-slicer-form)
-    (error "Function no defined"))
-  ;; slicers by themselves
-  (should-error (om--make-make-slicer-form '(:first)))
-  (should-error (om--make-make-slicer-form '(:last)))
-  (should-error (om--make-make-slicer-form '(:nth)))
-  (should-error (om--make-make-slicer-form '(:sub)))
-  ;; nth with non-integer
-  (should-error (om--make-make-slicer-form '(:nth "1" bold)))
-  ;; nth with integer but nothing after
-  (should-error (om--make-make-slicer-form '(:nth 1)))
-  ;; sub with non-integers
-  (should-error (om--make-make-slicer-form '(:sub "1" 2 bold)))
-  (should-error (om--make-make-slicer-form '(:sub 1 "2" bold)))
-  ;; sub with flipped integers
-  (should-error (om--make-make-slicer-form '(:sub 2 1 bold)))
-  (should-error (om--make-make-slicer-form '(:sub -1 -2 bold)))
-  ;; sub with split integers
-  (should-error (om--make-make-slicer-form '(:sub -1 2 bold)))
-  ;; sub with nothing after it
-  (should-error (om--make-make-slicer-form '(:sub 1 2))))
+    (error "Function not defined"))
+  (let ((fun #'om--make-make-slicer-form))
+    ;; slicers by themselves
+    (should-error-arg (funcall fun '(:first)))
+    (should-error-arg (funcall fun '(:last)))
+    (should-error-arg (funcall fun '(:nth)))
+    (should-error-arg (funcall fun '(:sub)))
+    ;; nth with non-integer
+    (should-error-arg (funcall fun '(:nth "1" bold)))
+    ;; nth with integer but nothing after
+    (should-error-arg (funcall fun '(:nth 1)))
+    ;; sub with non-integers
+    (should-error-arg (funcall fun '(:sub "1" 2 bold)))
+    (should-error-arg (funcall fun '(:sub 1 "2" bold)))
+    ;; sub with flipped integers
+    (should-error-arg (funcall fun '(:sub 2 1 bold)))
+    (should-error-arg (funcall fun '(:sub -1 -2 bold)))
+    ;; sub with split integers
+    (should-error-arg (funcall fun '(:sub -1 2 bold)))
+    ;; sub with nothing after it
+    (should-error-arg (funcall fun '(:sub 1 2)))))
 
 (defmacro match-should-equal (node result &rest patterns)
   "Return form to test if all PATTERNS applied NODE return RESULT."

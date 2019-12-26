@@ -886,7 +886,7 @@
       => '(plain-text bold plain-text)
       (->> (om-build-secondary-string! "* I'm not an object")
            (-map #'om-get-type))
-      !!> error)
+      !!> arg-type-error)
 
     (defexamples om-build-table-row-hline
       (->>  (om-build-table
@@ -991,7 +991,7 @@
                   "")
       (->> (om-build-paragraph! "* stuff /with/ *formatting*")
            (om-to-string))
-      !!> error)
+      !!> arg-type-error)
 
     (defexamples om-build-table-cell!
       (->> (om-build-table-cell! "rage")
@@ -1470,7 +1470,7 @@
       (->> (om-parse-this-headline)
            (om-set-property :value "wtf")
            (om-to-trimmed-string))
-      !!> error)
+      !!> arg-type-error)
 
     (defexamples-content om-set-properties
       nil
@@ -1853,7 +1853,7 @@
       (:comment "Throw error when requesting a property that doesn't exist")
       (->> (om-parse-this-headline)
            (om-get-property :value))
-      !!> error)
+      !!> arg-type-error)
 
     (defexamples-content om-map-property
       nil
@@ -1883,12 +1883,12 @@
       (->> (om-parse-this-object)
            (om-map-property :title #'s-upcase)
            (om-to-trimmed-string))
-      !!> error
+      !!> arg-type-error
       (:comment "Throw error if function doesn't return proper type")
       (->> (om-parse-this-object)
            (om-map-property* :value (if it 1 0))
            (om-to-trimmed-string))
-      !!> error
+      !!> arg-type-error
 
       :begin-hidden
 
@@ -2122,7 +2122,7 @@
       (->> (om-parse-this-item)
            (om-toggle-property :checkbox)
            (om-to-trimmed-string))
-      !!> error)
+      !!> arg-type-error)
 
     (defexamples-content om-shift-property
       nil
@@ -2159,7 +2159,7 @@
       (->> (om-parse-this-headline)
            (om-shift-property :todo-keyword 1)
            (om-to-string))
-      !!> error
+      !!> arg-type-error
 
       :begin-hidden
 
@@ -2235,7 +2235,7 @@
       (->> (om-parse-this-element)
            (om-insert-into-property :end-header 0 "html")
            (om-to-trimmed-string))
-      !!> error
+      !!> arg-type-error
 
       :begin-hidden
 
@@ -2302,7 +2302,7 @@
       (->> (om-parse-this-element)
            (om-remove-from-property :end-header ":results")
            (om-to-trimmed-string))
-      !!> error
+      !!> arg-type-error
 
       :begin-hidden
 
@@ -2370,7 +2370,7 @@
       (->> (om-parse-this-element)
            (om-plist-put-property :arguments :cache 'no)
            (om-to-trimmed-string))
-      !!> error
+      !!> arg-type-error
 
       :begin-hidden
 
@@ -2421,7 +2421,7 @@
       (->> (om-parse-this-element)
            (om-plist-remove-property :arguments :cache)
            (om-to-trimmed-string))
-      !!> error
+      !!> arg-type-error
 
       :begin-hidden
 
@@ -2908,12 +2908,12 @@
       (->> (om-parse-this-object)
            (om-timestamp-shift 30 'minute)
            (om-to-trimmed-string))
-      !!> error
+      !!> arg-type-error
       :begin-hidden
       (->> (om-parse-this-object)
            (om-timestamp-shift 30 'hour)
            (om-to-trimmed-string))
-      !!> error
+      !!> arg-type-error
       :end-hidden)
 
     (defexamples-content om-timestamp-shift-start
@@ -3076,7 +3076,7 @@
       (->> (om-parse-this-element)
            (om-get-children)
            (-map #'om-get-type))
-      !!> error
+      !!> arg-type-error
 
       :begin-hidden
 
@@ -3199,7 +3199,7 @@
       (->> (om-parse-this-element)
            (om-set-children "nil by mouth")
            (om-to-trimmed-string))
-      !!> error
+      !!> arg-type-error
 
       :begin-hidden
 
@@ -3230,7 +3230,7 @@
       (->> (om-parse-this-element)
            (om-map-children #'ignore)
            (om-to-trimmed-string))
-      !!> error
+      !!> arg-type-error
 
       :begin-hidden
 
@@ -3254,7 +3254,7 @@
       (:comment "Throw error when attempting to determine if non-container is empty")
       (->> (om-parse-this-element)
            (om-is-childless-p))
-      !!> error))
+      !!> arg-type-error))
 
   (def-example-subgroup "Headline"
     nil
@@ -3454,7 +3454,7 @@
       (->> (om-parse-element-at 1)
            (om-headline-indent-subheadline 0)
            (om-to-trimmed-string))
-      !!> error
+      !!> arg-type-error
       (->> (om-parse-element-at 1)
            (om-headline-indent-subheadline 1)
            (om-to-trimmed-string))
@@ -3595,7 +3595,7 @@
       (->> (om-parse-element-at 1)
            (om-plain-list-indent-item 0)
            (om-to-trimmed-string))
-      !!> error
+      !!> arg-type-error
       (->> (om-parse-element-at 1)
            (om-plain-list-indent-item 1)
            (om-to-trimmed-string))
@@ -3716,7 +3716,7 @@
            (om-table-get-cell 0 3)
            (om-get-children)
            (car))
-      !!> error
+      !!> arg-type-error
       :end-hidden)
 
     (defexamples-content om-table-delete-column

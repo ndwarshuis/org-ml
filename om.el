@@ -205,16 +205,28 @@ the car.")
 
 ;;; INTERNAL TYPE FUNCTIONS
 
+;; TODO this is a weird spot for this...
+(define-error 'arg-type-error "Argument type error")
+
+(defun om--arg-error (string &rest args)
+  "Signal an `arg-type-error'.
+STRING and ARGS are analogous to `error'."
+    (signal 'arg-type-error `(,(apply #'format-message string args))))
+
 (defalias 'om--get-type 'org-element-type)
 
 (defun om--is-type-p (type node)
   "Return t if NODE's type is `eq' to TYPE (a symbol)."
   (unless (memq type om-nodes)
-    (error "Invalid type requested: %s" type))
+    (om--arg-error "Argument 'type' must be in `om-nodes': %s" type))
   (eq (om--get-type node) type))
 
 (defun om--is-any-type-p (types node)
   "Return t if NODE's type is any in TYPES (a list of symbols)."
+  (-some->>
+   (-difference types om-nodes)
+   (om--arg-error
+    "All in 'types' must be in `om-nodes'; these were not: %s"))
   (if (memq (om--get-type node) types) t))
 
 (defun om--is-node-p (list)
@@ -511,13 +523,13 @@ wrapped in a lambda call binding the unary argument to the symbol
          ,docstring*
          ,indent*
          (unless (listp form)
-           (error "Argument 'form' must be a form: Got %S" form))
+           (om--arg-error "Argument 'form' must be a form: Got %S" form))
          ,body*)
        (defun ,name ,arglist
          ,docstring
          ,indent*
          (unless (functionp fun)
-           (error "Argument 'fun' must be a function: Got %S" fun))
+           (om--arg-error "Argument 'fun' must be a function: Got %S" fun))
          ,@body))))
 
 ;;; defun with runtime type checking
@@ -537,7 +549,8 @@ wrapped in a lambda call binding the unary argument to the symbol
                          "list of nodes"))
                (t (error "Invalid type checker flag used: %s" type))))
             (msg (format "Argument '%s' must be a %s: Got %%s" arg desc)))
-      `(unless (funcall #',pred ,arg) (error ,msg ,arg))))
+      `(unless (funcall #',pred ,arg)
+         (om--arg-error ,msg ,arg))))
 
   (defun om--defun-test-node (arglist)
     "Return a type-checking form based on ARGLIST.
@@ -559,7 +572,9 @@ node."
                (t `(,(format "node of type %s" type)
                     (om--is-type-p ',type)))))
             (msg (format "%s must be a %s" pre post)))
-      `(,@type-checks (unless (,@test ,type) (error ,msg)))))
+      `(,@type-checks
+        (unless (,@test ,type)
+          (om--arg-error ,msg)))))
 
   (defun om--defun-normalize-arglist (arglist)
     (--map (if (listp it) (cadr it) it) arglist)))
@@ -614,7 +629,7 @@ ARGLIST is a timestamp node with a non-diary type."
        (unless
            (and (om--is-type-p 'timestamp ,last)
                 (not (om--property-is-eq-p :type 'diary ,last)))
-         (error ,msg))
+         (om--arg-error ,msg))
        ,@type-checks
        ,@body)))
 
@@ -679,8 +694,9 @@ unless PERMIT-ERROR is t."
      ((<= 0 n upper) n)
      ((>= -1 n lower) (+ N n))
      (t (unless permit-error
-          (error "Index (%s) out of range; must be between %s and %s"
-                 n lower upper))))))
+          (om--arg-error
+           "Index (%s) out of range; must be between %s and %s"
+           n lower upper))))))
 
 (defun om--convert-inter-index (n list &optional permit-error)
   "Return absolute index given N and LIST.
@@ -703,8 +719,9 @@ unless PERMIT-ERROR is t."
      ((<= 0 n upper) n)
      ((>= -1 n lower) (+ 1 N n))
      (t (unless permit-error
-          (error "Index (%s) out of range; must be between %s and %s"
-                 n lower upper))))))
+          (om--arg-error
+           "Index (%s) out of range; must be between %s and %s"
+           n lower upper))))))
 
 (defun om--insert-at (n x list &optional permit-error)
   "Like `-insert-at' but can insert X at negative indices N in LIST.
@@ -770,11 +787,11 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
                     (om--get-children)))
       (cond
        ((--any? (om--is-any-type-p om-elements it) ss)
-        (error "Secondary string must only contain objects"))
+        (om--arg-error "Secondary string must only contain objects"))
        ((equal (car ss) " ")
         (-drop 1 ss))
        (t (om--map-first* (substring it 1) ss)))
-    (error "Could not make secondary string from %S" string)))
+    (om--arg-error "Could not make secondary string from %S" string)))
 
 ;;; INTERNAL PREDICATES
 
@@ -850,7 +867,7 @@ property list in NODE."
          (->> (-partition 2 plist)
               (--reduce-from (apply #'plist-put acc it) props))
          (om--get-children node)))
-    (error "Not a plist: %S" plist)))
+    (om--arg-error "Not a plist: %S" plist)))
 
 (defun om--set-property-nil (prop node)
   "Set PROP to nil in NODE."
@@ -1149,7 +1166,7 @@ Return value will conform to `om--is-valid-item-bullet-p'."
                     (car)
                     (string-to-char)
                     (+ -64))
-          (error "Invalid bullet found: %s" bullet)))))
+          (om--arg-error "Invalid bullet found: %s" bullet)))))
 
 (defun om--decode-headline-tags (tags)
   "Return TAGS with `org-archive-tag' removed."
@@ -1181,7 +1198,7 @@ Return value will conform to `om--is-valid-statistics-cookie-value-p'."
     (->>
      (or (s-match-strings-all "\\[\\([0-9]+\\)/\\([0-9]+\\)\\]" value)
          (s-match-strings-all "\\[\\([0-9]+\\)%\\]" value)
-         (error "Invalid stats-cookie: %s" value))
+         (om--arg-error "Invalid stats-cookie: %s" value))
      (cdar)
      (-map #'string-to-number)))))
 
@@ -1520,10 +1537,10 @@ bounds."
   (-if-let (type-list (alist-get type om--node-property-alist))
       (-if-let (plist (alist-get prop type-list))
           (plist-get plist attribute)
-        (error "Unsettable property '%s' for type '%s' requested; settable properties are %s"
+        (om--arg-error "Unsettable property '%s' for type '%s' requested; settable properties are %s"
                prop type (->> (--map (symbol-name (car it)) type-list)
                               (s-join ", "))))
-    (error "Tried to get property for non-existent type %s" type)))
+    (om--arg-error "Tried to get property for non-existent type %s" type)))
 
 (defun om--get-property-encoder (type prop)
   "Return the encoder function for PROP of node TYPE."
@@ -1568,7 +1585,7 @@ Will validate and encode VALUE if valid according to `om--node-property-alist'."
            (if encode-fun (funcall encode-fun value) value)
            (om--set-property prop it node)
            (if update-fun (funcall update-fun it) it)))
-      (error "Property '%s' in node of type '%s' must be %s. Got '%S'"
+      (om--arg-error "Property '%s' in node of type '%s' must be %s. Got '%S'"
              prop type (om--get-property-type-desc type prop) value))))
 
 (defun om--set-properties-strict (plist node)
@@ -1587,7 +1604,7 @@ Will validate and encode VALUE if valid according to `om--node-property-alist'."
               (let ((encode-fun (om--get-property-encoder type prop)))
                 (->> (if encode-fun (funcall encode-fun value) value)
                      (funcall #'plist-put acc prop)))
-            (error "Property '%s' in node of type '%s' must be %s. Got '%S'"
+            (om--arg-error "Property '%s' in node of type '%s' must be %s. Got '%S'"
                    prop type (om--get-property-type-desc type prop) value)))))
     (if (om--is-plist-p plist)
         (let* ((cur-props (om--get-all-properties node))
@@ -1605,7 +1622,7 @@ Will validate and encode VALUE if valid according to `om--node-property-alist'."
                  (om--get-children node))))
           (if (not update-funs) node*
             (--reduce-from (funcall it acc) node* update-funs)))
-      (error "Not a plist: %S" plist))))
+      (om--arg-error "Not a plist: %S" plist))))
 
 ;; mapper
 
@@ -1632,7 +1649,7 @@ Will validate/encode/decode value according to `om--node-property-alist'."
    ((om--is-plist-p plist)
     (->> (om--map-property-strict (nth 0 plist) (nth 1 plist) node)
          (om--map-properties-strict (-drop 2 plist))))
-   (t (error "Not a plist: %s" plist))))
+   (t (om--arg-error "Not a plist: %s" plist))))
 
 ;;; INTERNAL BRANCH/CHILD MANIPULATION
 
@@ -1673,7 +1690,7 @@ If any node in CHILDREN has a type not in TYPES, throw an error."
                                 (--remove (memq it types))
                                 (-map #'symbol-name)
                                 (s-join ", ")))
-    (error "Illegal types found: %s; allowed types are: %s"
+    (om--arg-error "Illegal types found: %s; allowed types are: %s"
            illegal (s-join ", " (-map #'symbol-name types))))
   (om--set-children children node))
 
@@ -1872,7 +1889,7 @@ If fractional cookie, return `fraction'; if percentage cookie return
   (let ((value (om--get-property :value statistics-cookie)))
     (cond ((s-contains? "/" value) 'fraction)
           ((s-contains? "%" value) 'percent)
-          (t (error "Unparsable statistics cookie: %s" value)))))
+          (t (om--arg-error "Unparsable statistics cookie: %s" value)))))
 
 ;; timestamp (auxiliary functions)
 
@@ -1919,8 +1936,8 @@ N is an integer."
           (month `(0 ,n 0 0 0))
           (year `(,n 0 0 0 0))
           ((minute hour)
-           (error "Invalid unit for short timestamps: %S" unit))
-          (t (error "Invalid time unit: %S" unit))))
+           (om--arg-error "Invalid unit for short timestamps: %S" unit))
+          (t (om--arg-error "Invalid time unit: %S" unit))))
        (get-shifts-long
         (n unit)
         (cl-case unit
@@ -1964,7 +1981,7 @@ SUFFIX is either `start' or `end'."
                          ,(pred null)))
                    time)
                   (`nil (-repeat 5 nil))
-                  (_ (error "Invalid time given: %s" time)))))
+                  (_ (om--arg-error "Invalid time given: %s" time)))))
     (-interleave props time*)))
 
 (defun om--decorator-format (dec dtype valid-types)
@@ -1978,11 +1995,11 @@ TYPE given in DEC."
     (if (not dec) (om--init-properties props)
       (-let (((type value unit) dec))
         (unless (memq type valid-types)
-          (error "Invalid %s type: %s" dtype type))
+          (om--arg-error "Invalid %s type: %s" dtype type))
         (unless (integerp value)
-          (error "Invalid %s value: %s" dtype value))
+          (om--arg-error "Invalid %s value: %s" dtype value))
         (unless (memq unit '(year month week day hour))
-          (error "Invalid %s unit: %s" dtype value))
+          (om--arg-error "Invalid %s unit: %s" dtype value))
         (-interleave props (list type value unit))))))
 
 ;; timestamp (regular)
@@ -2098,7 +2115,7 @@ TYPE given in DEC."
           (if ranged? 'active-range 'active))
          ((inactive inactive-range)
           (if ranged? 'inactive-range 'inactive))
-         (t (error "Invalid timestamp type: %s" type)))))
+         (t (om--arg-error "Invalid timestamp type: %s" type)))))
     (om--map-property :type #'update-range timestamp)))
 
 (defun om--timestamp-set-active (flag timestamp)
@@ -2505,8 +2522,6 @@ under INDEX and returns a modified child list with the unindented
 members removed. EXTRACT-FUN is a unary function that is applied to
 the child list under INDEX and returns the unindented children that
 will be spliced after INDEX."
-  (unless (and (integerp index) (<= 0 index))
-    (error "Index must be non-negative integer"))
   (-let* (((head tail) (-split-at index tree))
           (parent (-first-item tail))
           (parent* (funcall trim-fun parent))
@@ -2575,8 +2590,6 @@ will be spliced after INDEX."
 ;; fails
 (defun om--indent-after (indent-fun index node)
   "Return NODE with INDENT-FUN applied to all child nodes after INDEX."
-  (unless (and (integerp index) (<= 0 index))
-    (error "Index must be non-negative integer"))
   (if (< index (1- (length (om--get-children node))))
       (->> (funcall indent-fun (1+ index) node)
            (om--indent-after indent-fun index))
@@ -2967,7 +2980,7 @@ The following elements and properties are supported:"
          (flag (om--get-property-attribute :toggle type prop)))
     (if flag
         (om--map-property-strict prop #'not node)
-      (error "Not a toggle-able property"))))
+      (om--arg-error "Not a toggle-able property"))))
 
 (om--defun-node om-shift-property (prop (:int n) node)
   "Return NODE with PROP shifted by N (an integer).
@@ -2979,7 +2992,7 @@ The following elements and properties are supported:"
          (fun (om--get-property-attribute :shift type prop)))
     (if fun
         (om--map-property-strict* prop (funcall fun n it) node)
-      (error "Not a shiftable property"))))
+      (om--arg-error "Not a shiftable property"))))
 
 (om--defun-node om-insert-into-property (prop (:int index) string node)
   "Return NODE with STRING inserted at INDEX into PROP.
@@ -2997,7 +3010,7 @@ The following elements and properties are supported:"
            (flag (om--get-property-attribute :string-list type prop)))
       (if flag
           (om--map-property-strict prop #'insert-at-maybe node)
-        (error "Property '%s' in node of type '%s' is not a string-list"
+        (om--arg-error "Property '%s' in node of type '%s' is not a string-list"
                prop type)))))
 
 (om--defun-node om-remove-from-property (prop string node)
@@ -3012,7 +3025,7 @@ and properties that may be used with this function."
          (flag (om--get-property-attribute :string-list type prop)))
     (if flag
         (om--map-property-strict* prop (-remove-item string it) node)
-      (error "Property '%s' in node of type '%s' is not a string-list"
+      (om--arg-error "Property '%s' in node of type '%s' is not a string-list"
              prop type))))
 
 (om--defun-node om-plist-put-property (prop (:kw key) value node)
@@ -3026,7 +3039,7 @@ The following elements and properties are supported:."
          (flag (om--get-property-attribute :plist type prop)))
     (if flag
         (om--map-property-strict* prop (plist-put it key value) node)
-      (error "Not a plist property"))))
+      (om--arg-error "Not a plist property"))))
 
 (om--defun-node om-plist-remove-property (prop (:kw key) node)
   "Return NODE with KEY and its corresponding value removed from PROP.
@@ -3040,7 +3053,7 @@ and properties that may be used with this function."
          (flag (om--get-property-attribute :plist type prop)))
     (if flag
         (om--map-property-strict* prop (om--plist-remove key it) node)
-      (error "Not a plist property"))))
+      (om--arg-error "Not a plist property"))))
 
 ;; update polymorphic property function documentation
 
@@ -3108,7 +3121,7 @@ Any other keys will trigger an error."
            (org-entity-get)
            (cdr)
            (nth index))
-    (error "Invalid encoding requested: %s" index)))
+    (om--arg-error "Invalid encoding requested: %s" index)))
 
 ;; statistics-cookie
 
@@ -3283,7 +3296,7 @@ condensed format."
 TIMESTAMP must have a type `eq' to `diary'. FORM is a quoted list."
   (unless (and (om--is-type-p 'timestamp timestamp)
                (om--property-is-eq-p :type 'diary timestamp))
-    (error "Last argument must be a diary timestamp node"))
+    (om--arg-error "Last argument must be a diary timestamp node"))
   (om--timestamp-diary-set-value form timestamp))
 
 ;;; element nodes
@@ -3341,7 +3354,7 @@ or nil."
 PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
 is the same as that described in `om-build-planning!'."
   (unless (memq prop '(:closed :deadline :scheduled))
-    (error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
+    (om--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
   (let ((ts (om--planning-list-to-timestamp planning-list)))
     (om--set-property-strict prop ts planning)))
 
@@ -3525,7 +3538,7 @@ TYPE is one of the symbols `unordered' or `ordered'."
     ;; reliable.
     (om--map-children*
       (--map (om--set-property-strict :bullet 1 it) it) plain-list))
-   (t (error "Invalid type: %s" type))))
+   (t (om--arg-error "Invalid type: %s" type))))
 
 ;;; table
 
@@ -3623,13 +3636,13 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
 ;;; headline
 
 ;; TODO change type checker here when negative integers are allowed
-(om--defun-node om-headline-indent-subtree ((:nn-int index) headline)
+(om--defun-node om-headline-indent-subtree ((:p-int index) headline)
   "Return HEADLINE node with child headline at INDEX indented.
 Unlike `om-headline-indent-subheadline' this will also indent the
 indented headline node's children."
   (om--headline-indent-subtree index headline))
 
-(om--defun-node om-headline-indent-subheadline ((:nn-int index)
+(om--defun-node om-headline-indent-subheadline ((:p-int index)
                                                 headline)
   "Return HEADLINE node with child headline at INDEX indented.
 Unlike `om-headline-indent-subtree' this will not indent the
@@ -3650,13 +3663,13 @@ The specific child headline to unindent is selected by CHILD-INDEX."
 
 ;;; plain-list
 
-(om--defun-node om-plain-list-indent-item-tree ((:nn-int index) plain-list)
+(om--defun-node om-plain-list-indent-item-tree ((:p-int index) plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `om-item-indent-item' this will also indent the indented item
 node's children."
   (om--plain-list-indent-item-tree index plain-list))
 
-(om--defun-node om-plain-list-indent-item ((:nn-int index) plain-list)
+(om--defun-node om-plain-list-indent-item ((:p-int index) plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `om-item-indent-item-tree' this will not indent the indented
 item node's children."
@@ -3825,15 +3838,15 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;;
       ;; condition should not be nil
       (`nil
-       (error "Condition cannot be nil"))
+       (om--arg-error "Condition cannot be nil"))
       ;;
       ;; quote is invalid (may be accidentally in condition)
       (`(quote . ,_)
-       (error "'quote' not allowed in condition"))
+       (om--arg-error "'quote' not allowed in condition"))
       ;;
       ;; function is invalid (may be accidentally in condition)
       (`(function . ,_)
-       (error "'function' not allowed in condition"))
+       (om--arg-error "'function' not allowed in condition"))
       ;;
       ;; type
       ((and (pred (lambda (y) (memq y om-nodes))) type)
@@ -3869,7 +3882,7 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       (`(,(and (pred keywordp) prop) . (,val . nil))
        `(equal (om--get-property-strict ,prop ,it-node) ,val))
       ;;
-      (p (error "Invalid condition: %s" p)))))
+      (p (om--arg-error "Invalid condition: %s" p)))))
 
 (defun om--match-make-inner-pattern-form (end? limit pattern)
   "Return matching form for PATTERN.
@@ -3887,7 +3900,7 @@ terminate only when the entire tree is searched within PATTERN."
     (pcase pattern
       ;; slicers should not be here
       (`(,(or :first :last :nth :slice) . ,_)
-       (error "Slicers can only appear at the front of pattern"))
+       (om--arg-error "Slicers can only appear at the front of pattern"))
       ;;
       ;; :many! - if node matches add to accumulator, if not descend
       ;;   into node's children and keep searching
@@ -3914,7 +3927,7 @@ terminate only when the entire tree is searched within PATTERN."
       ;;
       ;; :many and :many! should only have one condition after them
       (`(,(and (or :many :many!) wildcard) . ,_)
-       (error "Exactly one condition should follow %s" wildcard))
+       (om--arg-error "Exactly one condition should follow %s" wildcard))
       ;;
       ;; :any (at end of pattern) - add all nodes to accumulator
       (`(:any . nil)
@@ -3939,7 +3952,7 @@ terminate only when the entire tree is searched within PATTERN."
              (inner (om--match-make-inner-pattern-form end? limit ps)))
          `(,@reduce (if ,pred ,inner acc) acc ,get-children)))
       ;;
-      (ps (error "Invalid pattern: %s" ps)))))
+      (ps (om--arg-error "Invalid pattern: %s" ps)))))
 
 (defun om--match-make-pattern-form (end? limit pattern)
   "Return non-slicer matching form for PATTERN.
@@ -3971,7 +3984,7 @@ which are passed directly through this function."
     ;;   results list
     (`(:nth . (,n . ,ps))
      (unless (integerp n)
-       (error ":nth argument must be an integer"))
+       (om--arg-error ":nth argument must be an integer"))
      (if (<= 0 n)
          `(-drop ,n ,(om--match-make-pattern-form nil (1+ n) ps))
        `(-drop-last ,(1- (- n)) ,(om--match-make-pattern-form t (- n) ps))))
@@ -3982,15 +3995,15 @@ which are passed directly through this function."
     (`(:sub . (,a . (,b . ,ps)))
      (cond
       ((not (and (integerp a) (integerp b)))
-       (error ":sub arguments must be an integers"))
+       (om--arg-error ":sub arguments must be an integers"))
       ((> a b)
-       (error ":sub left index must be less than right index"))
+       (om--arg-error ":sub left index must be less than right index"))
       ((and (<= 0 a) (<= 0 b))
        `(-drop ,a ,(om--match-make-pattern-form nil (1+ b) ps)))
       ((and (< a 0) (< b 0))
        `(-drop-last ,(1- (- b)) ,(om--match-make-pattern-form t (- a) ps)))
       (t
-       (error "Both indices must be on the same side of zero"))))
+       (om--arg-error "Both indices must be on the same side of zero"))))
     ;;
     ;; no slicer - search without limit and return all
     (ps (om--match-make-pattern-form nil nil ps))))
