@@ -41,58 +41,61 @@
 (require 'dash)
 (require 's)
 
-;;; NODE SET AND RELATIONAL CONSTANTS
+;;; NODE TYPE SETS
 
-(defconst om-object-restrictions
-  (->> org-element-object-restrictions
-       ;; remove non-objects
-       (--remove (memq (car it) '(inlinetask item headline keyword)))
-       ;; add plain-text type
-       (--map-when (not (eq (car it) 'table-row)) (-snoc it 'plain-text)))
-  "Alist of object restrictions for object containers.
-Unlike `org-element-object-restrictions', this only includes objects
-and object containers and includes the 'plain-text' type.")
+;; When only considering types, nodes can be arranged in the following
+;; sets (where nested sets are mutually exclusive)
 
-(defconst om-element-restrictions
-  ;; TODO add inlinetask
-  ;; this includes all elements except those that are restricted
-  ;; (see comments below)
-  (let ((standard '(babel-call center-block clock comment
-                          comment-block diary-sexp drawer
-                          dynamic-block example-block
-                          export-block fixed-width footnote-definition
-                          horizontal-rule
-                          keyword latex-environment
-                          paragraph
-                          plain-list planning property-drawer
-                          quote-block special-block
-                          src-block table verse-block)))
-    ;; TODO center blocks can't be in themselves
-    `((center-block ,@standard)
-      ;; TODO drawers can't be in themselves
-      (drawer ,@standard)
-      ;; TODO dynamic blocks can't be in themselves
-      (dynamic-block ,@standard)
-      ;; TODO cannot contain itself
-      (footnote-definition ,@standard)
-      ;; headlines and sections can only be in headlines
-      (headline headline section)
-      (item ,@standard)
-      ;; items can only be in plain-lists
-      (plain-list item)
-      ;; node-properties can only be in property-drawers
-      (property-drawer node-property)
-      ;; TODO cannot contain itself
-      (quote-block ,@standard)
-      (section ,@standard)
-      (special-block ,@standard)
-      ;; table-rows can only be in tables
-      (table table-row)))
-  "Alist of element restrictions for greater elements.")
+;; +---------------------------------------------------+
+;; | nodes                                             |
+;; |                                                   |
+;; | +-----------------------------------------------+ |
+;; | | element nodes                                 | |
+;; | | (`org-element-all-elements' + 'org-data')     | |
+;; | |                                               | |
+;; | | +-------------------------------------------+ | |
+;; | | | leaf nodes                                | | |
+;; | | +-------------------------------------------+ | |
+;; | |                                               | |
+;; | | +-------------------------------------------+ | |
+;; | | | branch nodes                              | | |
+;; | | |                                           | | |
+;; | | | +---------------------------------------+ | | |
+;; | | | | permitting child element nodes        | | | |
+;; | | | | (aka "greater elements")              | | | |
+;; | | | | (`org-element-greater-elements'       | | | |
+;; | | | | + 'org-data)                          | | | |
+;; | | | +---------------------------------------+ | | |
+;; | | |                                           | | |
+;; | | | +---------------------------------------+ | | |
+;; | | | | permitting child object nodes         | | | |
+;; | | | | (`org-element-object-containers' -    | | | |
+;; | | | | `org-element-recursive-objects')      | | | |
+;; | | | +---------------------------------------+ | | |
+;; | | +-------------------------------------------+ | |
+;; | +-----------------------------------------------+ |
+;; |                                                   |
+;; | +-----------------------------------------------+ |
+;; | | object nodes                                  | |
+;; | | (`org-element-all-objects' + 'plain-text')    | |
+;; | |                                               | |
+;; | | +-------------------------------------------+ | |
+;; | | | leaf nodes                                | | |
+;; | | +-------------------------------------------+ | |
+;; | |                                               | |
+;; | | +-------------------------------------------+ | |
+;; | | | branch nodes permitting child object      | | |
+;; | | | nodes (aka "recursive objects")           | | |
+;; | | | (`org-element-recursive-objects')         | | |
+;; | | +-------------------------------------------+ | |
+;; | +-----------------------------------------------+ |
+;; +---------------------------------------------------+
 
-(defconst om-node-restrictions
-  (append om-element-restrictions om-object-restrictions)
-  "Alist of all restrictions for containers.")
+;; In `org-element.el' the types 'plain-text' and 'org-data' are
+;; not mentioned but are required here to make the sets complete.
+;; 'plain-text' is consider a leaf node of class object and 'org-data'
+;; is considered a branch node of class element that is permitted to
+;; hold other element nodes as children
 
 (defconst om-elements
   (cons 'org-data org-element-all-elements)
@@ -134,29 +137,76 @@ These are also known as \"recursive objects\" in `org-element.el'")
   (append om-branch-elements om-branch-objects)
   "List of node types that can have children.")
 
-(defconst om-leaf-elements
-  (-difference om-elements om-branch-elements)
-  "List of element types that are leaves.")
+;;; NODE CHILD TYPE RESTRICTIONS
 
-(defconst om-leaf-objects
-  (-difference om-objects om-branch-objects)
-  "List of object types that are leaves.")
+;; `org-element.el' specifies which object nodes may be children of
+;; other object nodes but does not have the same thing for element
+;; nodes; implement my own restrictions here
 
-(defconst om-node-leaves
-  (append om-leaf-objects om-leaf-elements)
-  "List of node types that are leaves.")
+(defconst om--object-restrictions
+  (->> org-element-object-restrictions
+       ;; remove non-object nodes
+       (--remove (memq (car it) '(inlinetask item headline keyword)))
+       ;; add plain-text type to everything except table-row
+       (--map-when (not (eq (car it) 'table-row)) (-snoc it 'plain-text)))
+  "Alist of object node type restrictions for object branch nodes.
+The types in the cdr of each entry may be children of the type held at
+the car.")
+
+(defconst om--element-restrictions
+  ;; TODO add inlinetask
+  ;; this includes all elements except those that are restricted
+  ;; (see comments below)
+  (let ((standard '(babel-call center-block clock comment
+                          comment-block diary-sexp drawer
+                          dynamic-block example-block
+                          export-block fixed-width footnote-definition
+                          horizontal-rule
+                          keyword latex-environment
+                          paragraph
+                          plain-list planning property-drawer
+                          quote-block special-block
+                          src-block table verse-block)))
+    ;; TODO center blocks can't be in themselves
+    `((center-block ,@standard)
+      ;; TODO drawers can't be in themselves
+      (drawer ,@standard)
+      ;; TODO dynamic blocks can't be in themselves
+      (dynamic-block ,@standard)
+      ;; TODO cannot contain itself
+      (footnote-definition ,@standard)
+      ;; headlines and sections can only be in headlines
+      (headline headline section)
+      (item ,@standard)
+      ;; items can only be in plain-lists
+      (plain-list item)
+      ;; node-properties can only be in property-drawers
+      (property-drawer node-property)
+      ;; TODO cannot contain itself
+      (quote-block ,@standard)
+      (section ,@standard)
+      (special-block ,@standard)
+      ;; table-rows can only be in tables
+      (table table-row)))
+  "Alist of element node type restrictions for element branch nodes.
+The types in the cdr of each entry may be children of the type held at
+the car.")
+
+(defconst om--node-restrictions
+  (append om--element-restrictions om--object-restrictions)
+  "Alist of all restrictions for containers.")
 
 (defconst om--item-tag-restrictions
   (->> org-element-object-restrictions
        (alist-get 'item)
        (cons 'plain-text))
-  "List of nodes which may be used in item node tag properties.")
+  "List of node types which may be used in item node tag properties.")
 
 (defconst om--headline-title-restrictions
   (->> org-element-object-restrictions
        (alist-get 'headline)
        (cons 'plain-text))
-  "List of nodes which may be used in item headline title properties.")
+  "List of node types which may be used in item headline title properties.")
 
 ;;; INTERNAL TYPE FUNCTIONS
 
@@ -1528,7 +1578,7 @@ If any node in CHILDREN has a type that is not allowed for
 BRANCH-TYPE, throw an error."
   ;; TODO there may be additional restrictions, such as newlines
   ;; in strings not being allowed
-  (-if-let (types (alist-get branch-type om-node-restrictions))
+  (-if-let (types (alist-get branch-type om--node-restrictions))
       (om--set-children-restricted types children node)
     (error "Invalid branch type requested: %s" branch-type)))
 
