@@ -235,9 +235,17 @@ the car.")
 
 ;;; BOILERPLATE MACROS
 
-;; better cl-defun
-;; some functions here require a clean way to use &rest and &key
-;; at the same time, which `cl-defun' does not do...
+;;; better cl-defun
+
+;; Some functions here require a clean way to use &rest and &key
+;; at the same time, which `cl-defun' does not do. For a given
+;; external function signature like (P1 ... &key K1 ... &rest R), this
+;; framework will make a function with the internal signature
+;; (P1 ... &rest --rest-args) where PX are positional arguments
+;; matching exactly those in the external signature and
+;; --rest-args will bind the list contain the key-val pairs and rest
+;; arguments. This will be partitioned into keyword arguments like
+;; KX VAL rest arguments R internally.
 
 (eval-when-compile
   (defun om--symbol-to-keyword (symbol)
@@ -259,8 +267,14 @@ the car.")
       (error "Rest argument must only have one member")))
 
   (defun om--make-kwarg-let (kws-sym kwarg)
-    ;; TODO add more docs here
-    "Return plist for KWARG."
+    "Return cons cell for KWARG like (KW . LET-FORM).
+KWARG is a keyword argument in the signature of a function definition
+(see `om--defun-kw' for valid configurations of this). In the returned
+cell, KW is keyword representing the key to be used in a function
+call, and LET-FORM is a form to be used in a let binding that will
+retrieve the value for KW from a plist bound to KWS-ARG (which is
+a non-interned symbol to be bound to the keywords in a function
+call)."
     (cl-flet
         ((make-plist
           (arg kw init)
@@ -344,9 +358,8 @@ is a boolean that determines if rest arguments are to be considered."
          ,@tests
          ,return)))
 
-  (defun om--make-header (body args)
-    ;; TODO explain this better...but first actually understand it :/
-    "Return a valid header from BODY and ARGS."
+  (defun om--make-header (body arglist)
+    "Return a header using docstring from BODY and ARGLIST."
     (let ((header (caar (macroexp-parse-body body))))
       ;; Macro expansion can take place in the middle of
       ;; apparently harmless computation, so it should not
@@ -355,7 +368,7 @@ is a boolean that determines if rest arguments are to be considered."
         (let ((print-gensym nil)
               (print-quoted t)
               (print-escape-newlines t))
-          (->> (cl--make-usage-args args)
+          (->> (cl--make-usage-args arglist)
                (cons 'fn)
                (format "%S")
                (help--docstring-quote)
@@ -465,6 +478,7 @@ If PREDICATE fails, print a generic error message."
     `(progn ,@tests)))
 
 (eval-when-compile
+  ;; TODO use `macroexp-parse-body' here
   (defun om--partition-docstring-body (args)
     "Return ARGS as a partitioned list like (DOCSTRING BODY).
 If the car of ARGS is a string and the cdr of ARGS is non-nil,
