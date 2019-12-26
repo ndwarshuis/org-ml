@@ -669,10 +669,10 @@ unless PERMIT-ERROR is t."
           (error "Index (%s) out of range; must be between %s and %s"
                  n lower upper))))))
 
-(defun om--insert-at (n x list)
+(defun om--insert-at (n x list &optional permit-error)
   "Like `-insert-at' but can insert X at negative indices N in LIST.
 See `om--convert-inter-index' for the meaning of N."
-  (-insert-at (om--convert-inter-index n list) x list))
+  (-insert-at (om--convert-inter-index n list permit-error) x list))
 
 (defun om--remove-at (n list)
   "Like `-remove-at' but honors negative indices N in LIST.
@@ -683,6 +683,11 @@ See `om--convert-intra-index' for the meaning of N."
   "Like `-replace-at' but can substitute X at negative indices N in LIST.
 See `om--convert-intra-index' for the meaning of N."
   (-replace-at (om--convert-intra-index n list) x list))
+
+(defun om--split-at (n list &optional permit-error)
+  "Like `-split-at' except allow negative indices in LIST.
+See `om--convert-inter-index' for the meaning of N."
+  (-split-at (om--convert-inter-index n list permit-error) list))
 
 (defun om--nth (n list &optional permit-error)
   "Like `nth' but honors negative indices N in LIST.
@@ -3827,7 +3832,6 @@ and `acc' carry the same meaning."
      (--each-while ,list ,pred (setq acc ,form))
      acc))
 
-
 (defun om--match-make-condition-form (condition)
   "Return a Lisp form equivalent to CONDITION.
 Assume that `it' is a symbol bound to a list of the form
@@ -4206,24 +4210,12 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; insert-within
 
-;; TODO this is a silly function, refactor it out
-(defun om--normalize-insert-index (index list)
-  "Return a positive integer from INDEX relative to front of LIST.
-INDEX represents the position in between members of LIST where
-something may be inserted or a split may occur. If INDEX is positive,
-do nothing. If negative, '-1' is assumed to represent the position
-behind the last member of LIST and decreasing integers move toward the
-front."
-  (if (<= 0 index) index (+ (length list) index 1)))
-
 (defun om--insert-in (node node* index)
   "Return NODE with NODE* inserted at INDEX."
-  (let* ((children (om--get-children node)))
-      (om--construct
-       (nth 0 node)
-       (nth 1 node)
-       ;; TODO should we throw an error here?
-       (om--insert-at index node* children))))
+  (om--construct
+   (nth 0 node)
+   (nth 1 node)
+   (om--insert-at index node* (om--get-children node) t)))
 
 (defun om-match-insert-within (pattern index node* node)
   "Return NODE with NODE* inserted at INDEX in children matching PATTERN.
@@ -4286,15 +4278,13 @@ PATTERN follows the same rules as `om-match'."
 
 (defun om--splice-at (node nodes* index)
   "Return NODE with NODES* spliced at INDEX."
-  (let* ((children (om--get-children node))
-         (i (om--normalize-insert-index index children)))
-    (om--construct
-     (nth 0 node)
-     (nth 1 node)
-     ;; TODO make negative index version of this
-     (->> (-split-at i children)
-          (-insert-at 1 nodes*)
-          (apply #'append)))))
+  (om--construct
+   (nth 0 node)
+   (nth 1 node)
+   (--> (om--get-children node)
+        (om--split-at index it t)
+        (-insert-at 1 nodes* it)
+        (apply #'append it))))
 
 (defun om-match-splice-within (pattern index nodes* node)
   "Return NODE with NODES* spliced at INDEX in children matching PATTERN.
