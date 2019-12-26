@@ -4302,24 +4302,6 @@ in the immediate, top level children of NODE."
         node)
     (om--splice-at node nodes* index)))
 
-;;; misc
-
-;; (defun om-clean (node)
-;;   "Recursively remove all empty elements from NODE.
-;; Has no effect on 'plain-text' elements."
-;;   (cl-labels
-;;       ((clean-rec
-;;         (node)
-;;         (let ((type (om--get-type node)))
-;;           (if (eq type 'plain-text) node
-;;             (->> (om--get-children node)
-;;                  (--remove
-;;                   (and (om--is-childless-p it)
-;;                        (om--is-any-type-p '(section plain-list) it)))
-;;                  (--map (clean-rec it))
-;;                  (append (list type (nth 1 node))))))))
-;;     (clean-rec node)))
-
 ;;; side-effects
 
 (defun om-match-do (pattern fun node)
