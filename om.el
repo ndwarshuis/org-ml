@@ -531,7 +531,14 @@ wrapped in a lambda call binding the unary argument to the symbol
            (om--arg-error "Argument 'fun' must be a function: Got %S" fun))
          ,@body))))
 
-;;; defun with runtime type checking
+;;; defun with runtime type checking + auto checking last arg
+
+(defmacro om--defun-catch-arg-type-error (&rest body)
+  "Return BODY wrapped in `condition-case' form.
+The case form will catch `arg-type-error' and rethrow them as-is."
+  `(condition-case err
+       (progn ,@body)
+     (arg-type-error (signal (car err) (cdr err)))))
 
 (eval-when-compile
   (defun om--defun-make-type-check-form (type-check)
@@ -582,13 +589,32 @@ node."
   "Return a function definition for NAME, ARGLIST, and ARGS.
 Will insert a type checker according to `om--defun-test-node'."
   (declare (doc-string 3) (indent 2))
-  (-let (((docstring body) (om--partition-docstring-body args))
-         (type-checks (om--defun-test-node arglist))
-         (arglist (om--defun-normalize-arglist arglist)))
+  (-let* (((docstring body) (om--partition-docstring-body args))
+          (type-checks (om--defun-test-node arglist))
+          (arglist (om--defun-normalize-arglist arglist))
+          (body `(om--defun-catch-arg-type-error ,@body)))
     `(defun ,name ,arglist
        ,docstring
        ,@type-checks
-       ,@body)))
+       ,body)))
+
+;;; defun with runtime type checking
+
+;; TODO the docstrings here suck...
+(defmacro om--defun (name arglist &rest args)
+  "Return a function definition for NAME, ARGLIST, and ARGS."
+  (declare (doc-string 3) (indent 2))
+  (-let* (((docstring body) (om--partition-docstring-body args))
+          (type-checks (-some->>
+                        (-filter #'listp arglist)
+                        (-map #'om--defun-make-type-check-form)))
+          (arglist (om--defun-normalize-arglist arglist))
+          (body `(om--defun-catch-arg-type-error ,@body)))
+    `(defun ,name ,arglist
+       ,docstring
+       ,@type-checks
+       ,body)))
+
 
 ;;; combine type checking and anaphoric form generation
 
@@ -598,13 +624,14 @@ Will insert a type checker according to `om--defun-test-node' and will
 make an anaphoric form according to `om--defun*' (the same assumptions
 apply)."
   (declare (doc-string 3) (indent 2))
-  (-let (((docstring body) (om--partition-docstring-body args))
-         (type-checks (om--defun-test-node arglist))
-         (arglist (om--defun-normalize-arglist arglist)))
+  (-let* (((docstring body) (om--partition-docstring-body args))
+          (type-checks (om--defun-test-node arglist))
+          (arglist (om--defun-normalize-arglist arglist))
+          (body `(om--defun-catch-arg-type-error ,@body)))
     `(om--defun* ,name ,arglist
        ,docstring
        ,@type-checks
-       ,@body)))
+       ,body)))
 
 ;;; defun for weirdly-typed nodes
 
@@ -622,7 +649,8 @@ ARGLIST is a timestamp node with a non-diary type."
           (arglist (om--defun-normalize-arglist arglist))
           (last (-last-item arglist))
           (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
-          (msg (format "%s must be a non-diary timestamp node" pre)))
+          (msg (format "%s must be a non-diary timestamp node" pre))
+          (body `(om--defun-catch-arg-type-error ,@body)))
     `(defun ,name ,arglist
        ,docstring
        (unless
@@ -630,7 +658,7 @@ ARGLIST is a timestamp node with a non-diary type."
                 (not (om--property-is-eq-p :type 'diary ,last)))
          (om--arg-error ,msg))
        ,@type-checks
-       ,@body)))
+       ,body)))
 
 ;;; LIST OPERATIONS (EXTENDING DASH.el)
 
@@ -4311,7 +4339,7 @@ PATTERN follows the same rules as `om-match'."
 ;;; parse at specific point
 
 ;; TODO add test for plain-text parsing
-(defun om-parse-object-at (point)
+(om--defun om-parse-object-at ((:p-int point))
   "Return object node under POINT or nil if not on an object."
   (save-excursion
     (goto-char point)
@@ -4359,7 +4387,7 @@ elements vs item elements."
           (--> (om--get-descendent nesting tree)
                (if type (om--filter-type type it) it)))))))
 
-(defun om-parse-element-at (point)
+(om--defun om-parse-element-at ((:p-int point))
   "Return element node under POINT or nil if not on an element.
 
 This function will return every element available in `om-elements'
@@ -4368,14 +4396,14 @@ specifically parse these, use the functions `om-parse-section-at',
 `om-parse-item-at', and `om-parse-table-row-at'."
   (om--parse-element-at point))
 
-(defun om-parse-table-row-at (point)
+(om--defun om-parse-table-row-at ((:p-int point))
   "Return table-row node under POINT or nil if not on a table-row."
   (save-excursion
     (goto-char point)
     (beginning-of-line)
     (om--parse-element-at (point) 'table-row)))
 
-(defun om-parse-item-at (point)
+(om--defun om-parse-item-at ((:p-int point))
   "Return item node under POINT or nil if not on an item.
 This will return the item node even if POINT is not at the beginning
 of the line."
@@ -4399,21 +4427,21 @@ t, parse the entire subtree, else just parse the top headline."
         (car (org-element--parse-elements b e 'first-section
                                           nil nil nil nil))))))
 
-(defun om-parse-headline-at (point)
+(om--defun om-parse-headline-at ((:p-int point))
   "Return headline node under POINT or nil if not on a headline.
 POINT does not need to be on the headline itself. Only the headline
 and its section will be returned. To include subheadlines, use
 `om-parse-subtree-at'."
   (om--parse-headline-subtree-at point nil))
 
-(defun om-parse-subtree-at (point)
+(om--defun om-parse-subtree-at ((:p-int point))
   "Return headline node under POINT or nil if not on a headline.
 POINT does not need to be on the headline itself. Unlike
 `om-parse-headline-at', the returned node will include
 child headlines."
   (om--parse-headline-subtree-at point t))
 
-(defun om-parse-section-at (point)
+(om--defun om-parse-section-at ((:p-int point))
   "Return section node under POINT or nil if not on a section.
 If POINT is on or within a headline, return the section under that
 headline. If POINT is before the first headline (if any), return
