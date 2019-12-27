@@ -822,8 +822,8 @@ in BODY."
            (kw-lets (--map (plist-get (cdr it) :let) kw-alist))
            (pos-checks (cdr pos-cell))
            (kw-checks (--map (plist-get (cdr it) :check) kw-alist))
-           (rest-checks (cdr rest-cell))
-           (checks `(,@pos-checks ,@kw-checks ,@rest-checks))
+           (rest-check (cdr rest-cell))
+           (checks `(,@pos-checks ,@kw-checks ,rest-check))
            (arg-form `(,@pos-args &rest ,kr))
            (header (om--make-header body arglist))
            (let-forms
@@ -2278,7 +2278,6 @@ TYPE given in DEC."
 
 (defun om--timestamp-diary-set-value (form timestamp)
   "Return TIMESTAMP with raw-value set to FORM."
-  (om--verify form listp)
   (om--set-property :raw-value (format "<%%%%%S>" form) timestamp))
 
 ;;; element nodes
@@ -2303,7 +2302,6 @@ to be used in setting the statistics cookie that conforms to
 (defun om--headline-shift-level (n headline)
   "Return HEADLINE node with the level property shifted by N.
 If the level is less then one after shifting, set level to one."
-  (om--verify n integerp)
   (om--map-property* :level (om--shift-pos-integer n it) headline))
 
 (defun om--headline-set-statistics-cookie (value headline)
@@ -2460,7 +2458,6 @@ Rule-type table-row nodes do not factor when counting the index."
 
 (defun om--table-replace-column (column-index column-cells table)
   "Return TABLE with COLUMN-CELLS in place of original cells at COLUMN-INDEX."
-  (om--verify column-index integerp)
   (om--column-map-down-rows
    (lambda (new-cell cells) (om--replace-at column-index new-cell cells))
    column-cells
@@ -2478,7 +2475,6 @@ performed. TABLE is used to get the table width."
 
 (defun om--table-replace-row (row-index table-row table)
   "Return TABLE node with row at ROW-INDEX replaced by TABLE-ROW."
-  (om--verify row-index integerp)
   (let ((table-row (om--table-row-pad-maybe table table-row)))
     (om--map-children* (om--replace-at row-index table-row it) table)))
 
@@ -2775,7 +2771,7 @@ will be spliced after INDEX."
 ;; should probably be their own types but that's not what
 ;; `org-element.el' does
 
-(om--defun-kw om-build-timestamp-diary (form &key post-blank)
+(om--defun-kw om-build-timestamp-diary ((:cons form) &key post-blank)
   "Return a new diary-sexp timestamp node from FORM.
 Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-object 'timestamp post-blank)
@@ -2804,11 +2800,10 @@ Optionally set POST-BLANK (a positive integer)."
 STRING is any string that contains a textual representation of
 object nodes. If the string does not represent a list of object nodes,
 throw an error."
-  (om--verify string stringp)
   (om--build-secondary-string string))
 
-(om--defun-kw om-build-timestamp! (start &key end active repeater
-                                         warning post-blank)
+(om--defun-kw om-build-timestamp! (start &key end ((:bool active))
+                                         repeater warning post-blank)
   "Return a new timestamp node.
 
 START specifies the start time and is a list of integers in one of
@@ -2885,8 +2880,7 @@ like \":key: val\"."
                                        post-blank planning
                                        statistics-cookie
                                        section-children
-                                       &rest
-                                       subheadlines)
+                                       &rest subheadlines)
   "Return a new headline node.
 
 TITLE-TEXT is a oneline string for the title of the headline.
@@ -2938,9 +2932,8 @@ valid textual representations of object nodes."
   (let ((ss (om--build-secondary-string string)))
     (apply #'om-build-paragraph :post-blank (or post-blank 0) ss)))
 
-(om--defun-kw om-build-item! (&key post-blank bullet checkbox
-                                          tag paragraph counter
-                                          &rest children)
+(om--defun-kw om-build-item! (&key post-blank bullet checkbox tag
+                                   paragraph counter &rest children)
   "Return a new item node.
 
 TAG is a string representing the tag (make with
@@ -3083,12 +3076,11 @@ See builder functions for a list of properties and their rules for
 each type."
   (om--map-properties-strict plist node))
 
-(defmacro om-map-properties* (plist node)
+(om--defmacro om-map-properties* (plist (:node node))
   "Anaphoric form of `om-map-properties'.
 
 PLIST is a property list where the keys are properties of NODE and
 its values are forms to be mapped to these properties."
-  (om--verify node om--is-node-p)
   (let ((p (make-symbol "plist*")))
     `(let ((,p (om--plist-map-values (lambda (form) `(lambda (it) ,form)) ',plist)))
        (om--map-properties-strict ,p ,node))))
