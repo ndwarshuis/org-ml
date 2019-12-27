@@ -4841,7 +4841,7 @@ Return **`node`** with **`node*`** in place of children matching **`pattern`**.
 
 (->> (om-parse-this-element)
      (om-match-replace '(:many bold)
-		       (om-build-bold :post-blank 1 "0"))
+       (om-build-bold :post-blank 1 "0"))
      (om-to-trimmed-string))
  ;; => "*0* 2 *0* 4 *0* 6 *0* 8 *0* 10"
 
@@ -4861,7 +4861,7 @@ Return **`node`** with **`node*`** inserted before children matching **`pattern`
 
 (->> (om-parse-this-subtree)
      (om-match-insert-before '(headline)
-			     (om-build-headline! :title-text "new" :level 2))
+       (om-build-headline! :title-text "new" :level 2))
      (om-to-trimmed-string))
  ;; => "* one
  ;      ** new
@@ -4885,7 +4885,7 @@ Return **`node`** with **`node*`** inserted after children matching **`pattern`*
 
 (->> (om-parse-this-subtree)
      (om-match-insert-after '(headline)
-			    (om-build-headline! :title-text "new" :level 2))
+       (om-build-headline! :title-text "new" :level 2))
      (om-to-trimmed-string))
  ;; => "* one
  ;      ** two
@@ -4911,7 +4911,7 @@ in the immediate, top level children of **`node`**.
 
 (->> (om-parse-this-subtree)
      (om-match-insert-within '(headline)
-			     0 (om-build-headline! :title-text "new" :level 3))
+	 0 (om-build-headline! :title-text "new" :level 3))
      (om-to-trimmed-string))
  ;; => "* one
  ;      ** two
@@ -4945,8 +4945,8 @@ Return **`node`** with **`nodes*`** spliced in place of children matching **`pat
 
 (->> (om-parse-this-subtree)
      (om-match-splice '(0)
-		      (list (om-build-headline! :title-text "new0" :level 2)
-			    (om-build-headline! :title-text "new1" :level 2)))
+       (list (om-build-headline! :title-text "new0" :level 2)
+	     (om-build-headline! :title-text "new1" :level 2)))
      (om-to-trimmed-string))
  ;; => "* one
  ;      ** new0
@@ -4970,8 +4970,8 @@ Return **`node`** with **`nodes*`** spliced before children matching **`pattern`
 
 (->> (om-parse-this-subtree)
      (om-match-splice-before '(0)
-			     (list (om-build-headline! :title-text "new0" :level 2)
-				   (om-build-headline! :title-text "new1" :level 2)))
+       (list (om-build-headline! :title-text "new0" :level 2)
+	     (om-build-headline! :title-text "new1" :level 2)))
      (om-to-trimmed-string))
  ;; => "* one
  ;      ** new0
@@ -4996,8 +4996,8 @@ Return **`node`** with **`nodes*`** spliced after children matching **`pattern`*
 
 (->> (om-parse-this-subtree)
      (om-match-splice-after '(0)
-			    (list (om-build-headline! :title-text "new0" :level 2)
-				  (om-build-headline! :title-text "new1" :level 2)))
+       (list (om-build-headline! :title-text "new0" :level 2)
+	     (om-build-headline! :title-text "new1" :level 2)))
      (om-to-trimmed-string))
  ;; => "* one
  ;      ** two

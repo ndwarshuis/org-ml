@@ -206,13 +206,33 @@ the car.")
 ;;; ANAPHORIC FUNCTIONS
 
 (eval-when-compile
-  (defun om--partition-docstring-body (args)
-    "Return ARGS as a partitioned list like (DOCSTRING BODY).
-If the car of ARGS is a string and the cdr of ARGS is non-nil,
-the car of ARGS becomes DOCSTRING, otherwise it is nil. Anything
-that isn't DOCSTRING is BODY."
-    (let ((p (macroexp-parse-body args)))
-      (list (caar p) (cdr p)))))
+  (defun om--defun-partition-body (body)
+    "Return ARGS as a list like (DOCSTRING DECLS BODY).
+DOCSTRING is the first string in BODY if present and it succeeded by
+more forms. DECLS is a list of declarations in the DECLARE statement
+if present after the docstring. Everything else is BODY."
+    ;; macroexp-parse-body doesn't seem to retain declare
+    (cl-flet
+        ((is-declare
+          (form)
+          (eq 'declare (car form))))
+      (let ((first (car body))
+            (second (cadr body))
+            (rest (cddr body)))
+        (cond
+         ((and (stringp first) (is-declare second))
+          (list first (cdr second) rest))
+         ((and (stringp first) second)
+          (list first nil (cons second rest)))
+         ((and (is-declare first) second)
+          (list nil (cdr first) (cons second rest)))
+         (t
+          (list nil nil body))))))
+
+  (defun om--defun-make-indent-declare (decl pos)
+    (let ((indent (or (assoc 'indent decl) `(indent ,pos)))
+          (decl (--remove (eq 'indent (car it)) decl)))
+      `(declare ,@decl ,indent))))
 
 (defmacro om--defun-private* (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
@@ -223,7 +243,7 @@ somewhere in the definition's body. When making the anaphoric form,
 wrapped in a lambda call binding the unary argument to the symbol
 `it'."
   (declare (doc-string 3) (indent 2))
-  (-let* (((docstring body) (om--partition-docstring-body args))
+  (-let* (((docstring decls body) (om--defun-partition-body args))
           (name* (intern (format "%s*" name)))
           (arglist* (-replace 'fun 'form arglist))
           (docstring* (format "Anaphoric form of `%s'." name))
@@ -231,7 +251,8 @@ wrapped in a lambda call binding the unary argument to the symbol
                             (cons '\, (list it)))
                           arglist))
           (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
-          (indent `(declare (indent ,(-elem-index 'fun arglist)))))
+          (indent (om--defun-make-indent-declare
+                   decls (-elem-index 'fun arglist))))
     `(progn
        (defmacro ,name* ,arglist*
          ,docstring*
@@ -683,35 +704,31 @@ The case form will catch `arg-type-error' and rethrow them as-is."
      (error "This macro can only be used for public definitions")))
 
 ;; TODO the docstrings here suck...
+(defmacro om--defun-template (mac name arglist args)
+  `(progn
+     (om--defun-check-private ,name)
+     (-let* (((docstring decls body) (om--defun-partition-body ,args))
+             (type-checks (-some->>
+                           (-filter #'listp ,arglist)
+                           (-map #'om--defun-make-type-check-form)))
+             (arglist (om--defun-normalize-arglist ,arglist))
+             (body `(om--defun-catch-arg-type-error ,@body))
+             (mac ',mac))
+       `(,mac ,name ,arglist
+              ,docstring
+              (declare ,@decls)
+              ,@type-checks
+              ,body))))
+
 (defmacro om--defun (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS."
   (declare (doc-string 3) (indent 2))
-  (om--defun-check-private name)
-  (-let* (((docstring body) (om--partition-docstring-body args))
-          (type-checks (-some->>
-                        (-filter #'listp arglist)
-                        (-map #'om--defun-make-type-check-form)))
-          (arglist (om--defun-normalize-arglist arglist))
-          (body `(om--defun-catch-arg-type-error ,@body)))
-    `(defun ,name ,arglist
-       ,docstring
-       ,@type-checks
-       ,body)))
+  (om--defun-template defun name arglist args))
 
 (defmacro om--defmacro (name arglist &rest args)
   "Return a macro definition for NAME, ARGLIST, and ARGS."
   (declare (doc-string 3) (indent 2))
-  (om--defun-check-private name)
-  (-let* (((docstring body) (om--partition-docstring-body args))
-          (type-checks (-some->>
-                        (-filter #'listp arglist)
-                        (-map #'om--defun-make-type-check-form)))
-          (arglist (om--defun-normalize-arglist arglist))
-          (body `(om--defun-catch-arg-type-error ,@body)))
-    `(defmacro ,name ,arglist
-       ,docstring
-       ,@type-checks
-       ,body)))
+  (om--defun-template defmacro name arglist args))
 
 (defmacro om--defun* (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
@@ -723,7 +740,7 @@ wrapped in a lambda call binding the unary argument to the symbol
 `it'."
   (declare (doc-string 3) (indent 2))
   (om--defun-check-private name)
-  (-let* (((docstring body) (om--partition-docstring-body args))
+  (-let* (((docstring decls body) (om--defun-partition-body args))
           (name* (intern (format "%s*" name)))
           (arglist* (-replace 'fun '(:cons form) arglist))
           (docstring* (format "Anaphoric form of `%s'." name))
@@ -731,16 +748,17 @@ wrapped in a lambda call binding the unary argument to the symbol
                             (cons '\, (list it)))
                           arglist))
           (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
-          (indent `(declare (indent ,(-elem-index 'fun arglist))))
+          (dec `(om--defun-make-indent-declare
+                 ,decls ,(-elem-index 'fun arglist)))
           (arglist (-replace 'fun '(:fun fun) arglist)))
     `(progn
        (om--defmacro ,name* ,arglist*
          ,docstring*
-         ,indent
+         ,dec
          ,body*)
        (om--defun ,name ,arglist
          ,docstring
-         ,indent
+         ,dec
          ,@body))))
 
 ;;; defun which also makes anaphoric form
@@ -797,10 +815,11 @@ node."
   "Return a function definition for NAME, ARGLIST, and ARGS.
 Will insert a type checker according to `om--defun-test-node'."
   (declare (doc-string 3) (indent 2))
-  (-let* (((docstring body) (om--partition-docstring-body args))
+  (-let* (((docstring decls body) (om--defun-partition-body args))
           (node-check (om--defun-test-node arglist)))
     `(om--defun ,name ,arglist
        ,docstring
+       (declare ,@decls)
        ,node-check
        ,@body)))
 
@@ -812,13 +831,13 @@ Will insert a type checker according to `om--defun-test-node' and will
 make an anaphoric form according to `om--defun-private*' (the same assumptions
 apply)."
   (declare (doc-string 3) (indent 2))
-  (-let* (((docstring body) (om--partition-docstring-body args))
+  (-let* (((docstring decls body) (om--defun-partition-body args))
           (node-check (om--defun-test-node arglist)))
     `(om--defun* ,name ,arglist
        ,docstring
+       (declare ,@decls)
        ,node-check
        ,@body)))
-
 
 ;;; MISC HELPER FUNCTIONS
 
