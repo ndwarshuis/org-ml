@@ -477,14 +477,17 @@ The case form will catch `arg-type-error' and rethrow them as-is."
          (om--arg-error ,msg ,arg)))))
 
 (defmacro om--defun-normalize-arglist (arglist)
+  "Return ARGLIST with all cons cells cdr'ed to make a flat symbol list."
   `(--map (if (listp it) (cadr it) it) ,arglist))
 
 (defmacro om--defun-check-private (name)
+  "Throw and error if NAME refers to a private function (eg \"om--X\")."
   `(when (s-starts-with-p "om--" (symbol-name ,name))
      (error "This macro can only be used for public definitions")))
 
-;; TODO the docstrings here suck...
 (defmacro om--defun-template (mac name arglist args)
+  "Return a form to build a type-aware definition using MAC.
+NAME, ARGLIST, and ARGS will be fed into MAC."
   `(progn
      (om--defun-check-private ,name)
      (-let* (((docstring decls body) (om--defun-partition-body ,args))
@@ -2862,6 +2865,7 @@ matter."
    :scheduled (om--planning-list-to-timestamp scheduled)
    :post-blank post-blank))
 
+;; TODO check keyvals somehow
 (om--defun-kw om-build-property-drawer! (&key post-blank &rest keyvals)
   "Return a new property-drawer node.
 
