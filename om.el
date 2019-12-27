@@ -234,7 +234,8 @@ if present after the docstring. Everything else is BODY."
           (decl (--remove (eq 'indent (car it)) decl)))
       `(declare ,@decl ,indent))))
 
-(defmacro om--defun-private* (name arglist &rest args)
+;; TODO this is almost exactly the same as om--defun*
+(defmacro om--defun-nocheck* (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
 This will also make a mirrored anaphoric form macro definition. This
 assumes that `fun' represents a unary function which will be used
@@ -380,12 +381,12 @@ If PERMIT-ERROR is t, do not throw out-of-bounds errors."
   (-when-let (i (om--convert-intra-index n list permit-error))
     (nth i list)))
 
-(om--defun-private* om--map-first (fun list)
+(om--defun-nocheck* om--map-first (fun list)
   "Return LIST with FUN applied to the first member.
 FUN is a unary function that returns a modified member."
   (->> (cdr list) (cons (funcall fun (car list)))))
 
-(om--defun-private* om--map-last (fun list)
+(om--defun-nocheck* om--map-last (fun list)
   "Return LIST with FUN applied to the last member.
 FUN is a unary function that returns a modified member."
   (->> (nreverse list) (om--map-first fun) (nreverse)))
@@ -442,230 +443,7 @@ STRING and ARGS are analogous to `error'."
   "Return NODE if it is one of TYPES or nil otherwise."
   (and (om--is-any-type-p types node) node))
 
-;;; PUBLIC FUNCTION DEFINITIONS
-
-;;; better cl-defun
-
-;; Some functions here require a clean way to use &rest and &key
-;; at the same time, which `cl-defun' does not do. For a given
-;; external function signature like (P1 ... &key K1 ... &rest R), this
-;; framework will make a function with the internal signature
-;; (P1 ... &rest --rest-args) where PX are positional arguments
-;; matching exactly those in the external signature and
-;; --rest-args will bind the list contain the key-val pairs and rest
-;; arguments. This will be partitioned into keyword arguments like
-;; KX VAL rest arguments R internally.
-
-(eval-when-compile
-  (defun om--symbol-to-keyword (symbol)
-    "Convert SYMBOL to keyword if not already."
-    (if (keywordp symbol) symbol
-      (->> (symbol-name symbol)
-           (s-prepend ":")
-           (intern))))
-
-  (defun om--verify-pos-args (pos-args)
-    "Return POS-ARGS if it is not a list of all symbols or nil, else throw error."
-    (if (-all? #'symbolp pos-args) pos-args
-      (error "All positional arguments must be symbols")))
-
-  (defun om--verify-rest-arg (rest-arg)
-    "Return REST-ARG if it a list with only one symbol or nil, else throw error."
-    (if (and (>= 1 (length rest-arg)) (symbolp (car rest-arg)))
-        (car rest-arg)
-      (error "Rest argument must only have one member")))
-
-  (defun om--make-kwarg-let (kws-sym kwarg)
-    "Return cons cell for KWARG like (KW . LET-FORM).
-KWARG is a keyword argument in the signature of a function definition
-(see `om--defun-kw' for valid configurations of this). In the returned
-cell, KW is keyword representing the key to be used in a function
-call, and LET-FORM is a form to be used in a let binding that will
-retrieve the value for KW from a plist bound to KWS-ARG (which is
-a non-interned symbol to be bound to the keywords in a function
-call)."
-    (cl-flet
-        ((make-plist
-          (arg kw init)
-          (when (and kw (not (keywordp kw)))
-            (error "Must use keyword for kw-arg, not %s" kw))
-          (let* ((kw (or kw (om--symbol-to-keyword arg)))
-                 (kw-get `(cadr (plist-member ,kws-sym ',kw)))
-                 (val (if init `(or ,kw-get ,init) kw-get)))
-            (cons kw `(,arg ,val)))))
-      (pcase kwarg
-        (`((,(and (pred keywordp) kw) ,arg) ,init)
-         (make-plist arg kw init))
-        (`((,(and (pred keywordp) kw) ,arg))
-         (make-plist arg kw nil))
-        (`(,arg ,init) (make-plist arg nil init))
-        ((and (pred symbolp) arg)
-         (make-plist arg nil nil))
-        (_ (error "Invalid keyword argument: %s" kwarg)))))
-
-  (defun om--throw-kw-error (msg kws)
-    "Throw an error with MSG with formatted list of KEYWORDS."
-    (when kws
-      (->> (-map #'symbol-name kws)
-           (s-join ", ")
-           (error (concat msg ": %s")))))
-
-  (defun om--partition-rest-args (args)
-    "Partition ARGS into two keyword and rest argument lists.
-The keyword list is determined by partitioning all keyword-value
-pairs until this pattern is broken. Whatever is left is put into the
-rest list. Return a list like (KEYARGS RESTARGS)."
-    (->> (-partition-all 2 args)
-         (--split-with (keywordp (car it)))))
-
-  (defmacro om--make-rest-partition-form (argsym kws use-rest?)
-    "Return a form that will partition the args in ARGSYM.
-ARGSYM is a symbol which is bound to the rest argument list of a
-function call. KWS is a list of valid keywords to use when deciding
-which in the argument values is a keyword-value pair, and USE-REST?
-is a boolean that determines if rest arguments are to be considered."
-    ;; these `make-symbol' calls probably aren't necessary but they
-    ;; ensure the let bindings are leak-proof
-    (let* ((p (make-symbol "--part"))
-           (k (make-symbol "--kpart"))
-           (y (make-symbol "--keys"))
-           (r (make-symbol "--rpart"))
-           (inv-msg "Invalid keyword(s) found")
-           (dup-msg "Keyword(s) used multiple times")
-           (rest-msg
-            (s-join " " '("Keyword-value pairs must be immediately"
-                          "after positional arguments. These keywords"
-                          "were interpreted as rest arguments")))
-           (tests
-            ;; ensure that all keywords are valid
-            `((->> (-difference ,y ',kws)
-                   (om--throw-kw-error ,inv-msg))
-              ;; ensure keywords are only used once per call
-              (->> (-group-by #'identity ,y)
-                   (--filter (< 2 (length it)))
-                   (om--throw-kw-error ,dup-msg))
-              ;; ensure that keyword pairs are only used
-              ;; immediately after positional arguments
-              (->> (-filter #'keywordp ,r)
-                   (om--throw-kw-error ,rest-msg))))
-           ;; if rest arguments are used but not allowed in function
-           ;; call, throw error
-           (tests (if use-rest? tests
-                    (-snoc
-                     tests
-                     `(when ,r
-                        (error "Too many arguments supplied")))))
-           ;; return a cons cell of (KEY REST) argument values or
-           ;; just KEY if rest is not used in the function call
-           (return (if (not use-rest?) `(apply #'append ,k)
-                     `(cons (apply #'append ,k)
-                            (apply #'append ,r)))))
-      `(let* ((,p (om--partition-rest-args ,argsym))
-              (,k (car ,p))
-              (,y (-map #'car ,k))
-              (,r (cadr ,p)))
-         ,@tests
-         ,return)))
-
-  (defun om--make-header (body arglist)
-    "Return a header using docstring from BODY and ARGLIST."
-    (let ((header (caar (macroexp-parse-body body))))
-      ;; Macro expansion can take place in the middle of
-      ;; apparently harmless computation, so it should not
-      ;; touch the match-data.
-      (save-match-data
-        (let ((print-gensym nil)
-              (print-quoted t)
-              (print-escape-newlines t))
-          (->> (cl--make-usage-args arglist)
-               (cons 'fn)
-               (format "%S")
-               (help--docstring-quote)
-               (help-add-fundoc-usage header))))))
-
-  (defun om--transform-lambda (arglist body name)
-    "Make a form for a keyword/rest composite function definition.
-ARGLIST is the argument signature. BODY is the function body. NAME
-is the NAME of the function definition.
-
-This acts much like `cl-defun' except that it only considers &rest
-and &key slots. The way the final function call will work beneath the
-surface is that all positional arguments will be bound to their
-symbols in ARGLIST (analogous to `defun' and `cl-defun'), and the key
-and rest arguments will be captured in one rest argument to be
-partitioned on the fly into key and rest bindings that can be used
-in BODY."
-    ;; assume &key will always be present if this function is called
-    (let* ((a (make-symbol "--arg-cell"))
-           (k (make-symbol "--kw-args"))
-           (kr (make-symbol "--key-and-rest-args"))
-           (partargs (-partition-before-pred
-                      (lambda (it) (memq it '(&pos &rest &key)))
-                      (cons '&pos arglist)))
-           (pos-args (->> (alist-get '&pos partargs)
-                          (om--verify-pos-args)))
-           (kw-alist (->> (alist-get '&key partargs)
-                         (--map (om--make-kwarg-let k it))))
-           (rest-arg (->> (alist-get '&rest partargs)
-                          (om--verify-rest-arg)))
-           (kws (-map #'car kw-alist))
-           (kw-lets (-map #'cdr kw-alist))
-           (arg-form `(,@pos-args &rest ,kr))
-           (header (om--make-header body arglist))
-           (let-forms
-            (if rest-arg
-                `((,a (om--make-rest-partition-form ,kr ,kws t))
-                  (,k (car ,a))
-                  (,rest-arg (cdr ,a))
-                  ,@kw-lets)
-              `((,k (om--make-rest-partition-form ,kr ,kws nil))
-                ,@kw-lets)))
-           (body (->> (macroexp-parse-body body)
-                      (cdr)
-                      (append `(cl-block ,name)))))
-      ;; if &key is used but no keywords are actually used, slap the
-      ;; programmer in the face
-      (unless kw-alist (error "No keywords used"))
-      `(,arg-form
-        ,header
-        ,(macroexp-let*
-          let-forms
-          (macroexp-progn `(,body))))))
-
-  (defmacro om--defun-kw (name arglist &rest body)
-    "Define NAME as a function.
-
-This is like `cl-defun' except it allows &key to be used in
-conjunction with &rest without freaking out. Args can be specified
-using the following syntax:
-
-(VAR ... [&key (([KEYWORD] VAR) [INITFORM])...] [&rest VAR])
-
-where VAR is a symbol for the variable identifier, KEYWORD is a
-keyword that will be used to specify VAR in a function call, and
-INITFORM is an atom or form that will be the default value for keyword
-VAR if it is not give in a function call.
-
-When calling functions defined with this, keywords can be given in any
-order as long as they are after all positional arguments, and rest
-arguments will be interpreted as anything not belonging to a key-val
-pair (but only if &rest was used to define the function). This implies
-that keywords may not be used as values for the rest argument in
-function calls."
-    ;; TODO wtf does this stuff do...???
-    (declare (debug
-              ;; Same as defun but use cl-lambda-list.
-              (&define [&or name ("setf" :name setf name)]
-                       cl-lambda-list
-                       cl-declarations-or-string
-                       [&optional ("interactive" interactive)]
-                       def-body))
-             (doc-string 3)
-             (indent 2))
-    (if (memq '&key arglist)
-        (let ((res (om--transform-lambda arglist body name)))
-          `(defun ,name ,@res))
-      `(defun ,name ,arglist ,@body))))
+;;; EXTERNAL FUNCTION DEFINITIONS
 
 ;;; defun with runtime type checking
 
@@ -677,21 +455,23 @@ The case form will catch `arg-type-error' and rethrow them as-is."
      (arg-type-error (signal (car err) (cdr err)))))
 
 (eval-when-compile
+  (defun om--defun-get-type-check-fun (key)
+    "Return cell of (FUN DESC) for type check KEY."
+    (cl-case key
+      (:fun '(functionp "a function"))
+      (:cons '(consp "a cons"))
+      (:bool '(booleanp "a boolean"))
+      (:kw '(keywordp "a keyword"))
+      (:int '(integerp "an integer"))
+      (:p-int '(om--is-pos-integer-p "a positive integer"))
+      (:nn-int '(om--is-non-neg-integer-p "a non-negative integer"))
+      (:node '(om--is-node-p "a node"))
+      (:nodes '((lambda (it) (-all? #'om--is-node-p it)) "list of nodes"))
+      (t (error "Invalid type checker key used: %s" key))))
+
   (defun om--defun-make-type-check-form (type-check)
     (-let* (((type arg) type-check)
-            ((pred desc)
-             (cl-case type
-               (:fun '(functionp "a function"))
-               (:cons '(consp "a cons"))
-               (:bool '(booleanp "a boolean"))
-               (:kw '(keywordp "a keyword"))
-               (:int '(integerp "an integer"))
-               (:p-int '(om--is-pos-integer-p "a positive integer"))
-               (:nn-int '(om--is-non-neg-integer-p "a non-negative integer"))
-               (:node '(om--is-node-p "a node"))
-               (:nodes '((lambda (it) (-all? #'om--is-node-p it))
-                         "list of nodes"))
-               (t (error "Invalid type checker flag used: %s" type))))
+            ((pred desc) (om--defun-get-type-check-fun type))
             (msg (format "Argument '%s' must be %s: Got %%s" arg desc)))
       `(unless (funcall #',pred ,arg)
          (om--arg-error ,msg ,arg)))))
@@ -828,7 +608,7 @@ Will insert a type checker according to `om--defun-test-node'."
 (defmacro om--defun-node* (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
 Will insert a type checker according to `om--defun-test-node' and will
-make an anaphoric form according to `om--defun-private*' (the same assumptions
+make an anaphoric form according to `om--defun-nocheck*' (the same assumptions
 apply)."
   (declare (doc-string 3) (indent 2))
   (-let* (((docstring decls body) (om--defun-partition-body args))
@@ -838,6 +618,264 @@ apply)."
        (declare ,@decls)
        ,node-check
        ,@body)))
+
+;;; better cl-defun
+
+;; Some functions here require a clean way to use &rest and &key
+;; at the same time, which `cl-defun' does not do. For a given
+;; external function signature like (P1 ... &key K1 ... &rest R), this
+;; framework will make a function with the internal signature
+;; (P1 ... &rest --rest-args) where PX are positional arguments
+;; matching exactly those in the external signature and
+;; --rest-args will bind the list contain the key-val pairs and rest
+;; arguments. This will be partitioned into keyword arguments like
+;; KX VAL rest arguments R internally.
+
+(eval-when-compile
+  (defun om--symbol-to-keyword (symbol)
+    "Convert SYMBOL to keyword if not already."
+    (if (keywordp symbol) symbol
+      (->> (symbol-name symbol)
+           (s-prepend ":")
+           (intern))))
+
+  (defun om--process-pos-args (pos-args)
+    "Process POS-ARGS and return a cons cell like (SYMS . CHECKERS)
+SYMS is the list of symbols bound to the positional arguments, and
+CHECKERS is a list of type check forms."
+    (unless (--all? (or (symbolp it) (consp it)) pos-args)
+      (error "Positional args must be either cons cells or symbols"))
+    (let ((checks (-some->>
+                   (-filter #'consp pos-args)
+                   (-map #'om--defun-make-type-check-form)))
+          (syms (om--defun-normalize-arglist pos-args)))
+      (cons syms checks)))
+
+  (defun om--process-rest-arg (rest-arg)
+    "Process REST-ARG and return as a cell like (SYM . CHECKER).
+SYM is the symbol to be bound to the rest argument list, and CHECKER
+is a form used to type-check the rest arguments."
+    (pcase rest-arg
+      ;; checker
+      (`(,(and (pred keywordp) key) .
+         (,(and (pred symbolp) sym) . nil))
+       (-let* (((fun desc) (om--defun-get-type-check-fun key))
+               (msg (format "All in rest arg '%s' must be %s: Got %%s"
+                            sym desc))
+               (check `(unless (-all? (funcall #',fun it) ,sym)
+                         (om--arg-error ,msg ,sym))))
+         (cons sym check)))
+      ;; no checker
+      (`(,(and (pred symbolp) sym) . nil)
+       (cons sym nil))
+      ;; no rest arg period
+      (`nil
+       nil)
+      ;; silly user...
+      (_
+       (error "Rest argument must only have one symbol or cons"))))
+
+  (defun om--make-kwarg-let (kws-sym kwarg)
+    "Return cons cell for KWARG like (KW :let LET-FORM :check CHECKER).
+KWARG is a keyword argument in the signature of a function definition
+(see `om--defun-kw' for valid configurations of this). In the returned
+cell, KW is keyword representing the key to be used in a function
+call, and LET-FORM is a form to be used in a let binding that will
+retrieve the value for KW from a plist bound to KWS-ARG (which is
+a non-interned symbol to be bound to the keywords in a function
+call). CHECKER is a type check form used to validate the value
+bound to KW."
+    (cl-flet
+        ((make-plist
+          (arg pred init)
+          (let* ((kw (om--symbol-to-keyword arg))
+                 (kw-get `(cadr (plist-member ,kws-sym ',kw)))
+                 (val (if init `(or ,kw-get ,init) kw-get))
+                 (check (-some--> pred
+                                  (list it arg)
+                                  (om--defun-make-type-check-form it))))
+            (list kw :let `(,arg ,val) :check check))))
+      (pcase kwarg
+        (`((,(and (pred keywordp) pred) ,arg) ,init)
+         (make-plist arg pred init))
+        (`((,(and (pred keywordp) pred) ,arg))
+         (make-plist arg pred nil))
+        (`(,arg ,init) (make-plist arg nil init))
+        ((and (pred symbolp) arg)
+         (make-plist arg nil nil))
+        (_ (error "Invalid keyword argument: %s" kwarg)))))
+
+  (defun om--throw-kw-error (msg kws)
+    "Throw an error with MSG with formatted list of KEYWORDS."
+    (when kws
+      (->> (-map #'symbol-name kws)
+           (s-join ", ")
+           (error (concat msg ": %s")))))
+
+  (defun om--partition-rest-args (args)
+    "Partition ARGS into two keyword and rest argument lists.
+The keyword list is determined by partitioning all keyword-value
+pairs until this pattern is broken. Whatever is left is put into the
+rest list. Return a list like (KEYARGS RESTARGS)."
+    (->> (-partition-all 2 args)
+         (--split-with (keywordp (car it)))))
+
+  (defmacro om--make-rest-partition-form (argsym kws use-rest?)
+    "Return a form that will partition the args in ARGSYM.
+ARGSYM is a symbol which is bound to the rest argument list of a
+function call. KWS is a list of valid keywords to use when deciding
+which in the argument values is a keyword-value pair, and USE-REST?
+is a boolean that determines if rest arguments are to be considered."
+    ;; these `make-symbol' calls probably aren't necessary but they
+    ;; ensure the let bindings are leak-proof
+    (let* ((p (make-symbol "--part"))
+           (k (make-symbol "--kpart"))
+           (y (make-symbol "--keys"))
+           (r (make-symbol "--rpart"))
+           (inv-msg "Invalid keyword(s) found")
+           (dup-msg "Keyword(s) used multiple times")
+           (rest-msg
+            (s-join " " '("Keyword-value pairs must be immediately"
+                          "after positional arguments. These keywords"
+                          "were interpreted as rest arguments")))
+           (tests
+            ;; ensure that all keywords are valid
+            `((->> (-difference ,y ',kws)
+                   (om--throw-kw-error ,inv-msg))
+              ;; ensure keywords are only used once per call
+              (->> (-group-by #'identity ,y)
+                   (--filter (< 2 (length it)))
+                   (om--throw-kw-error ,dup-msg))
+              ;; ensure that keyword pairs are only used
+              ;; immediately after positional arguments
+              (->> (-filter #'keywordp ,r)
+                   (om--throw-kw-error ,rest-msg))))
+           ;; if rest arguments are used but not allowed in function
+           ;; call, throw error
+           (tests (if use-rest? tests
+                    (-snoc
+                     tests
+                     `(when ,r
+                        (error "Too many arguments supplied")))))
+           ;; return a cons cell of (KEY REST) argument values or
+           ;; just KEY if rest is not used in the function call
+           (return (if (not use-rest?) `(apply #'append ,k)
+                     `(cons (apply #'append ,k)
+                            (apply #'append ,r)))))
+      `(let* ((,p (om--partition-rest-args ,argsym))
+              (,k (car ,p))
+              (,y (-map #'car ,k))
+              (,r (cadr ,p)))
+         ,@tests
+         ,return)))
+
+  (defun om--make-header (body arglist)
+    "Return a header using docstring from BODY and ARGLIST."
+    (let ((header (caar (macroexp-parse-body body))))
+      ;; Macro expansion can take place in the middle of
+      ;; apparently harmless computation, so it should not
+      ;; touch the match-data.
+      (save-match-data
+        (let ((print-gensym nil)
+              (print-quoted t)
+              (print-escape-newlines t))
+          (->> (cl--make-usage-args arglist)
+               (cons 'fn)
+               (format "%S")
+               (help--docstring-quote)
+               (help-add-fundoc-usage header))))))
+
+  (defun om--transform-lambda (arglist body name)
+    "Make a form for a keyword/rest composite function definition.
+ARGLIST is the argument signature. BODY is the function body. NAME
+is the NAME of the function definition.
+
+This acts much like `cl-defun' except that it only considers &rest
+and &key slots. The way the final function call will work beneath the
+surface is that all positional arguments will be bound to their
+symbols in ARGLIST (analogous to `defun' and `cl-defun'), and the key
+and rest arguments will be captured in one rest argument to be
+partitioned on the fly into key and rest bindings that can be used
+in BODY."
+    ;; assume &key will always be present if this function is called
+    (let* ((a (make-symbol "--arg-cell"))
+           (k (make-symbol "--kw-args"))
+           (kr (make-symbol "--key-and-rest-args"))
+           (partargs (-partition-before-pred
+                      (lambda (it) (memq it '(&pos &rest &key)))
+                      (cons '&pos arglist)))
+           (pos-cell (->> (alist-get '&pos partargs)
+                          (om--process-pos-args)))
+           (pos-args (car pos-cell))
+           (kw-alist (->> (alist-get '&key partargs)
+                          (--map (om--make-kwarg-let k it))))
+           (rest-cell (->> (alist-get '&rest partargs)
+                           (om--process-rest-arg)))
+           (rest-arg (car rest-cell))
+           (kws (-map #'car kw-alist))
+           (kw-lets (--map (plist-get (cdr it) :let) kw-alist))
+           (pos-checks (cdr pos-cell))
+           (kw-checks (--map (plist-get (cdr it) :check) kw-alist))
+           (rest-checks (cdr rest-cell))
+           (checks `(,@pos-checks ,@kw-checks ,@rest-checks))
+           (arg-form `(,@pos-args &rest ,kr))
+           (header (om--make-header body arglist))
+           (let-forms
+            (if rest-arg
+                `((,a (om--make-rest-partition-form ,kr ,kws t))
+                  (,k (car ,a))
+                  (,rest-arg (cdr ,a))
+                  ,@kw-lets)
+              `((,k (om--make-rest-partition-form ,kr ,kws nil))
+                ,@kw-lets)))
+           (body (->> (macroexp-parse-body body)
+                      (cdr)
+                      (append `(cl-block ,name)))))
+      ;; if &key is used but no keywords are actually used, slap the
+      ;; programmer in the face
+      (unless kw-alist (error "No keywords used"))
+      `(,arg-form
+        ,header
+        ,(macroexp-let*
+          let-forms
+          (macroexp-progn `(,@checks ,body))))))
+
+  (defmacro om--defun-kw (name arglist &rest body)
+    "Define NAME as a function.
+
+This is like `cl-defun' except it allows &key to be used in
+conjunction with &rest without freaking out. Args can be specified
+using the following syntax:
+
+([([PRED] VAR)] ...
+ [&key (([PRED] VAR) [INITFORM])...]
+ [&rest ([PRED] VAR)])
+
+where VAR is a symbol for the variable identifier, PRED is a
+keyword that specifies how to test if VAR is the correct type,
+INITFORM is an atom or form that will be the default value for keyword
+VAR if it is not give in a function call.
+
+When calling functions defined with this, keywords can be given in any
+order as long as they are after all positional arguments, and rest
+arguments will be interpreted as anything not belonging to a key-val
+pair (but only if &rest was used to define the function). This implies
+that keywords may not be used as values for the rest argument in
+function calls."
+    ;; TODO wtf does this stuff do...???
+    (declare (debug
+              ;; Same as defun but use cl-lambda-list.
+              (&define [&or name ("setf" :name setf name)]
+                       cl-lambda-list
+                       cl-declarations-or-string
+                       [&optional ("interactive" interactive)]
+                       def-body))
+             (doc-string 3)
+             (indent 2))
+    (if (memq '&key arglist)
+        (let ((res (om--transform-lambda arglist body name)))
+          `(defun ,name ,@res))
+      (error "&key not used, use regular defun"))))
 
 ;;; MISC HELPER FUNCTIONS
 
@@ -957,7 +995,7 @@ property list in NODE."
   (let ((plist (--mapcat (list it nil) props)))
     (om--set-properties plist node)))
 
-(om--defun-private* om--map-property (prop fun node)
+(om--defun-nocheck* om--map-property (prop fun node)
   "Return NODE with FUN applied to the value in PROP.
 FUN is a unary function that returns a modified value."
   (let ((value (funcall fun (om--get-property prop node))))
@@ -979,7 +1017,7 @@ FUN is a unary function that returns a modified value."
   "Return t if PROP in NODE is `equal' to VAL."
   (equal val (om--get-property prop node)))
 
-(om--defun-private* om--property-is-predicate-p (prop fun node)
+(om--defun-nocheck* om--property-is-predicate-p (prop fun node)
   "Return t if FUN applied to the value of PROP in NODE results not nil.
 FUN is a predicate function that takes one argument."
   (and (funcall fun (om--get-property prop node)) t))
@@ -1705,7 +1743,7 @@ Will validate and encode VALUE if valid according to `om--node-property-alist'."
 
 ;; mapper
 
-(om--defun-private* om--map-property-strict (prop fun node)
+(om--defun-nocheck* om--map-property-strict (prop fun node)
   "Return NODE with FUN applied to the value in PROP.
 
 FUN is a unary function that returns a modified value.
@@ -1752,7 +1790,7 @@ nested element to return."
    (let ((head (om--get-head node)))
      (if children (append head children) head)))
 
-(om--defun-private* om--map-children (fun node)
+(om--defun-nocheck* om--map-children (fun node)
   "Return NODE with FUN applied to its children.
 
 FUN is a unary function that takes a list of children and returns
@@ -4605,14 +4643,14 @@ current buffer."
          (call (intern (format "om-parse-%s-at" it)))
          (update-at-body `(om-update fun (,call point)))
          (update-this-body `(,update-at (point) fun)))
-    (eval `(om--defun-private* ,update-at (point fun)
+    (eval `(om--defun-nocheck* ,update-at (point fun)
              ,update-at-doc
              ,update-at-body))
-    (eval `(om--defun-private* ,update-this (fun)
+    (eval `(om--defun-nocheck* ,update-this (fun)
              ,update-this-doc
              ,update-this-body))))
 
-(om--defun-private* om-update-this-buffer (fun)
+(om--defun-nocheck* om-update-this-buffer (fun)
   "Apply FUN to the contents of the current buffer.
 FUN is a unary function that takes a node of type 'org-data' and
 returns a modified node."

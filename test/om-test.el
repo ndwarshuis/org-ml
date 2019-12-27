@@ -290,26 +290,26 @@
   (should (equal (om--make-header '("docstring" (print 'hi)) '(one two))
                  "docstring\n\n(fn ONE TWO)")))
 
-(ert-deftest om--verify-pos-args/valid ()
-  (should (equal '(one two) (om--verify-pos-args '(one two))))
-  (should (equal nil (om--verify-pos-args nil))))
+;; (ert-deftest om--verify-pos-args/valid ()
+;;   (should (equal '(one two) (om--verify-pos-args '(one two))))
+;;   (should (equal nil (om--verify-pos-args nil))))
 
-(ert-deftest om--verify-pos-args/error ()
-  (should-error (om--verify-pos-args '(1)))
-  (should-error (om--verify-pos-args '("one")))
-  (should-error (om--verify-pos-args '((one)))))
+;; (ert-deftest om--verify-pos-args/error ()
+;;   (should-error (om--verify-pos-args '(1)))
+;;   (should-error (om--verify-pos-args '("one")))
+;;   (should-error (om--verify-pos-args '((one)))))
 
-(ert-deftest om--verify-rest-arg/valid ()
-  (should (equal 'one (om--verify-rest-arg '(one))))
-  (should (equal nil (om--verify-rest-arg nil))))
+;; (ert-deftest om--verify-rest-arg/valid ()
+;;   (should (equal 'one (om--verify-rest-arg '(one))))
+;;   (should (equal nil (om--verify-rest-arg nil))))
 
-(ert-deftest om--verify-rest-arg/error ()
-  ;; too long
-  (should-error (om--verify-rest-arg '(one two)))
-  ;; non-symbol
-  (should-error (om--verify-rest-arg '(1)))
-  (should-error (om--verify-rest-arg '("one")))
-  (should-error (om--verify-rest-arg '((one)))))
+;; (ert-deftest om--verify-rest-arg/error ()
+;;   ;; too long
+;;   (should-error (om--verify-rest-arg '(one two)))
+;;   ;; non-symbol
+;;   (should-error (om--verify-rest-arg '(1)))
+;;   (should-error (om--verify-rest-arg '("one")))
+;;   (should-error (om--verify-rest-arg '((one)))))
 
 ;; (ert-deftest om--make-optarg-let/valid ()
 ;;   (should (equal (om--make-optarg-let 'one 0)
@@ -327,19 +327,19 @@
 ;;   ;; wrong list length
 ;;   (should-error (om--make-optarg-let '(one one 1) 0)))
 
-(ert-deftest om--make-kwarg-let/valid ()
-  (should
-   (equal (om--make-kwarg-let 'k 'one)
-          '(:one one (cadr (plist-member k (quote :one))))))
-  (should
-   (equal (om--make-kwarg-let 'k '((:two one)))
-          '(:two one (cadr (plist-member k (quote :two))))))
-  (should
-   (equal (om--make-kwarg-let 'k '(one 1))
-          '(:one one (or (cadr (plist-member k (quote :one))) 1))))
-  (should
-   (equal (om--make-kwarg-let 'k '((:two one) 1))
-          '(:two one (or (cadr (plist-member k (quote :two))) 1)))))
+;; (ert-deftest om--make-kwarg-let/valid ()
+;;   (should
+;;    (equal (om--make-kwarg-let 'k 'one)
+;;           '(:one one (cadr (plist-member k (quote :one))))))
+;;   ;; (should
+;;   ;;  (equal (om--make-kwarg-let 'k '((:two one)))
+;;   ;;         '(:two one (cadr (plist-member k (quote :two))))))
+;;   (should
+;;    (equal (om--make-kwarg-let 'k '(one 1))
+;;           '(:one one (or (cadr (plist-member k (quote :one))) 1)))))
+;;   ;; (should
+;;   ;;  (equal (om--make-kwarg-let 'k '((:two one) 1))
+;;   ;;         '(:two one (or (cadr (plist-member k (quote :two))) 1)))))
 
 (ert-deftest om--make-kwarg-let/error ()
   ;; list too long
