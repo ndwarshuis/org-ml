@@ -97,17 +97,18 @@
 ;; is considered a branch node of class element that is permitted to
 ;; hold other element nodes as children
 
-(defconst om-elements
-  (cons 'org-data org-element-all-elements)
-  "List of all element types including 'org-data'.")
+(eval-when-compile
+  (defconst om-elements
+    (cons 'org-data org-element-all-elements)
+    "List of all element types including 'org-data'.")
 
-(defconst om-objects
-  (cons 'plain-text org-element-all-objects)
-  "List of all object types including 'plain-text'.")
+  (defconst om-objects
+    (cons 'plain-text org-element-all-objects)
+    "List of all object types including 'plain-text'.")
 
-(defconst om-nodes
-  (append om-elements om-objects)
-  "List of all node types.")
+  (defconst om-nodes
+    (append om-elements om-objects)
+    "List of all node types."))
 
 (defvaralias 'om-branch-nodes-permitting-child-objects
   'org-element-object-containers
@@ -202,6 +203,172 @@ the car.")
        (cons 'plain-text))
   "List of node types which may be used in item headline title properties.")
 
+;;; ANAPHORIC FUNCTIONS
+
+(eval-when-compile
+  (defun om--partition-docstring-body (args)
+    "Return ARGS as a partitioned list like (DOCSTRING BODY).
+If the car of ARGS is a string and the cdr of ARGS is non-nil,
+the car of ARGS becomes DOCSTRING, otherwise it is nil. Anything
+that isn't DOCSTRING is BODY."
+    (let ((p (macroexp-parse-body args)))
+      (list (caar p) (cdr p)))))
+
+(defmacro om--defun-private* (name arglist &rest args)
+  "Return a function definition for NAME, ARGLIST, and ARGS.
+This will also make a mirrored anaphoric form macro definition. This
+assumes that `fun' represents a unary function which will be used
+somewhere in the definition's body. When making the anaphoric form,
+`fun' will be replaced by the symbol `form', and `form' will be
+wrapped in a lambda call binding the unary argument to the symbol
+`it'."
+  (declare (doc-string 3) (indent 2))
+  (-let* (((docstring body) (om--partition-docstring-body args))
+          (name* (intern (format "%s*" name)))
+          (arglist* (-replace 'fun 'form arglist))
+          (docstring* (format "Anaphoric form of `%s'." name))
+          (funargs (--map (if (eq it 'fun) '(lambda (it) (\, form))
+                            (cons '\, (list it)))
+                          arglist))
+          (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
+          (indent `(declare (indent ,(-elem-index 'fun arglist)))))
+    `(progn
+       (defmacro ,name* ,arglist*
+         ,docstring*
+         ,indent
+         ,body*)
+       (defun ,name ,arglist
+         ,docstring
+         ,indent
+         ,@body))))
+
+;;; LIST OPERATIONS (EXTENDING DASH.el)
+
+(defun om--pad-or-truncate (length pad list)
+  "Return padded or truncated list starting from LIST.
+
+If length of LIST is greater than LENGTH, truncate LIST to LENGTH
+and return. If LIST is longer than LENGTH, add PAD to the end
+of LIST until it's length equals LENGTH and return. Do nothing if
+length of LIST is equal to LENGTH initially."
+  (let ((blanks (- length (length list))))
+    (if (< blanks 0) (-slice list 0 (1- length))
+      (append list (-repeat blanks pad)))))
+
+(defun om--plist-get-keys (plist)
+  "Get the keys for PLIST."
+  (-slice plist 0 nil 2))
+
+(defun om--plist-get-vals (plist)
+  "Get the values for PLIST."
+  (-slice plist 1 nil 2))
+
+(defun om--plist-map-values (fun plist)
+  "Map FUN over over the values in PLIST.
+FUN is a unary function that returns a modified value."
+  (let ((keys (om--plist-get-keys plist)))
+    (->> (om--plist-get-vals plist)
+         (--map (funcall fun it))
+         (-interleave keys))))
+
+(defun om--is-plist-p (list)
+  "Return t if LIST is a plist."
+  (and
+   (listp list)
+   (cl-evenp (length list))
+   (-all? #'keywordp (-slice list 0 nil 2))))
+
+(defun om--plist-remove (key plist)
+  "Return PLIST with KEY and its value removed."
+  (->> (-partition 2 plist) (--remove (eq (car it) key)) (-flatten-n 1)))
+
+(defun om--convert-intra-index (n list &optional permit-error)
+  "Return absolute index given N and LIST.
+
+The absolute index to be returned will be a positive integer that will
+select each member analogously to `nth'.
+
+N is relative index where positions in LIST are given by the following:
+- 0: first member
+- 1: second member (and so on)
+- -1: last member
+- -2: penultimate member (and so on)
+
+If N refers to a non-existent member, trigger an out-of-bounds error
+unless PERMIT-ERROR is t."
+  (let* ((N (length list))
+         (upper (1- N))
+         (lower (- N)))
+    (cond
+     ((<= 0 n upper) n)
+     ((>= -1 n lower) (+ N n))
+     (t (unless permit-error
+          (om--arg-error
+           "Index (%s) out of range; must be between %s and %s"
+           n lower upper))))))
+
+(defun om--convert-inter-index (n list &optional permit-error)
+  "Return absolute index given N and LIST.
+
+The absolute index to be returned will be a positive integer that will
+select the space between each member analogously to `-insert-at'.
+
+N is relative index where positions in LIST are given by the following:
+- 0: before first member
+- 1: before second member (and so on)
+- -1: after last member
+- -2: after penultimate member (and so on)
+
+If N refers to a non-existent member, trigger an out-of-bounds error
+unless PERMIT-ERROR is t."
+  (let* ((N (length list))
+         (upper N)
+         (lower (- (- N) 1)))
+    (cond
+     ((<= 0 n upper) n)
+     ((>= -1 n lower) (+ 1 N n))
+     (t (unless permit-error
+          (om--arg-error
+           "Index (%s) out of range; must be between %s and %s"
+           n lower upper))))))
+
+(defun om--insert-at (n x list &optional permit-error)
+  "Like `-insert-at' but can insert X at negative indices N in LIST.
+See `om--convert-inter-index' for the meaning of N."
+  (-insert-at (om--convert-inter-index n list permit-error) x list))
+
+(defun om--remove-at (n list)
+  "Like `-remove-at' but honors negative indices N in LIST.
+See `om--convert-intra-index' for the meaning of N."
+  (-remove-at (om--convert-intra-index n list) list))
+
+(defun om--replace-at (n x list)
+  "Like `-replace-at' but can substitute X at negative indices N in LIST.
+See `om--convert-intra-index' for the meaning of N."
+  (-replace-at (om--convert-intra-index n list) x list))
+
+(defun om--split-at (n list &optional permit-error)
+  "Like `-split-at' except allow negative indices in LIST.
+See `om--convert-inter-index' for the meaning of N."
+  (-split-at (om--convert-inter-index n list permit-error) list))
+
+(defun om--nth (n list &optional permit-error)
+  "Like `nth' but honors negative indices N in LIST.
+See `om--convert-intra-index' for the meaning of N.
+If PERMIT-ERROR is t, do not throw out-of-bounds errors."
+  (-when-let (i (om--convert-intra-index n list permit-error))
+    (nth i list)))
+
+(om--defun-private* om--map-first (fun list)
+  "Return LIST with FUN applied to the first member.
+FUN is a unary function that returns a modified member."
+  (->> (cdr list) (cons (funcall fun (car list)))))
+
+(om--defun-private* om--map-last (fun list)
+  "Return LIST with FUN applied to the last member.
+FUN is a unary function that returns a modified member."
+  (->> (nreverse list) (om--map-first fun) (nreverse)))
+
 ;;; INTERNAL TYPE FUNCTIONS
 
 ;; TODO this is a weird spot for this...
@@ -229,12 +396,22 @@ STRING and ARGS are analogous to `error'."
   (if (memq (om--get-type node) types) t))
 
 (defun om--is-node-p (list)
-  "Return t is LIST is a node."
+  "Return t if LIST is a node."
   (om--is-any-type-p om-nodes list))
 
 (defun om--is-branch-node-p (list)
-  "Return t is LIST is a branch node."
+  "Return t if LIST is a branch node."
   (om--is-any-type-p om-branch-nodes list))
+
+(defun om--is-timestamp-p (node)
+  "Return t if NODE is a timestamp node (not a diary timestamp node)."
+  (and (om--is-type-p 'timestamp node)
+       (not (om--property-is-eq-p :type 'diary node))))
+
+(defun om--is-timestamp-diary-p (node)
+  "Return t if NODE is a timestamp diary node."
+  (and (om--is-type-p 'timestamp node)
+       (om--property-is-eq-p :type 'diary node)))
 
 (defun om--filter-type (type node)
   "Return NODE if it is TYPE or nil otherwise."
@@ -244,7 +421,7 @@ STRING and ARGS are analogous to `error'."
   "Return NODE if it is one of TYPES or nil otherwise."
   (and (om--is-any-type-p types node) node))
 
-;;; BOILERPLATE MACROS
+;;; PUBLIC FUNCTION DEFINITIONS
 
 ;;; better cl-defun
 
@@ -469,6 +646,103 @@ function calls."
           `(defun ,name ,@res))
       `(defun ,name ,arglist ,@body))))
 
+;;; defun with runtime type checking
+
+(defmacro om--defun-catch-arg-type-error (&rest body)
+  "Return BODY wrapped in `condition-case' form.
+The case form will catch `arg-type-error' and rethrow them as-is."
+  `(condition-case err
+       (progn ,@body)
+     (arg-type-error (signal (car err) (cdr err)))))
+
+(eval-when-compile
+  (defun om--defun-make-type-check-form (type-check)
+    (-let* (((type arg) type-check)
+            ((pred desc)
+             (cl-case type
+               (:fun '(functionp "a function"))
+               (:cons '(consp "a cons"))
+               (:bool '(booleanp "a boolean"))
+               (:kw '(keywordp "a keyword"))
+               (:int '(integerp "an integer"))
+               (:p-int '(om--is-pos-integer-p "a positive integer"))
+               (:nn-int '(om--is-non-neg-integer-p "a non-negative integer"))
+               (:node '(om--is-node-p "a node"))
+               (:nodes '((lambda (it) (-all? #'om--is-node-p it))
+                         "list of nodes"))
+               (t (error "Invalid type checker flag used: %s" type))))
+            (msg (format "Argument '%s' must be %s: Got %%s" arg desc)))
+      `(unless (funcall #',pred ,arg)
+         (om--arg-error ,msg ,arg)))))
+
+(defmacro om--defun-normalize-arglist (arglist)
+  `(--map (if (listp it) (cadr it) it) ,arglist))
+
+(defmacro om--defun-check-private (name)
+  `(when (s-starts-with-p "om--" (symbol-name ,name))
+     (error "This macro can only be used for public definitions")))
+
+;; TODO the docstrings here suck...
+(defmacro om--defun (name arglist &rest args)
+  "Return a function definition for NAME, ARGLIST, and ARGS."
+  (declare (doc-string 3) (indent 2))
+  (om--defun-check-private name)
+  (-let* (((docstring body) (om--partition-docstring-body args))
+          (type-checks (-some->>
+                        (-filter #'listp arglist)
+                        (-map #'om--defun-make-type-check-form)))
+          (arglist (om--defun-normalize-arglist arglist))
+          (body `(om--defun-catch-arg-type-error ,@body)))
+    `(defun ,name ,arglist
+       ,docstring
+       ,@type-checks
+       ,body)))
+
+(defmacro om--defmacro (name arglist &rest args)
+  "Return a macro definition for NAME, ARGLIST, and ARGS."
+  (declare (doc-string 3) (indent 2))
+  (om--defun-check-private name)
+  (-let* (((docstring body) (om--partition-docstring-body args))
+          (type-checks (-some->>
+                        (-filter #'listp arglist)
+                        (-map #'om--defun-make-type-check-form)))
+          (arglist (om--defun-normalize-arglist arglist))
+          (body `(om--defun-catch-arg-type-error ,@body)))
+    `(defmacro ,name ,arglist
+       ,docstring
+       ,@type-checks
+       ,body)))
+
+(defmacro om--defun* (name arglist &rest args)
+  "Return a function definition for NAME, ARGLIST, and ARGS.
+This will also make a mirrored anaphoric form macro definition. This
+assumes that `fun' represents a unary function which will be used
+somewhere in the definition's body. When making the anaphoric form,
+`fun' will be replaced by the symbol `form', and `form' will be
+wrapped in a lambda call binding the unary argument to the symbol
+`it'."
+  (declare (doc-string 3) (indent 2))
+  (om--defun-check-private name)
+  (-let* (((docstring body) (om--partition-docstring-body args))
+          (name* (intern (format "%s*" name)))
+          (arglist* (-replace 'fun '(:cons form) arglist))
+          (docstring* (format "Anaphoric form of `%s'." name))
+          (funargs (--map (if (eq it 'fun) '(lambda (it) (\, form))
+                            (cons '\, (list it)))
+                          arglist))
+          (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
+          (indent `(declare (indent ,(-elem-index 'fun arglist))))
+          (arglist (-replace 'fun '(:fun fun) arglist)))
+    `(progn
+       (om--defmacro ,name* ,arglist*
+         ,docstring*
+         ,indent
+         ,body*)
+       (om--defun ,name ,arglist
+         ,docstring
+         ,indent
+         ,@body))))
+
 ;;; defun which also makes anaphoric form
 
 (defmacro om--verify (&rest args)
@@ -488,76 +762,9 @@ If PREDICATE fails, print a generic error message."
                        ',arg ,arg ',pred)))))))
     `(progn ,@tests)))
 
-(eval-when-compile
-  ;; TODO use `macroexp-parse-body' here
-  (defun om--partition-docstring-body (args)
-    "Return ARGS as a partitioned list like (DOCSTRING BODY).
-If the car of ARGS is a string and the cdr of ARGS is non-nil,
-the car of ARGS becomes DOCSTRING, otherwise it is nil. Anything
-that isn't DOCSTRING is BODY."
-    (if (and (stringp (car args)) (< 1 (length args)))
-        (list (car args) (cdr args))
-      (list nil args))))
-
-(defmacro om--defun* (name arglist &rest args)
-  "Return a function definition for NAME, ARGLIST, and ARGS.
-This will also make a mirrored anaphoric form macro definition. This
-assumes that `fun' represents a unary function which will be used
-somewhere in the definition's body. When making the anaphoric form,
-`fun' will be replaced by the symbol `form', and `form' will be
-wrapped in a lambda call binding the unary argument to the symbol
-`it'."
-  (declare (doc-string 3) (indent 2))
-  (-let* (((docstring body) (om--partition-docstring-body args))
-          (name* (intern (format "%s*" name)))
-          (arglist* (-replace 'fun 'form arglist))
-          (docstring* (format "Anaphoric form of `%s'." name))
-          (funargs (--map (if (eq it 'form) '(lambda (it) (\, form))
-                            (cons '\, (list it)))
-                          arglist*))
-          (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
-          (indent* `(declare (indent ,(-elem-index 'form arglist*)))))
-    `(progn
-       (defmacro ,name* ,arglist*
-         ,docstring*
-         ,indent*
-         (unless (listp form)
-           (om--arg-error "Argument 'form' must be a form: Got %S" form))
-         ,body*)
-       (defun ,name ,arglist
-         ,docstring
-         ,indent*
-         (unless (functionp fun)
-           (om--arg-error "Argument 'fun' must be a function: Got %S" fun))
-         ,@body))))
-
 ;;; defun with runtime type checking + auto checking last arg
 
-(defmacro om--defun-catch-arg-type-error (&rest body)
-  "Return BODY wrapped in `condition-case' form.
-The case form will catch `arg-type-error' and rethrow them as-is."
-  `(condition-case err
-       (progn ,@body)
-     (arg-type-error (signal (car err) (cdr err)))))
-
 (eval-when-compile
-  (defun om--defun-make-type-check-form (type-check)
-    (-let* (((type arg) type-check)
-            ((pred desc)
-             (cl-case type
-               (:bool '(booleanp "boolean"))
-               (:kw '(keywordp "keyword"))
-               (:int '(integerp "integer"))
-               (:p-int '(om--is-pos-integer-p "positive integer"))
-               (:nn-int '(om--is-non-neg-integer-p "non-negative integer"))
-               (:node '(om--is-node-p "node"))
-               (:nodes '((lambda (it) (-all? #'om--is-node-p it))
-                         "list of nodes"))
-               (t (error "Invalid type checker flag used: %s" type))))
-            (msg (format "Argument '%s' must be a %s: Got %%s" arg desc)))
-      `(unless (funcall #',pred ,arg)
-         (om--arg-error ,msg ,arg))))
-
   (defun om--defun-test-node (arglist)
     "Return a type-checking form based on ARGLIST.
 ARGLIST is a list of symbols from a function definition's signature,
@@ -565,227 +772,53 @@ and the type checker will use a predicate based solely on the
 symbol's name. This will only make a type checker for the last
 argument in arglist, and assumes that argument will be bound to a
 node."
-    (-let* ((type-checks (-some->>
-                          (-drop-last 1 arglist)
-                          (-filter #'listp)
-                          (-map #'om--defun-make-type-check-form)))
-            (type (-last-item arglist))
-            (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
-            ((post test)
-             (cl-case type
-               (node '("node" (om--is-node-p)))
-               (branch-node '("branch node" (om--is-branch-node-p)))
-               (t `(,(format "node of type %s" type)
-                    (om--is-type-p ',type)))))
-            (msg (format "%s must be a %s" pre post)))
-      `(,@type-checks
-        (unless (,@test ,type)
-          (om--arg-error ,msg)))))
-
-  (defun om--defun-normalize-arglist (arglist)
-    (--map (if (listp it) (cadr it) it) arglist)))
+    (let ((type (-last-item arglist)))
+      (if (consp type)
+          (error "Last argument must be a symbol: Got %s" type)
+        (-let* ((pre (if (= 1 (length arglist)) "Argument"
+                       "Last argument"))
+                ((post test)
+                 (cl-case type
+                   (node '("node" (om--is-node-p)))
+                   (branch-node '("branch node"
+                                  (om--is-branch-node-p)))
+                   (timestamp '("non-diary timestamp"
+                                (om--is-timestamp-p)))
+                   (timestamp-diary '("non-diary timestamp"
+                                      (om--is-timestamp-diary-p)))
+                   (t (if (memq type om-nodes)
+                          `(,(format "node of type %s" type)
+                            (om--is-type-p ',type))
+                        (error "Invalid node type arg: %s" type)))))
+                (msg (format "%s must be a %s" pre post)))
+          `(unless (,@test ,type) (om--arg-error ,msg)))))))
 
 (defmacro om--defun-node (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
 Will insert a type checker according to `om--defun-test-node'."
   (declare (doc-string 3) (indent 2))
   (-let* (((docstring body) (om--partition-docstring-body args))
-          (type-checks (om--defun-test-node arglist))
-          (arglist (om--defun-normalize-arglist arglist))
-          (body `(om--defun-catch-arg-type-error ,@body)))
-    `(defun ,name ,arglist
+          (node-check (om--defun-test-node arglist)))
+    `(om--defun ,name ,arglist
        ,docstring
-       ,@type-checks
-       ,body)))
-
-;;; defun with runtime type checking
-
-;; TODO the docstrings here suck...
-(defmacro om--defun (name arglist &rest args)
-  "Return a function definition for NAME, ARGLIST, and ARGS."
-  (declare (doc-string 3) (indent 2))
-  (-let* (((docstring body) (om--partition-docstring-body args))
-          (type-checks (-some->>
-                        (-filter #'listp arglist)
-                        (-map #'om--defun-make-type-check-form)))
-          (arglist (om--defun-normalize-arglist arglist))
-          (body `(om--defun-catch-arg-type-error ,@body)))
-    `(defun ,name ,arglist
-       ,docstring
-       ,@type-checks
-       ,body)))
-
+       ,node-check
+       ,@body)))
 
 ;;; combine type checking and anaphoric form generation
 
 (defmacro om--defun-node* (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
 Will insert a type checker according to `om--defun-test-node' and will
-make an anaphoric form according to `om--defun*' (the same assumptions
+make an anaphoric form according to `om--defun-private*' (the same assumptions
 apply)."
   (declare (doc-string 3) (indent 2))
   (-let* (((docstring body) (om--partition-docstring-body args))
-          (type-checks (om--defun-test-node arglist))
-          (arglist (om--defun-normalize-arglist arglist))
-          (body `(om--defun-catch-arg-type-error ,@body)))
+          (node-check (om--defun-test-node arglist)))
     `(om--defun* ,name ,arglist
        ,docstring
-       ,@type-checks
-       ,body)))
+       ,node-check
+       ,@body)))
 
-;;; defun for weirdly-typed nodes
-
-;; TODO this can probably be refactored...
-(defmacro om--defun-timestamp (name arglist &rest args)
-  "Return a function definition for NAME, ARGLIST, and ARGS.
-Will insert a type checker that will ensure the last argument in
-ARGLIST is a timestamp node with a non-diary type."
-  (declare (doc-string 3) (indent 2))
-  (-let* (((docstring body) (om--partition-docstring-body args))
-          (type-checks (-some->>
-                        (-drop-last 1 arglist)
-                        (-filter #'listp)
-                        (-map #'om--defun-make-type-check-form)))
-          (arglist (om--defun-normalize-arglist arglist))
-          (last (-last-item arglist))
-          (pre (if (= 1 (length arglist)) "Argument" "Last argument"))
-          (msg (format "%s must be a non-diary timestamp node" pre))
-          (body `(om--defun-catch-arg-type-error ,@body)))
-    `(defun ,name ,arglist
-       ,docstring
-       (unless
-           (and (om--is-type-p 'timestamp ,last)
-                (not (om--property-is-eq-p :type 'diary ,last)))
-         (om--arg-error ,msg))
-       ,@type-checks
-       ,body)))
-
-;;; LIST OPERATIONS (EXTENDING DASH.el)
-
-(defun om--pad-or-truncate (length pad list)
-  "Return padded or truncated list starting from LIST.
-
-If length of LIST is greater than LENGTH, truncate LIST to LENGTH
-and return. If LIST is longer than LENGTH, add PAD to the end
-of LIST until it's length equals LENGTH and return. Do nothing if
-length of LIST is equal to LENGTH initially."
-  (let ((blanks (- length (length list))))
-    (if (< blanks 0) (-slice list 0 (1- length))
-      (append list (-repeat blanks pad)))))
-
-(defun om--plist-get-keys (plist)
-  "Get the keys for PLIST."
-  (-slice plist 0 nil 2))
-
-(defun om--plist-get-vals (plist)
-  "Get the values for PLIST."
-  (-slice plist 1 nil 2))
-
-(defun om--plist-map-values (fun plist)
-  "Map FUN over over the values in PLIST.
-FUN is a unary function that returns a modified value."
-  (let ((keys (om--plist-get-keys plist)))
-    (->> (om--plist-get-vals plist)
-         (--map (funcall fun it))
-         (-interleave keys))))
-
-(defun om--is-plist-p (list)
-  "Return t if LIST is a plist."
-  (and
-   (listp list)
-   (cl-evenp (length list))
-   (-all? #'keywordp (-slice list 0 nil 2))))
-
-(defun om--plist-remove (key plist)
-  "Return PLIST with KEY and its value removed."
-  (->> (-partition 2 plist) (--remove (eq (car it) key)) (-flatten-n 1)))
-
-(defun om--convert-intra-index (n list &optional permit-error)
-  "Return absolute index given N and LIST.
-
-The absolute index to be returned will be a positive integer that will
-select each member analogously to `nth'.
-
-N is relative index where positions in LIST are given by the following:
-- 0: first member
-- 1: second member (and so on)
-- -1: last member
-- -2: penultimate member (and so on)
-
-If N refers to a non-existent member, trigger an out-of-bounds error
-unless PERMIT-ERROR is t."
-  (let* ((N (length list))
-         (upper (1- N))
-         (lower (- N)))
-    (cond
-     ((<= 0 n upper) n)
-     ((>= -1 n lower) (+ N n))
-     (t (unless permit-error
-          (om--arg-error
-           "Index (%s) out of range; must be between %s and %s"
-           n lower upper))))))
-
-(defun om--convert-inter-index (n list &optional permit-error)
-  "Return absolute index given N and LIST.
-
-The absolute index to be returned will be a positive integer that will
-select the space between each member analogously to `-insert-at'.
-
-N is relative index where positions in LIST are given by the following:
-- 0: before first member
-- 1: before second member (and so on)
-- -1: after last member
-- -2: after penultimate member (and so on)
-
-If N refers to a non-existent member, trigger an out-of-bounds error
-unless PERMIT-ERROR is t."
-  (let* ((N (length list))
-         (upper N)
-         (lower (- (- N) 1)))
-    (cond
-     ((<= 0 n upper) n)
-     ((>= -1 n lower) (+ 1 N n))
-     (t (unless permit-error
-          (om--arg-error
-           "Index (%s) out of range; must be between %s and %s"
-           n lower upper))))))
-
-(defun om--insert-at (n x list &optional permit-error)
-  "Like `-insert-at' but can insert X at negative indices N in LIST.
-See `om--convert-inter-index' for the meaning of N."
-  (-insert-at (om--convert-inter-index n list permit-error) x list))
-
-(defun om--remove-at (n list)
-  "Like `-remove-at' but honors negative indices N in LIST.
-See `om--convert-intra-index' for the meaning of N."
-  (-remove-at (om--convert-intra-index n list) list))
-
-(defun om--replace-at (n x list)
-  "Like `-replace-at' but can substitute X at negative indices N in LIST.
-See `om--convert-intra-index' for the meaning of N."
-  (-replace-at (om--convert-intra-index n list) x list))
-
-(defun om--split-at (n list &optional permit-error)
-  "Like `-split-at' except allow negative indices in LIST.
-See `om--convert-inter-index' for the meaning of N."
-  (-split-at (om--convert-inter-index n list permit-error) list))
-
-(defun om--nth (n list &optional permit-error)
-  "Like `nth' but honors negative indices N in LIST.
-See `om--convert-intra-index' for the meaning of N.
-If PERMIT-ERROR is t, do not throw out-of-bounds errors."
-  (-when-let (i (om--convert-intra-index n list permit-error))
-    (nth i list)))
-
-(om--defun* om--map-first (fun list)
-  "Return LIST with FUN applied to the first member.
-FUN is a unary function that returns a modified member."
-  (->> (cdr list) (cons (funcall fun (car list)))))
-
-(om--defun* om--map-last (fun list)
-  "Return LIST with FUN applied to the last member.
-FUN is a unary function that returns a modified member."
-  (->> (nreverse list) (om--map-first fun) (nreverse)))
 
 ;;; MISC HELPER FUNCTIONS
 
@@ -905,7 +938,7 @@ property list in NODE."
   (let ((plist (--mapcat (list it nil) props)))
     (om--set-properties plist node)))
 
-(om--defun* om--map-property (prop fun node)
+(om--defun-private* om--map-property (prop fun node)
   "Return NODE with FUN applied to the value in PROP.
 FUN is a unary function that returns a modified value."
   (let ((value (funcall fun (om--get-property prop node))))
@@ -927,7 +960,7 @@ FUN is a unary function that returns a modified value."
   "Return t if PROP in NODE is `equal' to VAL."
   (equal val (om--get-property prop node)))
 
-(om--defun* om--property-is-predicate-p (prop fun node)
+(om--defun-private* om--property-is-predicate-p (prop fun node)
   "Return t if FUN applied to the value of PROP in NODE results not nil.
 FUN is a predicate function that takes one argument."
   (and (funcall fun (om--get-property prop node)) t))
@@ -1653,7 +1686,7 @@ Will validate and encode VALUE if valid according to `om--node-property-alist'."
 
 ;; mapper
 
-(om--defun* om--map-property-strict (prop fun node)
+(om--defun-private* om--map-property-strict (prop fun node)
   "Return NODE with FUN applied to the value in PROP.
 
 FUN is a unary function that returns a modified value.
@@ -1700,7 +1733,7 @@ nested element to return."
    (let ((head (om--get-head node)))
      (if children (append head children) head)))
 
-(om--defun* om--map-children (fun node)
+(om--defun-private* om--map-children (fun node)
   "Return NODE with FUN applied to its children.
 
 FUN is a unary function that takes a list of children and returns
@@ -3168,67 +3201,67 @@ Any other keys will trigger an error."
 
 ;; timestamp
 
-(om--defun-timestamp om-timestamp-get-start-time (timestamp)
+(om--defun-node om-timestamp-get-start-time (timestamp)
   "Return the time list for start time of TIMESTAMP node.
 The return value will be a list as specified by the TIME argument in
 `om-build-timestamp!'."
   (om--timestamp-get-start-time timestamp))
 
-(om--defun-timestamp om-timestamp-get-end-time (timestamp)
+(om--defun-node om-timestamp-get-end-time (timestamp)
   "Return the end time list for end time of TIMESTAMP or nil if not a range.
 The return value will be a list as specified by the TIME argument in
 `om-build-timestamp!'."
   (and (om--timestamp-is-ranged-p timestamp)
        (om--timestamp-get-end-time timestamp)))
 
-(om--defun-timestamp om-timestamp-get-range (timestamp)
+(om--defun-node om-timestamp-get-range (timestamp)
   "Return the range of TIMESTAMP node in seconds as an integer.
 If non-ranged, this function will return 0. If ranged but
 the start time is in the future relative to end the time, return
 a negative integer."
   (om--timestamp-get-range timestamp))
 
-(om--defun-timestamp om-timestamp-is-active-p (timestamp)
+(om--defun-node om-timestamp-is-active-p (timestamp)
   "Return t if TIMESTAMP node is active."
   (or (om--property-is-eq-p :type 'active timestamp)
       (om--property-is-eq-p :type 'active-range timestamp)))
 
-(om--defun-timestamp om-timestamp-is-ranged-p (timestamp)
+(om--defun-node om-timestamp-is-ranged-p (timestamp)
   "Return t if TIMESTAMP node is ranged."
   (or (om--property-is-eq-p :type 'active-range timestamp)
       (om--property-is-eq-p :type 'inactive-range timestamp)))
 
-(om--defun-timestamp om-timestamp-range-contains-p (unixtime timestamp)
+(om--defun-node om-timestamp-range-contains-p (unixtime timestamp)
   "Return t if UNIXTIME is between start and end time of TIMESTAMP node."
   (let ((ut1 (om--timestamp-get-start-unixtime timestamp))
         (ut2 (om--timestamp-get-end-unixtime timestamp)))
     (< ut1 unixtime ut2)))
 
-(om--defun-timestamp om-timestamp-set-start-time (time timestamp)
+(om--defun-node om-timestamp-set-start-time (time timestamp)
   "Return TIMESTAMP node with start time set to TIME.
 TIME is a list analogous to the same argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-start-time time timestamp))
 
-(om--defun-timestamp om-timestamp-set-end-time (time timestamp)
+(om--defun-node om-timestamp-set-end-time (time timestamp)
   "Return TIMESTAMP node with end time set to TIME.
 TIME is a list analogous to the same argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-end-time time timestamp))
 
-(om--defun-timestamp om-timestamp-set-single-time (time timestamp)
+(om--defun-node om-timestamp-set-single-time (time timestamp)
   "Return TIMESTAMP node with start and end times set to TIME.
 TIME is a list analogous to the same argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-single-time time timestamp))
 
-(om--defun-timestamp om-timestamp-set-double-time (time1 time2 timestamp)
+(om--defun-node om-timestamp-set-double-time (time1 time2 timestamp)
   "Return TIMESTAMP node with start and end times set to TIME1 and TIME2 respectively.
 TIME1 and TIME2 are lists analogous to the TIME argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-double-time time1 time2 timestamp))
 
-(om--defun-timestamp om-timestamp-set-range (range timestamp)
+(om--defun-node om-timestamp-set-range (range timestamp)
   "Return TIMESTAMP node with range set to RANGE.
 If TIMESTAMP is ranged, keep start time the same and adjust the end
 time. If not, make a new end time. The units for RANGE are in minutes
@@ -3236,11 +3269,11 @@ if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format."
   (om--timestamp-set-range range timestamp))
 
-(om--defun-timestamp om-timestamp-set-active ((:bool flag) timestamp)
+(om--defun-node om-timestamp-set-active ((:bool flag) timestamp)
   "Return TIMESTAMP node with active type if FLAG is t."
   (om--timestamp-set-active flag timestamp))
 
-(om--defun-timestamp om-timestamp-shift ((:int n) unit timestamp)
+(om--defun-node om-timestamp-shift ((:int n) unit timestamp)
   "Return TIMESTAMP node with time shifted by N UNIT's.
 
 This function will move the start and end times together; therefore
@@ -3255,7 +3288,7 @@ will increase the hour property by 1 and the minute property by 30."
   (->> (om--timestamp-shift-start n unit timestamp)
        (om--timestamp-shift-end n unit)))
 
-(om--defun-timestamp om-timestamp-shift-start ((:int n) unit timestamp)
+(om--defun-node om-timestamp-shift-start ((:int n) unit timestamp)
   "Return TIMESTAMP node with start time shifted by N UNIT's.
 
 N and UNIT behave the same as those in `om-timestamp-shift'.
@@ -3265,7 +3298,7 @@ the shifted start time and the end time as that of TIMESTAMP. If this
 behavior is not desired, use `om-timestamp-shift'."
   (om--timestamp-shift-start n unit timestamp))
 
-(om--defun-timestamp om-timestamp-shift-end ((:int n) unit timestamp)
+(om--defun-node om-timestamp-shift-end ((:int n) unit timestamp)
   "Return TIMESTAMP node with end time shifted by N UNIT's.
 
 N and UNIT behave the same as those in `om-timestamp-shift'.
@@ -3275,13 +3308,13 @@ the shifted end time and the start time as that of TIMESTAMP. If this
 behavior is not desired, use `om-timestamp-shift'."
   (om--timestamp-shift-end n unit timestamp))
 
-(om--defun-timestamp om-timestamp-toggle-active (timestamp)
+(om--defun-node om-timestamp-toggle-active (timestamp)
   "Return TIMESTAMP node with its active/inactive type flipped."
   (-> (om--timestamp-is-active-p timestamp)
       (not)
       (om--timestamp-set-active timestamp)))
 
-(om--defun-timestamp om-timestamp-truncate (timestamp)
+(om--defun-node om-timestamp-truncate (timestamp)
   "Return TIMESTAMP node with start/end times forced to short format."
   (let ((t1 (->> (om--timestamp-get-start-time timestamp)
                     (om--time-truncate)))
@@ -3289,20 +3322,19 @@ behavior is not desired, use `om-timestamp-shift'."
                   (om--time-truncate))))
     (om--timestamp-set-double-time t1 t2 timestamp)))
 
-(om--defun-timestamp om-timestamp-truncate-start (timestamp)
+(om--defun-node om-timestamp-truncate-start (timestamp)
   "Return TIMESTAMP node with start time forced to short format."
   (let ((time (->> (om--timestamp-get-start-time timestamp)
                    (om--time-truncate))))
     (om--timestamp-set-start-time time timestamp)))
 
-(om--defun-timestamp om-timestamp-truncate-end (timestamp)
+(om--defun-node om-timestamp-truncate-end (timestamp)
   "Return TIMESTAMP node with end time forced to short format."
   (let ((time (->> (om--timestamp-get-end-time timestamp)
                    (om--time-truncate))))
     (om--timestamp-set-end-time time timestamp)))
 
-(om--defun-timestamp om-timestamp-set-condensation ((:bool flag)
-                                                    timestamp)
+(om--defun-node om-timestamp-set-condensation ((:bool flag) timestamp)
   "Return TIMESTAMP with condensation set to FLAG.
 
 If timestamp is ranged but not outside of one day, it may be condensed
@@ -3318,13 +3350,10 @@ condensed format."
       (om--timestamp-set-type-ranged (not flag) timestamp)
     timestamp))
 
-(defun om-timestamp-diary-set-value (form timestamp)
-  "Return TIMESTAMP node with value set to FORM.
+(om--defun-node om-timestamp-diary-set-value (form timestamp-diary)
+  "Return TIMESTAMP-DIARY node with value set to FORM.
 TIMESTAMP must have a type `eq' to `diary'. FORM is a quoted list."
-  (unless (and (om--is-type-p 'timestamp timestamp)
-               (om--property-is-eq-p :type 'diary timestamp))
-    (om--arg-error "Last argument must be a diary timestamp node"))
-  (om--timestamp-diary-set-value form timestamp))
+  (om--timestamp-diary-set-value form timestamp-diary))
 
 ;;; element nodes
 ;;
@@ -4557,14 +4586,14 @@ current buffer."
          (call (intern (format "om-parse-%s-at" it)))
          (update-at-body `(om-update fun (,call point)))
          (update-this-body `(,update-at (point) fun)))
-    (eval `(om--defun* ,update-at (point fun)
+    (eval `(om--defun-private* ,update-at (point fun)
              ,update-at-doc
              ,update-at-body))
-    (eval `(om--defun* ,update-this (fun)
+    (eval `(om--defun-private* ,update-this (fun)
              ,update-this-doc
              ,update-this-body))))
 
-(om--defun* om-update-this-buffer (fun)
+(om--defun-private* om-update-this-buffer (fun)
   "Apply FUN to the contents of the current buffer.
 FUN is a unary function that takes a node of type 'org-data' and
 returns a modified node."

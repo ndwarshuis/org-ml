@@ -356,7 +356,7 @@ Set, get, and map properties of nodes.
 
 ### Timestamp (diary)
 
-* [om-timestamp-diary-set-value](#om-timestamp-diary-set-value-form-timestamp) `(form timestamp)`
+* [om-timestamp-diary-set-value](#om-timestamp-diary-set-value-form-timestamp-diary) `(form timestamp-diary)`
 
 ## Branch/Child Manipulation
 
@@ -3571,10 +3571,10 @@ Return **`timestamp`** node with end time forced to short format.
 
 ### Timestamp (diary)
 
-#### om-timestamp-diary-set-value `(form timestamp)`
+#### om-timestamp-diary-set-value `(form timestamp-diary)`
 
-Return **`timestamp`** node with value set to **`form`**.
-**`timestamp`** must have a type `eq` to `diary`. **`form`** is a quoted list.
+Return **`timestamp-diary`** node with value set to **`form`**.
+`timestamp` must have a type `eq` to `diary`. **`form`** is a quoted list.
 
 ```el
 ;; Given the following contents:
@@ -4776,8 +4776,8 @@ which will replace the original.
 ;; Selectively mark headlines as DONE
 (->> (om-parse-this-subtree)
      (om-match-map '(headline)
-       (lambda (it)
-	 (om-set-property :todo-keyword "DONE" it)))
+		   (lambda (it)
+		     (om-set-property :todo-keyword "DONE" it)))
      (om-to-trimmed-string))
  ;; => "* headline one
  ;      ** DONE headline two
@@ -4786,7 +4786,7 @@ which will replace the original.
 
 (->> (om-parse-this-subtree)
      (om-match-map* '(:first headline)
-       (om-set-property :todo-keyword "DONE" it))
+		    (om-set-property :todo-keyword "DONE" it))
      (om-to-trimmed-string))
  ;; => "* headline one
  ;      ** DONE headline two
@@ -4795,8 +4795,8 @@ which will replace the original.
 
 (->> (om-parse-this-subtree)
      (om-match-map '(:last headline)
-       (-partial (function om-set-property)
-		 :todo-keyword "DONE"))
+		   (-partial (function om-set-property)
+			     :todo-keyword "DONE"))
      (om-to-trimmed-string))
  ;; => "* headline one
  ;      ** TODO headline two
@@ -4820,8 +4820,8 @@ nodes which will be spliced in place of the original node.
 
 (->> (om-parse-this-subtree)
      (om-match-mapcat* '(:first headline)
-       (list (om-build-headline! :title-text "1.5" :level 2)
-	     it))
+		       (list (om-build-headline! :title-text "1.5" :level 2)
+			     it))
      (om-to-trimmed-string))
  ;; => "* one
  ;      ** 1.5
@@ -5106,8 +5106,8 @@ current buffer.
 
 (->> (om-parse-this-headline)
      (om-update* (->> (om-match-map '(:many item)
-			(function om-item-toggle-checkbox)
-			it)
+				    (function om-item-toggle-checkbox)
+				    it)
 		      (om-headline-update-item-statistics))))
  ;; Output these buffer contents
  ;; $> "* win grammy [3/3]
