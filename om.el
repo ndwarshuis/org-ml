@@ -676,7 +676,7 @@ is a form used to type-check the rest arguments."
        (error "Rest argument must only have one symbol or cons"))))
 
   (defun om--make-kwarg-let (kws-sym kwarg)
-    "Return cons cell for KWARG like (KW :let LET-FORM :check CHECKER).
+    "Return list for KWARG like (KW :let LET-FORM :check CHECKER).
 KWARG is a keyword argument in the signature of a function definition
 (see `om--defun-kw' for valid configurations of this). In the returned
 cell, KW is keyword representing the key to be used in a function
@@ -696,13 +696,19 @@ bound to KW."
                                   (om--defun-make-type-check-form it))))
             (list kw :let `(,arg ,val) :check check))))
       (pcase kwarg
+        ;; ((PRED KEY) INITFORM)
         (`((,(and (pred keywordp) pred) ,arg) ,init)
          (make-plist arg pred init))
+        ;; ((PRED KEY))
         (`((,(and (pred keywordp) pred) ,arg))
          (make-plist arg pred nil))
-        (`(,arg ,init) (make-plist arg nil init))
+        ;; (KEY INITFORM)
+        (`(,arg ,init)
+         (make-plist arg nil init))
+        ;; KEY
         ((and (pred symbolp) arg)
          (make-plist arg nil nil))
+        ;; silly user...
         (_ (error "Invalid keyword argument: %s" kwarg)))))
 
   (defun om--throw-kw-error (msg kws)
