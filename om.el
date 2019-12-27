@@ -470,6 +470,8 @@ The case form will catch `arg-type-error' and rethrow them as-is."
       (t (error "Invalid type checker key used: %s" key))))
 
   (defun om--defun-make-type-check-form (type-check)
+    "Return type-checking form built from TYPE-CHECK.
+TYPE-CHECK is a list like (KEY SYM)."
     (-let* (((type arg) type-check)
             ((pred desc) (om--defun-get-type-check-fun type))
             (msg (format "Argument '%s' must be %s: Got %%s" arg desc)))
