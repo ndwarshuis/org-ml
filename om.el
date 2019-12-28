@@ -1893,7 +1893,9 @@ Throw an error if an nodes in CHILDREN are not in
   "Return NODE with FUN applied to its children.
 
 FUN is a unary function that takes a list of children and returns
-a modified list of children."
+a modified list of children. New children will be set with
+`om--set-children-strict' which will throw an error if FUN returns
+a child list containing illegal types."
   (let ((children (om--get-children node)))
     (om--set-children-strict (funcall fun children) node)))
 
