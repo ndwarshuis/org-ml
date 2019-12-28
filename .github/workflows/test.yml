@@ -34,6 +34,7 @@ jobs:
     - uses: conao3/setup-cask@master
       with:
         version: '0.8.4'
+        cmd: install
 
     - name: Run tests
       if: matrix.allow_failure != true
