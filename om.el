@@ -1857,32 +1857,45 @@ nested element to return."
 FUN is a unary function that takes a list of children and returns
 a modified list of children."
   (let ((children (om--get-children node)))
-    ;; TODO check the types of children after they are mapped?
     (om--set-children (funcall fun children) node)))
 
-(defun om--set-children-restricted (types children node)
+;;; strict child operations
+
+(defun om--set-childen-throw-error (type child-types illegal)
+  "Throw an `arg-type-error' for TYPE.
+In the message specify that allowed child types are CHILD-TYPES
+and ILLEGAL types were attempted to be set."
+  (cl-flet
+      ((format-types
+        (type-list)
+        (->> type-list (-map #'symbol-name) (s-join ", "))))
+    (let ((fmt (->> '("Setting illegal child types for node type '%s'"
+                      ": %s; allowed types are: %s")
+                    (s-join "")))
+          (illegal (format-types illegal))
+          (child-types (format-types child-types)))
+      (om--arg-error fmt type illegal child-types))))
+
+(defun om--set-children-strict (children node)
   "Return NODE with children set to CHILDREN.
+Throw an error if an nodes in CHILDREN are not in
+`om--node-restrictions' for the type of NODE."
+  (let ((type (om--get-type node)))
+    (-if-let (child-types (alist-get type om--node-restrictions))
+        (-if-let (illegal (-difference (-map #'om--get-type children)
+                                       child-types))
+            (om--set-childen-throw-error type child-types illegal)
+          (om--set-children children node))
+      ;; this should not happen
+      (error "Child type restrictions not found for %s" type))))
 
-If any node in CHILDREN has a type not in TYPES, throw an error."
-  (-when-let (illegal (-some->> (-map #'om--get-type children)
-                                (--remove (memq it types))
-                                (-map #'symbol-name)
-                                (s-join ", ")))
-    (om--arg-error "Illegal types found: %s; allowed types are: %s"
-           illegal (s-join ", " (-map #'symbol-name types))))
-  (om--set-children children node))
+(om--defun-nocheck* om--map-children-strict (fun node)
+  "Return NODE with FUN applied to its children.
 
-;; TODO the type argument is silly
-(defun om--set-children-by-type (branch-type children node)
-  "Return NODE with children set to CHILDREN.
-
-If any node in CHILDREN has a type that is not allowed for
-BRANCH-TYPE, throw an error."
-  ;; TODO there may be additional restrictions, such as newlines
-  ;; in strings not being allowed
-  (-if-let (types (alist-get branch-type om--node-restrictions))
-      (om--set-children-restricted types children node)
-    (error "Invalid branch type requested: %s" branch-type)))
+FUN is a unary function that takes a list of children and returns
+a modified list of children."
+  (let ((children (om--get-children node)))
+    (om--set-children-strict (funcall fun children) node)))
 
 ;;; BASE BUILDER FUNCTIONS
 
@@ -1923,7 +1936,7 @@ plist of properties for the node."
   "Return a new branch object-typed node from TYPE, POST-BLANK, and CHILDREN."
   (->> om--recursive-object-properties
        (om--build type post-blank)
-       (om--set-children-by-type type children)))
+       (om--set-children-strict children)))
 
 (defun om--build-element (type post-blank)
   "Return a new element-typed node from TYPE and POST-BLANK."
@@ -1933,7 +1946,7 @@ plist of properties for the node."
   "Return a new branch element-typed node from TYPE, POST-BLANK, and CHILDREN."
   (->> om--container-element-properties
        (om--build type post-blank)
-       (om--set-children-by-type type children)))
+       (om--set-children-strict children)))
 
 ;;; base builders
 
@@ -3545,8 +3558,7 @@ is the same as that described in `om-build-planning!'."
   "Return BRANCH-NODE with its children set to CHILDREN.
 CHILDREN is a list of nodes; the types permitted in this list depend
 on the type of NODE."
-  (let ((type (om--get-type branch-node)))
-    (om--set-children-by-type type children branch-node)))
+  (om--set-children-strict children branch-node))
 
 (om--defun-node* om-map-children (fun branch-node)
   "Return BRANCH-NODE with FUN applied to its children.
