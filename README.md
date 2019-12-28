@@ -3812,8 +3812,7 @@ return the result as a secondary string.
 
 #### om-unwrap-deep `(object-node)`
 
-Return the children of **`object-node`** as a secondary string.
-This is like [`om-unwrap-types-deep`](#om-unwrap-types-deep-types-object-node) but operates on all types.
+Return the children of **`object-node`** as plain-text wrapped in a list.
 
 ```el
 ;; Given the following contents:
@@ -3850,7 +3849,7 @@ The unwrap operation will be done with [`om-unwrap`](#om-unwrap-object-node).
 
 #### om-flatten-types-deep `(types secondary-string)`
 
-Return **`secondary-string`** with objects in **`types`** unwrapped.
+Return **`secondary-string`** with object nodes in **`types`** unwrapped.
 The unwrap operation will be done with [`om-unwrap-types-deep`](#om-unwrap-types-deep-types-object-node).
 
 ```el
@@ -3868,7 +3867,7 @@ The unwrap operation will be done with [`om-unwrap-types-deep`](#om-unwrap-types
 
 #### om-flatten-deep `(secondary-string)`
 
-Return **`secondary-string`** with all objects unwrapped to plain-text.
+Return **`secondary-string`** with all object nodes unwrapped to plain-text.
 The unwrap operation will be done with [`om-unwrap-deep`](#om-unwrap-deep-object-node).
 
 ```el
