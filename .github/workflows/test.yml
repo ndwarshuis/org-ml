@@ -7,16 +7,16 @@ jobs:
     strategy:
       matrix:
         emacs_version:
-          # - '24.1'
-          # - '24.2'
-          # - '24.3'
-          # - '24.4'
-          # - '24.5'
-          # - '25.1'
-          # - '25.2'
-          # - '25.3'
-          # - '26.1'
-          # - '26.2'
+          - '24.1'
+          - '24.2'
+          - '24.3'
+          - '24.4'
+          - '24.5'
+          - '25.1'
+          - '25.2'
+          - '25.3'
+          - '26.1'
+          - '26.2'
           - '26.3'
           - 'snapshot'
         include:
@@ -35,6 +35,7 @@ jobs:
       with:
         version: '0.8.4'
 
+    # idk why the 'cask install' should be necessary
     - name: Run tests
       if: matrix.allow_failure != true
       run: |
