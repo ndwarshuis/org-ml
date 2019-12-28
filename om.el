@@ -37,7 +37,7 @@
 
 ;;; Code:
 
-(require 'org)
+(require 'org-element)
 (require 'dash)
 (require 's)
 
