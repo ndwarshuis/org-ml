@@ -4301,9 +4301,9 @@ and the variable `it' is bound to the original children."
        ((rec
          (node)
          (if (om--is-type-p 'plain-text node) node
-           (om--map-children*
-             (->> (funcall (lambda (it) ,form) it)
-                  (--map (rec it)))
+           (om--map-children-strict*
+             (->> (--map (rec it) it)
+                  (funcall (lambda (it) ,form)))
              node))))
      (rec ,node)))
 
@@ -4400,13 +4400,6 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; insert-within
 
-(defun om--insert-in (node node* index)
-  "Return NODE with NODE* inserted at INDEX."
-  (om--construct
-   (nth 0 node)
-   (nth 1 node)
-   (om--insert-at index node* (om--get-children node) t)))
-
 (om--defun-node om-match-insert-within (pattern (:int index)
                                                 (:node node*) node)
   "Return NODE with NODE* inserted at INDEX in children matching PATTERN.
@@ -4415,13 +4408,13 @@ PATTERN follows the same rules as `om-match' with the exception
 that PATTERN may be nil. In this case NODE* will be inserted at INDEX
 in the immediate, top level children of NODE."
   (declare (indent 2))
-  (if (-non-nil pattern)
+  (if pattern
       (-if-let (targets (om-match pattern node))
           (om--modify-children node
             (if (not (member node targets)) it
-              (om--insert-in it node* index)))
+              (om--insert-at index node* it t)))
         node)
-    (om--insert-in node node* index)))
+    (om--map-children-strict* (om--insert-at index node* it t) node)))
 
 ;;; splice
 
