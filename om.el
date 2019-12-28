@@ -4279,22 +4279,18 @@ wildcards are:
 
 (defmacro om--modify-children (node form)
   "Recursively modify the children of NODE using FORM.
-FORM is a form that returns a list of elements or objects as the
-new children, and the variable 'it' is available to represent the
-original children to be modified."
+FORM returns a list of element or object nodes as the new children,
+and the variable `it' is bound to the original children."
   (declare (indent 1))
-  (let ((y (make-symbol "type")))
-    `(cl-labels
-         ((rec
-           (node)
-           (let ((,y (om--get-type node)))
-             (if (eq ,y 'plain-text) node
-               (->>
-                (om--get-children node)
-                (funcall (lambda (it) ,form))
-                (--map (rec it))
-                (om--construct ,y (nth 1 node)))))))
-       (rec ,node))))
+  `(cl-labels
+       ((rec
+         (node)
+         (if (om--is-type-p 'plain-text node) node
+           (om--map-children*
+             (->> (funcall (lambda (it) ,form) it)
+                  (--map (rec it)))
+             node))))
+     (rec ,node)))
 
 ;;; delete
 
