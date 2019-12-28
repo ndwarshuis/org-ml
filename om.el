@@ -406,7 +406,7 @@ STRING and ARGS are analogous to `error'."
 (defun om--is-type-p (type node)
   "Return t if NODE's type is `eq' to TYPE (a symbol)."
   (unless (memq type om-nodes)
-    (om--arg-error "Argument 'type' must be in `om-nodes': %s" type))
+    (om--arg-error "Argument 'type' must be in `om-nodes': Got %s" type))
   (eq (om--get-type node) type))
 
 (defun om--is-any-type-p (types node)
