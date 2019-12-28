@@ -1870,8 +1870,9 @@ and ILLEGAL types were attempted to be set."
         (type-list)
         (->> type-list (-map #'symbol-name) (s-join ", "))))
     (let ((fmt (->> '("Setting illegal child types for node type '%s'"
-                      ": %s; allowed types are: %s")
-                    (s-join "")))
+                      "illegal types found: %s"
+                      "allowed types are: %s")
+                    (s-join "; ")))
           (illegal (format-types illegal))
           (child-types (format-types child-types)))
       (om--arg-error fmt type illegal child-types))))
