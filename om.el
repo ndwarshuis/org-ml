@@ -3614,8 +3614,7 @@ return the result as a secondary string."
          (list)))))
 
 (om--defun-node om-unwrap-deep (object-node)
-  "Return the children of OBJECT-NODE as a secondary string.
-This is like `om-unwrap-types-deep' but operates on all types."
+  "Return the children of OBJECT-NODE as plain-text wrapped in a list."
   (om-unwrap-types-deep om-nodes object-node))
 
 ;;; secondary strings
@@ -3626,12 +3625,12 @@ The unwrap operation will be done with `om-unwrap'."
   (om--mapcat-normalize (om-unwrap it) secondary-string))
 
 (om--defun-node om-flatten-types-deep (types secondary-string)
-  "Return SECONDARY-STRING with objects in TYPES unwrapped.
+  "Return SECONDARY-STRING with object nodes in TYPES unwrapped.
 The unwrap operation will be done with `om-unwrap-types-deep'."
   (om--mapcat-normalize (om-unwrap-types-deep types it) secondary-string))
 
 (om--defun-node om-flatten-deep (secondary-string)
-  "Return SECONDARY-STRING with all objects unwrapped to plain-text.
+  "Return SECONDARY-STRING with all object nodes unwrapped to plain-text.
 The unwrap operation will be done with `om-unwrap-deep'."
   (om--mapcat-normalize (om-unwrap-deep it) secondary-string))
 
