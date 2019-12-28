@@ -4404,7 +4404,22 @@
     nil
     (:buffer "* one"
              "** two"
-             "** three")
+             "** three"
+             "*** four")
+    (->> (om-parse-this-subtree)
+         (om-match-splice-within '(headline) 0
+           (list
+            (om-build-headline! :title-text "new0" :level 3)
+            (om-build-headline! :title-text "new1" :level 3)))
+         (om-to-trimmed-string))
+    => (:result "* one"
+                "** two"
+                "*** new0"
+                "*** new1"
+                "** three"
+                "*** new0"
+                "*** new1"
+                "*** four")
     (->> (om-parse-this-subtree)
          (om-match-splice-within nil 1
            (list
@@ -4415,7 +4430,8 @@
                 "** two"
                 "** new0"
                 "** new1"
-                "** three")))
+                "** three"
+                "*** four")))
 
 (def-example-group "Buffer Side Effects"
   "Map node manipulations into buffers."

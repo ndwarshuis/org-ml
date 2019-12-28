@@ -5149,6 +5149,21 @@ in the immediate, top level children of **`node`**.
 ; * one
 ; ** two
 ; ** three
+; *** four
+
+(->> (om-parse-this-subtree)
+     (om-match-splice-within '(headline)
+	 0 (list (om-build-headline! :title-text "new0" :level 3)
+		 (om-build-headline! :title-text "new1" :level 3)))
+     (om-to-trimmed-string))
+ ;; => "* one
+ ;      ** two
+ ;      *** new0
+ ;      *** new1
+ ;      ** three
+ ;      *** new0
+ ;      *** new1
+ ;      *** four"
 
 (->> (om-parse-this-subtree)
      (om-match-splice-within nil 1 (list (om-build-headline! :title-text "new0" :level 2)
@@ -5158,7 +5173,8 @@ in the immediate, top level children of **`node`**.
  ;      ** two
  ;      ** new0
  ;      ** new1
- ;      ** three"
+ ;      ** three
+ ;      *** four"
 
 ```
 

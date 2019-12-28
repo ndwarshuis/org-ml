@@ -374,6 +374,12 @@ See `om--convert-intra-index' for the meaning of N."
 See `om--convert-inter-index' for the meaning of N."
   (-split-at (om--convert-inter-index n list permit-error) list))
 
+(defun om--splice-at (index list* list &optional permit-error)
+  "Return LIST with LIST* spliced at INDEX."
+  (--> (-map #'list list)
+       (om--insert-at index list* it permit-error)
+       (apply #'append it)))
+
 (defun om--nth (n list &optional permit-error)
   "Like `nth' but honors negative indices N in LIST.
 See `om--convert-intra-index' for the meaning of N.
@@ -4460,16 +4466,6 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; splice-within
 
-(defun om--splice-at (node nodes* index)
-  "Return NODE with NODES* spliced at INDEX."
-  (om--construct
-   (nth 0 node)
-   (nth 1 node)
-   (--> (om--get-children node)
-        (om--split-at index it t)
-        (-insert-at 1 nodes* it)
-        (apply #'append it))))
-
 (om--defun-node om-match-splice-within (pattern (:int index)
                                                 (:nodes nodes*) node)
   "Return NODE with NODES* spliced at INDEX in children matching PATTERN.
@@ -4479,13 +4475,13 @@ PATTERN follows the same rules as `om-match' with the exception
 that PATTERN may be nil. In this case NODES* will be inserted at INDEX
 in the immediate, top level children of NODE."
   (declare (indent 2))
-  (if (-non-nil pattern)
+  (if pattern
       (-if-let (targets (om-match pattern node))
           (om--modify-children node
             (if (not (member node targets)) it
-              (om--splice-at it nodes* index)))
+              (om--splice-at index nodes* it t)))
         node)
-    (om--splice-at node nodes* index)))
+    (om--map-children-strict* (om--splice-at index nodes* it t) node)))
 
 ;;; side-effects
 
