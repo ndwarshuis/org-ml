@@ -445,6 +445,11 @@ STRING and ARGS are analogous to `error'."
   (and (om--is-type-p 'timestamp node)
        (om--property-is-eq-p :type 'diary node)))
 
+(defun om--is-table-row-p (node)
+  "Return t if NODE is a standard table-row node."
+  (and (om--is-type-p 'table-row node)
+       (om--property-is-eq-p :type 'standard node)))
+
 (defun om--filter-type (type node)
   "Return NODE if it is TYPE or nil otherwise."
   (and (om--is-type-p type node) node))
@@ -3931,8 +3936,7 @@ The exception is rule-typed table-row nodes which are supposed to be
 empty."
   (unless (and (om--is-childless-p node)
                (or (om--is-any-type-p om--rm-if-empty node)
-                   (and (om--is-type-p 'table-row node)
-                        (om--property-is-eq-p :type 'standard node))))
+                   (om--is-table-row-p node)))
     node))
 
 (defun om--clean (node)
