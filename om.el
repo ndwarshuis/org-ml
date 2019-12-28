@@ -3567,7 +3567,7 @@ on the type of NODE."
   "Return BRANCH-NODE with FUN applied to its children.
 FUN is a unary function that takes the current list of children and
 returns a modified list of children."
-  (om--map-children fun branch-node))
+  (om--map-children-strict fun branch-node))
 
 (om--defun-node om-is-childless-p (branch-node)
   "Return t if BRANCH-NODE is empty."
@@ -3624,7 +3624,7 @@ return the result as a secondary string."
                             (+ it post-blank) it)))))
    (t
     (->> object-node
-         (om--map-children*
+         (om--map-children-strict*
            (om--mapcat-normalize (om-unwrap-types-deep types it) it))
          (list)))))
 
