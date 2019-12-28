@@ -34,12 +34,15 @@ jobs:
     - uses: conao3/setup-cask@master
       with:
         version: '0.8.4'
-        cmd: install
 
     - name: Run tests
       if: matrix.allow_failure != true
-      run: './run-tests.sh'
+      run: |
+        cask install
+        cask exec ./run-tests.sh
 
     - name: Run tests (allow failure)
       if: matrix.allow_failure == true
-      run: './run-tests.sh || true'
+      run: |
+        cask install
+        cask exec ./run-tests.sh || true
