@@ -3,7 +3,7 @@
 set -e
 
 if [ -z "$EMACS" ] ; then
-    EMACS="cask exec emacs"
+    EMACS="emacs"
 fi
 
 # Run all tests by default.
