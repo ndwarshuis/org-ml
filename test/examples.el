@@ -3040,7 +3040,7 @@
 (def-example-group "Branch/Child Manipulation"
   "Set, get, and map the children of branch nodes."
 
-  (def-example-subgroup "Generic"
+  (def-example-subgroup "Polymorphic"
     nil
 
     (defexamples-content om-children-contain-point-p
@@ -3255,6 +3255,69 @@
       (->> (om-parse-this-element)
            (om-is-childless-p))
       !!> arg-type-error))
+
+  (def-example-subgroup "Objects"
+    nil
+
+    (defexamples-content om-unwrap
+      nil
+      (:buffer "_1 *2* 3 */4/* 5 /6/_")
+      (:comment "Remove the outer underline formatting")
+      (->> (om-parse-this-object)
+           (om-unwrap)
+           (apply #'om-build-paragraph)
+           (om-to-trimmed-string))
+      => "1 *2* 3 */4/* 5 /6/")
+    
+    (defexamples-content om-unwrap-types-deep
+      nil
+      (:buffer "_1 *2* 3 */4/* 5 /6/_")
+      (:comment "Remove bold formatting at any level")
+      (->> (om-parse-this-object)
+           (om-unwrap-types-deep '(bold))
+           (apply #'om-build-paragraph)
+           (om-to-trimmed-string))
+      => "_1 2 3 /4/ 5 /6/_")
+
+    (defexamples-content om-unwrap-deep
+      nil
+      (:buffer "_1 *2* 3 */4/* 5 /6/_")
+      (:comment "Remove all formatting")
+      (->> (om-parse-this-object)
+           (om-unwrap-deep)
+           (apply #'om-build-paragraph)
+           (om-to-trimmed-string))
+      => "1 2 3 4 5 6"))
+
+  (def-example-subgroup "Secondary Strings"
+    nil
+
+    (defexamples-content om-flatten
+      nil
+      (:buffer "This (1 *2* 3 */4/* 5 /6/) is randomly formatted")
+      (:comment "Remove first level of formatting")
+      (->> (om-parse-this-element)
+           (om-map-children #'om-flatten)
+           (om-to-trimmed-string))
+      => "This (1 2 3 /4/ 5 6) is randomly formatted")
+
+    (defexamples-content om-flatten-types-deep
+      nil
+      (:buffer "This (1 *2* 3 */4/* 5 /6/) is randomly formatted")
+      (:comment "Remove italic formatting at any level")
+      (->> (om-parse-this-element)
+           (om-map-children* (om-flatten-types-deep '(italic) it))
+           (om-to-trimmed-string))
+      => "This (1 *2* 3 *4* 5 6) is randomly formatted")
+
+    (defexamples-content om-flatten-deep
+      nil
+      (:buffer "This (1 *2* 3 */4/* 5 /6/) is randomly formatted")
+      (:comment "Remove italic formatting at any level")
+      (->> (om-parse-this-element)
+           (om-map-children #'om-flatten-deep)
+           (om-to-trimmed-string))
+      => "This (1 2 3 4 5 6) is randomly formatted"))
 
   (def-example-subgroup "Headline"
     nil

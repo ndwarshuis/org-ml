@@ -364,13 +364,25 @@ Set, get, and map properties of nodes.
 Set, get, and map the children of branch nodes.
 
 
-### Generic
+### Polymorphic
 
 * [om-children-contain-point-p](#om-children-contain-point-p-point-branch-node) `(point branch-node)`
 * [om-get-children](#om-get-children-branch-node) `(branch-node)`
 * [om-set-children](#om-set-children-children-branch-node) `(children branch-node)`
 * [om-map-children](#om-map-children-fun-branch-node) `(fun branch-node)`
 * [om-is-childless-p](#om-is-childless-p-branch-node) `(branch-node)`
+
+### Objects
+
+* [om-unwrap](#om-unwrap-object-node) `(object-node)`
+* [om-unwrap-types-deep](#om-unwrap-types-deep-types-object-node) `(types object-node)`
+* [om-unwrap-deep](#om-unwrap-deep-object-node) `(object-node)`
+
+### Secondary Strings
+
+* [om-flatten](#om-flatten-secondary-string) `(secondary-string)`
+* [om-flatten-types-deep](#om-flatten-types-deep-types-secondary-string) `(types secondary-string)`
+* [om-flatten-deep](#om-flatten-deep-secondary-string) `(secondary-string)`
 
 ### Headline
 
@@ -3594,7 +3606,7 @@ Return **`timestamp-diary`** node with value set to **`form`**.
 Set, get, and map the children of branch nodes.
 
 
-### Generic
+### Polymorphic
 
 #### om-children-contain-point-p `(point branch-node)`
 
@@ -3751,6 +3763,123 @@ Return t if **`branch-node`** is empty.
 (->> (om-parse-this-element)
      (om-is-childless-p))
 Error
+
+```
+
+
+### Objects
+
+#### om-unwrap `(object-node)`
+
+Return the children of **`object-node`** as a secondary string.
+If **`object-node`** is a plain-text node, wrap it in a list and return.
+Else add the post-blank property of **`object-node`** to the last member
+of its children and return children as a secondary string.
+
+```el
+;; Given the following contents:
+; _1 *2* 3 */4/* 5 /6/_
+
+;; Remove the outer underline formatting
+(->> (om-parse-this-object)
+     (om-unwrap)
+     (apply (function om-build-paragraph))
+     (om-to-trimmed-string))
+ ;; => "1 *2* 3 */4/* 5 /6/"
+
+```
+
+#### om-unwrap-types-deep `(types object-node)`
+
+Return the children of **`object-node`** as a secondary string.
+If **`object-node`** is a plain-text node, wrap it in a list and return.
+Else recursively descend into the children of **`object-node`** and splice
+the children of nodes with type in **`types`** in place of said node and
+return the result as a secondary string.
+
+```el
+;; Given the following contents:
+; _1 *2* 3 */4/* 5 /6/_
+
+;; Remove bold formatting at any level
+(->> (om-parse-this-object)
+     (om-unwrap-types-deep '(bold))
+     (apply (function om-build-paragraph))
+     (om-to-trimmed-string))
+ ;; => "_1 2 3 /4/ 5 /6/_"
+
+```
+
+#### om-unwrap-deep `(object-node)`
+
+Return the children of **`object-node`** as a secondary string.
+This is like [`om-unwrap-types-deep`](#om-unwrap-types-deep-types-object-node) but operates on all types.
+
+```el
+;; Given the following contents:
+; _1 *2* 3 */4/* 5 /6/_
+
+;; Remove all formatting
+(->> (om-parse-this-object)
+     (om-unwrap-deep)
+     (apply (function om-build-paragraph))
+     (om-to-trimmed-string))
+ ;; => "1 2 3 4 5 6"
+
+```
+
+
+### Secondary Strings
+
+#### om-flatten `(secondary-string)`
+
+Return **`secondary-string`** with its first level unwrapped.
+The unwrap operation will be done with [`om-unwrap`](#om-unwrap-object-node).
+
+```el
+;; Given the following contents:
+; This (1 *2* 3 */4/* 5 /6/) is randomly formatted
+
+;; Remove first level of formatting
+(->> (om-parse-this-element)
+     (om-map-children (function om-flatten))
+     (om-to-trimmed-string))
+ ;; => "This (1 2 3 /4/ 5 6) is randomly formatted"
+
+```
+
+#### om-flatten-types-deep `(types secondary-string)`
+
+Return **`secondary-string`** with objects in **`types`** unwrapped.
+The unwrap operation will be done with [`om-unwrap-types-deep`](#om-unwrap-types-deep-types-object-node).
+
+```el
+;; Given the following contents:
+; This (1 *2* 3 */4/* 5 /6/) is randomly formatted
+
+;; Remove italic formatting at any level
+(->> (om-parse-this-element)
+     (om-map-children* (om-flatten-types-deep '(italic)
+					      it))
+     (om-to-trimmed-string))
+ ;; => "This (1 *2* 3 *4* 5 6) is randomly formatted"
+
+```
+
+#### om-flatten-deep `(secondary-string)`
+
+Return **`secondary-string`** with all objects unwrapped to plain-text.
+The unwrap operation will be done with [`om-unwrap-deep`](#om-unwrap-deep-object-node).
+
+```el
+;; Given the following contents:
+; This (1 *2* 3 */4/* 5 /6/) is randomly formatted
+
+;; Remove italic formatting at any level
+(->> (om-parse-this-element)
+     (om-map-children (function om-flatten-deep))
+     (om-to-trimmed-string))
+ ;; => "This (1 2 3 4 5 6) is randomly formatted"
 
 ```
 
