@@ -1,4 +1,4 @@
-# om.el
+# om.el ![Github Workflow Status](https://img.shields.io/github/workflow/status/ndwarshuis/om.el/CI)
 
 A functional API for org-mode inspired by
 [@magnars](https://github.com/magnars)'s
