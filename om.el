@@ -3172,9 +3172,7 @@ its values are forms to be mapped to these properties."
 (om--defun-node om-toggle-property (prop node)
   "Return NODE with the value of PROP flipped.
 
-This function only applies to properties that are booleans.
-
-The following elements and properties are supported:"
+This function only applies to properties that are booleans."
   (let* ((type (om--get-type node))
          (flag (om--get-property-attribute :toggle type prop)))
     (if flag
@@ -3184,9 +3182,7 @@ The following elements and properties are supported:"
 (om--defun-node om-shift-property (prop (:int n) node)
   "Return NODE with PROP shifted by N (an integer).
 
-This only applies the properties that are represented as integers.
-
-The following elements and properties are supported:"
+This only applies the properties that are represented as integers."
   (let* ((type (om--get-type node))
          (fun (om--get-property-attribute :shift type prop)))
     (if fun
@@ -3197,9 +3193,7 @@ The following elements and properties are supported:"
   "Return NODE with STRING inserted at INDEX into PROP.
 
 This only applies to properties that are represented as lists of
-strings.
-
-The following elements and properties are supported:"
+strings."
   (cl-flet
       ((insert-at-maybe
         (string-list)
@@ -3231,9 +3225,7 @@ and properties that may be used with this function."
   "Return NODE with VALUE corresponding to KEY inserted into PROP.
 
 KEY is a keyword and VALUE is a symbol. This only applies to
-properties that are represented as plists.
-
-The following elements and properties are supported:."
+properties that are represented as plists."
   (let* ((type (om--get-type node))
          (flag (om--get-property-attribute :plist type prop)))
     (if flag
@@ -3256,44 +3248,45 @@ and properties that may be used with this function."
 
 ;; update polymorphic property function documentation
 
-(defun om--append-documentation (fun string)
-  "Append STRING to the docstring of FUN."
-  (--> (documentation fun)
-       (concat it "\n" string)
-       (function-put fun 'function-documentation it)))
-
 ;; TODO these docstrings suck :(
-(defun om--get-type-alist-operation (op)
-  "Return alist of all nodes types that contain OP."
+(defun om--get-types-with-property-attribute (attr)
+  "Return alist of all nodes types that contain ATTR."
   (->> om--node-property-alist
-       (--map (cons (car it) (--filter (plist-get (cdr it) op) (cdr it))))
+       (--map (cons (car it) (--filter (plist-get (cdr it) attr) (cdr it))))
        (-filter #'cdr)))
 
-(defun om--format-alist-operations (ops)
-  "Return a formatted string of OPS."
-  (->> ops
+(defun om--format-alist-operations (type-alist)
+  "Return a formatted string of TYPE-ALIST."
+  (->> type-alist
        (--map (cons (car it) (-map #'car (cdr it))))
        (--map (format "\n%s\n%s"
                       (car it)
                       (s-join "\n" (--map (format "- %S" it) (cdr it)))))
        (s-join "\n")))
 
-(->> (om--get-type-alist-operation :toggle)
+(defun om--append-documentation (fun string)
+  "Append STRING to the docstring of FUN."
+  (let ((msg "\n\nThe following types and properties are supported:\n"))
+    (--> (documentation fun)
+         (concat it msg string)
+         (function-put fun 'function-documentation it))))
+
+(->> (om--get-types-with-property-attribute :toggle)
      (om--format-alist-operations)
      (om--append-documentation 'om-toggle-property))
 
-(->> (om--get-type-alist-operation :shift)
+(->> (om--get-types-with-property-attribute :shift)
      (--map (cons (car it) (--remove (eq :post-blank (car it)) (cdr it))))
      (-filter #'cdr)
      (om--format-alist-operations)
      (concat "\nall elements\n- :post-blank\n")
      (om--append-documentation 'om-shift-property))
 
-(->> (om--get-type-alist-operation :string-list)
+(->> (om--get-types-with-property-attribute :string-list)
      (om--format-alist-operations)
      (om--append-documentation 'om-insert-into-property))
 
-(->> (om--get-type-alist-operation :plist)
+(->> (om--get-types-with-property-attribute :plist)
      (om--format-alist-operations)
      (om--append-documentation 'om-plist-put-property))
 

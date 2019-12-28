@@ -2468,7 +2468,7 @@ Return **`node`** with the value of **`prop`** flipped.
 
 This function only applies to properties that are booleans.
 
-The following elements and properties are supported:
+The following types and properties are supported:
 
 entity
 - :use-brackets-p
@@ -2516,7 +2516,7 @@ Return **`node`** with **`prop`** shifted by **`n`** (an integer).
 
 This only applies the properties that are represented as integers.
 
-The following elements and properties are supported:
+The following types and properties are supported:
 
 all elements
 - :post-blank
@@ -2571,7 +2571,7 @@ Return **`node`** with **`string`** inserted at **`index`** into **`prop`**.
 This only applies to properties that are represented as lists of
 strings.
 
-The following elements and properties are supported:
+The following types and properties are supported:
 
 babel-call
 - :arguments
@@ -2657,7 +2657,7 @@ Return **`node`** with **`value`** corresponding to **`key`** inserted into **`p
 **`key`** is a keyword and **`value`** is a symbol. This only applies to
 properties that are represented as plists.
 
-The following elements and properties are supported:.
+The following types and properties are supported:
 
 babel-call
 - :inside-header
