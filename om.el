@@ -1132,6 +1132,7 @@ FUN is a predicate function that takes one argument."
 ;;     - :cis - a unary function that takes NODE and returns a
 ;;       modified NODE; the point of this it so 'update' other
 ;;       properties when PROP is changed
+;;     - :const - a value that PROP should always have
 ;;     - :shift - a binary function that shifts PROP; the first
 ;;       argument takes an integer describing the magnitude and
 ;;       direction of the shift and the second argument is VALUE for
