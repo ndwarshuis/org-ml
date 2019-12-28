@@ -425,6 +425,10 @@ STRING and ARGS are analogous to `error'."
   "Return t if LIST is a branch node."
   (om--is-any-type-p om-branch-nodes list))
 
+(defun om--is-object-node-p (list)
+  "Return t if LIST is an object node."
+  (om--is-any-type-p om-objects list))
+
 (defun om--is-timestamp-p (node)
   "Return t if NODE is a timestamp node (not a diary timestamp node)."
   (and (om--is-type-p 'timestamp node)
@@ -582,19 +586,26 @@ node."
                        "Last argument"))
                 ((post test)
                  (cl-case type
-                   (node '("node" (om--is-node-p)))
-                   (branch-node '("branch node"
-                                  (om--is-branch-node-p)))
-                   (timestamp '("non-diary timestamp"
-                                (om--is-timestamp-p)))
-                   (timestamp-diary '("non-diary timestamp"
-                                      (om--is-timestamp-diary-p)))
+                   (node
+                    '("node" 'om--is-node-p))
+                   (branch-node
+                    '("a branch node" 'om--is-branch-node-p))
+                   (object-node
+                    '("an object node" 'om--is-object-node-p))
+                   (secondary-string
+                    '("a secondary string"
+                      (lambda (it) (-all? #'om--is-object-node-p it))))
+                   (timestamp
+                    '("a non-diary timestamp" 'om--is-timestamp-p))
+                   (timestamp-diary
+                    '("a diary timestamp" 'om--is-timestamp-diary-p))
                    (t (if (memq type om-nodes)
                           `(,(format "node of type %s" type)
-                            (om--is-type-p ',type))
+                            (lambda (it) (om--is-type-p ',type it)))
                         (error "Invalid node type arg: %s" type)))))
-                (msg (format "%s must be a %s" pre post)))
-          `(unless (,@test ,type) (om--arg-error ,msg)))))))
+                (msg (format "%s must be %s" pre post)))
+          `(unless (funcall ,test ,type)
+             (om--arg-error ,msg)))))))
 
 (defmacro om--defun-node (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
@@ -3508,61 +3519,82 @@ returns a modified list of children."
   "Return t if BRANCH-NODE is empty."
   (om--is-childless-p branch-node))
 
-;; (defun om--wrap (type args)
-;;   (-> (format "om-build-%s" type) (intern) (apply args)))
+;;; objects
 
-;; (defun om-wrap-object (type &rest args)
-;;   "Call build function of TYPE to wrap objects contained in ARGS.
-;; ARGS is actually a list if keywords and objects that will be
-;; passed to the builder function. For example with TYPE of 'bold'
-;; and ARGS of ':post-blank 2 \"foo\"', the function `om-build-bold'
-;; will be called with keyword argument ':postblank 2' and \"foo\" in
-;; the rest args slot."
-;;   (if (memq type (append org-element-recursive-objects
-;;                          org-element-object-containers))
-;;       (om--wrap type args)
-;;     (error "Invalid type: %s" type)))
+(defun om--normalize-secondary-string (secondary-string)
+  "Return SECONDARY-STRING with all adjacent strings concatenated."
+  (cl-flet
+      ((concat-maybe
+        (acc node)
+        (let ((last (car acc)))
+          (if (and (om--is-type-p 'plain-text last)
+                   (om--is-type-p 'plain-text node))
+              (cons (concat last node) (cdr acc))
+            (cons node acc)))))
+    (reverse (-reduce-from #'concat-maybe nil secondary-string))))
 
-;; (defun om-wrap-element (type &rest args)
-;;   (if (memq type org-element-greater-elements)
-;;       (om--wrap type args)
-;;     (error "Invalid type: %s" type)))
+(defmacro om--mapcat-normalize (form secondary-string)
+  "Return mapped, concatenated, and normalized SECONDARY-STRING.
+FORM is a form supplied to `--mapcat'."
+  `(->> (--mapcat ,form ,secondary-string)
+        (om--normalize-secondary-string)))
 
-;; ;; TODO is this a meaningful distinction?
-;; (defun om-unwrap (obj)
-;;   "Remove the children of recursive/container object or greater element OBJ."
-;;   (if (om-plain-list-p obj) (list obj)
-;;     (let* ((children (om--get-children obj))
-;;            (post-blank (om--get-property :post-blank obj))
-;;            (first (-drop-last 1 children))
-;;            (last* (->> (-last-item children)
-;;                        (om-set-post-blank post-blank)
-;;                        (list))))
-;;       (append first last*))))
+(om--defun-node om-unwrap (object-node)
+  "Return the children of OBJECT-NODE as a secondary string.
+If OBJECT-NODE is a plain-text node, wrap it in a list and return.
+Else add the post-blank property of OBJECT-NODE to the last member
+of its children and return children as a secondary string."
+  (if (om--is-type-p 'plain-text object-node)
+      (list object-node)
+    (let ((children (om--get-children object-node))
+          (post-blank (om--get-property :post-blank object-node)))
+      (om--map-last* (om--map-property-strict* :post-blank
+                       (+ it post-blank) it)
+        children))))
 
-;; (defun om-unwrap-deep (types obj)
-;;   "Remove the children of all objects of type in TYPES from OBJ.
-;; Return a list of objects."
-;;   (cond
-;;    ((om--is-any-type-p types obj)
-;;     (let* ((children (om--get-children obj))
-;;            (post-blank (om--get-property :post-blank obj))
-;;            (first (-drop-last 1 children))
-;;            (last* (->> (-last-item children)
-;;                        (om-set-post-blank post-blank)
-;;                        (list))))
-;;       (--mapcat (om-unwrap-deep types it) (append first last*))))
-;;    ((om--is-plain-text-p obj) (list obj))
-;;    (t (list obj))))
+(om--defun-node om-unwrap-types-deep (types object-node)
+  "Return the children of OBJECT-NODE as a secondary string.
+If OBJECT-NODE is a plain-text node, wrap it in a list and return.
+Else recursively descend into the children of OBJECT-NODE and splice
+the children of nodes with type in TYPES in place of said node and
+return the result as a secondary string."
+  (cond
+   ((om--is-type-p 'plain-text object-node)
+    (list object-node))
+   ((om--is-any-type-p types object-node)
+    (let* ((children (om--get-children object-node))
+           (post-blank (om--get-property :post-blank object-node)))
+      (->> children
+           (om--mapcat-normalize (om-unwrap-types-deep types it))
+           (om--map-last* (om--map-property-strict* :post-blank
+                            (+ it post-blank) it)))))
+   (t
+    (->> object-node
+         (om--map-children*
+           (om--mapcat-normalize (om-unwrap-types-deep types it) it))
+         (list)))))
 
-;; (defun om-remove-formatting (types node)
-;;   "Remove all recursive formatting TYPES from NODE."
-;;   (om-match-map* `(:many! (:or ,@types))
-;;                 (om-unwrap-deep types it) node))
+(om--defun-node om-unwrap-deep (object-node)
+  "Return the children of OBJECT-NODE as a secondary string.
+This is like `om-unwrap-types-deep' but operates on all types."
+  (om-unwrap-types-deep om-nodes object-node))
 
-;; (defun om-remove-all-formatting (node)
-;;   "Remove all recursive formatting from NODE."
-;;   (om-remove-formatting org-element-all-objects node))
+;;; secondary strings
+
+(om--defun-node om-flatten (secondary-string)
+  "Return SECONDARY-STRING with its first level unwrapped.
+The unwrap operation will be done with `om-unwrap'."
+  (om--mapcat-normalize (om-unwrap it) secondary-string))
+
+(om--defun-node om-flatten-types-deep (types secondary-string)
+  "Return SECONDARY-STRING with objects in TYPES unwrapped.
+The unwrap operation will be done with `om-unwrap-types-deep'."
+  (om--mapcat-normalize (om-unwrap-types-deep types it) secondary-string))
+
+(om--defun-node om-flatten-deep (secondary-string)
+  "Return SECONDARY-STRING with all objects unwrapped to plain-text.
+The unwrap operation will be done with `om-unwrap-deep'."
+  (om--mapcat-normalize (om-unwrap-deep it) secondary-string))
 
 ;;; headline
 
