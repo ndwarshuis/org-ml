@@ -791,6 +791,45 @@ is a boolean that determines if rest arguments are to be considered."
          ,@tests
          ,return)))
 
+  (defun om--make-usage-args (arglist)
+    "Return ARGLIST as it should appear in the usage signature.
+This will uppercase all symbol names and remove all type keys."
+    (cl-flet*
+        ((ucase-sym
+          (sym)
+          (-> sym (symbol-name) (upcase) (make-symbol)))
+         (unwrap-form-maybe
+          (arg)
+          (ucase-sym (if (consp arg) (cadr arg) arg)))
+         (unwrap-kw-form-maybe
+          (arg)
+          (pcase arg
+            ;; ((PRED KEY) INITFORM)
+            (`((,(and (pred keywordp) pred) ,arg) ,init)
+             (list (ucase-sym arg) init))
+            ;; ((PRED KEY))
+            (`((,(and (pred keywordp) pred) ,arg))
+             (ucase-sym arg))
+            ;; (KEY INITFORM)
+            (`(,arg ,init)
+             (list (ucase-sym arg) init))
+            ;; KEY
+            ((and (pred symbolp) arg)
+             (ucase-sym arg))
+            (_ (error "This shouldn't happen")))))
+      (let* ((part(-partition-before-pred
+                   (lambda (it) (memq it '(&pos &rest &key)))
+                   (cons '&pos arglist)))
+             (pos (-some->> (alist-get '&pos part)
+                            (-map #'unwrap-form-maybe)))
+             (kw (-some->> (alist-get '&key part)
+                           (-map #'unwrap-kw-form-maybe)
+                           (cons '&key)))
+             (rest (-some->> (alist-get '&rest part)
+                             (-map #'unwrap-form-maybe)
+                             (cons '&rest))))
+        (append pos kw rest))))
+
   (defun om--make-header (body arglist)
     "Return a header using docstring from BODY and ARGLIST."
     (let ((header (caar (macroexp-parse-body body))))
@@ -801,7 +840,7 @@ is a boolean that determines if rest arguments are to be considered."
         (let ((print-gensym nil)
               (print-quoted t)
               (print-escape-newlines t))
-          (->> (cl--make-usage-args arglist)
+          (->> (om--make-usage-args arglist)
                (cons 'fn)
                (format "%S")
                (help--docstring-quote)
