@@ -97,6 +97,7 @@
 ;; is considered a branch node of class element that is permitted to
 ;; hold other element nodes as children
 
+;; TODO `org-element-all-elements' does not exist in emacs <= 25
 (eval-when-compile
   (defconst om-elements
     (cons 'org-data org-element-all-elements)
