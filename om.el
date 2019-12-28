@@ -805,10 +805,10 @@ This will uppercase all symbol names and remove all type keys."
           (arg)
           (pcase arg
             ;; ((PRED KEY) INITFORM)
-            (`((,(and (pred keywordp) pred) ,arg) ,init)
+            (`((,(and (pred keywordp) _) ,arg) ,init)
              (list (ucase-sym arg) init))
             ;; ((PRED KEY))
-            (`((,(and (pred keywordp) pred) ,arg))
+            (`((,(and (pred keywordp) _) ,arg))
              (ucase-sym arg))
             ;; (KEY INITFORM)
             (`(,arg ,init)
