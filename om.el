@@ -706,7 +706,7 @@ is a form used to type-check the rest arguments."
   (defun om--make-kwarg-let (kws-sym kwarg)
     "Return list for KWARG like (KW :let LET-FORM :check CHECKER).
 KWARG is a keyword argument in the signature of a function definition
-(see `om--defun-kw' for valid configurations of this). In the returned
+\(see `om--defun-kw' for valid configurations of this). In the returned
 cell, KW is keyword representing the key to be used in a function
 call, and LET-FORM is a form to be used in a let binding that will
 retrieve the value for KW from a plist bound to KWS-ARG (which is
@@ -920,7 +920,7 @@ This is like `cl-defun' except it allows &key to be used in
 conjunction with &rest without freaking out. Args can be specified
 using the following syntax:
 
-([([PRED] VAR)] ...
+\([([PRED] VAR)] ...
  [&key (([PRED] VAR) [INITFORM])...]
  [&rest ([PRED] VAR)])
 
@@ -2929,9 +2929,9 @@ START and END follow the same rules as their respective arguments in
   "Return a new planning node.
 
 CLOSED, DEADLINE, and SCHEDULED are lists with the following structure
-(brackets denote optional members):
+\(brackets denote optional members):
 
-(YEAR MINUTE DAY [HOUR] [MIN]
+\(YEAR MINUTE DAY [HOUR] [MIN]
  [&warning TYPE VALUE UNIT]
  [&repeater TYPE VALUE UNIT])
 
@@ -3025,7 +3025,7 @@ TAG is a string representing the tag (make with
 `om-build-secondary-string!') .
 
 PARAGRAPH is a string that will be the initial text in the item
-(made with `om-build-paragraph!').
+\(made with `om-build-paragraph!').
 
 CHILDREN contains the nodes that will go under this item after
 PARAGRAPH.
