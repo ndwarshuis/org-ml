@@ -19,7 +19,6 @@
 
 ;;; Code:
 
-;; (require 'om)
 (require 's)
 
 (def-example-group "Buffer Parsing"
