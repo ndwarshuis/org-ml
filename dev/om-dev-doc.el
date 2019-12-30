@@ -22,4 +22,17 @@
 (require 'om-dev-examples-to-docs)
 (require 'om-dev-examples)
 
+(let ((public-syms (alist-get 'public om-dev-defined-names))
+      (example-syms (->> (-remove #'stringp om-dev-examples-list)
+                         (-map #'car))))
+  (-some->> (-difference public-syms example-syms)
+            (-map #'symbol-name)
+            (--remove (s-ends-with? "*" it))
+            (--remove (s-starts-with? "om-update-this-" it))
+            (--remove (s-starts-with? "om-parse-this-" it))
+            (--map (format "  %s" it))
+            (s-join "\n")
+            (format "The following functions don't have examples:\n%s")
+            (print)))
+
 ;;; om-dev-doc.el ends here

@@ -27,7 +27,7 @@
 
 (setq text-quoting-style 'grave)
 
-(defvar functions '())
+(defvar om-dev-examples-list '())
 
 (defconst om-elem--fill-column 80)
 
@@ -106,7 +106,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
 ;;   (help-function-arglist function-symbol))))
 
 (defun format-doc (cmd)
-  ;; remove extra signature for cl-defun functions
+  ;; remove extra signature for cl-defun om-dev-examples-list
   ;; TODO this is hacky but it works
   (let ((doc (documentation cmd)))
     (unless doc (error "No docstring set for %s" cmd))
@@ -118,7 +118,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
        (--mapcat (--take-while (not (eq it :begin-hidden)) it))))
 
 (defmacro defexamples (cmd &rest examples)
-  `(add-to-list 'functions
+  `(add-to-list 'om-dev-examples-list
                 (list
                  ',cmd
                  (docs--signature ',cmd)
@@ -165,33 +165,33 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
                               (-partition 3 it)
                               (-map #'example-to-string)
                               (s-join "\n"))))))))
-       (add-to-list 'functions (list ',cmd
+       (add-to-list 'om-dev-examples-list (list ',cmd
                                      (docs--signature ',cmd)
                                      doc
                                      (or example '("no examples :(")))))))
 
 (defmacro def-example-subgroup (group desc &rest examples)
   `(progn
-     ;; (add-to-list 'functions ,(concat "### " group))
-     (setq functions (cons ,(concat "### " group) functions))
+     ;; (add-to-list 'om-dev-examples-list ,(concat "### " group))
+     (setq om-dev-examples-list (cons ,(concat "### " group) om-dev-examples-list))
      (when ,desc
-       ;; (add-to-list 'functions ,desc))
-       (setq functions (cons ,desc functions)))
+       ;; (add-to-list 'om-dev-examples-list ,desc))
+       (setq om-dev-examples-list (cons ,desc om-dev-examples-list)))
      ,@examples))
 
 (defmacro def-example-group (group desc &rest examples)
   `(progn
-     ;; (add-to-list 'functions ,(concat "## " group))
-     (setq functions (cons ,(concat "## " group) functions))
+     ;; (add-to-list 'om-dev-examples-list ,(concat "## " group))
+     (setq om-dev-examples-list (cons ,(concat "## " group) om-dev-examples-list))
      (when ,desc
-       ;; (add-to-list 'functions ,desc))
-       (setq functions (cons ,desc functions)))
+       ;; (add-to-list 'om-dev-examples-list ,desc))
+       (setq om-dev-examples-list (cons ,desc om-dev-examples-list)))
      ,@examples))
 
 
 (defun format-link (string-name)
   (-let* ((name (intern string-name))
-          ((_ signature _ _) (assoc name functions)))
+          ((_ signature _ _) (assoc name om-dev-examples-list)))
     (if signature
         (format "[`%s`](#%s)" name (github-id name signature))
       (format "`%s`" name))))
@@ -359,15 +359,15 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
     (insert replacement)))
 
 (defun create-docs-file ()
-  (let ((functions (nreverse functions)))
+  (let ((om-dev-examples-list (nreverse om-dev-examples-list)))
     (with-temp-file "./README.md"
       (insert-file-contents-literally "./readme-template.md")
 
       (goto-and-remove "[[ function-list ]]")
-      (insert (mapconcat 'function-summary functions "\n"))
+      (insert (mapconcat 'function-summary om-dev-examples-list "\n"))
 
       (goto-and-remove "[[ function-docs ]]")
-      (insert (mapconcat 'function-to-md functions "\n"))
+      (insert (mapconcat 'function-to-md om-dev-examples-list "\n"))
 
       (goto-and-replace-all "[[ version ]]" (om-get-package-version))
 

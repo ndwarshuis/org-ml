@@ -32,5 +32,19 @@
 
 (require 'om)
 
+(defconst om-dev-defined-names nil
+  "Alist of all functions/macros defined in `om.el'.
+The two cells in the alist are 'private' and 'public'.")
+
+(mapatoms
+ (lambda (x)
+   (when (and (fboundp x) (s-starts-with-p "om-" (symbol-name x)))
+     (push x om-dev-defined-names))))
+
+(setq om-dev-defined-names
+      (--group-by
+       (if (s-starts-with-p "om--" (symbol-name it)) 'private 'public)
+       om-dev-defined-names))
+
 (provide 'om-dev-init)
 ;;; om-dev.el ends here
