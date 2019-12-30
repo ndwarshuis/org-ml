@@ -1,4 +1,4 @@
-;;; examples-to-tests.el --- Extract om.el's tests from examples.el
+;;; om-dev-examples-to-tests.el --- Extract om.el's tests from examples.el
 
 ;; Copyright (C) 2015 Free Software Foundation, Inc.
 
@@ -89,5 +89,5 @@
 
 (defun def-example-group (&rest _)) ; ignore
 
-(provide 'examples-to-tests)
-;;; examples-to-tests.el ends here
+(provide 'om-dev-examples-to-tests)
+;;; om-dev-examples-to-tests.el ends here

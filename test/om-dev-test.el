@@ -1,10 +1,12 @@
-;;; om-test.el --- Tests for om
+;;; om-dev-test.el --- Tests for om
 
 ;;; Commentary:
 
 ;;; Code:
 
 (require 'dash)
+(require 'om-dev-examples-to-tests)
+(require 'om-dev-examples)
 
 (defun should-have-equal-properties (e1 e2)
   (unless (eq (om--get-type e1) (om--get-type e2))
@@ -635,4 +637,5 @@ applied."
     (match-slicer-should-equal node expected (:many item))
     (match-slicer-should-equal node expected! (:many! item))))
 
-;;; om-test.el ends here
+(provide 'om-dev-test)
+;;; om-dev-test.el ends here

@@ -1,4 +1,4 @@
-;;; examples-to-docs.el --- Extract om.el's doc from examples.el
+;;; om-dev-examples-to-docs.el --- Extract om.el's doc from examples.el
 
 ;; Copyright (C) 2015 Free Software Foundation, Inc.
 
@@ -19,7 +19,6 @@
 
 ;;; Code:
 
-(require 'om)
 (require 's)
 (require 'lispy)
 (require 'dash)
@@ -374,4 +373,5 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
 
       (simplify-quotes))))
 
-;;; examples-to-docs.el ends here
+(provide 'om-dev-examples-to-docs)
+;;; om-dev-examples-to-docs.el ends here

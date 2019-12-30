@@ -1,4 +1,4 @@
-;;; examples.el --- Examples/tests for om.el's API  -*- lexical-binding: t -*-
+;;; om-dev-examples.el --- Examples/tests for om.el's API  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2015 Free Software Foundation, Inc.
 
@@ -4555,3 +4555,6 @@
 
     (defexamples-content om-unfold
       nil)))
+
+(provide 'om-dev-examples)
+;;; om-dev-examples.el ends here
