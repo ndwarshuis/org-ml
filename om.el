@@ -233,7 +233,14 @@ if present after the docstring. Everything else is BODY."
   (defun om--defun-make-indent-declare (decl pos)
     (let ((indent (or (assoc 'indent decl) `(indent ,pos)))
           (decl (--remove (eq 'indent (car it)) decl)))
-      `(declare ,@decl ,indent))))
+      `(declare ,@decl ,indent)))
+
+  (defun om--defun-make-anaphoric-docstring (name docstring)
+    "Return DOCSTRING adapted for anaphoric version of definition NAME.
+This includes adding a short string to the front indicating it is an
+anaphoric version and replacing all instances of \"FUN\" with \"FORM\"."
+    (->> (s-replace "FUN" "FORM" docstring)
+         (format "Anaphoric form of `%s'.\n\n%s" name))))
 
 ;; TODO this is almost exactly the same as om--defun*
 (defmacro om--defun-nocheck* (name arglist &rest args)
@@ -248,7 +255,7 @@ wrapped in a lambda call binding the unary argument to the symbol
   (-let* (((docstring decls body) (om--defun-partition-body args))
           (name* (intern (format "%s*" name)))
           (arglist* (-replace 'fun 'form arglist))
-          (docstring* (format "Anaphoric form of `%s'." name))
+          (docstring* (om--defun-make-anaphoric-docstring name docstring))
           (funargs (--map (if (eq it 'fun) '(lambda (it) (\, form))
                             (cons '\, (list it)))
                           arglist))
@@ -544,7 +551,7 @@ wrapped in a lambda call binding the unary argument to the symbol
   (-let* (((docstring decls body) (om--defun-partition-body args))
           (name* (intern (format "%s*" name)))
           (arglist* (-replace 'fun '(:cons form) arglist))
-          (docstring* (format "Anaphoric form of `%s'." name))
+          (docstring* (om--defun-make-anaphoric-docstring name docstring))
           (funargs (--map (if (eq it 'fun) '(lambda (it) (\, form))
                             (cons '\, (list it)))
                           arglist))
