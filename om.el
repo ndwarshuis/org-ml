@@ -3124,7 +3124,7 @@ elements may have other elements as children."
       (error "Node boundaries are not defined"))))
 
 (om--defun-node om-set-property (prop value node)
-  "Return NODE with PROP set to VALUE
+  "Return NODE with PROP set to VALUE.
 
 See builder functions for a list of properties and their rules for
 each type."
@@ -3396,7 +3396,7 @@ TIME is a list analogous to the same argument specified in
   (om--timestamp-set-single-time time timestamp))
 
 (om--defun-node om-timestamp-set-double-time (time1 time2 timestamp)
-  "Return TIMESTAMP node with start and end times set to TIME1 and TIME2 respectively.
+  "Return TIMESTAMP node with start/end times set to TIME1/TIME2 respectively.
 TIME1 and TIME2 are lists analogous to the TIME argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-double-time time1 time2 timestamp))
@@ -3478,7 +3478,7 @@ behavior is not desired, use `om-timestamp-shift'."
   "Return TIMESTAMP with condensation set to FLAG.
 
 If timestamp is ranged but not outside of one day, it may be condensed
-(FLAG is t) to short format like [yyyy-mm-dd xxx hh:mm-hh:mm] or
+\(FLAG is t) to short format like [yyyy-mm-dd xxx hh:mm-hh:mm] or
 decondensed (FLAG is nil) to long format like [yyyy-mm-dd xxx
 hh:mm]--[yyyy-mm-dd xxx hh:mm]. If these conditions are not met,
 return TIMESTAMP untouched regardless of FLAG.
