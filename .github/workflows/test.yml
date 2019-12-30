@@ -40,10 +40,10 @@ jobs:
       if: matrix.allow_failure != true
       run: |
         cask install
-        cask exec ./run-tests.sh
+        make
 
     - name: Run tests (allow failure)
       if: matrix.allow_failure == true
       run: |
         cask install
-        cask exec ./run-tests.sh || true
+        make || true
