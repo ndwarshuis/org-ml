@@ -2294,7 +2294,7 @@ Return t if **`point`** is within the boundaries of **`node`**.
 
 #### om-set-property `(prop value node)`
 
-Return **`node`** with **`prop`** set to **`value`**
+Return **`node`** with **`prop`** set to **`value`**.
 
 See builder functions for a list of properties and their rules for
 each type.
@@ -3269,7 +3269,7 @@ Return **`timestamp`** node with start and end times set to **`time`**.
 
 #### om-timestamp-set-double-time `(time1 time2 timestamp)`
 
-Return **`timestamp`** node with start and end times set to **`time1`** and **`time2`** respectively.
+Return **`timestamp`** node with start/end times set to **`time1`**/**`time2`** respectively.
 **`time1`** and **`time2`** are lists analogous to the `time` argument specified in
 [`om-build-timestamp!`](#om-build-timestamp-start-key-end-active-repeater-warning-post-blank).
 
