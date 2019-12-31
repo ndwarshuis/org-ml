@@ -569,25 +569,6 @@ wrapped in a lambda call binding the unary argument to the symbol
          ,dec
          ,@body))))
 
-;;; defun which also makes anaphoric form
-
-(defmacro om--verify (&rest args)
-  "Return type-checking form from ARGS.
-ARGS is a list of ARGUMENT-PREDICATE pairs, where ARGUMENT is a
-symbol matching an argument in the function's signature, and
-PREDICATE tests the value bound to ARGUMENT after a function call.
-If PREDICATE fails, print a generic error message."
-  (let ((tests
-         (->>
-          (-partition 2 args)
-          (--map
-           (let ((arg (car it))
-                 (pred (cadr it)))
-             `(unless (funcall #',pred ,arg)
-                (error "Arg %s with value %s failed predicate %s"
-                       ',arg ,arg ',pred)))))))
-    `(progn ,@tests)))
-
 ;;; defun with runtime type checking + auto checking last arg
 
 (eval-when-compile
