@@ -46,5 +46,19 @@ The two cells in the alist are 'private' and 'public'.")
        (if (s-starts-with-p "om--" (symbol-name it)) 'private 'public)
        om-dev-defined-names))
 
+;; set up standard org environment
+
+(defmacro om--with-org-env (&rest body)
+  "Execute BODY in a standardized Org-mode buffer."
+  `(let ((org-tags-column 20)
+         (org-todo-keywords '((sequence "TODO" "DONE")))
+         (org-archive-tag "ARCHIVE")
+         (org-lowest-priority ?C)
+         (org-highest-priority ?A)
+         (org-list-allow-alphabetical nil))
+     (with-temp-buffer
+       (org-mode)
+       ,@body)))
+
 (provide 'om-dev-init)
 ;;; om-dev.el ends here

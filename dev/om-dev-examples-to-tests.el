@@ -41,17 +41,6 @@
           (t
            (error "Invalid test case: %S" `(,actual ,sym ,expected))))))
 
-(defmacro om--with-org-env (&rest body)
-  ;; define convenient variables for the org-mode testing env
-  `(let ((org-tags-column 20)
-         (org-todo-keywords '((sequence "TODO" "DONE")))
-         (org-archive-tag "ARCHIVE")
-         (org-lowest-priority ?C)
-         (org-highest-priority ?A)
-         (org-list-allow-alphabetical nil))
-     (org-mode)
-     ,@body))
-
 (defmacro defexamples (cmd &rest examples)
   (let ((tests (->> examples
                     (remove :begin-hidden)
@@ -70,12 +59,10 @@
                     (--remove (eq (and (listp it) (car it)) :comment))
                     (-partition 3)
                     (--map (apply #'example-to-should it)))))
-          `(with-temp-buffer
-             (om--with-org-env
-              ;; (org-mode)
-              (when ,contents (insert ,contents))
-              (goto-char (point-min))
-              ,@tests)))))
+          `(om--with-org-env
+            (when ,contents (insert ,contents))
+            (goto-char (point-min))
+            ,@tests))))
     (let ((body
            (->> args
                 (remove :begin-hidden)
