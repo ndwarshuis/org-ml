@@ -412,12 +412,13 @@ If PERMIT-ERROR is t, do not throw out-of-bounds errors."
 (om--defun-nocheck* om--map-first (fun list)
   "Return LIST with FUN applied to the first member.
 FUN is a unary function that returns a modified member."
-  (->> (cdr list) (cons (funcall fun (car list)))))
+  (when list
+    (cons (funcall fun (car list)) (cdr list))))
 
 (om--defun-nocheck* om--map-last (fun list)
   "Return LIST with FUN applied to the last member.
 FUN is a unary function that returns a modified member."
-  (->> (nreverse list) (om--map-first fun) (nreverse)))
+  (-some->> list (nreverse) (om--map-first fun) (nreverse)))
 
 ;;; INTERNAL TYPE FUNCTIONS
 
