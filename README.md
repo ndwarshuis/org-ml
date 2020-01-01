@@ -278,6 +278,7 @@ Build nodes with more convenient/shorter syntax.
 
 Test node types.
 
+* [om-get-type](#om-get-type-node) `(node)`
 * [om-is-type-p](#om-is-type-p-type-node) `(type node)`
 * [om-is-any-type-p](#om-is-any-type-p-types-node) `(types node)`
 * [om-is-element-p](#om-is-element-p-node) `(node)`
@@ -2082,6 +2083,34 @@ All other arguments follow the same rules as [`om-build-table`](#om-build-table-
 
 
 Test node types.
+
+#### om-get-type `(node)`
+
+Return the type of **`node`**.
+
+```el
+;; Given the following contents:
+; *I'm emboldened*
+
+(->> (om-parse-this-object)
+     (om-get-type))
+ ;; => 'bold
+
+;; Given the following contents:
+; * I'm the headliner
+
+(->> (om-parse-this-element)
+     (om-get-type))
+ ;; => 'headline
+
+;; Given the following contents:
+; [2112-12-21 Wed]
+
+(->> (om-parse-this-object)
+     (om-get-type))
+ ;; => 'timestamp
+
+```
 
 #### om-is-type-p `(type node)`
 
@@ -4727,7 +4756,7 @@ Possible values are:
 Subpatterns may either be wildcards or conditions.
 
 Conditions match exactly one level of the node tree being searched
-based on the node's type (the symbol returned by `om-get-type`),
+based on the node's type (the symbol returned by [`om-get-type`](#om-get-type-node)),
 properties (the value returned by [`om-get-property`](#om-get-property-prop-node) for a valid
 property keyword), and index (the position of the node in the list
 returned by [`om-get-children`](#om-get-children-branch-node)). For index, both left indices (where

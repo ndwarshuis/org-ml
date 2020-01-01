@@ -1022,6 +1022,21 @@
 (def-example-group "Type Predicates"
   "Test node types."
 
+  (defexamples-content om-get-type
+    nil
+    (:buffer "*I'm emboldened*")
+    (->> (om-parse-this-object)
+         (om-get-type))
+    => 'bold
+    (:buffer "* I'm the headliner")
+    (->> (om-parse-this-element)
+         (om-get-type))
+    => 'headline
+    (:buffer "[2112-12-21 Wed]")
+    (->> (om-parse-this-object)
+         (om-get-type))
+    => 'timestamp)
+
   (defexamples-content om-is-type-p
     nil
     (:buffer "*ziltoid*")
