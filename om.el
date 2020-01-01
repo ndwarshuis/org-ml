@@ -923,16 +923,7 @@ arguments will be interpreted as anything not belonging to a key-val
 pair (but only if &rest was used to define the function). This implies
 that keywords may not be used as values for the rest argument in
 function calls."
-    ;; TODO wtf does this stuff do...???
-    (declare (debug
-              ;; Same as defun but use cl-lambda-list.
-              (&define [&or name ("setf" :name setf name)]
-                       cl-lambda-list
-                       cl-declarations-or-string
-                       [&optional ("interactive" interactive)]
-                       def-body))
-             (doc-string 3)
-             (indent 2))
+    (declare (doc-string 3) (indent 2))
     (if (memq '&key arglist)
         (let ((res (om--transform-lambda arglist body name)))
           `(defun ,name ,@res))
