@@ -19,6 +19,9 @@
 
 ;;; Code:
 
+(require 'undercover)
+(undercover "om.el")
+
 (defvar om-dev-path
   (directory-file-name (file-name-directory load-file-name))
   "Path to development directory.")
@@ -29,6 +32,10 @@
 
 (add-to-list 'load-path om-dev-root-path)
 (add-to-list 'load-path om-dev-path)
+
+;; hack to make edebug work with undercover
+(put '->> 'edebug-form-spec
+     '(form &rest [&or symbolp (sexp &rest def-form)]))
 
 (require 'om)
 

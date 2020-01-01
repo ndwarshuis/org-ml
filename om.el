@@ -206,6 +206,26 @@ the car.")
 
 ;;; ANAPHORIC FUNCTIONS
 
+(def-edebug-spec om--defun-key
+  ([&or arg ((symbolp arg)) (arg sexp) (symbolp (arg sexp))]))
+
+(def-edebug-spec om--defun-arg
+  ([&or arg (symbolp arg)]))
+
+(def-edebug-spec om--defun-lambda-list
+  (([&rest om--defun-arg]
+    ;; TODO I guess &optional isn't allowed :/
+    &optional ["&rest" om--defun-arg])))
+
+(def-edebug-spec om--defun-lambda-kw-list
+  (([&rest om--defun-arg]
+    [&optional ["&key" om--defun-key &rest om--defun-key]]
+    &optional ["&rest" om--defun-arg])))
+
+(def-edebug-spec om--defun-defmacro
+  (&define name om--defun-lambda-list lambda-doc
+           [&optional ("declare" &rest sexp)] def-body))
+
 (eval-when-compile
   (defun om--defun-partition-body (body)
     "Return ARGS as a list like (DOCSTRING DECLS BODY).
@@ -251,7 +271,8 @@ somewhere in the definition's body. When making the anaphoric form,
 `fun' will be replaced by the symbol `form', and `form' will be
 wrapped in a lambda call binding the unary argument to the symbol
 `it'."
-  (declare (doc-string 3) (indent 2))
+  (declare (doc-string 3) (indent 2)
+           (debug defmacro))
   (-let* (((docstring decls body) (om--defun-partition-body args))
           (name* (intern (format "%s*" name)))
           (arglist* (-replace 'fun 'form arglist))
@@ -260,16 +281,19 @@ wrapped in a lambda call binding the unary argument to the symbol
                             (cons '\, (list it)))
                           arglist))
           (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
-          (indent (om--defun-make-indent-declare
-                   decls (-elem-index 'fun arglist))))
+          (dec (om--defun-make-indent-declare
+                (--remove (eq 'debug (car it)) decls)
+                (-elem-index 'fun arglist)))
+          (dec* (om--defun-make-indent-declare
+                 decls (-elem-index 'fun arglist))))
     `(progn
        (defmacro ,name* ,arglist*
          ,docstring*
-         ,indent
+         ,dec*
          ,body*)
        (defun ,name ,arglist
          ,docstring
-         ,indent
+         ,dec
          ,@body))))
 
 ;;; LIST OPERATIONS (EXTENDING DASH.el)
@@ -398,11 +422,14 @@ If PERMIT-ERROR is t, do not throw out-of-bounds errors."
 (om--defun-nocheck* om--map-first (fun list)
   "Return LIST with FUN applied to the first member.
 FUN is a unary function that returns a modified member."
+  (declare (debug (def-form form)))
   (->> (cdr list) (cons (funcall fun (car list)))))
 
+;; !!!
 (om--defun-nocheck* om--map-last (fun list)
   "Return LIST with FUN applied to the last member.
 FUN is a unary function that returns a modified member."
+  (declare (debug (def-form form)))
   (->> (nreverse list) (om--map-first fun) (nreverse)))
 
 ;;; INTERNAL TYPE FUNCTIONS
@@ -473,6 +500,7 @@ STRING and ARGS are analogous to `error'."
 (defmacro om--defun-catch-arg-type-error (&rest body)
   "Return BODY wrapped in `condition-case' form.
 The case form will catch `arg-type-error' and rethrow them as-is."
+  (declare (debug def-body))
   `(condition-case err
        (progn ,@body)
      (arg-type-error (signal (car err) (cdr err)))))
@@ -499,44 +527,70 @@ TYPE-CHECK is a list like (KEY SYM)."
             ((pred desc) (om--defun-get-type-check-fun type))
             (msg (format "Argument '%s' must be %s: Got %%s" arg desc)))
       `(unless (funcall #',pred ,arg)
-         (om--arg-error ,msg ,arg)))))
+         (om--arg-error ,msg ,arg))))
 
-(defmacro om--defun-normalize-arglist (arglist)
-  "Return ARGLIST with all cons cells cdr'ed to make a flat symbol list."
-  `(--map (if (listp it) (cadr it) it) ,arglist))
+  (defun om--defun-normalize-arglist (arglist)
+    "Return ARGLIST with all cons cells cdr'ed to make a flat symbol list."
+    (--map (if (listp it) (cadr it) it) arglist))
 
-(defmacro om--defun-check-private (name)
-  "Throw and error if NAME refers to a private function (eg \"om--X\")."
-  `(when (s-starts-with-p "om--" (symbol-name ,name))
-     (error "This macro can only be used for public definitions")))
+  (defun om--defun-check-private (name)
+    "Throw and error if NAME refers to a private function (eg \"om--X\")."
+    `(when (s-starts-with-p "om--" (symbol-name ,name))
+       (error "This macro can only be used for public definitions"))))
 
-(defmacro om--defun-template (mac name arglist args)
-  "Return a form to build a type-aware definition using MAC.
-NAME, ARGLIST, and ARGS will be fed into MAC."
-  `(progn
-     (om--defun-check-private ,name)
-     (-let* (((docstring decls body) (om--defun-partition-body ,args))
-             (type-checks (-some->>
-                           (-filter #'listp ,arglist)
-                           (-map #'om--defun-make-type-check-form)))
-             (arglist (om--defun-normalize-arglist ,arglist))
-             (body `(om--defun-catch-arg-type-error ,@body))
-             (mac ',mac))
-       `(,mac ,name ,arglist
-              ,docstring
-              (declare ,@decls)
-              ,@type-checks
-              ,body))))
+;; (defmacro om--defun-template (mac name arglist args)
+;;   "Return a form to build a type-aware definition using MAC.
+;; NAME, ARGLIST, and ARGS will be fed into MAC."
+;;   `(progn
+;;      (om--defun-check-private ,name)
+;;      (-let* (((docstring decls body) (om--defun-partition-body ,args))
+;;              (type-checks (-some->>
+;;                            (-filter #'listp ,arglist)
+;;                            (-map #'om--defun-make-type-check-form)))
+;;              (arglist (om--defun-normalize-arglist ,arglist))
+;;              (body `(om--defun-catch-arg-type-error ,@body))
+;;              (mac ',mac))
+;;        `(,mac ,name ,arglist
+;;               ,docstring
+;;               (declare ,@decls)
+;;               ,@type-checks
+;;               ,body))))
 
 (defmacro om--defun (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS."
-  (declare (doc-string 3) (indent 2))
-  (om--defun-template defun name arglist args))
+  (declare (doc-string 3) (indent 2)
+           (debug om--defun-defmacro))
+  (om--defun-check-private name)
+  (-let* (((docstring decls body) (om--defun-partition-body args))
+          (type-checks (-some->>
+                        (-filter #'listp arglist)
+                        (-map #'om--defun-make-type-check-form)))
+          (arglist (om--defun-normalize-arglist arglist))
+          (body `(om--defun-catch-arg-type-error ,@body)))
+    `(defun ,name ,arglist
+       ,docstring
+       (declare ,@decls)
+       ,@type-checks
+       ,body)))
+;; (om--defun-template defun name arglist args))
 
 (defmacro om--defmacro (name arglist &rest args)
   "Return a macro definition for NAME, ARGLIST, and ARGS."
-  (declare (doc-string 3) (indent 2))
-  (om--defun-template defmacro name arglist args))
+  (declare (doc-string 3) (indent 2)
+           (debug om--defun-defmacro))
+  (om--defun-check-private name)
+  (-let* (((docstring decls body) (om--defun-partition-body args))
+          (type-checks (-some->>
+                        (-filter #'listp arglist)
+                        (-map #'om--defun-make-type-check-form)))
+          (arglist (om--defun-normalize-arglist arglist))
+          (body `(om--defun-catch-arg-type-error ,@body)))
+    `(defmacro ,name ,arglist
+       ,docstring
+       (declare ,@decls)
+       ,@type-checks
+       ,body)))
+  ;; (om--defun-template defmacro name arglist args))
 
 (defmacro om--defun* (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
@@ -546,7 +600,8 @@ somewhere in the definition's body. When making the anaphoric form,
 `fun' will be replaced by the symbol `form', and `form' will be
 wrapped in a lambda call binding the unary argument to the symbol
 `it'."
-  (declare (doc-string 3) (indent 2))
+  (declare (doc-string 3) (indent 2)
+           (debug om--defun-defmacro))
   (om--defun-check-private name)
   (-let* (((docstring decls body) (om--defun-partition-body args))
           (name* (intern (format "%s*" name)))
@@ -556,13 +611,16 @@ wrapped in a lambda call binding the unary argument to the symbol
                             (cons '\, (list it)))
                           arglist))
           (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
-          (dec `(om--defun-make-indent-declare
-                 ,decls ,(-elem-index 'fun arglist)))
+          (dec* (om--defun-make-indent-declare
+                 decls (-elem-index 'fun arglist)))
+          (dec (om--defun-make-indent-declare
+                (--remove (eq 'debug (car it)) decls)
+                (-elem-index 'fun arglist)))
           (arglist (-replace 'fun '(:fun fun) arglist)))
     `(progn
        (om--defmacro ,name* ,arglist*
          ,docstring*
-         ,dec
+         ,dec*
          ,body*)
        (om--defun ,name ,arglist
          ,docstring
@@ -610,7 +668,8 @@ node."
 (defmacro om--defun-node (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
 Will insert a type checker according to `om--defun-test-node'."
-  (declare (doc-string 3) (indent 2))
+  (declare (doc-string 3) (indent 2)
+           (debug om--defun-defmacro))
   (-let* (((docstring decls body) (om--defun-partition-body args))
           (node-check (om--defun-test-node arglist)))
     `(om--defun ,name ,arglist
@@ -626,7 +685,8 @@ Will insert a type checker according to `om--defun-test-node'."
 Will insert a type checker according to `om--defun-test-node' and will
 make an anaphoric form according to `om--defun-nocheck*' (the same assumptions
 apply)."
-  (declare (doc-string 3) (indent 2))
+  (declare (doc-string 3) (indent 2)
+           (debug om--defun-defmacro))
   (-let* (((docstring decls body) (om--defun-partition-body args))
           (node-check (om--defun-test-node arglist)))
     `(om--defun* ,name ,arglist
@@ -742,7 +802,7 @@ rest list. Return a list like (KEYARGS RESTARGS)."
     (->> (-partition-all 2 args)
          (--split-with (keywordp (car it)))))
 
-  (defmacro om--make-rest-partition-form (argsym kws use-rest?)
+  (defun om--make-rest-partition-form (argsym kws use-rest?)
     "Return a form that will partition the args in ARGSYM.
 ARGSYM is a symbol which is bound to the rest argument list of a
 function call. KWS is a list of valid keywords to use when deciding
@@ -878,16 +938,16 @@ in BODY."
            (pos-checks (cdr pos-cell))
            (kw-checks (--map (plist-get (cdr it) :check) kw-alist))
            (rest-check (cdr rest-cell))
-           (checks `(,@pos-checks ,@kw-checks ,rest-check))
+           (checks (-non-nil `(,@pos-checks ,@kw-checks ,rest-check)))
            (arg-form `(,@pos-args &rest ,kr))
            (header (om--make-header body arglist))
            (let-forms
             (if rest-arg
-                `((,a (om--make-rest-partition-form ,kr ,kws t))
+                `((,a ,(om--make-rest-partition-form kr kws t))
                   (,k (car ,a))
                   (,rest-arg (cdr ,a))
                   ,@kw-lets)
-              `((,k (om--make-rest-partition-form ,kr ,kws nil))
+              `((,k ,(om--make-rest-partition-form kr kws nil))
                 ,@kw-lets)))
            (body (->> (macroexp-parse-body body)
                       (cdr)
@@ -924,13 +984,11 @@ pair (but only if &rest was used to define the function). This implies
 that keywords may not be used as values for the rest argument in
 function calls."
     ;; TODO wtf does this stuff do...???
-    (declare (debug
-              ;; Same as defun but use cl-lambda-list.
-              (&define [&or name ("setf" :name setf name)]
-                       cl-lambda-list
-                       cl-declarations-or-string
-                       [&optional ("interactive" interactive)]
-                       def-body))
+    (declare (debug (&define name
+                             om--defun-lambda-kw-list
+                             lambda-doc
+                             [&optional ("declare" &rest sexp)]
+                             def-body))
              (doc-string 3)
              (indent 2))
     (if (memq '&key arglist)
@@ -1059,6 +1117,7 @@ property list in NODE."
 (om--defun-nocheck* om--map-property (prop fun node)
   "Return NODE with FUN applied to the value in PROP.
 FUN is a unary function that returns a modified value."
+  (declare (debug (form def-form form)))
   (let ((value (funcall fun (om--get-property prop node))))
     (om--set-property prop value node)))
 
@@ -1081,6 +1140,7 @@ FUN is a unary function that returns a modified value."
 (om--defun-nocheck* om--property-is-predicate-p (prop fun node)
   "Return t if FUN applied to the value of PROP in NODE results not nil.
 FUN is a predicate function that takes one argument."
+  (declare (debug (form def-form form)))
   (and (funcall fun (om--get-property prop node)) t))
 
 ;;; NODE PROPERTY TRANSLATION AND CHECKING FRAMEWORK
@@ -1811,6 +1871,7 @@ Will validate and encode VALUE if valid according to `om--node-property-alist'."
 FUN is a unary function that returns a modified value.
 
 Will validate/encode/decode value according to `om--node-property-alist'."
+  (declare (debug (form def-form form)))
   (let ((value (funcall fun (om--get-property-strict prop node))))
     (om--set-property-strict prop value node)))
 
@@ -1852,11 +1913,13 @@ nested element to return."
    (let ((head (om--get-head node)))
      (if children (append head children) head)))
 
+;; !!!
 (om--defun-nocheck* om--map-children (fun node)
   "Return NODE with FUN applied to its children.
 
 FUN is a unary function that takes a list of children and returns
 a modified list of children."
+  (declare (debug (def-form form)))
   (let ((children (om--get-children node)))
     (om--set-children (funcall fun children) node)))
 
@@ -1891,6 +1954,7 @@ Throw an error if an nodes in CHILDREN are not in
       ;; this should not happen
       (error "Child type restrictions not found for %s" type))))
 
+;; !!!
 (om--defun-nocheck* om--map-children-strict (fun node)
   "Return NODE with FUN applied to its children.
 
@@ -1898,6 +1962,7 @@ FUN is a unary function that takes a list of children and returns
 a modified list of children. New children will be set with
 `om--set-children-strict' which will throw an error if FUN returns
 a child list containing illegal types."
+  (declare (debug (def-form form)))
   (let ((children (om--get-children node)))
     (om--set-children-strict (funcall fun children) node)))
 
@@ -2796,8 +2861,8 @@ will be spliced after INDEX."
          parent))
        (extract
         (parent)
-        (->> (om--indent-after #'om-headline-indent-subtree
-                                    child-index parent)
+        (->> (om--indent-after #'om--headline-indent-subtree
+                               child-index parent)
              (om--get-children)
              (-drop child-index)
              (--map (om--headline-subtree-shift-level -1 it)))))
@@ -3137,6 +3202,7 @@ returns a new value to which PROP will be set.
 
 See builder functions for a list of properties and their rules for
 each type."
+  (declare (debug (form def-form form)))
   (om--map-property-strict prop fun node))
 
 (om--defun-node om-map-properties (plist node)
@@ -3154,6 +3220,7 @@ each type."
 
 PLIST is a property list where the keys are properties of NODE and
 its values are forms to be mapped to these properties."
+  (declare (debug (form form)))
   (let ((p (make-symbol "plist*")))
     `(let ((,p (om--plist-map-values (lambda (form) `(lambda (it) ,form)) ',plist)))
        (om--map-properties-strict ,p ,node))))
@@ -3561,6 +3628,7 @@ on the type of NODE."
   "Return BRANCH-NODE with FUN applied to its children.
 FUN is a unary function that takes the current list of children and
 returns a modified list of children."
+  (declare (debug (def-form form)))
   (om--map-children-strict fun branch-node))
 
 (om--defun-node om-is-childless-p (branch-node)
@@ -3584,6 +3652,7 @@ returns a modified list of children."
 (defmacro om--mapcat-normalize (form secondary-string)
   "Return mapped, concatenated, and normalized SECONDARY-STRING.
 FORM is a form supplied to `--mapcat'."
+  (declare (debug (form form)))
   `(->> (--mapcat ,form ,secondary-string)
         (om--normalize-secondary-string)))
 
@@ -4015,6 +4084,7 @@ empty."
   "Like `--reduce-from' but only reduce LIST while PRED is t.
 FORM and INITIAL-VALUE work the same way, and the exposed symbols `it'
 and `acc' carry the same meaning."
+  (declare (debug (form form form form)))
   `(let ((acc ,initial-value))
      (--each-while ,list ,pred (setq acc ,form))
      acc))
@@ -4289,7 +4359,8 @@ wildcards are:
   "Recursively modify the children of NODE using FORM.
 FORM returns a list of element or object nodes as the new children,
 and the variable `it' is bound to the original children."
-  (declare (indent 1))
+  (declare (indent 1)
+           (debug (form def-form)))
   `(cl-labels
        ((rec
          (node)
@@ -4335,6 +4406,7 @@ FUN is a unary function that takes a node and returns a new node
 which will replace the original.
 
 PATTERN follows the same rules as `om-match'."
+  (declare (debug (form def-form form)))
   (-if-let (targets (om-match pattern node))
       (om--modify-children node
         (--map-when (member it targets) (funcall fun it) it))
@@ -4348,6 +4420,7 @@ FUN is a unary function that takes a node and returns a list of new
 nodes which will be spliced in place of the original node.
 
 PATTERN follows the same rules as `om-match'."
+  (declare (debug (form def-form form)))
   (-if-let (targets (om-match pattern node))
       (om--modify-children node
         (--mapcat (if (member it targets)
@@ -4478,6 +4551,7 @@ FUN is a unary function that has side effects and is applied to the
 matches from NODE using PATTERN. This function itself returns nil.
 
 PATTERN follows the same rules as `om-match'."
+  (declare (debug (form def-form form)))
   (-when-let (targets (om-match pattern node))
       (--each targets (funcall fun it))))
 
@@ -4666,6 +4740,7 @@ FUN is a unary function that takes NODE and returns a modified NODE.
 This modified node is then written in place of the old node in the
 current buffer."
   ;; if node is of type 'org-data' it will have no props
+  (declare (debug (def-form form)))
   (let* ((begin (or (om--get-property :begin node) (point-min)))
          (end (or (om--get-property :end node) (point-max)))
          ;; get the outline overlays that make text invisible
@@ -4704,17 +4779,20 @@ current buffer."
          (call (intern (format "om-parse-%s-at" it)))
          (update-at-body `(om-update fun (,call point)))
          (update-this-body `(,update-at (point) fun)))
-    (eval `(om--defun-nocheck* ,update-at (point fun)
+    (eval `(om--defun* ,update-at (point fun)
              ,update-at-doc
+             (declare (debug (form def-form)))
              ,update-at-body))
-    (eval `(om--defun-nocheck* ,update-this (fun)
+    (eval `(om--defun* ,update-this (fun)
              ,update-this-doc
+             (declare (debug (def-form)))
              ,update-this-body))))
 
-(om--defun-nocheck* om-update-this-buffer (fun)
+(om--defun* om-update-this-buffer (fun)
   "Apply FUN to the contents of the current buffer.
 FUN is a unary function that takes a node of type 'org-data' and
 returns a modified node."
+  (declare (debug (def-form)))
   (om-update fun (om-parse-this-buffer)))
 
 ;;; fold

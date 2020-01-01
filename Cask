@@ -6,4 +6,5 @@
 (development
  (depends-on "s")
  (depends-on "dash")
- (depends-on "lispy"))
+ (depends-on "lispy")
+ (depends-on "undercover"))

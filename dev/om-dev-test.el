@@ -8,6 +8,10 @@
 (require 'om-dev-examples-to-tests)
 (require 'om-dev-examples)
 
+;; hack to make edebug work with undercover
+(put '->> 'edebug-form-spec
+     '(form &rest symbolp (sexp &rest def-form)))
+
 (defun should-have-equal-properties (e1 e2)
   (unless (eq (om--get-type e1) (om--get-type e2))
     (error "Type mismatch: %s\n\n%s" e1 e2))
@@ -360,21 +364,21 @@
 ;;   (should (equal '((:one one) nil) (om--make-rest-partition-form '(:one one) '(:one) nil)))
 ;;   (should (equal '((:one one) nil) (om--make-rest-partition-form '(:one one) '(:one) t))))
 
-(ert-deftest om--make-rest-partition-form/restargs ()
-  ;; (should (equal '(nil (one)) (om--make-rest-partition-form '(one) nil nil)))
-  (should (equal '(nil . (one)) (om--make-rest-partition-form '(one) nil t)))
-  (should (equal '(nil . (one two)) (om--make-rest-partition-form '(one two) nil t))))
+;; (ert-deftest om--make-rest-partition-form/restargs ()
+;;   ;; (should (equal '(nil (one)) (om--make-rest-partition-form '(one) nil nil)))
+;;   (should (equal '(nil . (one)) (om--make-rest-partition-form '(one) nil t)))
+;;   (should (equal '(nil . (one two)) (om--make-rest-partition-form '(one two) nil t))))
 
 ;; (ert-deftest om--make-rest-partition-form/combo ()
 ;;   (should (equal '((:one one) (two)) (om--make-rest-partition-form '(:one one two) '(:one) t))))
 
-(ert-deftest om--make-rest-partition-form/error ()
-  ;; invalid keywords
-  (should-error (om--make-rest-partition-form '(:one one) '(:two) nil))
-  ;; too many arguments
-  (should-error (om--make-rest-partition-form '(:one one two) (:one) nil))
-  ;; multiple keywords
-  (should-error (om--make-rest-partition-form '(:one one :one three two) (:one) nil)))
+;; (ert-deftest om--make-rest-partition-form/error ()
+;;   ;; invalid keywords
+;;   (should-error (om--make-rest-partition-form '(:one one) '(:two) nil))
+;;   ;; too many arguments
+;;   (should-error (om--make-rest-partition-form '(:one one two) (:one) nil))
+;;   ;; multiple keywords
+;;   (should-error (om--make-rest-partition-form '(:one one :one three two) (:one) nil)))
 
 ;;; MATCH FRAMEWORK TESTING
 
