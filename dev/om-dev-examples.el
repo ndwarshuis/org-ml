@@ -454,6 +454,11 @@
            (om-to-trimmed-string))
       => "\\gamma")
 
+    (defexamples om-build-export-snippet
+      (->> (om-build-export-snippet "back" "value")
+           (om-to-string))
+      => "@@back:value@@")
+
     (defexamples om-build-inline-babel-call
       (->> (om-build-inline-babel-call "name")
            (om-to-trimmed-string))
@@ -479,13 +484,25 @@
       => "src_lang{value}"
       (->> (om-build-inline-src-block "lang" :value "value" :parameters '(:key val))
            (om-to-trimmed-string))
-      
       => "src_lang[:key val]{value}")
 
     (defexamples om-build-line-break
       (->> (om-build-line-break)
            (om-to-trimmed-string))
       => "\\\\")
+
+    (defexamples om-build-latex-fragment
+      (->> (om-build-latex-fragment "$2+2=5$")
+           (om-to-trimmed-string))
+      => "$2+2=5$")
+
+    (defexamples om-build-macro
+      (->> (om-build-macro "economics")
+           (om-to-trimmed-string))
+      => "{{{economics}}}"
+      (->> (om-build-macro "economics" :args '("s=d"))
+           (om-to-trimmed-string))
+      => "{{{economics(s=d)}}}")
 
     (defexamples om-build-statistics-cookie
       (->> (om-build-statistics-cookie '(nil))
@@ -771,6 +788,18 @@
                   "text"
                   ":END:"))
 
+    (defexamples om-build-dynamic-block
+      (->> (om-build-dynamic-block "empty")
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN: empty"
+                  "#+END:")
+      (->> (om-build-comment "I'm in here")
+           (om-build-dynamic-block "notempty")
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN: notempty"
+                  "# I'm in here"
+                  "#+END:"))
+
     (defexamples om-build-footnote-definition
       (->> (om-build-paragraph "footnote contents")
            (om-build-footnote-definition "label")
@@ -865,6 +894,18 @@
            (om-build-section)
            (om-to-trimmed-string))
       => "text")
+
+    (defexamples om-build-special-block
+      (->> (om-build-special-block "monad")
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_monad"
+                  "#+END_monad")
+      (->> (om-build-comment "Launch missiles")
+           (om-build-special-block "monad")
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_monad"
+                  "# Launch missiles"
+                  "#+END_monad"))
 
     (defexamples om-build-table
       (->> (om-build-table-cell "cell")
@@ -2683,7 +2724,19 @@
            (om-statistics-cookie-is-complete-p))
       => nil))
 
-  (def-example-subgroup "Timestamp"
+  (def-example-subgroup "Timestamp (Auxiliary)"
+    "Functions to work with timestamp data"
+
+    (defexamples-content om-time-to-unixtime
+      nil)
+
+    (defexamples-content om-unixtime-to-time-long
+      nil)
+
+    (defexamples-content om-unixtime-to-time-short
+      nil))
+
+  (def-example-subgroup "Timestamp (Standard)"
     nil
 
     (defexamples-content om-timestamp-get-start-time
@@ -2716,6 +2769,21 @@
            (om-timestamp-get-end-time))
       => '(2019 1 1 12 0))
 
+    (defexamples-content om-timestamp-get-range
+      nil
+      (:buffer "[2019-01-01 Tue]")
+      (->> (om-parse-this-object)
+           (om-timestamp-get-range))
+      => 0
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (om-parse-this-object)
+           (om-timestamp-get-range))
+      => 86400
+      (:buffer "[2019-01-01 Tue 00:00-12:00]")
+      (->> (om-parse-this-object)
+           (om-timestamp-get-range))
+      => 43200)
+
     (defexamples-content om-timestamp-is-active-p
       nil
       (:buffer "<2019-01-01 Tue>")
@@ -2741,6 +2809,23 @@
       (->> (om-parse-this-object)
            (om-timestamp-is-ranged-p))
       => nil)
+
+    (defexamples-content om-timestamp-range-contains-p
+      nil
+      (:buffer "[2019-01-01 Tue 00:00]")
+      (let ((ut (om-time-to-unixtime '(2019 1 1 0 0))))
+        (->> (om-parse-this-object)
+             (om-timestamp-range-contains-p ut)))
+      => t
+      (let ((ut (om-time-to-unixtime '(2019 1 1 0 30))))
+        (->> (om-parse-this-object)
+             (om-timestamp-range-contains-p ut)))
+      => nil
+      (:buffer "[2019-01-01 Tue 00:00-01:00]")
+      (let ((ut (om-time-to-unixtime '(2019 1 1 0 30))))
+        (->> (om-parse-this-object)
+             (om-timestamp-range-contains-p ut)))
+      => t)
 
     (defexamples-content om-timestamp-set-condensation
       nil
@@ -4445,7 +4530,10 @@
                 "** new0"
                 "** new1"
                 "** three"
-                "*** four")))
+                "*** four"))
+
+  (defexamples-content om-match-do
+    nil))
 
 (def-example-group "Buffer Side Effects"
   "Map node manipulations into buffers."
@@ -4508,8 +4596,7 @@
       $> (:result "* win grammy [3/3]"
                   "- [X] write punk song"
                   "- [X] get new vocalist"
-                  "- [X] sell 2 singles")
-      )
+                  "- [X] sell 2 singles"))
 
     (defexamples-content om-update-object-at
       nil
@@ -4560,7 +4647,19 @@
         (om-headline-indent-subheadline 1 it))
       $> (:result "* one"
                   "** two"
-                  "*** three")))
+                  "*** three"))
+
+    (defexamples-content om-update-section-at
+      nil
+      (:buffer "#+KEY1: VAL1"
+               "#+KEY2: VAL2"
+               "* irrelevant headline")
+      (:comment "Update the top buffer section before the headlines start")
+      (om-update-section-at* (point)
+        (om-map-children* (--map (om-map-property :value #'s-downcase it) it) it))
+      $> (:result "#+KEY1: val1"
+                  "#+KEY2: val2"
+                  "* irrelevant headline")))
 
   (def-example-subgroup "Misc"
     nil

@@ -587,7 +587,7 @@ node."
                 ((post test)
                  (cl-case type
                    (node
-                    '("node" 'om--is-node-p))
+                    '("a node" 'om--is-node-p))
                    (branch-node
                     '("a branch node" 'om--is-branch-node-p))
                    (object-node
@@ -603,9 +603,9 @@ node."
                           `(,(format "node of type %s" type)
                             (lambda (it) (om--is-type-p ',type it)))
                         (error "Invalid node type arg: %s" type)))))
-                (msg (format "%s must be %s" pre post)))
+                (msg (format "%s must be %s: Got %%s" pre post)))
           `(unless (funcall ,test ,type)
-             (om--arg-error ,msg)))))))
+             (om--arg-error ,msg ,type)))))))
 
 (defmacro om--defun-node (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
@@ -2086,22 +2086,26 @@ If fractional cookie, return `fraction'; if percentage cookie return
        ,(pred integerp) ,(pred integerp))
      t)))
 
-(defun om--time-to-unixtime (time)
+;; randomly make these public, not sure where else to put them
+(defun om-time-to-unixtime (time)
   "Return the unix time (integer seconds) of time list TIME.
-This depends on `current-time-zone'."
+The returned value is dependent on the time zone of the operating
+system."
   (let ((encoded
          (if (om--time-is-long-p time)
              (apply #'encode-time 0 (nreverse time))
            (apply #'encode-time 0 0 0 (nreverse (-take 3 time))))))
     (round (float-time encoded))))
 
-(defun om--unixtime-to-time-long (unixtime)
-  "Return the long time list of UNIXTIME."
+(defun om-unixtime-to-time-long (unixtime)
+  "Return the long time list of UNIXTIME.
+The list will be formatted like (YEAR MONTH DAY HOUR MIN)."
   (nreverse (-slice (decode-time unixtime) 1 6)))
 
-(defun om--unixtime-to-time-short (unixtime)
-  "Return the short time list of UNIXTIME."
-  (append (-take 3 (om--unixtime-to-time-long unixtime))
+(defun om-unixtime-to-time-short (unixtime)
+  "Return the short time list of UNIXTIME.
+The list will be formatted like (YEAR MONTH DAY nil nil)."
+  (append (-take 3 (om-unixtime-to-time-long unixtime))
           '(nil nil)))
 
 (defun om--time-truncate (time)
@@ -2207,12 +2211,12 @@ TYPE given in DEC."
 (defun om--timestamp-get-start-unixtime (timestamp)
   "Return the unixtime of the start time in TIMESTAMP."
   (->> (om--timestamp-get-start-time timestamp)
-       (om--time-to-unixtime)))
+       (om-time-to-unixtime)))
 
 (defun om--timestamp-get-end-unixtime (timestamp)
   "Return the unixtime of the end time in TIMESTAMP."
   (->> (om--timestamp-get-end-time timestamp)
-       (om--time-to-unixtime)))
+       (om-time-to-unixtime)))
 
 (defun om--timestamp-get-range (timestamp)
   "Return the range of TIMESTAMP in seconds."
@@ -2279,10 +2283,10 @@ TYPE given in DEC."
   (let* ((start (om--timestamp-get-start-time timestamp))
          (long? (om--time-is-long-p start))
          (range (* range (if long? 60 86400)))
-         (t2 (--> (om--time-to-unixtime start)
+         (t2 (--> (om-time-to-unixtime start)
                   (+ it range)
-                  (if long? (om--unixtime-to-time-long it)
-                    (om--unixtime-to-time-short it)))))
+                  (if long? (om-unixtime-to-time-long it)
+                    (om-unixtime-to-time-short it)))))
     (->> (om--timestamp-set-end-time-nocheck t2 timestamp)
          (om--timestamp-update-type-ranged))))
 
@@ -3311,7 +3315,7 @@ Any other keys will trigger an error."
          (-map #'string-to-number)
          (apply #'=)))))
 
-;; timestamp
+;; timestamp (standard)
 
 (om--defun-node om-timestamp-get-start-time (timestamp)
   "Return the time list for start time of TIMESTAMP node.
@@ -3344,10 +3348,13 @@ a negative integer."
       (om--property-is-eq-p :type 'inactive-range timestamp)))
 
 (om--defun-node om-timestamp-range-contains-p (unixtime timestamp)
-  "Return t if UNIXTIME is between start and end time of TIMESTAMP node."
+  "Return t if UNIXTIME is between start and end time of TIMESTAMP node.
+The boundaries are inclusive. If TIMESTAMP has a range of zero, then
+only return t if UNIXTIME is the same as TIMESTAMP. TIMESTAMP will be
+interpreted according to the localtime of the operating system."
   (let ((ut1 (om--timestamp-get-start-unixtime timestamp))
         (ut2 (om--timestamp-get-end-unixtime timestamp)))
-    (< ut1 unixtime ut2)))
+    (<= ut1 unixtime ut2)))
 
 (om--defun-node om-timestamp-set-start-time (time timestamp)
   "Return TIMESTAMP node with start time set to TIME.
@@ -3461,6 +3468,8 @@ condensed format."
            (om--timestamp-is-ranged-p timestamp))
       (om--timestamp-set-type-ranged (not flag) timestamp)
     timestamp))
+
+;; timestamp (diary)
 
 (om--defun-node om-timestamp-diary-set-value (form timestamp-diary)
   "Return TIMESTAMP-DIARY node with value set to FORM.

@@ -194,9 +194,12 @@ Build new nodes.
 
 * [om-build-code](#om-build-code-value-key-post-blank) `(value &key post-blank)`
 * [om-build-entity](#om-build-entity-name-key-use-brackets-p-post-blank) `(name &key use-brackets-p post-blank)`
+* [om-build-export-snippet](#om-build-export-snippet-back-end-value-key-post-blank) `(back-end value &key post-blank)`
 * [om-build-inline-babel-call](#om-build-inline-babel-call-call-key-inside-header-arguments-end-header-post-blank) `(call &key inside-header arguments end-header post-blank)`
 * [om-build-inline-src-block](#om-build-inline-src-block-language-key-parameters-value--post-blank) `(language &key parameters (value "") post-blank)`
 * [om-build-line-break](#om-build-line-break-key-post-blank) `(&key post-blank)`
+* [om-build-latex-fragment](#om-build-latex-fragment-value-key-post-blank) `(value &key post-blank)`
+* [om-build-macro](#om-build-macro-key-key-args-post-blank) `(key &key args post-blank)`
 * [om-build-statistics-cookie](#om-build-statistics-cookie-value-key-post-blank) `(value &key post-blank)`
 * [om-build-target](#om-build-target-value-key-post-blank) `(value &key post-blank)`
 * [om-build-timestamp](#om-build-timestamp-type-year-start-month-start-day-start-year-end-month-end-day-end-key-hour-start-minute-start-hour-end-minute-end-repeater-type-repeater-unit-repeater-value-warning-type-warning-unit-warning-value-post-blank) `(type year-start month-start day-start year-end month-end day-end &key hour-start minute-start hour-end minute-end repeater-type repeater-unit repeater-value warning-type warning-unit warning-value post-blank)`
@@ -242,6 +245,7 @@ Build new nodes.
 
 * [om-build-center-block](#om-build-center-block-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
 * [om-build-drawer](#om-build-drawer-drawer-name-key-post-blank-rest-element-nodes) `(drawer-name &key post-blank &rest element-nodes)`
+* [om-build-dynamic-block](#om-build-dynamic-block-block-name-key-arguments-post-blank-rest-element-nodes) `(block-name &key arguments post-blank &rest element-nodes)`
 * [om-build-footnote-definition](#om-build-footnote-definition-label-key-post-blank-rest-element-nodes) `(label &key post-blank &rest element-nodes)`
 * [om-build-headline](#om-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-element-nodes) `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest element-nodes)`
 * [om-build-item](#om-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-element-nodes) `(&key (bullet '-) checkbox counter tag post-blank &rest element-nodes)`
@@ -249,6 +253,7 @@ Build new nodes.
 * [om-build-property-drawer](#om-build-property-drawer-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
 * [om-build-quote-block](#om-build-quote-block-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
 * [om-build-section](#om-build-section-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
+* [om-build-special-block](#om-build-special-block-type-key-post-blank-rest-element-nodes) `(type &key post-blank &rest element-nodes)`
 * [om-build-table](#om-build-table-key-tblfm-post-blank-rest-element-nodes) `(&key tblfm post-blank &rest element-nodes)`
 
 ### Miscellaneous Builders
@@ -334,12 +339,23 @@ Set, get, and map properties of nodes.
 
 * [om-statistics-cookie-is-complete-p](#om-statistics-cookie-is-complete-p-statistics-cookie) `(statistics-cookie)`
 
-### Timestamp
+### Timestamp (Auxiliary)
+
+
+Functions to work with timestamp data
+
+* [om-time-to-unixtime](#om-time-to-unixtime-time) `(time)`
+* [om-unixtime-to-time-long](#om-unixtime-to-time-long-unixtime) `(unixtime)`
+* [om-unixtime-to-time-short](#om-unixtime-to-time-short-unixtime) `(unixtime)`
+
+### Timestamp (Standard)
 
 * [om-timestamp-get-start-time](#om-timestamp-get-start-time-timestamp) `(timestamp)`
 * [om-timestamp-get-end-time](#om-timestamp-get-end-time-timestamp) `(timestamp)`
+* [om-timestamp-get-range](#om-timestamp-get-range-timestamp) `(timestamp)`
 * [om-timestamp-is-active-p](#om-timestamp-is-active-p-timestamp) `(timestamp)`
 * [om-timestamp-is-ranged-p](#om-timestamp-is-ranged-p-timestamp) `(timestamp)`
+* [om-timestamp-range-contains-p](#om-timestamp-range-contains-p-unixtime-timestamp) `(unixtime timestamp)`
 * [om-timestamp-set-condensation](#om-timestamp-set-condensation-flag-timestamp) `(flag timestamp)`
 * [om-timestamp-set-start-time](#om-timestamp-set-start-time-time-timestamp) `(time timestamp)`
 * [om-timestamp-set-end-time](#om-timestamp-set-end-time-time-timestamp) `(time timestamp)`
@@ -437,6 +453,7 @@ Use pattern-matching to selectively perform operations on nodes in trees.
 * [om-match-splice-before](#om-match-splice-before-pattern-nodes-node) `(pattern nodes* node)`
 * [om-match-splice-after](#om-match-splice-after-pattern-nodes-node) `(pattern nodes* node)`
 * [om-match-splice-within](#om-match-splice-within-pattern-index-nodes-node) `(pattern index nodes* node)`
+* [om-match-do](#om-match-do-pattern-fun-node) `(pattern fun node)`
 
 ## Buffer Side Effects
 
@@ -458,6 +475,7 @@ Map node manipulations into buffers.
 * [om-update-item-at](#om-update-item-at-point-fun) `(point fun)`
 * [om-update-headline-at](#om-update-headline-at-point-fun) `(point fun)`
 * [om-update-subtree-at](#om-update-subtree-at-point-fun) `(point fun)`
+* [om-update-section-at](#om-update-section-at-point-fun) `(point fun)`
 
 ### Misc
 
@@ -836,6 +854,22 @@ The following properties are settable:
 
 ```
 
+#### om-build-export-snippet `(back-end value &key post-blank)`
+
+Build an export-snippet object node.
+
+The following properties are settable:
+- **`back-end`**: (required) a oneline string
+- **`value`**: (required) a string
+- **`post-blank`**: a non-negative integer
+
+```el
+(->> (om-build-export-snippet "back" "value")
+     (om-to-string))
+ ;; => "@@back:value@@"
+
+```
+
 #### om-build-inline-babel-call `(call &key inside-header arguments end-header post-blank)`
 
 Build an inline-babel-call object node.
@@ -903,6 +937,41 @@ The following properties are settable:
 (->> (om-build-line-break)
      (om-to-trimmed-string))
  ;; => "\\\\"
+
+```
+
+#### om-build-latex-fragment `(value &key post-blank)`
+
+Build a latex-fragment object node.
+
+The following properties are settable:
+- **`value`**: (required) a string
+- **`post-blank`**: a non-negative integer
+
+```el
+(->> (om-build-latex-fragment "$2+2=5$")
+     (om-to-trimmed-string))
+ ;; => "$2+2=5$"
+
+```
+
+#### om-build-macro `(key &key args post-blank)`
+
+Build a macro object node.
+
+The following properties are settable:
+- **`key`**: (required) a oneline string
+- **`args`**:  a list of oneline strings
+- **`post-blank`**: a non-negative integer
+
+```el
+(->> (om-build-macro "economics")
+     (om-to-trimmed-string))
+ ;; => "{{{economics}}}"
+
+(->> (om-build-macro "economics" :args '("s=d"))
+     (om-to-trimmed-string))
+ ;; => "{{{economics(s=d)}}}"
 
 ```
 
@@ -1576,6 +1645,30 @@ The following properties are settable:
 
 ```
 
+#### om-build-dynamic-block `(block-name &key arguments post-blank &rest element-nodes)`
+
+Build a dynamic-block element node with **`element-nodes`** as children.
+
+The following properties are settable:
+- **`block-name`**: (required) a oneline string
+- **`arguments`**:  a plist
+- **`post-blank`**: a non-negative integer
+
+```el
+(->> (om-build-dynamic-block "empty")
+     (om-to-trimmed-string))
+ ;; => "#+BEGIN: empty
+ ;      #+END:"
+
+(->> (om-build-comment "I'm in here")
+     (om-build-dynamic-block "notempty")
+     (om-to-trimmed-string))
+ ;; => "#+BEGIN: notempty
+ ;      # I'm in here
+ ;      #+END:"
+
+```
+
 #### om-build-footnote-definition `(label &key post-blank &rest element-nodes)`
 
 Build a footnote-definition element node with **`element-nodes`** as children.
@@ -1729,6 +1822,29 @@ The following properties are settable:
      (om-build-section)
      (om-to-trimmed-string))
  ;; => "text"
+
+```
+
+#### om-build-special-block `(type &key post-blank &rest element-nodes)`
+
+Build a special-block element node with **`element-nodes`** as children.
+
+The following properties are settable:
+- **`type`**: (required) a oneline string
+- **`post-blank`**: a non-negative integer
+
+```el
+(->> (om-build-special-block "monad")
+     (om-to-trimmed-string))
+ ;; => "#+BEGIN_monad
+ ;      #+END_monad"
+
+(->> (om-build-comment "Launch missiles")
+     (om-build-special-block "monad")
+     (om-to-trimmed-string))
+ ;; => "#+BEGIN_monad
+ ;      # Launch missiles
+ ;      #+END_monad"
 
 ```
 
@@ -3040,7 +3156,41 @@ Return t is **`statistics-cookie`** node is complete.
 ```
 
 
-### Timestamp
+### Timestamp (Auxiliary)
+
+
+Functions to work with timestamp data
+
+#### om-time-to-unixtime `(time)`
+
+Return the unix time (integer seconds) of time list **`time`**.
+The returned value is dependent on the time zone of the operating
+system.
+
+```el
+no examples :(
+```
+
+#### om-unixtime-to-time-long `(unixtime)`
+
+Return the long time list of **`unixtime`**.
+The list will be formatted like `(year month day hour min)`.
+
+```el
+no examples :(
+```
+
+#### om-unixtime-to-time-short `(unixtime)`
+
+Return the short time list of **`unixtime`**.
+The list will be formatted like `(year month day nil nil)`.
+
+```el
+no examples :(
+```
+
+
+### Timestamp (Standard)
 
 #### om-timestamp-get-start-time `(timestamp)`
 
@@ -3102,6 +3252,37 @@ The return value will be a list as specified by the `time` argument in
 
 ```
 
+#### om-timestamp-get-range `(timestamp)`
+
+Return the range of **`timestamp`** node in seconds as an integer.
+If non-ranged, this function will return 0. If ranged but
+the start time is in the future relative to end the time, return
+a negative integer.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue]
+
+(->> (om-parse-this-object)
+     (om-timestamp-get-range))
+ ;; => 0
+
+;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-02 Wed]
+
+(->> (om-parse-this-object)
+     (om-timestamp-get-range))
+ ;; => 86400
+
+;; Given the following contents:
+; [2019-01-01 Tue 00:00-12:00]
+
+(->> (om-parse-this-object)
+     (om-timestamp-get-range))
+ ;; => 43200
+
+```
+
 #### om-timestamp-is-active-p `(timestamp)`
 
 Return t if **`timestamp`** node is active.
@@ -3148,6 +3329,37 @@ Return t if **`timestamp`** node is ranged.
 (->> (om-parse-this-object)
      (om-timestamp-is-ranged-p))
  ;; => nil
+
+```
+
+#### om-timestamp-range-contains-p `(unixtime timestamp)`
+
+Return t if **`unixtime`** is between start and end time of **`timestamp`** node.
+The boundaries are inclusive. If **`timestamp`** has a range of zero, then
+only return t if **`unixtime`** is the same as **`timestamp`**. **`timestamp`** will be
+interpreted according to the localtime of the operating system.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 00:00]
+
+(let ((ut (om-time-to-unixtime '(2019 1 1 0 0))))
+  (->> (om-parse-this-object)
+       (om-timestamp-range-contains-p ut)))
+ ;; => t
+
+(let ((ut (om-time-to-unixtime '(2019 1 1 0 30))))
+  (->> (om-parse-this-object)
+       (om-timestamp-range-contains-p ut)))
+ ;; => nil
+
+;; Given the following contents:
+; [2019-01-01 Tue 00:00-01:00]
+
+(let ((ut (om-time-to-unixtime '(2019 1 1 0 30))))
+  (->> (om-parse-this-object)
+       (om-timestamp-range-contains-p ut)))
+ ;; => t
 
 ```
 
@@ -5207,6 +5419,18 @@ in the immediate, top level children of **`node`**.
 
 ```
 
+#### om-match-do `(pattern fun node)`
+
+Like [`om-match-map`](#om-match-map-pattern-fun-node) but for side effects only.
+**`fun`** is a unary function that has side effects and is applied to the
+matches from **`node`** using **`pattern`**. This function itself returns nil.
+
+**`pattern`** follows the same rules as [`om-match`](#om-match-pattern-node).
+
+```el
+no examples :(
+```
+
 
 ## Buffer Side Effects
 
@@ -5392,6 +5616,30 @@ Update subtree under **`point`** using **`fun`**.
  ;; $> "* one
  ;      ** two
  ;      *** three"
+
+```
+
+#### om-update-section-at `(point fun)`
+
+Update section under **`point`** using **`fun`**.
+**`fun`** takes an section and returns a modified section
+
+```el
+;; Given the following contents:
+; #+KEY1: VAL1
+; #+KEY2: VAL2
+; * irrelevant headline
+
+;; Update the top buffer section before the headlines start
+(om-update-section-at* (point)
+  (om-map-children* (--map (om-map-property :value (function s-downcase)
+					     it)
+			   it)
+		    it))
+ ;; Output these buffer contents
+ ;; $> "#+KEY1: val1
+ ;      #+KEY2: val2
+ ;      * irrelevant headline"
 
 ```
 
