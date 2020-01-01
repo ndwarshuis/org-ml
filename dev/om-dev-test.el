@@ -8,6 +8,127 @@
 (require 'om-dev-examples-to-tests)
 (require 'om-dev-examples)
 
+;;; list operations
+
+(ert-deftest om--pad-or-truncate/properties ()
+  (let ((finite-list '(1 2 3)))
+    ;; zero length list with zero length
+    (should (equal nil (om--pad-or-truncate 0 'x nil)))
+    ;; zero length list with positive length
+    (should (equal '(x) (om--pad-or-truncate 1 'x nil)))
+    ;; positive length list; length is less
+    (should (equal '(1 2) (om--pad-or-truncate 2 'x finite-list)))
+    ;; positive length list; length is equal
+    (should (equal '(1 2 3) (om--pad-or-truncate 3 'x finite-list)))
+    ;; positive length list; length is greater
+    (should (equal '(1 2 3 x) (om--pad-or-truncate 4 'x finite-list)))
+    ;; positive length list; length is zero
+    (should (equal nil (om--pad-or-truncate 0 'x finite-list)))))
+
+;; TODO add plist-get-keys?
+;; TODO add plist-get-vals?
+;; TODO add plist-map-values?
+
+(ert-deftest om--is-plist-p/properties ()
+  ;; finite plist
+  (should (om--is-plist-p '(:one one :two 2 :three "3")))
+  ;; zero-length plist
+  (should (om--is-plist-p nil))
+  ;; symbols instead of keywords
+  (should-not (om--is-plist-p '(one one two 2 three "3")))
+  ;; incomplete
+  (should-not (om--is-plist-p '(:one one :two 2 :three)))
+  ;; not list
+  (should-not (om--is-plist-p ":one one :two 2 :three")))
+
+;; TODO add plist-remove?
+
+(defmacro om--inter-list-ops-test (fun input output-single
+                                       output-upper output-lower)
+  (declare (indent 1))
+  `(let ((fun ,fun)
+         (input ,input)
+         (output-single ,output-single)
+         (output-upper ,output-upper)
+         (output-lower ,output-lower))
+     ;; zero length list at 0
+     (should (equal output-single (funcall fun 0 nil)))
+     (should (equal output-single (funcall fun -1 nil)))
+     ;; zero length list (overrange)
+     (should-error (funcall fun 100 nil))
+     (should (equal output-single (funcall fun 100 nil t)))
+     ;; zero length list (underrange)
+     (should-error (funcall fun -100 nil))
+     (should (equal output-single (funcall fun -100 nil t)))
+     ;; finite list (in range)
+     (should (equal output-lower (funcall fun 0 input)))
+     (should (equal output-upper (funcall fun -1 input)))
+     ;; finite list (overrange)
+     (should-error (funcall fun 100 '(1 2)))
+     (should (equal output-upper (funcall fun 100 input t)))
+     ;; finite list (underrange)
+     (should-error (funcall fun -100 '(1 2)))
+     (should (equal output-lower (funcall fun -100 input t)))))
+
+(ert-deftest om--insert-at/properties ()
+  (om--inter-list-ops-test (lambda (n list &optional p)
+                             (om--insert-at n 'x list p))
+    '(1 2) '(x) '(1 2 x) '(x 1 2)))
+
+(ert-deftest om--split-at/properties ()
+  (om--inter-list-ops-test #'om--split-at
+    '(1 2) nil '((1 2) nil) '(nil (1 2))))
+
+(ert-deftest om--splice-at/properties ()
+  (om--inter-list-ops-test (lambda (n list &optional p)
+                             (om--splice-at n '(x y) list p))
+    '(1 2) '(x y) '(1 2 x y) '(x y 1 2)))
+
+(defmacro om--intra-list-ops-test (fun input output-upper output-lower)
+  (declare (indent 1))
+  `(let ((fun ,fun)
+         (input ,input)
+         (output-upper ,output-upper)
+         (output-lower ,output-lower))
+     ;; index 0 in an empty list
+     (should-error (funcall fun 0 nil))
+     (should-not (funcall fun 0 nil t))
+     ;; overrange in empty list
+     (should-error (funcall fun 100 nil))
+     (should-not (funcall fun 100 nil t))
+     ;; underrange in empty list
+     (should-error (funcall fun -100 nil))
+     (should-not (funcall fun -100 nil t))
+     ;; positive in finite list
+     (should (equal output-lower (funcall fun 0 input)))
+     ;; negative in finite list
+     (should (equal output-upper (funcall fun -1 input)))
+     ;; positive overrange in finite list
+     (should (equal output-upper (funcall fun 100 input t)))
+     (should-error (funcall fun 100 input))
+     ;; negative underrange in finite list
+     (should (equal output-lower (funcall fun -100 input t)))
+     (should-error (funcall fun -100 input))))
+
+(ert-deftest om--remove-at/properties ()
+  (om--intra-list-ops-test #'om--remove-at '(1 2 3) '(1 2) '(2 3)))
+
+(ert-deftest om--replace-at/properties ()
+  (om--intra-list-ops-test (lambda (n list &optional p)
+                             (om--replace-at n 'x list p))
+    '(1 2 3) '(1 2 x) '(x 2 3)))
+
+(ert-deftest om--nth/properties ()
+  (om--intra-list-ops-test #'om--nth '(1 2 3) 3 1))
+
+;; TODO add map/first last
+;; specifications?
+;; - what to do with empty lists? makes sense to just return nil
+;;   but this breaks things
+;; - first and last should be the same for a one-member list
+
+;;; node property completeness
+
 (defun should-have-equal-properties (e1 e2)
   (unless (eq (om--get-type e1) (om--get-type e2))
     (error "Type mismatch: %s\n\n%s" e1 e2))
@@ -19,7 +140,6 @@
       ;; (print p1)
       ;; (print p2)
       (should-not (or (-difference p1 p2) (-difference p2 p1))))))
-
 
 ;; objects
 

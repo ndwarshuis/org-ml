@@ -282,7 +282,7 @@ and return. If LIST is longer than LENGTH, add PAD to the end
 of LIST until it's length equals LENGTH and return. Do nothing if
 length of LIST is equal to LENGTH initially."
   (let ((blanks (- length (length list))))
-    (if (< blanks 0) (-slice list 0 (1- length))
+    (if (< blanks 0) (-take length list)
       (append list (-repeat blanks pad)))))
 
 (defun om--plist-get-keys (plist)
@@ -312,30 +312,7 @@ FUN is a unary function that returns a modified value."
   "Return PLIST with KEY and its value removed."
   (->> (-partition 2 plist) (--remove (eq (car it) key)) (-flatten-n 1)))
 
-(defun om--convert-intra-index (n list &optional permit-error)
-  "Return absolute index given N and LIST.
-
-The absolute index to be returned will be a positive integer that will
-select each member analogously to `nth'.
-
-N is relative index where positions in LIST are given by the following:
-- 0: first member
-- 1: second member (and so on)
-- -1: last member
-- -2: penultimate member (and so on)
-
-If N refers to a non-existent member, trigger an out-of-bounds error
-unless PERMIT-ERROR is t."
-  (let* ((N (length list))
-         (upper (1- N))
-         (lower (- N)))
-    (cond
-     ((<= 0 n upper) n)
-     ((>= -1 n lower) (+ N n))
-     (t (unless permit-error
-          (om--arg-error
-           "Index (%s) out of range; must be between %s and %s"
-           n lower upper))))))
+;; inter-index operations
 
 (defun om--convert-inter-index (n list &optional permit-error)
   "Return absolute index given N and LIST.
@@ -357,30 +334,23 @@ unless PERMIT-ERROR is t."
     (cond
      ((<= 0 n upper) n)
      ((>= -1 n lower) (+ 1 N n))
-     (t (unless permit-error
-          (om--arg-error
-           "Index (%s) out of range; must be between %s and %s"
-           n lower upper))))))
+     ((and permit-error (< upper n)) upper)
+     ((and permit-error (< n lower)) lower)
+     (t (om--arg-error
+         "Index (%s) out of range; must be between %s and %s"
+         n lower upper)))))
 
 (defun om--insert-at (n x list &optional permit-error)
   "Like `-insert-at' but can insert X at negative indices N in LIST.
 See `om--convert-inter-index' for the meaning of N."
   (-insert-at (om--convert-inter-index n list permit-error) x list))
 
-(defun om--remove-at (n list)
-  "Like `-remove-at' but honors negative indices N in LIST.
-See `om--convert-intra-index' for the meaning of N."
-  (-remove-at (om--convert-intra-index n list) list))
-
-(defun om--replace-at (n x list)
-  "Like `-replace-at' but can substitute X at negative indices N in LIST.
-See `om--convert-intra-index' for the meaning of N."
-  (-replace-at (om--convert-intra-index n list) x list))
-
 (defun om--split-at (n list &optional permit-error)
   "Like `-split-at' except allow negative indices in LIST.
 See `om--convert-inter-index' for the meaning of N."
-  (-split-at (om--convert-inter-index n list permit-error) list))
+  (let ((n* (om--convert-inter-index n list permit-error)))
+    (when list
+      (-split-at n* list))))
 
 (defun om--splice-at (index list* list &optional permit-error)
   "Return LIST with LIST* spliced at INDEX."
@@ -388,12 +358,56 @@ See `om--convert-inter-index' for the meaning of N."
        (om--insert-at index list* it permit-error)
        (apply #'append it)))
 
+;; intra-index operations
+
+(defun om--convert-intra-index (n list &optional permit-error)
+  "Return absolute index given N and LIST.
+
+The absolute index to be returned will be a positive integer that will
+select each member analogously to `nth'.
+
+N is relative index where positions in LIST are given by the following:
+- 0: first member
+- 1: second member (and so on)
+- -1: last member
+- -2: penultimate member (and so on)
+
+If N refers to a non-existent member, trigger an out-of-bounds error
+unless PERMIT-ERROR is t."
+  (let* ((N (length list))
+         (upper (1- N))
+         (lower (- N)))
+    (cond
+     ((= N 0) (unless permit-error
+                (error "List is empty, index is meaningless")))
+     ((<= 0 n upper) n)
+     ((>= -1 n lower) (+ N n))
+     ((and permit-error (< upper n)) upper)
+     ((and permit-error (< n lower)) lower)
+     (t (om--arg-error
+         "Index (%s) out of range; must be between %s and %s"
+         n lower upper)))))
+
+(defun om--remove-at (n list &optional permit-error)
+  "Like `-remove-at' but honors negative indices N in LIST.
+See `om--convert-intra-index' for the meaning of N."
+  (-some-> (om--convert-intra-index n list permit-error)
+           (-remove-at list)))
+
+(defun om--replace-at (n x list &optional permit-error)
+  "Like `-replace-at' but can substitute X at negative indices N in LIST.
+See `om--convert-intra-index' for the meaning of N."
+  (-some-> (om--convert-intra-index n list permit-error)
+           (-replace-at x list)))
+
 (defun om--nth (n list &optional permit-error)
   "Like `nth' but honors negative indices N in LIST.
 See `om--convert-intra-index' for the meaning of N.
 If PERMIT-ERROR is t, do not throw out-of-bounds errors."
   (-when-let (i (om--convert-intra-index n list permit-error))
     (nth i list)))
+
+;; functors
 
 (om--defun-nocheck* om--map-first (fun list)
   "Return LIST with FUN applied to the first member.
