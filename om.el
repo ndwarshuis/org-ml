@@ -285,6 +285,8 @@ length of LIST is equal to LENGTH initially."
     (if (< blanks 0) (-take length list)
       (append list (-repeat blanks pad)))))
 
+;;; plist operations
+
 (defun om--plist-get-keys (plist)
   "Get the keys for PLIST."
   (-slice plist 0 nil 2))
@@ -312,13 +314,16 @@ FUN is a unary function that returns a modified value."
   "Return PLIST with KEY and its value removed."
   (->> (-partition 2 plist) (--remove (eq (car it) key)) (-flatten-n 1)))
 
-;; inter-index operations
+;;; inter-index operations
 
-(defun om--convert-inter-index (n list &optional permit-error)
+;; The "inter-index" alludes to the fact that these list operations
+;; use an index value that refers to spaces between list members.
+;; These functions are enhanced versions of what is provided in
+;; `dash.el' and native emacs that handle negative indices and have
+;; switches to handle out of bounds errors
+
+(defun om--convert-inter-index (n list &optional use-oor)
   "Return absolute index given N and LIST.
-
-The absolute index to be returned will be a positive integer that will
-select the space between each member analogously to `-insert-at'.
 
 N is relative index where positions in LIST are given by the following:
 - 0: before first member
@@ -326,45 +331,53 @@ N is relative index where positions in LIST are given by the following:
 - -1: after last member
 - -2: after penultimate member (and so on)
 
-If N refers to a non-existent member, trigger an out-of-bounds error
-unless PERMIT-ERROR is t."
+The absolute index to be returned will be N mapped to a positive
+integer that refers to the same space in LIST.
+
+If USE-OOR (use out-of-range) is t, return the closest valid index
+if N refers to a location that is outside LIST. Otherwise throw an
+error."
   (let* ((N (length list))
          (upper N)
          (lower (- (- N) 1)))
     (cond
      ((<= 0 n upper) n)
      ((>= -1 n lower) (+ 1 N n))
-     ((and permit-error (< upper n)) upper)
-     ((and permit-error (< n lower)) lower)
+     ((and use-oor (< upper n)) upper)
+     ((and use-oor (< n lower)) lower)
      (t (om--arg-error
          "Index (%s) out of range; must be between %s and %s"
          n lower upper)))))
 
-(defun om--insert-at (n x list &optional permit-error)
+(defun om--insert-at (n x list &optional use-oor)
   "Like `-insert-at' but can insert X at negative indices N in LIST.
-See `om--convert-inter-index' for the meaning of N."
-  (-insert-at (om--convert-inter-index n list permit-error) x list))
+See `om--convert-inter-index' for the meaning of N and USE-OOR."
+  (-insert-at (om--convert-inter-index n list use-oor) x list))
 
-(defun om--split-at (n list &optional permit-error)
+(defun om--split-at (n list &optional use-oor)
   "Like `-split-at' except allow negative indices in LIST.
-See `om--convert-inter-index' for the meaning of N."
-  (let ((n* (om--convert-inter-index n list permit-error)))
+See `om--convert-inter-index' for the meaning of N and USE-OOR."
+  (let ((n* (om--convert-inter-index n list use-oor)))
     (when list
       (-split-at n* list))))
 
-(defun om--splice-at (index list* list &optional permit-error)
-  "Return LIST with LIST* spliced at INDEX."
+(defun om--splice-at (n list* list &optional use-oor)
+  "Return LIST with LIST* spliced at index N.
+See `om--convert-inter-index' for the meaning of N and USE-OOR."
   (--> (-map #'list list)
-       (om--insert-at index list* it permit-error)
+       (om--insert-at n list* it use-oor)
        (apply #'append it)))
 
-;; intra-index operations
+;;; intra-index operations
 
-(defun om--convert-intra-index (n list &optional permit-error)
+;; The "intra-index" alludes to the fact that these list operations
+;; use an index value that refers to explicit list members.
+;; These functions are enhanced versions of what is provided in
+;; `dash.el' and native emacs that handle negative indices and have
+;; switches to handle out of bounds errors
+
+(defun om--convert-intra-index (n list &optional use-oor)
   "Return absolute index given N and LIST.
-
-The absolute index to be returned will be a positive integer that will
-select each member analogously to `nth'.
 
 N is relative index where positions in LIST are given by the following:
 - 0: first member
@@ -372,40 +385,47 @@ N is relative index where positions in LIST are given by the following:
 - -1: last member
 - -2: penultimate member (and so on)
 
-If N refers to a non-existent member, trigger an out-of-bounds error
-unless PERMIT-ERROR is t."
+The absolute index to be returned is N mapped to a positive integer
+that refers to the same member in LIST.
+
+If USE-OOR (use out-of-range) is non-nil, return the closest valid
+index if N refers to a position outside of LIST.
+
+In cases where LIST is nil, N is meaningless since it will never
+refer to anything. In this case, return nil if USE-OOR is
+`permit-empty', and throw an error otherwise (even if USE-OOR it
+non-nil)."
   (let* ((N (length list))
          (upper (1- N))
          (lower (- N)))
     (cond
-     ((= N 0) (unless permit-error
+     ((= N 0) (unless (eq use-oor 'permit-empty)
                 (error "List is empty, index is meaningless")))
      ((<= 0 n upper) n)
      ((>= -1 n lower) (+ N n))
-     ((and permit-error (< upper n)) upper)
-     ((and permit-error (< n lower)) lower)
+     ((and use-oor (< upper n)) upper)
+     ((and use-oor (< n lower)) lower)
      (t (om--arg-error
          "Index (%s) out of range; must be between %s and %s"
          n lower upper)))))
 
-(defun om--remove-at (n list &optional permit-error)
+(defun om--remove-at (n list &optional use-oor)
   "Like `-remove-at' but honors negative indices N in LIST.
-See `om--convert-intra-index' for the meaning of N."
-  (-some-> (om--convert-intra-index n list permit-error)
+See `om--convert-intra-index' for the meaning of N and USE-OOR."
+  (-some-> (om--convert-intra-index n list use-oor)
            (-remove-at list)))
 
-(defun om--replace-at (n x list &optional permit-error)
+(defun om--replace-at (n x list &optional use-oor)
   "Like `-replace-at' but can substitute X at negative indices N in LIST.
-See `om--convert-intra-index' for the meaning of N."
-  (-some-> (om--convert-intra-index n list permit-error)
+See `om--convert-intra-index' for the meaning of N and USE-OOR."
+  (-some-> (om--convert-intra-index n list use-oor)
            (-replace-at x list)))
 
-(defun om--nth (n list &optional permit-error)
+(defun om--nth (n list &optional use-oor)
   "Like `nth' but honors negative indices N in LIST.
-See `om--convert-intra-index' for the meaning of N.
-If PERMIT-ERROR is t, do not throw out-of-bounds errors."
-  (-when-let (i (om--convert-intra-index n list permit-error))
-    (nth i list)))
+See `om--convert-intra-index' for the meaning of N and USE-OOR."
+  (-some-> (om--convert-intra-index n list use-oor)
+           (nth list)))
 
 ;; functors
 

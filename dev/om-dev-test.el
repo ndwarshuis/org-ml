@@ -118,13 +118,16 @@ is the converse."
          (output-lower ,output-lower))
      ;; index 0 in an empty list
      (should-error (funcall fun 0 nil))
-     (should-not (funcall fun 0 nil t))
+     (should-error (funcall fun 0 nil t))
+     (should-not (funcall fun 0 nil 'permit-empty))
      ;; overrange in empty list
      (should-error (funcall fun 100 nil))
-     (should-not (funcall fun 100 nil t))
+     (should-error (funcall fun 100 nil t))
+     (should-not (funcall fun 100 nil 'permit-empty))
      ;; underrange in empty list
      (should-error (funcall fun -100 nil))
-     (should-not (funcall fun -100 nil t))
+     (should-error (funcall fun -100 nil t))
+     (should-not (funcall fun -100 nil 'permit-empty))
      ;; positive in finite list
      (should (equal output-lower (funcall fun 0 input)))
      ;; negative in finite list
