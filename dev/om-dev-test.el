@@ -8,7 +8,7 @@
 (require 'om-dev-examples-to-tests)
 (require 'om-dev-examples)
 
-;;; list operations
+;;; LIST OPERATIONS
 
 (ert-deftest om--pad-or-truncate/properties ()
   (let ((finite-list '(1 2 3)))
@@ -43,8 +43,23 @@
 
 ;; TODO add plist-remove?
 
+;;; inter-list operations
+
+;; These functions operate using indices that refer to spaces between
+;; list members. As such there is no such thing as a nonsensical index.
+;; Since there will always be the option to add to the front or the
+;; back of the list, even an empty list has a logical index that points
+;; to these locations (they just happen to be the same). Therefore,
+;; the only errors we need to catch here are those that refer to out
+;; of range indices.
+
 (defmacro om--inter-list-ops-test (fun input output-single
                                        output-upper output-lower)
+  "Return form to test intra-index list operations using FUN.
+INPUT is an input list, OUTPUT-SINGLE is a list made as if FUN were
+applied to an empty list, OUTPUT-UPPER is the input list with FUN
+applied as if it was given the highest possible index, and OUTPUT-LOWER
+is the converse."
   (declare (indent 1))
   `(let ((fun ,fun)
          (input ,input)
@@ -84,7 +99,18 @@
                              (om--splice-at n '(x y) list p))
     '(1 2) '(x y) '(1 2 x y) '(x y 1 2)))
 
+;; These functions operate using indices that refer to explicit
+;; members of a list. As such there will be no possible integers that
+;; will be valid for an empty list. This provides one extra error case
+;; to test, which is the possibility that we cannot operate on the
+;; list and thus return nil. All else is the same relative to the
+;; inter-list operations tests above
+
 (defmacro om--intra-list-ops-test (fun input output-upper output-lower)
+  "Return form to test intra-index list operations using FUN.
+INPUT is an input list, OUTPUT-UPPER is the input list with FUN
+applied as if it was given the highest possible index, and OUTPUT-LOWER
+is the converse."
   (declare (indent 1))
   `(let ((fun ,fun)
          (input ,input)
@@ -121,11 +147,22 @@
 (ert-deftest om--nth/properties ()
   (om--intra-list-ops-test #'om--nth '(1 2 3) 3 1))
 
-;; TODO add map/first last
-;; specifications?
-;; - what to do with empty lists? makes sense to just return nil
-;;   but this breaks things
-;; - first and last should be the same for a one-member list
+;;; list functors
+
+(ert-deftest om--map-first/last/properties ()
+  ;; mapping empty list should always return empty list
+  (should-not (om--map-first* (s-upcase it) nil))
+  (should-not (om--map-last* (s-upcase it) nil))
+  ;; mapping list with one member should be same for both
+  (should (equal '("X") (om--map-first* (s-upcase it) '("x"))))
+  (should (equal '("X") (om--map-last* (s-upcase it) '("x"))))
+  ;; mapping list with more than one member should be self-explanatory
+  (should (equal '("A" "b" "c") (om--map-first* (s-upcase it) '("a" "b" "c"))))
+  (should (equal '("a" "b" "C") (om--map-last* (s-upcase it) '("a" "b" "c"))))
+  ;; identity should hold true for any length list (0, 1, and 1+)
+  (let ((test-lists '(nil '(1) '(1 2))))
+    (--each test-lists (should (equal it (om--map-first #'identity it))))
+    (--each test-lists (should (equal it (om--map-last #'identity it))))))
 
 ;;; node property completeness
 
