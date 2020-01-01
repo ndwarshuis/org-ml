@@ -1543,7 +1543,7 @@ bounds."
                (:status)
                (:duration))
         (code (:value ,@str :require t))
-        (comment (:value ,@ol-str :require t))
+        (comment (:value ,@str :require t))
         (comment-block (:value ,@str :decode s-trim-right :require ""))
         (drawer (:drawer-name ,@ol-str :require t))
         (diary-sexp (:value :encode om--encode-diary-sexp-value

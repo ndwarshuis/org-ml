@@ -637,7 +637,10 @@
       ;; blank string (it should return a "# ")
       (->> (om-build-comment "text")
            (om-to-trimmed-string))
-      => "# text")
+      => "# text"
+      (->> (om-build-comment "text\nless")
+           (om-to-trimmed-string))
+      => "# text\n# less")
 
     (defexamples om-build-comment-block
       (->> (om-build-comment-block)
