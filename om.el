@@ -4770,9 +4770,11 @@ returns a modified node."
 ;; TODO this will fold items improperly
 (defun om--flag-elem-contents (flag node)
   "Set folding of buffer contents in NODE to FLAG."
-  (-let (((&plist :contents-begin :contents-end)
-          (om--get-all-properties node)))
-    (outline-flag-region (1- contents-begin) (1- contents-end) flag)))
+  (let ((b (om--get-property :contents-begin node))
+        (e (cl-case (om-get-type node)
+             ((property-drawer drawer) (om--get-property :end node))
+             (t (om--get-property :contents-end node)))))
+    (outline-flag-region (1- b) (1- e) flag)))
 
 (om--defun-node om-fold (node)
   "Fold the children of NODE if they exist."
