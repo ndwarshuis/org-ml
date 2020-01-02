@@ -1202,7 +1202,8 @@ FUN is a predicate function that takes one argument."
 
 (defun om--is-valid-item-tag-p (x)
   "Return t if X is an allowed value for an item node tag property."
-  (--all? (om--is-any-type-p om--item-tag-restrictions it) x))
+  (and (listp x)
+       (--all? (om--is-any-type-p om--item-tag-restrictions it) x)))
 
 (defun om--is-valid-item-bullet-p (x)
   "Return t if X is an allowed value for a item node bullet property."
@@ -1233,7 +1234,8 @@ FUN is a predicate function that takes one argument."
 
 (defun om--is-valid-headline-tags-p (x)
   "Return t if X is an allowed value for a headline node tags property."
-  (and (-all? #'om--is-oneline-string-p x)
+  (and (listp x)
+       (-all? #'om--is-oneline-string-p x)
        (not (member org-archive-tag x))))
 
 (defun om--is-valid-headline-priority-p (x)
@@ -1243,7 +1245,9 @@ FUN is a predicate function that takes one argument."
 
 (defun om--is-valid-headline-title-p (x)
   "Return t if X is an allowed value for a headline node title property."
-  (--all? (om--is-any-type-p om--headline-title-restrictions it) x))
+  (and
+   (listp x)
+   (--all? (om--is-any-type-p om--headline-title-restrictions it) x)))
 
 (defun om--is-valid-timestamp-type-p (x)
   "Return t if X is an allowed value for a timestamp node type property."
