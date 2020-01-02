@@ -2299,12 +2299,12 @@ Return t if **`node`** is an element class.
 ;; Given the following contents:
 ; *ziltoid*
 
-;; Parsing this text as an element gives a paragraph
+;; Parsing this text as an element node gives a paragraph node
 (->> (om-parse-this-element)
      (om-is-element-p))
  ;; => t
 
-;; Parsing the same text as an object gives a bold object
+;; Parsing the same text as an object node gives a bold node
 (->> (om-parse-this-object)
      (om-is-element-p))
  ;; => nil
@@ -2319,12 +2319,12 @@ Return t if **`node`** is a branch node.
 ;; Given the following contents:
 ; *ziltoid*
 
-;; Parsing this as an element gives a paragraph type (an object container).
+;; Parsing this as an element node gives a paragraph node (a branch node)
 (->> (om-parse-this-element)
      (om-is-branch-node-p))
  ;; => t
 
-;; Parsing this as an object gives a bold type (also an object container).
+;; Parsing this as an object node gives a bold node (also a branch node)
 (->> (om-parse-this-object)
      (om-is-branch-node-p))
  ;; => t
@@ -2332,7 +2332,7 @@ Return t if **`node`** is a branch node.
 ;; Given the following contents:
 ; ~ziltoid~
 
-;; Parsing this as an object gives a code type (not a container).
+;; Parsing this as an object node gives a code node (not a branch node)
 (->> (om-parse-this-object)
      (om-is-branch-node-p))
  ;; => nil
@@ -2340,7 +2340,7 @@ Return t if **`node`** is a branch node.
 ;; Given the following contents:
 ; # ziltoid
 
-;; Parsing this as an element gives a comment type (not a container).
+;; Parsing this as an element node gives a comment node (also not a branch node)
 (->> (om-parse-this-element)
      (om-is-branch-node-p))
  ;; => nil
@@ -2348,7 +2348,7 @@ Return t if **`node`** is a branch node.
 ;; Given the following contents:
 ; * I'm so great
 
-;; Parsing this as an element gives a table (a greater element).
+;; Parsing this as an element node gives a headline node (a branch node)
 (->> (om-parse-this-element)
      (om-is-branch-node-p))
  ;; => t
@@ -2363,12 +2363,14 @@ Return t if **`node`** is a branch node that may have child objects.
 ;; Given the following contents:
 ; *ziltoid*
 
-;; Parsing this as an element gives a paragraph type (an object container).
+;; Parsing this as an element node gives a paragraph node (can have child object
+;; nodes)
 (->> (om-parse-this-element)
      (om-node-may-have-child-objects-p))
  ;; => t
 
-;; Parsing this as an object gives a bold type (also an object container).
+;; Parsing this as an object node gives a bold node (also can have child object
+;; nodes)
 (->> (om-parse-this-object)
      (om-node-may-have-child-objects-p))
  ;; => t
@@ -2376,7 +2378,7 @@ Return t if **`node`** is a branch node that may have child objects.
 ;; Given the following contents:
 ; ~ziltoid~
 
-;; Parsing this as an object gives a code type (not a container).
+;; Parsing this as an object node gives a code node (not a branch node)
 (->> (om-parse-this-object)
      (om-node-may-have-child-objects-p))
  ;; => nil
@@ -2384,7 +2386,7 @@ Return t if **`node`** is a branch node that may have child objects.
 ;; Given the following contents:
 ; # ziltoid
 
-;; Parsing this as an element gives a comment type (not a container).
+;; Parsing this as an element node gives a comment node (not a branch node)
 (->> (om-parse-this-element)
      (om-node-may-have-child-objects-p))
  ;; => nil
@@ -2392,7 +2394,8 @@ Return t if **`node`** is a branch node that may have child objects.
 ;; Given the following contents:
 ; * I'm so great
 
-;; Parsing this as an element gives a table (a greater element).
+;; Parsing this as an element node gives a headline node (can only have child
+;; element nodes)
 (->> (om-parse-this-element)
      (om-node-may-have-child-objects-p))
  ;; => nil
@@ -2410,7 +2413,8 @@ elements may have other elements as children.
 ;; Given the following contents:
 ; * I'm so great
 
-;; Parsing this as an element gives a table (a greater element).
+;; Parsing this as an element node gives a headline node (can have child element
+;; nodes)
 (->> (om-parse-this-element)
      (om-node-may-have-child-elements-p))
  ;; => t
@@ -2418,7 +2422,8 @@ elements may have other elements as children.
 ;; Given the following contents:
 ; *ziltoid*
 
-;; Parsing this as an element gives a paragraph type (not a greater element).
+;; Parsing this as an element node gives a paragraph node (can only have child
+;; object nodes)
 (->> (om-parse-this-element)
      (om-node-may-have-child-elements-p))
  ;; => nil
@@ -2426,7 +2431,7 @@ elements may have other elements as children.
 ;; Given the following contents:
 ; # ziltoid
 
-;; Parsing this as an element gives a comment type (not a container).
+;; Parsing this as an element node gives a comment node (not a branch node)
 (->> (om-parse-this-element)
      (om-node-may-have-child-elements-p))
  ;; => nil
