@@ -167,7 +167,401 @@ is the converse."
     (--each test-lists (should (equal it (om--map-first #'identity it))))
     (--each test-lists (should (equal it (om--map-last #'identity it))))))
 
-;;; node property completeness
+;;; PARSING CONGRUENCE
+
+;; for all org buffer contents, parsing and printing should be
+;; perfect inverses
+
+(defun om--test-contents-parse-inversion (type parse-fun contents-list
+                                               &optional prefix suffix)
+  "Return form to test the parse/print inversion of CONTENTS-LIST.
+Use PARSE-FUN to get the node tree from the contents. All should
+be parsed to TYPE."
+  (declare (indent 2))
+  (let ((contents-list (--map (if (consp it) (s-join "\n" it) it)
+                              contents-list)))
+    (--each contents-list
+      (let* ((at (if prefix (1+ (length prefix)) 1))
+             (parsed (om--with-org-env
+                      (when prefix (insert prefix))
+                      (insert it)
+                      (when suffix (insert suffix))
+                      (funcall parse-fun at)))
+             (parsed-type (om-get-type parsed)))
+        ;; TODO not DRY
+        (unless (equal type parsed-type)
+          (print (format "%s parsed as %s" it parsed-type)))
+        (should (equal type parsed-type))
+        (should (equal it (om-to-string parsed)))))))
+
+;; leaf object nodes
+
+(ert-deftest om--test-parse-inversion/code ()
+  (om--test-contents-parse-inversion 'code #'om-parse-object-at
+    (list "~code~")))
+
+(ert-deftest om--test-parse-inversion/entity ()
+  (om--test-contents-parse-inversion 'entity #'om-parse-object-at
+    (list "\\pi" "\\pi{}")))
+
+(ert-deftest om--test-parse-inversion/export-snippet ()
+  (om--test-contents-parse-inversion 'export-snippet #'om-parse-object-at
+    (list "@@x:y@@")))
+
+(ert-deftest om--test-parse-inversion/inline-babel-call ()
+  (om--test-contents-parse-inversion 'inline-babel-call #'om-parse-object-at
+    (list "call_ktulu()"
+          "call_ktulu(n=1)"
+          "call_ktulu[:x y]()"
+          "call_ktulu[:x y](n=1)"
+          "call_ktulu()[:a b]"
+          "call_ktulu(n=1)[:a b]"
+          "call_ktulu[:x y]()[:a b]"
+          "call_ktulu[:x y](n=1)[:a b]")))
+
+(ert-deftest om--test-parse-inversion/inline-src-block ()
+  (om--test-contents-parse-inversion 'inline-src-block #'om-parse-object-at
+    (list "src_python{}"
+          "src_python{print \"yo\"}"
+          "src_python[:x y]{}"
+          "src_python[:x y]{print \"yo\"}")))
+
+(ert-deftest om--test-parse-inversion/line-break ()
+  (om--test-contents-parse-inversion 'line-break #'om-parse-object-at
+    (list "\\\\\n")))
+
+(ert-deftest om--test-parse-inversion/latex-fragment ()
+  (om--test-contents-parse-inversion 'latex-fragment #'om-parse-object-at
+    (list "$2+2=5$")))
+
+(ert-deftest om--test-parse-inversion/macro ()
+  (om--test-contents-parse-inversion 'macro #'om-parse-object-at
+    (list "{{{key}}}"
+          "{{{key(x=4)}}}")))
+
+(ert-deftest om--test-parse-inversion/statistics-cookie ()
+  (om--test-contents-parse-inversion 'statistics-cookie #'om-parse-object-at
+    (list "[/]"
+          "[0/0]"
+          "[%]"
+          "[0%]")))
+
+(ert-deftest om--test-parse-inversion/timestamp ()
+  (om--test-contents-parse-inversion 'timestamp #'om-parse-object-at
+    (list "[2019-01-01 Tue]"
+          "[2019-01-01 Tue 12:00]"
+          ;; "[2019-01-01 Tue 12:00-13:00]" TODO this doesn't parse correctly
+          "[2019-01-01 Tue]--[2019-01-02 Wed]"
+          "<2019-01-01 Tue>"
+          "[2019-01-01 Tue +1d]"
+          "[2019-01-01 Tue -1y]"
+          "[2019-01-01 Tue +1d -1y]")))
+
+(ert-deftest om--test-parse-inversion/verbatim ()
+  (om--test-contents-parse-inversion 'verbatim #'om-parse-object-at
+    (list "=verbatim=")))
+
+(ert-deftest om--test-parse-inversion/plain-text ()
+  (om--test-contents-parse-inversion 'plain-text #'om-parse-object-at
+    (list "plain-text"
+          ;; all syntax chars by themselves should be plain-text
+          "**" "~~" "@@:@@" "//" "[]" "[[]]" "{{{}}}" "<>" "<<>>"
+          "<<<>>>" "++" "^" "_" "__" "==")))
+
+;; branch object nodes
+
+(ert-deftest om--test-parse-inversion/bold ()
+  (om--test-contents-parse-inversion 'bold #'om-parse-object-at
+    (list "*bold*")))
+
+(ert-deftest om--test-parse-inversion/footnote-reference ()
+  (om--test-contents-parse-inversion 'footnote-reference #'om-parse-object-at
+    (list "[fn:label]" "[fn:label:nodes]")
+    " "))
+
+(ert-deftest om--test-parse-inversion/italic ()
+  (om--test-contents-parse-inversion 'italic #'om-parse-object-at
+    (list "/italic/")))
+
+(ert-deftest om--test-parse-inversion/link ()
+  (om--test-contents-parse-inversion 'link #'om-parse-object-at
+    ;; this is not exhaustive but hopefully good enough
+    (list "https://downloadmoreram.com"
+          "mailto:vladimirputin@pwned.ru"
+          "file:/home/kalilinux/pwneddata"
+          "<https://downloadmoreram.com>"
+          "[[https://downloadmoreram.com]]"
+          "[[https://downloadmoreram.com][legit advice]]")))
+
+(ert-deftest om--test-parse-inversion/radio-target ()
+  (om--test-contents-parse-inversion 'radio-target #'om-parse-object-at
+    (list "<<<radio>>>")))
+
+(ert-deftest om--test-parse-inversion/strike-through ()
+  (om--test-contents-parse-inversion 'strike-through #'om-parse-object-at
+    (list "+strike+")))
+
+(ert-deftest om--test-parse-inversion/subscript ()
+  (om--test-contents-parse-inversion 'subscript #'om-parse-object-at
+    (list "_sub" "_{sub}")
+    "dummy"))
+
+(ert-deftest om--test-parse-inversion/superscript ()
+  (om--test-contents-parse-inversion 'superscript #'om-parse-object-at
+    (list "^super" "^{super}")
+    "dummy"))
+
+(ert-deftest om--test-parse-inversion/table-cell ()
+  (om--test-contents-parse-inversion 'table-cell #'om-parse-object-at
+    (list " cell |")
+    "|"))
+
+;; leaf element nodes
+
+(ert-deftest om--test-parse-inversion/babel-call ()
+  (om--test-contents-parse-inversion 'babel-call #'om-parse-element-at
+    (list "#+CALL: name()\n"
+          "#+CALL: name(x=1)\n"
+          "#+CALL: name[:x y](x=1)\n"
+          "#+CALL: name[:x y]()\n"
+          "#+CALL: name[:x y](x=1) :a b\n"
+          "#+CALL: name[:x y]() :a b\n"
+          "#+CALL: name[]() :a b\n")))
+
+(ert-deftest om--test-parse-inversion/clock ()
+  (om--test-contents-parse-inversion 'clock #'om-parse-element-at
+    (list "CLOCK: [2019-01-01 Tue]\n"
+          "CLOCK: [2019-01-01 Tue]--[2019-01-02 Wed] => 24:00\n"
+          ;; TODO this doesn't work
+          ;; "CLOCK: [2019-01-01 Tue 00:00-01:00] =>  1:00\n"
+          )))
+
+(ert-deftest om--test-parse-inversion/comment ()
+  (om--test-contents-parse-inversion 'comment #'om-parse-element-at
+    (list "# one\n"
+          '("# one"
+            "# two\n")
+          ;; TODO this doesn't work
+          ;; "#\n"
+          )))
+
+(ert-deftest om--test-parse-inversion/comment-block ()
+  (om--test-contents-parse-inversion 'comment-block #'om-parse-element-at
+    (list '("#+BEGIN_COMMENT"
+            "battle of being"
+            "#+END_COMMENT\n")
+          '("#+BEGIN_COMMENT"
+            "#+END_COMMENT\n"))))
+
+(ert-deftest om--test-parse-inversion/diary-sexp ()
+  (om--test-contents-parse-inversion 'diary-sexp #'om-parse-element-at
+    (list "%%()\n" "%%(whatever)\n")))
+
+(ert-deftest om--test-parse-inversion/example-block ()
+  (om--test-contents-parse-inversion 'example-block #'om-parse-element-at
+    (list '("#+BEGIN_EXAMPLE"
+            "example.com"
+            "#+END_EXAMPLE\n")
+          '("#+BEGIN_EXAMPLE"
+            "#+END_EXAMPLE\n"))))
+
+(ert-deftest om--test-parse-inversion/export-block ()
+  (om--test-contents-parse-inversion 'export-block #'om-parse-element-at
+    (list '("#+BEGIN_EXPORT PLAIN"
+            "bullet, bombs, bigotry"
+            "#+END_EXPORT\n")
+          ;; TODO type needs to always be uppercase?
+          ;; '("#+BEGIN_EXPORT plain"
+          ;;   "#+END_EXPORT\n")
+          '("#+BEGIN_EXPORT PLAIN"
+            "#+END_EXPORT\n"))))
+
+(ert-deftest om--test-parse-inversion/fixed-width ()
+  (om--test-contents-parse-inversion 'fixed-width #'om-parse-element-at
+    (list ": crucifixed\n"
+          ;; TODO this make a blank
+          ;; ":\n"
+          )))
+
+(ert-deftest om--test-parse-inversion/horizontal-rule ()
+  (om--test-contents-parse-inversion 'horizontal-rule #'om-parse-element-at
+    (list "-----\n")))
+
+(ert-deftest om--test-parse-inversion/keyword ()
+  (om--test-contents-parse-inversion 'keyword #'om-parse-element-at
+    (list "#+KEY: val\n"
+          ;; TODO this randomly fails
+          ;; "#+KEY:\n"
+          "#+KEY: \n")))
+
+(ert-deftest om--test-parse-inversion/latex-environment ()
+  (om--test-contents-parse-inversion 'latex-environment #'om-parse-element-at
+    (list '("\\begin{env}"
+            "\\end{env}\n")
+          '("\\begin{env}"
+            "latex >>> ms word"
+            "\\end{env}\n"))))
+
+(ert-deftest om--test-parse-inversion/node-property ()
+  (om--test-contents-parse-inversion 'node-property #'om-parse-element-at
+    (list ":node:     prop\n"
+          ;; TODO this seems arbitrary
+          ;; ":node\n"
+          ":node:     \n")
+    "* dummy\n:PROPERTIES:\n"
+    ":END:\n"))
+
+(ert-deftest om--test-parse-inversion/planning ()
+  (om--test-contents-parse-inversion 'planning #'om-parse-element-at
+    (list "CLOSED: [2019-01-01 Tue]\n"
+          "CLOSED: [2019-01-01 Tue +1d]\n"
+          "CLOSED: [2019-01-01 Tue -1y]\n"
+          "CLOSED: [2019-01-01 Tue +1d -1y]\n")
+    "* dummy\n"))
+
+(ert-deftest om--test-parse-inversion/src-block ()
+  (om--test-contents-parse-inversion 'src-block #'om-parse-element-at
+    (list '("#+BEGIN_SRC"
+            "#+END_SRC\n")
+          ;; TODO this doesn't work if is isn't indented
+          '("#+BEGIN_SRC python -n :x y"
+            "  print \"yo\""
+            "#+END_SRC\n"))))
+
+;;; branch element nodes with child object nodes
+
+(ert-deftest om--test-parse-inversion/paragraph ()
+  (om--test-contents-parse-inversion 'paragraph #'om-parse-element-at
+    ;; TODO there are probably other things I could put here
+    (list "paragraph\n")))
+
+(ert-deftest om--test-parse-inversion/table-row ()
+  (om--test-contents-parse-inversion 'table-row #'om-parse-table-row-at
+    (list "| cell |\n"
+          ;; TODO this makes an empty string
+          ;; "| |\n"
+          )))
+
+(ert-deftest om--test-parse-inversion/verse-block ()
+  (om--test-contents-parse-inversion 'verse-block #'om-parse-element-at
+    (list '("#+BEGIN_VERSE"
+            "#+END_VERSE\n")
+          '("#+BEGIN_VERSE"
+            "Once upon a midnight dreary..."
+            "#+END_VERSE\n"))))
+
+;;; branch element nodes with child element nodes
+
+(ert-deftest om--test-parse-inversion/center-block ()
+  (om--test-contents-parse-inversion 'center-block #'om-parse-element-at
+    (list '("#+BEGIN_CENTER"
+            "#+END_CENTER\n")
+          '("#+BEGIN_CENTER"
+            "Of the universe..."
+            "#+END_CENTER\n"))))
+
+(ert-deftest om--test-parse-inversion/drawer ()
+  (om--test-contents-parse-inversion 'drawer #'om-parse-element-at
+    (list '(":LOGBOOK:"
+            ":END:\n")
+          '(":LOGBOOK:"
+            "- logged thingy"
+            ":END:\n"))))
+
+(ert-deftest om--test-parse-inversion/dynamic-block ()
+  (om--test-contents-parse-inversion 'dynamic-block #'om-parse-element-at
+    (list '("#+BEGIN: name"
+            "#+END:\n")
+          '("#+BEGIN: name"
+            "Random contents..."
+            "#+END:\n"))))
+
+(ert-deftest om--test-parse-inversion/footnote-definition ()
+  (om--test-contents-parse-inversion 'footnote-definition #'om-parse-element-at
+    (list "[fn:label] \n"
+          ;; TODO needs a random space at the end
+          ;; "[fn:label]"
+          "[fn:label] stuff after\n"
+          )))
+
+(ert-deftest om--test-parse-inversion/headline ()
+  (om--test-contents-parse-inversion 'headline #'om-parse-element-at
+    ;; this is not exhaustive...
+    (list "* dummy\n"
+          "** dummy\n"
+          "* COMMENT dummy\n"
+          "* TODO COMMENT dummy\n"
+          "* TODO dummy\n"
+          "* TODO [#A] dummy\n"
+          ;; TODO priority is supposed to be on the other side
+          ;; "* TODO [#A] COMMENT dummy\n"
+          ;; "* [#A] COMMENT dummy\n"
+          )))
+
+(ert-deftest om--test-parse-inversion/item ()
+  (om--test-contents-parse-inversion 'item #'om-parse-item-at
+    ;; this is not exhaustive...
+    ;; TODO not sure why these have two newlines
+    (list "- \n\n"
+          "1. \n\n"
+          ;; TODO these don't work
+          ;; "+ \n\n"
+          ;; "1) \n\n"
+          "- thing\n"
+          "- tagged :: thing\n"
+          "1. [@20] thing\n"
+          )))
+
+(ert-deftest om--test-parse-inversion/plain-list ()
+  (om--test-contents-parse-inversion 'plain-list #'om-parse-element-at
+    (list "- thing\n"
+          "1. thing\n"
+          '("- thing"
+            "- more thing\n"))))
+
+
+(ert-deftest om--test-parse-inversion/property-drawer ()
+  (om--test-contents-parse-inversion 'property-drawer #'om-parse-element-at
+    (list '(":PROPERTIES:"
+            ":END:\n")
+          '(":PROPERTIES:"
+            ":Effort:   0:30"
+            ":END:\n"))
+    "* dummy\n"))
+
+(ert-deftest om--test-parse-inversion/quote-block ()
+  (om--test-contents-parse-inversion 'quote-block #'om-parse-element-at
+    (list '("#+BEGIN_QUOTE"
+            "#+END_QUOTE\n")
+          '("#+BEGIN_QUOTE"
+            "Fear is the mind killer..."
+            "#+END_QUOTE\n"))))
+
+(ert-deftest om--test-parse-inversion/section ()
+  (om--test-contents-parse-inversion 'section #'om-parse-section-at
+    (list "things that could be a paragraph\n"
+          "#+KEY: val\n"
+          "# nothing important...\n")))
+
+(ert-deftest om--test-parse-inversion/special-block ()
+  (om--test-contents-parse-inversion 'special-block #'om-parse-element-at
+    (list '("#+BEGIN_special"
+            "#+END_special\n")
+          '("#+BEGIN_special"
+            "You don't belong here"
+            "#+END_special\n"))))
+
+(ert-deftest om--test-parse-inversion/table ()
+  (om--test-contents-parse-inversion 'table #'om-parse-element-at
+    (list "| simple |\n"
+          "| less | simple |\n"
+          '("| R | A |"
+            "| G | E |\n")
+          ;; TODO this makes a blank string
+          ;; "| |\n"
+          )))
+
+;;; NODE PROPERTY COMPLETENESS
 
 (defun should-have-equal-properties (e1 e2)
   (unless (eq (om--get-type e1) (om--get-type e2))
