@@ -1286,7 +1286,7 @@ The following properties are settable:
 Build a clock element node.
 
 The following properties are settable:
-- **`value`**: (required) an unranged, inactive timestamp with no warning or repeater
+- **`value`**: (required) an unranged, inactive timestamp node with no warning or repeater
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1494,9 +1494,9 @@ The following properties are settable:
 Build a planning element node.
 
 The following properties are settable:
-- **`closed`**:  a zero-range, inactive timestamp object
-- **`deadline`**:  a zero-range, inactive timestamp object
-- **`scheduled`**:  a zero-range, inactive timestamp object
+- **`closed`**:  a zero-range, inactive timestamp node
+- **`deadline`**:  a zero-range, inactive timestamp node
+- **`scheduled`**:  a zero-range, inactive timestamp node
 - **`post-blank`**: a non-negative integer
 
 ```el

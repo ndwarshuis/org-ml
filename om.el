@@ -1525,7 +1525,7 @@ bounds."
                            :string-list t
                            :type-desc "a list of oneline strings"))
           (planning (list :pred #'om--is-valid-planning-timestamp-p
-                          :type-desc "a zero-range, inactive timestamp object"))
+                          :type-desc "a zero-range, inactive timestamp node"))
           (ts-unit (list :pred #'om--is-valid-timestamp-unit-p
                          :type-desc '("nil or a symbol from `year' `month'"
                                       "`week' `day', or `hour'"))))
@@ -1538,7 +1538,8 @@ bounds."
         (center-block)
         (clock (:value :pred om--is-valid-clock-timestamp-p
                        :cis om--update-clock-duration
-                       :type-desc "an unranged, inactive timestamp with no warning or repeater"
+                       :type-desc ("an unranged, inactive timestamp"
+                                   "node with no warning or repeater")
                        :require t)
                (:status)
                (:duration))
