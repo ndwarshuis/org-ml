@@ -190,7 +190,7 @@ Parse buffers to trees.
 Build new nodes.
 
 
-### Leaf Objects
+### Leaf Object Nodes
 
 * [om-build-code](#om-build-code-value-key-post-blank) `(value &key post-blank)`
 * [om-build-entity](#om-build-entity-name-key-use-brackets-p-post-blank) `(name &key use-brackets-p post-blank)`
@@ -205,7 +205,7 @@ Build new nodes.
 * [om-build-timestamp](#om-build-timestamp-type-year-start-month-start-day-start-year-end-month-end-day-end-key-hour-start-minute-start-hour-end-minute-end-repeater-type-repeater-unit-repeater-value-warning-type-warning-unit-warning-value-post-blank) `(type year-start month-start day-start year-end month-end day-end &key hour-start minute-start hour-end minute-end repeater-type repeater-unit repeater-value warning-type warning-unit warning-value post-blank)`
 * [om-build-verbatim](#om-build-verbatim-value-key-post-blank) `(value &key post-blank)`
 
-### Branch Objects
+### Branch Object Nodes
 
 * [om-build-bold](#om-build-bold-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
 * [om-build-footnote-reference](#om-build-footnote-reference-key-label-post-blank-rest-object-nodes) `(&key label post-blank &rest object-nodes)`
@@ -218,7 +218,7 @@ Build new nodes.
 * [om-build-table-cell](#om-build-table-cell-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
 * [om-build-underline](#om-build-underline-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
 
-### Leaf Elements
+### Leaf Element Nodes
 
 * [om-build-babel-call](#om-build-babel-call-call-key-inside-header-arguments-end-header-post-blank) `(call &key inside-header arguments end-header post-blank)`
 * [om-build-clock](#om-build-clock-value-key-post-blank) `(value &key post-blank)`
@@ -235,13 +235,13 @@ Build new nodes.
 * [om-build-planning](#om-build-planning-key-closed-deadline-scheduled-post-blank) `(&key closed deadline scheduled post-blank)`
 * [om-build-src-block](#om-build-src-block-key-value--language-parameters-preserve-indent-switches-post-blank) `(&key (value "") language parameters preserve-indent switches post-blank)`
 
-### Branch Elements with Child Objects
+### Branch Element Nodes with Child Object Nodes
 
 * [om-build-paragraph](#om-build-paragraph-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
 * [om-build-table-row](#om-build-table-row-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
 * [om-build-verse-block](#om-build-verse-block-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
 
-### Branch Elements with Child Elements
+### Branch Element Nodes with Child Element Nodes
 
 * [om-build-center-block](#om-build-center-block-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
 * [om-build-drawer](#om-build-drawer-drawer-name-key-post-blank-rest-element-nodes) `(drawer-name &key post-blank &rest element-nodes)`
@@ -821,7 +821,7 @@ the section at the top of the org buffer.
 Build new nodes.
 
 
-### Leaf Objects
+### Leaf Object Nodes
 
 #### om-build-code `(value &key post-blank)`
 
@@ -989,6 +989,10 @@ The following properties are settable:
      (om-to-string))
  ;; => "[%]"
 
+(->> (om-build-statistics-cookie '(nil nil))
+     (om-to-string))
+ ;; => "[/]"
+
 (->> (om-build-statistics-cookie '(50))
      (om-to-string))
  ;; => "[50%]"
@@ -996,10 +1000,6 @@ The following properties are settable:
 (->> (om-build-statistics-cookie '(1 3))
      (om-to-string))
  ;; => "[1/3]"
-
-(->> (om-build-statistics-cookie '(nil nil))
-     (om-to-string))
- ;; => "[/]"
 
 ```
 
@@ -1078,7 +1078,7 @@ The following properties are settable:
 ```
 
 
-### Branch Objects
+### Branch Object Nodes
 
 #### om-build-bold `(&key post-blank &rest object-nodes)`
 
@@ -1228,9 +1228,8 @@ The following properties are settable:
 
 ```el
 (->> (om-build-table-cell "text")
-     (om-build-table-row)
      (om-to-string))
- ;; => "| text |"
+ ;; => " text |"
 
 ```
 
@@ -1250,7 +1249,7 @@ The following properties are settable:
 ```
 
 
-### Leaf Elements
+### Leaf Element Nodes
 
 #### om-build-babel-call `(call &key inside-header arguments end-header post-blank)`
 
@@ -1562,7 +1561,7 @@ The following properties are settable:
 ```
 
 
-### Branch Elements with Child Objects
+### Branch Element Nodes with Child Object Nodes
 
 #### om-build-paragraph `(&key post-blank &rest object-nodes)`
 
@@ -1614,7 +1613,7 @@ The following properties are settable:
 ```
 
 
-### Branch Elements with Child Elements
+### Branch Element Nodes with Child Element Nodes
 
 #### om-build-center-block `(&key post-blank &rest element-nodes)`
 

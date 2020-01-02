@@ -230,7 +230,7 @@
 (def-example-group "Building"
   "Build new nodes."
 
-  (def-example-subgroup "Leaf Objects"
+  (def-example-subgroup "Leaf Object Nodes"
     nil
 
     (defexamples om-build-code
@@ -330,7 +330,7 @@
            (om-to-string))
       => "=text="))
 
-  (def-example-subgroup "Branch Objects"
+  (def-example-subgroup "Branch Object Nodes"
     nil
 
     (defexamples om-build-bold
@@ -395,7 +395,7 @@
            (om-to-string))
       => "_text_"))
 
-  (def-example-subgroup "Leaf Elements"
+  (def-example-subgroup "Leaf Element Nodes"
     nil
 
     (defexamples om-build-babel-call
@@ -538,7 +538,7 @@
                   "  body"
                   "#+END_SRC")))
 
-  (def-example-subgroup "Branch Elements with Child Objects"
+  (def-example-subgroup "Branch Element Nodes with Child Object Nodes"
     nil
 
     (defexamples om-build-paragraph
@@ -560,7 +560,7 @@
                   "text"
                   "#+END_VERSE")))
 
-  (def-example-subgroup "Branch Elements with Child Elements"
+  (def-example-subgroup "Branch Element Nodes with Child Element Nodes"
     nil
 
     (defexamples om-build-center-block
