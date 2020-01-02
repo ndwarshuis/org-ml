@@ -1952,8 +1952,8 @@ Return a new timestamp node.
 **`start`** specifies the start time and is a list of integers in one of
 the following forms:
 - `(year month day)`: short form
-- `(year month day nil nil)` short form
-- `(year month day hour minute)` long form
+- `(year month day nil nil)`: short form
+- `(year month day hour minute)`: long form
 
 **`end`** (if supplied) will add the ending time, and follows the same
 formatting rules as **`start`**.

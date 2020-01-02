@@ -2912,8 +2912,8 @@ throw an error."
 START specifies the start time and is a list of integers in one of
 the following forms:
 - (YEAR MONTH DAY): short form
-- (YEAR MONTH DAY nil nil) short form
-- (YEAR MONTH DAY HOUR MINUTE) long form
+- (YEAR MONTH DAY nil nil): short form
+- (YEAR MONTH DAY HOUR MINUTE): long form
 
 END (if supplied) will add the ending time, and follows the same
 formatting rules as START.
