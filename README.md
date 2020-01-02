@@ -163,6 +163,14 @@ given in the examples below.
 # Function Summary
 
 
+## String Conversion
+
+
+Convert nodes to strings.
+
+* [om-to-string](#om-to-string-node) `(node)`
+* [om-to-trimmed-string](#om-to-trimmed-string-node) `(node)`
+
 ## Buffer Parsing
 
 
@@ -175,14 +183,6 @@ Parse buffers to trees.
 * [om-parse-item-at](#om-parse-item-at-point) `(point)`
 * [om-parse-table-row-at](#om-parse-table-row-at-point) `(point)`
 * [om-parse-section-at](#om-parse-section-at-point) `(point)`
-
-## String Conversion
-
-
-Convert nodes to strings.
-
-* [om-to-string](#om-to-string-node) `(node)`
-* [om-to-trimmed-string](#om-to-trimmed-string-node) `(node)`
 
 ## Building
 
@@ -485,6 +485,48 @@ Map node manipulations into buffers.
 # Function Examples
 
 
+## String Conversion
+
+
+Convert nodes to strings.
+
+#### om-to-string `(node)`
+
+Return **`node`** as an interpreted string without text properties.
+
+```el
+(om-to-string '(bold (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
+			   "text"))
+ ;; => "*text*"
+
+(om-to-string '(bold (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
+			   "text"))
+ ;; => "*text*   "
+
+(om-to-string nil)
+ ;; => ""
+
+```
+
+#### om-to-trimmed-string `(node)`
+
+Like [`om-to-string`](#om-to-string-node) but strip whitespace when returning **`node`**.
+
+```el
+(om-to-trimmed-string '(bold (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
+				   "text"))
+ ;; => "*text*"
+
+(om-to-trimmed-string '(bold (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
+				   "text"))
+ ;; => "*text*"
+
+(om-to-trimmed-string nil)
+ ;; => ""
+
+```
+
+
 ## Buffer Parsing
 
 
@@ -499,14 +541,14 @@ Return object node under **`point`** or nil if not on an object.
 ; *text*
 
 (->> (om-parse-object-at 1)
-     (om-get-type))
+     (car))
  ;; => 'bold
 
 ;; Given the following contents:
 ; [2019-01-01 Tue]
 
 (->> (om-parse-object-at 1)
-     (om-get-type))
+     (car))
  ;; => 'timestamp
 
 ;; Given the following contents:
@@ -533,7 +575,7 @@ specifically parse these, use the functions [`om-parse-section-at`](#om-parse-se
 ; #+CALL: ktulu()
 
 (->> (om-parse-element-at 1)
-     (om-get-type))
+     (car))
  ;; => 'babel-call
 
 ;; Given the following contents:
@@ -541,7 +583,7 @@ specifically parse these, use the functions [`om-parse-section-at`](#om-parse-se
 
 ;; Give the plain-list, not the item for this function
 (->> (om-parse-element-at 1)
-     (om-get-type))
+     (car))
  ;; => 'plain-list
 
 ;; Given the following contents:
@@ -550,7 +592,7 @@ specifically parse these, use the functions [`om-parse-section-at`](#om-parse-se
 
 ;; Return a table, not the table-row for this function
 (->> (om-parse-element-at 1)
-     (om-get-type))
+     (car))
  ;; => 'table
 
 ```
@@ -768,48 +810,6 @@ the section at the top of the org buffer.
 ;; Return nil if no section at all
 (->> (om-parse-section-at 1)
      (om-to-trimmed-string))
- ;; => ""
-
-```
-
-
-## String Conversion
-
-
-Convert nodes to strings.
-
-#### om-to-string `(node)`
-
-Return **`node`** as an interpreted string without text properties.
-
-```el
-(om-to-string '(bold (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
-			   "text"))
- ;; => "*text*"
-
-(om-to-string '(bold (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
-			   "text"))
- ;; => "*text*   "
-
-(om-to-string nil)
- ;; => ""
-
-```
-
-#### om-to-trimmed-string `(node)`
-
-Like [`om-to-string`](#om-to-string-node) but strip whitespace when returning **`node`**.
-
-```el
-(om-to-trimmed-string '(bold (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
-				   "text"))
- ;; => "*text*"
-
-(om-to-trimmed-string '(bold (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
-				   "text"))
- ;; => "*text*"
-
-(om-to-trimmed-string nil)
  ;; => ""
 
 ```
@@ -1306,13 +1306,19 @@ The following properties are settable:
 Build a comment element node.
 
 The following properties are settable:
-- **`value`**: (required) a oneline string
+- **`value`**: (required) a string
 - **`post-blank`**: a non-negative integer
 
 ```el
 (->> (om-build-comment "text")
      (om-to-trimmed-string))
  ;; => "# text"
+
+(->> (om-build-comment "text
+less")
+     (om-to-trimmed-string))
+ ;; => "# text
+ ;      # less"
 
 ```
 

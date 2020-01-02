@@ -21,106 +21,53 @@
 
 (require 's)
 
+(def-example-group "String Conversion"
+  "Convert nodes to strings."
+
+  ;; these are more thoroughly tested in `om-dev-test.el'
+
+  (defexamples om-to-string
+    (om-to-string
+     '(bold
+       (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
+       "text"))
+    => "*text*"
+    (om-to-string
+     '(bold
+       (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
+       "text"))
+    => "*text*   "
+    (om-to-string nil) => "")
+
+  (defexamples om-to-trimmed-string
+    (om-to-trimmed-string
+     '(bold
+       (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
+       "text"))
+    => "*text*"
+    (om-to-trimmed-string
+     '(bold
+       (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
+       "text"))
+    => "*text*"
+    (om-to-trimmed-string nil) => ""))
+
 (def-example-group "Buffer Parsing"
   "Parse buffers to trees."
+
+  ;; these are more thoroughly tested in `om-dev-test.el'
 
   (defexamples-content om-parse-object-at
     nil
     (:buffer "*text*")
     (->> (om-parse-object-at 1)
-         (om-get-type))
+         (car))
     => 'bold
-
-    :begin-hidden
-    (:buffer "~text~")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'code
-    (:buffer "\\pi")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'entity
-    (:buffer "@@export:snippet@@")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'export-snippet
-    (:buffer "[fn:1:text]")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'footnote-reference
-    (:buffer "call_name()")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'inline-babel-call
-    (:buffer "src_emacs{}")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'inline-src-block
-    (:buffer "/text/")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'italic
-    (:buffer "\\\\")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'line-break
-    (:buffer "$2+2=5$")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'latex-fragment
-    (:buffer "[[path][desc]]")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'link
-    (:buffer "{{{macro}}}")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'macro
-    (:buffer "<<<text>>>")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'radio-target
-    (:buffer "[1/2]")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'statistics-cookie
-    (:buffer "+text+")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'strike-through
-    (:buffer "a_b")
-    (->> (om-parse-object-at 3)
-         (om-get-type))
-    => 'subscript
-    (:buffer "a^b")
-    (->> (om-parse-object-at 3)
-         (om-get-type))
-    => 'superscript
-    (:buffer "| a |")
-    (->> (om-parse-object-at 2)
-         (om-get-type))
-    => 'table-cell
-    (:buffer "<<text>>")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'target
-    :end-hidden
 
     (:buffer "[2019-01-01 Tue]")
     (->> (om-parse-object-at 1)
-         (om-get-type))
+         (car))
     => 'timestamp
-
-    :begin-hidden
-    (:buffer "_text_")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'underline
-    (:buffer "=text=")
-    (->> (om-parse-object-at 1)
-         (om-get-type))
-    => 'verbatim
-    :end-hidden
 
     (:buffer "- notme")
     (:comment "Return nil when parsing an element")
@@ -131,150 +78,21 @@
     nil
     (:buffer "#+CALL: ktulu()")
     (->> (om-parse-element-at 1)
-         (om-get-type))
+         (car))
     => 'babel-call
-
-    :begin-hidden
-    (:buffer "#+BEGIN_CENTER"
-             "#+END_CENTER")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'center-block
-    (:buffer "CLOCK: [2019-01-01 Tue]")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'clock
-    (:buffer "# oops I looked")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'comment
-    (:buffer "#+BEGIN_COMMENT"
-             "oops I looked again"
-             "#+END_COMMENT")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'comment-block
-    (:buffer "%%(diary of a madman)")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'diary-sexp
-    (:buffer ":DRAWER:"
-             "- underwear"
-             "- savings account"
-             ":END:")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'drawer
-    (:buffer "#+BEGIN countdown"
-             "#+END")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'dynamic-block
-    (:buffer "#+BEGIN_EXAMPLE"
-             "#+END_EXAMPLE")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'example-block
-    (:buffer "#+BEGIN_EXPORT latex"
-             "#+END_EXPORT")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'export-block
-    (:buffer ": mini mini mini")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'fixed-width
-    (:buffer "[fn:1]")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'footnote-definition
-    (:buffer "* murder, young girl killed"
-             "* desperate shooting at echo's hill")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'headline
-    (:buffer "-----")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'horizontal-rule
-    ;; TODO add inlinetask
-    (:buffer "#+QUOTE: unquote")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'keyword
-    (:buffer "\\begin{env}"
-             "body"
-             "\\end{env}")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'latex-environment
-    (:buffer "* headline"
-             ":PROPERTIES:"
-             ":key: val"
-             ":END:")
-    (->> (om-parse-element-at 25)
-         (om-get-type))
-    => 'node-property
-    (:buffer "Just for the record"
-             "The weather today is slightly sarcastic with a good chance of"
-             "A. Indifference and B. disinterest in what the critics say")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'paragraph
-    :end-hidden
     
     (:buffer "- plain-list")
     (:comment "Give the plain-list, not the item for this function")
     (->> (om-parse-element-at 1)
-         (om-get-type))
+         (car))
     => 'plain-list
-
-    :begin-hidden
-    (:buffer "* deadhead"
-             "DEADLINE: [2019-01-01 Tue]")
-    (->> (om-parse-element-at 12)
-         (om-get-type))
-    => 'planning
-    (:buffer "* headline"
-             ":PROPERTIES:"
-             ":END:")
-    (->> (om-parse-element-at 12)
-         (om-get-type))
-    => 'property-drawer
-    (:buffer "#+BEGIN_QUOTE"
-             "Oh glorious cheeseburger, we bow to thee"
-             "The secrets of the universe are between the buns"
-             "#+END_QUOTE")
-    (->> (om-parse-element-at 12)
-         (om-get-type))
-    => 'quote-block
-    (:buffer "#+begin_dot dot.png"
-             "#+end_dot")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'special-block
-    (:buffer "#+BEGIN_SRC emacs"
-             "(launch-missiles)"
-             "#+END_SRC")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'src-block
-    :end-hidden
     
     (:buffer "| R | A |"
              "| G | E |")
     (:comment "Return a table, not the table-row for this function")
     (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'table
-
-    :begin-hidden
-    (:buffer "#+BEGIN_VERSE"
-             "#+END_VERSE")
-    (->> (om-parse-element-at 1)
-         (om-get-type))
-    => 'verse-block
-    :end-hidden)
+         (car))
+    => 'table)
 
   (defexamples-content om-parse-headline-at
     nil
@@ -408,35 +226,6 @@
     (->> (om-parse-section-at 1)
          (om-to-trimmed-string))
     => ""))
-
-(def-example-group "String Conversion"
-  "Convert nodes to strings."
-
-  (defexamples om-to-string
-    (om-to-string
-     '(bold
-       (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
-       "text"))
-    => "*text*"
-    (om-to-string
-     '(bold
-       (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
-       "text"))
-    => "*text*   "
-    (om-to-string nil) => "")
-
-  (defexamples om-to-trimmed-string
-    (om-to-trimmed-string
-     '(bold
-       (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
-       "text"))
-    => "*text*"
-    (om-to-trimmed-string
-     '(bold
-       (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
-       "text"))
-    => "*text*"
-    (om-to-trimmed-string nil) => ""))
 
 (def-example-group "Building"
   "Build new nodes."

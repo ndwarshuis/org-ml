@@ -167,10 +167,15 @@ is the converse."
     (--each test-lists (should (equal it (om--map-first #'identity it))))
     (--each test-lists (should (equal it (om--map-last #'identity it))))))
 
-;;; PARSING CONGRUENCE
+;;; PARSING INVERSION
 
-;; for all org buffer contents, parsing and printing should be
-;; perfect inverses
+;; For all org buffer contents, parsing and printing should be
+;; perfect inverses.
+
+;; These tests test/use the following:
+;; - all the parse functions
+;; - `om-to-string'
+;; - `om-get-type'
 
 (defun om--test-contents-parse-inversion (type parse-fun contents-list
                                                &optional prefix suffix)
