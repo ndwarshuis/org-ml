@@ -297,15 +297,15 @@
       (->> (om-build-statistics-cookie '(nil))
            (om-to-string))
       => "[%]"
+      (->> (om-build-statistics-cookie '(nil nil))
+           (om-to-string))
+      => "[/]"
       (->> (om-build-statistics-cookie '(50))
            (om-to-string))
       => "[50%]"
       (->> (om-build-statistics-cookie '(1 3))
            (om-to-string))
-      => "[1/3]"
-      (->> (om-build-statistics-cookie '(nil nil))
-           (om-to-string))
-      => "[/]")
+      => "[1/3]")
 
     (defexamples om-build-target
       (->> (om-build-target "text")
