@@ -4706,20 +4706,21 @@ FUN is a unary function that takes NODE and returns a modified NODE.
 This modified node is then written in place of the old node in the
 current buffer."
   ;; if node is of type 'org-data' it will have no props
-  (let* ((begin (or (om--get-property :begin node) (point-min)))
-         (end (or (om--get-property :end node) (point-max)))
-         ;; get the outline overlays that make text invisible
+  (let* ((begin (om--get-property :begin node))
+         (end (om--get-property :end node))
          (ov-cmd (->>
                   (overlays-in begin end)
                   (--filter (eq 'outline (overlay-get it 'invisible)))
                   (--map (list :start (overlay-start it)
                                :end (overlay-end it)
                                :props (overlay-properties it)))
-                  (list 'apply 'om--apply-overlays))))
+                  (list 'apply 'om--apply-overlays)))
+         ;; do all computation before modifying buffer
+         (node* (funcall fun node)))
     ;; hacky way to add overlays to undo tree
     (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
     (delete-region begin end)
-    (->> (funcall fun node) (om-insert begin))
+    (om-insert begin node*)
     nil))
 
 ;; generate all update functions for corresponding parse functions
