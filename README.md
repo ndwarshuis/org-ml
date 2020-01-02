@@ -356,7 +356,7 @@ Functions to work with timestamp data
 * [om-timestamp-is-active-p](#om-timestamp-is-active-p-timestamp) `(timestamp)`
 * [om-timestamp-is-ranged-p](#om-timestamp-is-ranged-p-timestamp) `(timestamp)`
 * [om-timestamp-range-contains-p](#om-timestamp-range-contains-p-unixtime-timestamp) `(unixtime timestamp)`
-* [om-timestamp-set-condensation](#om-timestamp-set-condensation-flag-timestamp) `(flag timestamp)`
+* [om-timestamp-set-collapsed](#om-timestamp-set-collapsed-flag-timestamp) `(flag timestamp)`
 * [om-timestamp-set-start-time](#om-timestamp-set-start-time-time-timestamp) `(time timestamp)`
 * [om-timestamp-set-end-time](#om-timestamp-set-end-time-time-timestamp) `(time timestamp)`
 * [om-timestamp-set-single-time](#om-timestamp-set-single-time-time-timestamp) `(time timestamp)`
@@ -3397,25 +3397,25 @@ interpreted according to the localtime of the operating system.
 
 ```
 
-#### om-timestamp-set-condensation `(flag timestamp)`
+#### om-timestamp-set-collapsed `(flag timestamp)`
 
-Return **`timestamp`** with condensation set to **`flag`**.
+Return **`timestamp`** with collapsed set to **`flag`**.
 
-If timestamp is ranged but not outside of one day, it may be condensed
+If timestamp is ranged but not outside of one day, it may be collapsed
 (**`flag`** is t) to short format like [yyyy-mm-dd xxx hh:mm-hh:mm] or
-decondensed (**`flag`** is nil) to long format like [yyyy-mm-dd xxx
+expanded (**`flag`** is nil) to long format like [yyyy-mm-dd xxx
 hh:mm]--[yyyy-mm-dd xxx hh:mm]. If these conditions are not met,
 return **`timestamp`** untouched regardless of **`flag`**.
 
 Note: the default for all timestamp functions in `om.el` is to favor
-condensed format.
+collapsed format.
 
 ```el
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00-13:00]
 
 (->> (om-parse-this-object)
-     (om-timestamp-set-condensation nil)
+     (om-timestamp-set-collapsed nil)
      (om-to-trimmed-string))
  ;; => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
 
@@ -3423,8 +3423,8 @@ condensed format.
 ; [2019-01-01 Tue 12:00-13:00]
 
 (->> (om-parse-this-object)
-     (om-timestamp-set-condensation nil)
-     (om-timestamp-set-condensation t)
+     (om-timestamp-set-collapsed nil)
+     (om-timestamp-set-collapsed t)
      (om-to-trimmed-string))
  ;; => "[2019-01-01 Tue 12:00-13:00]"
 
@@ -3432,7 +3432,7 @@ condensed format.
 ; [2019-01-01 Tue 12:00]
 
 (->> (om-parse-this-object)
-     (om-timestamp-set-condensation nil)
+     (om-timestamp-set-collapsed nil)
      (om-to-trimmed-string))
  ;; => "[2019-01-01 Tue 12:00]"
 
@@ -3440,7 +3440,7 @@ condensed format.
 ; [2019-01-01 Tue]--[2019-01-02 Wed]
 
 (->> (om-parse-this-object)
-     (om-timestamp-set-condensation nil)
+     (om-timestamp-set-collapsed nil)
      (om-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
 

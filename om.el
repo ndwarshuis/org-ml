@@ -3493,17 +3493,17 @@ behavior is not desired, use `om-timestamp-shift'."
                    (om--time-truncate))))
     (om--timestamp-set-end-time time timestamp)))
 
-(om--defun-node om-timestamp-set-condensation ((:bool flag) timestamp)
-  "Return TIMESTAMP with condensation set to FLAG.
+(om--defun-node om-timestamp-set-collapsed ((:bool flag) timestamp)
+  "Return TIMESTAMP with collapsed set to FLAG.
 
-If timestamp is ranged but not outside of one day, it may be condensed
+If timestamp is ranged but not outside of one day, it may be collapsed
 \(FLAG is t) to short format like [yyyy-mm-dd xxx hh:mm-hh:mm] or
-decondensed (FLAG is nil) to long format like [yyyy-mm-dd xxx
+expanded (FLAG is nil) to long format like [yyyy-mm-dd xxx
 hh:mm]--[yyyy-mm-dd xxx hh:mm]. If these conditions are not met,
 return TIMESTAMP untouched regardless of FLAG.
 
 Note: the default for all timestamp functions in `om.el' is to favor
-condensed format."
+collapsed format."
   (if (and (not (om--timestamp-is-ranged-lowres-p timestamp))
            (om--timestamp-is-ranged-p timestamp))
       (om--timestamp-set-type-ranged (not flag) timestamp)
