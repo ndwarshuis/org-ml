@@ -4457,21 +4457,25 @@
 
     (defexamples-content om-update-headline-at
       nil
-      (:buffer "* TODO might get done")
+      (:buffer "* TODO might get done"
+               "* DONE no need to update")
       (om-update-headline-at* (point)
         (om-set-property :todo-keyword "DONE" it))
-      $> "* DONE might get done")
+      $> (:result "* DONE might get done"
+                  "* DONE no need to update"))
 
     (defexamples-content om-update-subtree-at
       nil
       (:buffer "* one"
                "** two"
-               "** three")
+               "** three"
+               "* not updated")
       (om-update-subtree-at* (point)
         (om-headline-indent-subheadline 1 it))
       $> (:result "* one"
                   "** two"
-                  "*** three"))
+                  "*** three"
+                  "* not updated"))
 
     (defexamples-content om-update-section-at
       nil

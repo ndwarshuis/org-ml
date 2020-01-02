@@ -4609,7 +4609,14 @@ t, parse the entire subtree, else just parse the top headline."
     (goto-char point)
     (when (ignore-errors (org-back-to-heading))
       (let ((b (point))
-            (e (if subtree (org-end-of-subtree)
+            (e (if subtree
+                   (let ((orig-point (point)))
+                     ;; this function won't move if we are on the
+                     ;; last headline. Check if point has moved, and
+                     ;; if not, return the max point
+                     (org-forward-heading-same-level 1 t)
+                     (if (= (point) orig-point)
+                         (point-max) (point)))
                  (or (outline-next-heading) (point-max)))))
         (car (org-element--parse-elements b e 'first-section
                                           nil nil nil nil))))))
