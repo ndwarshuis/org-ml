@@ -235,12 +235,12 @@
 
     (defexamples om-build-code
       (->> (om-build-code "text")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "~text~")
 
     (defexamples om-build-entity
       (->> (om-build-entity "gamma")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "\\gamma")
 
     (defexamples om-build-export-snippet
@@ -250,84 +250,84 @@
 
     (defexamples om-build-inline-babel-call
       (->> (om-build-inline-babel-call "name")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "call_name()"
       (->> (om-build-inline-babel-call "name" :arguments '("n=4"))
-           (om-to-trimmed-string))
+           (om-to-string))
       => "call_name(n=4)"
       (->> (om-build-inline-babel-call "name" :inside-header '(:key val))
-           (om-to-trimmed-string))
+           (om-to-string))
       => "call_name[:key val]()"
       (->> (om-build-inline-babel-call "name" :end-header '(:key val))
-           (om-to-trimmed-string))
+           (om-to-string))
       => "call_name()[:key val]")
 
     (defexamples om-build-inline-src-block
       (->> (om-build-inline-src-block "lang")
-           (om-to-trimmed-string))
+           (om-to-string))
       
       => "src_lang{}"
       (->> (om-build-inline-src-block "lang" :value "value")
-           (om-to-trimmed-string))
+           (om-to-string))
       
       => "src_lang{value}"
       (->> (om-build-inline-src-block "lang" :value "value" :parameters '(:key val))
-           (om-to-trimmed-string))
+           (om-to-string))
       => "src_lang[:key val]{value}")
 
     (defexamples om-build-line-break
       (->> (om-build-line-break)
-           (om-to-trimmed-string))
-      => "\\\\")
+           (om-to-string))
+      => "\\\\\n")
 
     (defexamples om-build-latex-fragment
       (->> (om-build-latex-fragment "$2+2=5$")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "$2+2=5$")
 
     (defexamples om-build-macro
       (->> (om-build-macro "economics")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "{{{economics}}}"
       (->> (om-build-macro "economics" :args '("s=d"))
-           (om-to-trimmed-string))
+           (om-to-string))
       => "{{{economics(s=d)}}}")
 
     (defexamples om-build-statistics-cookie
       (->> (om-build-statistics-cookie '(nil))
-           (om-to-trimmed-string))
+           (om-to-string))
       => "[%]"
       (->> (om-build-statistics-cookie '(50))
-           (om-to-trimmed-string))
+           (om-to-string))
       => "[50%]"
       (->> (om-build-statistics-cookie '(1 3))
-           (om-to-trimmed-string))
+           (om-to-string))
       => "[1/3]"
       (->> (om-build-statistics-cookie '(nil nil))
-           (om-to-trimmed-string))
+           (om-to-string))
       => "[/]")
 
     (defexamples om-build-target
       (->> (om-build-target "text")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "<<text>>")
 
     (defexamples om-build-timestamp
       (->> (om-build-timestamp 'inactive 2019 1 15 2019 1 15)
-           (om-to-trimmed-string))
+           (om-to-string))
       => "[2019-01-15 Tue]"
       (->> (om-build-timestamp 'active-range 2019 1 15 2019 1 16)
-           (om-to-trimmed-string))
+           (om-to-string))
       => "<2019-01-15 Tue>--<2019-01-16 Wed>"
       (->> (om-build-timestamp
             'inactive 2019 1 15 2019 1 15 :warning-type 'all
             :warning-unit 'day :warning-value 1)
-           (om-to-trimmed-string))
+           (om-to-string))
       => "[2019-01-15 Tue -1d]")
 
     (defexamples om-build-verbatim
       (->> (om-build-verbatim "text")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "=text="))
 
   (def-example-subgroup "Branch Objects"
@@ -335,65 +335,64 @@
 
     (defexamples om-build-bold
       (->> (om-build-bold "text")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "*text*")
 
     (defexamples om-build-footnote-reference
       (->> (om-build-footnote-reference)
-           (om-to-trimmed-string))
+           (om-to-string))
       => "[fn:]"
       (->> (om-build-footnote-reference :label "label")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "[fn:label]"
       (->> (om-build-footnote-reference :label "label" "content")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "[fn:label:content]")
 
     (defexamples om-build-italic
       (->> (om-build-italic "text")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "/text/")
 
     (defexamples om-build-link
       (->> (om-build-link "target")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "[[target]]"
       (->> (om-build-link "target" :type "file")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "[[file:target]]"
       (->> (om-build-link "target" "desc")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "[[target][desc]]")
 
     (defexamples om-build-radio-target
       (->> (om-build-radio-target "text")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "<<<text>>>")
 
     (defexamples om-build-strike-through
       (->> (om-build-strike-through "text")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "+text+")
 
     (defexamples om-build-superscript
       (->> (om-build-superscript "text")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "^text")
 
     (defexamples om-build-subscript
       (->> (om-build-subscript "text")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "_text")
 
     (defexamples om-build-table-cell
       (->> (om-build-table-cell "text")
-           (om-build-table-row)
-           (om-to-trimmed-string))
-      => "| text |")
+           (om-to-string))
+      => " text |")
 
     (defexamples om-build-underline
       (->> (om-build-underline "text")
-           (om-to-trimmed-string))
+           (om-to-string))
       => "_text_"))
 
   (def-example-subgroup "Leaf Elements"

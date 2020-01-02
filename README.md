@@ -833,7 +833,7 @@ The following properties are settable:
 
 ```el
 (->> (om-build-code "text")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "~text~"
 
 ```
@@ -849,7 +849,7 @@ The following properties are settable:
 
 ```el
 (->> (om-build-entity "gamma")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "\\gamma"
 
 ```
@@ -883,19 +883,19 @@ The following properties are settable:
 
 ```el
 (->> (om-build-inline-babel-call "name")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "call_name()"
 
 (->> (om-build-inline-babel-call "name" :arguments '("n=4"))
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "call_name(n=4)"
 
 (->> (om-build-inline-babel-call "name" :inside-header '(:key val))
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "call_name[:key val]()"
 
 (->> (om-build-inline-babel-call "name" :end-header '(:key val))
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "call_name()[:key val]"
 
 ```
@@ -912,15 +912,15 @@ The following properties are settable:
 
 ```el
 (->> (om-build-inline-src-block "lang")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "src_lang{}"
 
 (->> (om-build-inline-src-block "lang" :value "value")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "src_lang{value}"
 
 (->> (om-build-inline-src-block "lang" :value "value" :parameters '(:key val))
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "src_lang[:key val]{value}"
 
 ```
@@ -935,8 +935,9 @@ The following properties are settable:
 
 ```el
 (->> (om-build-line-break)
-     (om-to-trimmed-string))
- ;; => "\\\\"
+     (om-to-string))
+ ;; => "\\\\
+ ;      "
 
 ```
 
@@ -950,7 +951,7 @@ The following properties are settable:
 
 ```el
 (->> (om-build-latex-fragment "$2+2=5$")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "$2+2=5$"
 
 ```
@@ -966,11 +967,11 @@ The following properties are settable:
 
 ```el
 (->> (om-build-macro "economics")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "{{{economics}}}"
 
 (->> (om-build-macro "economics" :args '("s=d"))
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "{{{economics(s=d)}}}"
 
 ```
@@ -985,19 +986,19 @@ The following properties are settable:
 
 ```el
 (->> (om-build-statistics-cookie '(nil))
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "[%]"
 
 (->> (om-build-statistics-cookie '(50))
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "[50%]"
 
 (->> (om-build-statistics-cookie '(1 3))
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "[1/3]"
 
 (->> (om-build-statistics-cookie '(nil nil))
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "[/]"
 
 ```
@@ -1012,7 +1013,7 @@ The following properties are settable:
 
 ```el
 (->> (om-build-target "text")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "<<text>>"
 
 ```
@@ -1044,19 +1045,19 @@ The following properties are settable:
 ```el
 (->> (om-build-timestamp 'inactive
 			 2019 1 15 2019 1 15)
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "[2019-01-15 Tue]"
 
 (->> (om-build-timestamp 'active-range
 			 2019 1 15 2019 1 16)
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "<2019-01-15 Tue>--<2019-01-16 Wed>"
 
 (->> (om-build-timestamp 'inactive
 			 2019 1 15 2019 1 15 :warning-type 'all
 			 :warning-unit 'day
 			 :warning-value 1)
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "[2019-01-15 Tue -1d]"
 
 ```
@@ -1071,7 +1072,7 @@ The following properties are settable:
 
 ```el
 (->> (om-build-verbatim "text")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "=text="
 
 ```
@@ -1089,7 +1090,7 @@ The following properties are settable:
 
 ```el
 (->> (om-build-bold "text")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "*text*"
 
 ```
@@ -1104,15 +1105,15 @@ The following properties are settable:
 
 ```el
 (->> (om-build-footnote-reference)
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "[fn:]"
 
 (->> (om-build-footnote-reference :label "label")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "[fn:label]"
 
 (->> (om-build-footnote-reference :label "label" "content")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "[fn:label:content]"
 
 ```
@@ -1127,7 +1128,7 @@ The following properties are settable:
 
 ```el
 (->> (om-build-italic "text")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "/text/"
 
 ```
@@ -1144,15 +1145,15 @@ The following properties are settable:
 
 ```el
 (->> (om-build-link "target")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "[[target]]"
 
 (->> (om-build-link "target" :type "file")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "[[file:target]]"
 
 (->> (om-build-link "target" "desc")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "[[target][desc]]"
 
 ```
@@ -1167,7 +1168,7 @@ The following properties are settable:
 
 ```el
 (->> (om-build-radio-target "text")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "<<<text>>>"
 
 ```
@@ -1182,7 +1183,7 @@ The following properties are settable:
 
 ```el
 (->> (om-build-strike-through "text")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "+text+"
 
 ```
@@ -1197,7 +1198,7 @@ The following properties are settable:
 
 ```el
 (->> (om-build-superscript "text")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "^text"
 
 ```
@@ -1212,7 +1213,7 @@ The following properties are settable:
 
 ```el
 (->> (om-build-subscript "text")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "_text"
 
 ```
@@ -1228,7 +1229,7 @@ The following properties are settable:
 ```el
 (->> (om-build-table-cell "text")
      (om-build-table-row)
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "| text |"
 
 ```
@@ -1243,7 +1244,7 @@ The following properties are settable:
 
 ```el
 (->> (om-build-underline "text")
-     (om-to-trimmed-string))
+     (om-to-string))
  ;; => "_text_"
 
 ```
