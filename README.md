@@ -2525,6 +2525,12 @@ each type.
      (om-to-trimmed-string))
 Error
 
+;; Throw error when setting to an improper type
+(->> (om-parse-this-headline)
+     (om-set-property :title 666)
+     (om-to-trimmed-string))
+Error
+
 ```
 
 #### om-set-properties `(plist node)`

@@ -1345,6 +1345,12 @@
       (->> (om-parse-this-headline)
            (om-set-property :value "wtf")
            (om-to-trimmed-string))
+      !!> arg-type-error
+
+      (:comment "Throw error when setting to an improper type")
+      (->> (om-parse-this-headline)
+           (om-set-property :title 666)
+           (om-to-trimmed-string))
       !!> arg-type-error)
 
     (defexamples-content om-set-properties
