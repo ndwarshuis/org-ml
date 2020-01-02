@@ -1314,8 +1314,7 @@ The following properties are settable:
      (om-to-trimmed-string))
  ;; => "# text"
 
-(->> (om-build-comment "text
-less")
+(->> (om-build-comment "text\nless")
      (om-to-trimmed-string))
  ;; => "# text
  ;      # less"
@@ -1403,8 +1402,7 @@ The following properties are settable:
 - **`post-blank`**: a non-negative integer
 
 ```el
-(->> (om-build-export-block "type" "value
-")
+(->> (om-build-export-block "type" "value\n")
      (om-to-trimmed-string))
  ;; => "#+BEGIN_EXPORT type
  ;      value
@@ -1603,8 +1601,7 @@ The following properties are settable:
 - **`post-blank`**: a non-negative integer
 
 ```el
-(->> (om-build-verse-block "text
-")
+(->> (om-build-verse-block "text\n")
      (om-to-trimmed-string))
  ;; => "#+BEGIN_VERSE
  ;      text

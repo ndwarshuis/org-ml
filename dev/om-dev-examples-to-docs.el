@@ -38,7 +38,9 @@
 
 (defun format-actual (actual)
   (with-temp-buffer
-    (insert (format "%S" actual))
+    (--> (format "%S" actual)
+         (replace-regexp-in-string "\n" "\\n" it t t)
+         (insert it))
     (goto-char (point-min))
     (lispy-multiline)
     (buffer-string)))
