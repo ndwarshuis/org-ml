@@ -178,10 +178,10 @@ Parse buffers to trees.
 
 * [om-parse-object-at](#om-parse-object-at-point) `(point)`
 * [om-parse-element-at](#om-parse-element-at-point) `(point)`
+* [om-parse-table-row-at](#om-parse-table-row-at-point) `(point)`
 * [om-parse-headline-at](#om-parse-headline-at-point) `(point)`
 * [om-parse-subtree-at](#om-parse-subtree-at-point) `(point)`
 * [om-parse-item-at](#om-parse-item-at-point) `(point)`
-* [om-parse-table-row-at](#om-parse-table-row-at-point) `(point)`
 * [om-parse-section-at](#om-parse-section-at-point) `(point)`
 
 ## Building
@@ -597,6 +597,34 @@ specifically parse these, use the functions [`om-parse-section-at`](#om-parse-se
 
 ```
 
+#### om-parse-table-row-at `(point)`
+
+Return table-row node under **`point`** or nil if not on a table-row.
+
+```el
+;; Given the following contents:
+; | bow | stroke |
+
+;; Return the row itself
+(->> (om-parse-table-row-at 1)
+     (car))
+ ;; => 'table-row
+
+;; Also return the row when not at beginning of line
+(->> (om-parse-table-row-at 5)
+     (car))
+ ;; => 'table-row
+
+;; Given the following contents:
+; - bow and arrow choke
+
+;; Return nil if not a table-row
+(->> (om-parse-table-row-at 1)
+     (car))
+ ;; => nil
+
+```
+
 #### om-parse-headline-at `(point)`
 
 Return headline node under **`point`** or nil if not on a headline.
@@ -739,34 +767,6 @@ of the line.
 
 ;; Return nil if not an item
 (->> (om-parse-item-at 1)
-     (om-to-trimmed-string))
- ;; => ""
-
-```
-
-#### om-parse-table-row-at `(point)`
-
-Return table-row node under **`point`** or nil if not on a table-row.
-
-```el
-;; Given the following contents:
-; | bow | stroke |
-
-;; Return the row itself
-(->> (om-parse-table-row-at 1)
-     (om-to-trimmed-string))
- ;; => "| bow | stroke |"
-
-;; Also return the row when not at beginning of line
-(->> (om-parse-table-row-at 5)
-     (om-to-trimmed-string))
- ;; => "| bow | stroke |"
-
-;; Given the following contents:
-; - bow and arrow choke
-
-;; Return nil if not a table-row
-(->> (om-parse-table-row-at 1)
      (om-to-trimmed-string))
  ;; => ""
 

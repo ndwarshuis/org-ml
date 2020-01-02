@@ -94,6 +94,23 @@
          (car))
     => 'table)
 
+  (defexamples-content om-parse-table-row-at
+    nil
+    (:buffer "| bow | stroke |")
+    (:comment "Return the row itself")
+    (->> (om-parse-table-row-at 1)
+         (car))
+    => 'table-row
+    (:comment "Also return the row when not at beginning of line")
+    (->> (om-parse-table-row-at 5)
+         (car))
+    => 'table-row
+    (:buffer "- bow and arrow choke")
+    (:comment "Return nil if not a table-row")
+    (->> (om-parse-table-row-at 1)
+         (car))
+    => nil)
+
   (defexamples-content om-parse-headline-at
     nil
     (:buffer "* headline")
@@ -182,23 +199,6 @@
     (:buffer "* not item")
     (:comment "Return nil if not an item")
     (->> (om-parse-item-at 1)
-         (om-to-trimmed-string))
-    => "")
-
-  (defexamples-content om-parse-table-row-at
-    nil
-    (:buffer "| bow | stroke |")
-    (:comment "Return the row itself")
-    (->> (om-parse-table-row-at 1)
-         (om-to-trimmed-string))
-    => "| bow | stroke |"
-    (:comment "Also return the row when not at beginning of line")
-    (->> (om-parse-table-row-at 5)
-         (om-to-trimmed-string))
-    => "| bow | stroke |"
-    (:buffer "- bow and arrow choke")
-    (:comment "Return nil if not a table-row")
-    (->> (om-parse-table-row-at 1)
          (om-to-trimmed-string))
     => "")
   
