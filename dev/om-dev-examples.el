@@ -2983,7 +2983,7 @@
       nil
 
       (:buffer "/this/ is a *paragraph*")
-      (:comment "Return objects for object containers")
+      (:comment "Return child nodes for branch nodes")
       (->> (om-parse-this-element)
            (om-get-children)
            (-map #'om-get-type))
@@ -2997,7 +2997,7 @@
       => nil
 
       (:buffer "#+CALL: ktulu()")
-      (:comment "Throw error when attempting to get contents of a non-container")
+      (:comment "Throw error when attempting to get contents of a non-branch node")
       (->> (om-parse-this-element)
            (om-get-children)
            (-map #'om-get-type))
@@ -3008,13 +3008,11 @@
       (:buffer "* headline"
                "stuff"
                "** subheadline")
-      (:comment "Return elements for greater elements")
+      (:comment "Return child element nodes")
       (->> (om-parse-this-subtree)
            (om-get-children)
            (-map #'om-get-type))
       => '(section headline)
-
-
 
       (:buffer "| a | b |")
       (->> (om-parse-this-table-row)
@@ -3105,14 +3103,14 @@
       nil
 
       (:buffer "/this/ is a *paragraph*")
-      (:comment "Set children for object containers")
+      (:comment "Set children for branch object")
       (->> (om-parse-this-element)
            (om-set-children (list "this is lame"))
            (om-to-trimmed-string))
       => "this is lame"
 
       (:buffer "* headline")
-      (:comment "Set children for greater elements")
+      (:comment "Set children for branch element nodes")
       (->> (om-parse-this-subtree)
            (om-set-children (list (om-build-headline! :title-text "only me" :level 2)))
            (om-to-trimmed-string))
@@ -3120,7 +3118,7 @@
                   "** only me")
 
       (:buffer "#+CALL: ktulu()")
-      (:comment "Throw error when attempting to set children of a non-container")
+      (:comment "Throw error when attempting to set children of a non-branch nodes")
       (->> (om-parse-this-element)
            (om-set-children "nil by mouth")
            (om-to-trimmed-string))
@@ -3151,7 +3149,7 @@
                   "*** subheadline")
 
       (:buffer "#+CALL: ktulu()")
-      (:comment "Throw error when attempting to map children of a non-container")
+      (:comment "Throw error when attempting to map children of a non-branch node")
       (->> (om-parse-this-element)
            (om-map-children #'ignore)
            (om-to-trimmed-string))
@@ -3176,7 +3174,7 @@
            (om-is-childless-p))
       => t
       (:buffer "#+CALL: ktulu()")
-      (:comment "Throw error when attempting to determine if non-container is empty")
+      (:comment "Throw error when attempting to determine if non-branch node is empty")
       (->> (om-parse-this-element)
            (om-is-childless-p))
       !!> arg-type-error))

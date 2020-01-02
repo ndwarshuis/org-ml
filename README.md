@@ -3910,7 +3910,7 @@ Return the children of **`branch-node`** as a list.
 ;; Given the following contents:
 ; /this/ is a *paragraph*
 
-;; Return objects for object containers
+;; Return child nodes for branch nodes
 (->> (om-parse-this-element)
      (om-get-children)
      (-map (function om-get-type)))
@@ -3928,7 +3928,7 @@ Return the children of **`branch-node`** as a list.
 ;; Given the following contents:
 ; #+CALL: ktulu()
 
-;; Throw error when attempting to get contents of a non-container
+;; Throw error when attempting to get contents of a non-branch node
 (->> (om-parse-this-element)
      (om-get-children)
      (-map (function om-get-type)))
@@ -3946,7 +3946,7 @@ on the type of `node`.
 ;; Given the following contents:
 ; /this/ is a *paragraph*
 
-;; Set children for object containers
+;; Set children for branch object
 (->> (om-parse-this-element)
      (om-set-children (list "this is lame"))
      (om-to-trimmed-string))
@@ -3955,7 +3955,7 @@ on the type of `node`.
 ;; Given the following contents:
 ; * headline
 
-;; Set children for greater elements
+;; Set children for branch element nodes
 (->> (om-parse-this-subtree)
      (om-set-children (list (om-build-headline! :title-text "only me" :level 2)))
      (om-to-trimmed-string))
@@ -3965,7 +3965,7 @@ on the type of `node`.
 ;; Given the following contents:
 ; #+CALL: ktulu()
 
-;; Throw error when attempting to set children of a non-container
+;; Throw error when attempting to set children of a non-branch nodes
 (->> (om-parse-this-element)
      (om-set-children "nil by mouth")
      (om-to-trimmed-string))
@@ -4003,7 +4003,7 @@ returns a modified list of children.
 ;; Given the following contents:
 ; #+CALL: ktulu()
 
-;; Throw error when attempting to map children of a non-container
+;; Throw error when attempting to map children of a non-branch node
 (->> (om-parse-this-element)
      (om-map-children (function ignore))
      (om-to-trimmed-string))
@@ -4034,7 +4034,7 @@ Return t if **`branch-node`** is empty.
 ;; Given the following contents:
 ; #+CALL: ktulu()
 
-;; Throw error when attempting to determine if non-container is empty
+;; Throw error when attempting to determine if non-branch node is empty
 (->> (om-parse-this-element)
      (om-is-childless-p))
 Error
