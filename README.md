@@ -1621,6 +1621,11 @@ The following properties are settable:
 - **`post-blank`**: a non-negative integer
 
 ```el
+(->> (om-build-center-block)
+     (om-to-trimmed-string))
+ ;; => "#+BEGIN_CENTER
+ ;      #+END_CENTER"
+
 (->> (om-build-paragraph "text")
      (om-build-center-block)
      (om-to-trimmed-string))
@@ -1639,6 +1644,11 @@ The following properties are settable:
 - **`post-blank`**: a non-negative integer
 
 ```el
+(->> (om-build-drawer "NAME")
+     (om-to-trimmed-string))
+ ;; => ":NAME:
+ ;      :END:"
+
 (->> (om-build-paragraph "text")
      (om-build-drawer "NAME")
      (om-to-trimmed-string))
@@ -1785,6 +1795,11 @@ The following properties are settable:
 - **`post-blank`**: a non-negative integer
 
 ```el
+(->> (om-build-property-drawer)
+     (om-to-trimmed-string))
+ ;; => ":PROPERTIES:
+ ;      :END:"
+
 (->> (om-build-node-property "key" "val")
      (om-build-property-drawer)
      (om-to-trimmed-string))
@@ -1803,6 +1818,11 @@ The following properties are settable:
 - **`post-blank`**: a non-negative integer
 
 ```el
+(->> (om-build-quote-block)
+     (om-to-trimmed-string))
+ ;; => "#+BEGIN_QUOTE
+ ;      #+END_QUOTE"
+
 (->> (om-build-paragraph "quoted stuff")
      (om-build-quote-block)
      (om-to-trimmed-string))

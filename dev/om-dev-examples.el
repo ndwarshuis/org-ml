@@ -564,6 +564,10 @@
     nil
 
     (defexamples om-build-center-block
+      (->> (om-build-center-block)
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_CENTER"
+                  "#+END_CENTER")
       (->> (om-build-paragraph "text")
            (om-build-center-block)
            (om-to-trimmed-string))
@@ -572,6 +576,10 @@
                   "#+END_CENTER"))
 
     (defexamples om-build-drawer
+      (->> (om-build-drawer "NAME")
+           (om-to-trimmed-string))
+      => (:result ":NAME:"
+                  ":END:")
       (->> (om-build-paragraph "text")
            (om-build-drawer "NAME")
            (om-to-trimmed-string))
@@ -665,6 +673,10 @@
       => "- item contents")
 
     (defexamples om-build-property-drawer
+      (->> (om-build-property-drawer)
+           (om-to-trimmed-string))
+      => (:result ":PROPERTIES:"
+                  ":END:")
       (->> (om-build-node-property "key" "val")
            (om-build-property-drawer)
            (om-to-trimmed-string))
@@ -673,6 +685,10 @@
                   ":END:"))
 
     (defexamples om-build-quote-block
+      (->> (om-build-quote-block)
+           (om-to-trimmed-string))
+      => (:result "#+BEGIN_QUOTE"
+                  "#+END_QUOTE")
       (->> (om-build-paragraph "quoted stuff")
            (om-build-quote-block)
            (om-to-trimmed-string))
