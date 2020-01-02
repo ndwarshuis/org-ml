@@ -3179,7 +3179,7 @@
            (om-is-childless-p))
       !!> arg-type-error))
 
-  (def-example-subgroup "Objects"
+  (def-example-subgroup "Object Nodes"
     nil
 
     (defexamples-content om-unwrap

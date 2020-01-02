@@ -389,7 +389,7 @@ Set, get, and map the children of branch nodes.
 * [om-map-children](#om-map-children-fun-branch-node) `(fun branch-node)`
 * [om-is-childless-p](#om-is-childless-p-branch-node) `(branch-node)`
 
-### Objects
+### Object Nodes
 
 * [om-unwrap](#om-unwrap-object-node) `(object-node)`
 * [om-unwrap-types-deep](#om-unwrap-types-deep-types-object-node) `(types object-node)`
@@ -4042,7 +4042,7 @@ Error
 ```
 
 
-### Objects
+### Object Nodes
 
 #### om-unwrap `(object-node)`
 
