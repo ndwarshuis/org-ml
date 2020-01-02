@@ -4278,12 +4278,12 @@
     (:buffer "* one"
              "** two"
              "** three")
-    (->> (om-parse-this-subtree)
-         (om-match-splice '(0)
-           (list
-            (om-build-headline! :title-text "new0" :level 2)
-            (om-build-headline! :title-text "new1" :level 2)))
-         (om-to-trimmed-string))
+    (let ((L (list
+              (om-build-headline! :title-text "new0" :level 2)
+              (om-build-headline! :title-text "new1" :level 2))))
+      (->> (om-parse-this-subtree)
+           (om-match-splice '(0) L)
+           (om-to-trimmed-string)))
     => (:result "* one"
                 "** new0"
                 "** new1"
@@ -4294,12 +4294,12 @@
     (:buffer "* one"
              "** two"
              "** three")
-    (->> (om-parse-this-subtree)
-         (om-match-splice-before '(0)
-           (list
-            (om-build-headline! :title-text "new0" :level 2)
-            (om-build-headline! :title-text "new1" :level 2)))
-         (om-to-trimmed-string))
+    (let ((L (list
+              (om-build-headline! :title-text "new0" :level 2)
+              (om-build-headline! :title-text "new1" :level 2))))
+      (->> (om-parse-this-subtree)
+           (om-match-splice-before '(0) L)
+           (om-to-trimmed-string)))
     => (:result "* one"
                 "** new0"
                 "** new1"
@@ -4311,12 +4311,12 @@
     (:buffer "* one"
              "** two"
              "** three")
-    (->> (om-parse-this-subtree)
-         (om-match-splice-after '(0)
-           (list
-            (om-build-headline! :title-text "new0" :level 2)
-            (om-build-headline! :title-text "new1" :level 2)))
-         (om-to-trimmed-string))
+    (let ((L (list
+              (om-build-headline! :title-text "new0" :level 2)
+              (om-build-headline! :title-text "new1" :level 2))))
+      (->> (om-parse-this-subtree)
+           (om-match-splice-after '(0) L)
+           (om-to-trimmed-string)))
     => (:result "* one"
                 "** two"
                 "** new0"
@@ -4329,12 +4329,12 @@
              "** two"
              "** three"
              "*** four")
-    (->> (om-parse-this-subtree)
-         (om-match-splice-within '(headline) 0
-           (list
-            (om-build-headline! :title-text "new0" :level 3)
-            (om-build-headline! :title-text "new1" :level 3)))
-         (om-to-trimmed-string))
+    (let ((L (list
+              (om-build-headline! :title-text "new0" :level 3)
+              (om-build-headline! :title-text "new1" :level 3))))
+      (->> (om-parse-this-subtree)
+           (om-match-splice-within '(headline) 0 L)
+           (om-to-trimmed-string)))
     => (:result "* one"
                 "** two"
                 "*** new0"
@@ -4343,12 +4343,12 @@
                 "*** new0"
                 "*** new1"
                 "*** four")
-    (->> (om-parse-this-subtree)
-         (om-match-splice-within nil 1
-           (list
-            (om-build-headline! :title-text "new0" :level 2)
-            (om-build-headline! :title-text "new1" :level 2)))
-         (om-to-trimmed-string))
+    (let ((L (list
+              (om-build-headline! :title-text "new0" :level 2)
+              (om-build-headline! :title-text "new1" :level 2))))
+      (->> (om-parse-this-subtree)
+           (om-match-splice-within nil 1 L)
+           (om-to-trimmed-string)))
     => (:result "* one"
                 "** two"
                 "** new0"
