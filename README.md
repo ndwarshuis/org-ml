@@ -3046,7 +3046,7 @@ Return t if **`headline`** node is tagged with **`tag`**.
  ;; => nil
 
 ;; Given the following contents:
-; * dummy                                                             :tmsu:
+; * dummy                  :tmsu:
 
 (->> (om-parse-this-headline)
      (om-headline-has-tag-p "tmsu"))

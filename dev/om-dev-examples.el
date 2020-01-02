@@ -1477,7 +1477,7 @@
       => "blacklabel"
 
       ;; TODO the priority should be parsable after "COMMENT"
-      (:buffer "** TODO [#A] COMMENT dummy                                   :tmsu:ARCHIVE:"
+      (:buffer "** TODO [#A] COMMENT dummy     :tmsu:ARCHIVE:"
                ""
                "stuff")
       (->> (om-parse-this-element)
@@ -2452,7 +2452,7 @@
       (->> (om-parse-this-headline)
            (om-headline-has-tag-p "tmsu"))
       => nil
-      (:buffer "* dummy                                                             :tmsu:")
+      (:buffer "* dummy                  :tmsu:")
       (->> (om-parse-this-headline)
            (om-headline-has-tag-p "tmsu"))
       => t)
