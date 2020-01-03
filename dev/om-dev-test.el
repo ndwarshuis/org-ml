@@ -29,17 +29,17 @@
 ;; TODO add plist-get-vals?
 ;; TODO add plist-map-values?
 
-(ert-deftest om--is-plist-p/properties ()
+(ert-deftest om--is-plist/properties ()
   ;; finite plist
-  (should (om--is-plist-p '(:one one :two 2 :three "3")))
+  (should (om--is-plist '(:one one :two 2 :three "3")))
   ;; zero-length plist
-  (should (om--is-plist-p nil))
+  (should (om--is-plist nil))
   ;; symbols instead of keywords
-  (should-not (om--is-plist-p '(one one two 2 three "3")))
+  (should-not (om--is-plist '(one one two 2 three "3")))
   ;; incomplete
-  (should-not (om--is-plist-p '(:one one :two 2 :three)))
+  (should-not (om--is-plist '(:one one :two 2 :three)))
   ;; not list
-  (should-not (om--is-plist-p ":one one :two 2 :three")))
+  (should-not (om--is-plist ":one one :two 2 :three")))
 
 ;; TODO add plist-remove?
 

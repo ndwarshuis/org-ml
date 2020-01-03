@@ -284,12 +284,12 @@ Build nodes with more convenient/shorter syntax.
 Test node types.
 
 * [om-get-type](#om-get-type-node) `(node)`
-* [om-is-type-p](#om-is-type-p-type-node) `(type node)`
-* [om-is-any-type-p](#om-is-any-type-p-types-node) `(types node)`
-* [om-is-element-p](#om-is-element-p-node) `(node)`
-* [om-is-branch-node-p](#om-is-branch-node-p-node) `(node)`
-* [om-node-may-have-child-objects-p](#om-node-may-have-child-objects-p-node) `(node)`
-* [om-node-may-have-child-elements-p](#om-node-may-have-child-elements-p-node) `(node)`
+* [om-is-type](#om-is-type-type-node) `(type node)`
+* [om-is-any-type](#om-is-any-type-types-node) `(types node)`
+* [om-is-element](#om-is-element-node) `(node)`
+* [om-is-branch-node](#om-is-branch-node-node) `(node)`
+* [om-node-may-have-child-objects](#om-node-may-have-child-objects-node) `(node)`
+* [om-node-may-have-child-elements](#om-node-may-have-child-elements-node) `(node)`
 
 ## Property Manipulation
 
@@ -314,7 +314,7 @@ Set, get, and map properties of nodes.
 
 ### Clock
 
-* [om-clock-is-running-p](#om-clock-is-running-p-clock) `(clock)`
+* [om-clock-is-running](#om-clock-is-running-clock) `(clock)`
 
 ### Entity
 
@@ -323,8 +323,8 @@ Set, get, and map properties of nodes.
 ### Headline
 
 * [om-headline-set-title!](#om-headline-set-title-title-text-stats-cookie-value-headline) `(title-text stats-cookie-value headline)`
-* [om-headline-is-done-p](#om-headline-is-done-p-headline) `(headline)`
-* [om-headline-has-tag-p](#om-headline-has-tag-p-tag-headline) `(tag headline)`
+* [om-headline-is-done](#om-headline-is-done-headline) `(headline)`
+* [om-headline-has-tag](#om-headline-has-tag-tag-headline) `(tag headline)`
 * [om-headline-get-statistics-cookie](#om-headline-get-statistics-cookie-headline) `(headline)`
 
 ### Item
@@ -337,7 +337,7 @@ Set, get, and map properties of nodes.
 
 ### Statistics Cookie
 
-* [om-statistics-cookie-is-complete-p](#om-statistics-cookie-is-complete-p-statistics-cookie) `(statistics-cookie)`
+* [om-statistics-cookie-is-complete](#om-statistics-cookie-is-complete-statistics-cookie) `(statistics-cookie)`
 
 ### Timestamp (Auxiliary)
 
@@ -353,8 +353,8 @@ Functions to work with timestamp data
 * [om-timestamp-get-start-time](#om-timestamp-get-start-time-timestamp) `(timestamp)`
 * [om-timestamp-get-end-time](#om-timestamp-get-end-time-timestamp) `(timestamp)`
 * [om-timestamp-get-range](#om-timestamp-get-range-timestamp) `(timestamp)`
-* [om-timestamp-is-active-p](#om-timestamp-is-active-p-timestamp) `(timestamp)`
-* [om-timestamp-is-ranged-p](#om-timestamp-is-ranged-p-timestamp) `(timestamp)`
+* [om-timestamp-is-active](#om-timestamp-is-active-timestamp) `(timestamp)`
+* [om-timestamp-is-ranged](#om-timestamp-is-ranged-timestamp) `(timestamp)`
 * [om-timestamp-range-contains-p](#om-timestamp-range-contains-p-unixtime-timestamp) `(unixtime timestamp)`
 * [om-timestamp-set-collapsed](#om-timestamp-set-collapsed-flag-timestamp) `(flag timestamp)`
 * [om-timestamp-set-start-time](#om-timestamp-set-start-time-time-timestamp) `(time timestamp)`
@@ -383,11 +383,11 @@ Set, get, and map the children of branch nodes.
 
 ### Polymorphic
 
-* [om-children-contain-point-p](#om-children-contain-point-p-point-branch-node) `(point branch-node)`
+* [om-children-contain-point](#om-children-contain-point-point-branch-node) `(point branch-node)`
 * [om-get-children](#om-get-children-branch-node) `(branch-node)`
 * [om-set-children](#om-set-children-children-branch-node) `(children branch-node)`
 * [om-map-children](#om-map-children-fun-branch-node) `(fun branch-node)`
-* [om-is-childless-p](#om-is-childless-p-branch-node) `(branch-node)`
+* [om-is-childless](#om-is-childless-branch-node) `(branch-node)`
 
 ### Object Nodes
 
@@ -2251,7 +2251,7 @@ Return the type of **`node`**.
 
 ```
 
-#### om-is-type-p `(type node)`
+#### om-is-type `(type node)`
 
 Return t if the type of **`node`** is **`type`** (a symbol).
 
@@ -2260,16 +2260,16 @@ Return t if the type of **`node`** is **`type`** (a symbol).
 ; *ziltoid*
 
 (->> (om-parse-this-object)
-     (om-is-type-p 'bold))
+     (om-is-type 'bold))
  ;; => t
 
 (->> (om-parse-this-object)
-     (om-is-type-p 'italic))
+     (om-is-type 'italic))
  ;; => nil
 
 ```
 
-#### om-is-any-type-p `(types node)`
+#### om-is-any-type `(types node)`
 
 Return t if the type of **`node`** is in **`types`** (a list of symbols).
 
@@ -2278,20 +2278,20 @@ Return t if the type of **`node`** is in **`types`** (a list of symbols).
 ; *ziltoid*
 
 (->> (om-parse-this-object)
-     (om-is-any-type-p '(bold)))
+     (om-is-any-type '(bold)))
  ;; => t
 
 (->> (om-parse-this-object)
-     (om-is-any-type-p '(bold italic)))
+     (om-is-any-type '(bold italic)))
  ;; => t
 
 (->> (om-parse-this-object)
-     (om-is-any-type-p '(italic)))
+     (om-is-any-type '(italic)))
  ;; => nil
 
 ```
 
-#### om-is-element-p `(node)`
+#### om-is-element `(node)`
 
 Return t if **`node`** is an element class.
 
@@ -2301,17 +2301,17 @@ Return t if **`node`** is an element class.
 
 ;; Parsing this text as an element node gives a paragraph node
 (->> (om-parse-this-element)
-     (om-is-element-p))
+     (om-is-element))
  ;; => t
 
 ;; Parsing the same text as an object node gives a bold node
 (->> (om-parse-this-object)
-     (om-is-element-p))
+     (om-is-element))
  ;; => nil
 
 ```
 
-#### om-is-branch-node-p `(node)`
+#### om-is-branch-node `(node)`
 
 Return t if **`node`** is a branch node.
 
@@ -2321,12 +2321,12 @@ Return t if **`node`** is a branch node.
 
 ;; Parsing this as an element node gives a paragraph node (a branch node)
 (->> (om-parse-this-element)
-     (om-is-branch-node-p))
+     (om-is-branch-node))
  ;; => t
 
 ;; Parsing this as an object node gives a bold node (also a branch node)
 (->> (om-parse-this-object)
-     (om-is-branch-node-p))
+     (om-is-branch-node))
  ;; => t
 
 ;; Given the following contents:
@@ -2334,7 +2334,7 @@ Return t if **`node`** is a branch node.
 
 ;; Parsing this as an object node gives a code node (not a branch node)
 (->> (om-parse-this-object)
-     (om-is-branch-node-p))
+     (om-is-branch-node))
  ;; => nil
 
 ;; Given the following contents:
@@ -2342,7 +2342,7 @@ Return t if **`node`** is a branch node.
 
 ;; Parsing this as an element node gives a comment node (also not a branch node)
 (->> (om-parse-this-element)
-     (om-is-branch-node-p))
+     (om-is-branch-node))
  ;; => nil
 
 ;; Given the following contents:
@@ -2350,12 +2350,12 @@ Return t if **`node`** is a branch node.
 
 ;; Parsing this as an element node gives a headline node (a branch node)
 (->> (om-parse-this-element)
-     (om-is-branch-node-p))
+     (om-is-branch-node))
  ;; => t
 
 ```
 
-#### om-node-may-have-child-objects-p `(node)`
+#### om-node-may-have-child-objects `(node)`
 
 Return t if **`node`** is a branch node that may have child objects.
 
@@ -2366,13 +2366,13 @@ Return t if **`node`** is a branch node that may have child objects.
 ;; Parsing this as an element node gives a paragraph node (can have child object
 ;; nodes)
 (->> (om-parse-this-element)
-     (om-node-may-have-child-objects-p))
+     (om-node-may-have-child-objects))
  ;; => t
 
 ;; Parsing this as an object node gives a bold node (also can have child object
 ;; nodes)
 (->> (om-parse-this-object)
-     (om-node-may-have-child-objects-p))
+     (om-node-may-have-child-objects))
  ;; => t
 
 ;; Given the following contents:
@@ -2380,7 +2380,7 @@ Return t if **`node`** is a branch node that may have child objects.
 
 ;; Parsing this as an object node gives a code node (not a branch node)
 (->> (om-parse-this-object)
-     (om-node-may-have-child-objects-p))
+     (om-node-may-have-child-objects))
  ;; => nil
 
 ;; Given the following contents:
@@ -2388,7 +2388,7 @@ Return t if **`node`** is a branch node that may have child objects.
 
 ;; Parsing this as an element node gives a comment node (not a branch node)
 (->> (om-parse-this-element)
-     (om-node-may-have-child-objects-p))
+     (om-node-may-have-child-objects))
  ;; => nil
 
 ;; Given the following contents:
@@ -2397,12 +2397,12 @@ Return t if **`node`** is a branch node that may have child objects.
 ;; Parsing this as an element node gives a headline node (can only have child
 ;; element nodes)
 (->> (om-parse-this-element)
-     (om-node-may-have-child-objects-p))
+     (om-node-may-have-child-objects))
  ;; => nil
 
 ```
 
-#### om-node-may-have-child-elements-p `(node)`
+#### om-node-may-have-child-elements `(node)`
 
 Return t if **`node`** is a branch node that may have child elements.
 
@@ -2416,7 +2416,7 @@ elements may have other elements as children.
 ;; Parsing this as an element node gives a headline node (can have child element
 ;; nodes)
 (->> (om-parse-this-element)
-     (om-node-may-have-child-elements-p))
+     (om-node-may-have-child-elements))
  ;; => t
 
 ;; Given the following contents:
@@ -2425,7 +2425,7 @@ elements may have other elements as children.
 ;; Parsing this as an element node gives a paragraph node (can only have child
 ;; object nodes)
 (->> (om-parse-this-element)
-     (om-node-may-have-child-elements-p))
+     (om-node-may-have-child-elements))
  ;; => nil
 
 ;; Given the following contents:
@@ -2433,7 +2433,7 @@ elements may have other elements as children.
 
 ;; Parsing this as an element node gives a comment node (not a branch node)
 (->> (om-parse-this-element)
-     (om-node-may-have-child-elements-p))
+     (om-node-may-have-child-elements))
  ;; => nil
 
 ```
@@ -2920,7 +2920,7 @@ Error
 
 ### Clock
 
-#### om-clock-is-running-p `(clock)`
+#### om-clock-is-running `(clock)`
 
 Return t if **`clock`** element is running (eg is open).
 
@@ -2929,14 +2929,14 @@ Return t if **`clock`** element is running (eg is open).
 ; CLOCK: [2019-01-01 Tue 00:00]
 
 (->> (om-parse-this-element)
-     (om-clock-is-running-p))
+     (om-clock-is-running))
  ;; => t
 
 ;; Given the following contents:
 ; CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00
 
 (->> (om-parse-this-element)
-     (om-clock-is-running-p))
+     (om-clock-is-running))
  ;; => nil
 
 ```
@@ -3012,7 +3012,7 @@ and **`stats-cookie-value`** is a list described in
 
 ```
 
-#### om-headline-is-done-p `(headline)`
+#### om-headline-is-done `(headline)`
 
 Return t if **`headline`** node has a done todo-keyword.
 
@@ -3021,19 +3021,19 @@ Return t if **`headline`** node has a done todo-keyword.
 ; * TODO darn
 
 (->> (om-parse-this-headline)
-     (om-headline-is-done-p))
+     (om-headline-is-done))
  ;; => nil
 
 ;; Given the following contents:
 ; * DONE yay
 
 (->> (om-parse-this-headline)
-     (om-headline-is-done-p))
+     (om-headline-is-done))
  ;; => t
 
 ```
 
-#### om-headline-has-tag-p `(tag headline)`
+#### om-headline-has-tag `(tag headline)`
 
 Return t if **`headline`** node is tagged with **`tag`**.
 
@@ -3042,14 +3042,14 @@ Return t if **`headline`** node is tagged with **`tag`**.
 ; * dummy
 
 (->> (om-parse-this-headline)
-     (om-headline-has-tag-p "tmsu"))
+     (om-headline-has-tag "tmsu"))
  ;; => nil
 
 ;; Given the following contents:
 ; * dummy                  :tmsu:
 
 (->> (om-parse-this-headline)
-     (om-headline-has-tag-p "tmsu"))
+     (om-headline-has-tag "tmsu"))
  ;; => t
 
 ```
@@ -3150,7 +3150,7 @@ is the same as that described in [`om-build-planning!`](#om-build-planning-key-c
 
 ### Statistics Cookie
 
-#### om-statistics-cookie-is-complete-p `(statistics-cookie)`
+#### om-statistics-cookie-is-complete `(statistics-cookie)`
 
 Return t is **`statistics-cookie`** node is complete.
 
@@ -3160,7 +3160,7 @@ Return t is **`statistics-cookie`** node is complete.
 
 (->> (om-parse-this-headline)
      (om-headline-get-statistics-cookie)
-     (om-statistics-cookie-is-complete-p))
+     (om-statistics-cookie-is-complete))
  ;; => t
 
 ;; Given the following contents:
@@ -3168,7 +3168,7 @@ Return t is **`statistics-cookie`** node is complete.
 
 (->> (om-parse-this-headline)
      (om-headline-get-statistics-cookie)
-     (om-statistics-cookie-is-complete-p))
+     (om-statistics-cookie-is-complete))
  ;; => nil
 
 ;; Given the following contents:
@@ -3176,7 +3176,7 @@ Return t is **`statistics-cookie`** node is complete.
 
 (->> (om-parse-this-headline)
      (om-headline-get-statistics-cookie)
-     (om-statistics-cookie-is-complete-p))
+     (om-statistics-cookie-is-complete))
  ;; => t
 
 ;; Given the following contents:
@@ -3184,7 +3184,7 @@ Return t is **`statistics-cookie`** node is complete.
 
 (->> (om-parse-this-headline)
      (om-headline-get-statistics-cookie)
-     (om-statistics-cookie-is-complete-p))
+     (om-statistics-cookie-is-complete))
  ;; => nil
 
 ```
@@ -3317,7 +3317,7 @@ a negative integer.
 
 ```
 
-#### om-timestamp-is-active-p `(timestamp)`
+#### om-timestamp-is-active `(timestamp)`
 
 Return t if **`timestamp`** node is active.
 
@@ -3326,19 +3326,19 @@ Return t if **`timestamp`** node is active.
 ; <2019-01-01 Tue>
 
 (->> (om-parse-this-object)
-     (om-timestamp-is-active-p))
+     (om-timestamp-is-active))
  ;; => t
 
 ;; Given the following contents:
 ; [2019-01-01 Tue]
 
 (->> (om-parse-this-object)
-     (om-timestamp-is-active-p))
+     (om-timestamp-is-active))
  ;; => nil
 
 ```
 
-#### om-timestamp-is-ranged-p `(timestamp)`
+#### om-timestamp-is-ranged `(timestamp)`
 
 Return t if **`timestamp`** node is ranged.
 
@@ -3347,21 +3347,21 @@ Return t if **`timestamp`** node is ranged.
 ; [2019-01-01 Tue]--[2019-01-02 Wed]
 
 (->> (om-parse-this-object)
-     (om-timestamp-is-ranged-p))
+     (om-timestamp-is-ranged))
  ;; => t
 
 ;; Given the following contents:
 ; [2019-01-01 Tue 00:00-12:00]
 
 (->> (om-parse-this-object)
-     (om-timestamp-is-ranged-p))
+     (om-timestamp-is-ranged))
  ;; => t
 
 ;; Given the following contents:
 ; [2019-01-01 Tue]
 
 (->> (om-parse-this-object)
-     (om-timestamp-is-ranged-p))
+     (om-timestamp-is-ranged))
  ;; => nil
 
 ```
@@ -3883,7 +3883,7 @@ Set, get, and map the children of branch nodes.
 
 ### Polymorphic
 
-#### om-children-contain-point-p `(point branch-node)`
+#### om-children-contain-point `(point branch-node)`
 
 Return t if **`point`** is within the boundaries of **`branch-node`**`s children.
 
@@ -3893,11 +3893,11 @@ Return t if **`point`** is within the boundaries of **`branch-node`**`s children
 ; findme
 
 (->> (om-parse-this-headline)
-     (om-children-contain-point-p 2))
+     (om-children-contain-point 2))
  ;; => nil
 
 (->> (om-parse-this-headline)
-     (om-children-contain-point-p 15))
+     (om-children-contain-point 15))
  ;; => t
 
 ```
@@ -4011,7 +4011,7 @@ Error
 
 ```
 
-#### om-is-childless-p `(branch-node)`
+#### om-is-childless `(branch-node)`
 
 Return t if **`branch-node`** is empty.
 
@@ -4021,14 +4021,14 @@ Return t if **`branch-node`** is empty.
 ; filled with useless knowledge
 
 (->> (om-parse-this-headline)
-     (om-is-childless-p))
+     (om-is-childless))
  ;; => nil
 
 ;; Given the following contents:
 ; * dummy
 
 (->> (om-parse-this-headline)
-     (om-is-childless-p))
+     (om-is-childless))
  ;; => t
 
 ;; Given the following contents:
@@ -4036,7 +4036,7 @@ Return t if **`branch-node`** is empty.
 
 ;; Throw error when attempting to determine if non-branch node is empty
 (->> (om-parse-this-element)
-     (om-is-childless-p))
+     (om-is-childless))
 Error
 
 ```
@@ -5630,11 +5630,13 @@ Update headline under **`point`** using **`fun`**.
 ```el
 ;; Given the following contents:
 ; * TODO might get done
+; * DONE no need to update
 
 (om-update-headline-at* (point)
   (om-set-property :todo-keyword "DONE" it))
  ;; Output these buffer contents
- ;; $> "* DONE might get done"
+ ;; $> "* DONE might get done
+ ;      * DONE no need to update"
 
 ```
 
@@ -5648,13 +5650,15 @@ Update subtree under **`point`** using **`fun`**.
 ; * one
 ; ** two
 ; ** three
+; * not updated
 
 (om-update-subtree-at* (point)
   (om-headline-indent-subheadline 1 it))
  ;; Output these buffer contents
  ;; $> "* one
  ;      ** two
- ;      *** three"
+ ;      *** three
+ ;      * not updated"
 
 ```
 
@@ -5702,7 +5706,7 @@ no examples :(
 ```
 
 
-<!-- 0.0.1 -->
+<!-- 1.0.0 -->
 
 # Acknowledgements
 

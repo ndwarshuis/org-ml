@@ -885,124 +885,124 @@
          (om-get-type))
     => 'timestamp)
 
-  (defexamples-content om-is-type-p
+  (defexamples-content om-is-type
     nil
     (:buffer "*ziltoid*")
     (->> (om-parse-this-object)
-         (om-is-type-p 'bold))
+         (om-is-type 'bold))
     => t
     (->> (om-parse-this-object)
-         (om-is-type-p 'italic))
+         (om-is-type 'italic))
     => nil)
 
-  (defexamples-content om-is-any-type-p
+  (defexamples-content om-is-any-type
     nil
     (:buffer "*ziltoid*")
     (->> (om-parse-this-object)
-         (om-is-any-type-p '(bold)))
+         (om-is-any-type '(bold)))
     => t
     (->> (om-parse-this-object)
-         (om-is-any-type-p '(bold italic)))
+         (om-is-any-type '(bold italic)))
     => t
     (->> (om-parse-this-object)
-         (om-is-any-type-p '(italic)))
+         (om-is-any-type '(italic)))
     => nil)
 
-  (defexamples-content om-is-element-p
+  (defexamples-content om-is-element
     nil
     (:buffer "*ziltoid*")
     (:comment "Parsing this text as an element node gives a paragraph node")
     (->> (om-parse-this-element)
-         (om-is-element-p))
+         (om-is-element))
     => t
     (:comment "Parsing the same text as an object node gives a bold node")
     (->> (om-parse-this-object)
-         (om-is-element-p))
+         (om-is-element))
     => nil)
 
-  (defexamples-content om-is-branch-node-p
+  (defexamples-content om-is-branch-node
     nil
     (:buffer "*ziltoid*")
     (:comment "Parsing this as an element node gives a paragraph node"
               "(a branch node)")
     (->> (om-parse-this-element)
-         (om-is-branch-node-p))
+         (om-is-branch-node))
     => t
     (:comment "Parsing this as an object node gives a bold node"
               "(also a branch node)")
     (->> (om-parse-this-object)
-         (om-is-branch-node-p))
+         (om-is-branch-node))
     => t
     (:buffer "~ziltoid~")
     (:comment "Parsing this as an object node gives a code node"
               "(not a branch node)")
     (->> (om-parse-this-object)
-         (om-is-branch-node-p))
+         (om-is-branch-node))
     => nil
     (:buffer "# ziltoid")
     (:comment "Parsing this as an element node gives a comment node"
               "(also not a branch node)")
     (->> (om-parse-this-element)
-         (om-is-branch-node-p))
+         (om-is-branch-node))
     => nil
     (:buffer "* I'm so great")
     (:comment "Parsing this as an element node gives a headline node"
               "(a branch node)")
     (->> (om-parse-this-element)
-         (om-is-branch-node-p))
+         (om-is-branch-node))
     => t)
 
-  (defexamples-content om-node-may-have-child-objects-p
+  (defexamples-content om-node-may-have-child-objects
     nil
     (:buffer "*ziltoid*")
     (:comment "Parsing this as an element node gives a paragraph node"
               "(can have child object nodes)")
     (->> (om-parse-this-element)
-         (om-node-may-have-child-objects-p))
+         (om-node-may-have-child-objects))
     => t
     (:comment "Parsing this as an object node gives a bold node"
               "(also can have child object nodes)")
     (->> (om-parse-this-object)
-         (om-node-may-have-child-objects-p))
+         (om-node-may-have-child-objects))
     => t
     (:buffer "~ziltoid~")
     (:comment "Parsing this as an object node gives a code node"
               "(not a branch node)")
     (->> (om-parse-this-object)
-         (om-node-may-have-child-objects-p))
+         (om-node-may-have-child-objects))
     => nil
     (:buffer "# ziltoid")
     (:comment "Parsing this as an element node gives a comment node"
               "(not a branch node)")
     (->> (om-parse-this-element)
-         (om-node-may-have-child-objects-p))
+         (om-node-may-have-child-objects))
     => nil
     (:buffer "* I'm so great")
     (:comment "Parsing this as an element node gives a headline node"
               "(can only have child element nodes)")
     (->> (om-parse-this-element)
-         (om-node-may-have-child-objects-p))
+         (om-node-may-have-child-objects))
     => nil)
 
-  (defexamples-content om-node-may-have-child-elements-p
+  (defexamples-content om-node-may-have-child-elements
     nil
     (:buffer "* I'm so great")
     (:comment "Parsing this as an element node gives a headline node"
               "(can have child element nodes)")
     (->> (om-parse-this-element)
-         (om-node-may-have-child-elements-p))
+         (om-node-may-have-child-elements))
     => t
     (:buffer "*ziltoid*")
     (:comment "Parsing this as an element node gives a paragraph node"
               "(can only have child object nodes)")
     (->> (om-parse-this-element)
-         (om-node-may-have-child-elements-p))
+         (om-node-may-have-child-elements))
     => nil
     (:buffer "# ziltoid")
     (:comment "Parsing this as an element node gives a comment node"
               "(not a branch node)")
     (->> (om-parse-this-element)
-         (om-node-may-have-child-elements-p))
+         (om-node-may-have-child-elements))
     => nil))
 
 (def-example-group "Property Manipulation"
@@ -2388,15 +2388,15 @@
   (def-example-subgroup "Clock"
     nil
 
-    (defexamples-content om-clock-is-running-p
+    (defexamples-content om-clock-is-running
       nil
       (:buffer "CLOCK: [2019-01-01 Tue 00:00]")
       (->> (om-parse-this-element)
-           (om-clock-is-running-p))
+           (om-clock-is-running))
       => t
       (:buffer "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00")
       (->> (om-parse-this-element)
-           (om-clock-is-running-p))
+           (om-clock-is-running))
       => nil))
 
   (def-example-subgroup "Entity"
@@ -2435,26 +2435,26 @@
            (om-to-trimmed-string))
       => "* really *impressive* title [2/3]")
 
-    (defexamples-content om-headline-is-done-p
+    (defexamples-content om-headline-is-done
       nil
       (:buffer "* TODO darn")
       (->> (om-parse-this-headline)
-           (om-headline-is-done-p))
+           (om-headline-is-done))
       => nil
       (:buffer "* DONE yay")
       (->> (om-parse-this-headline)
-           (om-headline-is-done-p))
+           (om-headline-is-done))
       => t)
 
-    (defexamples-content om-headline-has-tag-p
+    (defexamples-content om-headline-has-tag
       nil
       (:buffer "* dummy")
       (->> (om-parse-this-headline)
-           (om-headline-has-tag-p "tmsu"))
+           (om-headline-has-tag "tmsu"))
       => nil
       (:buffer "* dummy                  :tmsu:")
       (->> (om-parse-this-headline)
-           (om-headline-has-tag-p "tmsu"))
+           (om-headline-has-tag "tmsu"))
       => t)
 
     (defexamples-content om-headline-get-statistics-cookie
@@ -2527,27 +2527,27 @@
 
   (def-example-subgroup "Statistics Cookie"
     nil
-    (defexamples-content om-statistics-cookie-is-complete-p
+    (defexamples-content om-statistics-cookie-is-complete
       nil
       (:buffer "* statistically significant [10/10]")
       (->> (om-parse-this-headline)
            (om-headline-get-statistics-cookie)
-           (om-statistics-cookie-is-complete-p))
+           (om-statistics-cookie-is-complete))
       => t
       (:buffer "* statistically significant [1/10]")
       (->> (om-parse-this-headline)
            (om-headline-get-statistics-cookie)
-           (om-statistics-cookie-is-complete-p))
+           (om-statistics-cookie-is-complete))
       => nil
       (:buffer "* statistically significant [100%]")
       (->> (om-parse-this-headline)
            (om-headline-get-statistics-cookie)
-           (om-statistics-cookie-is-complete-p))
+           (om-statistics-cookie-is-complete))
       => t
       (:buffer "* statistically significant [33%]")
       (->> (om-parse-this-headline)
            (om-headline-get-statistics-cookie)
-           (om-statistics-cookie-is-complete-p))
+           (om-statistics-cookie-is-complete))
       => nil))
 
   (def-example-subgroup "Timestamp (Auxiliary)"
@@ -2610,30 +2610,30 @@
            (om-timestamp-get-range))
       => 43200)
 
-    (defexamples-content om-timestamp-is-active-p
+    (defexamples-content om-timestamp-is-active
       nil
       (:buffer "<2019-01-01 Tue>")
       (->> (om-parse-this-object)
-           (om-timestamp-is-active-p))
+           (om-timestamp-is-active))
       => t
       (:buffer "[2019-01-01 Tue]")
       (->> (om-parse-this-object)
-           (om-timestamp-is-active-p))
+           (om-timestamp-is-active))
       => nil)
 
-    (defexamples-content om-timestamp-is-ranged-p
+    (defexamples-content om-timestamp-is-ranged
       nil
       (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
       (->> (om-parse-this-object)
-           (om-timestamp-is-ranged-p))
+           (om-timestamp-is-ranged))
       => t
       (:buffer "[2019-01-01 Tue 00:00-12:00]")
       (->> (om-parse-this-object)
-           (om-timestamp-is-ranged-p))
+           (om-timestamp-is-ranged))
       => t
       (:buffer "[2019-01-01 Tue]")
       (->> (om-parse-this-object)
-           (om-timestamp-is-ranged-p))
+           (om-timestamp-is-ranged))
       => nil)
 
     (defexamples-content om-timestamp-range-contains-p
@@ -2968,15 +2968,15 @@
   (def-example-subgroup "Polymorphic"
     nil
 
-    (defexamples-content om-children-contain-point-p
+    (defexamples-content om-children-contain-point
       nil
       (:buffer "* headline"
                "findme")
       (->> (om-parse-this-headline)
-           (om-children-contain-point-p 2))
+           (om-children-contain-point 2))
       => nil
       (->> (om-parse-this-headline)
-           (om-children-contain-point-p 15))
+           (om-children-contain-point 15))
       => t)
 
     (defexamples-content om-get-children
@@ -3162,21 +3162,21 @@
       :end-hidden)
 
     
-    (defexamples-content om-is-childless-p
+    (defexamples-content om-is-childless
       nil
       (:buffer "* dummy"
                "filled with useless knowledge")
       (->> (om-parse-this-headline)
-           (om-is-childless-p))
+           (om-is-childless))
       => nil
       (:buffer "* dummy")
       (->> (om-parse-this-headline)
-           (om-is-childless-p))
+           (om-is-childless))
       => t
       (:buffer "#+CALL: ktulu()")
       (:comment "Throw error when attempting to determine if non-branch node is empty")
       (->> (om-parse-this-element)
-           (om-is-childless-p))
+           (om-is-childless))
       !!> arg-type-error))
 
   (def-example-subgroup "Object Nodes"
@@ -4023,7 +4023,7 @@
 
     ;; pred
     (->> (om-parse-this-subtree)
-         (om-match '((:pred om-headline-is-done-p) section))
+         (om-match '((:pred om-headline-is-done) section))
          (--map (om-to-trimmed-string it)))
     => '("5")
     (->> (om-parse-this-subtree)
