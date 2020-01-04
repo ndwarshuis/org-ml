@@ -4144,7 +4144,7 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;; NOTE: this must go last if we don't want :pred/:and/:or/:not
       ;; to be interpreted as a property
       (`(,(and (pred keywordp) prop) . (,val . nil))
-       `(equal (om--get-property-strict ,prop ,it-node) ,val))
+       `(equal (om--get-property ,prop ,it-node) ,val))
       ;;
       (p (om--arg-error "Invalid condition: %s" p)))))
 
