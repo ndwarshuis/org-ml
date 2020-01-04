@@ -125,16 +125,21 @@ wrapped in a lambda call binding the unary argument to the symbol
                             (cons '\, (list it)))
                           arglist))
           (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
-          (indent (om--defun-make-indent-declare
-                   decls (-elem-index 'fun arglist))))
+          (debug* (->> arglist
+                       (--map (if (eq it 'fun) 'def-form 'form))
+                       (list 'debug)))
+          (dec (om--defun-make-indent-declare
+                decls (-elem-index 'fun arglist)))
+          (dec* (om--defun-make-indent-declare
+                 (cons debug* decls) (-elem-index 'fun arglist))))
     `(progn
        (defmacro ,name* ,arglist*
          ,docstring*
-         ,indent
+         ,dec*
          ,body*)
        (defun ,name ,arglist
          ,docstring
-         ,indent
+         ,dec
          ,@body))))
 
 ;;; better cl-defun
@@ -360,6 +365,14 @@ in BODY."
           let-forms
           (macroexp-progn `(,body))))))
 
+  (def-edebug-spec om--defun-key
+    ([&or arg (arg sexp)]))
+  
+  (def-edebug-spec om--defun-lambda-kw-list
+    (([&rest arg]
+      [&optional ["&key" om--defun-key &rest om--defun-key]]
+      &optional ["&rest" arg])))
+
   (defmacro om--defun-kw (name arglist &rest body)
     "Define NAME as a function.
 
@@ -382,7 +395,12 @@ arguments will be interpreted as anything not belonging to a key-val
 pair (but only if &rest was used to define the function). This implies
 that keywords may not be used as values for the rest argument in
 function calls."
-    (declare (doc-string 3) (indent 2))
+    (declare (doc-string 3) (indent 2)
+             (debug (&define name
+                             om--defun-lambda-kw-list
+                             lambda-doc
+                             [&optional ("declare" &rest sexp)]
+                             def-body)))
     (if (memq '&key arglist)
         (let ((res (om--transform-lambda arglist body name)))
           `(defun ,name ,@res))
@@ -3008,6 +3026,7 @@ each type."
 
 PLIST is a property list where the keys are properties of NODE and
 its values are forms to be mapped to these properties."
+  (declare (debug (form form)))
   (let ((p (make-symbol "plist*")))
     `(let ((,p (om--plist-map-values (lambda (form) `(lambda (it) ,form)) ',plist)))
        (om--map-properties-strict ,p ,node))))
@@ -3443,6 +3462,7 @@ returns a modified list of children."
 (defmacro om--mapcat-normalize (form secondary-string)
   "Return mapped, concatenated, and normalized SECONDARY-STRING.
 FORM is a form supplied to `--mapcat'."
+  (declare (debug (def-form form)))
   `(->> (--mapcat ,form ,secondary-string)
         (om--normalize-secondary-string)))
 
@@ -3861,6 +3881,7 @@ empty."
   "Like `--reduce-from' but only reduce LIST while PRED is t.
 FORM and INITIAL-VALUE work the same way, and the exposed symbols `it'
 and `acc' carry the same meaning."
+  (declare (debug (form form form form)))
   `(let ((acc ,initial-value))
      (--each-while ,list ,pred (setq acc ,form))
      acc))
@@ -4135,6 +4156,7 @@ wildcards are:
   "Recursively modify the children of NODE using FORM.
 FORM returns a list of element or object nodes as the new children,
 and the variable `it' is bound to the original children."
+  (declare (debug (form def-form)))
   (declare (indent 1))
   `(cl-labels
        ((rec
