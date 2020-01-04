@@ -4538,8 +4538,12 @@ in the immediate, top level children of NODE."
   (if pattern
       (-if-let (targets (om-match pattern node))
           (om--modify-children node
-            (if (not (member node targets)) it
-              (om--splice-at index nodes* it t)))
+            (--map-when
+             (member it targets)
+             (om--map-children-strict*
+               (om--splice-at index nodes* it t)
+               it)
+             it))
         node)
     (om--map-children-strict* (om--splice-at index nodes* it t) node)))
 
