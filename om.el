@@ -4362,7 +4362,7 @@ and the variable `it' is bound to the original children."
   `(cl-labels
        ((rec
          (node)
-         (if (om--is-type 'plain-text node) node
+         (if (not (om--is-branch-node node)) node
            (om--map-children-strict*
              (->> (--map (rec it) it)
                   (funcall (lambda (it) ,form)))
