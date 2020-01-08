@@ -974,18 +974,17 @@ be parsed to TYPE."
     ;; and with no arguments
     (should-error-arg (funcall fun '(:and)))
     ;; and with nonsense
-    (should-error-arg (funcall fun '(:and bold "2")))
+    (should-error-arg (funcall fun '(:and bold :2)))
     ;; or with no arguments
     (should-error-arg (funcall fun '(:or)))
     ;; or with nonsense
-    (should-error-arg (funcall fun '(:or bold "2")))
+    (should-error-arg (funcall fun '(:or bold :2)))
     ;; properties with symbols instead of keywords
     (should-error-arg (funcall fun '(tags '("hi"))))
     ;; multiple properties
     (should-error-arg (funcall fun '(:tags '("hi") :todo-keyword "DONE")))
     ;; just wrong...
     (should-error-arg (funcall fun nil))
-    (should-error-arg (funcall fun "1"))
     (should-error-arg (funcall fun :1))))
 
 (ert-deftest om--match-make-inner-pattern-form/error ()
@@ -1036,24 +1035,24 @@ be parsed to TYPE."
     (error "Function not defined"))
   (let ((fun #'om--make-make-slicer-form))
     ;; slicers by themselves
-    (should-error-arg (funcall fun '(:first)))
-    (should-error-arg (funcall fun '(:last)))
-    (should-error-arg (funcall fun '(:nth)))
-    (should-error-arg (funcall fun '(:sub)))
+    (should-error-arg (funcall fun '(:first) nil))
+    (should-error-arg (funcall fun '(:last) nil))
+    (should-error-arg (funcall fun '(:nth) nil))
+    (should-error-arg (funcall fun '(:sub) nil))
     ;; nth with non-integer
-    (should-error-arg (funcall fun '(:nth "1" bold)))
+    (should-error-arg (funcall fun '(:nth "1" bold) nil))
     ;; nth with integer but nothing after
-    (should-error-arg (funcall fun '(:nth 1)))
+    (should-error-arg (funcall fun '(:nth 1) nil))
     ;; sub with non-integers
-    (should-error-arg (funcall fun '(:sub "1" 2 bold)))
-    (should-error-arg (funcall fun '(:sub 1 "2" bold)))
+    (should-error-arg (funcall fun '(:sub "1" 2 bold) nil))
+    (should-error-arg (funcall fun '(:sub 1 "2" bold) nil))
     ;; sub with flipped integers
-    (should-error-arg (funcall fun '(:sub 2 1 bold)))
-    (should-error-arg (funcall fun '(:sub -1 -2 bold)))
+    (should-error-arg (funcall fun '(:sub 2 1 bold) nil))
+    (should-error-arg (funcall fun '(:sub -1 -2 bold) nil))
     ;; sub with split integers
-    (should-error-arg (funcall fun '(:sub -1 2 bold)))
+    (should-error-arg (funcall fun '(:sub -1 2 bold) nil))
     ;; sub with nothing after it
-    (should-error-arg (funcall fun '(:sub 1 2)))))
+    (should-error-arg (funcall fun '(:sub 1 2) nil))))
 
 (defmacro match-should-equal (node result &rest patterns)
   "Return form to test if all PATTERNS applied NODE return RESULT."
