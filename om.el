@@ -3910,6 +3910,10 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       (`(function . ,_)
        (om--arg-error "'function' not allowed in condition"))
       ;;
+      ;; literal node
+      ((and (pred om--is-node) pattern-node)
+       `(equal ,it-node ',pattern-node))
+      ;;
       ;; type
       ((and (pred (lambda (y) (memq y om-nodes))) type)
        `(om--is-type ',type ,it-node))
@@ -3942,7 +3946,7 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;; NOTE: this must go last if we don't want :pred/:and/:or/:not
       ;; to be interpreted as a property
       (`(,(and (pred keywordp) prop) . (,val . nil))
-       `(equal (om--get-property-strict ,prop ,it-node) ,val))
+       `(equal (om--get-property ,prop ,it-node) ,val))
       ;;
       (p (om--arg-error "Invalid condition: %s" p)))))
 
@@ -4016,11 +4020,38 @@ terminate only when the entire tree is searched within PATTERN."
       ;;
       (ps (om--arg-error "Invalid pattern: %s" ps)))))
 
-(defun om--match-make-pattern-form (end? limit pattern)
+(defun om--match-make-expanded-pattern-form (pattern node)
+  "Return explicitly expanded PATTERN given a toplevel TYPE.
+NODE is the target NODE to be matched"
+  (let ((target-type (om--get-type node)))
+    (cl-labels
+        ((expand-node
+          (acc node)
+          (-if-let (cur-type (-some-> node (om--get-type)))
+              (if (om-is-type target-type node) acc
+                (expand-node (cons cur-type acc)
+                             (om--get-parent node)))
+            (error "Node in pattern is not in target node"))))
+      (let ((first (car pattern))
+            (rest (cdr pattern)))
+        (cond
+         ((and (om--is-node first) (-any? #'om--is-node rest))
+          (error "Multiple nodes in pattern"))
+         ((-any? #'om--is-node rest)
+          (error "Nodes must be first non-slicer in pattern"))
+         ((om--is-node first)
+          (let ((path (expand-node nil (om--get-parent first))))
+            `(,@path ,first ,@rest)))
+         (t pattern))))))
+
+(defun om--match-make-pattern-form (end? limit pattern node)
   "Return non-slicer matching form for PATTERN.
 See `om--match-make-inner-pattern-form' for meaning of END? and LIMIT
-which are passed directly through this function."
-  (let ((body (om--match-make-inner-pattern-form end? limit pattern)))
+which are passed directly through this function.
+NODE is the target node to be matched"
+  
+  (let ((body (->> (om--match-make-expanded-pattern-form pattern node)
+                   (om--match-make-inner-pattern-form end? limit))))
     ;; NOTE: the accumulator is assembled in reverse due to the nature
     ;; of linked lists. Consing to the front is a linear operation,
     ;; while appending to the back is a quadratic operation since the
@@ -4030,16 +4061,17 @@ which are passed directly through this function."
     ;; reversed if `END?' is t (meaning backward order)
     (if end? body `(reverse ,body))))
 
-(defun om--make-make-slicer-form (pattern)
-  "Return matching form with slicer operations for PATTERN."
+(defun om--make-make-slicer-form (pattern node)
+  "Return matching form with slicer operations for PATTERN.
+NODE is the node to be matched."
   (pcase pattern
     ;; :first - search until one match found and return that
     (`(:first . ,ps)
-     (om--match-make-pattern-form nil 1 ps))
+     (om--match-make-pattern-form nil 1 ps node))
     ;;
     ;; :last - search backwards until one match found and return that
     (`(:last . ,ps)
-     (om--match-make-pattern-form t 1 ps))
+     (om--match-make-pattern-form t 1 ps node))
     ;;
     ;; :nth - search until N matches found and return Nth; note that
     ;;   nil will be returned if N refers to anything outside the
@@ -4048,8 +4080,8 @@ which are passed directly through this function."
      (unless (integerp n)
        (om--arg-error ":nth argument must be an integer"))
      (if (<= 0 n)
-         `(-drop ,n ,(om--match-make-pattern-form nil (1+ n) ps))
-       `(-drop-last ,(1- (- n)) ,(om--match-make-pattern-form t (- n) ps))))
+         `(-drop ,n ,(om--match-make-pattern-form nil (1+ n) ps node))
+       `(-drop-last ,(1- (- n)) ,(om--match-make-pattern-form t (- n) ps node))))
     ;;
     ;; :sub - search until B matches found, drop A+1, and return;
     ;;   note that if B is longer than the results then all results
@@ -4061,18 +4093,19 @@ which are passed directly through this function."
       ((> a b)
        (om--arg-error ":sub left index must be less than right index"))
       ((and (<= 0 a) (<= 0 b))
-       `(-drop ,a ,(om--match-make-pattern-form nil (1+ b) ps)))
+       `(-drop ,a ,(om--match-make-pattern-form nil (1+ b) ps node)))
       ((and (< a 0) (< b 0))
-       `(-drop-last ,(1- (- b)) ,(om--match-make-pattern-form t (- a) ps)))
+       `(-drop-last ,(1- (- b)) ,(om--match-make-pattern-form t (- a) ps node)))
       (t
        (om--arg-error "Both indices must be on the same side of zero"))))
     ;;
     ;; no slicer - search without limit and return all
-    (ps (om--match-make-pattern-form nil nil ps))))
+    (ps (om--match-make-pattern-form nil nil ps node))))
 
-(defun om--match-make-lambda-form (pattern)
-  "Return callable lambda form for PATTERN."
-  (let ((body (om--make-make-slicer-form pattern)))
+(defun om--match-make-lambda-form (pattern node)
+  "Return callable lambda form for PATTERN.
+NODE is the node to be matched."
+  (let ((body (om--make-make-slicer-form pattern node)))
     `(lambda (it) (let ((it (cons nil it)) (acc)) ,body))))
 
 ;;; match
@@ -4080,7 +4113,7 @@ which are passed directly through this function."
 (defun om-match (pattern node)
   "Return a list of child nodes matching PATTERN in NODE.
 
-PATTERN is a list of form ([SLICER [ARG1] [ARG2]] SUB1 [SUB2 ...]).
+PATTERN is a list like ([SLICER [ARG1] [ARG2]] [PNODE] SUB1 [SUB2 ...]).
 
 SLICER is an optional prefix to the pattern describing how many
 and which matches to return. If not given, all matches are returned.
@@ -4099,6 +4132,11 @@ Possible values are:
   integers, the indices refer to the same counterparts as described in
   `:nth'. If ARG1 and ARG2 are equal, this slicer has the same
   behavior as `:nth'.
+
+PNODE is an optional literal node to be matched. If given, the
+matching process will start within PNODE wherever it happens to be in
+NODE. This is useful for 'reusing' previous matches without repeating
+the same pattern.
 
 SUBX denotes subpatterns that that match nodes in the parse tree.
 Subpatterns may either be wildcards or conditions.
@@ -4143,7 +4181,7 @@ wildcards are:
   in the tree; SUB is a subpattern of either a condition or the `:any'
   wildcard; only one subpattern is allowed after `:many'
 - `:many!' SUB - like `:many' but do not match within other matches"
-  (let ((match-fun (om--match-make-lambda-form pattern)))
+  (let ((match-fun (om--match-make-lambda-form pattern node)))
     (funcall match-fun node)))
 
 ;;; generalized tree modification
@@ -4161,7 +4199,7 @@ and the variable `it' is bound to the original children."
   `(cl-labels
        ((rec
          (node)
-         (if (om--is-type 'plain-text node) node
+         (if (not (om--is-branch-node node)) node
            (om--map-children-strict*
              (->> (--map (rec it) it)
                   (funcall (lambda (it) ,form)))
@@ -4271,8 +4309,12 @@ in the immediate, top level children of NODE."
   (if pattern
       (-if-let (targets (om-match pattern node))
           (om--modify-children node
-            (if (not (member node targets)) it
-              (om--insert-at index node* it t)))
+            (--map-when
+             (member it targets)
+             (om--map-children-strict*
+               (om--insert-at index node* it t)
+               it)
+             it))
         node)
     (om--map-children-strict* (om--insert-at index node* it t) node)))
 
@@ -4331,8 +4373,12 @@ in the immediate, top level children of NODE."
   (if pattern
       (-if-let (targets (om-match pattern node))
           (om--modify-children node
-            (if (not (member node targets)) it
-              (om--splice-at index nodes* it t)))
+            (--map-when
+             (member it targets)
+             (om--map-children-strict*
+               (om--splice-at index nodes* it t)
+               it)
+             it))
         node)
     (om--map-children-strict* (om--splice-at index nodes* it t) node)))
 

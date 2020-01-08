@@ -4196,7 +4196,25 @@
     => (:result "* headline one"
                 "** TODO headline two"
                 "** headline three"
-                "** DONE headline four"))
+                "** DONE headline four")
+
+    (:buffer "* headline"
+             ":PROPERTIES:"
+             ":Effort:   0:30"
+             ":END:")
+    (:comment "Match the literal property-drawer node and map the"
+              "node-property inside if the property-drawer exists")
+    (let ((hl (om-parse-this-headline)))
+      (-if-let (pd (om-headline-get-properties-drawer hl))
+          (->> hl
+               (om-match-map* `(,pd node-property)
+                              (om-set-property :value "1:30" it))
+               (om-to-trimmed-string))
+        (print "...or do something else if no drawer")))
+    => (:result "* headline"
+                ":PROPERTIES:"
+                ":Effort:   1:30"
+                ":END:"))
   
   (defexamples-content om-match-mapcat
     nil

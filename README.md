@@ -4978,7 +4978,7 @@ Use pattern-matching to selectively perform operations on nodes in trees.
 
 Return a list of child nodes matching **`pattern`** in **`node`**.
 
-**`pattern`** is a list of form `([slicer [arg1] [arg2]] sub1 [sub2 ...])`.
+**`pattern`** is a list like `([slicer [arg1] [arg2]] [pnode] sub1 [sub2 ...])`.
 
 `slicer` is an optional prefix to the pattern describing how many
 and which matches to return. If not given, all matches are returned.
@@ -4997,6 +4997,11 @@ Possible values are:
     integers, the indices refer to the same counterparts as described in
     `:nth`. If `arg1` and `arg2` are equal, this slicer has the same
     behavior as `:nth`.
+
+`pnode` is an optional literal node to be matched. If given, the
+matching process will start within `pnode` wherever it happens to be in
+**`node`**. This is useful for 'reusing' previous matches without repeating
+the same pattern.
 
 `subx` denotes subpatterns that that match nodes in the parse tree.
 Subpatterns may either be wildcards or conditions.
@@ -5205,6 +5210,26 @@ which will replace the original.
  ;      ** TODO headline two
  ;      ** headline three
  ;      ** DONE headline four"
+
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :Effort:   0:30
+; :END:
+
+;; Match the literal property-drawer node and map the node-property inside if
+;; the property-drawer exists
+(let ((hl (om-parse-this-headline)))
+  (-if-let (pd (om-headline-get-properties-drawer hl))
+      (->> hl (om-match-map* (\` ((\, pd)
+				  node-property))
+			     (om-set-property :value "1:30" it))
+	   (om-to-trimmed-string))
+    (print "...or do something else if no drawer")))
+ ;; => "* headline
+ ;      :PROPERTIES:
+ ;      :Effort:   1:30
+ ;      :END:"
 
 ```
 
