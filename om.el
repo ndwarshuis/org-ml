@@ -4579,6 +4579,11 @@ Return NODE."
           (--each (-partition 2 props) (apply #'overlay-put o* it)))))
     (-each os #'apply-overlays)))
 
+(defun om--clone-node (node)
+  "Return copy of NODE, which may be a circular tree."
+  (let ((print-circle t))
+    (->> node (format "%S") (read))))
+
 (om--defun* om-update (fun node)
   "Replace NODE in the current buffer with a new one.
 FUN is a unary function that takes NODE and returns a modified NODE.
@@ -4595,12 +4600,14 @@ current buffer."
                                :props (overlay-properties it)))
                   (list 'apply 'om--apply-overlays)))
          ;; do all computation before modifying buffer
+         (node0 (om--clone-node node))
          (node* (funcall fun node)))
-    ;; hacky way to add overlays to undo tree
-    (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
-    (delete-region begin end)
-    (om-insert begin node*)
-    nil))
+    (unless (equal node0 node*)
+      ;; hacky way to add overlays to undo tree
+      (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
+      (delete-region begin end)
+      (om-insert begin node*)
+      nil)))
 
 ;; generate all update functions for corresponding parse functions
 ;; since all take function args, also generate anaphoric forms

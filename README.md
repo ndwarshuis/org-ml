@@ -3925,15 +3925,6 @@ Return the children of **`branch-node`** as a list.
      (-map (function om-get-type)))
  ;; => nil
 
-;; Given the following contents:
-; #+CALL: ktulu()
-
-;; Throw error when attempting to get contents of a non-branch node
-(->> (om-parse-this-element)
-     (om-get-children)
-     (-map (function om-get-type)))
-Error
-
 ```
 
 #### om-set-children `(children branch-node)`
@@ -3961,15 +3952,6 @@ on the type of `node`.
      (om-to-trimmed-string))
  ;; => "* headline
  ;      ** only me"
-
-;; Given the following contents:
-; #+CALL: ktulu()
-
-;; Throw error when attempting to set children of a non-branch nodes
-(->> (om-parse-this-element)
-     (om-set-children "nil by mouth")
-     (om-to-trimmed-string))
-Error
 
 ```
 
@@ -4000,15 +3982,6 @@ returns a modified list of children.
  ;; => "* headline
  ;      *** subheadline"
 
-;; Given the following contents:
-; #+CALL: ktulu()
-
-;; Throw error when attempting to map children of a non-branch node
-(->> (om-parse-this-element)
-     (om-map-children (function ignore))
-     (om-to-trimmed-string))
-Error
-
 ```
 
 #### om-is-childless `(branch-node)`
@@ -4030,14 +4003,6 @@ Return t if **`branch-node`** is empty.
 (->> (om-parse-this-headline)
      (om-is-childless))
  ;; => t
-
-;; Given the following contents:
-; #+CALL: ktulu()
-
-;; Throw error when attempting to determine if non-branch node is empty
-(->> (om-parse-this-element)
-     (om-is-childless))
-Error
 
 ```
 
@@ -5184,8 +5149,8 @@ which will replace the original.
 ;; Selectively mark headlines as DONE
 (->> (om-parse-this-subtree)
      (om-match-map '(headline)
-		   (lambda (it)
-		     (om-set-property :todo-keyword "DONE" it)))
+       (lambda (it)
+	 (om-set-property :todo-keyword "DONE" it)))
      (om-to-trimmed-string))
  ;; => "* headline one
  ;      ** DONE headline two
@@ -5194,7 +5159,7 @@ which will replace the original.
 
 (->> (om-parse-this-subtree)
      (om-match-map* '(:first headline)
-		    (om-set-property :todo-keyword "DONE" it))
+       (om-set-property :todo-keyword "DONE" it))
      (om-to-trimmed-string))
  ;; => "* headline one
  ;      ** DONE headline two
@@ -5203,8 +5168,8 @@ which will replace the original.
 
 (->> (om-parse-this-subtree)
      (om-match-map '(:last headline)
-		   (-partial (function om-set-property)
-			     :todo-keyword "DONE"))
+       (-partial (function om-set-property)
+		 :todo-keyword "DONE"))
      (om-to-trimmed-string))
  ;; => "* headline one
  ;      ** TODO headline two
@@ -5223,7 +5188,7 @@ which will replace the original.
   (-if-let (pd (om-headline-get-properties-drawer hl))
       (->> hl (om-match-map* (\` ((\, pd)
 				  node-property))
-			     (om-set-property :value "1:30" it))
+		(om-set-property :value "1:30" it))
 	   (om-to-trimmed-string))
     (print "...or do something else if no drawer")))
  ;; => "* headline
@@ -5248,8 +5213,8 @@ nodes which will be spliced in place of the original node.
 
 (->> (om-parse-this-subtree)
      (om-match-mapcat* '(:first headline)
-		       (list (om-build-headline! :title-text "1.5" :level 2)
-			     it))
+       (list (om-build-headline! :title-text "1.5" :level 2)
+	     it))
      (om-to-trimmed-string))
  ;; => "* one
  ;      ** 1.5
@@ -5567,8 +5532,8 @@ current buffer.
 
 (->> (om-parse-this-headline)
      (om-update* (->> (om-match-map '(:many item)
-				    (function om-item-toggle-checkbox)
-				    it)
+			(function om-item-toggle-checkbox)
+			it)
 		      (om-headline-update-item-statistics))))
  ;; Output these buffer contents
  ;; $> "* win grammy [3/3]
