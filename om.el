@@ -4799,11 +4799,13 @@ current buffer."
                   (list 'apply 'om--apply-overlays)))
          ;; do all computation before modifying buffer
          (node* (funcall fun node)))
-    ;; hacky way to add overlays to undo tree
-    (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
-    (delete-region begin end)
-    (om-insert begin node*)
-    nil))
+    ;; do nothing if no changes are made
+    (unless (equal node* node)
+      ;; hacky way to add overlays to undo tree
+      (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
+      (delete-region begin end)
+      (om-insert begin node*)
+      nil)))
 
 ;; generate all update functions for corresponding parse functions
 ;; since all take function args, also generate anaphoric forms
