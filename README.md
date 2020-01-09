@@ -1494,23 +1494,26 @@ The following properties are settable:
 Build a planning element node.
 
 The following properties are settable:
-- **`closed`**:  a zero-range, inactive timestamp node
-- **`deadline`**:  a zero-range, inactive timestamp node
-- **`scheduled`**:  a zero-range, inactive timestamp node
+- **`closed`**:  a zero-range, active timestamp node
+- **`deadline`**:  a zero-range, active timestamp node
+- **`scheduled`**:  a zero-range, active timestamp node
 - **`post-blank`**: a non-negative integer
 
 ```el
-(->> (om-build-planning :closed (om-build-timestamp! '(2019 1 1)))
+(->> (om-build-planning :closed (om-build-timestamp! '(2019 1 1)
+						     :active t))
      (om-to-trimmed-string))
- ;; => "CLOSED: [2019-01-01 Tue]"
+ ;; => "CLOSED: <2019-01-01 Tue>"
 
-(->> (om-build-planning :scheduled (om-build-timestamp! '(2019 1 1)))
+(->> (om-build-planning :scheduled (om-build-timestamp! '(2019 1 1)
+							:active t))
      (om-to-trimmed-string))
- ;; => "SCHEDULED: [2019-01-01 Tue]"
+ ;; => "SCHEDULED: <2019-01-01 Tue>"
 
-(->> (om-build-planning :deadline (om-build-timestamp! '(2019 1 1)))
+(->> (om-build-planning :deadline (om-build-timestamp! '(2019 1 1)
+						       :active t))
      (om-to-trimmed-string))
- ;; => "DEADLINE: [2019-01-01 Tue]"
+ ;; => "DEADLINE: <2019-01-01 Tue>"
 
 ```
 
@@ -2029,16 +2032,16 @@ matter.
 ```el
 (->> (om-build-planning! :closed '(2019 1 1))
      (om-to-trimmed-string))
- ;; => "CLOSED: [2019-01-01 Tue]"
+ ;; => "CLOSED: <2019-01-01 Tue>"
 
 (->> (om-build-planning! :closed '(2019 1 1)
 			  :scheduled '(2018 1 1))
      (om-to-trimmed-string))
- ;; => "SCHEDULED: [2018-01-01 Mon] CLOSED: [2019-01-01 Tue]"
+ ;; => "SCHEDULED: <2018-01-01 Mon> CLOSED: <2019-01-01 Tue>"
 
 (->> (om-build-planning! :closed '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
      (om-to-trimmed-string))
- ;; => "CLOSED: [2019-01-01 Tue +1m -1d]"
+ ;; => "CLOSED: <2019-01-01 Tue +1m -1d>"
 
 ```
 
@@ -3128,14 +3131,14 @@ is the same as that described in [`om-build-planning!`](#om-build-planning-key-c
 ```el
 ;; Given the following contents:
 ; * dummy
-; CLOSED: [2019-01-01 Tue]
+; CLOSED: <2019-01-01 Tue>
 
 ;; Change an existing timestamp in planning
 (->> (om-parse-this-headline)
      (om-headline-get-planning)
      (om-planning-set-timestamp! :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
      (om-to-trimmed-string))
- ;; => "CLOSED: [2019-01-02 Wed +2m -1d]"
+ ;; => "CLOSED: <2019-01-02 Wed +2m -1d>"
 
 ;; Add a new timestamp and remove another
 (->> (om-parse-this-headline)
@@ -3143,7 +3146,7 @@ is the same as that described in [`om-build-planning!`](#om-build-planning-key-c
      (om-planning-set-timestamp! :deadline '(2112 1 1))
      (om-planning-set-timestamp! :closed nil)
      (om-to-trimmed-string))
- ;; => "DEADLINE: [2112-01-01 Fri]"
+ ;; => "DEADLINE: <2112-01-01 Fri>"
 
 ```
 

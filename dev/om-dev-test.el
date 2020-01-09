@@ -418,10 +418,10 @@ be parsed to TYPE."
 
 (ert-deftest om--test-parse-inversion/planning ()
   (om--test-contents-parse-inversion 'planning #'om-parse-element-at
-    (list "CLOSED: [2019-01-01 Tue]\n"
-          "CLOSED: [2019-01-01 Tue +1d]\n"
-          "CLOSED: [2019-01-01 Tue -1y]\n"
-          "CLOSED: [2019-01-01 Tue +1d -1y]\n")
+    (list "CLOSED: <2019-01-01 Tue>\n"
+          "CLOSED: <2019-01-01 Tue +1d>\n"
+          "CLOSED: <2019-01-01 Tue -1y>\n"
+          "CLOSED: <2019-01-01 Tue +1d -1y>\n")
     "* dummy\n"))
 
 (ert-deftest om--test-parse-inversion/src-block ()
@@ -750,8 +750,8 @@ be parsed to TYPE."
 
 (ert-deftest om--planning/valid-props ()
   (should-have-equal-properties
-   (om-build-planning :closed (om-build-timestamp! '(2019 1 1)))
-   (->> (om--from-string "* dummy\nCLOSED: [2019-01-01 Tue]")
+   (om-build-planning :closed (om-build-timestamp! '(2019 1 1) :active t))
+   (->> (om--from-string "* dummy\nCLOSED: <2019-01-01 Tue>")
         (om--get-descendent '(0 0)))))
 
 (ert-deftest om--src-block/valid-props ()

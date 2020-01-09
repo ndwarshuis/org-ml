@@ -1063,7 +1063,7 @@ FUN is a predicate function that takes one argument."
 (defun om--is-valid-planning-timestamp (x)
   "Return t if X is an allowed value for a planning node timestamp property."
   (or (null x) (and (om--is-type 'timestamp x)
-                    (om--property-is-eq :type 'inactive x))))
+                    (om--property-is-eq :type 'active x))))
 
 (defun om--is-valid-entity-name (x)
   "Return t if X is an allowed value for an entity node name property."
@@ -1366,7 +1366,7 @@ bounds."
                            :string-list t
                            :type-desc "a list of oneline strings"))
           (planning (list :pred #'om--is-valid-planning-timestamp
-                          :type-desc "a zero-range, inactive timestamp node"))
+                          :type-desc "a zero-range, active timestamp node"))
           (ts-unit (list :pred #'om--is-valid-timestamp-unit
                          :type-desc '("nil or a symbol from `year' `month'"
                                       "`week' `day', or `hour'"))))
@@ -2292,6 +2292,7 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
                (lambda (it) (memq it '(&warning &repeater)))
                planning-list)))
       (om-build-timestamp! (car p)
+                           :active t
                            :warning (alist-get '&warning p)
                            :repeater (alist-get '&repeater p)))))
 

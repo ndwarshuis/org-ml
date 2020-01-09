@@ -500,15 +500,15 @@
       => ":key:      val")
 
     (defexamples om-build-planning
-      (->> (om-build-planning :closed (om-build-timestamp! '(2019 1 1)))
+      (->> (om-build-planning :closed (om-build-timestamp! '(2019 1 1) :active t))
            (om-to-trimmed-string))
-      => "CLOSED: [2019-01-01 Tue]"
-      (->> (om-build-planning :scheduled (om-build-timestamp! '(2019 1 1)))
+      => "CLOSED: <2019-01-01 Tue>"
+      (->> (om-build-planning :scheduled (om-build-timestamp! '(2019 1 1) :active t))
            (om-to-trimmed-string))
-      => "SCHEDULED: [2019-01-01 Tue]"
-      (->> (om-build-planning :deadline (om-build-timestamp! '(2019 1 1)))
+      => "SCHEDULED: <2019-01-01 Tue>"
+      (->> (om-build-planning :deadline (om-build-timestamp! '(2019 1 1) :active t))
            (om-to-trimmed-string))
-      => "DEADLINE: [2019-01-01 Tue]")
+      => "DEADLINE: <2019-01-01 Tue>")
 
     (defexamples om-build-src-block
       (->> (om-build-src-block)
@@ -780,14 +780,14 @@
     (defexamples om-build-planning!
       (->> (om-build-planning! :closed '(2019 1 1))
            (om-to-trimmed-string))
-      => "CLOSED: [2019-01-01 Tue]"
+      => "CLOSED: <2019-01-01 Tue>"
       (->> (om-build-planning! :closed '(2019 1 1)
                                :scheduled '(2018 1 1))
            (om-to-trimmed-string))
-      => "SCHEDULED: [2018-01-01 Mon] CLOSED: [2019-01-01 Tue]"
+      => "SCHEDULED: <2018-01-01 Mon> CLOSED: <2019-01-01 Tue>"
       (->> (om-build-planning! :closed '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
            (om-to-trimmed-string))
-      => "CLOSED: [2019-01-01 Tue +1m -1d]")
+      => "CLOSED: <2019-01-01 Tue +1m -1d>")
 
     (defexamples om-build-property-drawer!
       (->> (om-build-property-drawer! '(key val))
@@ -1237,13 +1237,13 @@
       => ":kee:      vahl"
 
       (:buffer "* dummy"
-               "CLOSED: [2019-01-01 Tue]")
+               "CLOSED: <2019-01-01 Tue>")
       (->> (om-parse-this-headline)
            (om-headline-get-planning)
            (om-set-property
-            :closed (om-build-timestamp! '(2019 1 2)))
+            :closed (om-build-timestamp! '(2019 1 2) :active t))
            (om-to-trimmed-string))
-      => "CLOSED: [2019-01-02 Wed]"
+      => "CLOSED: <2019-01-02 Wed>"
 
       (:buffer "#+BEGIN_special"
                "#+END_special")
@@ -2507,14 +2507,14 @@
     (defexamples-content om-planning-set-timestamp!
       nil
       (:buffer "* dummy"
-               "CLOSED: [2019-01-01 Tue]")
+               "CLOSED: <2019-01-01 Tue>")
       (:comment "Change an existing timestamp in planning")
       (->> (om-parse-this-headline)
            (om-headline-get-planning)
            (om-planning-set-timestamp!
             :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
            (om-to-trimmed-string))
-      => "CLOSED: [2019-01-02 Wed +2m -1d]"
+      => "CLOSED: <2019-01-02 Wed +2m -1d>"
       (:comment "Add a new timestamp and remove another")
       (->> (om-parse-this-headline)
            (om-headline-get-planning)
@@ -2523,7 +2523,7 @@
            (om-planning-set-timestamp!
             :closed nil)
            (om-to-trimmed-string))
-      => "DEADLINE: [2112-01-01 Fri]"))
+      => "DEADLINE: <2112-01-01 Fri>"))
 
   (def-example-subgroup "Statistics Cookie"
     nil
