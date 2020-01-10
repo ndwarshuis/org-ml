@@ -3294,6 +3294,28 @@
            (om-to-trimmed-string))
       => "")
 
+    (defexamples-content om-headline-set-planning
+      nil
+      (:buffer "* headline")
+      (->> (om-parse-this-headline)
+           (om-headline-set-planning (om-build-planning! :closed '(2019 1 1)))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: <2019-01-01 Tue>")
+      (:buffer "* headline"
+                  "CLOSED: <2019-01-01 Tue>")
+      (->> (om-parse-this-headline)
+           (om-headline-set-planning (om-build-planning! :scheduled '(2019 1 1)))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "SCHEDULED: <2019-01-01 Tue>")
+      (:buffer "* headline"
+                  "CLOSED: <2019-01-01 Tue>")
+      (->> (om-parse-this-headline)
+           (om-headline-set-planning nil)
+           (om-to-trimmed-string))
+      => "* headline")
+
     (defexamples-content om-headline-get-subheadlines
       nil
       (:buffer "* headline 1"

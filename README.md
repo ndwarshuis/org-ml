@@ -406,6 +406,7 @@ Set, get, and map the children of branch nodes.
 * [om-headline-get-node-properties](#om-headline-get-node-properties-headline) `(headline)`
 * [om-headline-get-properties-drawer](#om-headline-get-properties-drawer-headline) `(headline)`
 * [om-headline-get-planning](#om-headline-get-planning-headline) `(headline)`
+* [om-headline-set-planning](#om-headline-set-planning-planning-headline) `(planning headline)`
 * [om-headline-get-subheadlines](#om-headline-get-subheadlines-headline) `(headline)`
 * [om-headline-get-section](#om-headline-get-section-headline) `(headline)`
 * [om-headline-get-path](#om-headline-get-path-headline) `(headline)`
@@ -4206,6 +4207,41 @@ Return the planning node in **`headline`** or nil if none.
      (om-headline-get-planning)
      (om-to-trimmed-string))
  ;; => ""
+
+```
+
+#### om-headline-set-planning `(planning headline)`
+
+Return **`headline`** node with planning components set to **`planning`** node.
+
+```el
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-set-planning (om-build-planning! :closed '(2019 1 1)))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      CLOSED: <2019-01-01 Tue>"
+
+;; Given the following contents:
+; * headline
+; CLOSED: <2019-01-01 Tue>
+
+(->> (om-parse-this-headline)
+     (om-headline-set-planning (om-build-planning! :scheduled '(2019 1 1)))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      SCHEDULED: <2019-01-01 Tue>"
+
+;; Given the following contents:
+; * headline
+; CLOSED: <2019-01-01 Tue>
+
+(->> (om-parse-this-headline)
+     (om-headline-set-planning nil)
+     (om-to-trimmed-string))
+ ;; => "* headline"
 
 ```
 
