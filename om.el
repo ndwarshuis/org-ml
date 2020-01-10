@@ -2334,7 +2334,7 @@ a modified list of headlines."
                           (funcall fun))))
        (cond
         ((and section subheadlines) (cons section subheadlines))
-        (section section)
+        (section (list section))
         (t subheadlines))))
    headline))
 
