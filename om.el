@@ -2321,7 +2321,7 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
    (om--headline-get-section headline)
    (--first (om--is-type 'property-drawer it))))
 
-(defun om--headline-map-subheadlines (fun headline)
+(om--defun* om--headline-map-subheadlines (fun headline)
   "Return HEADLINE node with child headline nodes modified by FUN.
 
 FUN is a unary function that takes a list of headlines and returns
