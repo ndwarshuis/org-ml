@@ -3575,7 +3575,11 @@ returned."
   (if planning
       (if (om-headline-get-section headline)
           (om--headline-map-section*
-            (om--map-children* (cons planning it) it)
+            (om--map-children*
+              (if (om-is-type 'planning (car it))
+                  (cons planning (cdr it))
+                (cons planning it))
+              it)
             headline)
         (om--map-children*
           (-> planning (om-build-section) (cons it))
