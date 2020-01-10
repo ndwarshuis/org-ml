@@ -2351,7 +2351,7 @@ modified section node."
            (subheadlines (--filter (om--is-type 'headline it) children)))
        (cond
         ((and section subheadlines) (cons section subheadlines))
-        (section section)
+        (section (list section))
         (t subheadlines))))
    headline))
 
@@ -3572,12 +3572,16 @@ returned."
 
 (defun om-headline-set-planning (planning headline)
   "Return HEADLINE node with planning components set to PLANNING node."
-  (if (om-headline-get-section headline)
-      (om--headline-map-section*
-        (om--map-children* (cons planning it) it)
-        headline)
-    (om--map-children*
-      (-> planning (om-build-section) (cons it))
+  (if planning
+      (if (om-headline-get-section headline)
+          (om--headline-map-section*
+            (om--map-children* (cons planning it) it)
+            headline)
+        (om--map-children*
+          (-> planning (om-build-section) (cons it))
+          headline))
+    (om--headline-map-section*
+      (om--map-children* (--remove (om--is-type 'planning it) it) it)
       headline)))
 
 (defun om-headline-get-path (headline)
