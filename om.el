@@ -2338,6 +2338,23 @@ a modified list of headlines."
         (t subheadlines))))
    headline))
 
+(om--defun* om--headline-map-section (fun headline)
+  "Return HEADLINE node with child section node modified by FUN.
+
+FUN is a unary function that takes a section node and returns a
+modified section node."
+  (om--map-children
+   (lambda (children)
+     (let ((section (-some->> children
+                              (assoc 'section)
+                              (funcall fun)))
+           (subheadlines (--filter (om--is-type 'headline it) children)))
+       (cond
+        ((and section subheadlines) (cons section subheadlines))
+        (section section)
+        (t subheadlines))))
+   headline))
+
 (defun om--headline-subtree-shift-level (n headline)
   "Return HEADLINE node with its level shifted by N.
 Also shift all HEADLINE node's child headline nodes by N.
@@ -3552,6 +3569,16 @@ returned."
   (-some->> (om--headline-get-section headline)
             (om--get-children)
             (--first (om--is-type 'planning it))))
+
+(defun om-headline-set-planning (planning headline)
+  "Return HEADLINE node with planning components set to PLANNING node."
+  (if (om-headline-get-section headline)
+      (om--headline-map-section*
+        (om--map-children* (cons planning it) it)
+        headline)
+    (om--map-children*
+      (-> planning (om-build-section) (cons it))
+      headline)))
 
 (defun om-headline-get-path (headline)
   "Return tree path of HEADLINE node.
