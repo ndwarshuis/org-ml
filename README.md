@@ -17,7 +17,7 @@ git clone https://github.com/ndwarshuis/om.el
 Then require in your emacs config:
 
 ```
-(require 'om.el)
+(require 'om)
 ```
 
 # Motivation
