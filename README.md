@@ -258,6 +258,7 @@ Build new nodes.
 
 ### Miscellaneous Builders
 
+* [om-clone-node](#om-clone-node-node) `(node)`
 * [om-build-secondary-string!](#om-build-secondary-string-string) `(string)`
 * [om-build-table-row-hline](#om-build-table-row-hline-key-post-blank) `(&key post-blank)`
 * [om-build-timestamp-diary](#om-build-timestamp-diary-form-key-post-blank) `(form &key post-blank)`
@@ -1903,6 +1904,32 @@ The following properties are settable:
 
 
 ### Miscellaneous Builders
+
+#### om-clone-node `(node)`
+
+Return copy of **`node`**, which may be a circular tree.
+
+This is only necessary to copy nodes parsed using any of parsing
+functions from this this package (example, `om-parse-this-headline`)
+because these retain parent references which makes the node a circular
+list. None of the builder functions add parent references, so
+`copy-tree` will be a faster alternative to this function.
+
+```el
+;; Given the following contents:
+; dolly
+
+(let* ((node1 (om-parse-this-element))
+       (node2 (om-clone-node node1)))
+  (equal node1 node2))
+ ;; => t
+
+(let* ((node1 (om-parse-this-element))
+       (node2 (om-clone-node node1)))
+  (eq node1 node2))
+ ;; => nil
+
+```
 
 #### om-build-secondary-string! `(string)`
 

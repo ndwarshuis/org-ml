@@ -2204,7 +2204,13 @@ performed. TABLE is used to get the table width."
 
 ;; ...and this is here because I can't think of where else to put it
 (defun om-clone-node (node)
-  "Return copy of NODE, which may be a circular tree."
+  "Return copy of NODE, which may be a circular tree.
+
+This is only necessary to copy nodes parsed using any of parsing
+functions from this this package (example, `om-parse-this-headline')
+because these retain parent references which makes the node a circular
+list. None of the builder functions add parent references, so
+`copy-tree' will be a faster alternative to this function."
   (let ((print-circle t))
     (->> node (format "%S") (read))))
 
