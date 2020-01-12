@@ -4582,15 +4582,19 @@ are nil, use `point-min' and `point-max' respectively."
   (let ((begin (or begin (point-min)))
         (end (or end (point-max))))
     (save-excursion
-      (goto-char begin)
+      (goto-char end)
+      ;; goto last toplevel headline
+      (while (and (/= ?* (char-after)) (outline-previous-heading)))
+      ;; if on a headline, parse it
       (when (= ?* (char-after))
         (om-update-this-subtree fun))
-      (let ((cur-point begin))
-        (org-forward-heading-same-level 1 t)
-        (while (/= (point) cur-point)
+      ;; parse the rest of the headlines
+      (let ((cur-point (point)))
+        (org-backward-heading-same-level 1 t)
+        (while (and (/= (point) cur-point) (<= begin (point)))
           (om-update-this-subtree fun)
           (setq cur-point (point))
-          (org-forward-heading-same-level 1 t))))))
+          (org-backward-heading-same-level 1 t))))))
 
 (om--defun* om-do-subtrees (fun)
   "Update all toplevel subtrees in the current buffer using FUN.
