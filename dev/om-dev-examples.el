@@ -3254,8 +3254,8 @@
                 "** headline 3")
       (->> (om-parse-this-subtree)
            (om-headline-get-section)
-           (om-to-trimmed-string))
-      => "sectional stuff"
+           (-map #'om-to-trimmed-string))
+      => '("sectional stuff")
       (:buffer "* headline 1"
                 "** headline 2"
                 "** headline 3")
@@ -3263,6 +3263,37 @@
            (om-headline-get-section)
            (om-to-trimmed-string))
       => "")
+
+    (defexamples-content om-headline-set-section
+      nil
+      (:buffer "* headline")
+      (->> (om-parse-this-subtree)
+           (om-headline-set-section (list (om-build-paragraph! "x-section")))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "x-section")
+      (:buffer "* headline"
+               "x-section")
+      (->> (om-parse-this-subtree)
+           (om-headline-set-section (list (om-build-paragraph! "x-guard")))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "x-guard")
+      (->> (om-parse-this-subtree)
+           (om-headline-set-section nil)
+           (om-to-trimmed-string))
+      => "* headline")
+
+    (defexamples-content om-headline-map-section
+      nil
+      (:buffer "* headline"
+               "x-section")
+      (->> (om-parse-this-subtree)
+           (om-headline-map-section* (cons (om-build-planning! :closed '(2019 1 1)) it))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: <2019-01-01 Tue>"
+                  "x-section"))
 
     (defexamples-content om-headline-get-subheadlines
       nil
@@ -3280,6 +3311,36 @@
            (om-headline-get-subheadlines)
            (-map #'om-to-trimmed-string))
       => nil)
+
+    (defexamples-content om-headline-set-subheadlines
+      nil
+      (:buffer "* headline 1"
+                "sectional stuff"
+                "** headline 2"
+                "** headline 3")
+      (->> (om-parse-this-subtree)
+           (om-headline-set-subheadlines (list (om-build-headline! :level 2 :title-text "headline x")))
+           (om-to-trimmed-string))
+      => (:result "* headline 1"
+                  "sectional stuff"
+                  "** headline x")
+      (->> (om-parse-this-subtree)
+           (om-headline-set-subheadlines nil)
+           (om-to-trimmed-string))
+      => (:result "* headline 1"
+                  "sectional stuff"))
+
+    (defexamples-content om-headline-map-subheadlines
+      nil
+      (:buffer "* headline 1"
+                "** headline 2"
+                "** headline 3")
+      (->> (om-parse-this-subtree)
+           (om-headline-map-subheadlines* (--map (om-set-property :todo-keyword "TODO" it) it))
+           (om-to-trimmed-string))
+      => (:result "* headline 1"
+                  "** TODO headline 2"
+                  "** TODO headline 3"))
 
     (defexamples-content om-headline-get-planning
       nil
@@ -3316,6 +3377,18 @@
            (om-headline-set-planning nil)
            (om-to-trimmed-string))
       => "* headline")
+
+    (defexamples-content om-headline-map-planning
+      nil
+      (:buffer "* headline"
+                  "CLOSED: <2019-01-01 Tue>")
+      (->> (om-parse-this-headline)
+           (om-headline-map-planning*
+             (om-map-property* :closed
+               (om-timestamp-shift 1 'day it) it))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: <2019-01-02 Wed>"))
 
     (defexamples-content om-headline-get-node-properties
       nil

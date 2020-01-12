@@ -3499,6 +3499,31 @@ The unwrap operation will be done with `om-unwrap-deep'."
 
 ;;; headline
 
+(defun om-headline-get-section (headline)
+  "Return children of section node in HEADLINE node or nil if none."
+  (-some->> (om--get-children headline)
+            (assoc 'section)
+            (om-get-children)))
+
+(defun om-headline-set-section (children headline)
+  "Return HEADLINE with section node containing CHILDREN.
+If CHILDREN is nil, return HEADLINE with no section node."
+  (om--map-children*
+    (let ((subheadlines (--filter (om--is-type 'headline it) it)))
+      (if children
+          (cons (apply #'om-build-section children) subheadlines)
+        subheadlines))
+    headline))
+
+(om--defun* om-headline-map-section (fun headline)
+  "Return HEADLINE node with child section node modified by FUN.
+
+FUN is a unary function that takes a section node's children as a list
+returns a modified child list."
+  (let ((children* (->> (om-headline-get-section headline)
+                        (funcall fun))))
+    (om-headline-set-section children* headline)))
+
 (defun om-headline-get-subheadlines (headline)
   "Return list of child headline nodes in HEADLINE node or nil if none."
   (-some->> (om--get-children headline)
@@ -3521,25 +3546,6 @@ a modified list of headlines."
                             (funcall fun))))
     (om-headline-set-subheadlines subheadlines* headline)))
 
-(defun om-headline-get-section (headline)
-  "Return child section node within HEADLINE node or nil if none."
-  (-some->> (om--get-children headline) (assoc 'section)))
-
-(defun om-headline-set-section (section headline)
-  "Return HEADLINE with child section node set to SECTION."
-  (om--map-children*
-    (cons section (--filter (om--is-type 'headline it) it))
-    headline))
-
-(om--defun* om-headline-map-section (fun headline)
-  "Return HEADLINE node with child section node modified by FUN.
-
-FUN is a unary function that takes a section node and returns a
-modified section node."
-  (let ((section* (->> (om-headline-get-section headline)
-                       (funcall fun))))
-    (om-headline-set-section section* headline)))
-
 (defun om-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
   (-some->> (om-headline-get-section headline)
@@ -3551,17 +3557,15 @@ modified section node."
   (if planning
       (om-headline-map-section*
        ;; if no section, build new section with planning in it
-       (if (not it) (om-build-section planning)
+       (if (not it) (list planning)
          ;; if section, test if planning already in front and override
          ;; as needed
-         (om--map-children*
-           (let ((r (if (om-is-type 'planning (car it)) (cdr it) it)))
-             (cons planning r))
-           it))
+         (let ((r (if (om-is-type 'planning (car it)) (cdr it) it)))
+           (cons planning r)))
        headline)
     ;; if `PLANNING' is nil, remove planning from section if present
     (om-headline-map-section*
-     (om--map-children* (--remove (om--is-type 'planning it) it) it)
+     (--remove (om--is-type 'planning it) it)
      headline)))
 
 (om--defun* om-headline-map-planning (fun headline)

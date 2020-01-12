@@ -404,9 +404,14 @@ Set, get, and map the children of branch nodes.
 ### Headline
 
 * [om-headline-get-section](#om-headline-get-section-headline) `(headline)`
+* [om-headline-set-section](#om-headline-set-section-children-headline) `(children headline)`
+* [om-headline-map-section](#om-headline-map-section-fun-headline) `(fun headline)`
 * [om-headline-get-subheadlines](#om-headline-get-subheadlines-headline) `(headline)`
+* [om-headline-set-subheadlines](#om-headline-set-subheadlines-subheadlines-headline) `(subheadlines headline)`
+* [om-headline-map-subheadlines](#om-headline-map-subheadlines-fun-headline) `(fun headline)`
 * [om-headline-get-planning](#om-headline-get-planning-headline) `(headline)`
 * [om-headline-set-planning](#om-headline-set-planning-planning-headline) `(planning headline)`
+* [om-headline-map-planning](#om-headline-map-planning-fun-headline) `(fun headline)`
 * [om-headline-get-node-properties](#om-headline-get-node-properties-headline) `(headline)`
 * [om-headline-get-properties-drawer](#om-headline-get-properties-drawer-headline) `(headline)`
 * [om-headline-get-path](#om-headline-get-path-headline) `(headline)`
@@ -4131,7 +4136,7 @@ The unwrap operation will be done with [`om-unwrap-deep`](#om-unwrap-deep-object
 
 #### om-headline-get-section `(headline)`
 
-Return child section node within **`headline`** node or nil if none.
+Return children of section node in **`headline`** node or nil if none.
 
 ```el
 ;; Given the following contents:
@@ -4142,8 +4147,8 @@ Return child section node within **`headline`** node or nil if none.
 
 (->> (om-parse-this-subtree)
      (om-headline-get-section)
-     (om-to-trimmed-string))
- ;; => "sectional stuff"
+     (-map (function om-to-trimmed-string)))
+ ;; => '("sectional stuff")
 
 ;; Given the following contents:
 ; * headline 1
@@ -4154,6 +4159,60 @@ Return child section node within **`headline`** node or nil if none.
      (om-headline-get-section)
      (om-to-trimmed-string))
  ;; => ""
+
+```
+
+#### om-headline-set-section `(children headline)`
+
+Return **`headline`** with section node containing **`children`**.
+If **`children`** is nil, return **`headline`** with no section node.
+
+```el
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-subtree)
+     (om-headline-set-section (list (om-build-paragraph! "x-section")))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      x-section"
+
+;; Given the following contents:
+; * headline
+; x-section
+
+(->> (om-parse-this-subtree)
+     (om-headline-set-section (list (om-build-paragraph! "x-guard")))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      x-guard"
+
+(->> (om-parse-this-subtree)
+     (om-headline-set-section nil)
+     (om-to-trimmed-string))
+ ;; => "* headline"
+
+```
+
+#### om-headline-map-section `(fun headline)`
+
+Return **`headline`** node with child section node modified by **`fun`**.
+
+**`fun`** is a unary function that takes a section node's children as a list
+returns a modified child list.
+
+```el
+;; Given the following contents:
+; * headline
+; x-section
+
+(->> (om-parse-this-subtree)
+     (om-headline-map-section* (cons (om-build-planning! :closed '(2019 1 1))
+				     it))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      CLOSED: <2019-01-01 Tue>
+ ;      x-section"
 
 ```
 
@@ -4181,6 +4240,55 @@ Return list of child headline nodes in **`headline`** node or nil if none.
      (om-headline-get-subheadlines)
      (-map (function om-to-trimmed-string)))
  ;; => nil
+
+```
+
+#### om-headline-set-subheadlines `(subheadlines headline)`
+
+Return **`headline`** node with **`subheadlines`** set to child subheadlines.
+
+```el
+;; Given the following contents:
+; * headline 1
+; sectional stuff
+; ** headline 2
+; ** headline 3
+
+(->> (om-parse-this-subtree)
+     (om-headline-set-subheadlines (list (om-build-headline! :level 2 :title-text "headline x")))
+     (om-to-trimmed-string))
+ ;; => "* headline 1
+ ;      sectional stuff
+ ;      ** headline x"
+
+(->> (om-parse-this-subtree)
+     (om-headline-set-subheadlines nil)
+     (om-to-trimmed-string))
+ ;; => "* headline 1
+ ;      sectional stuff"
+
+```
+
+#### om-headline-map-subheadlines `(fun headline)`
+
+Return **`headline`** node with child headline nodes modified by **`fun`**.
+
+**`fun`** is a unary function that takes a list of headlines and returns
+a modified list of headlines.
+
+```el
+;; Given the following contents:
+; * headline 1
+; ** headline 2
+; ** headline 3
+
+(->> (om-parse-this-subtree)
+     (om-headline-map-subheadlines* (--map (om-set-property :todo-keyword "TODO" it)
+					   it))
+     (om-to-trimmed-string))
+ ;; => "* headline 1
+ ;      ** TODO headline 2
+ ;      ** TODO headline 3"
 
 ```
 
@@ -4240,6 +4348,28 @@ Return **`headline`** node with planning components set to **`planning`** node.
      (om-headline-set-planning nil)
      (om-to-trimmed-string))
  ;; => "* headline"
+
+```
+
+#### om-headline-map-planning `(fun headline)`
+
+Return **`headline`** node with planning node modified by **`fun`**.
+
+**`fun`** is a unary function that takes a planning node and returns a
+modified planning node.
+
+```el
+;; Given the following contents:
+; * headline
+; CLOSED: <2019-01-01 Tue>
+
+(->> (om-parse-this-headline)
+     (om-headline-map-planning* (om-map-property* :closed (om-timestamp-shift 1 'day
+									      it)
+						   it))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      CLOSED: <2019-01-02 Wed>"
 
 ```
 
