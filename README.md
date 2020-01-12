@@ -403,12 +403,12 @@ Set, get, and map the children of branch nodes.
 
 ### Headline
 
-* [om-headline-get-node-properties](#om-headline-get-node-properties-headline) `(headline)`
-* [om-headline-get-properties-drawer](#om-headline-get-properties-drawer-headline) `(headline)`
+* [om-headline-get-section](#om-headline-get-section-headline) `(headline)`
+* [om-headline-get-subheadlines](#om-headline-get-subheadlines-headline) `(headline)`
 * [om-headline-get-planning](#om-headline-get-planning-headline) `(headline)`
 * [om-headline-set-planning](#om-headline-set-planning-planning-headline) `(planning headline)`
-* [om-headline-get-subheadlines](#om-headline-get-subheadlines-headline) `(headline)`
-* [om-headline-get-section](#om-headline-get-section-headline) `(headline)`
+* [om-headline-get-node-properties](#om-headline-get-node-properties-headline) `(headline)`
+* [om-headline-get-properties-drawer](#om-headline-get-properties-drawer-headline) `(headline)`
 * [om-headline-get-path](#om-headline-get-path-headline) `(headline)`
 * [om-headline-update-item-statistics](#om-headline-update-item-statistics-headline) `(headline)`
 * [om-headline-update-todo-statistics](#om-headline-update-todo-statistics-headline) `(headline)`
@@ -4129,60 +4129,58 @@ The unwrap operation will be done with [`om-unwrap-deep`](#om-unwrap-deep-object
 
 ### Headline
 
-#### om-headline-get-node-properties `(headline)`
+#### om-headline-get-section `(headline)`
 
-Return a list of node-properties nodes in **`headline`** or nil if none.
+Return child section node within **`headline`** node or nil if none.
 
 ```el
 ;; Given the following contents:
-; * headline
-; :PROPERTIES:
-; :Effort:   1:00
-; :END:
+; * headline 1
+; sectional stuff
+; ** headline 2
+; ** headline 3
 
-(->> (om-parse-this-headline)
-     (om-headline-get-node-properties)
-     (-map (function om-to-trimmed-string)))
- ;; => '(":Effort:   1:00")
+(->> (om-parse-this-subtree)
+     (om-headline-get-section)
+     (om-to-trimmed-string))
+ ;; => "sectional stuff"
 
 ;; Given the following contents:
-; * headline
+; * headline 1
+; ** headline 2
+; ** headline 3
 
-(->> (om-parse-this-headline)
-     (om-headline-get-node-properties)
-     (-map (function om-to-trimmed-string)))
- ;; => nil
+(->> (om-parse-this-subtree)
+     (om-headline-get-section)
+     (om-to-trimmed-string))
+ ;; => ""
 
 ```
 
-#### om-headline-get-properties-drawer `(headline)`
+#### om-headline-get-subheadlines `(headline)`
 
-Return the properties drawer node in **`headline`**.
-
-If multiple are present (there shouldn't be) the first will be
-returned.
+Return list of child headline nodes in **`headline`** node or nil if none.
 
 ```el
 ;; Given the following contents:
-; * headline
-; :PROPERTIES:
-; :Effort:   1:00
-; :END:
+; * headline 1
+; sectional stuff
+; ** headline 2
+; ** headline 3
 
-(->> (om-parse-this-headline)
-     (om-headline-get-properties-drawer)
-     (om-to-trimmed-string))
- ;; => ":PROPERTIES:
- ;      :Effort:   1:00
- ;      :END:"
+(->> (om-parse-this-subtree)
+     (om-headline-get-subheadlines)
+     (-map (function om-to-trimmed-string)))
+ ;; => '("** headline 2" "** headline 3")
 
 ;; Given the following contents:
-; * headline
+; * headline 1
+; sectional stuff
 
-(->> (om-parse-this-headline)
-     (om-headline-get-properties-drawer)
-     (om-to-trimmed-string))
- ;; => ""
+(->> (om-parse-this-subtree)
+     (om-headline-get-subheadlines)
+     (-map (function om-to-trimmed-string)))
+ ;; => nil
 
 ```
 
@@ -4245,56 +4243,58 @@ Return **`headline`** node with planning components set to **`planning`** node.
 
 ```
 
-#### om-headline-get-subheadlines `(headline)`
+#### om-headline-get-node-properties `(headline)`
 
-Return list of child headline nodes in **`headline`** node or nil if none.
+Return a list of node-properties nodes in **`headline`** or nil if none.
 
 ```el
 ;; Given the following contents:
-; * headline 1
-; sectional stuff
-; ** headline 2
-; ** headline 3
+; * headline
+; :PROPERTIES:
+; :Effort:   1:00
+; :END:
 
-(->> (om-parse-this-subtree)
-     (om-headline-get-subheadlines)
+(->> (om-parse-this-headline)
+     (om-headline-get-node-properties)
      (-map (function om-to-trimmed-string)))
- ;; => '("** headline 2" "** headline 3")
+ ;; => '(":Effort:   1:00")
 
 ;; Given the following contents:
-; * headline 1
-; sectional stuff
+; * headline
 
-(->> (om-parse-this-subtree)
-     (om-headline-get-subheadlines)
+(->> (om-parse-this-headline)
+     (om-headline-get-node-properties)
      (-map (function om-to-trimmed-string)))
  ;; => nil
 
 ```
 
-#### om-headline-get-section `(headline)`
+#### om-headline-get-properties-drawer `(headline)`
 
-Return child section node within **`headline`** node or nil if none.
+Return the properties drawer node in **`headline`**.
+
+If multiple are present (there shouldn't be) the first will be
+returned.
 
 ```el
 ;; Given the following contents:
-; * headline 1
-; sectional stuff
-; ** headline 2
-; ** headline 3
+; * headline
+; :PROPERTIES:
+; :Effort:   1:00
+; :END:
 
-(->> (om-parse-this-subtree)
-     (om-headline-get-section)
+(->> (om-parse-this-headline)
+     (om-headline-get-properties-drawer)
      (om-to-trimmed-string))
- ;; => "sectional stuff"
+ ;; => ":PROPERTIES:
+ ;      :Effort:   1:00
+ ;      :END:"
 
 ;; Given the following contents:
-; * headline 1
-; ** headline 2
-; ** headline 3
+; * headline
 
-(->> (om-parse-this-subtree)
-     (om-headline-get-section)
+(->> (om-parse-this-headline)
+     (om-headline-get-properties-drawer)
      (om-to-trimmed-string))
  ;; => ""
 

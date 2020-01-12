@@ -3246,39 +3246,40 @@
   (def-example-subgroup "Headline"
     nil
 
-    (defexamples-content om-headline-get-node-properties
+    (defexamples-content om-headline-get-section
       nil
-      (:buffer "* headline"
-               ":PROPERTIES:"
-               ":Effort:   1:00"
-               ":END:")
-      (->> (om-parse-this-headline)
-           (om-headline-get-node-properties)
-           (-map #'om-to-trimmed-string))
-      => '(":Effort:   1:00")
-      (:buffer "* headline")
-      (->> (om-parse-this-headline)
-           (om-headline-get-node-properties)
-           (-map #'om-to-trimmed-string))
-      => nil)
-
-    (defexamples-content om-headline-get-properties-drawer
-      nil
-      (:buffer "* headline"
-               ":PROPERTIES:"
-               ":Effort:   1:00"
-               ":END:")
-      (->> (om-parse-this-headline)
-           (om-headline-get-properties-drawer)
+      (:buffer "* headline 1"
+                "sectional stuff"
+                "** headline 2"
+                "** headline 3")
+      (->> (om-parse-this-subtree)
+           (om-headline-get-section)
            (om-to-trimmed-string))
-      => (:result ":PROPERTIES:"
-                  ":Effort:   1:00"
-                  ":END:")
-      (:buffer "* headline")
-      (->> (om-parse-this-headline)
-           (om-headline-get-properties-drawer)
+      => "sectional stuff"
+      (:buffer "* headline 1"
+                "** headline 2"
+                "** headline 3")
+      (->> (om-parse-this-subtree)
+           (om-headline-get-section)
            (om-to-trimmed-string))
       => "")
+
+    (defexamples-content om-headline-get-subheadlines
+      nil
+      (:buffer "* headline 1"
+                "sectional stuff"
+                "** headline 2"
+                "** headline 3")
+      (->> (om-parse-this-subtree)
+           (om-headline-get-subheadlines)
+           (-map #'om-to-trimmed-string))
+      => '("** headline 2" "** headline 3")
+      (:buffer "* headline 1"
+                "sectional stuff")
+      (->> (om-parse-this-subtree)
+           (om-headline-get-subheadlines)
+           (-map #'om-to-trimmed-string))
+      => nil)
 
     (defexamples-content om-headline-get-planning
       nil
@@ -3316,38 +3317,37 @@
            (om-to-trimmed-string))
       => "* headline")
 
-    (defexamples-content om-headline-get-subheadlines
+    (defexamples-content om-headline-get-node-properties
       nil
-      (:buffer "* headline 1"
-                "sectional stuff"
-                "** headline 2"
-                "** headline 3")
-      (->> (om-parse-this-subtree)
-           (om-headline-get-subheadlines)
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":Effort:   1:00"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-get-node-properties)
            (-map #'om-to-trimmed-string))
-      => '("** headline 2" "** headline 3")
-      (:buffer "* headline 1"
-                "sectional stuff")
-      (->> (om-parse-this-subtree)
-           (om-headline-get-subheadlines)
+      => '(":Effort:   1:00")
+      (:buffer "* headline")
+      (->> (om-parse-this-headline)
+           (om-headline-get-node-properties)
            (-map #'om-to-trimmed-string))
       => nil)
 
-    (defexamples-content om-headline-get-section
+    (defexamples-content om-headline-get-properties-drawer
       nil
-      (:buffer "* headline 1"
-                "sectional stuff"
-                "** headline 2"
-                "** headline 3")
-      (->> (om-parse-this-subtree)
-           (om-headline-get-section)
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":Effort:   1:00"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-get-properties-drawer)
            (om-to-trimmed-string))
-      => "sectional stuff"
-      (:buffer "* headline 1"
-                "** headline 2"
-                "** headline 3")
-      (->> (om-parse-this-subtree)
-           (om-headline-get-section)
+      => (:result ":PROPERTIES:"
+                  ":Effort:   1:00"
+                  ":END:")
+      (:buffer "* headline")
+      (->> (om-parse-this-headline)
+           (om-headline-get-properties-drawer)
            (om-to-trimmed-string))
       => "")
 
