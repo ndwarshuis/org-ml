@@ -2387,8 +2387,8 @@ All arguments not mentioned here follow the same rules as
 
 STRING is the text to be parsed into a paragraph and must contain
 valid textual representations of object nodes."
-  (let ((ss (om-build-secondary-string! string)))
-    (apply #'om-build-paragraph :post-blank (or post-blank 0) ss)))
+  (->> (om-build-secondary-string! string)
+       (apply #'om-build-paragraph :post-blank (or post-blank 0))))
 
 (om--defun-kw om-build-item! (&key post-blank bullet checkbox tag
                                    paragraph counter &rest children)
@@ -2404,16 +2404,18 @@ CHILDREN contains the nodes that will go under this item after
 PARAGRAPH.
 
 All other arguments follow the same rules as `om-build-item'."
-  (let ((paragraph* (-some->> paragraph (om-build-paragraph!)))
+  (let ((children* (or (-some-> paragraph
+                                (om-build-paragraph!)
+                                (cons children))
+                       children))
         (tag (-some->> tag (om-build-secondary-string!))))
-    (->> (append (list paragraph*) children)
-         (-non-nil)
-         (apply #'om-build-item
-                :post-blank post-blank
-                :bullet bullet
-                :checkbox checkbox
-                :counter counter
-                :tag tag))))
+    (apply #'om-build-item
+           :post-blank post-blank
+           :bullet bullet
+           :checkbox checkbox
+           :counter counter
+           :tag tag
+           children*)))
 
 (defun om-build-table-cell! (string)
   "Return a new table-cell node.
