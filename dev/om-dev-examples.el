@@ -4601,7 +4601,76 @@
         (om-map-children* (--map (om-map-property :value #'s-downcase it) it) it))
       $> (:result "#+KEY1: val1"
                   "#+KEY2: val2"
-                  "* irrelevant headline")))
+                  "* irrelevant headline"))
+
+    (defexamples-content om-do-some-headlines
+      nil
+      (:buffer "* one"
+               "* two"
+               "* three")
+      (om-do-some-headlines* 2 nil
+        (om-set-property :todo-keyword "DONE" it))
+      $> (:result "* one"
+                  "* DONE two"
+                  "* DONE three")
+      (om-do-some-headlines* 2 10
+        (om-set-property :todo-keyword "DONE" it))
+      $> (:result "* one"
+                  "* DONE two"
+                  "* three"))
+
+    (defexamples-content om-do-headlines
+      nil
+      (:buffer "* one"
+               "* two"
+               "* three")
+      (om-do-headlines*
+        (om-set-property :todo-keyword "DONE" it))
+      $> (:result "* DONE one"
+                  "* DONE two"
+                  "* DONE three"))
+
+    (defexamples-content om-do-some-subtrees
+      nil
+      (:buffer "* one [/]"
+               "** DONE _one"
+               "** DONE _two"
+               "* two [/]"
+               "** DONE _one"
+               "** DONE _two")
+      (om-do-some-subtrees* 2 nil
+        (om-headline-update-todo-statistics))
+      $> (:buffer "* one [/]"
+                  "** DONE _one"
+                  "** DONE _two"
+                  "* two [2/2]"
+                  "** DONE _one"
+                  "** DONE _two")
+      (om-do-some-subtrees* nil 10
+        (om-headline-update-todo-statistics))
+      $> (:buffer "* one [2/2]"
+                  "** DONE _one"
+                  "** DONE _two"
+                  "* two [/]"
+                  "** DONE _one"
+                  "** DONE _two"))
+
+    (defexamples-content om-do-subtrees
+      nil
+      (:buffer "* one [/]"
+               "** DONE _one"
+               "** DONE _two"
+               "* two [/]"
+               "** DONE _one"
+               "** DONE _two")
+      (om-do-subtrees*
+        (om-headline-update-todo-statistics))
+      $> (:buffer "* one [2/2]"
+                  "** DONE _one"
+                  "** DONE _two"
+                  "* two [2/2]"
+                  "** DONE _one"
+                  "** DONE _two")))
 
   (def-example-subgroup "Misc"
     nil

@@ -482,6 +482,10 @@ Map node manipulations into buffers.
 * [om-update-headline-at](#om-update-headline-at-point-fun) `(point fun)`
 * [om-update-subtree-at](#om-update-subtree-at-point-fun) `(point fun)`
 * [om-update-section-at](#om-update-section-at-point-fun) `(point fun)`
+* [om-do-some-headlines](#om-do-some-headlines-begin-end-fun) `(begin end fun)`
+* [om-do-headlines](#om-do-headlines-fun) `(fun)`
+* [om-do-some-subtrees](#om-do-some-subtrees-begin-end-fun) `(begin end fun)`
+* [om-do-subtrees](#om-do-subtrees-fun) `(fun)`
 
 ### Misc
 
@@ -5842,6 +5846,121 @@ Update section under **`point`** using **`fun`**.
  ;; $> "#+KEY1: val1
  ;      #+KEY2: val2
  ;      * irrelevant headline"
+
+```
+
+#### om-do-some-headlines `(begin end fun)`
+
+Update some headlines in the current using **`fun`**.
+
+Headlines are updated using `om-update-this-headline` (see this for
+use and meaning of **`fun`**). Iteration is only performed for headlines
+that begin between **`begin`** and **`end`** points in the buffer. If either of
+these are nil, use `point-min` and `point-max` respectively.
+
+```el
+;; Given the following contents:
+; * one
+; * two
+; * three
+
+(om-do-some-headlines* 2 nil (om-set-property :todo-keyword "DONE" it))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      * DONE two
+ ;      * DONE three"
+
+(om-do-some-headlines* 2 10 (om-set-property :todo-keyword "DONE" it))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      * DONE two
+ ;      * three"
+
+```
+
+#### om-do-headlines `(fun)`
+
+Update all headlines in the current buffer using **`fun`**.
+
+Headlines are updated using `om-update-this-headline` (see this for
+use and meaning of **`fun`**).
+
+```el
+;; Given the following contents:
+; * one
+; * two
+; * three
+
+(om-do-headlines* (om-set-property :todo-keyword "DONE" it))
+ ;; Output these buffer contents
+ ;; $> "* DONE one
+ ;      * DONE two
+ ;      * DONE three"
+
+```
+
+#### om-do-some-subtrees `(begin end fun)`
+
+Update some toplevel subtrees in the current buffer using **`fun`**.
+
+Subtrees are updated using `om-update-this-subtree` (see this for use
+and meaning of **`fun`**). Iteration is only performed for headlines that
+begin between **`begin`** and **`end`** points in the buffer. If either of these
+are nil, use `point-min` and `point-max` respectively.
+
+```el
+;; Given the following contents:
+; * one [/]
+; ** DONE _one
+; ** DONE _two
+; * two [/]
+; ** DONE _one
+; ** DONE _two
+
+
+;; Given the following contents:
+; * one [/]
+; ** DONE _one
+; ** DONE _two
+; * two [2/2]
+; ** DONE _one
+; ** DONE _two
+
+
+;; Given the following contents:
+; * one [2/2]
+; ** DONE _one
+; ** DONE _two
+; * two [/]
+; ** DONE _one
+; ** DONE _two
+
+```
+
+#### om-do-subtrees `(fun)`
+
+Update all toplevel subtrees in the current buffer using **`fun`**.
+
+Subtrees are updated using `om-update-this-subtree` (see this for use
+and meaning of **`fun`**).
+
+```el
+;; Given the following contents:
+; * one [/]
+; ** DONE _one
+; ** DONE _two
+; * two [/]
+; ** DONE _one
+; ** DONE _two
+
+
+;; Given the following contents:
+; * one [2/2]
+; ** DONE _one
+; ** DONE _two
+; * two [2/2]
+; ** DONE _one
+; ** DONE _two
 
 ```
 
