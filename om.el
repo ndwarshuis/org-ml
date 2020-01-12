@@ -878,19 +878,9 @@ FUN is a unary function that returns a modified value."
   "Return t if PROP in NODE is nil."
   (not (om--get-property-nocheck prop node)))
 
-;; TODO this is unused
-(defun om--property-is-non-nil (prop node)
-  "Return t if PROP in NODE is not nil."
-  (if (om--get-property-nocheck prop node) t))
-
 (defun om--property-is-eq (prop val node)
   "Return t if PROP in NODE is `eq' to VAL."
   (eq val (om--get-property-nocheck prop node)))
-
-;; TODO this is unused
-(defun om--property-is-equal (prop val node)
-  "Return t if PROP in NODE is `equal' to VAL."
-  (equal val (om--get-property-nocheck prop node)))
 
 (om--defun* om--property-is-predicate (prop fun node)
   "Return t if FUN applied to the value of PROP in NODE results not nil.
