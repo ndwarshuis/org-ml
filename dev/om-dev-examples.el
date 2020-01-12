@@ -724,6 +724,18 @@
   (def-example-subgroup "Miscellaneous Builders"
     nil
 
+    (defexamples-content om-clone-node
+      nil
+      (:buffer "dolly")
+      (let* ((node1 (om-parse-this-element))
+             (node2 (om-clone-node node1)))
+        (equal node1 node2))
+      => t
+      (let* ((node1 (om-parse-this-element))
+             (node2 (om-clone-node node1)))
+        (eq node1 node2))
+      => nil)
+
     (defexamples om-build-secondary-string!
       (->> (om-build-secondary-string! "I'm plain")
            (-map #'om-get-type))

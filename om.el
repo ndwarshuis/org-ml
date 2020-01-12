@@ -2202,6 +2202,12 @@ performed. TABLE is used to get the table width."
 ;; should probably be their own types but that's not what
 ;; `org-element.el' does
 
+;; ...and this is here because I can't think of where else to put it
+(defun om-clone-node (node)
+  "Return copy of NODE, which may be a circular tree."
+  (let ((print-circle t))
+    (->> node (format "%S") (read))))
+
 (om--defun-kw om-build-timestamp-diary (form &key post-blank)
   "Return a new diary-sexp timestamp node from FORM.
 Optionally set POST-BLANK (a positive integer)."
@@ -4453,11 +4459,6 @@ Return NODE."
           (--each (-partition 2 props) (apply #'overlay-put o* it)))))
     (-each os #'apply-overlays)))
 
-(defun om--clone-node (node)
-  "Return copy of NODE, which may be a circular tree."
-  (let ((print-circle t))
-    (->> node (format "%S") (read))))
-
 (om--defun* om-update (fun node)
   "Replace NODE in the current buffer with a new one.
 FUN is a unary function that takes NODE and returns a modified NODE.
@@ -4474,7 +4475,7 @@ current buffer."
                                :props (overlay-properties it)))
                   (list 'apply 'om--apply-overlays)))
          ;; do all computation before modifying buffer
-         (node0 (om--clone-node node))
+         (node0 (om-clone-node node))
          (node* (funcall fun node)))
     (unless (equal node0 node*)
       ;; hacky way to add overlays to undo tree
