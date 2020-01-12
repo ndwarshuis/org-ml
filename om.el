@@ -781,21 +781,6 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
     (insert string)
     (-> (om-parse-this-buffer) (om-get-children) (car))))
 
-(defun om--build-secondary-string (string)
-  "Return a list of elements from STRING as a secondary string."
-  ;; fool parser to always parse objects, bold will parse to headlines
-  ;; because of the stars
-  (-if-let (ss (->> (om--from-string (concat " " string))
-                    (om--get-descendent '(0))
-                    (om-get-children)))
-      (cond
-       ((--any? (om-is-any-type om-elements it) ss)
-        (om--arg-error "Secondary string must only contain objects"))
-       ((equal (car ss) " ")
-        (-drop 1 ss))
-       (t (om--map-first* (substring it 1) ss)))
-    (om--arg-error "Could not make secondary string from %S" string)))
-
 ;;; INTERNAL PREDICATES
 
 (defun om--is-oneline-string (x)
@@ -2261,7 +2246,18 @@ Optionally set POST-BLANK (a positive integer)."
 STRING is any string that contains a textual representation of
 object nodes. If the string does not represent a list of object nodes,
 throw an error."
-  (om--build-secondary-string string))
+  ;; fool parser to always parse objects, bold will parse to headlines
+  ;; because of the stars
+  (-if-let (ss (->> (om--from-string (concat " " string))
+                    (om--get-descendent '(0))
+                    (om-get-children)))
+      (cond
+       ((--any? (om-is-any-type om-elements it) ss)
+        (om--arg-error "Secondary string must only contain objects"))
+       ((equal (car ss) " ")
+        (-drop 1 ss))
+       (t (om--map-first* (substring it 1) ss)))
+    (om--arg-error "Could not make secondary string from %S" string)))
 
 (om--defun-kw om-build-timestamp! (start &key end active repeater
                                          warning post-blank)
@@ -2391,7 +2387,7 @@ All arguments not mentioned here follow the same rules as
 
 STRING is the text to be parsed into a paragraph and must contain
 valid textual representations of object nodes."
-  (let ((ss (om--build-secondary-string string)))
+  (let ((ss (om-build-secondary-string! string)))
     (apply #'om-build-paragraph :post-blank (or post-blank 0) ss)))
 
 (om--defun-kw om-build-item! (&key post-blank bullet checkbox tag
@@ -2409,7 +2405,7 @@ PARAGRAPH.
 
 All other arguments follow the same rules as `om-build-item'."
   (let ((paragraph* (-some->> paragraph (om-build-paragraph!)))
-        (tag (-some->> tag (om--build-secondary-string))))
+        (tag (-some->> tag (om-build-secondary-string!))))
     (->> (append (list paragraph*) children)
          (-non-nil)
          (apply #'om-build-item
@@ -2425,7 +2421,7 @@ All other arguments follow the same rules as `om-build-item'."
 STRING is the text to be contained in the table-cell node. It must
 contain valid textual representations of objects that are allowed in
 table-cell nodes."
-  (apply #'om-build-table-cell (om--build-secondary-string string)))
+  (apply #'om-build-table-cell (om-build-secondary-string! string)))
 
 (defun om-build-table-row! (row-list)
   "Return a new table-row node.
@@ -2956,7 +2952,7 @@ TITLE-TEXT is a string to be parsed into object nodes for the title
 via `om-build-secondary-string!' (see that function for restrictions)
 and STATS-COOKIE-VALUE is a list described in
 `om-build-statistics-cookie'."
-  (let ((ss (om--build-secondary-string title-text)))
+  (let ((ss (om-build-secondary-string! title-text)))
     (if (not stats-cookie-value)
         (om-set-property :title ss headline)
       (let ((ss* (om--map-last*
