@@ -739,7 +739,6 @@ FUN is a unary function that returns a modified member."
 
 ;;; INTERNAL TYPE FUNCTIONS
 
-;; TODO this is a weird spot for this...
 (define-error 'arg-type-error "Argument type error")
 
 (defun om--arg-error (string &rest args)
@@ -747,57 +746,22 @@ FUN is a unary function that returns a modified member."
 STRING and ARGS are analogous to `error'."
     (signal 'arg-type-error `(,(apply #'format-message string args))))
 
-(defalias 'om--get-type 'org-element-type)
-
-(defun om--is-type (type node)
-  "Return t if NODE's type is `eq' to TYPE (a symbol)."
-  (unless (memq type om-nodes)
-    (om--arg-error "Argument 'type' must be in `om-nodes': Got %s" type))
-  (eq (om--get-type node) type))
-
-(defun om--is-any-type (types node)
-  "Return t if NODE's type is any in TYPES (a list of symbols)."
-  (-some->>
-   (-difference types om-nodes)
-   (om--arg-error
-    "All in 'types' must be in `om-nodes'; these were not: %s"))
-  (if (memq (om--get-type node) types) t))
-
 (defun om--is-node (list)
   "Return t if LIST is a node."
-  (om--is-any-type om-nodes list))
-
-(defun om--is-branch-node (list)
-  "Return t if LIST is a branch node."
-  (om--is-any-type om-branch-nodes list))
-
-(defun om--is-object-node (list)
-  "Return t if LIST is an object node."
-  (om--is-any-type om-objects list))
-
-(defun om--is-timestamp (node)
-  "Return t if NODE is a timestamp node (not a diary timestamp node)."
-  (and (om--is-type 'timestamp node)
-       (not (om--property-is-eq :type 'diary node))))
-
-(defun om--is-timestamp-diary (node)
-  "Return t if NODE is a timestamp diary node."
-  (and (om--is-type 'timestamp node)
-       (om--property-is-eq :type 'diary node)))
+  (om-is-any-type om-nodes list))
 
 (defun om--is-table-row (node)
   "Return t if NODE is a standard table-row node."
-  (and (om--is-type 'table-row node)
+  (and (om-is-type 'table-row node)
        (om--property-is-eq :type 'standard node)))
 
 (defun om--filter-type (type node)
   "Return NODE if it is TYPE or nil otherwise."
-  (and (om--is-type type node) node))
+  (and (om-is-type type node) node))
 
 (defun om--filter-types (types node)
   "Return NODE if it is one of TYPES or nil otherwise."
-  (and (om--is-any-type types node) node))
-
+  (and (om-is-any-type types node) node))
 
 ;;; MISC HELPER FUNCTIONS
 
@@ -825,7 +789,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
                     (om--get-descendent '(0))
                     (om--get-children)))
       (cond
-       ((--any? (om--is-any-type om-elements it) ss)
+       ((--any? (om-is-any-type om-elements it) ss)
         (om--arg-error "Secondary string must only contain objects"))
        ((equal (car ss) " ")
         (-drop 1 ss))
@@ -881,7 +845,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 (defun om--get-parent-headline (node)
   "Return the most immediate parent headline node of NODE."
   (-when-let (parent (om--get-parent node))
-    (if (om--is-type 'headline parent) parent
+    (if (om-is-type 'headline parent) parent
       (om--get-parent-headline parent))))
 
 (defun om--set-property (prop value node)
@@ -891,7 +855,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
           (->> (s-trim-right node) (s-append (s-repeat value " ")))
         (org-add-props node nil prop value))
     (om--construct
-     (om--get-type node)
+     (om-get-type node)
      (plist-put (om--get-all-properties node) prop value)
      (om--get-children node))))
 
@@ -902,7 +866,7 @@ property list in NODE."
   (if (om--is-plist plist)
       (let ((props (om--get-all-properties node)))
         (om--construct
-         (om--get-type node)
+         (om-get-type node)
          (->> (-partition 2 plist)
               (--reduce-from (apply #'plist-put acc it) props))
          (om--get-children node)))
@@ -1040,7 +1004,7 @@ FUN is a predicate function that takes one argument."
 (defun om--is-valid-item-tag (x)
   "Return t if X is an allowed value for an item node tag property."
   (and (listp x)
-       (--all? (om--is-any-type om--item-tag-restrictions it) x)))
+       (--all? (om-is-any-type om--item-tag-restrictions it) x)))
 
 (defun om--is-valid-item-bullet (x)
   "Return t if X is an allowed value for a item node bullet property."
@@ -1055,14 +1019,14 @@ FUN is a predicate function that takes one argument."
 
 (defun om--is-valid-clock-timestamp (x)
   "Return t if X is an allowed value for a clock node value property."
-  (and (om--is-type 'timestamp x)
+  (and (om-is-type 'timestamp x)
        (om--property-is-predicate :type
          (lambda (it) (memq it '(inactive inactive-range))) x)
        (om--property-is-nil :repeater-type x)))
 
 (defun om--is-valid-planning-timestamp (x)
   "Return t if X is an allowed value for a planning node timestamp property."
-  (or (null x) (and (om--is-type 'timestamp x)
+  (or (null x) (and (om-is-type 'timestamp x)
                     (om--property-is-eq :type 'active x))))
 
 (defun om--is-valid-entity-name (x)
@@ -1084,7 +1048,7 @@ FUN is a predicate function that takes one argument."
   "Return t if X is an allowed value for a headline node title property."
   (and
    (listp x)
-   (--all? (om--is-any-type om--headline-title-restrictions it) x)))
+   (--all? (om-is-any-type om--headline-title-restrictions it) x)))
 
 (defun om--is-valid-timestamp-type (x)
   "Return t if X is an allowed value for a timestamp node type property."
@@ -1612,7 +1576,7 @@ bounds."
   "Return the value of PROP in NODE.
 
 Will decode value according to `om--node-property-alist'."
-  (let ((filter-fun (-> (om--get-type node)
+  (let ((filter-fun (-> (om-get-type node)
                         (om--get-property-decoder prop)))
         (value (om--get-property prop node)))
     (if filter-fun (funcall filter-fun value) value)))
@@ -1623,7 +1587,7 @@ Will decode value according to `om--node-property-alist'."
   "Return NODE with PROP set to VALUE.
 
 Will validate and encode VALUE if valid according to `om--node-property-alist'."
-  (let* ((type (om--get-type node))
+  (let* ((type (om-get-type node))
          (pred (om--get-property-attribute :pred type prop)))
     (if (funcall pred value)
         (let* ((encode-fun (om--get-property-encoder type prop))
@@ -1655,7 +1619,7 @@ Will validate and encode VALUE if valid according to `om--node-property-alist'."
                    prop type (om--get-property-type-desc type prop) value)))))
     (if (om--is-plist plist)
         (let* ((cur-props (om--get-all-properties node))
-               (type (om--get-type node))
+               (type (om-get-type node))
                (keyvals (-partition 2 plist))
                (update-funs
                 (->> (-map #'car keyvals)
@@ -1664,7 +1628,7 @@ Will validate and encode VALUE if valid according to `om--node-property-alist'."
                      (-non-nil)))
                (node*
                 (om--construct
-                 (om--get-type node)
+                 (om-get-type node)
                  (--reduce-from (filter acc it type) cur-props keyvals)
                  (om--get-children node))))
           (if (not update-funs) node*
@@ -1750,9 +1714,9 @@ and ILLEGAL types were attempted to be set."
   "Return NODE with children set to CHILDREN.
 Throw an error if an nodes in CHILDREN are not in
 `om--node-restrictions' for the type of NODE."
-  (let ((type (om--get-type node)))
+  (let ((type (om-get-type node)))
     (-if-let (child-types (alist-get type om--node-restrictions))
-        (-if-let (illegal (-difference (-map #'om--get-type children)
+        (-if-let (illegal (-difference (-map #'om-get-type children)
                                        child-types))
             (om--set-childen-throw-error type child-types illegal)
           (om--set-children children node))
@@ -2254,7 +2218,7 @@ VALUE is a list conforming to `om--is-valid-statistics-cookie-value'
 or nil to erase the statistics cookie if present."
   (om--map-property*
    :title
-   (let ((last? (om--is-type 'statistics-cookie (-last-item it))))
+   (let ((last? (om-is-type 'statistics-cookie (-last-item it))))
      (cond
       ((and last? value)
        (om--map-last* (om--set-property-strict :value value it) it))
@@ -2310,7 +2274,7 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
   "Return child properties-drawer node within HEADLINE node."
   (-some->>
    (om-headline-get-section headline)
-   (--first (om--is-type 'property-drawer it))))
+   (--first (om-is-type 'property-drawer it))))
 
 (defun om--headline-subtree-shift-level (n headline)
   "Return HEADLINE node with its level shifted by N.
@@ -2501,11 +2465,11 @@ This will not indent children under the item node at INDEX."
         (let ((target-item*
                (->> target-item
                     (om--map-children*
-                     (--remove (om--is-type 'plain-list it) it))
+                     (--remove (om-is-type 'plain-list it) it))
                     (om-build-plain-list)))
               (items-in-target
                (->> (om--get-children target-item)
-                    (--filter (om--is-type 'plain-list it)))))
+                    (--filter (om-is-type 'plain-list it)))))
           (om--map-children
            (lambda (item-children)
              ;; TODO technically the target-item* should go in an
@@ -2588,12 +2552,12 @@ will be spliced after INDEX."
         (parent)
         (om--map-children
          (lambda (children)
-           (--remove-first (om--is-type 'plain-list it) children))
+           (--remove-first (om-is-type 'plain-list it) children))
          parent))
        (extract
         (parent)
         (->> (om--get-children parent)
-             (--first (om--is-type 'plain-list it))
+             (--first (om-is-type 'plain-list it))
              (om--get-children))))
     (om--map-children
      (lambda (items)
@@ -2661,8 +2625,8 @@ will be spliced after INDEX."
         (om--map-children
          (lambda (children)
            (if (= 0 index)
-               (--remove-first (om--is-type 'plain-list it) children)
-             (--map-first (om--is-type 'plain-list it)
+               (--remove-first (om-is-type 'plain-list it) children)
+             (--map-first (om-is-type 'plain-list it)
                           (om--map-children
                            (lambda (items) (-take child-index items)) it)
                           children)))
@@ -2671,7 +2635,7 @@ will be spliced after INDEX."
         (parent)
         (->>
          (om--get-children parent)
-         (--first (om--is-type 'plain-list it))
+         (--first (om-is-type 'plain-list it))
          (om--indent-after #'om--plain-list-indent-item-tree
                                 child-index)
          (om--get-children)
@@ -2911,34 +2875,40 @@ All other arguments follow the same rules as `om-build-table'."
 
 (defun om-get-type (node)
   "Return the type of NODE."
-  (om--get-type node))
+  (org-element-type node))
 
 (defun om-is-type (type node)
   "Return t if the type of NODE is TYPE (a symbol)."
-  (om--is-type type node))
+  (unless (memq type om-nodes)
+    (om--arg-error "Argument 'type' must be in `om-nodes': Got %s" type))
+  (eq (om-get-type node) type))
 
 (defun om-is-any-type (types node)
   "Return t if the type of NODE is in TYPES (a list of symbols)."
-  (om--is-any-type types node))
+  (-some->>
+   (-difference types om-nodes)
+   (om--arg-error
+    "All in 'types' must be in `om-nodes'; these were not: %s"))
+  (if (memq (om-get-type node) types) t))
 
 (defun om-is-element (node)
   "Return t if NODE is an element class."
-  (om--is-any-type om-elements node))
+  (om-is-any-type om-elements node))
 
 (defun om-is-branch-node (node)
   "Return t if NODE is a branch node."
-  (om--is-branch-node node))
+  (om-is-any-type om-branch-nodes node))
 
 (defun om-node-may-have-child-objects (node)
   "Return t if NODE is a branch node that may have child objects."
-  (om--is-any-type om-branch-nodes-permitting-child-objects node))
+  (om-is-any-type om-branch-nodes-permitting-child-objects node))
 
 (defun om-node-may-have-child-elements (node)
   "Return t if NODE is a branch node that may have child elements.
 
 Note this implies that NODE is also of class element since only
 elements may have other elements as children."
-  (om--is-any-type om-branch-elements-permitting-child-elements node))
+  (om-is-any-type om-branch-elements-permitting-child-elements node))
 
 ;;; PUBLIC PROPERTY FUNCTIONS
 
@@ -3010,7 +2980,7 @@ its values are forms to be mapped to these properties."
   "Return NODE with the value of PROP flipped.
 
 This function only applies to properties that are booleans."
-  (let* ((type (om--get-type node))
+  (let* ((type (om-get-type node))
          (flag (om--get-property-attribute :toggle type prop)))
     (if flag
         (om--map-property-strict prop #'not node)
@@ -3020,7 +2990,7 @@ This function only applies to properties that are booleans."
   "Return NODE with PROP shifted by N (an integer).
 
 This only applies the properties that are represented as integers."
-  (let* ((type (om--get-type node))
+  (let* ((type (om-get-type node))
          (fun (om--get-property-attribute :shift type prop)))
     (if fun
         (om--map-property-strict* prop (funcall fun n it) node)
@@ -3036,7 +3006,7 @@ strings."
         (string-list)
         (if (member string string-list) string-list
           (om--insert-at index string string-list))))
-    (let* ((type (om--get-type node))
+    (let* ((type (om-get-type node))
            (flag (om--get-property-attribute :string-list type prop)))
       (if flag
           (om--map-property-strict prop #'insert-at-maybe node)
@@ -3051,7 +3021,7 @@ strings.
 
 See `om-insert-into-property' for a list of supported elements
 and properties that may be used with this function."
-  (let* ((type (om--get-type node))
+  (let* ((type (om-get-type node))
          (flag (om--get-property-attribute :string-list type prop)))
     (if flag
         (om--map-property-strict* prop (-remove-item string it) node)
@@ -3063,7 +3033,7 @@ and properties that may be used with this function."
 
 KEY is a keyword and VALUE is a symbol. This only applies to
 properties that are represented as plists."
-  (let* ((type (om--get-type node))
+  (let* ((type (om-get-type node))
          (flag (om--get-property-attribute :plist type prop)))
     (if flag
         (om--map-property-strict* prop (plist-put it key value) node)
@@ -3077,7 +3047,7 @@ represented as plists.
 
 See `om-plist-put-property' for a list of supported elements
 and properties that may be used with this function."
-  (let* ((type (om--get-type node))
+  (let* ((type (om-get-type node))
          (flag (om--get-property-attribute :plist type prop)))
     (if flag
         (om--map-property-strict* prop (om--plist-remove key it) node)
@@ -3428,8 +3398,8 @@ returns a modified list of children."
       ((concat-maybe
         (acc node)
         (let ((last (car acc)))
-          (if (and (om--is-type 'plain-text last)
-                   (om--is-type 'plain-text node))
+          (if (and (om-is-type 'plain-text last)
+                   (om-is-type 'plain-text node))
               (cons (concat last node) (cdr acc))
             (cons node acc)))))
     (reverse (-reduce-from #'concat-maybe nil secondary-string))))
@@ -3446,7 +3416,7 @@ FORM is a form supplied to `--mapcat'."
 If OBJECT-NODE is a plain-text node, wrap it in a list and return.
 Else add the post-blank property of OBJECT-NODE to the last member
 of its children and return children as a secondary string."
-  (if (om--is-type 'plain-text object-node)
+  (if (om-is-type 'plain-text object-node)
       (list object-node)
     (let ((children (om--get-children object-node))
           (post-blank (om--get-property :post-blank object-node)))
@@ -3461,9 +3431,9 @@ Else recursively descend into the children of OBJECT-NODE and splice
 the children of nodes with type in TYPES in place of said node and
 return the result as a secondary string."
   (cond
-   ((om--is-type 'plain-text object-node)
+   ((om-is-type 'plain-text object-node)
     (list object-node))
-   ((om--is-any-type types object-node)
+   ((om-is-any-type types object-node)
     (let* ((children (om--get-children object-node))
            (post-blank (om--get-property :post-blank object-node)))
       (->> children
@@ -3509,7 +3479,7 @@ The unwrap operation will be done with `om-unwrap-deep'."
   "Return HEADLINE with section node containing CHILDREN.
 If CHILDREN is nil, return HEADLINE with no section node."
   (om--map-children*
-    (let ((subheadlines (--filter (om--is-type 'headline it) it)))
+    (let ((subheadlines (--filter (om-is-type 'headline it) it)))
       (if children
           (cons (apply #'om-build-section children) subheadlines)
         subheadlines))
@@ -3527,7 +3497,7 @@ returns a modified child list."
 (defun om-headline-get-subheadlines (headline)
   "Return list of child headline nodes in HEADLINE node or nil if none."
   (-some->> (om--get-children headline)
-            (--filter (om--is-type 'headline it))))
+            (--filter (om-is-type 'headline it))))
 
 (defun om-headline-set-subheadlines (subheadlines headline)
   "Return HEADLINE node with SUBHEADLINES set to child subheadlines."
@@ -3550,7 +3520,7 @@ a modified list of headlines."
   "Return the planning node in HEADLINE or nil if none."
   (-some->> (om-headline-get-section headline)
             (om--get-children)
-            (--first (om--is-type 'planning it))))
+            (--first (om-is-type 'planning it))))
 
 (defun om-headline-set-planning (planning headline)
   "Return HEADLINE node with planning components set to PLANNING node."
@@ -3565,7 +3535,7 @@ a modified list of headlines."
        headline)
     ;; if `PLANNING' is nil, remove planning from section if present
     (om-headline-map-section*
-     (--remove (om--is-type 'planning it) it)
+     (--remove (om-is-type 'planning it) it)
      headline)))
 
 (om--defun* om-headline-map-planning (fun headline)
@@ -3589,7 +3559,7 @@ returned."
   (-some->>
    (om--headline-get-properties-drawer headline)
    (om--get-children)
-   (--filter (om--is-type 'node-property it))))
+   (--filter (om-is-type 'node-property it))))
 
 
 (defun om-headline-get-path (headline)
@@ -3615,7 +3585,7 @@ not be considered)."
   (let* ((items
           (->> (om-headline-get-section headline)
                (om--get-children)
-               (--filter (om--is-type 'plain-list it))
+               (--filter (om-is-type 'plain-list it))
                (-mapcat #'om--get-children)
                (--remove (om--property-is-nil :checkbox it))))
          (done (length (--filter (om--property-is-eq :checkbox 'on it)
@@ -3823,7 +3793,7 @@ This is a workaround for a bug.")
 The exception is rule-typed table-row nodes which are supposed to be
 empty."
   (unless (and (om--is-childless node)
-               (or (om--is-any-type om--rm-if-empty node)
+               (or (om-is-any-type om--rm-if-empty node)
                    (om--is-table-row node)))
     node))
 
@@ -3835,7 +3805,7 @@ empty."
 (defun om--blank (node)
   "Return NODE with empty child nodes `om--blank-if-empty' set to contain \"\"."
   (if (om--is-childless node)
-      (if (om--is-any-type om--blank-if-empty node)
+      (if (om-is-any-type om--blank-if-empty node)
           (om--set-blank-children node)
         node)
     (om--map-children* (-map #'om--blank it) node)))
@@ -3956,7 +3926,7 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;;
       ;; type
       ((and (pred (lambda (y) (memq y om-nodes))) type)
-       `(om--is-type ',type ,it-node))
+       `(om-is-type ',type ,it-node))
       ;; 
       ;; index
       ((and (pred integerp) index)
@@ -4063,11 +4033,11 @@ terminate only when the entire tree is searched within PATTERN."
 (defun om--match-make-expanded-pattern-form (pattern node)
   "Return explicitly expanded PATTERN given a toplevel TYPE.
 NODE is the target NODE to be matched"
-  (let ((target-type (om--get-type node)))
+  (let ((target-type (om-get-type node)))
     (cl-labels
         ((expand-node
           (acc node)
-          (-if-let (cur-type (-some-> node (om--get-type)))
+          (-if-let (cur-type (-some-> node (om-get-type)))
               (if (om-is-type target-type node) acc
                 (expand-node (cons cur-type acc)
                              (om--get-parent node)))
@@ -4239,7 +4209,7 @@ and the variable `it' is bound to the original children."
   `(cl-labels
        ((rec
          (node)
-         (if (not (om--is-branch-node node)) node
+         (if (not (om-is-branch-node node)) node
            (om--map-children-strict*
              (->> (--map (rec it) it)
                   (funcall (lambda (it) ,form)))
@@ -4443,7 +4413,7 @@ PATTERN follows the same rules as `om-match'."
   (save-excursion
     (goto-char point)
     (-let* ((context (org-element-context))
-            ((offset nesting) (cl-case (om--get-type context)
+            ((offset nesting) (cl-case (om-get-type context)
                                 ((superscript subscript) '(-1 (0 1)))
                                 (table-cell '(-1 (0 0 0)))
                                 (t '(0 (0 0)))))
@@ -4470,7 +4440,7 @@ elements vs item elements."
     (goto-char point)
     (let*
         ((node (org-element-at-point))
-         (node-type (om--get-type node)))
+         (node-type (om-get-type node)))
       ;; NOTE this will not filter by type if it is a leaf node
       (if (not (memq node-type om-branch-nodes)) node
         ;; need to parse again if branch-node since

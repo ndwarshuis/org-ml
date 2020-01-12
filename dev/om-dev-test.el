@@ -569,7 +569,7 @@ be parsed to TYPE."
 ;;; NODE PROPERTY COMPLETENESS
 
 (defun should-have-equal-properties (e1 e2)
-  (unless (eq (om--get-type e1) (om--get-type e2))
+  (unless (eq (om-get-type e1) (om-get-type e2))
     (error "Type mismatch: %s\n\n%s" e1 e2))
   (cl-flet ((plist-get-keys (plist) (-slice plist 0 nil 2)))
     (let ((p1 (plist-get-keys (nth 1 e1)))
