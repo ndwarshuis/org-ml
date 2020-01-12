@@ -2223,282 +2223,6 @@ performed. TABLE is used to get the table width."
   "Return TABLE with table-cells in column at COLUMN-INDEX filled with blanks."
   (om--table-replace-column column-index `(,(om-build-table-cell " ")) table))
 
-;;; INTERNAL INDENTATION AND UNINDENTATION
-
-;;; indentation
-
-;; high level steps to indent
-;;
-;; Assume an abstract tree thing like this:
-;; - 0.
-;; - 1.
-;;   - 1.0
-;; - 2.
-;;
-;; We wish to indent 1. There are two cases:
-;; 1. indent only 1.
-;; 2. indent 1. and 1.1 along with it
-;;
-;; In both cases, make 1.0 a child of 0. Remove 1.0 from the
-;; top-level list and leave 1.0 and 2. untouched
-;;
-;; In case 2, this is all that is needed since 1.0 is already a child
-;; of 1. and will "autoindent" as 1. itself is moved.
-;;
-;; To make it "stay in place," as in case 1, remove 1.0 as a child of
-;; 1., append it to the end of the list containing 2., and set this
-;; list (with both 1. and 1.0.) as the child of 0.
-;;
-;; parameters for indenting:
-;; - index of target to indent (1 in above example)
-
-;; TODO throw error when index out of range???
-
-(defun om--indent-members (fun index tree)
-  "Return TREE with member at INDEX indented.
-FUN is a binary function that takes the members of TREE immediately
-before INDEX (called 'head') and the item at INDEX to be indented
-\(called 'target'). It maps over the last item of 'head' and sets the
-target as its child, or appends it to the end of its children if they
-exist."
-  (unless (and (integerp index) (< 0 index))
-    (error "Cannot indent topmost item at this level"))
-  (-let* (((head tail) (-split-at index tree))
-          (target (-first-item tail))
-          (head* (om--map-last* (funcall fun target it) head)))
-    (append head* (-drop 1 tail))))
-
-;; headline
-
-(defun om--headline-indent-subheadline (index headline)
-  "Return HEADLINE node with child headline node at INDEX indented.
-This will not indent children under the headline node at INDEX."
-  (cl-flet
-      ((append-indented
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (->> target-headline
-                    (om-headline-map-subheadlines #'ignore)
-                    (om--headline-shift-level 1)))
-              (headlines-in-target
-               (om-headline-get-subheadlines target-headline)))
-          (om--map-children-nocheck
-           (lambda (children)
-             (append children (list target-headline*) headlines-in-target))
-           parent-headline))))
-    (om-headline-map-subheadlines
-     (lambda (subheadlines)
-       (om--indent-members #'append-indented index subheadlines))
-     headline)))
-
-(defun om--headline-indent-subtree (index headline)
-  "Return HEADLINE node with child headline node at INDEX indented.
-This will indent children under the headline node at INDEX."
-  (cl-flet
-      ((append-indented
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (om--headline-subtree-shift-level 1 target-headline)))
-          (om--map-children-nocheck
-           (lambda (headline-children)
-             (append headline-children (list target-headline*)))
-           parent-headline))))
-    (om-headline-map-subheadlines
-     (lambda (subheadlines)
-       (om--indent-members #'append-indented index subheadlines))
-     headline)))
-
-;; plain-list
-
-(defun om--plain-list-indent-item (index plain-list)
-  "Return PLAIN-LIST node with child item node at INDEX indented.
-This will not indent children under the item node at INDEX."
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item*
-               (->> target-item
-                    (om--map-children-nocheck*
-                     (--remove (om-is-type 'plain-list it) it))
-                    (om-build-plain-list)))
-              (items-in-target
-               (->> (om-get-children target-item)
-                    (--filter (om-is-type 'plain-list it)))))
-          (om--map-children-nocheck
-           (lambda (item-children)
-             ;; TODO technically the target-item* should go in an
-             ;; existing plain list but I don't this matters (for now)
-             (append item-children (list target-item*) items-in-target))
-           parent-item))))
-    (om--map-children-nocheck
-     (lambda (items)
-       (om--indent-members #'append-indented index items))
-     plain-list)))
-
-(defun om--plain-list-indent-item-tree (index plain-list)
-  "Return PLAIN-LIST node with child item node at INDEX indented.
-This will indent children under the item node at INDEX."
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item* (om-build-plain-list target-item)))
-          (om--map-children-nocheck
-           (lambda (item-children) (append item-children (list target-item*)))
-           parent-item))))
-    (om--map-children-nocheck
-     (lambda (items)
-       (om--indent-members #'append-indented index items))
-     plain-list)))
-
-;;: internal unindentation (tree)
-
-;; high level steps to unindent a tree
-;;
-;; Assume an abstract tree thing like this:
-;; - 0.
-;; - 1.
-;;   - 1.0.
-;;   - 1.1.
-;;     - 1.1.0.
-;;   - 1.2.
-;; - 2.
-;;
-;; We want to unindent everything under 1. So just take all children
-;; of 1. and splice them into the top-level list between 1. and 2.
-;; In this case 1.1.0 will remain a child of 1.1 but it will be
-;; unindented as well because its parent is being unindented
-;;
-;; parameters for unindenting a tree:
-;; - the index whose children are to be unindented
-
-(defun om--unindent-members (index trim-fun extract-fun tree)
-  "Return TREE with children under INDEX unindented.
-TRIM-FUN is a unary function that is applied to the child list
-under INDEX and returns a modified child list with the unindented
-members removed. EXTRACT-FUN is a unary function that is applied to
-the child list under INDEX and returns the unindented children that
-will be spliced after INDEX."
-  (-let* (((head tail) (-split-at index tree))
-          (parent (-first-item tail))
-          (parent* (funcall trim-fun parent))
-          (unindented (funcall extract-fun parent)))
-    (append head (list parent*) unindented (-drop 1 tail))))
-
-(defun om--headline-unindent-all-subheadlines (index headline)
-  "Return HEADLINE node with all child headline nodes at INDEX unindented."
-  (cl-flet
-      ((trim
-        (parent)
-        (om-headline-map-subheadlines #'ignore parent))
-       (extract
-        (parent)
-        (->> (om-get-children parent)
-             (--map (om--headline-subtree-shift-level -1 it)))))
-    (om-headline-map-subheadlines
-     (lambda (subheadlines)
-       (om--unindent-members index #'trim #'extract subheadlines))
-     headline)))
-
-(defun om--plain-list-unindent-all-items (index plain-list)
-  "Return PLAIN-LIST node with all child item nodes at INDEX unindented."
-  (cl-flet
-      ((trim
-        (parent)
-        (om--map-children-nocheck
-         (lambda (children)
-           (--remove-first (om-is-type 'plain-list it) children))
-         parent))
-       (extract
-        (parent)
-        (->> (om-get-children parent)
-             (--first (om-is-type 'plain-list it))
-             (om-get-children))))
-    (om--map-children-nocheck
-     (lambda (items)
-       (om--unindent-members index #'trim #'extract items))
-     plain-list)))
-
-;;; internal unindentation (single target)
-
-;; high level steps to unindent a single item
-;;
-;; Assume an abstract tree thing like this:
-;; - 0.
-;; - 1.
-;;   - 1.0.
-;;   - 1.1.
-;;     - 1.1.0.
-;;   - 1.2.
-;; - 2.
-;; 
-;; We want to unindent 1.1. First, indent everything after 1.1 (in
-;; this case only 1.2, which will be appended to the list starting
-;; with 1.1.0). Then move 1.1 (with 1.1.0 and 1.2 as children) between
-;; 1 and 2 in the toplevel list.
-;;
-;; parameters for unindenting:
-;; - parent index (in this case 1 for 1.)
-;; - child index (in this case 1 for 1.1)
-
-;; TODO this is a bit sketchy...it depends on the indentation
-;; function to make the children list one element shorter, which
-;; is usually true but makes a really hard error to catch when it
-;; fails
-(defun om--indent-after (indent-fun index node)
-  "Return NODE with INDENT-FUN applied to all child nodes after INDEX."
-  (if (< index (1- (length (om-get-children node))))
-      (->> (funcall indent-fun (1+ index) node)
-           (om--indent-after indent-fun index))
-    node))
-
-(defun om--headline-unindent-subheadline (index child-index headline)
-  "Return HEADLINE with child headline at CHILD-INDEX under INDEX unindented."
-  (cl-flet
-      ((trim
-        (parent)
-        (om-headline-map-subheadlines
-         (lambda (subheadlines) (-take child-index subheadlines))
-         parent))
-       (extract
-        (parent)
-        (->> (om--indent-after #'om-headline-indent-subtree
-                                    child-index parent)
-             (om-get-children)
-             (-drop child-index)
-             (--map (om--headline-subtree-shift-level -1 it)))))
-    (om-headline-map-subheadlines
-     (lambda (subheadlines)
-       (om--unindent-members index #'trim #'extract subheadlines))
-     headline)))
-
-(defun om--plain-list-unindent-item (index child-index plain-list)
-  "Return PLAIN-LIST with child item at CHILD-INDEX under INDEX unindented."
-  (cl-flet
-      ((trim
-        (parent)
-        (om--map-children-nocheck
-         (lambda (children)
-           (if (= 0 index)
-               (--remove-first (om-is-type 'plain-list it) children)
-             (--map-first (om-is-type 'plain-list it)
-                          (om--map-children-nocheck
-                           (lambda (items) (-take child-index items)) it)
-                          children)))
-         parent))
-       (extract
-        (parent)
-        (->>
-         (om-get-children parent)
-         (--first (om-is-type 'plain-list it))
-         (om--indent-after #'om--plain-list-indent-item-tree
-                                child-index)
-         (om-get-children)
-         (-drop child-index))))
-    (om--map-children-nocheck
-     (lambda (items)
-       (om--unindent-members index #'trim #'extract items))
-     plain-list)))
-
 ;;; COMPOSITE BUILDERS
 
 ;;; misc builders
@@ -3625,53 +3349,295 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
   (let ((row-cells (om-build-table-row! row-text)))
     (om--table-replace-row row-index row-cells table)))
 
-;;; PUBLIC INDENTATION FUNCTIONS
+;;; INDENTATION FUNCTIONS
 
-;;; headline
+;;; indentation (single and tree)
+
+;; high level steps to indent
+;;
+;; Assume an abstract tree thing like this:
+;; - 0.
+;; - 1.
+;;   - 1.0
+;; - 2.
+;;
+;; We wish to indent 1. There are two cases:
+;; 1. indent only 1.
+;; 2. indent 1. and 1.1 along with it
+;;
+;; In both cases, make 1.0 a child of 0. Remove 1.0 from the
+;; top-level list and leave 1.0 and 2. untouched
+;;
+;; In case 2, this is all that is needed since 1.0 is already a child
+;; of 1. and will "autoindent" as 1. itself is moved.
+;;
+;; To make it "stay in place," as in case 1, remove 1.0 as a child of
+;; 1., append it to the end of the list containing 2., and set this
+;; list (with both 1. and 1.0.) as the child of 0.
+;;
+;; parameters for indenting:
+;; - index of target to indent (1 in above example)
+
+;; TODO throw error when index out of range???
+
+(defun om--indent-members (fun index tree)
+  "Return TREE with member at INDEX indented.
+FUN is a binary function that takes the members of TREE immediately
+before INDEX (called 'head') and the item at INDEX to be indented
+\(called 'target'). It maps over the last item of 'head' and sets the
+target as its child, or appends it to the end of its children if they
+exist."
+  (unless (and (integerp index) (< 0 index))
+    (error "Cannot indent topmost item at this level"))
+  (-let* (((head tail) (-split-at index tree))
+          (target (-first-item tail))
+          (head* (om--map-last* (funcall fun target it) head)))
+    (append head* (-drop 1 tail))))
+
+;; headline
 
 (defun om-headline-indent-subtree (index headline)
   "Return HEADLINE node with child headline at INDEX indented.
 Unlike `om-headline-indent-subheadline' this will also indent the
 indented headline node's children."
-  (om--headline-indent-subtree index headline))
+  (cl-flet
+      ((append-indented
+        (target-headline parent-headline)
+        (let ((target-headline*
+               (om--headline-subtree-shift-level 1 target-headline)))
+          (om--map-children-nocheck
+           (lambda (headline-children)
+             (append headline-children (list target-headline*)))
+           parent-headline))))
+    (om-headline-map-subheadlines
+     (lambda (subheadlines)
+       (om--indent-members #'append-indented index subheadlines))
+     headline)))
 
 (defun om-headline-indent-subheadline (index headline)
   "Return HEADLINE node with child headline at INDEX indented.
 Unlike `om-headline-indent-subtree' this will not indent the
 indented headline node's children."
-  (om--headline-indent-subheadline index headline))
+  (cl-flet
+      ((append-indented
+        (target-headline parent-headline)
+        (let ((target-headline*
+               (->> target-headline
+                    (om-headline-map-subheadlines #'ignore)
+                    (om--headline-shift-level 1)))
+              (headlines-in-target
+               (om-headline-get-subheadlines target-headline)))
+          (om--map-children-nocheck
+           (lambda (children)
+             (append children (list target-headline*) headlines-in-target))
+           parent-headline))))
+    (om-headline-map-subheadlines
+     (lambda (subheadlines)
+       (om--indent-members #'append-indented index subheadlines))
+     headline)))
 
-(defun om-headline-unindent-all-subheadlines (index headline)
-  "Return HEADLINE node with all child headlines under INDEX unindented."
-  (om--headline-unindent-all-subheadlines index headline))
-
-(defun om-headline-unindent-subheadline (index child-index headline)
-  "Return HEADLINE node with a child headline under INDEX unindented.
-The specific child headline to unindent is selected by CHILD-INDEX."
-  (om--headline-unindent-subheadline index child-index headline))
-
-;;; plain-list
+;; plain-list
 
 (defun om-plain-list-indent-item-tree (index plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `om-item-indent-item' this will also indent the indented item
 node's children."
-  (om--plain-list-indent-item-tree index plain-list))
+  (cl-flet
+      ((append-indented
+        (target-item parent-item)
+        (let ((target-item* (om-build-plain-list target-item)))
+          (om--map-children-nocheck
+           (lambda (item-children) (append item-children (list target-item*)))
+           parent-item))))
+    (om--map-children-nocheck
+     (lambda (items)
+       (om--indent-members #'append-indented index items))
+     plain-list)))
 
 (defun om-plain-list-indent-item (index plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `om-item-indent-item-tree' this will not indent the indented
 item node's children."
-  (om--plain-list-indent-item index plain-list))
+  (cl-flet
+      ((append-indented
+        (target-item parent-item)
+        (let ((target-item*
+               (->> target-item
+                    (om--map-children-nocheck*
+                     (--remove (om-is-type 'plain-list it) it))
+                    (om-build-plain-list)))
+              (items-in-target
+               (->> (om-get-children target-item)
+                    (--filter (om-is-type 'plain-list it)))))
+          (om--map-children-nocheck
+           (lambda (item-children)
+             ;; TODO technically the target-item* should go in an
+             ;; existing plain list but I don't this matters (for now)
+             (append item-children (list target-item*) items-in-target))
+           parent-item))))
+    (om--map-children-nocheck
+     (lambda (items)
+       (om--indent-members #'append-indented index items))
+     plain-list)))
+
+;;; unindentation (tree)
+
+;; high level steps to unindent a tree
+;;
+;; Assume an abstract tree thing like this:
+;; - 0.
+;; - 1.
+;;   - 1.0.
+;;   - 1.1.
+;;     - 1.1.0.
+;;   - 1.2.
+;; - 2.
+;;
+;; We want to unindent everything under 1. So just take all children
+;; of 1. and splice them into the top-level list between 1. and 2.
+;; In this case 1.1.0 will remain a child of 1.1 but it will be
+;; unindented as well because its parent is being unindented
+;;
+;; parameters for unindenting a tree:
+;; - the index whose children are to be unindented
+
+(defun om--unindent-members (index trim-fun extract-fun tree)
+  "Return TREE with children under INDEX unindented.
+TRIM-FUN is a unary function that is applied to the child list
+under INDEX and returns a modified child list with the unindented
+members removed. EXTRACT-FUN is a unary function that is applied to
+the child list under INDEX and returns the unindented children that
+will be spliced after INDEX."
+  (-let* (((head tail) (-split-at index tree))
+          (parent (-first-item tail))
+          (parent* (funcall trim-fun parent))
+          (unindented (funcall extract-fun parent)))
+    (append head (list parent*) unindented (-drop 1 tail))))
+
+;; headline
+
+(defun om-headline-unindent-all-subheadlines (index headline)
+  "Return HEADLINE node with all child headlines under INDEX unindented."
+  (cl-flet
+      ((trim
+        (parent)
+        (om-headline-map-subheadlines #'ignore parent))
+       (extract
+        (parent)
+        (->> (om-get-children parent)
+             (--map (om--headline-subtree-shift-level -1 it)))))
+    (om-headline-map-subheadlines
+     (lambda (subheadlines)
+       (om--unindent-members index #'trim #'extract subheadlines))
+     headline)))
+
+;; plain-list
 
 (defun om-plain-list-unindent-all-items (index plain-list)
   "Return PLAIN-LIST node with all child items under INDEX unindented."
-  (om--plain-list-unindent-all-items index plain-list))
+  (cl-flet
+      ((trim
+        (parent)
+        (om--map-children-nocheck
+         (lambda (children)
+           (--remove-first (om-is-type 'plain-list it) children))
+         parent))
+       (extract
+        (parent)
+        (->> (om-get-children parent)
+             (--first (om-is-type 'plain-list it))
+             (om-get-children))))
+    (om--map-children-nocheck
+     (lambda (items)
+       (om--unindent-members index #'trim #'extract items))
+     plain-list)))
+
+;;; unindentation (single target)
+
+;; high level steps to unindent a single item
+;;
+;; Assume an abstract tree thing like this:
+;; - 0.
+;; - 1.
+;;   - 1.0.
+;;   - 1.1.
+;;     - 1.1.0.
+;;   - 1.2.
+;; - 2.
+;; 
+;; We want to unindent 1.1. First, indent everything after 1.1 (in
+;; this case only 1.2, which will be appended to the list starting
+;; with 1.1.0). Then move 1.1 (with 1.1.0 and 1.2 as children) between
+;; 1 and 2 in the toplevel list.
+;;
+;; parameters for unindenting:
+;; - parent index (in this case 1 for 1.)
+;; - child index (in this case 1 for 1.1)
+
+;; TODO this is a bit sketchy...it depends on the indentation
+;; function to make the children list one element shorter, which
+;; is usually true but makes a really hard error to catch when it
+;; fails
+(defun om--indent-after (indent-fun index node)
+  "Return NODE with INDENT-FUN applied to all child nodes after INDEX."
+  (if (< index (1- (length (om-get-children node))))
+      (->> (funcall indent-fun (1+ index) node)
+           (om--indent-after indent-fun index))
+    node))
+
+;; headline
+
+(defun om-headline-unindent-subheadline (index child-index headline)
+  "Return HEADLINE node with a child headline under INDEX unindented.
+The specific child headline to unindent is selected by CHILD-INDEX."
+  (cl-flet
+      ((trim
+        (parent)
+        (om-headline-map-subheadlines
+         (lambda (subheadlines) (-take child-index subheadlines))
+         parent))
+       (extract
+        (parent)
+        (->> (om--indent-after #'om-headline-indent-subtree
+                                    child-index parent)
+             (om-get-children)
+             (-drop child-index)
+             (--map (om--headline-subtree-shift-level -1 it)))))
+    (om-headline-map-subheadlines
+     (lambda (subheadlines)
+       (om--unindent-members index #'trim #'extract subheadlines))
+     headline)))
+
+;; plain-list
 
 (defun om-plain-list-unindent-item (index child-index plain-list)
   "Return PLAIN-LIST node with a child item under INDEX unindented.
 The specific child item to unindent is selected by CHILD-INDEX."
-  (om--plain-list-unindent-item index child-index plain-list))
+  (cl-flet
+      ((trim
+        (parent)
+        (om--map-children-nocheck
+         (lambda (children)
+           (if (= 0 index)
+               (--remove-first (om-is-type 'plain-list it) children)
+             (--map-first (om-is-type 'plain-list it)
+                          (om--map-children-nocheck
+                           (lambda (items) (-take child-index items)) it)
+                          children)))
+         parent))
+       (extract
+        (parent)
+        (->>
+         (om-get-children parent)
+         (--first (om-is-type 'plain-list it))
+         (om--indent-after #'om-plain-list-indent-item-tree
+                                child-index)
+         (om-get-children)
+         (-drop child-index))))
+    (om--map-children-nocheck
+     (lambda (items)
+       (om--unindent-members index #'trim #'extract items))
+     plain-list)))
 
 ;;; PRINTING FUNCTIONS
 
