@@ -3677,7 +3677,6 @@ empty."
 
 ;;; print functions
 
-;; TODO these should allow node or nil
 (defun om-to-string (node)
   "Return NODE as an interpreted string without text properties."
   (->> node
