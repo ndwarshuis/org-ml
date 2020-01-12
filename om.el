@@ -3406,9 +3406,9 @@ If CHILDREN is nil, return HEADLINE with no section node."
 
 FUN is a unary function that takes a section node's children as a list
 returns a modified child list."
-  (let ((children* (->> (om-headline-get-section headline)
-                        (funcall fun))))
-    (om-headline-set-section children* headline)))
+  (--> (om-headline-get-section headline)
+       (funcall fun it)
+       (om-headline-set-section it headline)))
 
 (defun om-headline-get-subheadlines (headline)
   "Return list of child headline nodes in HEADLINE node or nil if none."
@@ -3428,9 +3428,9 @@ returns a modified child list."
 
 FUN is a unary function that takes a list of headlines and returns
 a modified list of headlines."
-  (let ((subheadlines* (->> (om-headline-get-subheadlines headline)
-                            (funcall fun))))
-    (om-headline-set-subheadlines subheadlines* headline)))
+  (--> (om-headline-get-subheadlines headline)
+       (funcall fun it)
+       (om-headline-set-subheadlines it headline)))
 
 (defun om-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
@@ -3459,9 +3459,9 @@ a modified list of headlines."
 
 FUN is a unary function that takes a planning node and returns a
 modified planning node."
-  (let ((planning* (->> (om-headline-get-planning headline)
-                        (funcall fun))))
-    (om-headline-set-planning planning* headline)))
+   (--> (om-headline-get-planning headline)
+        (funcall fun it)
+        (om-headline-set-planning it headline)))
 
 (defun om-headline-get-properties-drawer (headline)
   "Return the properties drawer node in HEADLINE.
@@ -3472,11 +3472,9 @@ returned."
 
 (defun om-headline-get-node-properties (headline)
   "Return a list of node-properties nodes in HEADLINE or nil if none."
-  (-some->>
-   (om--headline-get-properties-drawer headline)
-   (om-get-children)
-   (--filter (om-is-type 'node-property it))))
-
+  (-some->> (om--headline-get-properties-drawer headline)
+            (om-get-children)
+            (--filter (om-is-type 'node-property it))))
 
 (defun om-headline-get-path (headline)
   "Return tree path of HEADLINE node.
