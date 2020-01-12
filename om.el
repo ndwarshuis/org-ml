@@ -2300,15 +2300,6 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
 
 ;;; headline
 
-(defun om--headline-get-subheadlines (headline)
-  "Return list of child headline nodes within HEADLINE node."
-  (-some->> (om--get-children headline)
-            (--filter (om--is-type 'headline it))))
-
-(defun om--headline-get-section (headline)
-  "Return child section node within HEADLINE node."
-  (-some->> (om--get-children headline) (assoc 'section)))
-
 (defun om--headline-get-statistics-cookie (headline)
   "Return statistics-cookie node within HEADLINE node."
   (->> (om--get-property :title headline)
@@ -2318,42 +2309,8 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
 (defun om--headline-get-properties-drawer (headline)
   "Return child properties-drawer node within HEADLINE node."
   (-some->>
-   (om--headline-get-section headline)
+   (om-headline-get-section headline)
    (--first (om--is-type 'property-drawer it))))
-
-(om--defun* om--headline-map-subheadlines (fun headline)
-  "Return HEADLINE node with child headline nodes modified by FUN.
-
-FUN is a unary function that takes a list of headlines and returns
-a modified list of headlines."
-  (om--map-children
-   (lambda (children)
-     (let ((section (assoc 'section children))
-           (subheadlines (-some->>
-                          (--filter (om--is-type 'headline it) children)
-                          (funcall fun))))
-       (cond
-        ((and section subheadlines) (cons section subheadlines))
-        (section (list section))
-        (t subheadlines))))
-   headline))
-
-(om--defun* om--headline-map-section (fun headline)
-  "Return HEADLINE node with child section node modified by FUN.
-
-FUN is a unary function that takes a section node and returns a
-modified section node."
-  (om--map-children
-   (lambda (children)
-     (let ((section (-some->> children
-                              (assoc 'section)
-                              (funcall fun)))
-           (subheadlines (--filter (om--is-type 'headline it) children)))
-       (cond
-        ((and section subheadlines) (cons section subheadlines))
-        (section (list section))
-        (t subheadlines))))
-   headline))
 
 (defun om--headline-subtree-shift-level (n headline)
   "Return HEADLINE node with its level shifted by N.
@@ -2361,7 +2318,7 @@ Also shift all HEADLINE node's child headline nodes by N.
 If the final shifted level is less one, set level to one (for parent
 and child nodes)."
   (->> (om--headline-shift-level n headline)
-       (om--headline-map-subheadlines
+       (om-headline-map-subheadlines
         (lambda (headlines)
           (--map (om--headline-subtree-shift-level n it)
                  headlines)))))
@@ -2503,15 +2460,15 @@ This will not indent children under the headline node at INDEX."
         (target-headline parent-headline)
         (let ((target-headline*
                (->> target-headline
-                    (om--headline-map-subheadlines #'ignore)
+                    (om-headline-map-subheadlines #'ignore)
                     (om--headline-shift-level 1)))
               (headlines-in-target
-               (om--headline-get-subheadlines target-headline)))
+               (om-headline-get-subheadlines target-headline)))
           (om--map-children
            (lambda (children)
              (append children (list target-headline*) headlines-in-target))
            parent-headline))))
-    (om--headline-map-subheadlines
+    (om-headline-map-subheadlines
      (lambda (subheadlines)
        (om--indent-members #'append-indented index subheadlines))
      headline)))
@@ -2528,7 +2485,7 @@ This will indent children under the headline node at INDEX."
            (lambda (headline-children)
              (append headline-children (list target-headline*)))
            parent-headline))))
-    (om--headline-map-subheadlines
+    (om-headline-map-subheadlines
      (lambda (subheadlines)
        (om--indent-members #'append-indented index subheadlines))
      headline)))
@@ -2614,12 +2571,12 @@ will be spliced after INDEX."
   (cl-flet
       ((trim
         (parent)
-        (om--headline-map-subheadlines #'ignore parent))
+        (om-headline-map-subheadlines #'ignore parent))
        (extract
         (parent)
         (->> (om--get-children parent)
              (--map (om--headline-subtree-shift-level -1 it)))))
-    (om--headline-map-subheadlines
+    (om-headline-map-subheadlines
      (lambda (subheadlines)
        (om--unindent-members index #'trim #'extract subheadlines))
      headline)))
@@ -2681,7 +2638,7 @@ will be spliced after INDEX."
   (cl-flet
       ((trim
         (parent)
-        (om--headline-map-subheadlines
+        (om-headline-map-subheadlines
          (lambda (subheadlines) (-take child-index subheadlines))
          parent))
        (extract
@@ -2691,7 +2648,7 @@ will be spliced after INDEX."
              (om--get-children)
              (-drop child-index)
              (--map (om--headline-subtree-shift-level -1 it)))))
-    (om--headline-map-subheadlines
+    (om-headline-map-subheadlines
      (lambda (subheadlines)
        (om--unindent-members index #'trim #'extract subheadlines))
      headline)))
@@ -3543,12 +3500,78 @@ The unwrap operation will be done with `om-unwrap-deep'."
 ;;; headline
 
 (defun om-headline-get-subheadlines (headline)
-  "Return list of subheadline nodes for HEADLINE node or nil if none."
-  (om--headline-get-subheadlines headline))
+  "Return list of child headline nodes in HEADLINE node or nil if none."
+  (-some->> (om--get-children headline)
+            (--filter (om--is-type 'headline it))))
+
+(defun om-headline-set-subheadlines (subheadlines headline)
+  "Return HEADLINE node with SUBHEADLINES set to child subheadlines."
+  (om--map-children*
+    (-if-let (section (assoc 'section it))
+        (cons section subheadlines)
+      subheadlines)
+    headline))
+
+(om--defun* om-headline-map-subheadlines (fun headline)
+  "Return HEADLINE node with child headline nodes modified by FUN.
+
+FUN is a unary function that takes a list of headlines and returns
+a modified list of headlines."
+  (let ((subheadlines* (->> (om-headline-get-subheadlines headline)
+                            (funcall fun))))
+    (om-headline-set-subheadlines subheadlines* headline)))
 
 (defun om-headline-get-section (headline)
-  "Return section node for headline HEADLINE node or nil if none."
-  (om--headline-get-section headline))
+  "Return child section node within HEADLINE node or nil if none."
+  (-some->> (om--get-children headline) (assoc 'section)))
+
+(defun om-headline-set-section (section headline)
+  "Return HEADLINE with child section node set to SECTION."
+  (om--map-children*
+    (cons section (--filter (om--is-type 'headline it) it))
+    headline))
+
+(om--defun* om-headline-map-section (fun headline)
+  "Return HEADLINE node with child section node modified by FUN.
+
+FUN is a unary function that takes a section node and returns a
+modified section node."
+  (let ((section* (->> (om-headline-get-section headline)
+                       (funcall fun))))
+    (om-headline-set-section section* headline)))
+
+(defun om-headline-get-planning (headline)
+  "Return the planning node in HEADLINE or nil if none."
+  (-some->> (om-headline-get-section headline)
+            (om--get-children)
+            (--first (om--is-type 'planning it))))
+
+(defun om-headline-set-planning (planning headline)
+  "Return HEADLINE node with planning components set to PLANNING node."
+  (if planning
+      (om-headline-map-section*
+       ;; if no section, build new section with planning in it
+       (if (not it) (om-build-section planning)
+         ;; if section, test if planning already in front and override
+         ;; as needed
+         (om--map-children*
+           (let ((r (if (om-is-type 'planning (car it)) (cdr it) it)))
+             (cons planning r))
+           it))
+       headline)
+    ;; if `PLANNING' is nil, remove planning from section if present
+    (om-headline-map-section*
+     (om--map-children* (--remove (om--is-type 'planning it) it) it)
+     headline)))
+
+(om--defun* om-headline-map-planning (fun headline)
+  "Return HEADLINE node with planning node modified by FUN.
+
+FUN is a unary function that takes a planning node and returns a
+modified planning node."
+  (let ((planning* (->> (om-headline-get-planning headline)
+                        (funcall fun))))
+    (om-headline-set-planning planning* headline)))
 
 (defun om-headline-get-properties-drawer (headline)
   "Return the properties drawer node in HEADLINE.
@@ -3564,29 +3587,6 @@ returned."
    (om--get-children)
    (--filter (om--is-type 'node-property it))))
 
-(defun om-headline-get-planning (headline)
-  "Return the planning node in HEADLINE or nil if none."
-  (-some->> (om--headline-get-section headline)
-            (om--get-children)
-            (--first (om--is-type 'planning it))))
-
-(defun om-headline-set-planning (planning headline)
-  "Return HEADLINE node with planning components set to PLANNING node."
-  (if planning
-      (if (om-headline-get-section headline)
-          (om--headline-map-section*
-            (om--map-children*
-              (if (om-is-type 'planning (car it))
-                  (cons planning (cdr it))
-                (cons planning it))
-              it)
-            headline)
-        (om--map-children*
-          (-> planning (om-build-section) (cons it))
-          headline))
-    (om--headline-map-section*
-      (om--map-children* (--remove (om--is-type 'planning it) it) it)
-      headline)))
 
 (defun om-headline-get-path (headline)
   "Return tree path of HEADLINE node.
@@ -3609,7 +3609,7 @@ The percent/fraction will be computed as the number of checked items
 over the number of items with checkboxes (non-checkbox items will
 not be considered)."
   (let* ((items
-          (->> (om--headline-get-section headline)
+          (->> (om-headline-get-section headline)
                (om--get-children)
                (--filter (om--is-type 'plain-list it))
                (-mapcat #'om--get-children)
@@ -3625,7 +3625,7 @@ not be considered)."
 The percent/fraction will be computed as the number of done
 subheadlines over the number of todo subheadlines (eg non-todo
 subheadlines will not be counted)."
-  (let* ((subtodo (->> (om--headline-get-subheadlines headline)
+  (let* ((subtodo (->> (om-headline-get-subheadlines headline)
                        (--filter (om--get-property :todo-keyword it))))
          (done (length (-filter #'om-headline-is-done subtodo)))
          (total (length subtodo)))

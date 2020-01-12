@@ -17,7 +17,7 @@ git clone https://github.com/ndwarshuis/om.el
 Then require in your emacs config:
 
 ```
-(require 'om)
+(require 'om.el)
 ```
 
 # Motivation
@@ -4247,7 +4247,7 @@ Return **`headline`** node with planning components set to **`planning`** node.
 
 #### om-headline-get-subheadlines `(headline)`
 
-Return list of subheadline nodes for **`headline`** node or nil if none.
+Return list of child headline nodes in **`headline`** node or nil if none.
 
 ```el
 ;; Given the following contents:
@@ -4274,7 +4274,7 @@ Return list of subheadline nodes for **`headline`** node or nil if none.
 
 #### om-headline-get-section `(headline)`
 
-Return section node for headline **`headline`** node or nil if none.
+Return child section node within **`headline`** node or nil if none.
 
 ```el
 ;; Given the following contents:
