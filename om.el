@@ -4703,5 +4703,57 @@ returns a modified node."
   "Unfold the children of NODE if they exist."
   (om--flag-elem-contents nil node))
 
+;;; headline iteration
+
+(om--defun* om-do-some-headlines (begin end fun)
+  "Update some headlines in the current using FUN.
+
+Headlines are updated using `om-update-this-headline' (see this for
+use and meaning of FUN). Iteration is only performed for headlines
+that begin between BEGIN and END points in the buffer. If either of
+these are nil, use `point-min' and `point-max' respectively."
+  (let ((begin (or begin (point-min)))
+        (end (or end (point-max))))
+    (save-excursion
+      (goto-char end)
+      ;; iterate backwards, its actually simpler since we don't need
+      ;; to worry about the toplevel section at the beginning
+      (while (and (outline-previous-heading) (<= begin (point)))
+        (om-update-this-headline fun)))))
+
+(om--defun* om-do-headlines (fun)
+  "Update all headlines in the current buffer using FUN.
+
+Headlines are updated using `om-update-this-headline' (see this for
+use and meaning of FUN)."
+  (om-do-some-headlines nil nil fun))
+
+(om--defun* om-do-some-subtrees (begin end fun)
+  "Update some toplevel subtrees in the current buffer using FUN.
+
+Subtrees are updated using `om-update-this-subtree' (see this for use
+and meaning of FUN). Iteration is only performed for headlines that
+begin between BEGIN and END points in the buffer. If either of these
+are nil, use `point-min' and `point-max' respectively."
+  (let ((begin (or begin (point-min)))
+        (end (or end (point-max))))
+    (save-excursion
+      (goto-char begin)
+      (when (= ?* (char-after))
+        (om-update-this-subtree fun))
+      (let ((cur-point begin))
+        (org-forward-heading-same-level 1 t)
+        (while (/= (point) cur-point)
+          (om-update-this-subtree fun)
+          (setq cur-point (point))
+          (org-forward-heading-same-level 1 t))))))
+
+(om--defun* om-do-subtrees (fun)
+  "Update all toplevel subtrees in the current buffer using FUN.
+
+Subtrees are updated using `om-update-this-subtree' (see this for use
+and meaning of FUN)."
+  (om-do-some-subtrees nil nil fun))
+
 (provide 'om)
 ;;; om.el ends here
