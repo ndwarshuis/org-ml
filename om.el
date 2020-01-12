@@ -2109,12 +2109,6 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
 
 ;;; headline
 
-(defun om--headline-get-properties-drawer (headline)
-  "Return child properties-drawer node within HEADLINE node."
-  (-some->>
-   (om-headline-get-section headline)
-   (--first (om-is-type 'property-drawer it))))
-
 (defun om--headline-subtree-shift-level (n headline)
   "Return HEADLINE node with its level shifted by N.
 Also shift all HEADLINE node's child headline nodes by N.
@@ -3190,11 +3184,13 @@ modified planning node."
 
 If multiple are present (there shouldn't be) the first will be
 returned."
-  (om--headline-get-properties-drawer headline))
+  (-some->>
+   (om-headline-get-section headline)
+   (--first (om-is-type 'property-drawer it))))
 
 (defun om-headline-get-node-properties (headline)
   "Return a list of node-properties nodes in HEADLINE or nil if none."
-  (-some->> (om--headline-get-properties-drawer headline)
+  (-some->> (om-headline-get-properties-drawer headline)
             (om-get-children)
             (--filter (om-is-type 'node-property it))))
 
