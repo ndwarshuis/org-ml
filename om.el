@@ -2063,10 +2063,6 @@ TYPE given in DEC."
 
 ;; timestamp (diary sexp)
 
-(defun om--timestamp-diary-set-value (form timestamp)
-  "Return TIMESTAMP with raw-value set to FORM."
-  (om--set-property-nocheck :raw-value (format "<%%%%%S>" form) timestamp))
-
 ;;; element nodes
 ;;
 ;; headline
@@ -2538,7 +2534,7 @@ will be spliced after INDEX."
 Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-object 'timestamp post-blank)
        (om--set-property-nocheck :type 'diary)
-       (om--timestamp-diary-set-value form)
+       (om-timestamp-diary-set-value form)
        (om--set-properties-nocheck-nil
         (list :repeater-type :repeater-unit :repeater-value
               :warning-type :warning-unit :warning-value :year-start
@@ -3217,8 +3213,12 @@ collapsed format."
 
 (defun om-timestamp-diary-set-value (form timestamp-diary)
   "Return TIMESTAMP-DIARY node with value set to FORM.
-TIMESTAMP must have a type `eq' to `diary'. FORM is a quoted list."
-  (om--timestamp-diary-set-value form timestamp-diary))
+The node must have a type `eq' to `diary'. FORM is a quoted list."
+  (if (listp form)
+      (om--set-property-nocheck :raw-value (format "<%%%%%S>" form)
+                                timestamp-diary)
+    (om--arg-error "Timestamp-diary node value must be a form: Got %S"
+                   form)))
 
 ;;; element nodes
 ;;

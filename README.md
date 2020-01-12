@@ -3874,7 +3874,7 @@ Return **`timestamp`** node with end time forced to short format.
 #### om-timestamp-diary-set-value `(form timestamp-diary)`
 
 Return **`timestamp-diary`** node with value set to **`form`**.
-`timestamp` must have a type `eq` to `diary`. **`form`** is a quoted list.
+The node must have a type `eq` to `diary`. **`form`** is a quoted list.
 
 ```el
 ;; Given the following contents:
