@@ -413,7 +413,7 @@ Set, get, and map the children of branch nodes.
 * [om-headline-set-planning](#om-headline-set-planning-planning-headline) `(planning headline)`
 * [om-headline-map-planning](#om-headline-map-planning-fun-headline) `(fun headline)`
 * [om-headline-get-node-properties](#om-headline-get-node-properties-headline) `(headline)`
-* [om-headline-get-properties-drawer](#om-headline-get-properties-drawer-headline) `(headline)`
+* [om-headline-get-property-drawer](#om-headline-get-property-drawer-headline) `(headline)`
 * [om-headline-get-path](#om-headline-get-path-headline) `(headline)`
 * [om-headline-update-item-statistics](#om-headline-update-item-statistics-headline) `(headline)`
 * [om-headline-update-todo-statistics](#om-headline-update-todo-statistics-headline) `(headline)`
@@ -4403,7 +4403,7 @@ Return a list of node-properties nodes in **`headline`** or nil if none.
 
 ```
 
-#### om-headline-get-properties-drawer `(headline)`
+#### om-headline-get-property-drawer `(headline)`
 
 Return the properties drawer node in **`headline`**.
 
@@ -4418,7 +4418,7 @@ returned.
 ; :END:
 
 (->> (om-parse-this-headline)
-     (om-headline-get-properties-drawer)
+     (om-headline-get-property-drawer)
      (om-to-trimmed-string))
  ;; => ":PROPERTIES:
  ;      :Effort:   1:00
@@ -4428,7 +4428,7 @@ returned.
 ; * headline
 
 (->> (om-parse-this-headline)
-     (om-headline-get-properties-drawer)
+     (om-headline-get-property-drawer)
      (om-to-trimmed-string))
  ;; => ""
 
@@ -5358,7 +5358,7 @@ which will replace the original.
 ;; Match the literal property-drawer node and map the node-property inside if
 ;; the property-drawer exists
 (let ((hl (om-parse-this-headline)))
-  (-if-let (pd (om-headline-get-properties-drawer hl))
+  (-if-let (pd (om-headline-get-property-drawer hl))
       (->> hl (om-match-map* (\` ((\, pd)
 				  node-property))
 		(om-set-property :value "1:30" it))

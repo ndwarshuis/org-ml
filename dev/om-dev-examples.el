@@ -3069,7 +3069,7 @@
                ":TWO: two"
                ":END:")
       (->> (om-parse-this-headline)
-           (om-headline-get-properties-drawer)
+           (om-headline-get-property-drawer)
            (om-get-children)
            (-map #'om-get-type))
       => '(node-property node-property) 
@@ -3406,21 +3406,21 @@
            (-map #'om-to-trimmed-string))
       => nil)
 
-    (defexamples-content om-headline-get-properties-drawer
+    (defexamples-content om-headline-get-property-drawer
       nil
       (:buffer "* headline"
                ":PROPERTIES:"
                ":Effort:   1:00"
                ":END:")
       (->> (om-parse-this-headline)
-           (om-headline-get-properties-drawer)
+           (om-headline-get-property-drawer)
            (om-to-trimmed-string))
       => (:result ":PROPERTIES:"
                   ":Effort:   1:00"
                   ":END:")
       (:buffer "* headline")
       (->> (om-parse-this-headline)
-           (om-headline-get-properties-drawer)
+           (om-headline-get-property-drawer)
            (om-to-trimmed-string))
       => "")
 
@@ -4300,7 +4300,7 @@
     (:comment "Match the literal property-drawer node and map the"
               "node-property inside if the property-drawer exists")
     (let ((hl (om-parse-this-headline)))
-      (-if-let (pd (om-headline-get-properties-drawer hl))
+      (-if-let (pd (om-headline-get-property-drawer hl))
           (->> hl
                (om-match-map* `(,pd node-property)
                               (om-set-property :value "1:30" it))

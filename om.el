@@ -3179,7 +3179,7 @@ modified planning node."
         (funcall fun it)
         (om-headline-set-planning it headline)))
 
-(defun om-headline-get-properties-drawer (headline)
+(defun om-headline-get-property-drawer (headline)
   "Return the properties drawer node in HEADLINE.
 
 If multiple are present (there shouldn't be) the first will be
@@ -3190,7 +3190,7 @@ returned."
 
 (defun om-headline-get-node-properties (headline)
   "Return a list of node-properties nodes in HEADLINE or nil if none."
-  (-some->> (om-headline-get-properties-drawer headline)
+  (-some->> (om-headline-get-property-drawer headline)
             (om-get-children)
             (--filter (om-is-type 'node-property it))))
 
