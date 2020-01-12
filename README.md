@@ -3007,7 +3007,7 @@ Any other keys will trigger an error.
 
 #### om-headline-set-title! `(title-text stats-cookie-value headline)`
 
-Return **`headline`** node with title set with **`title-text`** and **`stats-cookie-value`**.
+Return **`headline`** node with new title.
 
 **`title-text`** is a string to be parsed into object nodes for the title
 via [`om-build-secondary-string!`](#om-build-secondary-string-string) (see that function for restrictions)

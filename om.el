@@ -2067,21 +2067,6 @@ TYPE given in DEC."
 ;;
 ;; headline
 
-(defun om--headline-set-title! (title-text statistics-cookie headline)
-  "Return HEADLINE node with modified title property.
-
-TITLE-TEXT is the text used for the title (without todo keywords,
-priorities, or comment flags) and STATISTICS-COOKIE is a value
-to be used in setting the statistics cookie that conforms to
-`om--is-valid-statistics-cookie-value'."
-  (let ((ss (om--build-secondary-string title-text)))
-    (if (not statistics-cookie)
-        (om-set-property :title ss headline)
-      (let ((ss* (om--map-last*
-                  (om--set-property-nocheck :post-blank 1 it) ss))
-            (sc (om-build-statistics-cookie statistics-cookie)))
-        (om-set-property :title (-snoc ss* sc) headline)))))
-
 (defun om--headline-shift-level (n headline)
   "Return HEADLINE node with the level property shifted by N.
 If the level is less then one after shifting, set level to one."
@@ -2110,7 +2095,7 @@ or nil to erase the statistics cookie if present."
 DONE and TOTAL are integers representing the numerator and denominator
 respectively of the statistics-cookie's fractional value. Both must
 be greater than zero, and DONE must be less than or equal to TOTAL."
-  (-if-let (cookie (om--headline-get-statistics-cookie headline))
+  (-if-let (cookie (om-headline-get-statistics-cookie headline))
       (let* ((format (om--statistics-cookie-get-format cookie))
              (value (if (eq 'fraction format) `(,done ,total)
                       (-> (float done)
@@ -2138,12 +2123,6 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
 ;;; INTERNAL TYPE-SPECIFIC BRANCH/CHILD FUNCTIONS
 
 ;;; headline
-
-(defun om--headline-get-statistics-cookie (headline)
-  "Return statistics-cookie node within HEADLINE node."
-  (->> (om--get-property-nocheck :title headline)
-       (-last-item)
-       (om--filter-type 'statistics-cookie)))
 
 (defun om--headline-get-properties-drawer (headline)
   "Return child properties-drawer node within HEADLINE node."
@@ -2681,7 +2660,7 @@ All arguments not mentioned here follow the same rules as
                 :commentedp commentedp
                 :archivedp archivedp
                 nodes)
-         (om--headline-set-title! title-text statistics-cookie))))
+         (om-headline-set-title! title-text statistics-cookie))))
 
 (om--defun-kw om-build-paragraph! (string &key post-blank)
   "Return a new paragraph node from STRING.
@@ -3232,7 +3211,9 @@ The node must have a type `eq' to `diary'. FORM is a quoted list."
 
 (defun om-headline-get-statistics-cookie (headline)
   "Return the statistics cookie node from HEADLINE if it exists."
-  (om--headline-get-statistics-cookie headline))
+  (->> (om--get-property-nocheck :title headline)
+       (-last-item)
+       (om--filter-type 'statistics-cookie)))
 
 (defun om-headline-is-done (headline)
   "Return t if HEADLINE node has a done todo-keyword."
@@ -3244,15 +3225,20 @@ The node must have a type `eq' to `diary'. FORM is a quoted list."
   "Return t if HEADLINE node is tagged with TAG."
   (if (member tag (om--get-property-nocheck :tags headline)) t))
 
-(defun om-headline-set-title! (title-text stats-cookie-value
-                                                   headline)
-  "Return HEADLINE node with title set with TITLE-TEXT and STATS-COOKIE-VALUE.
+(defun om-headline-set-title! (title-text stats-cookie-value headline)
+  "Return HEADLINE node with new title.
 
 TITLE-TEXT is a string to be parsed into object nodes for the title
 via `om-build-secondary-string!' (see that function for restrictions)
 and STATS-COOKIE-VALUE is a list described in
 `om-build-statistics-cookie'."
-  (om--headline-set-title! title-text stats-cookie-value headline))
+  (let ((ss (om--build-secondary-string title-text)))
+    (if (not stats-cookie-value)
+        (om-set-property :title ss headline)
+      (let ((ss* (om--map-last*
+                  (om--set-property-nocheck :post-blank 1 it) ss))
+            (sc (om-build-statistics-cookie stats-cookie-value)))
+        (om-set-property :title (-snoc ss* sc) headline)))))
 
 ;; item
 
