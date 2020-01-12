@@ -2980,9 +2980,8 @@ its values are forms to be mapped to these properties."
   "Return NODE with the value of PROP flipped.
 
 This function only applies to properties that are booleans."
-  (let* ((type (om-get-type node))
-         (flag (om--get-property-attribute :toggle type prop)))
-    (if flag
+  (let ((type (om-get-type node)))
+    (if (om--get-property-attribute :toggle type prop)
         (om--map-property-strict prop #'not node)
       (om--arg-error "Not a toggle-able property"))))
 
@@ -3006,12 +3005,11 @@ strings."
         (string-list)
         (if (member string string-list) string-list
           (om--insert-at index string string-list))))
-    (let* ((type (om-get-type node))
-           (flag (om--get-property-attribute :string-list type prop)))
-      (if flag
+    (let ((type (om-get-type node)))
+      (if (om--get-property-attribute :string-list type prop)
           (om--map-property-strict prop #'insert-at-maybe node)
         (om--arg-error "Property '%s' in node of type '%s' is not a string-list"
-               prop type)))))
+                       prop type)))))
 
 (defun om-remove-from-property (prop string node)
   "Return NODE with STRING removed from PROP if present.
@@ -3021,21 +3019,19 @@ strings.
 
 See `om-insert-into-property' for a list of supported elements
 and properties that may be used with this function."
-  (let* ((type (om-get-type node))
-         (flag (om--get-property-attribute :string-list type prop)))
-    (if flag
+  (let ((type (om-get-type node)))
+    (if (om--get-property-attribute :string-list type prop)
         (om--map-property-strict* prop (-remove-item string it) node)
       (om--arg-error "Property '%s' in node of type '%s' is not a string-list"
-             prop type))))
+                     prop type))))
 
 (defun om-plist-put-property (prop key value node)
   "Return NODE with VALUE corresponding to KEY inserted into PROP.
 
 KEY is a keyword and VALUE is a symbol. This only applies to
 properties that are represented as plists."
-  (let* ((type (om-get-type node))
-         (flag (om--get-property-attribute :plist type prop)))
-    (if flag
+  (let ((type (om-get-type node)))
+    (if (om--get-property-attribute :plist type prop)
         (om--map-property-strict* prop (plist-put it key value) node)
       (om--arg-error "Not a plist property"))))
 
@@ -3047,9 +3043,8 @@ represented as plists.
 
 See `om-plist-put-property' for a list of supported elements
 and properties that may be used with this function."
-  (let* ((type (om-get-type node))
-         (flag (om--get-property-attribute :plist type prop)))
-    (if flag
+  (let ((type (om-get-type node)))
+    (if (om--get-property-attribute :plist type prop)
         (om--map-property-strict* prop (om--plist-remove key it) node)
       (om--arg-error "Not a plist property"))))
 
