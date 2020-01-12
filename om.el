@@ -779,7 +779,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
   "Convert STRING to org-element representation."
   (with-temp-buffer
     (insert string)
-    (-> (om-parse-this-buffer) (om--get-children) (car))))
+    (-> (om-parse-this-buffer) (om-get-children) (car))))
 
 (defun om--build-secondary-string (string)
   "Return a list of elements from STRING as a secondary string."
@@ -787,7 +787,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
   ;; because of the stars
   (-if-let (ss (->> (om--from-string (concat " " string))
                     (om--get-descendent '(0))
-                    (om--get-children)))
+                    (om-get-children)))
       (cond
        ((--any? (om-is-any-type om-elements it) ss)
         (om--arg-error "Secondary string must only contain objects"))
@@ -857,7 +857,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
     (om--construct
      (om-get-type node)
      (plist-put (om--get-all-properties node) prop value)
-     (om--get-children node))))
+     (om-get-children node))))
 
 (defun om--set-properties-nocheck (plist node)
   "Set all properties in NODE to the values corresponding to PLIST.
@@ -869,7 +869,7 @@ property list in NODE."
          (om-get-type node)
          (->> (-partition 2 plist)
               (--reduce-from (apply #'plist-put acc it) props))
-         (om--get-children node)))
+         (om-get-children node)))
     (om--arg-error "Not a plist: %S" plist)))
 
 (defun om--set-property-nocheck-nil (prop node)
@@ -1573,35 +1573,28 @@ bounds."
 
 ;;; INTERNAL BRANCH/CHILD MANIPULATION
 
-(defalias 'om--get-children 'org-element-contents)
-
 (defun om--get-descendent (indices node)
   "Return the nested children of NODE as given by INDICES.
 INDICES is a list of integers specifying the index and level of the
 nested element to return."
   (if (not indices) node
-    (->> (om--get-children node)
+    (->> (om-get-children node)
          (nth (car indices))
          (om--get-descendent (cdr indices)))))
 
-(defun om--is-childless (node)
-  "Return t if NODE has no children."
-  (not (om--get-children node)))
-
-(defun om--set-children (children node)
+(defun om--set-children-nocheck (children node)
   "Return NODE with children set to CHILDREN."
    (let ((head (om--get-head node)))
      (if children (append head children) head)))
 
-(om--defun* om--map-children (fun node)
+(om--defun* om--map-children-nocheck (fun node)
   "Return NODE with FUN applied to its children.
 
 FUN is a unary function that takes a list of children and returns
 a modified list of children."
-  (let ((children (om--get-children node)))
-    (om--set-children (funcall fun children) node)))
-
-;;; strict child operations
+  (--> (om-get-children node)
+       (funcall fun it)
+       (om--set-children-nocheck it node)))
 
 (defun om--set-childen-throw-error (type child-types illegal)
   "Throw an `arg-type-error' for TYPE.
@@ -1618,29 +1611,6 @@ and ILLEGAL types were attempted to be set."
           (illegal (format-types illegal))
           (child-types (format-types child-types)))
       (om--arg-error fmt type illegal child-types))))
-
-(defun om--set-children-strict (children node)
-  "Return NODE with children set to CHILDREN.
-Throw an error if an nodes in CHILDREN are not in
-`om--node-restrictions' for the type of NODE."
-  (let ((type (om-get-type node)))
-    (-if-let (child-types (alist-get type om--node-restrictions))
-        (-if-let (illegal (-difference (-map #'om-get-type children)
-                                       child-types))
-            (om--set-childen-throw-error type child-types illegal)
-          (om--set-children children node))
-      ;; this should not happen
-      (error "Child type restrictions not found for %s" type))))
-
-(om--defun* om--map-children-strict (fun node)
-  "Return NODE with FUN applied to its children.
-
-FUN is a unary function that takes a list of children and returns
-a modified list of children. New children will be set with
-`om--set-children-strict' which will throw an error if FUN returns
-a child list containing illegal types."
-  (let ((children (om--get-children node)))
-    (om--set-children-strict (funcall fun children) node)))
 
 ;;; BASE BUILDER FUNCTIONS
 
@@ -1681,7 +1651,7 @@ plist of properties for the node."
   "Return a new branch object-typed node from TYPE, POST-BLANK, and CHILDREN."
   (->> om--recursive-object-properties
        (om--build type post-blank)
-       (om--set-children-strict children)))
+       (om-set-children children)))
 
 (defun om--build-element (type post-blank)
   "Return a new element-typed node from TYPE and POST-BLANK."
@@ -1691,7 +1661,7 @@ plist of properties for the node."
   "Return a new branch element-typed node from TYPE, POST-BLANK, and CHILDREN."
   (->> om--container-element-properties
        (om--build type post-blank)
-       (om--set-children-strict children)))
+       (om-set-children children)))
 
 ;;; base builders
 
@@ -2201,7 +2171,7 @@ and child nodes)."
 Additionally set all child headline nodes to be (+ 1 level) for
 first layer, (+ 2 level for second, and so on."
   (->> (om-set-property :level level headline)
-       (om--map-children*
+       (om--map-children-nocheck*
          (--map (om--headline-set-level (1+ level) it) it))))
 
 ;;; table
@@ -2209,8 +2179,8 @@ first layer, (+ 2 level for second, and so on."
 (defun om--table-get-width (table)
   "Return the width of TABLE as an integer.
 This effectively is the maximum of all table-row lengths."
-  (->> (om--get-children table)
-       (--map (length (om--get-children it)))
+  (->> (om-get-children table)
+       (--map (length (om-get-children it)))
        (-max)))
 
 (defun om--table-pad-or-truncate (length list)
@@ -2229,7 +2199,7 @@ a modified table-cell node."
       ((zip-into-rows
         (row new-cell)
         (if (om--property-is-eq :type 'rule row) row
-          (om--map-children
+          (om--map-children-nocheck
            (lambda (cells) (funcall fun new-cell cells))
            row)))
        (map-rows
@@ -2239,12 +2209,12 @@ a modified table-cell node."
              (--reduce-from (-insert-at it nil acc) column-index)
              (om--table-pad-or-truncate (length rows))
              (-zip-with #'zip-into-rows rows))))
-    (om--map-children #'map-rows table)))
+    (om--map-children-nocheck #'map-rows table)))
 
 (defun om--table-get-row (row-index table)
   "Return the table-row node at ROW-INDEX within TABLE.
 Rule-type table-row nodes do not factor when counting the index."
-  (-some->> (om--get-children table)
+  (-some->> (om-get-children table)
             (--filter (om--property-is-eq :type 'standard it))
             (om--nth row-index)))
 
@@ -2261,14 +2231,14 @@ See `om--table-pad-or-truncate' for how padding and truncation is
 performed. TABLE is used to get the table width."
   (if (om--property-is-eq :type 'rule table-row) table-row
     (let ((width (om--table-get-width table)))
-      (om--map-children*
+      (om--map-children-nocheck*
         (om--table-pad-or-truncate width it)
         table-row))))
 
 (defun om--table-replace-row (row-index table-row table)
   "Return TABLE node with row at ROW-INDEX replaced by TABLE-ROW."
   (let ((table-row (om--table-row-pad-maybe table table-row)))
-    (om--map-children* (om--replace-at row-index table-row it) table)))
+    (om--map-children-nocheck* (om--replace-at row-index table-row it) table)))
 
 (defun om--table-clear-row (row-index table)
   "Return TABLE with table-cells in row at ROW-INDEX filled with blanks."
@@ -2337,7 +2307,7 @@ This will not indent children under the headline node at INDEX."
                     (om--headline-shift-level 1)))
               (headlines-in-target
                (om-headline-get-subheadlines target-headline)))
-          (om--map-children
+          (om--map-children-nocheck
            (lambda (children)
              (append children (list target-headline*) headlines-in-target))
            parent-headline))))
@@ -2354,7 +2324,7 @@ This will indent children under the headline node at INDEX."
         (target-headline parent-headline)
         (let ((target-headline*
                (om--headline-subtree-shift-level 1 target-headline)))
-          (om--map-children
+          (om--map-children-nocheck
            (lambda (headline-children)
              (append headline-children (list target-headline*)))
            parent-headline))))
@@ -2373,19 +2343,19 @@ This will not indent children under the item node at INDEX."
         (target-item parent-item)
         (let ((target-item*
                (->> target-item
-                    (om--map-children*
+                    (om--map-children-nocheck*
                      (--remove (om-is-type 'plain-list it) it))
                     (om-build-plain-list)))
               (items-in-target
-               (->> (om--get-children target-item)
+               (->> (om-get-children target-item)
                     (--filter (om-is-type 'plain-list it)))))
-          (om--map-children
+          (om--map-children-nocheck
            (lambda (item-children)
              ;; TODO technically the target-item* should go in an
              ;; existing plain list but I don't this matters (for now)
              (append item-children (list target-item*) items-in-target))
            parent-item))))
-    (om--map-children
+    (om--map-children-nocheck
      (lambda (items)
        (om--indent-members #'append-indented index items))
      plain-list)))
@@ -2397,10 +2367,10 @@ This will indent children under the item node at INDEX."
       ((append-indented
         (target-item parent-item)
         (let ((target-item* (om-build-plain-list target-item)))
-          (om--map-children
+          (om--map-children-nocheck
            (lambda (item-children) (append item-children (list target-item*)))
            parent-item))))
-    (om--map-children
+    (om--map-children-nocheck
      (lambda (items)
        (om--indent-members #'append-indented index items))
      plain-list)))
@@ -2447,7 +2417,7 @@ will be spliced after INDEX."
         (om-headline-map-subheadlines #'ignore parent))
        (extract
         (parent)
-        (->> (om--get-children parent)
+        (->> (om-get-children parent)
              (--map (om--headline-subtree-shift-level -1 it)))))
     (om-headline-map-subheadlines
      (lambda (subheadlines)
@@ -2459,16 +2429,16 @@ will be spliced after INDEX."
   (cl-flet
       ((trim
         (parent)
-        (om--map-children
+        (om--map-children-nocheck
          (lambda (children)
            (--remove-first (om-is-type 'plain-list it) children))
          parent))
        (extract
         (parent)
-        (->> (om--get-children parent)
+        (->> (om-get-children parent)
              (--first (om-is-type 'plain-list it))
-             (om--get-children))))
-    (om--map-children
+             (om-get-children))))
+    (om--map-children-nocheck
      (lambda (items)
        (om--unindent-members index #'trim #'extract items))
      plain-list)))
@@ -2501,7 +2471,7 @@ will be spliced after INDEX."
 ;; fails
 (defun om--indent-after (indent-fun index node)
   "Return NODE with INDENT-FUN applied to all child nodes after INDEX."
-  (if (< index (1- (length (om--get-children node))))
+  (if (< index (1- (length (om-get-children node))))
       (->> (funcall indent-fun (1+ index) node)
            (om--indent-after indent-fun index))
     node))
@@ -2518,7 +2488,7 @@ will be spliced after INDEX."
         (parent)
         (->> (om--indent-after #'om-headline-indent-subtree
                                     child-index parent)
-             (om--get-children)
+             (om-get-children)
              (-drop child-index)
              (--map (om--headline-subtree-shift-level -1 it)))))
     (om-headline-map-subheadlines
@@ -2531,25 +2501,25 @@ will be spliced after INDEX."
   (cl-flet
       ((trim
         (parent)
-        (om--map-children
+        (om--map-children-nocheck
          (lambda (children)
            (if (= 0 index)
                (--remove-first (om-is-type 'plain-list it) children)
              (--map-first (om-is-type 'plain-list it)
-                          (om--map-children
+                          (om--map-children-nocheck
                            (lambda (items) (-take child-index items)) it)
                           children)))
          parent))
        (extract
         (parent)
         (->>
-         (om--get-children parent)
+         (om-get-children parent)
          (--first (om-is-type 'plain-list it))
          (om--indent-after #'om--plain-list-indent-item-tree
                                 child-index)
-         (om--get-children)
+         (om-get-children)
          (-drop child-index))))
-    (om--map-children
+    (om--map-children-nocheck
      (lambda (items)
        (om--unindent-members index #'trim #'extract items))
      plain-list)))
@@ -2879,7 +2849,7 @@ each type."
                 (om--construct
                  (om-get-type node)
                  (--reduce-from (filter acc it type) cur-props keyvals)
-                 (om--get-children node))))
+                 (om-get-children node))))
           (if (not update-funs) node*
             (--reduce-from (funcall it acc) node* update-funs)))
       (om--arg-error "Not a plist: %S" plist))))
@@ -3323,23 +3293,32 @@ is the same as that described in `om-build-planning!'."
 
 (defun om-get-children (branch-node)
   "Return the children of BRANCH-NODE as a list."
-  (om--get-children branch-node))
+  (org-element-contents branch-node))
 
 (defun om-set-children (children branch-node)
   "Return BRANCH-NODE with its children set to CHILDREN.
 CHILDREN is a list of nodes; the types permitted in this list depend
 on the type of NODE."
-  (om--set-children-strict children branch-node))
+  (let ((type (om-get-type branch-node)))
+    (-if-let (child-types (alist-get type om--node-restrictions))
+        (-if-let (illegal (-difference (-map #'om-get-type children)
+                                       child-types))
+            (om--set-childen-throw-error type child-types illegal)
+          (om--set-children-nocheck children branch-node))
+      ;; this should not happen
+      (error "Child type restrictions not found for %s" type))))
 
 (om--defun* om-map-children (fun branch-node)
   "Return BRANCH-NODE with FUN applied to its children.
 FUN is a unary function that takes the current list of children and
 returns a modified list of children."
-  (om--map-children-strict fun branch-node))
+  (--> (om-get-children branch-node)
+       (funcall fun it)
+       (om-set-children it branch-node)))
 
 (defun om-is-childless (branch-node)
-  "Return t if BRANCH-NODE is empty."
-  (om--is-childless branch-node))
+  "Return t if BRANCH-NODE has no children."
+  (not (om-get-children branch-node)))
 
 ;;; objects
 
@@ -3369,7 +3348,7 @@ Else add the post-blank property of OBJECT-NODE to the last member
 of its children and return children as a secondary string."
   (if (om-is-type 'plain-text object-node)
       (list object-node)
-    (let ((children (om--get-children object-node))
+    (let ((children (om-get-children object-node))
           (post-blank (om--get-property-nocheck :post-blank object-node)))
       (om--map-last* (om-map-property* :post-blank
                        (+ it post-blank) it)
@@ -3385,7 +3364,7 @@ return the result as a secondary string."
    ((om-is-type 'plain-text object-node)
     (list object-node))
    ((om-is-any-type types object-node)
-    (let* ((children (om--get-children object-node))
+    (let* ((children (om-get-children object-node))
            (post-blank (om--get-property-nocheck :post-blank object-node)))
       (->> children
            (om--mapcat-normalize (om-unwrap-types-deep types it))
@@ -3393,7 +3372,7 @@ return the result as a secondary string."
                             (+ it post-blank) it)))))
    (t
     (->> object-node
-         (om--map-children-strict*
+         (om-map-children*
            (om--mapcat-normalize (om-unwrap-types-deep types it) it))
          (list)))))
 
@@ -3422,14 +3401,14 @@ The unwrap operation will be done with `om-unwrap-deep'."
 
 (defun om-headline-get-section (headline)
   "Return children of section node in HEADLINE node or nil if none."
-  (-some->> (om--get-children headline)
+  (-some->> (om-get-children headline)
             (assoc 'section)
             (om-get-children)))
 
 (defun om-headline-set-section (children headline)
   "Return HEADLINE with section node containing CHILDREN.
 If CHILDREN is nil, return HEADLINE with no section node."
-  (om--map-children*
+  (om--map-children-nocheck*
     (let ((subheadlines (--filter (om-is-type 'headline it) it)))
       (if children
           (cons (apply #'om-build-section children) subheadlines)
@@ -3447,12 +3426,12 @@ returns a modified child list."
 
 (defun om-headline-get-subheadlines (headline)
   "Return list of child headline nodes in HEADLINE node or nil if none."
-  (-some->> (om--get-children headline)
+  (-some->> (om-get-children headline)
             (--filter (om-is-type 'headline it))))
 
 (defun om-headline-set-subheadlines (subheadlines headline)
   "Return HEADLINE node with SUBHEADLINES set to child subheadlines."
-  (om--map-children*
+  (om--map-children-nocheck*
     (-if-let (section (assoc 'section it))
         (cons section subheadlines)
       subheadlines)
@@ -3470,7 +3449,7 @@ a modified list of headlines."
 (defun om-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
   (-some->> (om-headline-get-section headline)
-            (om--get-children)
+            (om-get-children)
             (--first (om-is-type 'planning it))))
 
 (defun om-headline-set-planning (planning headline)
@@ -3509,7 +3488,7 @@ returned."
   "Return a list of node-properties nodes in HEADLINE or nil if none."
   (-some->>
    (om--headline-get-properties-drawer headline)
-   (om--get-children)
+   (om-get-children)
    (--filter (om-is-type 'node-property it))))
 
 
@@ -3535,9 +3514,9 @@ over the number of items with checkboxes (non-checkbox items will
 not be considered)."
   (let* ((items
           (->> (om-headline-get-section headline)
-               (om--get-children)
+               (om-get-children)
                (--filter (om-is-type 'plain-list it))
-               (-mapcat #'om--get-children)
+               (-mapcat #'om-get-children)
                (--remove (om--property-is-nil :checkbox it))))
          (done (length (--filter (om--property-is-eq :checkbox 'on it)
                                  items)))
@@ -3566,13 +3545,13 @@ subheadlines will not be counted)."
 TYPE is one of the symbols `unordered' or `ordered'."
   (cond
    ((eq type 'unordered)
-    (om--map-children*
+    (om--map-children-nocheck*
       (--map (om-set-property :bullet '- it) it) plain-list))
    ((eq type 'ordered)
     ;; NOTE the org-interpreter seems to use the correct, ordered
     ;; numbers if any number is set here. This behavior may not be
     ;; reliable.
-    (om--map-children*
+    (om--map-children-nocheck*
       (--map (om-set-property :bullet 1 it) it) plain-list))
    (t (om--arg-error "Invalid type: %s" type))))
 
@@ -3582,12 +3561,12 @@ TYPE is one of the symbols `unordered' or `ordered'."
   "Return table-cell node at ROW-INDEX and COLUMN-INDEX in TABLE node.
 Rule-type rows do not count toward row indices."
   (-some->> (om--table-get-row row-index table)
-            (om--get-children)
+            (om-get-children)
             (om--nth column-index)))
 
 (defun om-table-delete-row (row-index table)
   "Return TABLE node with row at ROW-INDEX deleted."
-  (om--map-children* (om--remove-at row-index it) table))
+  (om--map-children-nocheck* (om--remove-at row-index it) table))
 
 (defun om-table-delete-column (column-index table)
   "Return TABLE node with column at COLUMN-INDEX deleted."
@@ -3598,8 +3577,8 @@ Rule-type rows do not count toward row indices."
        (map-row
         (row)
         (if (om--property-is-eq :type 'rule row) row
-          (om--map-children #'delete-cell row))))
-    (om--map-children* (-map #'map-row it) table)))
+          (om--map-children-nocheck #'delete-cell row))))
+    (om--map-children-nocheck* (-map #'map-row it) table)))
 
 (defun om-table-insert-column! (column-index column-text table)
   "Return TABLE node with COLUMN-TEXT inserted at COLUMN-INDEX.
@@ -3622,7 +3601,7 @@ as `om-build-table-row!'."
   (if (not row-text) (om--table-clear-row row-index table)
     (let ((row (->> (om-build-table-row! row-text)
                     (om--table-row-pad-maybe table))))
-      (om--map-children* (om--insert-at row-index row it) table))))
+      (om--map-children-nocheck* (om--insert-at row-index row it) table))))
 
 (defun om-table-replace-cell! (row-index column-index cell-text table)
   "Return TABLE node with a table-cell node replaced by CELL-TEXT.
@@ -3635,7 +3614,7 @@ If CELL-TEXT is nil, it will set the cell to an empty string."
   (let* ((cell (if cell-text (om-build-table-cell! cell-text)
                  (om-build-table-cell "")))
          (row (->> (om--table-get-row row-index table)
-                   (om--map-children*
+                   (om--map-children-nocheck*
                      (om--replace-at column-index cell it)))))
     (om--table-replace-row row-index row table)))
 
@@ -3725,7 +3704,7 @@ The specific child item to unindent is selected by CHILD-INDEX."
 
 (defun om--set-blank-children (node)
   "Set the children of NODE to a blank string (\"\")."
-  (om--set-children '("") node))
+  (om--set-children-nocheck '("") node))
 
 (defconst om--rm-if-empty
   '(table plain-list bold italic radio-target strike-through
@@ -3743,23 +3722,23 @@ This is a workaround for a bug.")
   "Return NODE if it is not an empty node type from `om--rm-if-empty'.
 The exception is rule-typed table-row nodes which are supposed to be
 empty."
-  (unless (and (om--is-childless node)
+  (unless (and (om-is-childless node)
                (or (om-is-any-type om--rm-if-empty node)
                    (om--is-table-row node)))
     node))
 
 (defun om--clean (node)
   "Return NODE with empty child nodes from `om--rm-if-empty' removed."
-  (->> (om--map-children* (-non-nil (-map #'om--clean it)) node)
+  (->> (om--map-children-nocheck* (-non-nil (-map #'om--clean it)) node)
        (om--filter-non-zero-length)))
 
 (defun om--blank (node)
   "Return NODE with empty child nodes `om--blank-if-empty' set to contain \"\"."
-  (if (om--is-childless node)
+  (if (om-is-childless node)
       (if (om-is-any-type om--blank-if-empty node)
           (om--set-blank-children node)
         node)
-    (om--map-children* (-map #'om--blank it) node)))
+    (om--map-children-nocheck* (-map #'om--blank it) node)))
 
 ;;; print functions
 
@@ -3834,7 +3813,7 @@ empty."
 
 (defun om--get-children-indexed (node)
   "Return list of children from NODE (it any) with index annotations."
-  (let* ((children (om--get-children node))
+  (let* ((children (om-get-children node))
          (len (- (length children))))
     (--map-indexed (cons `(,it-index . ,(+ len it-index)) it) children)))
 
@@ -4161,7 +4140,7 @@ and the variable `it' is bound to the original children."
        ((rec
          (node)
          (if (not (om-is-branch-node node)) node
-           (om--map-children-strict*
+           (om-map-children*
              (->> (--map (rec it) it)
                   (funcall (lambda (it) ,form)))
              node))))
@@ -4272,12 +4251,12 @@ in the immediate, top level children of NODE."
           (om--modify-children node
             (--map-when
              (member it targets)
-             (om--map-children-strict*
+             (om-map-children*
                (om--insert-at index node* it t)
                it)
              it))
         node)
-    (om--map-children-strict* (om--insert-at index node* it t) node)))
+    (om-map-children* (om--insert-at index node* it t) node)))
 
 ;;; splice
 
@@ -4336,12 +4315,12 @@ in the immediate, top level children of NODE."
           (om--modify-children node
             (--map-when
              (member it targets)
-             (om--map-children-strict*
+             (om-map-children*
                (om--splice-at index nodes* it t)
                it)
              it))
         node)
-    (om--map-children-strict* (om--splice-at index nodes* it t) node)))
+    (om-map-children* (om--splice-at index nodes* it t) node)))
 
 ;;; side-effects
 
@@ -4500,7 +4479,7 @@ the section at the top of the org buffer."
   "Return org-data document tree for the current buffer.
 Contrary to the org-element specification, the org-data element
 returned from this function will have :begin and :end properties."
-  (let* ((c (om--get-children (org-element-parse-buffer)))
+  (let* ((c (om-get-children (org-element-parse-buffer)))
          (b (if c (om--get-property-nocheck :begin (-first-item c)) 1))
          (e (if c (om--get-property-nocheck :end (-last-item c)) 1)))
     (om--construct 'org-data `(:begin ,b :end ,e) c)))

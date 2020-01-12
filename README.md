@@ -3999,7 +3999,7 @@ returns a modified list of children.
 
 #### om-is-childless `(branch-node)`
 
-Return t if **`branch-node`** is empty.
+Return t if **`branch-node`** has no children.
 
 ```el
 ;; Given the following contents:
