@@ -108,39 +108,40 @@ anaphoric version and replacing all instances of \"FUN\" with \"FORM\"."
     (->> (s-replace "FUN" "FORM" docstring)
          (format "Anaphoric form of `%s'.\n\n%s" name))))
 
-(defmacro om--defun* (name arglist &rest args)
-  "Return a function definition for NAME, ARGLIST, and ARGS.
+(eval-when-compile
+  (defmacro om--defun* (name arglist &rest args)
+    "Return a function definition for NAME, ARGLIST, and ARGS.
 This will also make a mirrored anaphoric form macro definition. This
 assumes that `fun' represents a unary function which will be used
 somewhere in the definition's body. When making the anaphoric form,
 `fun' will be replaced by the symbol `form', and `form' will be
 wrapped in a lambda call binding the unary argument to the symbol
 `it'."
-  (declare (doc-string 3) (indent 2))
-  (-let* (((docstring decls body) (om--defun-partition-body args))
-          (name* (intern (format "%s*" name)))
-          (arglist* (-replace 'fun 'form arglist))
-          (docstring* (om--defun-make-anaphoric-docstring name docstring))
-          (funargs (--map (if (eq it 'fun) '(lambda (it) (\, form))
-                            (cons '\, (list it)))
-                          arglist))
-          (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
-          (debug* (->> arglist
-                       (--map (if (eq it 'fun) 'def-form 'form))
-                       (list 'debug)))
-          (dec (om--defun-make-indent-declare
-                decls (-elem-index 'fun arglist)))
-          (dec* (om--defun-make-indent-declare
-                 (cons debug* decls) (-elem-index 'fun arglist))))
-    `(progn
-       (defmacro ,name* ,arglist*
-         ,docstring*
-         ,dec*
-         ,body*)
-       (defun ,name ,arglist
-         ,docstring
-         ,dec
-         ,@body))))
+    (declare (doc-string 3) (indent 2))
+    (-let* (((docstring decls body) (om--defun-partition-body args))
+            (name* (intern (format "%s*" name)))
+            (arglist* (-replace 'fun 'form arglist))
+            (docstring* (om--defun-make-anaphoric-docstring name docstring))
+            (funargs (--map (if (eq it 'fun) '(lambda (it) (\, form))
+                              (cons '\, (list it)))
+                            arglist))
+            (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
+            (debug* (->> arglist
+                         (--map (if (eq it 'fun) 'def-form 'form))
+                         (list 'debug)))
+            (dec (om--defun-make-indent-declare
+                  decls (-elem-index 'fun arglist)))
+            (dec* (om--defun-make-indent-declare
+                   (cons debug* decls) (-elem-index 'fun arglist))))
+      `(progn
+         (defmacro ,name* ,arglist*
+           ,docstring*
+           ,dec*
+           ,body*)
+         (defun ,name ,arglist
+           ,docstring
+           ,dec
+           ,@body)))))
 
 ;;; better cl-defun
 
@@ -4495,32 +4496,33 @@ current buffer."
 
 ;; generate all update functions for corresponding parse functions
 ;; since all take function args, also generate anaphoric forms
-(--each '(object element table-row item headline subtree section)
-  (let* ((update-at
-          (intern (format "om-update-%s-at" it)))
-         (update-this
-          (intern (format "om-update-this-%s" it)))
-         (update-at-doc
-          (-as-> (list "Update %1$s under POINT using FUN."
-                       "FUN takes an %1$s and returns a modified %1$s")
-                 fmt
-                 (s-join "\n" fmt)
-                 (format fmt it)))
-         (update-this-doc
-          (-as-> (list "Update %1$s under current point using FUN."
-                       "FUN takes an %1$s and returns a modified %1$s")
-                 fmt
-                 (s-join "\n" fmt)
-                 (format fmt it)))
-         (call (intern (format "om-parse-%s-at" it)))
-         (update-at-body `(om-update fun (,call point)))
-         (update-this-body `(,update-at (point) fun)))
-    (eval `(om--defun* ,update-at (point fun)
-             ,update-at-doc
-             ,update-at-body))
-    (eval `(om--defun* ,update-this (fun)
-             ,update-this-doc
-             ,update-this-body))))
+(eval-when-compile
+  (--each '(object element table-row item headline subtree section)
+    (let* ((update-at
+            (intern (format "om-update-%s-at" it)))
+           (update-this
+            (intern (format "om-update-this-%s" it)))
+           (update-at-doc
+            (-as-> (list "Update %1$s under POINT using FUN."
+                         "FUN takes an %1$s and returns a modified %1$s")
+                   fmt
+                   (s-join "\n" fmt)
+                   (format fmt it)))
+           (update-this-doc
+            (-as-> (list "Update %1$s under current point using FUN."
+                         "FUN takes an %1$s and returns a modified %1$s")
+                   fmt
+                   (s-join "\n" fmt)
+                   (format fmt it)))
+           (call (intern (format "om-parse-%s-at" it)))
+           (update-at-body `(om-update fun (,call point)))
+           (update-this-body `(,update-at (point) fun)))
+      (eval `(om--defun* ,update-at (point fun)
+               ,update-at-doc
+               ,update-at-body))
+      (eval `(om--defun* ,update-this (fun)
+               ,update-this-doc
+               ,update-this-body)))))
 
 (om--defun* om-update-this-buffer (fun)
   "Apply FUN to the contents of the current buffer.
