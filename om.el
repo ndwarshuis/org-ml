@@ -828,7 +828,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 
 ;;; INTERNAL NODE PROPERTY FUNCTIONS
 
-(defun om--get-property (prop node)
+(defun om--get-property-nocheck (prop node)
   "Return PROP from NODE."
   (if (and (stringp node) (eq prop :post-blank))
       (length (car (s-match "[ ]*$" node)))
@@ -840,7 +840,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 
 (defun om--get-parent (node)
   "Return the parent of NODE."
-  (om--get-property :parent node))
+  (om--get-property-nocheck :parent node))
 
 (defun om--get-parent-headline (node)
   "Return the most immediate parent headline node of NODE."
@@ -848,7 +848,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
     (if (om-is-type 'headline parent) parent
       (om--get-parent-headline parent))))
 
-(defun om--set-property (prop value node)
+(defun om--set-property-nocheck (prop value node)
   "Set PROP in NODE to VALUE."
   (if (stringp node)
       (if (eq prop :post-blank)
@@ -859,7 +859,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
      (plist-put (om--get-all-properties node) prop value)
      (om--get-children node))))
 
-(defun om--set-properties (plist node)
+(defun om--set-properties-nocheck (plist node)
   "Set all properties in NODE to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that correspond to the
 property list in NODE."
@@ -872,43 +872,43 @@ property list in NODE."
          (om--get-children node)))
     (om--arg-error "Not a plist: %S" plist)))
 
-(defun om--set-property-nil (prop node)
+(defun om--set-property-nocheck-nil (prop node)
   "Set PROP to nil in NODE."
-  (om--set-property prop nil node))
+  (om--set-property-nocheck prop nil node))
 
-(defun om--set-properties-nil (props node)
+(defun om--set-properties-nocheck-nil (props node)
   "Set all PROPS to new in NODE."
   (let ((plist (--mapcat (list it nil) props)))
-    (om--set-properties plist node)))
+    (om--set-properties-nocheck plist node)))
 
-(om--defun* om--map-property (prop fun node)
+(om--defun* om--map-property-nocheck (prop fun node)
   "Return NODE with FUN applied to the value in PROP.
 FUN is a unary function that returns a modified value."
-  (let ((value (funcall fun (om--get-property prop node))))
-    (om--set-property prop value node)))
+  (let ((value (funcall fun (om--get-property-nocheck prop node))))
+    (om--set-property-nocheck prop value node)))
 
 (defun om--property-is-nil (prop node)
   "Return t if PROP in NODE is nil."
-  (not (om--get-property prop node)))
+  (not (om--get-property-nocheck prop node)))
 
 ;; TODO this is unused
 (defun om--property-is-non-nil (prop node)
   "Return t if PROP in NODE is not nil."
-  (if (om--get-property prop node) t))
+  (if (om--get-property-nocheck prop node) t))
 
 (defun om--property-is-eq (prop val node)
   "Return t if PROP in NODE is `eq' to VAL."
-  (eq val (om--get-property prop node)))
+  (eq val (om--get-property-nocheck prop node)))
 
 ;; TODO this is unused
 (defun om--property-is-equal (prop val node)
   "Return t if PROP in NODE is `equal' to VAL."
-  (equal val (om--get-property prop node)))
+  (equal val (om--get-property-nocheck prop node)))
 
 (om--defun* om--property-is-predicate (prop fun node)
   "Return t if FUN applied to the value of PROP in NODE results not nil.
 FUN is a predicate function that takes one argument."
-  (and (funcall fun (om--get-property prop node)) t))
+  (and (funcall fun (om--get-property-nocheck prop node)) t))
 
 ;;; NODE PROPERTY TRANSLATION AND CHECKING FRAMEWORK
 
@@ -1228,15 +1228,15 @@ Return value will conform to `om--is-valid-diary-sexp-value'."
 (defun om--update-macro-value (macro)
   "Return MACRO node with its value property updated.
 This will be based on MACRO's key and value properties."
-  (let* ((k (om--get-property :key macro))
-         (as (om--get-property :args macro))
+  (let* ((k (om--get-property-nocheck :key macro))
+         (as (om--get-property-nocheck :args macro))
          (v (if as (format "%s(%s)" k (s-join "," as)) k)))
-    (om--set-property :value (format "{{{%s}}}" v) macro)))
+    (om--set-property-nocheck :value (format "{{{%s}}}" v) macro)))
 
 (defun om--update-clock-duration (clock)
   "Return CLOCK node with its duration and status properties updated.
 This will be based on CLOCK's value property."
-  (let* ((ts (om--get-property :value clock))
+  (let* ((ts (om--get-property-nocheck :value clock))
          (seconds (om--timestamp-get-range ts))
          (plist
           (if (< 0 seconds)
@@ -1244,7 +1244,7 @@ This will be based on CLOCK's value property."
                      (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
                 `(:duration ,(format "%2d:%02d" h m) :status running))
             '(:duration nil :status closed))))
-    (om--set-properties plist clock)))
+    (om--set-properties-nocheck plist clock)))
 
 (defun om--update-headline-tags (headline)
   "Return HEADLINE node with its tags updated.
@@ -1253,9 +1253,9 @@ This will be based on HEADLINE's archivedp property."
       ((add-archive-tag-maybe
         (tags)
         (let ((tags* (remove org-archive-tag tags)))
-          (if (om--get-property :archivedp headline)
+          (if (om--get-property-nocheck :archivedp headline)
               (-snoc tags* org-archive-tag) tags*))))
-    (om--map-property :tags #'add-archive-tag-maybe headline)))
+    (om--map-property-nocheck :tags #'add-archive-tag-maybe headline)))
 
 ;;; shifters
 
@@ -1543,7 +1543,7 @@ bounds."
 
 ;; alist functions
 
-(defun om--get-property-attribute (attribute type prop)
+(defun om--get-property-nocheck-attribute (attribute type prop)
   "Return ATTRIBUTE for PROP of node TYPE."
   (-if-let (type-list (alist-get type om--node-property-alist))
       (-if-let (plist (alist-get prop type-list))
@@ -1553,53 +1553,53 @@ bounds."
                               (s-join ", "))))
     (om--arg-error "Tried to get property for non-existent type %s" type)))
 
-(defun om--get-property-encoder (type prop)
+(defun om--get-property-nocheck-encoder (type prop)
   "Return the encoder function for PROP of node TYPE."
-  (om--get-property-attribute :encode type prop))
+  (om--get-property-nocheck-attribute :encode type prop))
 
-(defun om--get-property-decoder (type prop)
+(defun om--get-property-nocheck-decoder (type prop)
   "Return the decoder function for PROP of node TYPE."
-  (om--get-property-attribute :decode type prop))
+  (om--get-property-nocheck-attribute :decode type prop))
 
-(defun om--get-property-cis-function (type prop)
+(defun om--get-property-nocheck-cis-function (type prop)
   "Return the cis function for PROP of node TYPE."
-  (om--get-property-attribute :cis type prop))
+  (om--get-property-nocheck-attribute :cis type prop))
 
-(defun om--get-property-type-desc (type prop)
+(defun om--get-property-nocheck-type-desc (type prop)
   "Return the type-description string for PROP of node TYPE."
-  (let ((desc (om--get-property-attribute :type-desc type prop)))
+  (let ((desc (om--get-property-nocheck-attribute :type-desc type prop)))
     (if (listp desc) (s-join " " desc) desc)))
 
 ;; getter
 
-(defun om--get-property-strict (prop node)
+(defun om--get-pr0perty (prop node)
   "Return the value of PROP in NODE.
 
 Will decode value according to `om--node-property-alist'."
   (let ((filter-fun (-> (om-get-type node)
-                        (om--get-property-decoder prop)))
-        (value (om--get-property prop node)))
+                        (om--get-property-nocheck-decoder prop)))
+        (value (om--get-property-nocheck prop node)))
     (if filter-fun (funcall filter-fun value) value)))
 
 ;; setter
 
-(defun om--set-property-strict (prop value node)
+(defun om--set-property (prop value node)
   "Return NODE with PROP set to VALUE.
 
 Will validate and encode VALUE if valid according to `om--node-property-alist'."
   (let* ((type (om-get-type node))
-         (pred (om--get-property-attribute :pred type prop)))
+         (pred (om--get-property-nocheck-attribute :pred type prop)))
     (if (funcall pred value)
-        (let* ((encode-fun (om--get-property-encoder type prop))
-               (update-fun (om--get-property-cis-function type prop)))
+        (let* ((encode-fun (om--get-property-nocheck-encoder type prop))
+               (update-fun (om--get-property-nocheck-cis-function type prop)))
           (-->
            (if encode-fun (funcall encode-fun value) value)
-           (om--set-property prop it node)
+           (om--set-property-nocheck prop it node)
            (if update-fun (funcall update-fun it) it)))
       (om--arg-error "Property '%s' in node of type '%s' must be %s. Got '%S'"
-             prop type (om--get-property-type-desc type prop) value))))
+             prop type (om--get-property-nocheck-type-desc type prop) value))))
 
-(defun om--set-properties-strict (plist node)
+(defun om--set-pr0perties (plist node)
   "Set all properties in NODE to the values corresponding to PLIST.
 
 PLIST is a list of property-value pairs that correspond to the
@@ -1610,20 +1610,20 @@ Will validate and encode VALUE if valid according to `om--node-property-alist'."
       ((filter
         (acc keyval type)
         (-let* (((prop value) keyval)
-                (pred (om--get-property-attribute :pred type prop)))
+                (pred (om--get-property-nocheck-attribute :pred type prop)))
           (if (funcall pred value)
-              (let ((encode-fun (om--get-property-encoder type prop)))
+              (let ((encode-fun (om--get-property-nocheck-encoder type prop)))
                 (->> (if encode-fun (funcall encode-fun value) value)
                      (funcall #'plist-put acc prop)))
             (om--arg-error "Property '%s' in node of type '%s' must be %s. Got '%S'"
-                   prop type (om--get-property-type-desc type prop) value)))))
+                   prop type (om--get-property-nocheck-type-desc type prop) value)))))
     (if (om--is-plist plist)
         (let* ((cur-props (om--get-all-properties node))
                (type (om-get-type node))
                (keyvals (-partition 2 plist))
                (update-funs
                 (->> (-map #'car keyvals)
-                     (--map (om--get-property-cis-function type it))
+                     (--map (om--get-property-nocheck-cis-function type it))
                      (-uniq)
                      (-non-nil)))
                (node*
@@ -1637,16 +1637,16 @@ Will validate and encode VALUE if valid according to `om--node-property-alist'."
 
 ;; mapper
 
-(om--defun* om--map-property-strict (prop fun node)
+(om--defun* om--map-pr0perty (prop fun node)
   "Return NODE with FUN applied to the value in PROP.
 
 FUN is a unary function that returns a modified value.
 
 Will validate/encode/decode value according to `om--node-property-alist'."
-  (let ((value (funcall fun (om--get-property-strict prop node))))
-    (om--set-property-strict prop value node)))
+  (let ((value (funcall fun (om--get-pr0perty prop node))))
+    (om--set-property prop value node)))
 
-(defun om--map-properties-strict (plist node)
+(defun om--map-pr0perties (plist node)
   "Return NODE with modified property values.
 
 PLIST is a property list where the keys are properties in NODE
@@ -1658,8 +1658,8 @@ Will validate/encode/decode value according to `om--node-property-alist'."
   (cond
    ((not plist) node)
    ((om--is-plist plist)
-    (->> (om--map-property-strict (nth 0 plist) (nth 1 plist) node)
-         (om--map-properties-strict (-drop 2 plist))))
+    (->> (om--map-pr0perty (nth 0 plist) (nth 1 plist) node)
+         (om--map-pr0perties (-drop 2 plist))))
    (t (om--arg-error "Not a plist: %s" plist))))
 
 ;;; INTERNAL BRANCH/CHILD MANIPULATION
@@ -1761,8 +1761,8 @@ a child list containing illegal types."
   "Return a new node assembled from TYPE, POST-BLANK, and PROPS.
 TYPE is a symbol, POST-BLANK is a postive integer, and PROPS is a
 plist of properties for the node."
-  (->> (om--set-property-strict :post-blank (or post-blank 0) `(,type nil))
-       (om--set-properties-nil props)))
+  (->> (om--set-property :post-blank (or post-blank 0) `(,type nil))
+       (om--set-properties-nocheck-nil props)))
 
 (defun om--build-object (type post-blank)
   "Return a new object-typed node from TYPE and POST-BLANK."
@@ -1835,22 +1835,22 @@ plist of properties for the node."
                          (list p c))
                        it)
                       (if (= 2 (length it))
-                          `(om--set-property ,@it)
-                        `(om--set-properties (list ,@it)))))
+                          `(om--set-property-nocheck ,@it)
+                        `(om--set-properties-nocheck (list ,@it)))))
            (nil-props
             (-some--> (alist-get 'null props)
                       (-map #'car it)
                       (if (= 1 (length it))
-                          `(om--set-property-nil ,@it)
-                        `(om--set-properties-nil (list ,@it)))))
+                          `(om--set-property-nocheck-nil ,@it)
+                        `(om--set-properties-nocheck-nil (list ,@it)))))
            (strict-props
             (-some-->
              (append (alist-get 'key props) (alist-get 'req props))
              (-map #'car it)
              (--mapcat (list it (om--kwd-to-sym it)) it)
              (if (= 2 (length it))
-                 `(om--set-property-strict ,@it)
-               `(om--set-properties-strict (list ,@it)))))
+                 `(om--set-property ,@it)
+               `(om--set-pr0perties (list ,@it)))))
            (doc
             (let ((class (if element? "element" "object"))
                   (end (if (not rest-arg) "."
@@ -1913,7 +1913,7 @@ plist of properties for the node."
   "Return format of STATISTICS-COOKIE as a symbol.
 If fractional cookie, return `fraction'; if percentage cookie return
 `percent', else throw error (which should never happen)."
-  (let ((value (om--get-property :value statistics-cookie)))
+  (let ((value (om--get-property-nocheck :value statistics-cookie)))
     (cond ((s-contains? "/" value) 'fraction)
           ((s-contains? "%" value) 'percent)
           (t (om--arg-error "Unparsable statistics cookie: %s" value)))))
@@ -2066,7 +2066,7 @@ TYPE given in DEC."
 
 (defun om--timestamp-is-active (timestamp)
   "Return t if TIMESTAMP is an active type."
-  (memq (om--get-property :type timestamp) '(active active-range)))
+  (memq (om--get-property-nocheck :type timestamp) '(active active-range)))
 
 (defun om--timestamp-is-ranged (timestamp)
   "Return t if TIMESTAMP has a range greater than 0 seconds."
@@ -2085,7 +2085,7 @@ TYPE given in DEC."
 (defun om--timestamp-set-start-time-nocheck (time timestamp)
   "Set the start TIME of TIMESTAMP. Does not set type."
   (let ((time* (om--time-format-props time 'start)))
-      (om--set-properties time* timestamp)))
+      (om--set-properties-nocheck time* timestamp)))
 
 (defun om--timestamp-set-start-time (time timestamp)
   "Return TIMESTAMP with start time properties set according to time list TIME."
@@ -2096,10 +2096,10 @@ TYPE given in DEC."
   "Set the end TIME of TIMESTAMP. Does not set type."
   (if time
       (-> (om--time-format-props time 'end)
-          (om--set-properties timestamp))
+          (om--set-properties-nocheck timestamp))
     (-> (om--timestamp-get-start-time timestamp)
         (om--time-format-props 'end)
-        (om--set-properties timestamp))))
+        (om--set-properties-nocheck timestamp))))
 
 (defun om--timestamp-set-end-time (time timestamp)
   "Return TIMESTAMP with end time properties set according to time list TIME."
@@ -2147,26 +2147,26 @@ TYPE given in DEC."
          ((inactive inactive-range)
           (if ranged? 'inactive-range 'inactive))
          (t (om--arg-error "Invalid timestamp type: %s" type)))))
-    (om--map-property :type #'update-range timestamp)))
+    (om--map-property-nocheck :type #'update-range timestamp)))
 
 (defun om--timestamp-set-active (flag timestamp)
   "Return TIMESTAMP with active type if FLAG is t."
   (let* ((type (if (om--timestamp-is-ranged-lowres timestamp)
                    (if flag 'active-range 'inactive-range)
                  (if flag 'active 'inactive))))
-    (om--set-property :type type timestamp)))
+    (om--set-property-nocheck :type type timestamp)))
 
 (defun om--timestamp-set-warning (warning timestamp)
   "Return TIMESTAMP with warning properties set to WARNING list."
   (let ((types '(all first)))
     (-> (om--decorator-format warning 'warning types)
-        (om--set-properties timestamp))))
+        (om--set-properties-nocheck timestamp))))
 
 (defun om--timestamp-set-repeater (repeater timestamp)
   "Return TIMESTAMP with warning properties set to REPEATER list."
   (let ((types '(catch-up restart cumulate)))
     (-> (om--decorator-format repeater 'repeater types)
-        (om--set-properties timestamp))))
+        (om--set-properties-nocheck timestamp))))
 
 (defun om--timestamp-shift-start (n unit timestamp)
   "Return TIMESTAMP with start time shifted N UNIT's."
@@ -2186,7 +2186,7 @@ TYPE given in DEC."
 
 (defun om--timestamp-diary-set-value (form timestamp)
   "Return TIMESTAMP with raw-value set to FORM."
-  (om--set-property :raw-value (format "<%%%%%S>" form) timestamp))
+  (om--set-property-nocheck :raw-value (format "<%%%%%S>" form) timestamp))
 
 ;;; element nodes
 ;;
@@ -2201,27 +2201,27 @@ to be used in setting the statistics cookie that conforms to
 `om--is-valid-statistics-cookie-value'."
   (let ((ss (om--build-secondary-string title-text)))
     (if (not statistics-cookie)
-        (om--set-property-strict :title ss headline)
+        (om--set-property :title ss headline)
       (let ((ss* (om--map-last*
-                  (om--set-property :post-blank 1 it) ss))
+                  (om--set-property-nocheck :post-blank 1 it) ss))
             (sc (om-build-statistics-cookie statistics-cookie)))
-        (om--set-property-strict :title (-snoc ss* sc) headline)))))
+        (om--set-property :title (-snoc ss* sc) headline)))))
 
 (defun om--headline-shift-level (n headline)
   "Return HEADLINE node with the level property shifted by N.
 If the level is less then one after shifting, set level to one."
-  (om--map-property* :level (om--shift-pos-integer n it) headline))
+  (om--map-property-nocheck* :level (om--shift-pos-integer n it) headline))
 
 (defun om--headline-set-statistics-cookie (value headline)
   "Return HEADLINE node with statistics cookie set by VALUE.
 VALUE is a list conforming to `om--is-valid-statistics-cookie-value'
 or nil to erase the statistics cookie if present."
-  (om--map-property*
+  (om--map-property-nocheck*
    :title
    (let ((last? (om-is-type 'statistics-cookie (-last-item it))))
      (cond
       ((and last? value)
-       (om--map-last* (om--set-property-strict :value value it) it))
+       (om--map-last* (om--set-property :value value it) it))
       ((and last? (not value))
        (-drop-last 1 it))
       (value
@@ -2266,7 +2266,7 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
 
 (defun om--headline-get-statistics-cookie (headline)
   "Return statistics-cookie node within HEADLINE node."
-  (->> (om--get-property :title headline)
+  (->> (om--get-property-nocheck :title headline)
        (-last-item)
        (om--filter-type 'statistics-cookie)))
 
@@ -2291,7 +2291,7 @@ and child nodes)."
   "Return HEADLINE node with its level set to LEVEL.
 Additionally set all child headline nodes to be (+ 1 level) for
 first layer, (+ 2 level for second, and so on."
-  (->> (om--set-property-strict :level level headline)
+  (->> (om--set-property :level level headline)
        (om--map-children*
          (--map (om--headline-set-level (1+ level) it) it))))
 
@@ -2658,9 +2658,9 @@ will be spliced after INDEX."
   "Return a new diary-sexp timestamp node from FORM.
 Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-object 'timestamp post-blank)
-       (om--set-property :type 'diary)
+       (om--set-property-nocheck :type 'diary)
        (om--timestamp-diary-set-value form)
-       (om--set-properties-nil
+       (om--set-properties-nocheck-nil
         (list :repeater-type :repeater-unit :repeater-value
               :warning-type :warning-unit :warning-value :year-start
               :month-start :day-start :hour-start :minute-start
@@ -2670,7 +2670,7 @@ Optionally set POST-BLANK (a positive integer)."
   "Return a new rule-typed table-row node.
 Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-container-element 'table-row post-blank nil)
-       (om--set-property :type 'rule)))
+       (om--set-property-nocheck :type 'rule)))
 
 ;;; shorthand builders
 
@@ -2713,7 +2713,7 @@ Building a diary sexp timestamp is not possible with this function."
        (om--timestamp-set-active active)
        (om--timestamp-set-warning warning)
        (om--timestamp-set-repeater repeater)
-       (om--set-property-nil :raw-value)))
+       (om--set-property-nocheck-nil :raw-value)))
 
 (om--defun-kw om-build-clock! (start &key end post-blank)
   "Return a new clock node.
@@ -2926,7 +2926,7 @@ elements may have other elements as children."
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om--set-property-strict prop value node))
+  (om--set-property prop value node))
 
 (defun om-set-properties (plist node)
   "Return NODE with all properties set to the values according to PLIST.
@@ -2936,7 +2936,7 @@ property list in NODE.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om--set-properties-strict plist node))
+  (om--set-pr0perties plist node))
 
 ;; TODO add plural version of this...
 (defun om-get-property (prop node)
@@ -2944,7 +2944,7 @@ each type."
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om--get-property-strict prop node))
+  (om--get-pr0perty prop node))
 
 (om--defun* om-map-property (prop fun node)
   "Return NODE with FUN applied to the value of PROP.
@@ -2954,7 +2954,7 @@ returns a new value to which PROP will be set.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om--map-property-strict prop fun node))
+  (om--map-pr0perty prop fun node))
 
 (defun om-map-properties (plist node)
   "Return NODE with functions applied to the values of properties.
@@ -2964,7 +2964,7 @@ its values are unary functions to be mapped to these properties.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om--map-properties-strict plist node))
+  (om--map-pr0perties plist node))
 
 (defmacro om-map-properties* (plist node)
   "Anaphoric form of `om-map-properties'.
@@ -2974,15 +2974,15 @@ its values are forms to be mapped to these properties."
   (declare (debug (form form)))
   (let ((p (make-symbol "plist*")))
     `(let ((,p (om--plist-map-values (lambda (form) `(lambda (it) ,form)) ',plist)))
-       (om--map-properties-strict ,p ,node))))
+       (om--map-pr0perties ,p ,node))))
 
 (defun om-toggle-property (prop node)
   "Return NODE with the value of PROP flipped.
 
 This function only applies to properties that are booleans."
   (let ((type (om-get-type node)))
-    (if (om--get-property-attribute :toggle type prop)
-        (om--map-property-strict prop #'not node)
+    (if (om--get-property-nocheck-attribute :toggle type prop)
+        (om--map-pr0perty prop #'not node)
       (om--arg-error "Not a toggle-able property"))))
 
 (defun om-shift-property (prop n node)
@@ -2990,9 +2990,9 @@ This function only applies to properties that are booleans."
 
 This only applies the properties that are represented as integers."
   (let* ((type (om-get-type node))
-         (fun (om--get-property-attribute :shift type prop)))
+         (fun (om--get-property-nocheck-attribute :shift type prop)))
     (if fun
-        (om--map-property-strict* prop (funcall fun n it) node)
+        (om--map-pr0perty* prop (funcall fun n it) node)
       (om--arg-error "Not a shiftable property"))))
 
 (defun om-insert-into-property (prop index string node)
@@ -3006,8 +3006,8 @@ strings."
         (if (member string string-list) string-list
           (om--insert-at index string string-list))))
     (let ((type (om-get-type node)))
-      (if (om--get-property-attribute :string-list type prop)
-          (om--map-property-strict prop #'insert-at-maybe node)
+      (if (om--get-property-nocheck-attribute :string-list type prop)
+          (om--map-pr0perty prop #'insert-at-maybe node)
         (om--arg-error "Property '%s' in node of type '%s' is not a string-list"
                        prop type)))))
 
@@ -3020,8 +3020,8 @@ strings.
 See `om-insert-into-property' for a list of supported elements
 and properties that may be used with this function."
   (let ((type (om-get-type node)))
-    (if (om--get-property-attribute :string-list type prop)
-        (om--map-property-strict* prop (-remove-item string it) node)
+    (if (om--get-property-nocheck-attribute :string-list type prop)
+        (om--map-pr0perty* prop (-remove-item string it) node)
       (om--arg-error "Property '%s' in node of type '%s' is not a string-list"
                      prop type))))
 
@@ -3031,8 +3031,8 @@ and properties that may be used with this function."
 KEY is a keyword and VALUE is a symbol. This only applies to
 properties that are represented as plists."
   (let ((type (om-get-type node)))
-    (if (om--get-property-attribute :plist type prop)
-        (om--map-property-strict* prop (plist-put it key value) node)
+    (if (om--get-property-nocheck-attribute :plist type prop)
+        (om--map-pr0perty* prop (plist-put it key value) node)
       (om--arg-error "Not a plist property"))))
 
 (defun om-plist-remove-property (prop key node)
@@ -3044,8 +3044,8 @@ represented as plists.
 See `om-plist-put-property' for a list of supported elements
 and properties that may be used with this function."
   (let ((type (om-get-type node)))
-    (if (om--get-property-attribute :plist type prop)
-        (om--map-property-strict* prop (om--plist-remove key it) node)
+    (if (om--get-property-nocheck-attribute :plist type prop)
+        (om--map-pr0perty* prop (om--plist-remove key it) node)
       (om--arg-error "Not a plist property"))))
 
 ;; update polymorphic property function documentation
@@ -3111,7 +3111,7 @@ KEY is one of:
 Any other keys will trigger an error."
   (-if-let (index (-elem-index key (list :latex :latex-math-p :html
                                          :ascii :latin1 :utf-8)))
-      (->> (om--get-property-strict :name entity)
+      (->> (om--get-pr0perty :name entity)
            (org-entity-get)
            (cdr)
            (nth index))
@@ -3121,7 +3121,7 @@ Any other keys will trigger an error."
 
 (defun om-statistics-cookie-is-complete (statistics-cookie)
   "Return t is STATISTICS-COOKIE node is complete."
-  (let ((val (om--get-property :value statistics-cookie)))
+  (let ((val (om--get-property-nocheck :value statistics-cookie)))
     (or (-some->>
          (s-match "\\([[:digit:]]+\\)%" val)
          (nth 1)
@@ -3310,13 +3310,13 @@ TIMESTAMP must have a type `eq' to `diary'. FORM is a quoted list."
 
 (defun om-headline-is-done (headline)
   "Return t if HEADLINE node has a done todo-keyword."
-  (-> (om--get-property :todo-keyword headline)
+  (-> (om--get-property-nocheck :todo-keyword headline)
       (member org-done-keywords)
       (and t)))
 
 (defun om-headline-has-tag (tag headline)
   "Return t if HEADLINE node is tagged with TAG."
-  (if (member tag (om--get-property :tags headline)) t))
+  (if (member tag (om--get-property-nocheck :tags headline)) t))
 
 (defun om-headline-set-title! (title-text stats-cookie-value
                                                    headline)
@@ -3335,10 +3335,10 @@ and STATS-COOKIE-VALUE is a list described in
 This only affects item nodes with checkboxes in the `on' or `off'
 states; return ITEM node unchanged if the checkbox property is `trans'
 or nil."
-  (cl-case (om--get-property-strict :checkbox item)
+  (cl-case (om--get-pr0perty :checkbox item)
     ((or trans nil) item)
-    ('on (om--set-property-strict :checkbox 'off item))
-    ('off (om--set-property-strict :checkbox 'on item))
+    ('on (om--set-property :checkbox 'off item))
+    ('off (om--set-property :checkbox 'on item))
     (t (error "This should not happen"))))
 
 ;; planning
@@ -3351,7 +3351,7 @@ is the same as that described in `om-build-planning!'."
   (unless (memq prop '(:closed :deadline :scheduled))
     (om--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
   (let ((ts (om--planning-list-to-timestamp planning-list)))
-    (om--set-property-strict prop ts planning)))
+    (om--set-property prop ts planning)))
 
 ;;; PUBLIC BRANCH/CHILD FUNCTIONS
 
@@ -3414,8 +3414,8 @@ of its children and return children as a secondary string."
   (if (om-is-type 'plain-text object-node)
       (list object-node)
     (let ((children (om--get-children object-node))
-          (post-blank (om--get-property :post-blank object-node)))
-      (om--map-last* (om--map-property-strict* :post-blank
+          (post-blank (om--get-property-nocheck :post-blank object-node)))
+      (om--map-last* (om--map-pr0perty* :post-blank
                        (+ it post-blank) it)
         children))))
 
@@ -3430,10 +3430,10 @@ return the result as a secondary string."
     (list object-node))
    ((om-is-any-type types object-node)
     (let* ((children (om--get-children object-node))
-           (post-blank (om--get-property :post-blank object-node)))
+           (post-blank (om--get-property-nocheck :post-blank object-node)))
       (->> children
            (om--mapcat-normalize (om-unwrap-types-deep types it))
-           (om--map-last* (om--map-property-strict* :post-blank
+           (om--map-last* (om--map-pr0perty* :post-blank
                             (+ it post-blank) it)))))
    (t
     (->> object-node
@@ -3565,7 +3565,7 @@ HEADLINE) leading to the root node."
   (cl-labels
       ((get-path
         (hl)
-        (let ((title (om--get-property :raw-value hl)))
+        (let ((title (om--get-property-nocheck :raw-value hl)))
           (-if-let (parent (om--get-parent-headline hl))
               (cons title (get-path parent))
             (list title)))))
@@ -3595,7 +3595,7 @@ The percent/fraction will be computed as the number of done
 subheadlines over the number of todo subheadlines (eg non-todo
 subheadlines will not be counted)."
   (let* ((subtodo (->> (om-headline-get-subheadlines headline)
-                       (--filter (om--get-property :todo-keyword it))))
+                       (--filter (om--get-property-nocheck :todo-keyword it))))
          (done (length (-filter #'om-headline-is-done subtodo)))
          (total (length subtodo)))
     (om--headline-set-statistics-cookie-fraction done total headline)))
@@ -3611,13 +3611,13 @@ TYPE is one of the symbols `unordered' or `ordered'."
   (cond
    ((eq type 'unordered)
     (om--map-children*
-      (--map (om--set-property-strict :bullet '- it) it) plain-list))
+      (--map (om--set-property :bullet '- it) it) plain-list))
    ((eq type 'ordered)
     ;; NOTE the org-interpreter seems to use the correct, ordered
     ;; numbers if any number is set here. This behavior may not be
     ;; reliable.
     (om--map-children*
-      (--map (om--set-property-strict :bullet 1 it) it) plain-list))
+      (--map (om--set-property :bullet 1 it) it) plain-list))
    (t (om--arg-error "Invalid type: %s" type))))
 
 ;;; table
@@ -3951,7 +3951,7 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;; NOTE: this must go last if we don't want :pred/:and/:or/:not
       ;; to be interpreted as a property
       (`(,(and (pred keywordp) prop) . (,val . nil))
-       `(equal (om--get-property ,prop ,it-node) ,val))
+       `(equal (om--get-property-nocheck ,prop ,it-node) ,val))
       ;;
       (p (om--arg-error "Invalid condition: %s" p)))))
 
@@ -4545,8 +4545,8 @@ the section at the top of the org buffer."
 Contrary to the org-element specification, the org-data element
 returned from this function will have :begin and :end properties."
   (let* ((c (om--get-children (org-element-parse-buffer)))
-         (b (if c (om--get-property :begin (-first-item c)) 1))
-         (e (if c (om--get-property :end (-last-item c)) 1)))
+         (b (if c (om--get-property-nocheck :begin (-first-item c)) 1))
+         (e (if c (om--get-property-nocheck :end (-last-item c)) 1)))
     (om--construct 'org-data `(:begin ,b :end ,e) c)))
 
 ;;; BUFFER SIDE EFFECTS
@@ -4595,8 +4595,8 @@ FUN is a unary function that takes NODE and returns a modified NODE.
 This modified node is then written in place of the old node in the
 current buffer."
   ;; if node is of type 'org-data' it will have no props
-  (let* ((begin (om--get-property :begin node))
-         (end (om--get-property :end node))
+  (let* ((begin (om--get-property-nocheck :begin node))
+         (end (om--get-property-nocheck :end node))
          (ov-cmd (->>
                   (overlays-in begin end)
                   (--filter (eq 'outline (overlay-get it 'invisible)))
@@ -4654,10 +4654,10 @@ returns a modified node."
 ;; TODO this will fold items improperly
 (defun om--flag-elem-contents (flag node)
   "Set folding of buffer contents in NODE to FLAG."
-  (let ((b (om--get-property :contents-begin node))
+  (let ((b (om--get-property-nocheck :contents-begin node))
         (e (cl-case (om-get-type node)
-             ((property-drawer drawer) (om--get-property :end node))
-             (t (om--get-property :contents-end node)))))
+             ((property-drawer drawer) (om--get-property-nocheck :end node))
+             (t (om--get-property-nocheck :contents-end node)))))
     (outline-flag-region (1- b) (1- e) flag)))
 
 (defun om-fold (node)
