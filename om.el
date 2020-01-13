@@ -3161,17 +3161,17 @@ a modified list of headlines."
   "Return HEADLINE node with planning components set to PLANNING node."
   (if planning
       (om-headline-map-section*
-       ;; if no section, build new section with planning in it
-       (if (not it) (list planning)
-         ;; if section, test if planning already in front and override
-         ;; as needed
-         (let ((r (if (om-is-type 'planning (car it)) (cdr it) it)))
-           (cons planning r)))
-       headline)
+        ;; if no section, build new section with planning in it
+        (if (not it) (list planning)
+          ;; if section, test if planning already in front and override
+          ;; as needed
+          (let ((r (if (om-is-type 'planning (car it)) (cdr it) it)))
+            (cons planning r)))
+        headline)
     ;; if `PLANNING' is nil, remove planning from section if present
     (om-headline-map-section*
-     (--remove (om-is-type 'planning it) it)
-     headline)))
+      (--remove-first (om-is-type 'planning it) it)
+      headline)))
 
 (om--defun* om-headline-map-planning (fun headline)
   "Return HEADLINE node with planning node modified by FUN.
@@ -3191,11 +3191,113 @@ returned."
    (om-headline-get-section headline)
    (--first (om-is-type 'property-drawer it))))
 
+(defun om-headline-set-property-drawer (property-drawer headline)
+  "Return HEADLINE node with property drawer set to PROPERTY-DRAWER NODE."
+  (if property-drawer
+      (om-headline-map-section*
+        ;; if no section, build new section with prop-drwr in it
+        (if (not it) (list property-drawer)
+          ;; the prop-drwr could either be the first child or second
+          ;; if planning is in front
+          (let ((first (nth 0 it))
+                (second (nth 1 it)))
+            (cond
+             ((and (om-is-type 'planning first)
+                   (om-is-type 'property-drawer second))
+              (-replace-at 1 property-drawer it))
+             ((om-is-type 'property-drawer first)
+              (-replace-at 0 property-drawer it))
+             ((om-is-type 'planning first)
+              (-insert-at 1 property-drawer it))
+             (t
+              (cons property-drawer it)))))
+        headline)
+    ;; if `PROPERTY-DRAWER' is nil, remove from section if present
+    (om-headline-map-section*
+      (--remove-first (om-is-type 'property-drawer it) it)
+      headline)))
+
+(om--defun* om-headline-map-property-drawer (fun headline)
+  "Return HEADLINE node with property-drawer node modified by FUN.
+
+FUN is a unary function that takes a property-drawer node and returns
+a modified property-drawer node."
+   (--> (om-headline-get-property-drawer headline)
+        (funcall fun it)
+        (om-headline-set-property-drawer it headline)))
+
 (defun om-headline-get-node-properties (headline)
   "Return a list of node-properties nodes in HEADLINE or nil if none."
   (-some->> (om-headline-get-property-drawer headline)
             (om-get-children)
             (--filter (om-is-type 'node-property it))))
+
+(defun om-headline-set-node-properties (node-properties headline)
+  "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
+NODE-PROPERTIES is a list of node-property nodes."
+  (if node-properties
+      (om-headline-map-section*
+        (let ((pd (apply #'om-build-property-drawer node-properties)))
+          ;; if no section, build new section with prop-drwr in it
+          (if (not it) (list pd)
+            ;; the prop-drwr could either be the first child or second
+            ;; if planning is in front
+            (let ((first (nth 0 it))
+                  (second (nth 1 it)))
+              (cond
+               ((and (om-is-type 'planning first)
+                     (om-is-type 'property-drawer second))
+                (-replace-at 1 pd it))
+               ((om-is-type 'property-drawer first)
+                (-replace-at 0 pd it))
+               ((om-is-type 'planning first)
+                (-insert-at 1 pd it))
+               (t
+                (cons pd it))))))
+        headline)
+    ;; if `NODE-PROPERTIES' is nil, remove from section if present
+    (om-headline-map-section*
+      (--remove-first (om-is-type 'property-drawer it) it)
+      headline)))
+
+(om--defun* om-headline-map-node-properties (fun headline)
+  "Return HEADLINE node with property-drawer node modified by FUN.
+
+FUN is a unary function that takes a property-drawer node and returns
+a modified property-drawer node."
+   (--> (om-headline-get-node-properties headline)
+        (funcall fun it)
+        (om-headline-set-node-properties it headline)))
+
+(defun om-headline-get-node-property (key headline)
+  "Return value of property with KEY in HEADLINE or nil if not found.
+If multiple properties with KEY are present, only return the first."
+  (->> (om-headline-get-node-properties headline)
+       (--first (equal key (om-get-property :key it)))
+       (om-get-property :value)))
+
+(defun om-headline-set-node-property (key value headline)
+  "Return HEADLINE with node property matching KEY set to VALUE.
+If a property matching KEY is present, set it to VALUE. If multiple
+properties matching KEY are present, only set the first."
+  (om-headline-map-node-properties*
+    (let ((np (om-build-node-property key value)))
+      (if (not it) (list np)
+        ;; replace first np matching `KEY' or add to the front of
+        ;; np's if not found
+        (-if-let (i (--find-index (equal key (om-get-property :key it)) it))
+            (-replace-at i np it)
+          (cons np it))))
+    headline))
+
+(om--defun* om-headline-map-node-property (key fun headline)
+  "Return HEADLINE node with property value matching KEY modified by FUN.
+
+FUN is a unary function that takes a node-property value and returns
+a modified node-property value."
+   (--> (om-headline-get-node-property key headline)
+        (funcall fun it)
+        (om-headline-set-node-property key it headline)))
 
 (defun om-headline-get-path (headline)
   "Return tree path of HEADLINE node.
