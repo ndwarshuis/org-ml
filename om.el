@@ -3299,6 +3299,83 @@ a modified node-property value."
         (funcall fun it)
         (om-headline-set-node-property key it headline)))
 
+(defun om-headline-get-logbook (headline)
+  "Return the children of the logbook drawer of HEADLINE.
+This function assumes that the logbook entries are in a drawer
+immediately after planning and/or property-drawer nodes named
+via `org-log-into-drawer'. If `org-log-into-drawer' is nil, always
+return nil."
+  ;; TODO this will not inherit the log-into-drawer property
+  (-when-let (drawer-name (org-log-into-drawer))
+    (-some-->
+     (om-headline-get-section headline)
+     (if (om-is-type 'planning (car it)) (cdr it) it)
+     (if (om-is-type 'property-drawer (car it)) (cdr it) it)
+     (car it)
+     (and (om-is-type 'drawer it)
+          (equal drawer-name (om-get-property :drawer-name it))
+          (om-get-children it)))))
+
+(defun om-headline-set-logbook (children headline)
+  "Return HEADLINE with logbook drawer filled with CHILDREN.
+CHILDREN must be a list of plain-list and/or clock nodes.
+
+This function assumes that the logbook entries will be stored in a
+drawer immediately after planning and/or property-drawer nodes named
+via `org-log-into-drawer'. If `org-log-into-drawer' is nil, return
+HEADLINE unmodified."
+  (unless (--all? (om-is-any-type '(plain-list clock) it) children)
+    (om--arg-error
+     "Logbook must only contain clock or plain-list nodes. Got %s"
+     children))
+  (-if-let (drawer-name (org-log-into-drawer))
+      (cl-flet
+          ((is-logbook
+            (node)
+            (and (om-is-type 'drawer node)
+                 (equal drawer-name (om-get-property :drawer-name node)))))
+        (om-headline-map-section*
+          (let ((lb (apply #'om-build-drawer drawer-name children)))
+            (if (not it) (list lb)
+              (-let (((n0 n1 n2) (-take 3 it)))
+                (cond
+                 ((and (om-is-type 'planning n0)
+                       (om-is-type 'property-drawer n1)
+                       (is-logbook n2))
+                  (-replace-at 2 lb it))
+                 ((and (om-is-type 'planning n0)
+                       (om-is-type 'property-drawer n1))
+                  (-insert-at 2 lb it))
+                 ((and (or (om-is-type 'planning n0)
+                           (om-is-type 'property-drawer n0))
+                       (is-logbook n1))
+                  (-replace-at 1 lb it))
+                 ((or (om-is-type 'planning n0)
+                      (om-is-type 'property-drawer n0))
+                  (-insert-at 1 lb it))
+                 ((is-logbook n0)
+                  (-replace-at 0 lb it))
+                 (t
+                  (cons lb it))))))
+          headline))
+    headline))
+
+(om--defun* om-headline-map-logbook (fun headline)
+  "Return HEADLINE node with property value matching KEY modified by FUN.
+
+FUN is a unary function that takes a list of child nodes from the
+logbook value and returns a modified list of child nodes.
+
+This function assumes that the logbook entries will be stored in a
+drawer immediately after planning and/or property-drawer nodes named
+via `org-log-into-drawer'. If `org-log-into-drawer' is nil, return
+HEADLINE unmodified."
+  (if (org-log-into-drawer)
+      (--> (om-headline-get-logbook headline)
+           (funcall fun it)
+           (om-headline-set-logbook it headline))
+    headline))
+
 (defun om-headline-get-path (headline)
   "Return tree path of HEADLINE node.
 
