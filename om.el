@@ -3443,55 +3443,15 @@ modified planning node."
         (funcall fun it)
         (om-headline-set-planning it headline)))
 
-(defun om-headline-get-property-drawer (headline)
-  "Return the properties drawer node in HEADLINE.
-
-If multiple are present (there shouldn't be) the first will be
-returned."
-  (-some->>
-   (om-headline-get-section headline)
-   (--first (om-is-type 'property-drawer it))))
-
-(defun om-headline-set-property-drawer (property-drawer headline)
-  "Return HEADLINE node with property drawer set to PROPERTY-DRAWER NODE."
-  (if property-drawer
-      (om-headline-map-section*
-        ;; if no section, build new section with prop-drwr in it
-        (if (not it) (list property-drawer)
-          ;; the prop-drwr could either be the first child or second
-          ;; if planning is in front
-          (let ((first (nth 0 it))
-                (second (nth 1 it)))
-            (cond
-             ((and (om-is-type 'planning first)
-                   (om-is-type 'property-drawer second))
-              (-replace-at 1 property-drawer it))
-             ((om-is-type 'property-drawer first)
-              (-replace-at 0 property-drawer it))
-             ((om-is-type 'planning first)
-              (-insert-at 1 property-drawer it))
-             (t
-              (cons property-drawer it)))))
-        headline)
-    ;; if `PROPERTY-DRAWER' is nil, remove from section if present
-    (om-headline-map-section*
-      (--remove-first (om-is-type 'property-drawer it) it)
-      headline)))
-
-(om--defun* om-headline-map-property-drawer (fun headline)
-  "Return HEADLINE node with property-drawer node modified by FUN.
-
-FUN is a unary function that takes a property-drawer node and returns
-a modified property-drawer node."
-   (--> (om-headline-get-property-drawer headline)
-        (funcall fun it)
-        (om-headline-set-property-drawer it headline)))
-
 ;; node-properties (eg the entire property drawer)
 
 (defun om-headline-get-node-properties (headline)
   "Return a list of node-properties nodes in HEADLINE or nil if none."
-  (-some->> (om-headline-get-property-drawer headline)
+  (-some->> (om-headline-get-section headline)
+            ;; assume the property drawer is the first or second
+            ;; child of section
+            (-take 2)
+            (--first (om-is-type 'property-drawer it))
             (om-get-children)
             (--filter (om-is-type 'node-property it))))
 
