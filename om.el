@@ -2536,6 +2536,15 @@ in the first paragraph of the returned item."
        (om-build-paragraph!)
        (om-build-item)))
 
+(defun om--build-log-item-trans (type unixtime old-timestamp note)
+  "Return an item for any of the transition log entry types.
+These are re/del-schedule/deadline (specified with TYPE) transitioning
+from OLD-TIMESTAMP at UNIXTIME with optionally supplied NOTE."
+  (->> (om--log-get type)
+       (om--log-replace-old-timestamp old-timestamp)
+       (om--log-replace-timestamp unixtime nil t)
+       (om--build-log-item note)))
+
 ;; public
 
 (defun om-build-log-done (unixtime &optional note)
@@ -2598,10 +2607,7 @@ OLD-TIMESTAMP is a timestamp node of the schedule that is being
 deleted. It will always be converted to an inactive timestamp.
 
 If string NOTE is supplied, append a note to the log entry."
-  (->> (om--log-get 'reschedule)
-       (om--log-replace-old-timestamp old-timestamp)
-       (om--log-replace-timestamp unixtime nil t)
-       (om--build-log-item note)))
+  (om--build-log-item-trans 'reschedule unixtime old-timestamp note))
 
 (defun om-build-log-delschedule (unixtime old-timestamp &optional note)
   "Return an item node for a delete schedule log entry.
@@ -2616,10 +2622,7 @@ OLD-TIMESTAMP is a timestamp node of the schedule that is being
 deleted. It will always be converted to an inactive timestamp.
 
 If string NOTE is supplied, append a note to the log entry."
-  (->> (om--log-get 'delschedule)
-       (om--log-replace-old-timestamp old-timestamp)
-       (om--log-replace-timestamp unixtime nil t)
-       (om--build-log-item note)))
+  (om--build-log-item-trans 'delschedule unixtime old-timestamp note))
 
 (defun om-build-log-redeadline (unixtime old-timestamp &optional note)
   "Return an item node for a new deadline log entry.
@@ -2634,10 +2637,7 @@ OLD-TIMESTAMP is a timestamp node of the deadline that is being
 deleted. It will always be converted to an inactive timestamp.
 
 If string NOTE is supplied, append a note to the log entry."
-  (->> (om--log-get 'redeadline)
-       (om--log-replace-old-timestamp old-timestamp)
-       (om--log-replace-timestamp unixtime nil t)
-       (om--build-log-item note)))
+  (om--build-log-item-trans 'redeadline unixtime old-timestamp note))
 
 (defun om-build-log-deldeadline (unixtime old-timestamp &optional note)
   "Return an item node for a delete deadline log entry.
@@ -2652,10 +2652,7 @@ OLD-TIMESTAMP is a timestamp node of the deadline that is being
 deleted. It will always be converted to an inactive timestamp.
 
 If string NOTE is supplied, append a note to the log entry."
-  (->> (om--log-get 'deldeadline)
-       (om--log-replace-old-timestamp old-timestamp)
-       (om--log-replace-timestamp unixtime nil t)
-       (om--build-log-item note)))
+  (om--build-log-item-trans 'deldeadline unixtime old-timestamp note))
 
 (defun om-build-log-refile (unixtime &optional note)
   "Return an item node for a refile log entry.
