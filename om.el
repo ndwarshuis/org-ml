@@ -2616,7 +2616,7 @@ OLD-TIMESTAMP is a timestamp node of the schedule that is being
 deleted. It will always be converted to an inactive timestamp.
 
 If string NOTE is supplied, append a note to the log entry."
-  (->> (om--log-get 'reschedule)
+  (->> (om--log-get 'delschedule)
        (om--log-replace-old-timestamp old-timestamp)
        (om--log-replace-timestamp unixtime nil t)
        (om--build-log-item note)))
