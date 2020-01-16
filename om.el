@@ -2444,6 +2444,229 @@ All other arguments follow the same rules as `om-build-table'."
   (->> (--map (om-build-table-row! it) row-lists)
        (apply #'om-build-table :tblfm tblfm :post-blank post-blank)))
 
+;;; logbook items
+
+(defun om--log-replace (key string heading)
+  (->> (cons key string)
+       (list)
+       (org-replace-escapes heading)))
+
+(defun om--log-replace-new (string heading)
+  (--> (format "\"%s\"" string)
+       (om--log-replace "%s" it heading)))
+
+(defun om--log-replace-old (string heading)
+  (--> (format "\"%s\"" string)
+       (om--log-replace "%S" it heading)))
+
+(defun om--log-replace-new-state (state heading)
+  (om--log-replace-new state heading))
+
+(defun om--log-replace-old-state (state heading)
+  (om--log-replace-old state heading))
+
+(defun om--log-replace-new-timestamp (timestamp heading)
+  (-> (om-timestamp-set-active nil timestamp)
+      (om-to-string)
+      (om--log-replace-new heading)))
+
+(defun om--log-replace-old-timestamp (timestamp heading)
+  (-> (om-timestamp-set-active nil timestamp)
+      (om-to-string)
+      (om--log-replace-old heading)))
+
+(defun om--log-replace-timestamp (unixtime active-p long-p heading)
+  (let ((key (cond ((and active-p long-p) "%T")
+                   (active-p "%D")
+                   (long-p "%t")
+                   (t "%d")))
+        (time (if long-p (om-unixtime-to-time-long unixtime)
+                (om-unixtime-to-time-short unixtime))))
+    (--> (om-build-timestamp! time :active active-p)
+         (om-to-string it)
+         (om--log-replace key it heading))))
+
+(defun om--log-replace-username (username heading)
+  (om--log-replace "%u" username heading))
+
+(defun om--log-replace-full-username (full-username heading)
+  (om--log-replace "%U" full-username heading))
+
+(defun om--log-get (type)
+  (alist-get type (default-value 'org-log-note-headings)))
+
+(defun om--build-log-item (note heading)
+  (->> (if note (format "%s \\\\\n  %s" heading note) heading)
+       (om-build-paragraph!)
+       (om-build-item)))
+
+(defun om-build-log-done (&optional note)
+  "Return an item node for a done log entry.
+
+This will format the log entry from the default value for the
+'done` cell in `org-log-note-headings'.
+
+If string NOTE is supplied, append a note to the log entry."
+  (->> (om--log-get 'done)
+       (om--log-replace-timestamp (float-time) nil t)
+       (om--build-log-item note)))
+
+(defun om-build-log-state (new-state old-state &optional note)
+  "Return an item node for a state change log entry.
+
+This will format the log entry from the default value for the
+'state` cell in `org-log-note-headings'.
+
+NEW-STATE and OLD-STATE are strings for the new and old todo keywords
+respectively.
+
+If string NOTE is supplied, append a note to the log entry."
+  (->> (om--log-get 'state)
+       (om--log-replace-new-state new-state)
+       (om--log-replace-old-state old-state)
+       (om--log-replace-timestamp (float-time) nil t)
+       (om--build-log-item note)))
+
+(defun om-build-log-note (note)
+  "Return an item node for a new note log entry.
+
+This will format the log entry from the default value for the
+'note` cell in `org-log-note-headings'.
+
+NOTE is a string for the note text."
+  (->> (om--log-get 'note)
+       (om--log-replace-timestamp (float-time) nil t)
+       (om--build-log-item note)))
+
+(defun om-build-log-reschedule (old-timestamp &optional note)
+  "Return an item node for a new schedule log entry.
+
+This will format the log entry from the default value for the
+'reschedule` cell in `org-log-note-headings'.
+
+OLD-TIMESTAMP is a timestamp node of the schedule that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string NOTE is supplied, append a note to the log entry."
+  (->> (om--log-get 'reschedule)
+       (om--log-replace-old-timestamp old-timestamp)
+       (om--log-replace-timestamp (float-time) nil t)
+       (om--build-log-item note)))
+
+(defun om-build-log-delschedule (old-timestamp &optional note)
+  "Return an item node for a delete schedule log entry.
+
+This will format the log entry from the default value for the
+'delschedule` cell in `org-log-note-headings'.
+
+OLD-TIMESTAMP is a timestamp node of the schedule that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string NOTE is supplied, append a note to the log entry."
+  (->> (om--log-get 'reschedule)
+       (om--log-replace-old-timestamp old-timestamp)
+       (om--log-replace-timestamp (float-time) nil t)
+       (om--build-log-item note)))
+
+(defun om-build-log-redeadline (old-timestamp &optional note)
+  "Return an item node for a new deadline log entry.
+
+This will format the log entry from the default value for the
+'redeadline` cell in `org-log-note-headings'.
+
+OLD-TIMESTAMP is a timestamp node of the deadline that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string NOTE is supplied, append a note to the log entry."
+  (->> (om--log-get 'redeadline)
+       (om--log-replace-old-timestamp old-timestamp)
+       (om--log-replace-timestamp (float-time) nil t)
+       (om--build-log-item note)))
+
+(defun om-build-log-deldeadline (old-timestamp &optional note)
+  "Return an item node for a delete deadline log entry.
+
+This will format the log entry from the default value for the
+'deldeadline` cell in `org-log-note-headings'.
+
+OLD-TIMESTAMP is a timestamp node of the deadline that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string NOTE is supplied, append a note to the log entry."
+  (->> (om--log-get 'deldeadline)
+       (om--log-replace-old-timestamp old-timestamp)
+       (om--log-replace-timestamp (float-time) nil t)
+       (om--build-log-item note)))
+
+(defun om-build-log-refile (&optional note)
+  "Return an item node for a refile log entry.
+This will format the log entry from the default value for the
+'deldeadline` cell in `org-log-note-headings'.
+
+If string NOTE is supplied, append a note to the log entry."
+  (->> (om--log-get 'refile)
+       (om--log-replace-timestamp (float-time) nil t)
+       (om--build-log-item note)))
+
+(om--defun-kw om-build-log-note-type (type &key old new unixtime
+                                           username full-username
+                                           note)
+  "Return an item for an arbitrary log entry.
+
+TYPE is a symbol corresponding to the car of one of the cells in
+`org-log-note-headings'. Unlike the other log entry build functions
+in this package, this function will not use the default value of
+`org-log-note-headings' which means it can be used for customly
+formatted log entries.
+
+The arguments correspond to the following formatting placeholders
+(see `org-log-note-headings' for more information on these
+placeholders):
+- NEW: either a string or timestamp node that will replace the
+  new state/timestamp placeholder (%s)
+- OLD: like NEW but for the old state/timestamp placeholder (%S)
+- UNIXTIME: an integer corresponding to the time to be used for the
+  timestamp placeholders (%t/%T/%d/%D)
+- USERNAME: a symbol for the username (%u)
+- FULL-USERNAME: a symbol for the full username (%U)
+
+If any of these arguments are not supplied but their placeholders
+are present in the heading determined by TYPE, the placeholders will
+not be substituted.
+
+If string NOTE is supplied, append a note to the log entry."
+  (cl-flet
+      ((replace-note
+        (old-p rep note)
+        (if (not rep) note
+          (let* ((type (if old-p "old" "new"))
+                 (fun
+                  (cond
+                   ((om-is-type 'timestamp rep)
+                    (intern (format "om--log-replace-%s-timestamp" type)))
+                   ((stringp rep)
+                    (intern (format "om--log-replace-%s-state" type)))
+                   (t
+                    (om--arg-error "Must be string or timestamp: Got %S" rep)))))
+            (funcall fun rep note))))
+       (replace-timestamps
+        (heading)
+        (if (not unixtime) heading
+          (->> heading
+               (om--log-replace-timestamp unixtime nil nil)
+               (om--log-replace-timestamp unixtime t nil)
+               (om--log-replace-timestamp unixtime nil t)
+               (om--log-replace-timestamp unixtime t t)))))
+    (--> (alist-get type org-log-note-headings)
+         (replace-timestamps it)
+         (replace-note t old it)
+         (replace-note nil new it)
+         (if username (om--log-replace-username username it) it)
+         (if full-username
+             (om--log-replace-full-username full-username it)
+           it)
+         (om--build-log-item note it))))
+
 ;;; PUBLIC TYPE FUNCTIONS
 
 (defun om-get-type (node)
