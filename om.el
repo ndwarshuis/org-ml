@@ -2451,6 +2451,8 @@ All other arguments follow the same rules as `om-build-table'."
 
 ;;; logbook items
 
+;; internal
+
 (defun om--log-replace (placeholder string heading)
   "Return HEADING with PLACEHOLDER replaced by STRING."
   (->> (cons placeholder string)
@@ -2534,22 +2536,30 @@ in the first paragraph of the returned item."
        (om-build-paragraph!)
        (om-build-item)))
 
-(defun om-build-log-done (&optional note)
+;; public
+
+(defun om-build-log-done (unixtime &optional note)
   "Return an item node for a done log entry.
 
 This will format the log entry from the default value for the
 'done` cell in `org-log-note-headings'.
 
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
 If string NOTE is supplied, append a note to the log entry."
   (->> (om--log-get 'done)
-       (om--log-replace-timestamp (float-time) nil t)
+       (om--log-replace-timestamp unixtime nil t)
        (om--build-log-item note)))
 
-(defun om-build-log-state (new-state old-state &optional note)
+(defun om-build-log-state (unixtime new-state old-state &optional note)
   "Return an item node for a state change log entry.
 
 This will format the log entry from the default value for the
 'state` cell in `org-log-note-headings'.
+
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
 
 NEW-STATE and OLD-STATE are strings for the new and old todo keywords
 respectively.
@@ -2558,55 +2568,67 @@ If string NOTE is supplied, append a note to the log entry."
   (->> (om--log-get 'state)
        (om--log-replace-new-state new-state)
        (om--log-replace-old-state old-state)
-       (om--log-replace-timestamp (float-time) nil t)
+       (om--log-replace-timestamp unixtime nil t)
        (om--build-log-item note)))
 
-(defun om-build-log-note (note)
+(defun om-build-log-note (unixtime note)
   "Return an item node for a new note log entry.
 
 This will format the log entry from the default value for the
 'note` cell in `org-log-note-headings'.
 
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
 NOTE is a string for the note text."
   (->> (om--log-get 'note)
-       (om--log-replace-timestamp (float-time) nil t)
+       (om--log-replace-timestamp unixtime nil t)
        (om--build-log-item note)))
 
-(defun om-build-log-reschedule (old-timestamp &optional note)
+(defun om-build-log-reschedule (unixtime old-timestamp &optional note)
   "Return an item node for a new schedule log entry.
 
 This will format the log entry from the default value for the
 'reschedule` cell in `org-log-note-headings'.
 
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
 OLD-TIMESTAMP is a timestamp node of the schedule that is being
 deleted. It will always be converted to an inactive timestamp.
 
 If string NOTE is supplied, append a note to the log entry."
   (->> (om--log-get 'reschedule)
        (om--log-replace-old-timestamp old-timestamp)
-       (om--log-replace-timestamp (float-time) nil t)
+       (om--log-replace-timestamp unixtime nil t)
        (om--build-log-item note)))
 
-(defun om-build-log-delschedule (old-timestamp &optional note)
+(defun om-build-log-delschedule (unixtime old-timestamp &optional note)
   "Return an item node for a delete schedule log entry.
 
 This will format the log entry from the default value for the
 'delschedule` cell in `org-log-note-headings'.
 
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
 OLD-TIMESTAMP is a timestamp node of the schedule that is being
 deleted. It will always be converted to an inactive timestamp.
 
 If string NOTE is supplied, append a note to the log entry."
   (->> (om--log-get 'reschedule)
        (om--log-replace-old-timestamp old-timestamp)
-       (om--log-replace-timestamp (float-time) nil t)
+       (om--log-replace-timestamp unixtime nil t)
        (om--build-log-item note)))
 
-(defun om-build-log-redeadline (old-timestamp &optional note)
+(defun om-build-log-redeadline (unixtime old-timestamp &optional note)
   "Return an item node for a new deadline log entry.
 
 This will format the log entry from the default value for the
 'redeadline` cell in `org-log-note-headings'.
+
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
 
 OLD-TIMESTAMP is a timestamp node of the deadline that is being
 deleted. It will always be converted to an inactive timestamp.
@@ -2614,14 +2636,17 @@ deleted. It will always be converted to an inactive timestamp.
 If string NOTE is supplied, append a note to the log entry."
   (->> (om--log-get 'redeadline)
        (om--log-replace-old-timestamp old-timestamp)
-       (om--log-replace-timestamp (float-time) nil t)
+       (om--log-replace-timestamp unixtime nil t)
        (om--build-log-item note)))
 
-(defun om-build-log-deldeadline (old-timestamp &optional note)
+(defun om-build-log-deldeadline (unixtime old-timestamp &optional note)
   "Return an item node for a delete deadline log entry.
 
 This will format the log entry from the default value for the
 'deldeadline` cell in `org-log-note-headings'.
+
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
 
 OLD-TIMESTAMP is a timestamp node of the deadline that is being
 deleted. It will always be converted to an inactive timestamp.
@@ -2629,17 +2654,20 @@ deleted. It will always be converted to an inactive timestamp.
 If string NOTE is supplied, append a note to the log entry."
   (->> (om--log-get 'deldeadline)
        (om--log-replace-old-timestamp old-timestamp)
-       (om--log-replace-timestamp (float-time) nil t)
+       (om--log-replace-timestamp unixtime nil t)
        (om--build-log-item note)))
 
-(defun om-build-log-refile (&optional note)
+(defun om-build-log-refile (unixtime &optional note)
   "Return an item node for a refile log entry.
 This will format the log entry from the default value for the
 'deldeadline` cell in `org-log-note-headings'.
 
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
 If string NOTE is supplied, append a note to the log entry."
   (->> (om--log-get 'refile)
-       (om--log-replace-timestamp (float-time) nil t)
+       (om--log-replace-timestamp unixtime nil t)
        (om--build-log-item note)))
 
 (om--defun-kw om-build-log-note-type (type &key old new unixtime
