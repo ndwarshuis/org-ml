@@ -738,6 +738,11 @@ FUN is a unary function that returns a modified member."
 FUN is a unary function that returns a modified member."
   (-some->> list (nreverse) (om--map-first fun) (nreverse)))
 
+(om--defun* om--map-at (n fun list)
+  "Return LIST with FUN applied to the member at index N.
+FUN is a unary function that returns a modified member."
+  (--> (nth n list) (funcall fun it) (-replace-at n it list)))
+
 ;;; INTERNAL TYPE FUNCTIONS
 
 (define-error 'arg-type-error "Argument type error")
@@ -3627,6 +3632,73 @@ HEADLINE unmodified."
            (funcall fun it)
            (om-headline-set-logbook it headline))
     headline))
+
+(defun om-headline-logbook-append-entry (item headline)
+  "Return HEADLINE with ITEM node appended to the front of its logbook.
+
+The same assumptions and restrictions for `om-headline-map-logbook'
+apply here."
+  (om-headline-map-logbook*
+    ;; if logbook starts with a plain-list, add item to front of
+    ;; said plain list
+    (if (om-is-type 'plain-list (car it))
+        (om--map-first* (om-map-children* (cons item it) it) it)
+      ;; else just append a new plain-list to the front
+      (cons (om-build-plain-list item) it))
+    headline))
+
+(defun om-headline-logbook-append-open-clock (unixtime headline)
+  "Return HEADLINE with an open clock append to front of its logbook.
+UNIXTIME is an integer that will be used to build the clock node.
+
+This does the functional equivalent of `org-clock-in' on the logbook."
+  (om-headline-map-logbook*
+    (-> (om-unixtime-to-time-long unixtime)
+        (om-build-clock!)
+        (cons it))
+    headline))
+
+(defun om-headline-logbook-close-open-clock (unixtime note headline)
+  "Return HEADLINE with the first clock closed.
+
+The clock will be closed to UNIXTIME, and NOTE will be appended
+as a clock out note if supplied (as string). If no open clocks
+are found, return HEADLINE unmodified.
+
+This does the functional equivalent of `org-clock-out' on the logbook."
+  (cl-flet
+      ((close-clock
+        (index logbook-children)
+        (let ((time (om-unixtime-to-time-long unixtime)))
+          (om--map-at* index
+            (om-map-property* :value
+              (->> (om-timestamp-set-end-time time it)
+                   (om-timestamp-set-collapsed nil))
+              it)
+            logbook-children)))
+       (add-note-maybe
+        (index logbook-children)
+        (if (not note) logbook-children
+          (let* ((next (1+ index))
+                 (target (nth next logbook-children))
+                 (item (->> (om-build-paragraph note)
+                            (om-build-item))))
+            ;; if plain-list is after the clock being closed, add the
+            ;; note to the front of the plain-list, otherwise insert
+            ;; a new plain-list
+            (if (om-is-type 'plain-list target)
+                (om--map-at* next
+                  (om-map-children* (cons item it) it)
+                  logbook-children)
+              (-insert-at next (om-build-plain-list item)
+                          logbook-children))))))
+    (om-headline-map-logbook*
+      (-if-let (i (--find-index (and (om-is-type 'clock it)
+                                     (om-clock-is-running it))
+                                it))
+          (->> it (close-clock i) (add-note-maybe i))
+        it)
+      headline)))
 
 (defun om-headline-get-path (headline)
   "Return tree path of HEADLINE node.
