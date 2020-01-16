@@ -877,7 +877,94 @@
            (om-to-trimmed-string))
       => (:result "| L | O |"
                   "|---+---|"
-                  "| V | E |"))))
+                  "| V | E |")))
+
+  (def-example-subgroup "Logbook Item Builders"
+    "Build item nodes for inclusion in headline logbooks"
+
+    (defexamples om-build-log-note
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-note "noteworthy")
+          (om-to-trimmed-string))
+      => (:result "- Note taken on [2019-01-01 Tue 00:00] \\\\"
+                  "  noteworthy"))
+    
+    (defexamples om-build-log-done
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-done)
+          (om-to-trimmed-string))
+      => (:result "- CLOSING NOTE [2019-01-01 Tue 00:00]")
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-done "noteworthy")
+          (om-to-trimmed-string))
+      => (:result "- CLOSING NOTE [2019-01-01 Tue 00:00] \\\\"
+                  "  noteworthy"))
+
+    (defexamples om-build-log-refile
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-refile)
+          (om-to-trimmed-string))
+      => (:result "- Refiled on [2019-01-01 Tue 00:00]")
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-refile "noteworthy")
+          (om-to-trimmed-string))
+      => (:result "- Refiled on [2019-01-01 Tue 00:00] \\\\"
+                  "  noteworthy"))
+
+    (defexamples om-build-log-state
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-state "HOLD" "TODO")
+          (om-to-trimmed-string))
+      => (:result "- State \"HOLD\"       from \"TODO\"       [2019-01-01 Tue 00:00]")
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-state "HOLD" "TODO" "noteworthy")
+          (om-to-trimmed-string))
+      => (:result "- State \"HOLD\"       from \"TODO\"       [2019-01-01 Tue 00:00] \\\\"
+                  "  noteworthy"))
+
+    (defexamples om-build-log-deldeadline
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-deldeadline (om-build-timestamp! '(2019 1 2)))
+          (om-to-trimmed-string))
+      => (:result "- Removed deadline, was \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00]")
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-deldeadline (om-build-timestamp! '(2019 1 2)) "noteworthy")
+          (om-to-trimmed-string))
+      => (:result "- Removed deadline, was \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\"
+                  "  noteworthy"))
+
+    (defexamples om-build-log-delschedule
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-delschedule (om-build-timestamp! '(2019 1 2)))
+          (om-to-trimmed-string))
+      => (:result "- Not scheduled, was \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00]")
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-delschedule (om-build-timestamp! '(2019 1 2)) "noteworthy")
+          (om-to-trimmed-string))
+      => (:result "- Not scheduled, was \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\"
+                  "  noteworthy"))
+
+    (defexamples om-build-log-redeadline
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-redeadline (om-build-timestamp! '(2019 1 2)))
+          (om-to-trimmed-string))
+      => (:result "- New deadline from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00]")
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-redeadline (om-build-timestamp! '(2019 1 2)) "noteworthy")
+          (om-to-trimmed-string))
+      => (:result "- New deadline from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\"
+                  "  noteworthy"))
+
+    (defexamples om-build-log-reschedule
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-reschedule (om-build-timestamp! '(2019 1 2)))
+          (om-to-trimmed-string))
+      => (:result "- Rescheduled from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00]")
+      (-> (- 1546300800 (car (current-time-zone)))
+          (om-build-log-reschedule (om-build-timestamp! '(2019 1 2)) "noteworthy")
+          (om-to-trimmed-string))
+      => (:result "- Rescheduled from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\"
+                  "  noteworthy"))))
 
 (def-example-group "Type Predicates"
   "Test node types."

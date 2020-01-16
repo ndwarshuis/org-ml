@@ -279,6 +279,20 @@ Build nodes with more convenient/shorter syntax.
 * [om-build-table-row!](#om-build-table-row-row-list) `(row-list)`
 * [om-build-table!](#om-build-table-key-tblfm-post-blank-rest-row-lists) `(&key tblfm post-blank &rest row-lists)`
 
+### Logbook Item Builders
+
+
+Build item nodes for inclusion in headline logbooks
+
+* [om-build-log-note](#om-build-log-note-unixtime-note) `(unixtime note)`
+* [om-build-log-done](#om-build-log-done-unixtime-optional-note) `(unixtime &optional note)`
+* [om-build-log-refile](#om-build-log-refile-unixtime-optional-note) `(unixtime &optional note)`
+* [om-build-log-state](#om-build-log-state-unixtime-new-state-old-state-optional-note) `(unixtime new-state old-state &optional note)`
+* [om-build-log-deldeadline](#om-build-log-deldeadline-unixtime-old-timestamp-optional-note) `(unixtime old-timestamp &optional note)`
+* [om-build-log-delschedule](#om-build-log-delschedule-unixtime-old-timestamp-optional-note) `(unixtime old-timestamp &optional note)`
+* [om-build-log-redeadline](#om-build-log-redeadline-unixtime-old-timestamp-optional-note) `(unixtime old-timestamp &optional note)`
+* [om-build-log-reschedule](#om-build-log-reschedule-unixtime-old-timestamp-optional-note) `(unixtime old-timestamp &optional note)`
+
 ## Type Predicates
 
 
@@ -2261,6 +2275,233 @@ All other arguments follow the same rules as [`om-build-table`](#om-build-table-
  ;; => "| L | O |
  ;      |---+---|
  ;      | V | E |"
+
+```
+
+
+### Logbook Item Builders
+
+
+Build item nodes for inclusion in headline logbooks
+
+#### om-build-log-note `(unixtime note)`
+
+Return an item node for a new note log entry.
+
+This will format the log entry from the default value for the
+'note` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+**`note`** is a string for the note text.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-note "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- Note taken on [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-done `(unixtime &optional note)`
+
+Return an item node for a done log entry.
+
+This will format the log entry from the default value for the
+'done` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-done)
+    (om-to-trimmed-string))
+ ;; => "- CLOSING NOTE [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-done "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- CLOSING NOTE [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-refile `(unixtime &optional note)`
+
+Return an item node for a refile log entry.
+This will format the log entry from the default value for the
+'deldeadline` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-refile)
+    (om-to-trimmed-string))
+ ;; => "- Refiled on [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-refile "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- Refiled on [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-state `(unixtime new-state old-state &optional note)`
+
+Return an item node for a state change log entry.
+
+This will format the log entry from the default value for the
+'state` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+**`new-state`** and **`old-state`** are strings for the new and old todo keywords
+respectively.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-state "HOLD" "TODO")
+    (om-to-trimmed-string))
+ ;; => "- State \"HOLD\"       from \"TODO\"       [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-state "HOLD" "TODO" "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- State \"HOLD\"       from \"TODO\"       [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-deldeadline `(unixtime old-timestamp &optional note)`
+
+Return an item node for a delete deadline log entry.
+
+This will format the log entry from the default value for the
+'deldeadline` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+**`old-timestamp`** is a timestamp node of the deadline that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-deldeadline (om-build-timestamp! '(2019 1 2)))
+    (om-to-trimmed-string))
+ ;; => "- Removed deadline, was \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-deldeadline (om-build-timestamp! '(2019 1 2))
+			      "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- Removed deadline, was \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-delschedule `(unixtime old-timestamp &optional note)`
+
+Return an item node for a delete schedule log entry.
+
+This will format the log entry from the default value for the
+'delschedule` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+**`old-timestamp`** is a timestamp node of the schedule that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-delschedule (om-build-timestamp! '(2019 1 2)))
+    (om-to-trimmed-string))
+ ;; => "- Not scheduled, was \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-delschedule (om-build-timestamp! '(2019 1 2))
+			      "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- Not scheduled, was \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-redeadline `(unixtime old-timestamp &optional note)`
+
+Return an item node for a new deadline log entry.
+
+This will format the log entry from the default value for the
+'redeadline` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+**`old-timestamp`** is a timestamp node of the deadline that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-redeadline (om-build-timestamp! '(2019 1 2)))
+    (om-to-trimmed-string))
+ ;; => "- New deadline from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-redeadline (om-build-timestamp! '(2019 1 2))
+			     "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- New deadline from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-reschedule `(unixtime old-timestamp &optional note)`
+
+Return an item node for a new schedule log entry.
+
+This will format the log entry from the default value for the
+'reschedule` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+**`old-timestamp`** is a timestamp node of the schedule that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-reschedule (om-build-timestamp! '(2019 1 2)))
+    (om-to-trimmed-string))
+ ;; => "- Rescheduled from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-reschedule (om-build-timestamp! '(2019 1 2))
+			     "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- Rescheduled from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
 
 ```
 
