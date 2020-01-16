@@ -3439,9 +3439,9 @@ a modified list of headlines."
 
 (defun om-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
-  (-some->> (om-headline-get-section headline)
-            (om-get-children)
-            (--first (om-is-type 'planning it))))
+  (-some--> (om-headline-get-section headline)
+            (car it)
+            (when (om-is-type 'planning it) it)))
 
 (defun om-headline-set-planning (planning headline)
   "Return HEADLINE node with planning components set to PLANNING node."
@@ -3472,13 +3472,13 @@ modified planning node."
 
 (defun om-headline-get-node-properties (headline)
   "Return a list of node-properties nodes in HEADLINE or nil if none."
-  (-some->> (om-headline-get-section headline)
+  (-some--> (om-headline-get-section headline)
             ;; assume the property drawer is the first or second
             ;; child of section
-            (-take 2)
-            (--first (om-is-type 'property-drawer it))
-            (om-get-children)
-            (--filter (om-is-type 'node-property it))))
+            (if (om-is-type 'planning (car it)) (cdr it) it)
+            (car it)
+            (when (om-is-type 'property-drawer it)
+              (om-get-children it))))
 
 (defun om-headline-set-node-properties (node-properties headline)
   "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
