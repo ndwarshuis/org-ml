@@ -3352,7 +3352,10 @@
            (om-to-trimmed-string))
       => (:result "* headline 1"
                   "** TODO headline 2"
-                  "** TODO headline 3"))
+                  "** TODO headline 3")))
+
+  (def-example-subgroup "Headline (metadata)"
+    nil
 
     (defexamples-content om-headline-get-planning
       nil
@@ -3407,34 +3410,145 @@
       (:buffer "* headline"
                ":PROPERTIES:"
                ":Effort:   1:00"
+               ":ID:       minesfake"
                ":END:")
       (->> (om-parse-this-headline)
            (om-headline-get-node-properties)
            (-map #'om-to-trimmed-string))
-      => '(":Effort:   1:00")
+      => '(":Effort:   1:00" ":ID:       minesfake")
       (:buffer "* headline")
       (->> (om-parse-this-headline)
            (om-headline-get-node-properties)
            (-map #'om-to-trimmed-string))
-      => nil)
+      => nil
+      :begin-hidden
+      (:buffer "* headline"
+               "CLOSED: <2019-01-01 Tue>"
+               ":PROPERTIES:"
+               ":Effort:   1:00"
+               ":ID:       minesfake"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-get-node-properties)
+           (-map #'om-to-trimmed-string))
+      => '(":Effort:   1:00" ":ID:       minesfake")
+      :end-hidden)
 
-    (defexamples-content om-headline-get-property-drawer
+    (defexamples-content om-headline-set-node-properties
       nil
       (:buffer "* headline"
                ":PROPERTIES:"
                ":Effort:   1:00"
+               ":ID:       minesfake"
                ":END:")
       (->> (om-parse-this-headline)
-           (om-headline-get-property-drawer)
+           (om-headline-set-node-properties
+            (--map (apply #'om-build-node-property it)
+                   '(("Effort" "0:01") ("ID" "easy"))))
            (om-to-trimmed-string))
-      => (:result ":PROPERTIES:"
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":Effort:   0:01"
+                  ":ID:       easy"
+                  ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-node-properties nil)
+           (om-to-trimmed-string))
+      :begin-hidden
+      => "* headline"
+      (:buffer "* headline"
+               "CLOSED: <2019-01-01 Tue>"
+               ":PROPERTIES:"
+               ":Effort:   1:00"
+               ":ID:       minesfake"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-node-properties
+            (--map (apply #'om-build-node-property it)
+                   '(("Effort" "0:01") ("ID" "easy"))))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: <2019-01-01 Tue>"
+                  ":PROPERTIES:"
+                  ":Effort:   0:01"
+                  ":ID:       easy"
+                  ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-node-properties nil)
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: <2019-01-01 Tue>")
+      :end-hidden)
+
+    (defexamples-content om-headline-map-node-properties
+      nil
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":Effort:   1:00"
+               ":ID:       minesfake"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-map-node-properties*
+             (cons (om-build-node-property "New" "world man") it))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":New:      world man"
                   ":Effort:   1:00"
+                  ":ID:       minesfake"
+                  ":END:")
+      ;; assume this will work with planning in front because
+      ;; we already tested the get/set base functions
+      )
+
+    ;; assume these will work when planning is in front since
+    ;; they are all based on the -map-properties (plural) functions
+    ;; and these have already been tested
+    (defexamples-content om-headline-get-node-property
+      nil
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-get-node-property "ID"))
+      => "fake")
+
+    (defexamples-content om-headline-set-node-property
+      nil
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-node-property "ID" "real")
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":ID:       real"
                   ":END:")
       (:buffer "* headline")
       (->> (om-parse-this-headline)
-           (om-headline-get-property-drawer)
+           (om-headline-set-node-property "ID" "real")
            (om-to-trimmed-string))
-      => "")
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":ID:       real"
+                  ":END:"))
+
+    (defexamples-content om-headline-map-node-property
+      nil
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-map-node-property "ID" #'s-upcase)
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":ID:       FAKE"
+                  ":END:"))
 
     (defexamples-content om-headline-get-path
       nil

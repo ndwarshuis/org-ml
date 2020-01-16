@@ -3408,6 +3408,10 @@ a modified list of headlines."
        (funcall fun it)
        (om-headline-set-subheadlines it headline)))
 
+;;; headline (metadata)
+
+;; planning
+
 (defun om-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
   (-some->> (om-headline-get-section headline)
@@ -3483,6 +3487,8 @@ a modified property-drawer node."
         (funcall fun it)
         (om-headline-set-property-drawer it headline)))
 
+;; node-properties (eg the entire property drawer)
+
 (defun om-headline-get-node-properties (headline)
   "Return a list of node-properties nodes in HEADLINE or nil if none."
   (-some->> (om-headline-get-property-drawer headline)
@@ -3526,6 +3532,8 @@ a modified property-drawer node."
         (funcall fun it)
         (om-headline-set-node-properties it headline)))
 
+;; node-property
+
 (defun om-headline-get-node-property (key headline)
   "Return value of property with KEY in HEADLINE or nil if not found.
 If multiple properties with KEY are present, only return the first."
@@ -3555,6 +3563,8 @@ a modified node-property value."
    (--> (om-headline-get-node-property key headline)
         (funcall fun it)
         (om-headline-set-node-property key it headline)))
+
+;; logbook
 
 (defun om-headline-get-logbook (headline)
   "Return the children of the logbook drawer of HEADLINE.

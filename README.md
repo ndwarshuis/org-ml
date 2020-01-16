@@ -410,11 +410,18 @@ Set, get, and map the children of branch nodes.
 * [om-headline-get-subheadlines](#om-headline-get-subheadlines-headline) `(headline)`
 * [om-headline-set-subheadlines](#om-headline-set-subheadlines-subheadlines-headline) `(subheadlines headline)`
 * [om-headline-map-subheadlines](#om-headline-map-subheadlines-fun-headline) `(fun headline)`
+
+### Headline (metadata)
+
 * [om-headline-get-planning](#om-headline-get-planning-headline) `(headline)`
 * [om-headline-set-planning](#om-headline-set-planning-planning-headline) `(planning headline)`
 * [om-headline-map-planning](#om-headline-map-planning-fun-headline) `(fun headline)`
 * [om-headline-get-node-properties](#om-headline-get-node-properties-headline) `(headline)`
-* [om-headline-get-property-drawer](#om-headline-get-property-drawer-headline) `(headline)`
+* [om-headline-set-node-properties](#om-headline-set-node-properties-node-properties-headline) `(node-properties headline)`
+* [om-headline-map-node-properties](#om-headline-map-node-properties-fun-headline) `(fun headline)`
+* [om-headline-get-node-property](#om-headline-get-node-property-key-headline) `(key headline)`
+* [om-headline-set-node-property](#om-headline-set-node-property-key-value-headline) `(key value headline)`
+* [om-headline-map-node-property](#om-headline-map-node-property-key-fun-headline) `(key fun headline)`
 * [om-headline-get-path](#om-headline-get-path-headline) `(headline)`
 * [om-headline-update-item-statistics](#om-headline-update-item-statistics-headline) `(headline)`
 * [om-headline-update-todo-statistics](#om-headline-update-todo-statistics-headline) `(headline)`
@@ -4323,6 +4330,9 @@ a modified list of headlines.
 
 ```
 
+
+### Headline (metadata)
+
 #### om-headline-get-planning `(headline)`
 
 Return the planning node in **`headline`** or nil if none.
@@ -4413,12 +4423,13 @@ Return a list of node-properties nodes in **`headline`** or nil if none.
 ; * headline
 ; :PROPERTIES:
 ; :Effort:   1:00
+; :ID:       minesfake
 ; :END:
 
 (->> (om-parse-this-headline)
      (om-headline-get-node-properties)
      (-map (function om-to-trimmed-string)))
- ;; => '(":Effort:   1:00")
+ ;; => '(":Effort:   1:00" ":ID:       minesfake")
 
 ;; Given the following contents:
 ; * headline
@@ -4430,34 +4441,134 @@ Return a list of node-properties nodes in **`headline`** or nil if none.
 
 ```
 
-#### om-headline-get-property-drawer `(headline)`
+#### om-headline-set-node-properties `(node-properties headline)`
 
-Return the properties drawer node in **`headline`**.
-
-If multiple are present (there shouldn't be) the first will be
-returned.
+Return **`headline`** node with property drawer containing **`node-properties`**.
+**`node-properties`** is a list of node-property nodes.
 
 ```el
 ;; Given the following contents:
 ; * headline
 ; :PROPERTIES:
 ; :Effort:   1:00
+; :ID:       minesfake
 ; :END:
 
 (->> (om-parse-this-headline)
-     (om-headline-get-property-drawer)
+     (om-headline-set-node-properties (--map (apply (function om-build-node-property)
+						    it)
+					     '(("Effort" "0:01")
+						     ("ID" "easy"))))
      (om-to-trimmed-string))
- ;; => ":PROPERTIES:
+ ;; => "* headline
+ ;      :PROPERTIES:
+ ;      :Effort:   0:01
+ ;      :ID:       easy
+ ;      :END:"
+
+```
+
+#### om-headline-map-node-properties `(fun headline)`
+
+Return **`headline`** node with property-drawer node modified by **`fun`**.
+
+**`fun`** is a unary function that takes a property-drawer node and returns
+a modified property-drawer node.
+
+```el
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :Effort:   1:00
+; :ID:       minesfake
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-map-node-properties* (cons (om-build-node-property "New" "world man")
+					     it))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :PROPERTIES:
+ ;      :New:      world man
  ;      :Effort:   1:00
+ ;      :ID:       minesfake
+ ;      :END:"
+
+```
+
+#### om-headline-get-node-property `(key headline)`
+
+Return value of property with **`key`** in **`headline`** or nil if not found.
+If multiple properties with **`key`** are present, only return the first.
+
+```el
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :ID:       fake
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-get-node-property "ID"))
+ ;; => "fake"
+
+```
+
+#### om-headline-set-node-property `(key value headline)`
+
+Return **`headline`** with node property matching **`key`** set to **`value`**.
+If a property matching **`key`** is present, set it to **`value`**. If multiple
+properties matching **`key`** are present, only set the first.
+
+```el
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :ID:       fake
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-set-node-property "ID" "real")
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :PROPERTIES:
+ ;      :ID:       real
  ;      :END:"
 
 ;; Given the following contents:
 ; * headline
 
 (->> (om-parse-this-headline)
-     (om-headline-get-property-drawer)
+     (om-headline-set-node-property "ID" "real")
      (om-to-trimmed-string))
- ;; => ""
+ ;; => "* headline
+ ;      :PROPERTIES:
+ ;      :ID:       real
+ ;      :END:"
+
+```
+
+#### om-headline-map-node-property `(key fun headline)`
+
+Return **`headline`** node with property value matching **`key`** modified by **`fun`**.
+
+**`fun`** is a unary function that takes a node-property value and returns
+a modified node-property value.
+
+```el
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :ID:       fake
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-map-node-property "ID" (function s-upcase))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :PROPERTIES:
+ ;      :ID:       FAKE
+ ;      :END:"
 
 ```
 
