@@ -2446,36 +2446,57 @@ All other arguments follow the same rules as `om-build-table'."
 
 ;;; logbook items
 
-(defun om--log-replace (key string heading)
-  (->> (cons key string)
+(defun om--log-replace (placeholder string heading)
+  "Return HEADING with PLACEHOLDER replaced by STRING."
+  (->> (cons placeholder string)
        (list)
        (org-replace-escapes heading)))
 
 (defun om--log-replace-new (string heading)
+  "Return HEADING with placeholder \"%s\" replaced by STRING."
   (--> (format "\"%s\"" string)
        (om--log-replace "%s" it heading)))
 
 (defun om--log-replace-old (string heading)
+  "Return HEADING with placeholder \"%S\" replaced by STRING."
   (--> (format "\"%s\"" string)
        (om--log-replace "%S" it heading)))
 
 (defun om--log-replace-new-state (state heading)
+  "Return HEADING with placeholder \"%s\" replaced by string STATE."
   (om--log-replace-new state heading))
 
 (defun om--log-replace-old-state (state heading)
+  "Return HEADING with placeholder \"%S\" replaced by string STATE."
   (om--log-replace-old state heading))
 
 (defun om--log-replace-new-timestamp (timestamp heading)
+  "Return HEADING with placeholder \"%s\" replaced by TIMESTAMP.
+TIMESTAMP is a timestamp node and will be converted to an inactive
+timestamp if active."
   (-> (om-timestamp-set-active nil timestamp)
       (om-to-string)
       (om--log-replace-new heading)))
 
 (defun om--log-replace-old-timestamp (timestamp heading)
+  "Return HEADING with placeholder \"%S\" replaced by TIMESTAMP.
+TIMESTAMP is a timestamp node and will be converted to an inactive
+timestamp if active."
   (-> (om-timestamp-set-active nil timestamp)
       (om-to-string)
       (om--log-replace-old heading)))
 
 (defun om--log-replace-timestamp (unixtime active-p long-p heading)
+  "Return HEADING with timestamp placeholders replaced by a timestamp.
+
+UNIXTIME is an integer to be converted to a timestamp.
+
+The type of timestamp and the placeholders that are replaced depend
+on the boolean values of ACTIVE-P and LONG-P:
+- ACTIVE-P and LONG-P are t: long active timestamp replacing \"T\"
+- ACTIVE-P is t: short active timestamp replacing \"D\"
+- LONG-P is t: long inactive timestamp replacing \"t\"
+- both nil: short inactive timestamp replacing \"d\""
   (let ((key (cond ((and active-p long-p) "%T")
                    (active-p "%D")
                    (long-p "%t")
@@ -2487,15 +2508,23 @@ All other arguments follow the same rules as `om-build-table'."
          (om--log-replace key it heading))))
 
 (defun om--log-replace-username (username heading)
+  "Return HEADING with \"%u\" replaced by symbol USERNAME."
   (om--log-replace "%u" username heading))
 
 (defun om--log-replace-full-username (full-username heading)
+  "Return HEADING with \"%U\" replaced by symbol FULL-USERNAME."
   (om--log-replace "%U" full-username heading))
 
 (defun om--log-get (type)
+  "Return the log heading associated with symbol TYPE.
+This function will only use the default value of
+`org-log-note-headings' and is thus a pure function."
   (alist-get type (default-value 'org-log-note-headings)))
 
 (defun om--build-log-item (note heading)
+  "Return an item with string HEADING as its first line.
+If string NOTE is supplied, append this after a newline object node
+in the first paragraph of the returned item."
   (->> (if note (format "%s \\\\\n  %s" heading note) heading)
        (om-build-paragraph!)
        (om-build-item)))
