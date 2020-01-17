@@ -731,6 +731,11 @@ FUN is a predicate function that takes one argument."
   "Return STRING as either itself or \"\" if nil."
   (if (null string) "" string))
 
+(defun om--decode-string-or-nil (string)
+  "Return STRING without text properties if not nil."
+  (unless (null string)
+    (substring-no-properties string)))
+
 (defun om--encode-string-list-delim (string-list delim)
   "Return STRING-LIST as string joined by DELIM."
   (-some->> string-list (s-join delim)))
@@ -1038,7 +1043,8 @@ bounds."
                          :string-list t)
                   (:title :pred om--is-valid-headline-title
                           :type-desc "a secondary string")
-                  (:todo-keyword ,@ol-str-nil) ; TODO restrict this?
+                  (:todo-keyword ,@ol-str-nil
+                                 :decode om--decode-string-or-nil) ; TODO restrict this?
                   (:raw-value)
                   (:todo-type))
         (horizontal-rule)
