@@ -2,6 +2,7 @@
 (source melpa)
 
 (package-file "om.el")
+(files "*.el")
 
 (development
  (depends-on "s")

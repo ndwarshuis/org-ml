@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/om.el
 ;; Package-Requires: ((emacs "26.1") (dash "2.15") (s "1.12"))
-;; Version: 1.0.0
+;; Version: 1.1.0
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -47,18 +47,6 @@
 ;; - writers: insert/update the contents of a buffer given a parse
 ;;   tree
 
-;; This library has several unconventional uses of macros:
-;; - type checking: all public functions have a simple type-checking
-;;   mechanism
-;; - anaphoric forms: definition macros ending in a '*' will create
-;;   two definitions: one as defined in the source code and one as
-;;   an anaphoric macro (anaphoric forms are macro equivalents of
-;;   higher-order functions that take forms in the place of lambda
-;;   functions)
-;; - rest+keyval arguments: some functions require keyed arguments to
-;;   be used with the &rest parameter; this is not in `cl-macs' and
-;;   therefore requires a custom definition here
-
 ;; For examples please see full documentation at:
 ;; https://github.com/ndwarshuis/om.el
 
@@ -67,6 +55,7 @@
 (require 'org-element)
 (require 'dash)
 (require 's)
+(require 'om-macs)
 
 ;;; NODE TYPE SETS
 
@@ -231,74 +220,6 @@ the car.")
        (cons 'plain-text))
   "List of node types which may be used in item headline title properties.")
 
-;;; ANAPHORIC FUNCTIONS
-
-(eval-when-compile
-  (defun om--defun-partition-body (body)
-    "Return ARGS as a list like (DOCSTRING DECLS BODY).
-DOCSTRING is the first string in BODY if present and it succeeded by
-more forms. DECLS is a list of declarations in the DECLARE statement
-if present after the docstring. Everything else is BODY."
-    ;; macroexp-parse-body doesn't seem to retain declare
-    (cl-flet
-        ((is-declare
-          (form)
-          (eq 'declare (car form))))
-      (let ((first (car body))
-            (second (cadr body))
-            (rest (cddr body)))
-        (cond
-         ((and (stringp first) (is-declare second))
-          (list first (cdr second) rest))
-         ((and (stringp first) second)
-          (list first nil (cons second rest)))
-         ((and (is-declare first) second)
-          (list nil (cdr first) (cons second rest)))
-         (t
-          (list nil nil body))))))
-
-  (defun om--defun-make-indent-declare (decl pos)
-    (let ((indent (or (assoc 'indent decl) `(indent ,pos)))
-          (decl (--remove (eq 'indent (car it)) decl)))
-      `(declare ,@decl ,indent)))
-
-  (defun om--defun-make-anaphoric-docstring (name docstring)
-    "Return DOCSTRING adapted for anaphoric version of definition NAME.
-This includes adding a short string to the front indicating it is an
-anaphoric version and replacing all instances of \"FUN\" with \"FORM\"."
-    (->> (s-replace "FUN" "FORM" docstring)
-         (format "Anaphoric form of `%s'.\n\n%s" name))))
-
-;; TODO this is almost exactly the same as om--defun*
-(defmacro om--defun-nocheck* (name arglist &rest args)
-  "Return a function definition for NAME, ARGLIST, and ARGS.
-This will also make a mirrored anaphoric form macro definition. This
-assumes that `fun' represents a unary function which will be used
-somewhere in the definition's body. When making the anaphoric form,
-`fun' will be replaced by the symbol `form', and `form' will be
-wrapped in a lambda call binding the unary argument to the symbol
-`it'."
-  (declare (doc-string 3) (indent 2))
-  (-let* (((docstring decls body) (om--defun-partition-body args))
-          (name* (intern (format "%s*" name)))
-          (arglist* (-replace 'fun 'form arglist))
-          (docstring* (om--defun-make-anaphoric-docstring name docstring))
-          (funargs (--map (if (eq it 'fun) '(lambda (it) (\, form))
-                            (cons '\, (list it)))
-                          arglist))
-          (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
-          (indent (om--defun-make-indent-declare
-                   decls (-elem-index 'fun arglist))))
-    `(progn
-       (defmacro ,name* ,arglist*
-         ,docstring*
-         ,indent
-         ,body*)
-       (defun ,name ,arglist
-         ,docstring
-         ,indent
-         ,@body))))
-
 ;;; LIST OPERATIONS (EXTENDING DASH.el)
 
 (defun om--pad-or-truncate (length pad list)
@@ -456,20 +377,24 @@ See `om--convert-intra-index' for the meaning of N and USE-OOR."
 
 ;; functors
 
-(om--defun-nocheck* om--map-first (fun list)
+(om--defun* om--map-first (fun list)
   "Return LIST with FUN applied to the first member.
 FUN is a unary function that returns a modified member."
   (when list
     (cons (funcall fun (car list)) (cdr list))))
 
-(om--defun-nocheck* om--map-last (fun list)
+(om--defun* om--map-last (fun list)
   "Return LIST with FUN applied to the last member.
 FUN is a unary function that returns a modified member."
   (-some->> list (nreverse) (om--map-first fun) (nreverse)))
 
+(om--defun* om--map-at (n fun list)
+  "Return LIST with FUN applied to the member at index N.
+FUN is a unary function that returns a modified member."
+  (--> (nth n list) (funcall fun it) (-replace-at n it list)))
+
 ;;; INTERNAL TYPE FUNCTIONS
 
-;; TODO this is a weird spot for this...
 (define-error 'arg-type-error "Argument type error")
 
 (defun om--arg-error (string &rest args)
@@ -477,519 +402,22 @@ FUN is a unary function that returns a modified member."
 STRING and ARGS are analogous to `error'."
     (signal 'arg-type-error `(,(apply #'format-message string args))))
 
-(defalias 'om--get-type 'org-element-type)
-
-(defun om--is-type (type node)
-  "Return t if NODE's type is `eq' to TYPE (a symbol)."
-  (unless (memq type om-nodes)
-    (om--arg-error "Argument 'type' must be in `om-nodes': Got %s" type))
-  (eq (om--get-type node) type))
-
-(defun om--is-any-type (types node)
-  "Return t if NODE's type is any in TYPES (a list of symbols)."
-  (-some->>
-   (-difference types om-nodes)
-   (om--arg-error
-    "All in 'types' must be in `om-nodes'; these were not: %s"))
-  (if (memq (om--get-type node) types) t))
-
 (defun om--is-node (list)
   "Return t if LIST is a node."
-  (om--is-any-type om-nodes list))
-
-(defun om--is-branch-node (list)
-  "Return t if LIST is a branch node."
-  (om--is-any-type om-branch-nodes list))
-
-(defun om--is-object-node (list)
-  "Return t if LIST is an object node."
-  (om--is-any-type om-objects list))
-
-(defun om--is-timestamp (node)
-  "Return t if NODE is a timestamp node (not a diary timestamp node)."
-  (and (om--is-type 'timestamp node)
-       (not (om--property-is-eq :type 'diary node))))
-
-(defun om--is-timestamp-diary (node)
-  "Return t if NODE is a timestamp diary node."
-  (and (om--is-type 'timestamp node)
-       (om--property-is-eq :type 'diary node)))
+  (om-is-any-type om-nodes list))
 
 (defun om--is-table-row (node)
   "Return t if NODE is a standard table-row node."
-  (and (om--is-type 'table-row node)
+  (and (om-is-type 'table-row node)
        (om--property-is-eq :type 'standard node)))
 
 (defun om--filter-type (type node)
   "Return NODE if it is TYPE or nil otherwise."
-  (and (om--is-type type node) node))
+  (and (om-is-type type node) node))
 
 (defun om--filter-types (types node)
   "Return NODE if it is one of TYPES or nil otherwise."
-  (and (om--is-any-type types node) node))
-
-;;; EXTERNAL FUNCTION DEFINITIONS
-
-;;; defun with runtime type checking
-
-(defmacro om--defun-catch-arg-type-error (&rest body)
-  "Return BODY wrapped in `condition-case' form.
-The case form will catch `arg-type-error' and rethrow them as-is."
-  `(condition-case err
-       (progn ,@body)
-     (arg-type-error (signal (car err) (cdr err)))))
-
-(eval-when-compile
-  (defun om--defun-get-type-check-fun (key)
-    "Return cell of (FUN DESC) for type check KEY."
-    (cl-case key
-      (:fun '(functionp "a function"))
-      (:cons '(consp "a cons"))
-      (:bool '(booleanp "a boolean"))
-      (:kw '(keywordp "a keyword"))
-      (:int '(integerp "an integer"))
-      (:p-int '(om--is-pos-integer "a positive integer"))
-      (:nn-int '(om--is-non-neg-integer "a non-negative integer"))
-      (:node '(om--is-node "a node"))
-      (:nodes '((lambda (it) (-all? #'om--is-node it)) "list of nodes"))
-      (t (error "Invalid type checker key used: %s" key))))
-
-  (defun om--defun-make-type-check-form (type-check)
-    "Return type-checking form built from TYPE-CHECK.
-TYPE-CHECK is a list like (KEY SYM)."
-    (-let* (((type arg) type-check)
-            ((pred desc) (om--defun-get-type-check-fun type))
-            (msg (format "Argument '%s' must be %s: Got %%s" arg desc)))
-      `(unless (funcall #',pred ,arg)
-         (om--arg-error ,msg ,arg)))))
-
-(defmacro om--defun-normalize-arglist (arglist)
-  "Return ARGLIST with all cons cells cdr'ed to make a flat symbol list."
-  `(--map (if (listp it) (cadr it) it) ,arglist))
-
-(defmacro om--defun-check-private (name)
-  "Throw and error if NAME refers to a private function (eg \"om--X\")."
-  `(when (s-starts-with-p "om--" (symbol-name ,name))
-     (error "This macro can only be used for public definitions")))
-
-(defmacro om--defun-template (mac name arglist args)
-  "Return a form to build a type-aware definition using MAC.
-NAME, ARGLIST, and ARGS will be fed into MAC."
-  `(progn
-     (om--defun-check-private ,name)
-     (-let* (((docstring decls body) (om--defun-partition-body ,args))
-             (type-checks (-some->>
-                           (-filter #'listp ,arglist)
-                           (-map #'om--defun-make-type-check-form)))
-             (arglist (om--defun-normalize-arglist ,arglist))
-             (body `(om--defun-catch-arg-type-error ,@body))
-             (mac ',mac))
-       `(,mac ,name ,arglist
-              ,docstring
-              (declare ,@decls)
-              ,@type-checks
-              ,body))))
-
-(defmacro om--defun (name arglist &rest args)
-  "Return a function definition for NAME, ARGLIST, and ARGS."
-  (declare (doc-string 3) (indent 2))
-  (om--defun-template defun name arglist args))
-
-(defmacro om--defmacro (name arglist &rest args)
-  "Return a macro definition for NAME, ARGLIST, and ARGS."
-  (declare (doc-string 3) (indent 2))
-  (om--defun-template defmacro name arglist args))
-
-(defmacro om--defun* (name arglist &rest args)
-  "Return a function definition for NAME, ARGLIST, and ARGS.
-This will also make a mirrored anaphoric form macro definition. This
-assumes that `fun' represents a unary function which will be used
-somewhere in the definition's body. When making the anaphoric form,
-`fun' will be replaced by the symbol `form', and `form' will be
-wrapped in a lambda call binding the unary argument to the symbol
-`it'."
-  (declare (doc-string 3) (indent 2))
-  (om--defun-check-private name)
-  (-let* (((docstring decls body) (om--defun-partition-body args))
-          (name* (intern (format "%s*" name)))
-          (arglist* (-replace 'fun '(:cons form) arglist))
-          (docstring* (om--defun-make-anaphoric-docstring name docstring))
-          (funargs (--map (if (eq it 'fun) '(lambda (it) (\, form))
-                            (cons '\, (list it)))
-                          arglist))
-          (body* (cdr (backquote-process (backquote (,name ,@funargs)))))
-          (dec `(om--defun-make-indent-declare
-                 ,decls ,(-elem-index 'fun arglist)))
-          (arglist (-replace 'fun '(:fun fun) arglist)))
-    `(progn
-       (om--defmacro ,name* ,arglist*
-         ,docstring*
-         ,dec
-         ,body*)
-       (om--defun ,name ,arglist
-         ,docstring
-         ,dec
-         ,@body))))
-
-;;; defun with runtime type checking + auto checking last arg
-
-(eval-when-compile
-  (defun om--defun-test-node (arglist)
-    "Return a type-checking form based on ARGLIST.
-ARGLIST is a list of symbols from a function definition's signature,
-and the type checker will use a predicate based solely on the
-symbol's name. This will only make a type checker for the last
-argument in arglist, and assumes that argument will be bound to a
-node."
-    (let ((type (-last-item arglist)))
-      (if (consp type)
-          (error "Last argument must be a symbol: Got %s" type)
-        (-let* ((pre (if (= 1 (length arglist)) "Argument"
-                       "Last argument"))
-                ((post test)
-                 (cl-case type
-                   (node
-                    '("a node" 'om--is-node))
-                   (branch-node
-                    '("a branch node" 'om--is-branch-node))
-                   (object-node
-                    '("an object node" 'om--is-object-node))
-                   (secondary-string
-                    '("a secondary string"
-                      (lambda (it) (-all? #'om--is-object-node it))))
-                   (timestamp
-                    '("a non-diary timestamp" 'om--is-timestamp))
-                   (timestamp-diary
-                    '("a diary timestamp" 'om--is-timestamp-diary))
-                   (t (if (memq type om-nodes)
-                          `(,(format "node of type %s" type)
-                            (lambda (it) (om--is-type ',type it)))
-                        (error "Invalid node type arg: %s" type)))))
-                (msg (format "%s must be %s: Got %%s" pre post)))
-          `(unless (funcall ,test ,type)
-             (om--arg-error ,msg ,type)))))))
-
-(defmacro om--defun-node (name arglist &rest args)
-  "Return a function definition for NAME, ARGLIST, and ARGS.
-Will insert a type checker according to `om--defun-test-node'."
-  (declare (doc-string 3) (indent 2))
-  (-let* (((docstring decls body) (om--defun-partition-body args))
-          (node-check (om--defun-test-node arglist)))
-    `(om--defun ,name ,arglist
-       ,docstring
-       (declare ,@decls)
-       ,node-check
-       ,@body)))
-
-;;; combine type checking and anaphoric form generation
-
-(defmacro om--defun-node* (name arglist &rest args)
-  "Return a function definition for NAME, ARGLIST, and ARGS.
-Will insert a type checker according to `om--defun-test-node' and will
-make an anaphoric form according to `om--defun-nocheck*' (the same assumptions
-apply)."
-  (declare (doc-string 3) (indent 2))
-  (-let* (((docstring decls body) (om--defun-partition-body args))
-          (node-check (om--defun-test-node arglist)))
-    `(om--defun* ,name ,arglist
-       ,docstring
-       (declare ,@decls)
-       ,node-check
-       ,@body)))
-
-;;; better cl-defun
-
-;; Some functions here require a clean way to use &rest and &key
-;; at the same time, which `cl-defun' does not do. For a given
-;; external function signature like (P1 ... &key K1 ... &rest R), this
-;; framework will make a function with the internal signature
-;; (P1 ... &rest --rest-args) where PX are positional arguments
-;; matching exactly those in the external signature and
-;; --rest-args will bind the list contain the key-val pairs and rest
-;; arguments. This will be partitioned into keyword arguments like
-;; KX VAL rest arguments R internally.
-
-(eval-when-compile
-  (defun om--symbol-to-keyword (symbol)
-    "Convert SYMBOL to keyword if not already."
-    (if (keywordp symbol) symbol
-      (->> (symbol-name symbol)
-           (s-prepend ":")
-           (intern))))
-
-  (defun om--process-pos-args (pos-args)
-    "Process POS-ARGS and return a cons cell like (SYMS . CHECKERS)
-SYMS is the list of symbols bound to the positional arguments, and
-CHECKERS is a list of type check forms."
-    (unless (--all? (or (symbolp it) (consp it)) pos-args)
-      (error "Positional args must be either cons cells or symbols"))
-    (let ((checks (-some->>
-                   (-filter #'consp pos-args)
-                   (-map #'om--defun-make-type-check-form)))
-          (syms (om--defun-normalize-arglist pos-args)))
-      (cons syms checks)))
-
-  (defun om--process-rest-arg (rest-arg)
-    "Process REST-ARG and return as a cell like (SYM . CHECKER).
-SYM is the symbol to be bound to the rest argument list, and CHECKER
-is a form used to type-check the rest arguments."
-    (pcase rest-arg
-      ;; checker
-      (`(,(and (pred keywordp) key) .
-         (,(and (pred symbolp) sym) . nil))
-       (-let* (((fun desc) (om--defun-get-type-check-fun key))
-               (msg (format "All in rest arg '%s' must be %s: Got %%s"
-                            sym desc))
-               (check `(unless (-all? (funcall #',fun it) ,sym)
-                         (om--arg-error ,msg ,sym))))
-         (cons sym check)))
-      ;; no checker
-      (`(,(and (pred symbolp) sym) . nil)
-       (cons sym nil))
-      ;; no rest arg period
-      (`nil
-       nil)
-      ;; silly user...
-      (_
-       (error "Rest argument must only have one symbol or cons"))))
-
-  (defun om--make-kwarg-let (kws-sym kwarg)
-    "Return list for KWARG like (KW :let LET-FORM :check CHECKER).
-KWARG is a keyword argument in the signature of a function definition
-\(see `om--defun-kw' for valid configurations of this). In the returned
-cell, KW is keyword representing the key to be used in a function
-call, and LET-FORM is a form to be used in a let binding that will
-retrieve the value for KW from a plist bound to KWS-ARG (which is
-a non-interned symbol to be bound to the keywords in a function
-call). CHECKER is a type check form used to validate the value
-bound to KW."
-    (cl-flet
-        ((make-plist
-          (arg pred init)
-          (let* ((kw (om--symbol-to-keyword arg))
-                 (kw-get `(cadr (plist-member ,kws-sym ',kw)))
-                 (val (if init `(or ,kw-get ,init) kw-get))
-                 (check (-some--> pred
-                                  (list it arg)
-                                  (om--defun-make-type-check-form it))))
-            (list kw :let `(,arg ,val) :check check))))
-      (pcase kwarg
-        ;; ((PRED KEY) INITFORM)
-        (`((,(and (pred keywordp) pred) ,arg) ,init)
-         (make-plist arg pred init))
-        ;; ((PRED KEY))
-        (`((,(and (pred keywordp) pred) ,arg))
-         (make-plist arg pred nil))
-        ;; (KEY INITFORM)
-        (`(,arg ,init)
-         (make-plist arg nil init))
-        ;; KEY
-        ((and (pred symbolp) arg)
-         (make-plist arg nil nil))
-        ;; silly user...
-        (_ (error "Invalid keyword argument: %s" kwarg)))))
-
-  (defun om--throw-kw-error (msg kws)
-    "Throw an error with MSG with formatted list of KEYWORDS."
-    (when kws
-      (->> (-map #'symbol-name kws)
-           (s-join ", ")
-           (error (concat msg ": %s")))))
-
-  (defun om--partition-rest-args (args)
-    "Partition ARGS into two keyword and rest argument lists.
-The keyword list is determined by partitioning all keyword-value
-pairs until this pattern is broken. Whatever is left is put into the
-rest list. Return a list like (KEYARGS RESTARGS)."
-    (->> (-partition-all 2 args)
-         (--split-with (keywordp (car it)))))
-
-  (defmacro om--make-rest-partition-form (argsym kws use-rest?)
-    "Return a form that will partition the args in ARGSYM.
-ARGSYM is a symbol which is bound to the rest argument list of a
-function call. KWS is a list of valid keywords to use when deciding
-which in the argument values is a keyword-value pair, and USE-REST?
-is a boolean that determines if rest arguments are to be considered."
-    ;; these `make-symbol' calls probably aren't necessary but they
-    ;; ensure the let bindings are leak-proof
-    (let* ((p (make-symbol "--part"))
-           (k (make-symbol "--kpart"))
-           (y (make-symbol "--keys"))
-           (r (make-symbol "--rpart"))
-           (inv-msg "Invalid keyword(s) found")
-           (dup-msg "Keyword(s) used multiple times")
-           (rest-msg
-            (s-join " " '("Keyword-value pairs must be immediately"
-                          "after positional arguments. These keywords"
-                          "were interpreted as rest arguments")))
-           (tests
-            ;; ensure that all keywords are valid
-            `((->> (-difference ,y ',kws)
-                   (om--throw-kw-error ,inv-msg))
-              ;; ensure keywords are only used once per call
-              (->> (-group-by #'identity ,y)
-                   (--filter (< 2 (length it)))
-                   (om--throw-kw-error ,dup-msg))
-              ;; ensure that keyword pairs are only used
-              ;; immediately after positional arguments
-              (->> (-filter #'keywordp ,r)
-                   (om--throw-kw-error ,rest-msg))))
-           ;; if rest arguments are used but not allowed in function
-           ;; call, throw error
-           (tests (if use-rest? tests
-                    (-snoc
-                     tests
-                     `(when ,r
-                        (error "Too many arguments supplied")))))
-           ;; return a cons cell of (KEY REST) argument values or
-           ;; just KEY if rest is not used in the function call
-           (return (if (not use-rest?) `(apply #'append ,k)
-                     `(cons (apply #'append ,k)
-                            (apply #'append ,r)))))
-      `(let* ((,p (om--partition-rest-args ,argsym))
-              (,k (car ,p))
-              (,y (-map #'car ,k))
-              (,r (cadr ,p)))
-         ,@tests
-         ,return)))
-
-  (defun om--make-usage-args (arglist)
-    "Return ARGLIST as it should appear in the usage signature.
-This will uppercase all symbol names and remove all type keys."
-    (cl-flet*
-        ((ucase-sym
-          (sym)
-          (-> sym (symbol-name) (upcase) (make-symbol)))
-         (unwrap-form-maybe
-          (arg)
-          (ucase-sym (if (consp arg) (cadr arg) arg)))
-         (unwrap-kw-form-maybe
-          (arg)
-          (pcase arg
-            ;; ((PRED KEY) INITFORM)
-            (`((,(and (pred keywordp) _) ,arg) ,init)
-             (list (ucase-sym arg) init))
-            ;; ((PRED KEY))
-            (`((,(and (pred keywordp) _) ,arg))
-             (ucase-sym arg))
-            ;; (KEY INITFORM)
-            (`(,arg ,init)
-             (list (ucase-sym arg) init))
-            ;; KEY
-            ((and (pred symbolp) arg)
-             (ucase-sym arg))
-            (_ (error "This shouldn't happen")))))
-      (let* ((part(-partition-before-pred
-                   (lambda (it) (memq it '(&pos &rest &key)))
-                   (cons '&pos arglist)))
-             (pos (-some->> (alist-get '&pos part)
-                            (-map #'unwrap-form-maybe)))
-             (kw (-some->> (alist-get '&key part)
-                           (-map #'unwrap-kw-form-maybe)
-                           (cons '&key)))
-             (rest (-some->> (alist-get '&rest part)
-                             (-map #'unwrap-form-maybe)
-                             (cons '&rest))))
-        (append pos kw rest))))
-
-  (defun om--make-header (body arglist)
-    "Return a header using docstring from BODY and ARGLIST."
-    (let ((header (caar (macroexp-parse-body body))))
-      ;; Macro expansion can take place in the middle of
-      ;; apparently harmless computation, so it should not
-      ;; touch the match-data.
-      (save-match-data
-        (let ((print-gensym nil)
-              (print-quoted t)
-              (print-escape-newlines t))
-          (->> (om--make-usage-args arglist)
-               (cons 'fn)
-               (format "%S")
-               (help--docstring-quote)
-               (help-add-fundoc-usage header))))))
-
-  (defun om--transform-lambda (arglist body name)
-    "Make a form for a keyword/rest composite function definition.
-ARGLIST is the argument signature. BODY is the function body. NAME
-is the NAME of the function definition.
-
-This acts much like `cl-defun' except that it only considers &rest
-and &key slots. The way the final function call will work beneath the
-surface is that all positional arguments will be bound to their
-symbols in ARGLIST (analogous to `defun' and `cl-defun'), and the key
-and rest arguments will be captured in one rest argument to be
-partitioned on the fly into key and rest bindings that can be used
-in BODY."
-    ;; assume &key will always be present if this function is called
-    (let* ((a (make-symbol "--arg-cell"))
-           (k (make-symbol "--kw-args"))
-           (kr (make-symbol "--key-and-rest-args"))
-           (partargs (-partition-before-pred
-                      (lambda (it) (memq it '(&pos &rest &key)))
-                      (cons '&pos arglist)))
-           (pos-cell (->> (alist-get '&pos partargs)
-                          (om--process-pos-args)))
-           (pos-args (car pos-cell))
-           (kw-alist (->> (alist-get '&key partargs)
-                          (--map (om--make-kwarg-let k it))))
-           (rest-cell (->> (alist-get '&rest partargs)
-                           (om--process-rest-arg)))
-           (rest-arg (car rest-cell))
-           (kws (-map #'car kw-alist))
-           (kw-lets (--map (plist-get (cdr it) :let) kw-alist))
-           (pos-checks (cdr pos-cell))
-           (kw-checks (--map (plist-get (cdr it) :check) kw-alist))
-           (rest-check (cdr rest-cell))
-           (checks `(,@pos-checks ,@kw-checks ,rest-check))
-           (arg-form `(,@pos-args &rest ,kr))
-           (header (om--make-header body arglist))
-           (let-forms
-            (if rest-arg
-                `((,a (om--make-rest-partition-form ,kr ,kws t))
-                  (,k (car ,a))
-                  (,rest-arg (cdr ,a))
-                  ,@kw-lets)
-              `((,k (om--make-rest-partition-form ,kr ,kws nil))
-                ,@kw-lets)))
-           (body (->> (macroexp-parse-body body)
-                      (cdr)
-                      (append `(cl-block ,name)))))
-      ;; if &key is used but no keywords are actually used, slap the
-      ;; programmer in the face
-      (unless kw-alist (error "No keywords used"))
-      `(,arg-form
-        ,header
-        ,(macroexp-let*
-          let-forms
-          (macroexp-progn `(,@checks ,body))))))
-
-  (defmacro om--defun-kw (name arglist &rest body)
-    "Define NAME as a function.
-
-This is like `cl-defun' except it allows &key to be used in
-conjunction with &rest without freaking out. Args can be specified
-using the following syntax:
-
-\([([PRED] VAR)] ...
- [&key (([PRED] VAR) [INITFORM])...]
- [&rest ([PRED] VAR)])
-
-where VAR is a symbol for the variable identifier, PRED is a
-keyword that specifies how to test if VAR is the correct type,
-INITFORM is an atom or form that will be the default value for keyword
-VAR if it is not give in a function call.
-
-When calling functions defined with this, keywords can be given in any
-order as long as they are after all positional arguments, and rest
-arguments will be interpreted as anything not belonging to a key-val
-pair (but only if &rest was used to define the function). This implies
-that keywords may not be used as values for the rest argument in
-function calls."
-    (declare (doc-string 3) (indent 2))
-    (if (memq '&key arglist)
-        (let ((res (om--transform-lambda arglist body name)))
-          `(defun ,name ,@res))
-      (error "&key not used, use regular defun"))))
+  (and (om-is-any-type types node) node))
 
 ;;; MISC HELPER FUNCTIONS
 
@@ -1007,22 +435,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
   "Convert STRING to org-element representation."
   (with-temp-buffer
     (insert string)
-    (-> (om-parse-this-buffer) (om--get-children) (car))))
-
-(defun om--build-secondary-string (string)
-  "Return a list of elements from STRING as a secondary string."
-  ;; fool parser to always parse objects, bold will parse to headlines
-  ;; because of the stars
-  (-if-let (ss (->> (om--from-string (concat " " string))
-                    (om--get-descendent '(0))
-                    (om--get-children)))
-      (cond
-       ((--any? (om--is-any-type om-elements it) ss)
-        (om--arg-error "Secondary string must only contain objects"))
-       ((equal (car ss) " ")
-        (-drop 1 ss))
-       (t (om--map-first* (substring it 1) ss)))
-    (om--arg-error "Could not make secondary string from %S" string)))
+    (-> (om-parse-this-buffer) (om-get-children) (car))))
 
 ;;; INTERNAL PREDICATES
 
@@ -1056,7 +469,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 
 ;;; INTERNAL NODE PROPERTY FUNCTIONS
 
-(defun om--get-property (prop node)
+(defun om--get-property-nocheck (prop node)
   "Return PROP from NODE."
   (if (and (stringp node) (eq prop :post-blank))
       (length (car (s-match "[ ]*$" node)))
@@ -1068,75 +481,66 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 
 (defun om--get-parent (node)
   "Return the parent of NODE."
-  (om--get-property :parent node))
+  (om--get-property-nocheck :parent node))
 
 (defun om--get-parent-headline (node)
   "Return the most immediate parent headline node of NODE."
   (-when-let (parent (om--get-parent node))
-    (if (om--is-type 'headline parent) parent
+    (if (om-is-type 'headline parent) parent
       (om--get-parent-headline parent))))
 
-(defun om--set-property (prop value node)
+(defun om--set-property-nocheck (prop value node)
   "Set PROP in NODE to VALUE."
   (if (stringp node)
       (if (eq prop :post-blank)
           (->> (s-trim-right node) (s-append (s-repeat value " ")))
         (org-add-props node nil prop value))
     (om--construct
-     (om--get-type node)
+     (om-get-type node)
      (plist-put (om--get-all-properties node) prop value)
-     (om--get-children node))))
+     (om-get-children node))))
 
-(defun om--set-properties (plist node)
+(defun om--set-properties-nocheck (plist node)
   "Set all properties in NODE to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that correspond to the
 property list in NODE."
   (if (om--is-plist plist)
       (let ((props (om--get-all-properties node)))
         (om--construct
-         (om--get-type node)
+         (om-get-type node)
          (->> (-partition 2 plist)
               (--reduce-from (apply #'plist-put acc it) props))
-         (om--get-children node)))
+         (om-get-children node)))
     (om--arg-error "Not a plist: %S" plist)))
 
-(defun om--set-property-nil (prop node)
+(defun om--set-property-nocheck-nil (prop node)
   "Set PROP to nil in NODE."
-  (om--set-property prop nil node))
+  (om--set-property-nocheck prop nil node))
 
-(defun om--set-properties-nil (props node)
+(defun om--set-properties-nocheck-nil (props node)
   "Set all PROPS to new in NODE."
   (let ((plist (--mapcat (list it nil) props)))
-    (om--set-properties plist node)))
+    (om--set-properties-nocheck plist node)))
 
-(om--defun-nocheck* om--map-property (prop fun node)
+(om--defun* om--map-property-nocheck (prop fun node)
   "Return NODE with FUN applied to the value in PROP.
 FUN is a unary function that returns a modified value."
-  (let ((value (funcall fun (om--get-property prop node))))
-    (om--set-property prop value node)))
+  (--> (om--get-property-nocheck prop node)
+       (funcall fun it)
+       (om--set-property-nocheck prop it node)))
 
 (defun om--property-is-nil (prop node)
   "Return t if PROP in NODE is nil."
-  (not (om--get-property prop node)))
-
-;; TODO this is unused
-(defun om--property-is-non-nil (prop node)
-  "Return t if PROP in NODE is not nil."
-  (if (om--get-property prop node) t))
+  (not (om--get-property-nocheck prop node)))
 
 (defun om--property-is-eq (prop val node)
   "Return t if PROP in NODE is `eq' to VAL."
-  (eq val (om--get-property prop node)))
+  (eq val (om--get-property-nocheck prop node)))
 
-;; TODO this is unused
-(defun om--property-is-equal (prop val node)
-  "Return t if PROP in NODE is `equal' to VAL."
-  (equal val (om--get-property prop node)))
-
-(om--defun-nocheck* om--property-is-predicate (prop fun node)
+(om--defun* om--property-is-predicate (prop fun node)
   "Return t if FUN applied to the value of PROP in NODE results not nil.
 FUN is a predicate function that takes one argument."
-  (and (funcall fun (om--get-property prop node)) t))
+  (and (funcall fun (om--get-property-nocheck prop node)) t))
 
 ;;; NODE PROPERTY TRANSLATION AND CHECKING FRAMEWORK
 
@@ -1232,7 +636,7 @@ FUN is a predicate function that takes one argument."
 (defun om--is-valid-item-tag (x)
   "Return t if X is an allowed value for an item node tag property."
   (and (listp x)
-       (--all? (om--is-any-type om--item-tag-restrictions it) x)))
+       (--all? (om-is-any-type om--item-tag-restrictions it) x)))
 
 (defun om--is-valid-item-bullet (x)
   "Return t if X is an allowed value for a item node bullet property."
@@ -1247,15 +651,15 @@ FUN is a predicate function that takes one argument."
 
 (defun om--is-valid-clock-timestamp (x)
   "Return t if X is an allowed value for a clock node value property."
-  (and (om--is-type 'timestamp x)
+  (and (om-is-type 'timestamp x)
        (om--property-is-predicate :type
          (lambda (it) (memq it '(inactive inactive-range))) x)
        (om--property-is-nil :repeater-type x)))
 
 (defun om--is-valid-planning-timestamp (x)
   "Return t if X is an allowed value for a planning node timestamp property."
-  (or (null x) (and (om--is-type 'timestamp x)
-                    (om--property-is-eq :type 'inactive x))))
+  (or (null x) (and (om-is-type 'timestamp x)
+                    (om--property-is-eq :type 'active x))))
 
 (defun om--is-valid-entity-name (x)
   "Return t if X is an allowed value for an entity node name property."
@@ -1276,7 +680,7 @@ FUN is a predicate function that takes one argument."
   "Return t if X is an allowed value for a headline node title property."
   (and
    (listp x)
-   (--all? (om--is-any-type om--headline-title-restrictions it) x)))
+   (--all? (om-is-any-type om--headline-title-restrictions it) x)))
 
 (defun om--is-valid-timestamp-type (x)
   "Return t if X is an allowed value for a timestamp node type property."
@@ -1456,15 +860,15 @@ Return value will conform to `om--is-valid-diary-sexp-value'."
 (defun om--update-macro-value (macro)
   "Return MACRO node with its value property updated.
 This will be based on MACRO's key and value properties."
-  (let* ((k (om--get-property :key macro))
-         (as (om--get-property :args macro))
+  (let* ((k (om--get-property-nocheck :key macro))
+         (as (om--get-property-nocheck :args macro))
          (v (if as (format "%s(%s)" k (s-join "," as)) k)))
-    (om--set-property :value (format "{{{%s}}}" v) macro)))
+    (om--set-property-nocheck :value (format "{{{%s}}}" v) macro)))
 
 (defun om--update-clock-duration (clock)
   "Return CLOCK node with its duration and status properties updated.
 This will be based on CLOCK's value property."
-  (let* ((ts (om--get-property :value clock))
+  (let* ((ts (om--get-property-nocheck :value clock))
          (seconds (om--timestamp-get-range ts))
          (plist
           (if (< 0 seconds)
@@ -1472,7 +876,7 @@ This will be based on CLOCK's value property."
                      (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
                 `(:duration ,(format "%2d:%02d" h m) :status running))
             '(:duration nil :status closed))))
-    (om--set-properties plist clock)))
+    (om--set-properties-nocheck plist clock)))
 
 (defun om--update-headline-tags (headline)
   "Return HEADLINE node with its tags updated.
@@ -1481,9 +885,9 @@ This will be based on HEADLINE's archivedp property."
       ((add-archive-tag-maybe
         (tags)
         (let ((tags* (remove org-archive-tag tags)))
-          (if (om--get-property :archivedp headline)
+          (if (om--get-property-nocheck :archivedp headline)
               (-snoc tags* org-archive-tag) tags*))))
-    (om--map-property :tags #'add-archive-tag-maybe headline)))
+    (om--map-property-nocheck :tags #'add-archive-tag-maybe headline)))
 
 ;;; shifters
 
@@ -1558,7 +962,7 @@ bounds."
                            :string-list t
                            :type-desc "a list of oneline strings"))
           (planning (list :pred #'om--is-valid-planning-timestamp
-                          :type-desc "a zero-range, inactive timestamp node"))
+                          :type-desc "a zero-range, active timestamp node"))
           (ts-unit (list :pred #'om--is-valid-timestamp-unit
                          :type-desc '("nil or a symbol from `year' `month'"
                                       "`week' `day', or `hour'"))))
@@ -1785,7 +1189,7 @@ bounds."
   "Return the encoder function for PROP of node TYPE."
   (om--get-property-attribute :encode type prop))
 
-(defun om--get-property-decoder (type prop)
+(defun om--get-property-nocheck-decoder (type prop)
   "Return the decoder function for PROP of node TYPE."
   (om--get-property-attribute :decode type prop))
 
@@ -1798,129 +1202,30 @@ bounds."
   (let ((desc (om--get-property-attribute :type-desc type prop)))
     (if (listp desc) (s-join " " desc) desc)))
 
-;; getter
-
-(defun om--get-property-strict (prop node)
-  "Return the value of PROP in NODE.
-
-Will decode value according to `om--node-property-alist'."
-  (let ((filter-fun (-> (om--get-type node)
-                        (om--get-property-decoder prop)))
-        (value (om--get-property prop node)))
-    (if filter-fun (funcall filter-fun value) value)))
-
-;; setter
-
-(defun om--set-property-strict (prop value node)
-  "Return NODE with PROP set to VALUE.
-
-Will validate and encode VALUE if valid according to `om--node-property-alist'."
-  (let* ((type (om--get-type node))
-         (pred (om--get-property-attribute :pred type prop)))
-    (if (funcall pred value)
-        (let* ((encode-fun (om--get-property-encoder type prop))
-               (update-fun (om--get-property-cis-function type prop)))
-          (-->
-           (if encode-fun (funcall encode-fun value) value)
-           (om--set-property prop it node)
-           (if update-fun (funcall update-fun it) it)))
-      (om--arg-error "Property '%s' in node of type '%s' must be %s. Got '%S'"
-             prop type (om--get-property-type-desc type prop) value))))
-
-(defun om--set-properties-strict (plist node)
-  "Set all properties in NODE to the values corresponding to PLIST.
-
-PLIST is a list of property-value pairs that correspond to the
-property list in NODE.
-
-Will validate and encode VALUE if valid according to `om--node-property-alist'."
-  (cl-flet
-      ((filter
-        (acc keyval type)
-        (-let* (((prop value) keyval)
-                (pred (om--get-property-attribute :pred type prop)))
-          (if (funcall pred value)
-              (let ((encode-fun (om--get-property-encoder type prop)))
-                (->> (if encode-fun (funcall encode-fun value) value)
-                     (funcall #'plist-put acc prop)))
-            (om--arg-error "Property '%s' in node of type '%s' must be %s. Got '%S'"
-                   prop type (om--get-property-type-desc type prop) value)))))
-    (if (om--is-plist plist)
-        (let* ((cur-props (om--get-all-properties node))
-               (type (om--get-type node))
-               (keyvals (-partition 2 plist))
-               (update-funs
-                (->> (-map #'car keyvals)
-                     (--map (om--get-property-cis-function type it))
-                     (-uniq)
-                     (-non-nil)))
-               (node*
-                (om--construct
-                 (om--get-type node)
-                 (--reduce-from (filter acc it type) cur-props keyvals)
-                 (om--get-children node))))
-          (if (not update-funs) node*
-            (--reduce-from (funcall it acc) node* update-funs)))
-      (om--arg-error "Not a plist: %S" plist))))
-
-;; mapper
-
-(om--defun-nocheck* om--map-property-strict (prop fun node)
-  "Return NODE with FUN applied to the value in PROP.
-
-FUN is a unary function that returns a modified value.
-
-Will validate/encode/decode value according to `om--node-property-alist'."
-  (let ((value (funcall fun (om--get-property-strict prop node))))
-    (om--set-property-strict prop value node)))
-
-(defun om--map-properties-strict (plist node)
-  "Return NODE with modified property values.
-
-PLIST is a property list where the keys are properties in NODE
-to change and the values are unary functions that will be
-applied to current property values and return modified property
-values.
-
-Will validate/encode/decode value according to `om--node-property-alist'."
-  (cond
-   ((not plist) node)
-   ((om--is-plist plist)
-    (->> (om--map-property-strict (nth 0 plist) (nth 1 plist) node)
-         (om--map-properties-strict (-drop 2 plist))))
-   (t (om--arg-error "Not a plist: %s" plist))))
-
 ;;; INTERNAL BRANCH/CHILD MANIPULATION
-
-(defalias 'om--get-children 'org-element-contents)
 
 (defun om--get-descendent (indices node)
   "Return the nested children of NODE as given by INDICES.
 INDICES is a list of integers specifying the index and level of the
 nested element to return."
   (if (not indices) node
-    (->> (om--get-children node)
+    (->> (om-get-children node)
          (nth (car indices))
          (om--get-descendent (cdr indices)))))
 
-(defun om--is-childless (node)
-  "Return t if NODE has no children."
-  (not (om--get-children node)))
-
-(defun om--set-children (children node)
+(defun om--set-children-nocheck (children node)
   "Return NODE with children set to CHILDREN."
    (let ((head (om--get-head node)))
      (if children (append head children) head)))
 
-(om--defun-nocheck* om--map-children (fun node)
+(om--defun* om--map-children-nocheck (fun node)
   "Return NODE with FUN applied to its children.
 
 FUN is a unary function that takes a list of children and returns
 a modified list of children."
-  (let ((children (om--get-children node)))
-    (om--set-children (funcall fun children) node)))
-
-;;; strict child operations
+  (--> (om-get-children node)
+       (funcall fun it)
+       (om--set-children-nocheck it node)))
 
 (defun om--set-childen-throw-error (type child-types illegal)
   "Throw an `arg-type-error' for TYPE.
@@ -1937,29 +1242,6 @@ and ILLEGAL types were attempted to be set."
           (illegal (format-types illegal))
           (child-types (format-types child-types)))
       (om--arg-error fmt type illegal child-types))))
-
-(defun om--set-children-strict (children node)
-  "Return NODE with children set to CHILDREN.
-Throw an error if an nodes in CHILDREN are not in
-`om--node-restrictions' for the type of NODE."
-  (let ((type (om--get-type node)))
-    (-if-let (child-types (alist-get type om--node-restrictions))
-        (-if-let (illegal (-difference (-map #'om--get-type children)
-                                       child-types))
-            (om--set-childen-throw-error type child-types illegal)
-          (om--set-children children node))
-      ;; this should not happen
-      (error "Child type restrictions not found for %s" type))))
-
-(om--defun-nocheck* om--map-children-strict (fun node)
-  "Return NODE with FUN applied to its children.
-
-FUN is a unary function that takes a list of children and returns
-a modified list of children. New children will be set with
-`om--set-children-strict' which will throw an error if FUN returns
-a child list containing illegal types."
-  (let ((children (om--get-children node)))
-    (om--set-children-strict (funcall fun children) node)))
 
 ;;; BASE BUILDER FUNCTIONS
 
@@ -1989,8 +1271,8 @@ a child list containing illegal types."
   "Return a new node assembled from TYPE, POST-BLANK, and PROPS.
 TYPE is a symbol, POST-BLANK is a postive integer, and PROPS is a
 plist of properties for the node."
-  (->> (om--set-property-strict :post-blank (or post-blank 0) `(,type nil))
-       (om--set-properties-nil props)))
+  (->> (om-set-property :post-blank (or post-blank 0) `(,type nil))
+       (om--set-properties-nocheck-nil props)))
 
 (defun om--build-object (type post-blank)
   "Return a new object-typed node from TYPE and POST-BLANK."
@@ -2000,7 +1282,7 @@ plist of properties for the node."
   "Return a new branch object-typed node from TYPE, POST-BLANK, and CHILDREN."
   (->> om--recursive-object-properties
        (om--build type post-blank)
-       (om--set-children-strict children)))
+       (om-set-children children)))
 
 (defun om--build-element (type post-blank)
   "Return a new element-typed node from TYPE and POST-BLANK."
@@ -2010,7 +1292,7 @@ plist of properties for the node."
   "Return a new branch element-typed node from TYPE, POST-BLANK, and CHILDREN."
   (->> om--container-element-properties
        (om--build type post-blank)
-       (om--set-children-strict children)))
+       (om-set-children children)))
 
 ;;; base builders
 
@@ -2063,22 +1345,22 @@ plist of properties for the node."
                          (list p c))
                        it)
                       (if (= 2 (length it))
-                          `(om--set-property ,@it)
-                        `(om--set-properties (list ,@it)))))
+                          `(om--set-property-nocheck ,@it)
+                        `(om--set-properties-nocheck (list ,@it)))))
            (nil-props
             (-some--> (alist-get 'null props)
                       (-map #'car it)
                       (if (= 1 (length it))
-                          `(om--set-property-nil ,@it)
-                        `(om--set-properties-nil (list ,@it)))))
+                          `(om--set-property-nocheck-nil ,@it)
+                        `(om--set-properties-nocheck-nil (list ,@it)))))
            (strict-props
             (-some-->
              (append (alist-get 'key props) (alist-get 'req props))
              (-map #'car it)
              (--mapcat (list it (om--kwd-to-sym it)) it)
              (if (= 2 (length it))
-                 `(om--set-property-strict ,@it)
-               `(om--set-properties-strict (list ,@it)))))
+                 `(om-set-property ,@it)
+               `(om-set-properties (list ,@it)))))
            (doc
             (let ((class (if element? "element" "object"))
                   (end (if (not rest-arg) "."
@@ -2141,7 +1423,7 @@ plist of properties for the node."
   "Return format of STATISTICS-COOKIE as a symbol.
 If fractional cookie, return `fraction'; if percentage cookie return
 `percent', else throw error (which should never happen)."
-  (let ((value (om--get-property :value statistics-cookie)))
+  (let ((value (om--get-property-nocheck :value statistics-cookie)))
     (cond ((s-contains? "/" value) 'fraction)
           ((s-contains? "%" value) 'percent)
           (t (om--arg-error "Unparsable statistics cookie: %s" value)))))
@@ -2294,7 +1576,7 @@ TYPE given in DEC."
 
 (defun om--timestamp-is-active (timestamp)
   "Return t if TIMESTAMP is an active type."
-  (memq (om--get-property :type timestamp) '(active active-range)))
+  (memq (om--get-property-nocheck :type timestamp) '(active active-range)))
 
 (defun om--timestamp-is-ranged (timestamp)
   "Return t if TIMESTAMP has a range greater than 0 seconds."
@@ -2313,7 +1595,7 @@ TYPE given in DEC."
 (defun om--timestamp-set-start-time-nocheck (time timestamp)
   "Set the start TIME of TIMESTAMP. Does not set type."
   (let ((time* (om--time-format-props time 'start)))
-      (om--set-properties time* timestamp)))
+      (om--set-properties-nocheck time* timestamp)))
 
 (defun om--timestamp-set-start-time (time timestamp)
   "Return TIMESTAMP with start time properties set according to time list TIME."
@@ -2324,10 +1606,10 @@ TYPE given in DEC."
   "Set the end TIME of TIMESTAMP. Does not set type."
   (if time
       (-> (om--time-format-props time 'end)
-          (om--set-properties timestamp))
+          (om--set-properties-nocheck timestamp))
     (-> (om--timestamp-get-start-time timestamp)
         (om--time-format-props 'end)
-        (om--set-properties timestamp))))
+        (om--set-properties-nocheck timestamp))))
 
 (defun om--timestamp-set-end-time (time timestamp)
   "Return TIMESTAMP with end time properties set according to time list TIME."
@@ -2375,26 +1657,26 @@ TYPE given in DEC."
          ((inactive inactive-range)
           (if ranged? 'inactive-range 'inactive))
          (t (om--arg-error "Invalid timestamp type: %s" type)))))
-    (om--map-property :type #'update-range timestamp)))
+    (om--map-property-nocheck :type #'update-range timestamp)))
 
 (defun om--timestamp-set-active (flag timestamp)
   "Return TIMESTAMP with active type if FLAG is t."
   (let* ((type (if (om--timestamp-is-ranged-lowres timestamp)
                    (if flag 'active-range 'inactive-range)
                  (if flag 'active 'inactive))))
-    (om--set-property :type type timestamp)))
+    (om--set-property-nocheck :type type timestamp)))
 
 (defun om--timestamp-set-warning (warning timestamp)
   "Return TIMESTAMP with warning properties set to WARNING list."
   (let ((types '(all first)))
     (-> (om--decorator-format warning 'warning types)
-        (om--set-properties timestamp))))
+        (om--set-properties-nocheck timestamp))))
 
 (defun om--timestamp-set-repeater (repeater timestamp)
   "Return TIMESTAMP with warning properties set to REPEATER list."
   (let ((types '(catch-up restart cumulate)))
     (-> (om--decorator-format repeater 'repeater types)
-        (om--set-properties timestamp))))
+        (om--set-properties-nocheck timestamp))))
 
 (defun om--timestamp-shift-start (n unit timestamp)
   "Return TIMESTAMP with start time shifted N UNIT's."
@@ -2412,44 +1694,25 @@ TYPE given in DEC."
 
 ;; timestamp (diary sexp)
 
-(defun om--timestamp-diary-set-value (form timestamp)
-  "Return TIMESTAMP with raw-value set to FORM."
-  (om--set-property :raw-value (format "<%%%%%S>" form) timestamp))
-
 ;;; element nodes
 ;;
 ;; headline
 
-(defun om--headline-set-title! (title-text statistics-cookie headline)
-  "Return HEADLINE node with modified title property.
-
-TITLE-TEXT is the text used for the title (without todo keywords,
-priorities, or comment flags) and STATISTICS-COOKIE is a value
-to be used in setting the statistics cookie that conforms to
-`om--is-valid-statistics-cookie-value'."
-  (let ((ss (om--build-secondary-string title-text)))
-    (if (not statistics-cookie)
-        (om--set-property-strict :title ss headline)
-      (let ((ss* (om--map-last*
-                  (om--set-property :post-blank 1 it) ss))
-            (sc (om-build-statistics-cookie statistics-cookie)))
-        (om--set-property-strict :title (-snoc ss* sc) headline)))))
-
 (defun om--headline-shift-level (n headline)
   "Return HEADLINE node with the level property shifted by N.
 If the level is less then one after shifting, set level to one."
-  (om--map-property* :level (om--shift-pos-integer n it) headline))
+  (om--map-property-nocheck* :level (om--shift-pos-integer n it) headline))
 
 (defun om--headline-set-statistics-cookie (value headline)
   "Return HEADLINE node with statistics cookie set by VALUE.
 VALUE is a list conforming to `om--is-valid-statistics-cookie-value'
 or nil to erase the statistics cookie if present."
-  (om--map-property*
+  (om--map-property-nocheck*
    :title
-   (let ((last? (om--is-type 'statistics-cookie (-last-item it))))
+   (let ((last? (om-is-type 'statistics-cookie (-last-item it))))
      (cond
       ((and last? value)
-       (om--map-last* (om--set-property-strict :value value it) it))
+       (om--map-last* (om-set-property :value value it) it))
       ((and last? (not value))
        (-drop-last 1 it))
       (value
@@ -2463,7 +1726,7 @@ or nil to erase the statistics cookie if present."
 DONE and TOTAL are integers representing the numerator and denominator
 respectively of the statistics-cookie's fractional value. Both must
 be greater than zero, and DONE must be less than or equal to TOTAL."
-  (-if-let (cookie (om--headline-get-statistics-cookie headline))
+  (-if-let (cookie (om-headline-get-statistics-cookie headline))
       (let* ((format (om--statistics-cookie-get-format cookie))
              (value (if (eq 'fraction format) `(,done ,total)
                       (-> (float done)
@@ -2484,6 +1747,7 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
                (lambda (it) (memq it '(&warning &repeater)))
                planning-list)))
       (om-build-timestamp! (car p)
+                           :active t
                            :warning (alist-get '&warning p)
                            :repeater (alist-get '&repeater p)))))
 
@@ -2491,51 +1755,13 @@ See `om-build-planning!' for syntax of PLANNING-LIST."
 
 ;;; headline
 
-(defun om--headline-get-subheadlines (headline)
-  "Return list of child headline nodes within HEADLINE node."
-  (-some->> (om--get-children headline)
-            (--filter (om--is-type 'headline it))))
-
-(defun om--headline-get-section (headline)
-  "Return child section node within HEADLINE node."
-  (-some->> (om--get-children headline) (assoc 'section)))
-
-(defun om--headline-get-statistics-cookie (headline)
-  "Return statistics-cookie node within HEADLINE node."
-  (->> (om--get-property :title headline)
-       (-last-item)
-       (om--filter-type 'statistics-cookie)))
-
-(defun om--headline-get-properties-drawer (headline)
-  "Return child properties-drawer node within HEADLINE node."
-  (-some->>
-   (om--headline-get-section headline)
-   (--first (om--is-type 'property-drawer it))))
-
-(defun om--headline-map-subheadlines (fun headline)
-  "Return HEADLINE node with child headline nodes modified by FUN.
-
-FUN is a unary function that takes a list of headlines and returns
-a modified list of headlines."
-  (om--map-children
-   (lambda (children)
-     (let ((section (assoc 'section children))
-           (subheadlines (-some->>
-                          (--filter (om--is-type 'headline it) children)
-                          (funcall fun))))
-       (cond
-        ((and section subheadlines) (cons section subheadlines))
-        (section section)
-        (t subheadlines))))
-   headline))
-
 (defun om--headline-subtree-shift-level (n headline)
   "Return HEADLINE node with its level shifted by N.
 Also shift all HEADLINE node's child headline nodes by N.
 If the final shifted level is less one, set level to one (for parent
 and child nodes)."
   (->> (om--headline-shift-level n headline)
-       (om--headline-map-subheadlines
+       (om-headline-map-subheadlines
         (lambda (headlines)
           (--map (om--headline-subtree-shift-level n it)
                  headlines)))))
@@ -2544,8 +1770,8 @@ and child nodes)."
   "Return HEADLINE node with its level set to LEVEL.
 Additionally set all child headline nodes to be (+ 1 level) for
 first layer, (+ 2 level for second, and so on."
-  (->> (om--set-property-strict :level level headline)
-       (om--map-children*
+  (->> (om-set-property :level level headline)
+       (om--map-children-nocheck*
          (--map (om--headline-set-level (1+ level) it) it))))
 
 ;;; table
@@ -2553,8 +1779,8 @@ first layer, (+ 2 level for second, and so on."
 (defun om--table-get-width (table)
   "Return the width of TABLE as an integer.
 This effectively is the maximum of all table-row lengths."
-  (->> (om--get-children table)
-       (--map (length (om--get-children it)))
+  (->> (om-get-children table)
+       (--map (length (om-get-children it)))
        (-max)))
 
 (defun om--table-pad-or-truncate (length list)
@@ -2573,7 +1799,7 @@ a modified table-cell node."
       ((zip-into-rows
         (row new-cell)
         (if (om--property-is-eq :type 'rule row) row
-          (om--map-children
+          (om--map-children-nocheck
            (lambda (cells) (funcall fun new-cell cells))
            row)))
        (map-rows
@@ -2583,12 +1809,12 @@ a modified table-cell node."
              (--reduce-from (-insert-at it nil acc) column-index)
              (om--table-pad-or-truncate (length rows))
              (-zip-with #'zip-into-rows rows))))
-    (om--map-children #'map-rows table)))
+    (om--map-children-nocheck #'map-rows table)))
 
 (defun om--table-get-row (row-index table)
   "Return the table-row node at ROW-INDEX within TABLE.
 Rule-type table-row nodes do not factor when counting the index."
-  (-some->> (om--get-children table)
+  (-some->> (om-get-children table)
             (--filter (om--property-is-eq :type 'standard it))
             (om--nth row-index)))
 
@@ -2605,14 +1831,14 @@ See `om--table-pad-or-truncate' for how padding and truncation is
 performed. TABLE is used to get the table width."
   (if (om--property-is-eq :type 'rule table-row) table-row
     (let ((width (om--table-get-width table)))
-      (om--map-children*
+      (om--map-children-nocheck*
         (om--table-pad-or-truncate width it)
         table-row))))
 
 (defun om--table-replace-row (row-index table-row table)
   "Return TABLE node with row at ROW-INDEX replaced by TABLE-ROW."
   (let ((table-row (om--table-row-pad-maybe table table-row)))
-    (om--map-children* (om--replace-at row-index table-row it) table)))
+    (om--map-children-nocheck* (om--replace-at row-index table-row it) table)))
 
 (defun om--table-clear-row (row-index table)
   "Return TABLE with table-cells in row at ROW-INDEX filled with blanks."
@@ -2621,282 +1847,6 @@ performed. TABLE is used to get the table width."
 (defun om--table-clear-column (column-index table)
   "Return TABLE with table-cells in column at COLUMN-INDEX filled with blanks."
   (om--table-replace-column column-index `(,(om-build-table-cell " ")) table))
-
-;;; INTERNAL INDENTATION AND UNINDENTATION
-
-;;; indentation
-
-;; high level steps to indent
-;;
-;; Assume an abstract tree thing like this:
-;; - 0.
-;; - 1.
-;;   - 1.0
-;; - 2.
-;;
-;; We wish to indent 1. There are two cases:
-;; 1. indent only 1.
-;; 2. indent 1. and 1.1 along with it
-;;
-;; In both cases, make 1.0 a child of 0. Remove 1.0 from the
-;; top-level list and leave 1.0 and 2. untouched
-;;
-;; In case 2, this is all that is needed since 1.0 is already a child
-;; of 1. and will "autoindent" as 1. itself is moved.
-;;
-;; To make it "stay in place," as in case 1, remove 1.0 as a child of
-;; 1., append it to the end of the list containing 2., and set this
-;; list (with both 1. and 1.0.) as the child of 0.
-;;
-;; parameters for indenting:
-;; - index of target to indent (1 in above example)
-
-;; TODO throw error when index out of range???
-
-(defun om--indent-members (fun index tree)
-  "Return TREE with member at INDEX indented.
-FUN is a binary function that takes the members of TREE immediately
-before INDEX (called 'head') and the item at INDEX to be indented
-\(called 'target'). It maps over the last item of 'head' and sets the
-target as its child, or appends it to the end of its children if they
-exist."
-  (unless (and (integerp index) (< 0 index))
-    (error "Cannot indent topmost item at this level"))
-  (-let* (((head tail) (-split-at index tree))
-          (target (-first-item tail))
-          (head* (om--map-last* (funcall fun target it) head)))
-    (append head* (-drop 1 tail))))
-
-;; headline
-
-(defun om--headline-indent-subheadline (index headline)
-  "Return HEADLINE node with child headline node at INDEX indented.
-This will not indent children under the headline node at INDEX."
-  (cl-flet
-      ((append-indented
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (->> target-headline
-                    (om--headline-map-subheadlines #'ignore)
-                    (om--headline-shift-level 1)))
-              (headlines-in-target
-               (om--headline-get-subheadlines target-headline)))
-          (om--map-children
-           (lambda (children)
-             (append children (list target-headline*) headlines-in-target))
-           parent-headline))))
-    (om--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om--indent-members #'append-indented index subheadlines))
-     headline)))
-
-(defun om--headline-indent-subtree (index headline)
-  "Return HEADLINE node with child headline node at INDEX indented.
-This will indent children under the headline node at INDEX."
-  (cl-flet
-      ((append-indented
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (om--headline-subtree-shift-level 1 target-headline)))
-          (om--map-children
-           (lambda (headline-children)
-             (append headline-children (list target-headline*)))
-           parent-headline))))
-    (om--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om--indent-members #'append-indented index subheadlines))
-     headline)))
-
-;; plain-list
-
-(defun om--plain-list-indent-item (index plain-list)
-  "Return PLAIN-LIST node with child item node at INDEX indented.
-This will not indent children under the item node at INDEX."
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item*
-               (->> target-item
-                    (om--map-children*
-                     (--remove (om--is-type 'plain-list it) it))
-                    (om-build-plain-list)))
-              (items-in-target
-               (->> (om--get-children target-item)
-                    (--filter (om--is-type 'plain-list it)))))
-          (om--map-children
-           (lambda (item-children)
-             ;; TODO technically the target-item* should go in an
-             ;; existing plain list but I don't this matters (for now)
-             (append item-children (list target-item*) items-in-target))
-           parent-item))))
-    (om--map-children
-     (lambda (items)
-       (om--indent-members #'append-indented index items))
-     plain-list)))
-
-(defun om--plain-list-indent-item-tree (index plain-list)
-  "Return PLAIN-LIST node with child item node at INDEX indented.
-This will indent children under the item node at INDEX."
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item* (om-build-plain-list target-item)))
-          (om--map-children
-           (lambda (item-children) (append item-children (list target-item*)))
-           parent-item))))
-    (om--map-children
-     (lambda (items)
-       (om--indent-members #'append-indented index items))
-     plain-list)))
-
-;;: internal unindentation (tree)
-
-;; high level steps to unindent a tree
-;;
-;; Assume an abstract tree thing like this:
-;; - 0.
-;; - 1.
-;;   - 1.0.
-;;   - 1.1.
-;;     - 1.1.0.
-;;   - 1.2.
-;; - 2.
-;;
-;; We want to unindent everything under 1. So just take all children
-;; of 1. and splice them into the top-level list between 1. and 2.
-;; In this case 1.1.0 will remain a child of 1.1 but it will be
-;; unindented as well because its parent is being unindented
-;;
-;; parameters for unindenting a tree:
-;; - the index whose children are to be unindented
-
-(defun om--unindent-members (index trim-fun extract-fun tree)
-  "Return TREE with children under INDEX unindented.
-TRIM-FUN is a unary function that is applied to the child list
-under INDEX and returns a modified child list with the unindented
-members removed. EXTRACT-FUN is a unary function that is applied to
-the child list under INDEX and returns the unindented children that
-will be spliced after INDEX."
-  (-let* (((head tail) (-split-at index tree))
-          (parent (-first-item tail))
-          (parent* (funcall trim-fun parent))
-          (unindented (funcall extract-fun parent)))
-    (append head (list parent*) unindented (-drop 1 tail))))
-
-(defun om--headline-unindent-all-subheadlines (index headline)
-  "Return HEADLINE node with all child headline nodes at INDEX unindented."
-  (cl-flet
-      ((trim
-        (parent)
-        (om--headline-map-subheadlines #'ignore parent))
-       (extract
-        (parent)
-        (->> (om--get-children parent)
-             (--map (om--headline-subtree-shift-level -1 it)))))
-    (om--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om--unindent-members index #'trim #'extract subheadlines))
-     headline)))
-
-(defun om--plain-list-unindent-all-items (index plain-list)
-  "Return PLAIN-LIST node with all child item nodes at INDEX unindented."
-  (cl-flet
-      ((trim
-        (parent)
-        (om--map-children
-         (lambda (children)
-           (--remove-first (om--is-type 'plain-list it) children))
-         parent))
-       (extract
-        (parent)
-        (->> (om--get-children parent)
-             (--first (om--is-type 'plain-list it))
-             (om--get-children))))
-    (om--map-children
-     (lambda (items)
-       (om--unindent-members index #'trim #'extract items))
-     plain-list)))
-
-;;; internal unindentation (single target)
-
-;; high level steps to unindent a single item
-;;
-;; Assume an abstract tree thing like this:
-;; - 0.
-;; - 1.
-;;   - 1.0.
-;;   - 1.1.
-;;     - 1.1.0.
-;;   - 1.2.
-;; - 2.
-;; 
-;; We want to unindent 1.1. First, indent everything after 1.1 (in
-;; this case only 1.2, which will be appended to the list starting
-;; with 1.1.0). Then move 1.1 (with 1.1.0 and 1.2 as children) between
-;; 1 and 2 in the toplevel list.
-;;
-;; parameters for unindenting:
-;; - parent index (in this case 1 for 1.)
-;; - child index (in this case 1 for 1.1)
-
-;; TODO this is a bit sketchy...it depends on the indentation
-;; function to make the children list one element shorter, which
-;; is usually true but makes a really hard error to catch when it
-;; fails
-(defun om--indent-after (indent-fun index node)
-  "Return NODE with INDENT-FUN applied to all child nodes after INDEX."
-  (if (< index (1- (length (om--get-children node))))
-      (->> (funcall indent-fun (1+ index) node)
-           (om--indent-after indent-fun index))
-    node))
-
-(defun om--headline-unindent-subheadline (index child-index headline)
-  "Return HEADLINE with child headline at CHILD-INDEX under INDEX unindented."
-  (cl-flet
-      ((trim
-        (parent)
-        (om--headline-map-subheadlines
-         (lambda (subheadlines) (-take child-index subheadlines))
-         parent))
-       (extract
-        (parent)
-        (->> (om--indent-after #'om-headline-indent-subtree
-                                    child-index parent)
-             (om--get-children)
-             (-drop child-index)
-             (--map (om--headline-subtree-shift-level -1 it)))))
-    (om--headline-map-subheadlines
-     (lambda (subheadlines)
-       (om--unindent-members index #'trim #'extract subheadlines))
-     headline)))
-
-(defun om--plain-list-unindent-item (index child-index plain-list)
-  "Return PLAIN-LIST with child item at CHILD-INDEX under INDEX unindented."
-  (cl-flet
-      ((trim
-        (parent)
-        (om--map-children
-         (lambda (children)
-           (if (= 0 index)
-               (--remove-first (om--is-type 'plain-list it) children)
-             (--map-first (om--is-type 'plain-list it)
-                          (om--map-children
-                           (lambda (items) (-take child-index items)) it)
-                          children)))
-         parent))
-       (extract
-        (parent)
-        (->>
-         (om--get-children parent)
-         (--first (om--is-type 'plain-list it))
-         (om--indent-after #'om--plain-list-indent-item-tree
-                                child-index)
-         (om--get-children)
-         (-drop child-index))))
-    (om--map-children
-     (lambda (items)
-       (om--unindent-members index #'trim #'extract items))
-     plain-list)))
 
 ;;; COMPOSITE BUILDERS
 
@@ -2907,13 +1857,25 @@ will be spliced after INDEX."
 ;; should probably be their own types but that's not what
 ;; `org-element.el' does
 
-(om--defun-kw om-build-timestamp-diary ((:cons form) &key post-blank)
+;; ...and this is here because I can't think of where else to put it
+(defun om-clone-node (node)
+  "Return copy of NODE, which may be a circular tree.
+
+This is only necessary to copy nodes parsed using any of parsing
+functions from this this package (example, `om-parse-this-headline')
+because these retain parent references which makes the node a circular
+list. None of the builder functions add parent references, so
+`copy-tree' will be a faster alternative to this function."
+  (let ((print-circle t))
+    (->> node (format "%S") (read))))
+
+(om--defun-kw om-build-timestamp-diary (form &key post-blank)
   "Return a new diary-sexp timestamp node from FORM.
 Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-object 'timestamp post-blank)
-       (om--set-property :type 'diary)
-       (om--timestamp-diary-set-value form)
-       (om--set-properties-nil
+       (om--set-property-nocheck :type 'diary)
+       (om-timestamp-diary-set-value form)
+       (om--set-properties-nocheck-nil
         (list :repeater-type :repeater-unit :repeater-value
               :warning-type :warning-unit :warning-value :year-start
               :month-start :day-start :hour-start :minute-start
@@ -2923,7 +1885,7 @@ Optionally set POST-BLANK (a positive integer)."
   "Return a new rule-typed table-row node.
 Optionally set POST-BLANK (a positive integer)."
   (->> (om--build-container-element 'table-row post-blank nil)
-       (om--set-property :type 'rule)))
+       (om--set-property-nocheck :type 'rule)))
 
 ;;; shorthand builders
 
@@ -2936,10 +1898,21 @@ Optionally set POST-BLANK (a positive integer)."
 STRING is any string that contains a textual representation of
 object nodes. If the string does not represent a list of object nodes,
 throw an error."
-  (om--build-secondary-string string))
+  ;; fool parser to always parse objects, bold will parse to headlines
+  ;; because of the stars
+  (-if-let (ss (->> (om--from-string (concat " " string))
+                    (om--get-descendent '(0))
+                    (om-get-children)))
+      (cond
+       ((--any? (om-is-any-type om-elements it) ss)
+        (om--arg-error "Secondary string must only contain objects"))
+       ((equal (car ss) " ")
+        (-drop 1 ss))
+       (t (om--map-first* (substring it 1) ss)))
+    (om--arg-error "Could not make secondary string from %S" string)))
 
-(om--defun-kw om-build-timestamp! (start &key end ((:bool active))
-                                         repeater warning post-blank)
+(om--defun-kw om-build-timestamp! (start &key end active repeater
+                                         warning post-blank)
   "Return a new timestamp node.
 
 START specifies the start time and is a list of integers in one of
@@ -2966,7 +1939,7 @@ Building a diary sexp timestamp is not possible with this function."
        (om--timestamp-set-active active)
        (om--timestamp-set-warning warning)
        (om--timestamp-set-repeater repeater)
-       (om--set-property-nil :raw-value)))
+       (om--set-property-nocheck-nil :raw-value)))
 
 (om--defun-kw om-build-clock! (start &key end post-blank)
   "Return a new clock node.
@@ -3059,15 +2032,15 @@ All arguments not mentioned here follow the same rules as
                 :commentedp commentedp
                 :archivedp archivedp
                 nodes)
-         (om--headline-set-title! title-text statistics-cookie))))
+         (om-headline-set-title! title-text statistics-cookie))))
 
 (om--defun-kw om-build-paragraph! (string &key post-blank)
   "Return a new paragraph node from STRING.
 
 STRING is the text to be parsed into a paragraph and must contain
 valid textual representations of object nodes."
-  (let ((ss (om--build-secondary-string string)))
-    (apply #'om-build-paragraph :post-blank (or post-blank 0) ss)))
+  (->> (om-build-secondary-string! string)
+       (apply #'om-build-paragraph :post-blank (or post-blank 0))))
 
 (om--defun-kw om-build-item! (&key post-blank bullet checkbox tag
                                    paragraph counter &rest children)
@@ -3083,16 +2056,18 @@ CHILDREN contains the nodes that will go under this item after
 PARAGRAPH.
 
 All other arguments follow the same rules as `om-build-item'."
-  (let ((paragraph* (-some->> paragraph (om-build-paragraph!)))
-        (tag (-some->> tag (om--build-secondary-string))))
-    (->> (append (list paragraph*) children)
-         (-non-nil)
-         (apply #'om-build-item
-                :post-blank post-blank
-                :bullet bullet
-                :checkbox checkbox
-                :counter counter
-                :tag tag))))
+  (let ((children* (or (-some-> paragraph
+                                (om-build-paragraph!)
+                                (cons children))
+                       children))
+        (tag (-some->> tag (om-build-secondary-string!))))
+    (apply #'om-build-item
+           :post-blank post-blank
+           :bullet bullet
+           :checkbox checkbox
+           :counter counter
+           :tag tag
+           children*)))
 
 (defun om-build-table-cell! (string)
   "Return a new table-cell node.
@@ -3100,7 +2075,7 @@ All other arguments follow the same rules as `om-build-item'."
 STRING is the text to be contained in the table-cell node. It must
 contain valid textual representations of objects that are allowed in
 table-cell nodes."
-  (apply #'om-build-table-cell (om--build-secondary-string string)))
+  (apply #'om-build-table-cell (om-build-secondary-string! string)))
 
 (defun om-build-table-row! (row-list)
   "Return a new table-row node.
@@ -3124,58 +2099,350 @@ All other arguments follow the same rules as `om-build-table'."
   (->> (--map (om-build-table-row! it) row-lists)
        (apply #'om-build-table :tblfm tblfm :post-blank post-blank)))
 
+;;; logbook items
+
+;; internal
+
+(defun om--log-replace (placeholder string heading)
+  "Return HEADING with PLACEHOLDER replaced by STRING."
+  (->> (cons placeholder string)
+       (list)
+       (org-replace-escapes heading)))
+
+(defun om--log-replace-new (string heading)
+  "Return HEADING with placeholder \"%s\" replaced by STRING."
+  (--> (format "\"%s\"" string)
+       (om--log-replace "%s" it heading)))
+
+(defun om--log-replace-old (string heading)
+  "Return HEADING with placeholder \"%S\" replaced by STRING."
+  (--> (format "\"%s\"" string)
+       (om--log-replace "%S" it heading)))
+
+(defun om--log-replace-new-state (state heading)
+  "Return HEADING with placeholder \"%s\" replaced by string STATE."
+  (om--log-replace-new state heading))
+
+(defun om--log-replace-old-state (state heading)
+  "Return HEADING with placeholder \"%S\" replaced by string STATE."
+  (om--log-replace-old state heading))
+
+(defun om--log-replace-new-timestamp (timestamp heading)
+  "Return HEADING with placeholder \"%s\" replaced by TIMESTAMP.
+TIMESTAMP is a timestamp node and will be converted to an inactive
+timestamp if active."
+  (-> (om-timestamp-set-active nil timestamp)
+      (om-to-string)
+      (om--log-replace-new heading)))
+
+(defun om--log-replace-old-timestamp (timestamp heading)
+  "Return HEADING with placeholder \"%S\" replaced by TIMESTAMP.
+TIMESTAMP is a timestamp node and will be converted to an inactive
+timestamp if active."
+  (-> (om-timestamp-set-active nil timestamp)
+      (om-to-string)
+      (om--log-replace-old heading)))
+
+(defun om--log-replace-timestamp (unixtime active-p long-p heading)
+  "Return HEADING with timestamp placeholders replaced by a timestamp.
+
+UNIXTIME is an integer to be converted to a timestamp.
+
+The type of timestamp and the placeholders that are replaced depend
+on the boolean values of ACTIVE-P and LONG-P:
+- ACTIVE-P and LONG-P are t: long active timestamp replacing \"T\"
+- ACTIVE-P is t: short active timestamp replacing \"D\"
+- LONG-P is t: long inactive timestamp replacing \"t\"
+- both nil: short inactive timestamp replacing \"d\""
+  (let ((key (cond ((and active-p long-p) "%T")
+                   (active-p "%D")
+                   (long-p "%t")
+                   (t "%d")))
+        (time (if long-p (om-unixtime-to-time-long unixtime)
+                (om-unixtime-to-time-short unixtime))))
+    (--> (om-build-timestamp! time :active active-p)
+         (om-to-string it)
+         (om--log-replace key it heading))))
+
+(defun om--log-replace-username (username heading)
+  "Return HEADING with \"%u\" replaced by symbol USERNAME."
+  (om--log-replace "%u" username heading))
+
+(defun om--log-replace-full-username (full-username heading)
+  "Return HEADING with \"%U\" replaced by symbol FULL-USERNAME."
+  (om--log-replace "%U" full-username heading))
+
+(defun om--log-get (type)
+  "Return the log heading associated with symbol TYPE.
+This function will only use the default value of
+`org-log-note-headings' and is thus a pure function."
+  (alist-get type (default-value 'org-log-note-headings)))
+
+(defun om--build-log-item (note heading)
+  "Return an item with string HEADING as its first line.
+If string NOTE is supplied, append this after a newline object node
+in the first paragraph of the returned item."
+  (->> (if note (format "%s \\\\\n  %s" heading note) heading)
+       (om-build-paragraph!)
+       (om-build-item)))
+
+(defun om--build-log-item-trans (type unixtime old-timestamp note)
+  "Return an item for any of the transition log entry types.
+These are re/del-schedule/deadline (specified with TYPE) transitioning
+from OLD-TIMESTAMP at UNIXTIME with optionally supplied NOTE."
+  (->> (om--log-get type)
+       (om--log-replace-old-timestamp old-timestamp)
+       (om--log-replace-timestamp unixtime nil t)
+       (om--build-log-item note)))
+
+;; public
+
+(defun om-build-log-done (unixtime &optional note)
+  "Return an item node for a done log entry.
+
+This will format the log entry from the default value for the
+'done` cell in `org-log-note-headings'.
+
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
+If string NOTE is supplied, append a note to the log entry."
+  (->> (om--log-get 'done)
+       (om--log-replace-timestamp unixtime nil t)
+       (om--build-log-item note)))
+
+(defun om-build-log-state (unixtime new-state old-state &optional note)
+  "Return an item node for a state change log entry.
+
+This will format the log entry from the default value for the
+'state` cell in `org-log-note-headings'.
+
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
+NEW-STATE and OLD-STATE are strings for the new and old todo keywords
+respectively.
+
+If string NOTE is supplied, append a note to the log entry."
+  (->> (om--log-get 'state)
+       (om--log-replace-new-state new-state)
+       (om--log-replace-old-state old-state)
+       (om--log-replace-timestamp unixtime nil t)
+       (om--build-log-item note)))
+
+(defun om-build-log-note (unixtime note)
+  "Return an item node for a new note log entry.
+
+This will format the log entry from the default value for the
+'note` cell in `org-log-note-headings'.
+
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
+NOTE is a string for the note text."
+  (->> (om--log-get 'note)
+       (om--log-replace-timestamp unixtime nil t)
+       (om--build-log-item note)))
+
+(defun om-build-log-reschedule (unixtime old-timestamp &optional note)
+  "Return an item node for a new schedule log entry.
+
+This will format the log entry from the default value for the
+'reschedule` cell in `org-log-note-headings'.
+
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
+OLD-TIMESTAMP is a timestamp node of the schedule that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string NOTE is supplied, append a note to the log entry."
+  (om--build-log-item-trans 'reschedule unixtime old-timestamp note))
+
+(defun om-build-log-delschedule (unixtime old-timestamp &optional note)
+  "Return an item node for a delete schedule log entry.
+
+This will format the log entry from the default value for the
+'delschedule` cell in `org-log-note-headings'.
+
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
+OLD-TIMESTAMP is a timestamp node of the schedule that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string NOTE is supplied, append a note to the log entry."
+  (om--build-log-item-trans 'delschedule unixtime old-timestamp note))
+
+(defun om-build-log-redeadline (unixtime old-timestamp &optional note)
+  "Return an item node for a new deadline log entry.
+
+This will format the log entry from the default value for the
+'redeadline` cell in `org-log-note-headings'.
+
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
+OLD-TIMESTAMP is a timestamp node of the deadline that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string NOTE is supplied, append a note to the log entry."
+  (om--build-log-item-trans 'redeadline unixtime old-timestamp note))
+
+(defun om-build-log-deldeadline (unixtime old-timestamp &optional note)
+  "Return an item node for a delete deadline log entry.
+
+This will format the log entry from the default value for the
+'deldeadline` cell in `org-log-note-headings'.
+
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
+OLD-TIMESTAMP is a timestamp node of the deadline that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string NOTE is supplied, append a note to the log entry."
+  (om--build-log-item-trans 'deldeadline unixtime old-timestamp note))
+
+(defun om-build-log-refile (unixtime &optional note)
+  "Return an item node for a refile log entry.
+This will format the log entry from the default value for the
+'deldeadline` cell in `org-log-note-headings'.
+
+UNIXTIME is an integer representing the time to be used for all
+timestamp nodes.
+
+If string NOTE is supplied, append a note to the log entry."
+  (->> (om--log-get 'refile)
+       (om--log-replace-timestamp unixtime nil t)
+       (om--build-log-item note)))
+
+(om--defun-kw om-build-log-type (type &key old new unixtime username
+                                      full-username note)
+  "Return an item for an arbitrary log entry.
+
+TYPE is a symbol corresponding to the car of one of the cells in
+`org-log-note-headings'. Unlike the other log entry build functions
+in this package, this function will not use the default value of
+`org-log-note-headings' which means it can be used for customly
+formatted log entries.
+
+The arguments correspond to the following formatting placeholders
+(see `org-log-note-headings' for more information on these
+placeholders):
+- NEW: either a string or timestamp node that will replace the
+  new state/timestamp placeholder (%s)
+- OLD: like NEW but for the old state/timestamp placeholder (%S)
+- UNIXTIME: an integer corresponding to the time to be used for the
+  timestamp placeholders (%t/%T/%d/%D)
+- USERNAME: a string for the username (%u)
+- FULL-USERNAME: a string for the full username (%U)
+
+If any of these arguments are not supplied but their placeholders
+are present in the heading determined by TYPE, the placeholders will
+not be substituted.
+
+If string NOTE is supplied, append a note to the log entry."
+  (cl-flet
+      ((replace-note
+        (old-p rep note)
+        (if (not rep) note
+          (let* ((type (if old-p "old" "new"))
+                 (fun
+                  (cond
+                   ((om-is-type 'timestamp rep)
+                    (intern (format "om--log-replace-%s-timestamp" type)))
+                   ((stringp rep)
+                    (intern (format "om--log-replace-%s-state" type)))
+                   (t
+                    (om--arg-error "Must be string or timestamp: Got %S" rep)))))
+            (funcall fun rep note))))
+       (replace-timestamps
+        (heading)
+        (if (not unixtime) heading
+          (->> heading
+               (om--log-replace-timestamp unixtime nil nil)
+               (om--log-replace-timestamp unixtime t nil)
+               (om--log-replace-timestamp unixtime nil t)
+               (om--log-replace-timestamp unixtime t t)))))
+    (--> (alist-get type org-log-note-headings)
+         (replace-timestamps it)
+         (replace-note t old it)
+         (replace-note nil new it)
+         (if username (om--log-replace-username username it) it)
+         (if full-username
+             (om--log-replace-full-username full-username it)
+           it)
+         (om--build-log-item note it))))
+
 ;;; PUBLIC TYPE FUNCTIONS
 
-(om--defun-node om-get-type (node)
+(defun om-get-type (node)
   "Return the type of NODE."
-  (om--get-type node))
+  (org-element-type node))
 
-(om--defun-node om-is-type (type node)
+(defun om-is-type (type node)
   "Return t if the type of NODE is TYPE (a symbol)."
-  (om--is-type type node))
+  (unless (memq type om-nodes)
+    (om--arg-error "Argument 'type' must be in `om-nodes': Got %s" type))
+  (eq (om-get-type node) type))
 
-(om--defun-node om-is-any-type (types node)
+(defun om-is-any-type (types node)
   "Return t if the type of NODE is in TYPES (a list of symbols)."
-  (om--is-any-type types node))
+  (-some->>
+   (-difference types om-nodes)
+   (om--arg-error
+    "All in 'types' must be in `om-nodes'; these were not: %s"))
+  (if (memq (om-get-type node) types) t))
 
-(om--defun-node om-is-element (node)
+(defun om-is-element (node)
   "Return t if NODE is an element class."
-  (om--is-any-type om-elements node))
+  (om-is-any-type om-elements node))
 
-(om--defun-node om-is-branch-node (node)
+(defun om-is-branch-node (node)
   "Return t if NODE is a branch node."
-  (om--is-branch-node node))
+  (om-is-any-type om-branch-nodes node))
 
-(om--defun-node om-node-may-have-child-objects (node)
+(defun om-node-may-have-child-objects (node)
   "Return t if NODE is a branch node that may have child objects."
-  (om--is-any-type om-branch-nodes-permitting-child-objects node))
+  (om-is-any-type om-branch-nodes-permitting-child-objects node))
 
-(om--defun-node om-node-may-have-child-elements (node)
+(defun om-node-may-have-child-elements (node)
   "Return t if NODE is a branch node that may have child elements.
 
 Note this implies that NODE is also of class element since only
 elements may have other elements as children."
-  (om--is-any-type om-branch-elements-permitting-child-elements node))
+  (om-is-any-type om-branch-elements-permitting-child-elements node))
 
 ;;; PUBLIC PROPERTY FUNCTIONS
 
 ;;; polymorphic
 
-(om--defun-node om-contains-point-p ((:p-int point) node)
+(defun om-contains-point-p (point node)
   "Return t if POINT is within the boundaries of NODE."
   (-let (((&plist :begin :end) (om--get-all-properties node)))
     (if (and (integerp begin) (integerp end))
         (<= begin point end)
       (error "Node boundaries are not defined"))))
 
-(om--defun-node om-set-property (prop value node)
+(defun om-set-property (prop value node)
   "Return NODE with PROP set to VALUE.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om--set-property-strict prop value node))
+  (let* ((type (om-get-type node))
+         (pred (om--get-property-attribute :pred type prop)))
+    (if (funcall pred value)
+        (let* ((encode-fun (om--get-property-encoder type prop))
+               (update-fun (om--get-property-cis-function type prop)))
+          (-->
+           (if encode-fun (funcall encode-fun value) value)
+           (om--set-property-nocheck prop it node)
+           (if update-fun (funcall update-fun it) it)))
+      (om--arg-error "Property '%s' in node of type '%s' must be %s. Got '%S'"
+             prop type (om--get-property-type-desc type prop) value))))
 
-(om--defun-node om-set-properties (plist node)
+(defun om-set-properties (plist node)
   "Return NODE with all properties set to the values according to PLIST.
 
 PLIST is a list of property-value pairs that corresponds to the
@@ -3183,17 +2450,47 @@ property list in NODE.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om--set-properties-strict plist node))
+  (cl-flet
+      ((filter
+        (acc keyval type)
+        (-let* (((prop value) keyval)
+                (pred (om--get-property-attribute :pred type prop)))
+          (if (funcall pred value)
+              (let ((encode-fun (om--get-property-encoder type prop)))
+                (->> (if encode-fun (funcall encode-fun value) value)
+                     (funcall #'plist-put acc prop)))
+            (om--arg-error "Property '%s' in node of type '%s' must be %s. Got '%S'"
+                   prop type (om--get-property-type-desc type prop) value)))))
+    (if (om--is-plist plist)
+        (let* ((cur-props (om--get-all-properties node))
+               (type (om-get-type node))
+               (keyvals (-partition 2 plist))
+               (update-funs
+                (->> (-map #'car keyvals)
+                     (--map (om--get-property-cis-function type it))
+                     (-uniq)
+                     (-non-nil)))
+               (node*
+                (om--construct
+                 (om-get-type node)
+                 (--reduce-from (filter acc it type) cur-props keyvals)
+                 (om-get-children node))))
+          (if (not update-funs) node*
+            (--reduce-from (funcall it acc) node* update-funs)))
+      (om--arg-error "Not a plist: %S" plist))))
 
 ;; TODO add plural version of this...
-(om--defun-node om-get-property (prop node)
+(defun om-get-property (prop node)
   "Return the value of PROP of NODE.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om--get-property-strict prop node))
+  (let ((filter-fun (-> (om-get-type node)
+                        (om--get-property-nocheck-decoder prop)))
+        (value (om--get-property-nocheck prop node)))
+    (if filter-fun (funcall filter-fun value) value)))
 
-(om--defun-node* om-map-property (prop fun node)
+(om--defun* om-map-property (prop fun node)
   "Return NODE with FUN applied to the value of PROP.
 
 FUN is a unary function which takes the current value of PROP and
@@ -3201,9 +2498,11 @@ returns a new value to which PROP will be set.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om--map-property-strict prop fun node))
+  (--> (om-get-property prop node)
+       (funcall fun it)
+       (om-set-property prop it node)))
 
-(om--defun-node om-map-properties (plist node)
+(defun om-map-properties (plist node)
   "Return NODE with functions applied to the values of properties.
 
 PLIST is a property list where the keys are properties of NODE and
@@ -3211,38 +2510,43 @@ its values are unary functions to be mapped to these properties.
 
 See builder functions for a list of properties and their rules for
 each type."
-  (om--map-properties-strict plist node))
+  (cond
+   ((not plist) node)
+   ((om--is-plist plist)
+    (->> (om-map-property (nth 0 plist) (nth 1 plist) node)
+         (om-map-properties (-drop 2 plist))))
+   (t (om--arg-error "Not a plist: %s" plist))))
 
-(om--defmacro om-map-properties* (plist (:node node))
+(defmacro om-map-properties* (plist node)
   "Anaphoric form of `om-map-properties'.
 
 PLIST is a property list where the keys are properties of NODE and
 its values are forms to be mapped to these properties."
+  (declare (debug (form form)))
   (let ((p (make-symbol "plist*")))
     `(let ((,p (om--plist-map-values (lambda (form) `(lambda (it) ,form)) ',plist)))
-       (om--map-properties-strict ,p ,node))))
+       (om-map-properties ,p ,node))))
 
-(om--defun-node om-toggle-property (prop node)
+(defun om-toggle-property (prop node)
   "Return NODE with the value of PROP flipped.
 
 This function only applies to properties that are booleans."
-  (let* ((type (om--get-type node))
-         (flag (om--get-property-attribute :toggle type prop)))
-    (if flag
-        (om--map-property-strict prop #'not node)
+  (let ((type (om-get-type node)))
+    (if (om--get-property-attribute :toggle type prop)
+        (om-map-property prop #'not node)
       (om--arg-error "Not a toggle-able property"))))
 
-(om--defun-node om-shift-property (prop (:int n) node)
+(defun om-shift-property (prop n node)
   "Return NODE with PROP shifted by N (an integer).
 
 This only applies the properties that are represented as integers."
-  (let* ((type (om--get-type node))
+  (let* ((type (om-get-type node))
          (fun (om--get-property-attribute :shift type prop)))
     (if fun
-        (om--map-property-strict* prop (funcall fun n it) node)
+        (om-map-property* prop (funcall fun n it) node)
       (om--arg-error "Not a shiftable property"))))
 
-(om--defun-node om-insert-into-property (prop (:int index) string node)
+(defun om-insert-into-property (prop index string node)
   "Return NODE with STRING inserted at INDEX into PROP.
 
 This only applies to properties that are represented as lists of
@@ -3252,14 +2556,13 @@ strings."
         (string-list)
         (if (member string string-list) string-list
           (om--insert-at index string string-list))))
-    (let* ((type (om--get-type node))
-           (flag (om--get-property-attribute :string-list type prop)))
-      (if flag
-          (om--map-property-strict prop #'insert-at-maybe node)
+    (let ((type (om-get-type node)))
+      (if (om--get-property-attribute :string-list type prop)
+          (om-map-property prop #'insert-at-maybe node)
         (om--arg-error "Property '%s' in node of type '%s' is not a string-list"
-               prop type)))))
+                       prop type)))))
 
-(om--defun-node om-remove-from-property (prop string node)
+(defun om-remove-from-property (prop string node)
   "Return NODE with STRING removed from PROP if present.
 
 This only applies to properties that are represented as lists of
@@ -3267,25 +2570,23 @@ strings.
 
 See `om-insert-into-property' for a list of supported elements
 and properties that may be used with this function."
-  (let* ((type (om--get-type node))
-         (flag (om--get-property-attribute :string-list type prop)))
-    (if flag
-        (om--map-property-strict* prop (-remove-item string it) node)
+  (let ((type (om-get-type node)))
+    (if (om--get-property-attribute :string-list type prop)
+        (om-map-property* prop (-remove-item string it) node)
       (om--arg-error "Property '%s' in node of type '%s' is not a string-list"
-             prop type))))
+                     prop type))))
 
-(om--defun-node om-plist-put-property (prop (:kw key) value node)
+(defun om-plist-put-property (prop key value node)
   "Return NODE with VALUE corresponding to KEY inserted into PROP.
 
 KEY is a keyword and VALUE is a symbol. This only applies to
 properties that are represented as plists."
-  (let* ((type (om--get-type node))
-         (flag (om--get-property-attribute :plist type prop)))
-    (if flag
-        (om--map-property-strict* prop (plist-put it key value) node)
+  (let ((type (om-get-type node)))
+    (if (om--get-property-attribute :plist type prop)
+        (om-map-property* prop (plist-put it key value) node)
       (om--arg-error "Not a plist property"))))
 
-(om--defun-node om-plist-remove-property (prop (:kw key) node)
+(defun om-plist-remove-property (prop key node)
   "Return NODE with KEY and its corresponding value removed from PROP.
 
 KEY is a keyword. This only applies to properties that are
@@ -3293,10 +2594,9 @@ represented as plists.
 
 See `om-plist-put-property' for a list of supported elements
 and properties that may be used with this function."
-  (let* ((type (om--get-type node))
-         (flag (om--get-property-attribute :plist type prop)))
-    (if flag
-        (om--map-property-strict* prop (om--plist-remove key it) node)
+  (let ((type (om-get-type node)))
+    (if (om--get-property-attribute :plist type prop)
+        (om-map-property* prop (om--plist-remove key it) node)
       (om--arg-error "Not a plist property"))))
 
 ;; update polymorphic property function documentation
@@ -3347,7 +2647,7 @@ and properties that may be used with this function."
 ;;
 ;; entity
 
-(om--defun-node om-entity-get-replacement (key entity)
+(defun om-entity-get-replacement (key entity)
   "Return replacement string or symbol for ENTITY node.
 
 KEY is one of:
@@ -3362,7 +2662,7 @@ KEY is one of:
 Any other keys will trigger an error."
   (-if-let (index (-elem-index key (list :latex :latex-math-p :html
                                          :ascii :latin1 :utf-8)))
-      (->> (om--get-property-strict :name entity)
+      (->> (om-get-property :name entity)
            (org-entity-get)
            (cdr)
            (nth index))
@@ -3370,9 +2670,9 @@ Any other keys will trigger an error."
 
 ;; statistics-cookie
 
-(om--defun-node om-statistics-cookie-is-complete (statistics-cookie)
+(defun om-statistics-cookie-is-complete (statistics-cookie)
   "Return t is STATISTICS-COOKIE node is complete."
-  (let ((val (om--get-property :value statistics-cookie)))
+  (let ((val (om--get-property-nocheck :value statistics-cookie)))
     (or (-some->>
          (s-match "\\([[:digit:]]+\\)%" val)
          (nth 1)
@@ -3386,37 +2686,37 @@ Any other keys will trigger an error."
 
 ;; timestamp (standard)
 
-(om--defun-node om-timestamp-get-start-time (timestamp)
+(defun om-timestamp-get-start-time (timestamp)
   "Return the time list for start time of TIMESTAMP node.
 The return value will be a list as specified by the TIME argument in
 `om-build-timestamp!'."
   (om--timestamp-get-start-time timestamp))
 
-(om--defun-node om-timestamp-get-end-time (timestamp)
+(defun om-timestamp-get-end-time (timestamp)
   "Return the end time list for end time of TIMESTAMP or nil if not a range.
 The return value will be a list as specified by the TIME argument in
 `om-build-timestamp!'."
   (and (om--timestamp-is-ranged timestamp)
        (om--timestamp-get-end-time timestamp)))
 
-(om--defun-node om-timestamp-get-range (timestamp)
+(defun om-timestamp-get-range (timestamp)
   "Return the range of TIMESTAMP node in seconds as an integer.
 If non-ranged, this function will return 0. If ranged but
 the start time is in the future relative to end the time, return
 a negative integer."
   (om--timestamp-get-range timestamp))
 
-(om--defun-node om-timestamp-is-active (timestamp)
+(defun om-timestamp-is-active (timestamp)
   "Return t if TIMESTAMP node is active."
   (or (om--property-is-eq :type 'active timestamp)
       (om--property-is-eq :type 'active-range timestamp)))
 
-(om--defun-node om-timestamp-is-ranged (timestamp)
+(defun om-timestamp-is-ranged (timestamp)
   "Return t if TIMESTAMP node is ranged."
   (or (om--property-is-eq :type 'active-range timestamp)
       (om--property-is-eq :type 'inactive-range timestamp)))
 
-(om--defun-node om-timestamp-range-contains-p (unixtime timestamp)
+(defun om-timestamp-range-contains-p (unixtime timestamp)
   "Return t if UNIXTIME is between start and end time of TIMESTAMP node.
 The boundaries are inclusive. If TIMESTAMP has a range of zero, then
 only return t if UNIXTIME is the same as TIMESTAMP. TIMESTAMP will be
@@ -3425,31 +2725,31 @@ interpreted according to the localtime of the operating system."
         (ut2 (om--timestamp-get-end-unixtime timestamp)))
     (<= ut1 unixtime ut2)))
 
-(om--defun-node om-timestamp-set-start-time (time timestamp)
+(defun om-timestamp-set-start-time (time timestamp)
   "Return TIMESTAMP node with start time set to TIME.
 TIME is a list analogous to the same argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-start-time time timestamp))
 
-(om--defun-node om-timestamp-set-end-time (time timestamp)
+(defun om-timestamp-set-end-time (time timestamp)
   "Return TIMESTAMP node with end time set to TIME.
 TIME is a list analogous to the same argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-end-time time timestamp))
 
-(om--defun-node om-timestamp-set-single-time (time timestamp)
+(defun om-timestamp-set-single-time (time timestamp)
   "Return TIMESTAMP node with start and end times set to TIME.
 TIME is a list analogous to the same argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-single-time time timestamp))
 
-(om--defun-node om-timestamp-set-double-time (time1 time2 timestamp)
+(defun om-timestamp-set-double-time (time1 time2 timestamp)
   "Return TIMESTAMP node with start/end times set to TIME1/TIME2 respectively.
 TIME1 and TIME2 are lists analogous to the TIME argument specified in
 `om-build-timestamp!'."
   (om--timestamp-set-double-time time1 time2 timestamp))
 
-(om--defun-node om-timestamp-set-range (range timestamp)
+(defun om-timestamp-set-range (range timestamp)
   "Return TIMESTAMP node with range set to RANGE.
 If TIMESTAMP is ranged, keep start time the same and adjust the end
 time. If not, make a new end time. The units for RANGE are in minutes
@@ -3457,11 +2757,11 @@ if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format."
   (om--timestamp-set-range range timestamp))
 
-(om--defun-node om-timestamp-set-active ((:bool flag) timestamp)
+(defun om-timestamp-set-active (flag timestamp)
   "Return TIMESTAMP node with active type if FLAG is t."
   (om--timestamp-set-active flag timestamp))
 
-(om--defun-node om-timestamp-shift ((:int n) unit timestamp)
+(defun om-timestamp-shift (n unit timestamp)
   "Return TIMESTAMP node with time shifted by N UNIT's.
 
 This function will move the start and end times together; therefore
@@ -3476,7 +2776,7 @@ will increase the hour property by 1 and the minute property by 30."
   (->> (om--timestamp-shift-start n unit timestamp)
        (om--timestamp-shift-end n unit)))
 
-(om--defun-node om-timestamp-shift-start ((:int n) unit timestamp)
+(defun om-timestamp-shift-start (n unit timestamp)
   "Return TIMESTAMP node with start time shifted by N UNIT's.
 
 N and UNIT behave the same as those in `om-timestamp-shift'.
@@ -3486,7 +2786,7 @@ the shifted start time and the end time as that of TIMESTAMP. If this
 behavior is not desired, use `om-timestamp-shift'."
   (om--timestamp-shift-start n unit timestamp))
 
-(om--defun-node om-timestamp-shift-end ((:int n) unit timestamp)
+(defun om-timestamp-shift-end (n unit timestamp)
   "Return TIMESTAMP node with end time shifted by N UNIT's.
 
 N and UNIT behave the same as those in `om-timestamp-shift'.
@@ -3496,13 +2796,13 @@ the shifted end time and the start time as that of TIMESTAMP. If this
 behavior is not desired, use `om-timestamp-shift'."
   (om--timestamp-shift-end n unit timestamp))
 
-(om--defun-node om-timestamp-toggle-active (timestamp)
+(defun om-timestamp-toggle-active (timestamp)
   "Return TIMESTAMP node with its active/inactive type flipped."
   (-> (om--timestamp-is-active timestamp)
       (not)
       (om--timestamp-set-active timestamp)))
 
-(om--defun-node om-timestamp-truncate (timestamp)
+(defun om-timestamp-truncate (timestamp)
   "Return TIMESTAMP node with start/end times forced to short format."
   (let ((t1 (->> (om--timestamp-get-start-time timestamp)
                     (om--time-truncate)))
@@ -3510,19 +2810,19 @@ behavior is not desired, use `om-timestamp-shift'."
                   (om--time-truncate))))
     (om--timestamp-set-double-time t1 t2 timestamp)))
 
-(om--defun-node om-timestamp-truncate-start (timestamp)
+(defun om-timestamp-truncate-start (timestamp)
   "Return TIMESTAMP node with start time forced to short format."
   (let ((time (->> (om--timestamp-get-start-time timestamp)
                    (om--time-truncate))))
     (om--timestamp-set-start-time time timestamp)))
 
-(om--defun-node om-timestamp-truncate-end (timestamp)
+(defun om-timestamp-truncate-end (timestamp)
   "Return TIMESTAMP node with end time forced to short format."
   (let ((time (->> (om--timestamp-get-end-time timestamp)
                    (om--time-truncate))))
     (om--timestamp-set-end-time time timestamp)))
 
-(om--defun-node om-timestamp-set-collapsed ((:bool flag) timestamp)
+(defun om-timestamp-set-collapsed (flag timestamp)
   "Return TIMESTAMP with collapsed set to FLAG.
 
 If timestamp is ranged but not outside of one day, it may be collapsed
@@ -3540,61 +2840,72 @@ collapsed format."
 
 ;; timestamp (diary)
 
-(om--defun-node om-timestamp-diary-set-value (form timestamp-diary)
+(defun om-timestamp-diary-set-value (form timestamp-diary)
   "Return TIMESTAMP-DIARY node with value set to FORM.
-TIMESTAMP must have a type `eq' to `diary'. FORM is a quoted list."
-  (om--timestamp-diary-set-value form timestamp-diary))
+The node must have a type `eq' to `diary'. FORM is a quoted list."
+  (if (listp form)
+      (om--set-property-nocheck :raw-value (format "<%%%%%S>" form)
+                                timestamp-diary)
+    (om--arg-error "Timestamp-diary node value must be a form: Got %S"
+                   form)))
 
 ;;; element nodes
 ;;
 ;; clock
 
-(om--defun-node om-clock-is-running (clock)
+(defun om-clock-is-running (clock)
   "Return t if CLOCK element is running (eg is open)."
   (om--property-is-eq :status 'running clock))
 
 ;; headline
 
-(om--defun-node om-headline-get-statistics-cookie (headline)
+(defun om-headline-get-statistics-cookie (headline)
   "Return the statistics cookie node from HEADLINE if it exists."
-  (om--headline-get-statistics-cookie headline))
+  (->> (om--get-property-nocheck :title headline)
+       (-last-item)
+       (om--filter-type 'statistics-cookie)))
 
-(om--defun-node om-headline-is-done (headline)
+(defun om-headline-is-done (headline)
   "Return t if HEADLINE node has a done todo-keyword."
-  (-> (om--get-property :todo-keyword headline)
+  (-> (om--get-property-nocheck :todo-keyword headline)
       (member org-done-keywords)
       (and t)))
 
-(om--defun-node om-headline-has-tag (tag headline)
+(defun om-headline-has-tag (tag headline)
   "Return t if HEADLINE node is tagged with TAG."
-  (if (member tag (om--get-property :tags headline)) t))
+  (if (member tag (om--get-property-nocheck :tags headline)) t))
 
-(om--defun-node om-headline-set-title! (title-text stats-cookie-value
-                                                   headline)
-  "Return HEADLINE node with title set with TITLE-TEXT and STATS-COOKIE-VALUE.
+(defun om-headline-set-title! (title-text stats-cookie-value headline)
+  "Return HEADLINE node with new title.
 
 TITLE-TEXT is a string to be parsed into object nodes for the title
 via `om-build-secondary-string!' (see that function for restrictions)
 and STATS-COOKIE-VALUE is a list described in
 `om-build-statistics-cookie'."
-  (om--headline-set-title! title-text stats-cookie-value headline))
+  (let ((ss (om-build-secondary-string! title-text)))
+    (if (not stats-cookie-value)
+        (om-set-property :title ss headline)
+      (let ((ss* (om--map-last*
+                  (om--set-property-nocheck :post-blank 1 it) ss))
+            (sc (om-build-statistics-cookie stats-cookie-value)))
+        (om-set-property :title (-snoc ss* sc) headline)))))
 
 ;; item
 
-(om--defun-node om-item-toggle-checkbox (item)
+(defun om-item-toggle-checkbox (item)
   "Return ITEM node with its checkbox state flipped.
 This only affects item nodes with checkboxes in the `on' or `off'
 states; return ITEM node unchanged if the checkbox property is `trans'
 or nil."
-  (cl-case (om--get-property-strict :checkbox item)
+  (cl-case (om-get-property :checkbox item)
     ((or trans nil) item)
-    ('on (om--set-property-strict :checkbox 'off item))
-    ('off (om--set-property-strict :checkbox 'on item))
+    ('on (om-set-property :checkbox 'off item))
+    ('off (om-set-property :checkbox 'on item))
     (t (error "This should not happen"))))
 
 ;; planning
 
-(om--defun-node om-planning-set-timestamp! (prop planning-list planning)
+(defun om-planning-set-timestamp! (prop planning-list planning)
   "Return PLANNING node with PROP set to PLANNING-LIST.
 
 PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
@@ -3602,13 +2913,13 @@ is the same as that described in `om-build-planning!'."
   (unless (memq prop '(:closed :deadline :scheduled))
     (om--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
   (let ((ts (om--planning-list-to-timestamp planning-list)))
-    (om--set-property-strict prop ts planning)))
+    (om-set-property prop ts planning)))
 
 ;;; PUBLIC BRANCH/CHILD FUNCTIONS
 
 ;;; polymorphic
 
-(om--defun-node om-children-contain-point ((:p-int point) branch-node)
+(defun om-children-contain-point (point branch-node)
   "Return t if POINT is within the boundaries of BRANCH-NODE's children."
   (-let (((&plist :contents-begin :contents-end)
           (om--get-all-properties branch-node)))
@@ -3616,25 +2927,34 @@ is the same as that described in `om-build-planning!'."
         (<= contents-begin point contents-end)
       (error "Node boundaries are not defined"))))
 
-(om--defun-node om-get-children (branch-node)
+(defun om-get-children (branch-node)
   "Return the children of BRANCH-NODE as a list."
-  (om--get-children branch-node))
+  (org-element-contents branch-node))
 
-(om--defun-node om-set-children (children branch-node)
+(defun om-set-children (children branch-node)
   "Return BRANCH-NODE with its children set to CHILDREN.
 CHILDREN is a list of nodes; the types permitted in this list depend
 on the type of NODE."
-  (om--set-children-strict children branch-node))
+  (let ((type (om-get-type branch-node)))
+    (-if-let (child-types (alist-get type om--node-restrictions))
+        (-if-let (illegal (-difference (-map #'om-get-type children)
+                                       child-types))
+            (om--set-childen-throw-error type child-types illegal)
+          (om--set-children-nocheck children branch-node))
+      ;; this should not happen
+      (error "Child type restrictions not found for %s" type))))
 
-(om--defun-node* om-map-children (fun branch-node)
+(om--defun* om-map-children (fun branch-node)
   "Return BRANCH-NODE with FUN applied to its children.
 FUN is a unary function that takes the current list of children and
 returns a modified list of children."
-  (om--map-children-strict fun branch-node))
+  (--> (om-get-children branch-node)
+       (funcall fun it)
+       (om-set-children it branch-node)))
 
-(om--defun-node om-is-childless (branch-node)
-  "Return t if BRANCH-NODE is empty."
-  (om--is-childless branch-node))
+(defun om-is-childless (branch-node)
+  "Return t if BRANCH-NODE has no children."
+  (not (om-get-children branch-node)))
 
 ;;; objects
 
@@ -3644,8 +2964,8 @@ returns a modified list of children."
       ((concat-maybe
         (acc node)
         (let ((last (car acc)))
-          (if (and (om--is-type 'plain-text last)
-                   (om--is-type 'plain-text node))
+          (if (and (om-is-type 'plain-text last)
+                   (om-is-type 'plain-text node))
               (cons (concat last node) (cdr acc))
             (cons node acc)))))
     (reverse (-reduce-from #'concat-maybe nil secondary-string))))
@@ -3653,96 +2973,385 @@ returns a modified list of children."
 (defmacro om--mapcat-normalize (form secondary-string)
   "Return mapped, concatenated, and normalized SECONDARY-STRING.
 FORM is a form supplied to `--mapcat'."
+  (declare (debug (def-form form)))
   `(->> (--mapcat ,form ,secondary-string)
         (om--normalize-secondary-string)))
 
-(om--defun-node om-unwrap (object-node)
+(defun om-unwrap (object-node)
   "Return the children of OBJECT-NODE as a secondary string.
 If OBJECT-NODE is a plain-text node, wrap it in a list and return.
 Else add the post-blank property of OBJECT-NODE to the last member
 of its children and return children as a secondary string."
-  (if (om--is-type 'plain-text object-node)
+  (if (om-is-type 'plain-text object-node)
       (list object-node)
-    (let ((children (om--get-children object-node))
-          (post-blank (om--get-property :post-blank object-node)))
-      (om--map-last* (om--map-property-strict* :post-blank
+    (let ((children (om-get-children object-node))
+          (post-blank (om--get-property-nocheck :post-blank object-node)))
+      (om--map-last* (om-map-property* :post-blank
                        (+ it post-blank) it)
         children))))
 
-(om--defun-node om-unwrap-types-deep (types object-node)
+(defun om-unwrap-types-deep (types object-node)
   "Return the children of OBJECT-NODE as a secondary string.
 If OBJECT-NODE is a plain-text node, wrap it in a list and return.
 Else recursively descend into the children of OBJECT-NODE and splice
 the children of nodes with type in TYPES in place of said node and
 return the result as a secondary string."
   (cond
-   ((om--is-type 'plain-text object-node)
+   ((om-is-type 'plain-text object-node)
     (list object-node))
-   ((om--is-any-type types object-node)
-    (let* ((children (om--get-children object-node))
-           (post-blank (om--get-property :post-blank object-node)))
+   ((om-is-any-type types object-node)
+    (let* ((children (om-get-children object-node))
+           (post-blank (om--get-property-nocheck :post-blank object-node)))
       (->> children
            (om--mapcat-normalize (om-unwrap-types-deep types it))
-           (om--map-last* (om--map-property-strict* :post-blank
+           (om--map-last* (om-map-property* :post-blank
                             (+ it post-blank) it)))))
    (t
     (->> object-node
-         (om--map-children-strict*
+         (om-map-children*
            (om--mapcat-normalize (om-unwrap-types-deep types it) it))
          (list)))))
 
-(om--defun-node om-unwrap-deep (object-node)
+(defun om-unwrap-deep (object-node)
   "Return the children of OBJECT-NODE as plain-text wrapped in a list."
   (om-unwrap-types-deep om-nodes object-node))
 
 ;;; secondary strings
 
-(om--defun-node om-flatten (secondary-string)
+(defun om-flatten (secondary-string)
   "Return SECONDARY-STRING with its first level unwrapped.
 The unwrap operation will be done with `om-unwrap'."
   (om--mapcat-normalize (om-unwrap it) secondary-string))
 
-(om--defun-node om-flatten-types-deep (types secondary-string)
+(defun om-flatten-types-deep (types secondary-string)
   "Return SECONDARY-STRING with object nodes in TYPES unwrapped.
 The unwrap operation will be done with `om-unwrap-types-deep'."
   (om--mapcat-normalize (om-unwrap-types-deep types it) secondary-string))
 
-(om--defun-node om-flatten-deep (secondary-string)
+(defun om-flatten-deep (secondary-string)
   "Return SECONDARY-STRING with all object nodes unwrapped to plain-text.
 The unwrap operation will be done with `om-unwrap-deep'."
   (om--mapcat-normalize (om-unwrap-deep it) secondary-string))
 
 ;;; headline
 
-(om--defun-node om-headline-get-subheadlines (headline)
-  "Return list of subheadline nodes for HEADLINE node or nil if none."
-  (om--headline-get-subheadlines headline))
+(defun om-headline-get-section (headline)
+  "Return children of section node in HEADLINE node or nil if none."
+  (-some->> (om-get-children headline)
+            (assoc 'section)
+            (om-get-children)))
 
-(om--defun-node om-headline-get-section (headline)
-  "Return section node for headline HEADLINE node or nil if none."
-  (om--headline-get-section headline))
+(defun om-headline-set-section (children headline)
+  "Return HEADLINE with section node containing CHILDREN.
+If CHILDREN is nil, return HEADLINE with no section node."
+  (om--map-children-nocheck*
+    (let ((subheadlines (--filter (om-is-type 'headline it) it)))
+      (if children
+          (cons (apply #'om-build-section children) subheadlines)
+        subheadlines))
+    headline))
 
-(om--defun-node om-headline-get-properties-drawer (headline)
-  "Return the properties drawer node in HEADLINE.
+(om--defun* om-headline-map-section (fun headline)
+  "Return HEADLINE node with child section node modified by FUN.
 
-If multiple are present (there shouldn't be) the first will be
-returned."
-  (om--headline-get-properties-drawer headline))
+FUN is a unary function that takes a section node's children as a list
+returns a modified child list."
+  (--> (om-headline-get-section headline)
+       (funcall fun it)
+       (om-headline-set-section it headline)))
 
-(om--defun-node om-headline-get-node-properties (headline)
-  "Return a list of node-properties nodes in HEADLINE or nil if none."
-  (-some->>
-   (om--headline-get-properties-drawer headline)
-   (om--get-children)
-   (--filter (om--is-type 'node-property it))))
+(defun om-headline-get-subheadlines (headline)
+  "Return list of child headline nodes in HEADLINE node or nil if none."
+  (-some->> (om-get-children headline)
+            (--filter (om-is-type 'headline it))))
 
-(om--defun-node om-headline-get-planning (headline)
+(defun om-headline-set-subheadlines (subheadlines headline)
+  "Return HEADLINE node with SUBHEADLINES set to child subheadlines."
+  (om--map-children-nocheck*
+    (-if-let (section (assoc 'section it))
+        (cons section subheadlines)
+      subheadlines)
+    headline))
+
+(om--defun* om-headline-map-subheadlines (fun headline)
+  "Return HEADLINE node with child headline nodes modified by FUN.
+
+FUN is a unary function that takes a list of headlines and returns
+a modified list of headlines."
+  (--> (om-headline-get-subheadlines headline)
+       (funcall fun it)
+       (om-headline-set-subheadlines it headline)))
+
+;;; headline (metadata)
+
+;; planning
+
+(defun om-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
-  (-some->> (om--headline-get-section headline)
-            (om--get-children)
-            (--first (om--is-type 'planning it))))
+  (-some--> (om-headline-get-section headline)
+            (car it)
+            (when (om-is-type 'planning it) it)))
 
-(om--defun-node om-headline-get-path (headline)
+(defun om-headline-set-planning (planning headline)
+  "Return HEADLINE node with planning components set to PLANNING node."
+  (if planning
+      (om-headline-map-section*
+        ;; if no section, build new section with planning in it
+        (if (not it) (list planning)
+          ;; if section, test if planning already in front and override
+          ;; as needed
+          (let ((r (if (om-is-type 'planning (car it)) (cdr it) it)))
+            (cons planning r)))
+        headline)
+    ;; if `PLANNING' is nil, remove planning from section if present
+    (om-headline-map-section*
+      (--remove-first (om-is-type 'planning it) it)
+      headline)))
+
+(om--defun* om-headline-map-planning (fun headline)
+  "Return HEADLINE node with planning node modified by FUN.
+
+FUN is a unary function that takes a planning node and returns a
+modified planning node."
+   (--> (om-headline-get-planning headline)
+        (funcall fun it)
+        (om-headline-set-planning it headline)))
+
+;; node-properties (eg the entire property drawer)
+
+(defun om-headline-get-node-properties (headline)
+  "Return a list of node-properties nodes in HEADLINE or nil if none."
+  (-some--> (om-headline-get-section headline)
+            ;; assume the property drawer is the first or second
+            ;; child of section
+            (if (om-is-type 'planning (car it)) (cdr it) it)
+            (car it)
+            (when (om-is-type 'property-drawer it)
+              (om-get-children it))))
+
+(defun om-headline-set-node-properties (node-properties headline)
+  "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
+NODE-PROPERTIES is a list of node-property nodes."
+  (if node-properties
+      (om-headline-map-section*
+        (let ((pd (apply #'om-build-property-drawer node-properties)))
+          ;; if no section, build new section with prop-drwr in it
+          (if (not it) (list pd)
+            ;; the prop-drwr could either be the first child or second
+            ;; if planning is in front
+            (let ((first (nth 0 it))
+                  (second (nth 1 it)))
+              (cond
+               ((and (om-is-type 'planning first)
+                     (om-is-type 'property-drawer second))
+                (-replace-at 1 pd it))
+               ((om-is-type 'property-drawer first)
+                (-replace-at 0 pd it))
+               ((om-is-type 'planning first)
+                (-insert-at 1 pd it))
+               (t
+                (cons pd it))))))
+        headline)
+    ;; if `NODE-PROPERTIES' is nil, remove from section if present
+    (om-headline-map-section*
+      (--remove-first (om-is-type 'property-drawer it) it)
+      headline)))
+
+(om--defun* om-headline-map-node-properties (fun headline)
+  "Return HEADLINE node with property-drawer node modified by FUN.
+
+FUN is a unary function that takes a property-drawer node and returns
+a modified property-drawer node."
+   (--> (om-headline-get-node-properties headline)
+        (funcall fun it)
+        (om-headline-set-node-properties it headline)))
+
+;; node-property
+
+(defun om-headline-get-node-property (key headline)
+  "Return value of property with KEY in HEADLINE or nil if not found.
+If multiple properties with KEY are present, only return the first."
+  (->> (om-headline-get-node-properties headline)
+       (--first (equal key (om-get-property :key it)))
+       (om-get-property :value)))
+
+(defun om-headline-set-node-property (key value headline)
+  "Return HEADLINE with node property matching KEY set to VALUE.
+If a property matching KEY is present, set it to VALUE. If multiple
+properties matching KEY are present, only set the first."
+  (om-headline-map-node-properties*
+    (-if-let (np (-some->> value (om-build-node-property key)))
+        (if (not it) (list np)
+          ;; replace first np matching `KEY' or add to the front of
+          ;; np's if not found
+          (-if-let (i (--find-index (equal key (om-get-property :key it)) it))
+              (-replace-at i np it)
+            (cons np it)))
+      ;; remove first property matching `KEY' if `VALUE' is nil
+      (--remove-first (equal key (om-get-property :value it)) it))
+    headline))
+
+(om--defun* om-headline-map-node-property (key fun headline)
+  "Return HEADLINE node with property value matching KEY modified by FUN.
+
+FUN is a unary function that takes a node-property value and returns
+a modified node-property value."
+   (--> (om-headline-get-node-property key headline)
+        (funcall fun it)
+        (om-headline-set-node-property key it headline)))
+
+;; logbook
+
+(defun om-headline-get-logbook (headline)
+  "Return the children of the logbook drawer of HEADLINE.
+This function assumes that the logbook entries are in a drawer
+immediately after planning and/or property-drawer nodes named
+via `org-log-into-drawer'. If `org-log-into-drawer' is nil, always
+return nil."
+  ;; TODO this will not inherit the log-into-drawer property
+  (-when-let (drawer-name (org-log-into-drawer))
+    (-some-->
+     (om-headline-get-section headline)
+     (if (om-is-type 'planning (car it)) (cdr it) it)
+     (if (om-is-type 'property-drawer (car it)) (cdr it) it)
+     (car it)
+     (and (om-is-type 'drawer it)
+          (equal drawer-name (om-get-property :drawer-name it))
+          (om-get-children it)))))
+
+(defun om-headline-set-logbook (children headline)
+  "Return HEADLINE with logbook drawer filled with CHILDREN.
+CHILDREN must be a list of plain-list and/or clock nodes.
+
+This function assumes that the logbook entries will be stored in a
+drawer immediately after planning and/or property-drawer nodes named
+via `org-log-into-drawer'. If `org-log-into-drawer' is nil, return
+HEADLINE unmodified."
+  (unless (--all? (om-is-any-type '(plain-list clock) it) children)
+    (om--arg-error
+     "Logbook must only contain clock or plain-list nodes. Got %s"
+     children))
+  (-if-let (drawer-name (org-log-into-drawer))
+      (cl-flet
+          ((is-logbook
+            (node)
+            (and (om-is-type 'drawer node)
+                 (equal drawer-name (om-get-property :drawer-name node)))))
+        (if children
+            (om-headline-map-section*
+              (let ((lb (apply #'om-build-drawer drawer-name children)))
+                (if (not it) (list lb)
+                  (-let (((n0 n1 n2) (-take 3 it)))
+                    (cond
+                     ((and (om-is-type 'planning n0)
+                           (om-is-type 'property-drawer n1)
+                           (is-logbook n2))
+                      (-replace-at 2 lb it))
+                     ((and (om-is-type 'planning n0)
+                           (om-is-type 'property-drawer n1))
+                      (-insert-at 2 lb it))
+                     ((and (or (om-is-type 'planning n0)
+                               (om-is-type 'property-drawer n0))
+                           (is-logbook n1))
+                      (-replace-at 1 lb it))
+                     ((or (om-is-type 'planning n0)
+                          (om-is-type 'property-drawer n0))
+                      (-insert-at 1 lb it))
+                     ((is-logbook n0)
+                      (-replace-at 0 lb it))
+                     (t
+                      (cons lb it))))))
+              headline)
+          (om-headline-map-section*
+            ;; TODO make this more specific
+            (-remove-first #'is-logbook it)
+            headline)))
+    headline))
+
+(om--defun* om-headline-map-logbook (fun headline)
+  "Return HEADLINE node with property value matching KEY modified by FUN.
+
+FUN is a unary function that takes a list of child nodes from the
+logbook value and returns a modified list of child nodes.
+
+This function assumes that the logbook entries will be stored in a
+drawer immediately after planning and/or property-drawer nodes named
+via `org-log-into-drawer'. If `org-log-into-drawer' is nil, return
+HEADLINE unmodified."
+  (if (org-log-into-drawer)
+      (--> (om-headline-get-logbook headline)
+           (funcall fun it)
+           (om-headline-set-logbook it headline))
+    headline))
+
+(defun om-headline-logbook-append-entry (item headline)
+  "Return HEADLINE with ITEM node appended to the front of its logbook.
+
+The same assumptions and restrictions for `om-headline-map-logbook'
+apply here."
+  (om-headline-map-logbook*
+    ;; if logbook starts with a plain-list, add item to front of
+    ;; said plain list
+    (if (om-is-type 'plain-list (car it))
+        (om--map-first* (om-map-children* (cons item it) it) it)
+      ;; else just append a new plain-list to the front
+      (cons (om-build-plain-list item) it))
+    headline))
+
+(defun om-headline-logbook-append-open-clock (unixtime headline)
+  "Return HEADLINE with an open clock append to front of its logbook.
+UNIXTIME is an integer that will be used to build the clock node.
+
+This does the functional equivalent of `org-clock-in' on the logbook."
+  (om-headline-map-logbook*
+    (-> (om-unixtime-to-time-long unixtime)
+        (om-build-clock!)
+        (cons it))
+    headline))
+
+(defun om-headline-logbook-close-open-clock (unixtime note headline)
+  "Return HEADLINE with the first clock closed.
+
+The clock will be closed to UNIXTIME, and NOTE will be appended
+as a clock out note if supplied (as string). If no open clocks
+are found, return HEADLINE unmodified.
+
+This does the functional equivalent of `org-clock-out' on the logbook."
+  (cl-flet
+      ((close-clock
+        (index logbook-children)
+        (let ((time (om-unixtime-to-time-long unixtime)))
+          (om--map-at* index
+            (om-map-property* :value
+              (->> (om-timestamp-set-end-time time it)
+                   (om-timestamp-set-collapsed nil))
+              it)
+            logbook-children)))
+       (add-note-maybe
+        (index logbook-children)
+        (if (not note) logbook-children
+          (let* ((next (1+ index))
+                 (target (nth next logbook-children))
+                 (item (->> (om-build-paragraph note)
+                            (om-build-item))))
+            ;; if plain-list is after the clock being closed, add the
+            ;; note to the front of the plain-list, otherwise insert
+            ;; a new plain-list
+            (if (om-is-type 'plain-list target)
+                (om--map-at* next
+                  (om-map-children* (cons item it) it)
+                  logbook-children)
+              (-insert-at next (om-build-plain-list item)
+                          logbook-children))))))
+    (om-headline-map-logbook*
+      (-if-let (i (--find-index (and (om-is-type 'clock it)
+                                     (om-clock-is-running it))
+                                it))
+          (->> it (close-clock i) (add-note-maybe i))
+        it)
+      headline)))
+
+(defun om-headline-get-path (headline)
   "Return tree path of HEADLINE node.
 
 The return value is a list of headline titles (including that from
@@ -3750,37 +3359,37 @@ HEADLINE) leading to the root node."
   (cl-labels
       ((get-path
         (hl)
-        (let ((title (om--get-property :raw-value hl)))
+        (let ((title (om--get-property-nocheck :raw-value hl)))
           (-if-let (parent (om--get-parent-headline hl))
               (cons title (get-path parent))
             (list title)))))
     (reverse (get-path headline))))
 
-(om--defun-node om-headline-update-item-statistics (headline)
+(defun om-headline-update-item-statistics (headline)
   "Return HEADLINE node with updated statistics cookie via items.
 
 The percent/fraction will be computed as the number of checked items
 over the number of items with checkboxes (non-checkbox items will
 not be considered)."
   (let* ((items
-          (->> (om--headline-get-section headline)
-               (om--get-children)
-               (--filter (om--is-type 'plain-list it))
-               (-mapcat #'om--get-children)
+          (->> (om-headline-get-section headline)
+               (om-get-children)
+               (--filter (om-is-type 'plain-list it))
+               (-mapcat #'om-get-children)
                (--remove (om--property-is-nil :checkbox it))))
          (done (length (--filter (om--property-is-eq :checkbox 'on it)
                                  items)))
          (total (length items)))
     (om--headline-set-statistics-cookie-fraction done total headline)))
 
-(om--defun-node om-headline-update-todo-statistics (headline)
+(defun om-headline-update-todo-statistics (headline)
   "Return HEADLINE node with updated statistics cookie via subheadlines.
 
 The percent/fraction will be computed as the number of done
 subheadlines over the number of todo subheadlines (eg non-todo
 subheadlines will not be counted)."
-  (let* ((subtodo (->> (om--headline-get-subheadlines headline)
-                       (--filter (om--get-property :todo-keyword it))))
+  (let* ((subtodo (->> (om-headline-get-subheadlines headline)
+                       (--filter (om--get-property-nocheck :todo-keyword it))))
          (done (length (-filter #'om-headline-is-done subtodo)))
          (total (length subtodo)))
     (om--headline-set-statistics-cookie-fraction done total headline)))
@@ -3790,36 +3399,35 @@ subheadlines will not be counted)."
 ;; TODO there seems to be a bug in the org-interpeter that prevents
 ;; "+" bullets from being recognized (as of org-9.1.9 they are simply
 ;; read as "-")
-(om--defun-node om-plain-list-set-type (type plain-list)
+(defun om-plain-list-set-type (type plain-list)
   "Return PLAIN-LIST node with type property set to TYPE.
 TYPE is one of the symbols `unordered' or `ordered'."
   (cond
    ((eq type 'unordered)
-    (om--map-children*
-      (--map (om--set-property-strict :bullet '- it) it) plain-list))
+    (om--map-children-nocheck*
+      (--map (om-set-property :bullet '- it) it) plain-list))
    ((eq type 'ordered)
     ;; NOTE the org-interpreter seems to use the correct, ordered
     ;; numbers if any number is set here. This behavior may not be
     ;; reliable.
-    (om--map-children*
-      (--map (om--set-property-strict :bullet 1 it) it) plain-list))
+    (om--map-children-nocheck*
+      (--map (om-set-property :bullet 1 it) it) plain-list))
    (t (om--arg-error "Invalid type: %s" type))))
 
 ;;; table
 
-(om--defun-node om-table-get-cell ((:int row-index)
-                                   (:int column-index) table)
+(defun om-table-get-cell (row-index column-index table)
   "Return table-cell node at ROW-INDEX and COLUMN-INDEX in TABLE node.
 Rule-type rows do not count toward row indices."
   (-some->> (om--table-get-row row-index table)
-            (om--get-children)
+            (om-get-children)
             (om--nth column-index)))
 
-(om--defun-node om-table-delete-row ((:int row-index) table)
+(defun om-table-delete-row (row-index table)
   "Return TABLE node with row at ROW-INDEX deleted."
-  (om--map-children* (om--remove-at row-index it) table))
+  (om--map-children-nocheck* (om--remove-at row-index it) table))
 
-(om--defun-node om-table-delete-column ((:int column-index) table)
+(defun om-table-delete-column (column-index table)
   "Return TABLE node with column at COLUMN-INDEX deleted."
   (cl-flet*
       ((delete-cell
@@ -3828,11 +3436,10 @@ Rule-type rows do not count toward row indices."
        (map-row
         (row)
         (if (om--property-is-eq :type 'rule row) row
-          (om--map-children #'delete-cell row))))
-    (om--map-children* (-map #'map-row it) table)))
+          (om--map-children-nocheck #'delete-cell row))))
+    (om--map-children-nocheck* (-map #'map-row it) table)))
 
-(om--defun-node om-table-insert-column! ((:int column-index)
-                                         column-text table)
+(defun om-table-insert-column! (column-index column-text table)
   "Return TABLE node with COLUMN-TEXT inserted at COLUMN-INDEX.
 
 COLUMN-INDEX is the index of the column and COLUMN-TEXT is a list of
@@ -3844,7 +3451,7 @@ syntax as `om-build-table-cell!'."
      column
      table)))
 
-(om--defun-node om-table-insert-row! ((:int row-index) row-text table)
+(defun om-table-insert-row! (row-index row-text table)
   "Return TABLE node with ROW-TEXT inserted at ROW-INDEX.
 
 ROW-INDEX is the index of the column and ROW-TEXT is a list of strings
@@ -3853,11 +3460,9 @@ as `om-build-table-row!'."
   (if (not row-text) (om--table-clear-row row-index table)
     (let ((row (->> (om-build-table-row! row-text)
                     (om--table-row-pad-maybe table))))
-      (om--map-children* (om--insert-at row-index row it) table))))
+      (om--map-children-nocheck* (om--insert-at row-index row it) table))))
 
-(om--defun-node om-table-replace-cell! ((:int row-index)
-                                        (:int column-index)
-                                        cell-text table)
+(defun om-table-replace-cell! (row-index column-index cell-text table)
   "Return TABLE node with a table-cell node replaced by CELL-TEXT.
 
 If CELL-TEXT is a string, it will replace the children of the
@@ -3868,12 +3473,11 @@ If CELL-TEXT is nil, it will set the cell to an empty string."
   (let* ((cell (if cell-text (om-build-table-cell! cell-text)
                  (om-build-table-cell "")))
          (row (->> (om--table-get-row row-index table)
-                   (om--map-children*
+                   (om--map-children-nocheck*
                      (om--replace-at column-index cell it)))))
     (om--table-replace-row row-index row table)))
 
-(om--defun-node om-table-replace-column! ((:int column-index)
-                                          column-text table)
+(defun om-table-replace-column! (column-index column-text table)
   "Return TABLE node with the column at COLUMN-INDEX replaced by COLUMN-TEXT.
 
 If COLUMN-TEXT is a list of strings, it will replace the table-cells
@@ -3885,7 +3489,7 @@ If COLUMN-TEXT is nil, it will clear all cells at COLUMN-INDEX."
     (let ((column-cells (-map #'om-build-table-cell! column-text)))
       (om--table-replace-column column-index column-cells table))))
 
-(om--defun-node om-table-replace-row! ((:int row-index) row-text table)
+(defun om-table-replace-row! (row-index row-text table)
   "Return TABLE node with the row at ROW-INDEX replaced by ROW-TEXT.
 
 If ROW-TEXT is a list of strings, it will replace the cells at
@@ -3896,61 +3500,295 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
   (let ((row-cells (om-build-table-row! row-text)))
     (om--table-replace-row row-index row-cells table)))
 
-;;; PUBLIC INDENTATION FUNCTIONS
+;;; INDENTATION FUNCTIONS
 
-;;; headline
+;;; indentation (single and tree)
 
-;; TODO change type checker here when negative integers are allowed
-(om--defun-node om-headline-indent-subtree ((:p-int index) headline)
+;; high level steps to indent
+;;
+;; Assume an abstract tree thing like this:
+;; - 0.
+;; - 1.
+;;   - 1.0
+;; - 2.
+;;
+;; We wish to indent 1. There are two cases:
+;; 1. indent only 1.
+;; 2. indent 1. and 1.1 along with it
+;;
+;; In both cases, make 1.0 a child of 0. Remove 1.0 from the
+;; top-level list and leave 1.0 and 2. untouched
+;;
+;; In case 2, this is all that is needed since 1.0 is already a child
+;; of 1. and will "autoindent" as 1. itself is moved.
+;;
+;; To make it "stay in place," as in case 1, remove 1.0 as a child of
+;; 1., append it to the end of the list containing 2., and set this
+;; list (with both 1. and 1.0.) as the child of 0.
+;;
+;; parameters for indenting:
+;; - index of target to indent (1 in above example)
+
+;; TODO throw error when index out of range???
+
+(defun om--indent-members (fun index tree)
+  "Return TREE with member at INDEX indented.
+FUN is a binary function that takes the members of TREE immediately
+before INDEX (called 'head') and the item at INDEX to be indented
+\(called 'target'). It maps over the last item of 'head' and sets the
+target as its child, or appends it to the end of its children if they
+exist."
+  (unless (and (integerp index) (< 0 index))
+    (error "Cannot indent topmost item at this level"))
+  (-let* (((head tail) (-split-at index tree))
+          (target (-first-item tail))
+          (head* (om--map-last* (funcall fun target it) head)))
+    (append head* (-drop 1 tail))))
+
+;; headline
+
+(defun om-headline-indent-subtree (index headline)
   "Return HEADLINE node with child headline at INDEX indented.
 Unlike `om-headline-indent-subheadline' this will also indent the
 indented headline node's children."
-  (om--headline-indent-subtree index headline))
+  (cl-flet
+      ((append-indented
+        (target-headline parent-headline)
+        (let ((target-headline*
+               (om--headline-subtree-shift-level 1 target-headline)))
+          (om--map-children-nocheck
+           (lambda (headline-children)
+             (append headline-children (list target-headline*)))
+           parent-headline))))
+    (om-headline-map-subheadlines
+     (lambda (subheadlines)
+       (om--indent-members #'append-indented index subheadlines))
+     headline)))
 
-(om--defun-node om-headline-indent-subheadline ((:p-int index)
-                                                headline)
+(defun om-headline-indent-subheadline (index headline)
   "Return HEADLINE node with child headline at INDEX indented.
 Unlike `om-headline-indent-subtree' this will not indent the
 indented headline node's children."
-  (om--headline-indent-subheadline index headline))
+  (cl-flet
+      ((append-indented
+        (target-headline parent-headline)
+        (let ((target-headline*
+               (->> target-headline
+                    (om-headline-map-subheadlines #'ignore)
+                    (om--headline-shift-level 1)))
+              (headlines-in-target
+               (om-headline-get-subheadlines target-headline)))
+          (om--map-children-nocheck
+           (lambda (children)
+             (append children (list target-headline*) headlines-in-target))
+           parent-headline))))
+    (om-headline-map-subheadlines
+     (lambda (subheadlines)
+       (om--indent-members #'append-indented index subheadlines))
+     headline)))
 
-(om--defun-node om-headline-unindent-all-subheadlines ((:nn-int index)
-                                                       headline)
-  "Return HEADLINE node with all child headlines under INDEX unindented."
-  (om--headline-unindent-all-subheadlines index headline))
+;; plain-list
 
-(om--defun-node om-headline-unindent-subheadline ((:nn-int index)
-                                                  (:nn-int child-index)
-                                                  headline)
-  "Return HEADLINE node with a child headline under INDEX unindented.
-The specific child headline to unindent is selected by CHILD-INDEX."
-  (om--headline-unindent-subheadline index child-index headline))
-
-;;; plain-list
-
-(om--defun-node om-plain-list-indent-item-tree ((:p-int index) plain-list)
+(defun om-plain-list-indent-item-tree (index plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `om-item-indent-item' this will also indent the indented item
 node's children."
-  (om--plain-list-indent-item-tree index plain-list))
+  (cl-flet
+      ((append-indented
+        (target-item parent-item)
+        (let ((target-item* (om-build-plain-list target-item)))
+          (om--map-children-nocheck
+           (lambda (item-children) (append item-children (list target-item*)))
+           parent-item))))
+    (om--map-children-nocheck
+     (lambda (items)
+       (om--indent-members #'append-indented index items))
+     plain-list)))
 
-(om--defun-node om-plain-list-indent-item ((:p-int index) plain-list)
+(defun om-plain-list-indent-item (index plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `om-item-indent-item-tree' this will not indent the indented
 item node's children."
-  (om--plain-list-indent-item index plain-list))
+  (cl-flet
+      ((append-indented
+        (target-item parent-item)
+        (let ((target-item*
+               (->> target-item
+                    (om--map-children-nocheck*
+                     (--remove (om-is-type 'plain-list it) it))
+                    (om-build-plain-list)))
+              (items-in-target
+               (->> (om-get-children target-item)
+                    (--filter (om-is-type 'plain-list it)))))
+          (om--map-children-nocheck
+           (lambda (item-children)
+             ;; TODO technically the target-item* should go in an
+             ;; existing plain list but I don't this matters (for now)
+             (append item-children (list target-item*) items-in-target))
+           parent-item))))
+    (om--map-children-nocheck
+     (lambda (items)
+       (om--indent-members #'append-indented index items))
+     plain-list)))
 
-(om--defun-node om-plain-list-unindent-all-items ((:nn-int index)
-                                                  plain-list)
+;;; unindentation (tree)
+
+;; high level steps to unindent a tree
+;;
+;; Assume an abstract tree thing like this:
+;; - 0.
+;; - 1.
+;;   - 1.0.
+;;   - 1.1.
+;;     - 1.1.0.
+;;   - 1.2.
+;; - 2.
+;;
+;; We want to unindent everything under 1. So just take all children
+;; of 1. and splice them into the top-level list between 1. and 2.
+;; In this case 1.1.0 will remain a child of 1.1 but it will be
+;; unindented as well because its parent is being unindented
+;;
+;; parameters for unindenting a tree:
+;; - the index whose children are to be unindented
+
+(defun om--unindent-members (index trim-fun extract-fun tree)
+  "Return TREE with children under INDEX unindented.
+TRIM-FUN is a unary function that is applied to the child list
+under INDEX and returns a modified child list with the unindented
+members removed. EXTRACT-FUN is a unary function that is applied to
+the child list under INDEX and returns the unindented children that
+will be spliced after INDEX."
+  (-let* (((head tail) (-split-at index tree))
+          (parent (-first-item tail))
+          (parent* (funcall trim-fun parent))
+          (unindented (funcall extract-fun parent)))
+    (append head (list parent*) unindented (-drop 1 tail))))
+
+;; headline
+
+(defun om-headline-unindent-all-subheadlines (index headline)
+  "Return HEADLINE node with all child headlines under INDEX unindented."
+  (cl-flet
+      ((trim
+        (parent)
+        (om-headline-map-subheadlines #'ignore parent))
+       (extract
+        (parent)
+        (->> (om-get-children parent)
+             (--map (om--headline-subtree-shift-level -1 it)))))
+    (om-headline-map-subheadlines
+     (lambda (subheadlines)
+       (om--unindent-members index #'trim #'extract subheadlines))
+     headline)))
+
+;; plain-list
+
+(defun om-plain-list-unindent-all-items (index plain-list)
   "Return PLAIN-LIST node with all child items under INDEX unindented."
-  (om--plain-list-unindent-all-items index plain-list))
+  (cl-flet
+      ((trim
+        (parent)
+        (om--map-children-nocheck
+         (lambda (children)
+           (--remove-first (om-is-type 'plain-list it) children))
+         parent))
+       (extract
+        (parent)
+        (->> (om-get-children parent)
+             (--first (om-is-type 'plain-list it))
+             (om-get-children))))
+    (om--map-children-nocheck
+     (lambda (items)
+       (om--unindent-members index #'trim #'extract items))
+     plain-list)))
 
-(om--defun-node om-plain-list-unindent-item ((:nn-int index)
-                                             (:nn-int child-index)
-                                             plain-list)
+;;; unindentation (single target)
+
+;; high level steps to unindent a single item
+;;
+;; Assume an abstract tree thing like this:
+;; - 0.
+;; - 1.
+;;   - 1.0.
+;;   - 1.1.
+;;     - 1.1.0.
+;;   - 1.2.
+;; - 2.
+;; 
+;; We want to unindent 1.1. First, indent everything after 1.1 (in
+;; this case only 1.2, which will be appended to the list starting
+;; with 1.1.0). Then move 1.1 (with 1.1.0 and 1.2 as children) between
+;; 1 and 2 in the toplevel list.
+;;
+;; parameters for unindenting:
+;; - parent index (in this case 1 for 1.)
+;; - child index (in this case 1 for 1.1)
+
+;; TODO this is a bit sketchy...it depends on the indentation
+;; function to make the children list one element shorter, which
+;; is usually true but makes a really hard error to catch when it
+;; fails
+(defun om--indent-after (indent-fun index node)
+  "Return NODE with INDENT-FUN applied to all child nodes after INDEX."
+  (if (< index (1- (length (om-get-children node))))
+      (->> (funcall indent-fun (1+ index) node)
+           (om--indent-after indent-fun index))
+    node))
+
+;; headline
+
+(defun om-headline-unindent-subheadline (index child-index headline)
+  "Return HEADLINE node with a child headline under INDEX unindented.
+The specific child headline to unindent is selected by CHILD-INDEX."
+  (cl-flet
+      ((trim
+        (parent)
+        (om-headline-map-subheadlines
+         (lambda (subheadlines) (-take child-index subheadlines))
+         parent))
+       (extract
+        (parent)
+        (->> (om--indent-after #'om-headline-indent-subtree
+                                    child-index parent)
+             (om-get-children)
+             (-drop child-index)
+             (--map (om--headline-subtree-shift-level -1 it)))))
+    (om-headline-map-subheadlines
+     (lambda (subheadlines)
+       (om--unindent-members index #'trim #'extract subheadlines))
+     headline)))
+
+;; plain-list
+
+(defun om-plain-list-unindent-item (index child-index plain-list)
   "Return PLAIN-LIST node with a child item under INDEX unindented.
 The specific child item to unindent is selected by CHILD-INDEX."
-  (om--plain-list-unindent-item index child-index plain-list))
+  (cl-flet
+      ((trim
+        (parent)
+        (om--map-children-nocheck
+         (lambda (children)
+           (if (= 0 index)
+               (--remove-first (om-is-type 'plain-list it) children)
+             (--map-first (om-is-type 'plain-list it)
+                          (om--map-children-nocheck
+                           (lambda (items) (-take child-index items)) it)
+                          children)))
+         parent))
+       (extract
+        (parent)
+        (->>
+         (om-get-children parent)
+         (--first (om-is-type 'plain-list it))
+         (om--indent-after #'om-plain-list-indent-item-tree
+                                child-index)
+         (om-get-children)
+         (-drop child-index))))
+    (om--map-children-nocheck
+     (lambda (items)
+       (om--unindent-members index #'trim #'extract items))
+     plain-list)))
 
 ;;; PRINTING FUNCTIONS
 
@@ -3967,7 +3805,7 @@ The specific child item to unindent is selected by CHILD-INDEX."
 
 (defun om--set-blank-children (node)
   "Set the children of NODE to a blank string (\"\")."
-  (om--set-children '("") node))
+  (om--set-children-nocheck '("") node))
 
 (defconst om--rm-if-empty
   '(table plain-list bold italic radio-target strike-through
@@ -3985,27 +3823,26 @@ This is a workaround for a bug.")
   "Return NODE if it is not an empty node type from `om--rm-if-empty'.
 The exception is rule-typed table-row nodes which are supposed to be
 empty."
-  (unless (and (om--is-childless node)
-               (or (om--is-any-type om--rm-if-empty node)
+  (unless (and (om-is-childless node)
+               (or (om-is-any-type om--rm-if-empty node)
                    (om--is-table-row node)))
     node))
 
 (defun om--clean (node)
   "Return NODE with empty child nodes from `om--rm-if-empty' removed."
-  (->> (om--map-children* (-non-nil (-map #'om--clean it)) node)
+  (->> (om--map-children-nocheck* (-non-nil (-map #'om--clean it)) node)
        (om--filter-non-zero-length)))
 
 (defun om--blank (node)
   "Return NODE with empty child nodes `om--blank-if-empty' set to contain \"\"."
-  (if (om--is-childless node)
-      (if (om--is-any-type om--blank-if-empty node)
+  (if (om-is-childless node)
+      (if (om-is-any-type om--blank-if-empty node)
           (om--set-blank-children node)
         node)
-    (om--map-children* (-map #'om--blank it) node)))
+    (om--map-children-nocheck* (-map #'om--blank it) node)))
 
 ;;; print functions
 
-;; TODO these should allow node or nil
 (defun om-to-string (node)
   "Return NODE as an interpreted string without text properties."
   (->> node
@@ -4076,7 +3913,7 @@ empty."
 
 (defun om--get-children-indexed (node)
   "Return list of children from NODE (it any) with index annotations."
-  (let* ((children (om--get-children node))
+  (let* ((children (om-get-children node))
          (len (- (length children))))
     (--map-indexed (cons `(,it-index . ,(+ len it-index)) it) children)))
 
@@ -4084,6 +3921,7 @@ empty."
   "Like `--reduce-from' but only reduce LIST while PRED is t.
 FORM and INITIAL-VALUE work the same way, and the exposed symbols `it'
 and `acc' carry the same meaning."
+  (declare (debug (form form form form)))
   `(let ((acc ,initial-value))
      (--each-while ,list ,pred (setq acc ,form))
      acc))
@@ -4118,7 +3956,7 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;;
       ;; type
       ((and (pred (lambda (y) (memq y om-nodes))) type)
-       `(om--is-type ',type ,it-node))
+       `(om-is-type ',type ,it-node))
       ;; 
       ;; index
       ((and (pred integerp) index)
@@ -4148,7 +3986,7 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;; NOTE: this must go last if we don't want :pred/:and/:or/:not
       ;; to be interpreted as a property
       (`(,(and (pred keywordp) prop) . (,val . nil))
-       `(equal (om--get-property ,prop ,it-node) ,val))
+       `(equal (om--get-property-nocheck ,prop ,it-node) ,val))
       ;;
       (p (om--arg-error "Invalid condition: %s" p)))))
 
@@ -4225,11 +4063,11 @@ terminate only when the entire tree is searched within PATTERN."
 (defun om--match-make-expanded-pattern-form (pattern node)
   "Return explicitly expanded PATTERN given a toplevel TYPE.
 NODE is the target NODE to be matched"
-  (let ((target-type (om--get-type node)))
+  (let ((target-type (om-get-type node)))
     (cl-labels
         ((expand-node
           (acc node)
-          (-if-let (cur-type (-some-> node (om--get-type)))
+          (-if-let (cur-type (-some-> node (om-get-type)))
               (if (om-is-type target-type node) acc
                 (expand-node (cons cur-type acc)
                              (om--get-parent node)))
@@ -4312,7 +4150,7 @@ NODE is the node to be matched."
 
 ;;; match
 
-(om--defun-node om-match (pattern node)
+(defun om-match (pattern node)
   "Return a list of child nodes matching PATTERN in NODE.
 
 PATTERN is a list like ([SLICER [ARG1] [ARG2]] [PNODE] SUB1 [SUB2 ...]).
@@ -4396,12 +4234,13 @@ wildcards are:
   "Recursively modify the children of NODE using FORM.
 FORM returns a list of element or object nodes as the new children,
 and the variable `it' is bound to the original children."
+  (declare (debug (form def-form)))
   (declare (indent 1))
   `(cl-labels
        ((rec
          (node)
-         (if (not (om--is-branch-node node)) node
-           (om--map-children-strict*
+         (if (not (om-is-branch-node node)) node
+           (om-map-children*
              (->> (--map (rec it) it)
                   (funcall (lambda (it) ,form)))
              node))))
@@ -4414,7 +4253,7 @@ and the variable `it' is bound to the original children."
   (om--modify-children node
     (--remove (member it targets) it)))
 
-(om--defun-node om-match-delete (pattern node)
+(defun om-match-delete (pattern node)
   "Return NODE without children matching PATTERN.
 
 PATTERN follows the same rules as `om-match'."
@@ -4424,7 +4263,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; extract
 
-(om--defun-node om-match-extract (pattern node)
+(defun om-match-extract (pattern node)
   "Remove nodes matching PATTERN from NODE.
 Return cons cell where the car is a list of all removed nodes and
 the cdr is the modified NODE.
@@ -4436,7 +4275,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; map
 
-(om--defun-node* om-match-map (pattern fun node)
+(om--defun* om-match-map (pattern fun node)
   "Return NODE with FUN applied to children matching PATTERN.
 FUN is a unary function that takes a node and returns a new node
 which will replace the original.
@@ -4449,7 +4288,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; mapcat
 
-(om--defun-node* om-match-mapcat (pattern fun node)
+(om--defun* om-match-mapcat (pattern fun node)
   "Return NODE with FUN applied to children matching PATTERN.
 FUN is a unary function that takes a node and returns a list of new
 nodes which will be spliced in place of the original node.
@@ -4464,7 +4303,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; replace
 
-(om--defun-node om-match-replace (pattern (:node node*) node)
+(defun om-match-replace (pattern node* node)
   "Return NODE with NODE* in place of children matching PATTERN.
 
 PATTERN follows the same rules as `om-match'."
@@ -4476,7 +4315,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; insert-before
 
-(om--defun-node om-match-insert-before (pattern (:node node*) node)
+(defun om-match-insert-before (pattern node* node)
   "Return NODE with NODE* inserted before children matching PATTERN.
 
 PATTERN follows the same rules as `om-match'."
@@ -4488,7 +4327,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; insert-after
 
-(om--defun-node om-match-insert-after (pattern (:node node*) node)
+(defun om-match-insert-after (pattern node* node)
   "Return NODE with NODE* inserted after children matching PATTERN.
 
 PATTERN follows the same rules as `om-match'."
@@ -4500,8 +4339,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; insert-within
 
-(om--defun-node om-match-insert-within (pattern (:int index)
-                                                (:node node*) node)
+(defun om-match-insert-within (pattern index node* node)
   "Return NODE with NODE* inserted at INDEX in children matching PATTERN.
 
 PATTERN follows the same rules as `om-match' with the exception
@@ -4513,16 +4351,16 @@ in the immediate, top level children of NODE."
           (om--modify-children node
             (--map-when
              (member it targets)
-             (om--map-children-strict*
+             (om-map-children*
                (om--insert-at index node* it t)
                it)
              it))
         node)
-    (om--map-children-strict* (om--insert-at index node* it t) node)))
+    (om-map-children* (om--insert-at index node* it t) node)))
 
 ;;; splice
 
-(om--defun-node om-match-splice (pattern (:nodes nodes*) node)
+(defun om-match-splice (pattern nodes* node)
   "Return NODE with NODES* spliced in place of children matching PATTERN.
 NODES* is a list of nodes.
 
@@ -4535,7 +4373,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; splice-before
 
-(om--defun-node om-match-splice-before (pattern (:nodes nodes*) node)
+(defun om-match-splice-before (pattern nodes* node)
   "Return NODE with NODES* spliced before children matching PATTERN.
 NODES* is a list of nodes.
 
@@ -4551,7 +4389,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; splice-after
 
-(om--defun-node om-match-splice-after (pattern (:nodes nodes*) node)
+(defun om-match-splice-after (pattern nodes* node)
   "Return NODE with NODES* spliced after children matching PATTERN.
 NODES* is a list of nodes.
 
@@ -4564,8 +4402,7 @@ PATTERN follows the same rules as `om-match'."
 
 ;;; splice-within
 
-(om--defun-node om-match-splice-within (pattern (:int index)
-                                                (:nodes nodes*) node)
+(defun om-match-splice-within (pattern index nodes* node)
   "Return NODE with NODES* spliced at INDEX in children matching PATTERN.
 NODES* is a list of nodes.
 
@@ -4578,16 +4415,16 @@ in the immediate, top level children of NODE."
           (om--modify-children node
             (--map-when
              (member it targets)
-             (om--map-children-strict*
+             (om-map-children*
                (om--splice-at index nodes* it t)
                it)
              it))
         node)
-    (om--map-children-strict* (om--splice-at index nodes* it t) node)))
+    (om-map-children* (om--splice-at index nodes* it t) node)))
 
 ;;; side-effects
 
-(om--defun-node* om-match-do (pattern fun node)
+(om--defun* om-match-do (pattern fun node)
   "Like `om-match-map' but for side effects only.
 FUN is a unary function that has side effects and is applied to the
 matches from NODE using PATTERN. This function itself returns nil.
@@ -4601,12 +4438,12 @@ PATTERN follows the same rules as `om-match'."
 ;;; parse at specific point
 
 ;; TODO add test for plain-text parsing
-(om--defun om-parse-object-at ((:p-int point))
+(defun om-parse-object-at (point)
   "Return object node under POINT or nil if not on an object."
   (save-excursion
     (goto-char point)
     (-let* ((context (org-element-context))
-            ((offset nesting) (cl-case (om--get-type context)
+            ((offset nesting) (cl-case (om-get-type context)
                                 ((superscript subscript) '(-1 (0 1)))
                                 (table-cell '(-1 (0 0 0)))
                                 (t '(0 (0 0)))))
@@ -4633,7 +4470,7 @@ elements vs item elements."
     (goto-char point)
     (let*
         ((node (org-element-at-point))
-         (node-type (om--get-type node)))
+         (node-type (om-get-type node)))
       ;; NOTE this will not filter by type if it is a leaf node
       (if (not (memq node-type om-branch-nodes)) node
         ;; need to parse again if branch-node since
@@ -4649,7 +4486,7 @@ elements vs item elements."
           (--> (om--get-descendent nesting tree)
                (if type (om--filter-type type it) it)))))))
 
-(om--defun om-parse-element-at ((:p-int point))
+(defun om-parse-element-at (point)
   "Return element node under POINT or nil if not on an element.
 
 This function will return every element available in `om-elements'
@@ -4658,14 +4495,14 @@ specifically parse these, use the functions `om-parse-section-at',
 `om-parse-item-at', and `om-parse-table-row-at'."
   (om--parse-element-at point))
 
-(om--defun om-parse-table-row-at ((:p-int point))
+(defun om-parse-table-row-at (point)
   "Return table-row node under POINT or nil if not on a table-row."
   (save-excursion
     (goto-char point)
     (beginning-of-line)
     (om--parse-element-at (point) 'table-row)))
 
-(om--defun om-parse-item-at ((:p-int point))
+(defun om-parse-item-at (point)
   "Return item node under POINT or nil if not on an item.
 This will return the item node even if POINT is not at the beginning
 of the line."
@@ -4696,21 +4533,21 @@ t, parse the entire subtree, else just parse the top headline."
         (car (org-element--parse-elements b e 'first-section
                                           nil nil nil nil))))))
 
-(om--defun om-parse-headline-at ((:p-int point))
+(defun om-parse-headline-at (point)
   "Return headline node under POINT or nil if not on a headline.
 POINT does not need to be on the headline itself. Only the headline
 and its section will be returned. To include subheadlines, use
 `om-parse-subtree-at'."
   (om--parse-headline-subtree-at point nil))
 
-(om--defun om-parse-subtree-at ((:p-int point))
+(defun om-parse-subtree-at (point)
   "Return headline node under POINT or nil if not on a headline.
 POINT does not need to be on the headline itself. Unlike
 `om-parse-headline-at', the returned node will include
 child headlines."
   (om--parse-headline-subtree-at point t))
 
-(om--defun om-parse-section-at ((:p-int point))
+(defun om-parse-section-at (point)
   "Return section node under POINT or nil if not on a section.
 If POINT is on or within a headline, return the section under that
 headline. If POINT is before the first headline (if any), return
@@ -4742,16 +4579,16 @@ the section at the top of the org buffer."
   "Return org-data document tree for the current buffer.
 Contrary to the org-element specification, the org-data element
 returned from this function will have :begin and :end properties."
-  (let* ((c (om--get-children (org-element-parse-buffer)))
-         (b (if c (om--get-property :begin (-first-item c)) 1))
-         (e (if c (om--get-property :end (-last-item c)) 1)))
+  (let* ((c (om-get-children (org-element-parse-buffer)))
+         (b (if c (om--get-property-nocheck :begin (-first-item c)) 1))
+         (e (if c (om--get-property-nocheck :end (-last-item c)) 1)))
     (om--construct 'org-data `(:begin ,b :end ,e) c)))
 
 ;;; BUFFER SIDE EFFECTS
 
 ;;; insert
 
-(om--defun-node om-insert ((:p-int point) node)
+(defun om-insert (point node)
   "Convert NODE to a string and insert at POINT in the current buffer.
 Return NODE."
   (save-excursion
@@ -4759,7 +4596,7 @@ Return NODE."
     (insert (om-to-string node)))
   node)
 
-(om--defun-node om-insert-tail ((:p-int point) node)
+(defun om-insert-tail (point node)
   "Like `om-insert' but insert NODE at POINT and move to end of insertion."
   (let ((s (om-to-string node)))
     (save-excursion
@@ -4782,14 +4619,14 @@ Return NODE."
           (--each (-partition 2 props) (apply #'overlay-put o* it)))))
     (-each os #'apply-overlays)))
 
-(om--defun-node* om-update (fun node)
+(om--defun* om-update (fun node)
   "Replace NODE in the current buffer with a new one.
 FUN is a unary function that takes NODE and returns a modified NODE.
 This modified node is then written in place of the old node in the
 current buffer."
   ;; if node is of type 'org-data' it will have no props
-  (let* ((begin (om--get-property :begin node))
-         (end (om--get-property :end node))
+  (let* ((begin (om--get-property-nocheck :begin node))
+         (end (om--get-property-nocheck :end node))
          (ov-cmd (->>
                   (overlays-in begin end)
                   (--filter (eq 'outline (overlay-get it 'invisible)))
@@ -4798,43 +4635,46 @@ current buffer."
                                :props (overlay-properties it)))
                   (list 'apply 'om--apply-overlays)))
          ;; do all computation before modifying buffer
+         (node0 (om-clone-node node))
          (node* (funcall fun node)))
-    ;; hacky way to add overlays to undo tree
-    (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
-    (delete-region begin end)
-    (om-insert begin node*)
-    nil))
+    (unless (equal node0 node*)
+      ;; hacky way to add overlays to undo tree
+      (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
+      (delete-region begin end)
+      (om-insert begin node*)
+      nil)))
 
 ;; generate all update functions for corresponding parse functions
 ;; since all take function args, also generate anaphoric forms
-(--each '(object element table-row item headline subtree section)
-  (let* ((update-at
-          (intern (format "om-update-%s-at" it)))
-         (update-this
-          (intern (format "om-update-this-%s" it)))
-         (update-at-doc
-          (-as-> (list "Update %1$s under POINT using FUN."
-                       "FUN takes an %1$s and returns a modified %1$s")
-                 fmt
-                 (s-join "\n" fmt)
-                 (format fmt it)))
-         (update-this-doc
-          (-as-> (list "Update %1$s under current point using FUN."
-                       "FUN takes an %1$s and returns a modified %1$s")
-                 fmt
-                 (s-join "\n" fmt)
-                 (format fmt it)))
-         (call (intern (format "om-parse-%s-at" it)))
-         (update-at-body `(om-update fun (,call point)))
-         (update-this-body `(,update-at (point) fun)))
-    (eval `(om--defun-nocheck* ,update-at (point fun)
-             ,update-at-doc
-             ,update-at-body))
-    (eval `(om--defun-nocheck* ,update-this (fun)
-             ,update-this-doc
-             ,update-this-body))))
+(eval-when-compile
+  (--each '(object element table-row item headline subtree section)
+    (let* ((update-at
+            (intern (format "om-update-%s-at" it)))
+           (update-this
+            (intern (format "om-update-this-%s" it)))
+           (update-at-doc
+            (-as-> (list "Update %1$s under POINT using FUN."
+                         "FUN takes an %1$s and returns a modified %1$s")
+                   fmt
+                   (s-join "\n" fmt)
+                   (format fmt it)))
+           (update-this-doc
+            (-as-> (list "Update %1$s under current point using FUN."
+                         "FUN takes an %1$s and returns a modified %1$s")
+                   fmt
+                   (s-join "\n" fmt)
+                   (format fmt it)))
+           (call (intern (format "om-parse-%s-at" it)))
+           (update-at-body `(om-update fun (,call point)))
+           (update-this-body `(,update-at (point) fun)))
+      (eval `(om--defun* ,update-at (point fun)
+               ,update-at-doc
+               ,update-at-body))
+      (eval `(om--defun* ,update-this (fun)
+               ,update-this-doc
+               ,update-this-body)))))
 
-(om--defun-nocheck* om-update-this-buffer (fun)
+(om--defun* om-update-this-buffer (fun)
   "Apply FUN to the contents of the current buffer.
 FUN is a unary function that takes a node of type 'org-data' and
 returns a modified node."
@@ -4845,19 +4685,75 @@ returns a modified node."
 ;; TODO this will fold items improperly
 (defun om--flag-elem-contents (flag node)
   "Set folding of buffer contents in NODE to FLAG."
-  (let ((b (om--get-property :contents-begin node))
+  (let ((b (om--get-property-nocheck :contents-begin node))
         (e (cl-case (om-get-type node)
-             ((property-drawer drawer) (om--get-property :end node))
-             (t (om--get-property :contents-end node)))))
+             ((property-drawer drawer) (om--get-property-nocheck :end node))
+             (t (om--get-property-nocheck :contents-end node)))))
     (outline-flag-region (1- b) (1- e) flag)))
 
-(om--defun-node om-fold (node)
+(defun om-fold (node)
   "Fold the children of NODE if they exist."
   (om--flag-elem-contents t node))
 
-(om--defun-node om-unfold (node)
+(defun om-unfold (node)
   "Unfold the children of NODE if they exist."
   (om--flag-elem-contents nil node))
+
+;;; headline iteration
+
+(om--defun* om-do-some-headlines (begin end fun)
+  "Update some headlines in the current using FUN.
+
+Headlines are updated using `om-update-this-headline' (see this for
+use and meaning of FUN). Iteration is only performed for headlines
+that begin between BEGIN and END points in the buffer. If either of
+these are nil, use `point-min' and `point-max' respectively."
+  (let ((begin (or begin (point-min)))
+        (end (or end (point-max))))
+    (save-excursion
+      (goto-char end)
+      ;; iterate backwards, its actually simpler since we don't need
+      ;; to worry about the toplevel section at the beginning
+      (while (and (outline-previous-heading) (<= begin (point)))
+        (om-update-this-headline fun)))))
+
+(om--defun* om-do-headlines (fun)
+  "Update all headlines in the current buffer using FUN.
+
+Headlines are updated using `om-update-this-headline' (see this for
+use and meaning of FUN)."
+  (om-do-some-headlines nil nil fun))
+
+(om--defun* om-do-some-subtrees (begin end fun)
+  "Update some toplevel subtrees in the current buffer using FUN.
+
+Subtrees are updated using `om-update-this-subtree' (see this for use
+and meaning of FUN). Iteration is only performed for headlines that
+begin between BEGIN and END points in the buffer. If either of these
+are nil, use `point-min' and `point-max' respectively."
+  (let ((begin (or begin (point-min)))
+        (end (or end (point-max))))
+    (save-excursion
+      (goto-char end)
+      ;; goto last toplevel headline
+      (while (and (/= ?* (char-after)) (outline-previous-heading)))
+      ;; if on a headline, parse it
+      (when (= ?* (char-after))
+        (om-update-this-subtree fun))
+      ;; parse the rest of the headlines
+      (let ((cur-point (point)))
+        (org-backward-heading-same-level 1 t)
+        (while (and (/= (point) cur-point) (<= begin (point)))
+          (om-update-this-subtree fun)
+          (setq cur-point (point))
+          (org-backward-heading-same-level 1 t))))))
+
+(om--defun* om-do-subtrees (fun)
+  "Update all toplevel subtrees in the current buffer using FUN.
+
+Subtrees are updated using `om-update-this-subtree' (see this for use
+and meaning of FUN)."
+  (om-do-some-subtrees nil nil fun))
 
 (provide 'om)
 ;;; om.el ends here

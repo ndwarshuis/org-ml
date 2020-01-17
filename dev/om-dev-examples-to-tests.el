@@ -50,8 +50,14 @@
     `(ert-deftest ,cmd () (om--with-org-env ,@tests))))
 
 (defmacro defexamples-content (cmd _docstring &rest args)
-  (cl-flet
-      ((make-test
+  (cl-flet*
+      ((make-test-form
+        (test contents)
+        `(om--with-org-env
+          (when ,contents (insert ,contents))
+          (goto-char (point-min))
+          ,test))
+       (make-tests
         (list)
         (let ((contents (->> (car list) (-drop 1) (s-join "\n")))
               (tests
@@ -59,17 +65,14 @@
                     (--remove (eq (and (listp it) (car it)) :comment))
                     (-partition 3)
                     (--map (apply #'example-to-should it)))))
-          `(om--with-org-env
-            (when ,contents (insert ,contents))
-            (goto-char (point-min))
-            ,@tests))))
+          (--map (make-test-form it contents) tests))))
     (let ((body
            (->> args
                 (remove :begin-hidden)
                 (remove :end-hidden)
                 (-partition-before-pred
                  (lambda (it) (eq (and (listp it) (car it)) :buffer)))
-                (-map #'make-test))))
+                (-mapcat #'make-tests))))
       `(ert-deftest ,cmd () ,@body))))
 
 (defun def-example-subgroup (&rest _)) ; ignore

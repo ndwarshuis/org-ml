@@ -21,9 +21,9 @@ unit:
        -f ert-run-tests-batch-and-exit
 
 compile:
-	${CASK} exec ${EMACS} -Q -batch -f batch-byte-compile om.el
+	${CASK} build
 
 clean-elc:
-	rm -f om.elc
+	${CASK} clean-elc
 
 .PHONY:	all test docs unit

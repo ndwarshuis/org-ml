@@ -17,7 +17,7 @@ git clone https://github.com/ndwarshuis/om.el
 Then require in your emacs config:
 
 ```
-(require 'om)
+(require 'om.el)
 ```
 
 # Motivation
@@ -258,6 +258,7 @@ Build new nodes.
 
 ### Miscellaneous Builders
 
+* [om-clone-node](#om-clone-node-node) `(node)`
 * [om-build-secondary-string!](#om-build-secondary-string-string) `(string)`
 * [om-build-table-row-hline](#om-build-table-row-hline-key-post-blank) `(&key post-blank)`
 * [om-build-timestamp-diary](#om-build-timestamp-diary-form-key-post-blank) `(form &key post-blank)`
@@ -277,6 +278,21 @@ Build nodes with more convenient/shorter syntax.
 * [om-build-table-cell!](#om-build-table-cell-string) `(string)`
 * [om-build-table-row!](#om-build-table-row-row-list) `(row-list)`
 * [om-build-table!](#om-build-table-key-tblfm-post-blank-rest-row-lists) `(&key tblfm post-blank &rest row-lists)`
+
+### Logbook Item Builders
+
+
+Build item nodes for inclusion in headline logbooks
+
+* [om-build-log-note](#om-build-log-note-unixtime-note) `(unixtime note)`
+* [om-build-log-done](#om-build-log-done-unixtime-optional-note) `(unixtime &optional note)`
+* [om-build-log-refile](#om-build-log-refile-unixtime-optional-note) `(unixtime &optional note)`
+* [om-build-log-state](#om-build-log-state-unixtime-new-state-old-state-optional-note) `(unixtime new-state old-state &optional note)`
+* [om-build-log-deldeadline](#om-build-log-deldeadline-unixtime-old-timestamp-optional-note) `(unixtime old-timestamp &optional note)`
+* [om-build-log-delschedule](#om-build-log-delschedule-unixtime-old-timestamp-optional-note) `(unixtime old-timestamp &optional note)`
+* [om-build-log-redeadline](#om-build-log-redeadline-unixtime-old-timestamp-optional-note) `(unixtime old-timestamp &optional note)`
+* [om-build-log-reschedule](#om-build-log-reschedule-unixtime-old-timestamp-optional-note) `(unixtime old-timestamp &optional note)`
+* [om-build-log-type](#om-build-log-type-type-key-old-new-unixtime-username-full-username-note) `(type &key old new unixtime username full-username note)`
 
 ## Type Predicates
 
@@ -403,11 +419,33 @@ Set, get, and map the children of branch nodes.
 
 ### Headline
 
-* [om-headline-get-node-properties](#om-headline-get-node-properties-headline) `(headline)`
-* [om-headline-get-properties-drawer](#om-headline-get-properties-drawer-headline) `(headline)`
-* [om-headline-get-planning](#om-headline-get-planning-headline) `(headline)`
-* [om-headline-get-subheadlines](#om-headline-get-subheadlines-headline) `(headline)`
 * [om-headline-get-section](#om-headline-get-section-headline) `(headline)`
+* [om-headline-set-section](#om-headline-set-section-children-headline) `(children headline)`
+* [om-headline-map-section](#om-headline-map-section-fun-headline) `(fun headline)`
+* [om-headline-get-subheadlines](#om-headline-get-subheadlines-headline) `(headline)`
+* [om-headline-set-subheadlines](#om-headline-set-subheadlines-subheadlines-headline) `(subheadlines headline)`
+* [om-headline-map-subheadlines](#om-headline-map-subheadlines-fun-headline) `(fun headline)`
+
+### Headline (metadata)
+
+* [om-headline-get-planning](#om-headline-get-planning-headline) `(headline)`
+* [om-headline-set-planning](#om-headline-set-planning-planning-headline) `(planning headline)`
+* [om-headline-map-planning](#om-headline-map-planning-fun-headline) `(fun headline)`
+* [om-headline-get-node-properties](#om-headline-get-node-properties-headline) `(headline)`
+* [om-headline-set-node-properties](#om-headline-set-node-properties-node-properties-headline) `(node-properties headline)`
+* [om-headline-map-node-properties](#om-headline-map-node-properties-fun-headline) `(fun headline)`
+* [om-headline-get-node-property](#om-headline-get-node-property-key-headline) `(key headline)`
+* [om-headline-set-node-property](#om-headline-set-node-property-key-value-headline) `(key value headline)`
+* [om-headline-map-node-property](#om-headline-map-node-property-key-fun-headline) `(key fun headline)`
+* [om-headline-get-logbook](#om-headline-get-logbook-headline) `(headline)`
+* [om-headline-map-logbook](#om-headline-map-logbook-fun-headline) `(fun headline)`
+* [om-headline-set-logbook](#om-headline-set-logbook-children-headline) `(children headline)`
+* [om-headline-logbook-append-entry](#om-headline-logbook-append-entry-item-headline) `(item headline)`
+* [om-headline-logbook-append-open-clock](#om-headline-logbook-append-open-clock-unixtime-headline) `(unixtime headline)`
+* [om-headline-logbook-close-open-clock](#om-headline-logbook-close-open-clock-unixtime-note-headline) `(unixtime note headline)`
+
+### Headline (misc)
+
 * [om-headline-get-path](#om-headline-get-path-headline) `(headline)`
 * [om-headline-update-item-statistics](#om-headline-update-item-statistics-headline) `(headline)`
 * [om-headline-update-todo-statistics](#om-headline-update-todo-statistics-headline) `(headline)`
@@ -476,6 +514,10 @@ Map node manipulations into buffers.
 * [om-update-headline-at](#om-update-headline-at-point-fun) `(point fun)`
 * [om-update-subtree-at](#om-update-subtree-at-point-fun) `(point fun)`
 * [om-update-section-at](#om-update-section-at-point-fun) `(point fun)`
+* [om-do-some-headlines](#om-do-some-headlines-begin-end-fun) `(begin end fun)`
+* [om-do-headlines](#om-do-headlines-fun) `(fun)`
+* [om-do-some-subtrees](#om-do-some-subtrees-begin-end-fun) `(begin end fun)`
+* [om-do-subtrees](#om-do-subtrees-fun) `(fun)`
 
 ### Misc
 
@@ -1494,23 +1536,26 @@ The following properties are settable:
 Build a planning element node.
 
 The following properties are settable:
-- **`closed`**:  a zero-range, inactive timestamp node
-- **`deadline`**:  a zero-range, inactive timestamp node
-- **`scheduled`**:  a zero-range, inactive timestamp node
+- **`closed`**:  a zero-range, active timestamp node
+- **`deadline`**:  a zero-range, active timestamp node
+- **`scheduled`**:  a zero-range, active timestamp node
 - **`post-blank`**: a non-negative integer
 
 ```el
-(->> (om-build-planning :closed (om-build-timestamp! '(2019 1 1)))
+(->> (om-build-planning :closed (om-build-timestamp! '(2019 1 1)
+						     :active t))
      (om-to-trimmed-string))
- ;; => "CLOSED: [2019-01-01 Tue]"
+ ;; => "CLOSED: <2019-01-01 Tue>"
 
-(->> (om-build-planning :scheduled (om-build-timestamp! '(2019 1 1)))
+(->> (om-build-planning :scheduled (om-build-timestamp! '(2019 1 1)
+							:active t))
      (om-to-trimmed-string))
- ;; => "SCHEDULED: [2019-01-01 Tue]"
+ ;; => "SCHEDULED: <2019-01-01 Tue>"
 
-(->> (om-build-planning :deadline (om-build-timestamp! '(2019 1 1)))
+(->> (om-build-planning :deadline (om-build-timestamp! '(2019 1 1)
+						       :active t))
      (om-to-trimmed-string))
- ;; => "DEADLINE: [2019-01-01 Tue]"
+ ;; => "DEADLINE: <2019-01-01 Tue>"
 
 ```
 
@@ -1891,6 +1936,32 @@ The following properties are settable:
 
 ### Miscellaneous Builders
 
+#### om-clone-node `(node)`
+
+Return copy of **`node`**, which may be a circular tree.
+
+This is only necessary to copy nodes parsed using any of parsing
+functions from this this package (example, `om-parse-this-headline`)
+because these retain parent references which makes the node a circular
+list. None of the builder functions add parent references, so
+`copy-tree` will be a faster alternative to this function.
+
+```el
+;; Given the following contents:
+; dolly
+
+(let* ((node1 (om-parse-this-element))
+       (node2 (om-clone-node node1)))
+  (equal node1 node2))
+ ;; => t
+
+(let* ((node1 (om-parse-this-element))
+       (node2 (om-clone-node node1)))
+  (eq node1 node2))
+ ;; => nil
+
+```
+
 #### om-build-secondary-string! `(string)`
 
 Return a secondary string (list of object nodes) from **`string`**.
@@ -2029,16 +2100,16 @@ matter.
 ```el
 (->> (om-build-planning! :closed '(2019 1 1))
      (om-to-trimmed-string))
- ;; => "CLOSED: [2019-01-01 Tue]"
+ ;; => "CLOSED: <2019-01-01 Tue>"
 
 (->> (om-build-planning! :closed '(2019 1 1)
 			  :scheduled '(2018 1 1))
      (om-to-trimmed-string))
- ;; => "SCHEDULED: [2018-01-01 Mon] CLOSED: [2019-01-01 Tue]"
+ ;; => "SCHEDULED: <2018-01-01 Mon> CLOSED: <2019-01-01 Tue>"
 
 (->> (om-build-planning! :closed '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
      (om-to-trimmed-string))
- ;; => "CLOSED: [2019-01-01 Tue +1m -1d]"
+ ;; => "CLOSED: <2019-01-01 Tue +1m -1d>"
 
 ```
 
@@ -2214,6 +2285,271 @@ All other arguments follow the same rules as [`om-build-table`](#om-build-table-
  ;; => "| L | O |
  ;      |---+---|
  ;      | V | E |"
+
+```
+
+
+### Logbook Item Builders
+
+
+Build item nodes for inclusion in headline logbooks
+
+#### om-build-log-note `(unixtime note)`
+
+Return an item node for a new note log entry.
+
+This will format the log entry from the default value for the
+'note` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+**`note`** is a string for the note text.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-note "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- Note taken on [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-done `(unixtime &optional note)`
+
+Return an item node for a done log entry.
+
+This will format the log entry from the default value for the
+'done` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-done)
+    (om-to-trimmed-string))
+ ;; => "- CLOSING NOTE [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-done "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- CLOSING NOTE [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-refile `(unixtime &optional note)`
+
+Return an item node for a refile log entry.
+This will format the log entry from the default value for the
+'deldeadline` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-refile)
+    (om-to-trimmed-string))
+ ;; => "- Refiled on [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-refile "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- Refiled on [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-state `(unixtime new-state old-state &optional note)`
+
+Return an item node for a state change log entry.
+
+This will format the log entry from the default value for the
+'state` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+**`new-state`** and **`old-state`** are strings for the new and old todo keywords
+respectively.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-state "HOLD" "TODO")
+    (om-to-trimmed-string))
+ ;; => "- State \"HOLD\"       from \"TODO\"       [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-state "HOLD" "TODO" "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- State \"HOLD\"       from \"TODO\"       [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-deldeadline `(unixtime old-timestamp &optional note)`
+
+Return an item node for a delete deadline log entry.
+
+This will format the log entry from the default value for the
+'deldeadline` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+**`old-timestamp`** is a timestamp node of the deadline that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-deldeadline (om-build-timestamp! '(2019 1 2)))
+    (om-to-trimmed-string))
+ ;; => "- Removed deadline, was \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-deldeadline (om-build-timestamp! '(2019 1 2))
+			      "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- Removed deadline, was \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-delschedule `(unixtime old-timestamp &optional note)`
+
+Return an item node for a delete schedule log entry.
+
+This will format the log entry from the default value for the
+'delschedule` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+**`old-timestamp`** is a timestamp node of the schedule that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-delschedule (om-build-timestamp! '(2019 1 2)))
+    (om-to-trimmed-string))
+ ;; => "- Not scheduled, was \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-delschedule (om-build-timestamp! '(2019 1 2))
+			      "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- Not scheduled, was \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-redeadline `(unixtime old-timestamp &optional note)`
+
+Return an item node for a new deadline log entry.
+
+This will format the log entry from the default value for the
+'redeadline` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+**`old-timestamp`** is a timestamp node of the deadline that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-redeadline (om-build-timestamp! '(2019 1 2)))
+    (om-to-trimmed-string))
+ ;; => "- New deadline from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-redeadline (om-build-timestamp! '(2019 1 2))
+			     "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- New deadline from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-reschedule `(unixtime old-timestamp &optional note)`
+
+Return an item node for a new schedule log entry.
+
+This will format the log entry from the default value for the
+'reschedule` cell in `org-log-note-headings`.
+
+**`unixtime`** is an integer representing the time to be used for all
+timestamp nodes.
+
+**`old-timestamp`** is a timestamp node of the schedule that is being
+deleted. It will always be converted to an inactive timestamp.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-reschedule (om-build-timestamp! '(2019 1 2)))
+    (om-to-trimmed-string))
+ ;; => "- Rescheduled from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00]"
+
+(-> (- 1546300800 (car (current-time-zone)))
+    (om-build-log-reschedule (om-build-timestamp! '(2019 1 2))
+			     "noteworthy")
+    (om-to-trimmed-string))
+ ;; => "- Rescheduled from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\
+ ;        noteworthy"
+
+```
+
+#### om-build-log-type `(type &key old new unixtime username full-username note)`
+
+Return an item for an arbitrary log entry.
+
+**`type`** is a symbol corresponding to the car of one of the cells in
+`org-log-note-headings`. Unlike the other log entry build functions
+in this package, this function will not use the default value of
+`org-log-note-headings` which means it can be used for customly
+formatted log entries.
+
+The arguments correspond to the following formatting placeholders
+(see `org-log-note-headings` for more information on these
+placeholders):
+- **`new`**: either a string or timestamp node that will replace the
+    new state/timestamp placeholder (%s)
+- **`old`**: like **`new`** but for the old state/timestamp placeholder (%S)
+- **`unixtime`**: an integer corresponding to the time to be used for the
+    timestamp placeholders (%t/%T/%d/%D)
+- **`username`**: a string for the username (%u)
+- **`full-username`**: a string for the full username (%U)
+
+If any of these arguments are not supplied but their placeholders
+are present in the heading determined by **`type`**, the placeholders will
+not be substituted.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(let ((org-log-note-headings '((test . "Changed %s from %S on %t by %u")))
+      (ut (- 1546300800 (car (current-time-zone)))))
+  (->> (om-build-log-type 'test
+			  :unixtime ut :old "TODO" :new "DONE" :username "shadowbrokers" :note "We're coming for you")
+       (om-to-trimmed-string)))
+ ;; => "- Changed \"DONE\" from \"TODO\" on [2019-01-01 Tue 00:00] by shadowbrokers \\\\
+ ;        We're coming for you"
 
 ```
 
@@ -2994,7 +3330,7 @@ Any other keys will trigger an error.
 
 #### om-headline-set-title! `(title-text stats-cookie-value headline)`
 
-Return **`headline`** node with title set with **`title-text`** and **`stats-cookie-value`**.
+Return **`headline`** node with new title.
 
 **`title-text`** is a string to be parsed into object nodes for the title
 via [`om-build-secondary-string!`](#om-build-secondary-string-string) (see that function for restrictions)
@@ -3128,14 +3464,14 @@ is the same as that described in [`om-build-planning!`](#om-build-planning-key-c
 ```el
 ;; Given the following contents:
 ; * dummy
-; CLOSED: [2019-01-01 Tue]
+; CLOSED: <2019-01-01 Tue>
 
 ;; Change an existing timestamp in planning
 (->> (om-parse-this-headline)
      (om-headline-get-planning)
      (om-planning-set-timestamp! :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
      (om-to-trimmed-string))
- ;; => "CLOSED: [2019-01-02 Wed +2m -1d]"
+ ;; => "CLOSED: <2019-01-02 Wed +2m -1d>"
 
 ;; Add a new timestamp and remove another
 (->> (om-parse-this-headline)
@@ -3143,7 +3479,7 @@ is the same as that described in [`om-build-planning!`](#om-build-planning-key-c
      (om-planning-set-timestamp! :deadline '(2112 1 1))
      (om-planning-set-timestamp! :closed nil)
      (om-to-trimmed-string))
- ;; => "DEADLINE: [2112-01-01 Fri]"
+ ;; => "DEADLINE: <2112-01-01 Fri>"
 
 ```
 
@@ -3861,7 +4197,7 @@ Return **`timestamp`** node with end time forced to short format.
 #### om-timestamp-diary-set-value `(form timestamp-diary)`
 
 Return **`timestamp-diary`** node with value set to **`form`**.
-`timestamp` must have a type `eq` to `diary`. **`form`** is a quoted list.
+The node must have a type `eq` to `diary`. **`form`** is a quoted list.
 
 ```el
 ;; Given the following contents:
@@ -3925,15 +4261,6 @@ Return the children of **`branch-node`** as a list.
      (-map (function om-get-type)))
  ;; => nil
 
-;; Given the following contents:
-; #+CALL: ktulu()
-
-;; Throw error when attempting to get contents of a non-branch node
-(->> (om-parse-this-element)
-     (om-get-children)
-     (-map (function om-get-type)))
-Error
-
 ```
 
 #### om-set-children `(children branch-node)`
@@ -3961,15 +4288,6 @@ on the type of `node`.
      (om-to-trimmed-string))
  ;; => "* headline
  ;      ** only me"
-
-;; Given the following contents:
-; #+CALL: ktulu()
-
-;; Throw error when attempting to set children of a non-branch nodes
-(->> (om-parse-this-element)
-     (om-set-children "nil by mouth")
-     (om-to-trimmed-string))
-Error
 
 ```
 
@@ -4000,20 +4318,11 @@ returns a modified list of children.
  ;; => "* headline
  ;      *** subheadline"
 
-;; Given the following contents:
-; #+CALL: ktulu()
-
-;; Throw error when attempting to map children of a non-branch node
-(->> (om-parse-this-element)
-     (om-map-children (function ignore))
-     (om-to-trimmed-string))
-Error
-
 ```
 
 #### om-is-childless `(branch-node)`
 
-Return t if **`branch-node`** is empty.
+Return t if **`branch-node`** has no children.
 
 ```el
 ;; Given the following contents:
@@ -4030,14 +4339,6 @@ Return t if **`branch-node`** is empty.
 (->> (om-parse-this-headline)
      (om-is-childless))
  ;; => t
-
-;; Given the following contents:
-; #+CALL: ktulu()
-
-;; Throw error when attempting to determine if non-branch node is empty
-(->> (om-parse-this-element)
-     (om-is-childless))
-Error
 
 ```
 
@@ -4160,62 +4461,166 @@ The unwrap operation will be done with [`om-unwrap-deep`](#om-unwrap-deep-object
 
 ### Headline
 
-#### om-headline-get-node-properties `(headline)`
+#### om-headline-get-section `(headline)`
 
-Return a list of node-properties nodes in **`headline`** or nil if none.
+Return children of section node in **`headline`** node or nil if none.
+
+```el
+;; Given the following contents:
+; * headline 1
+; sectional stuff
+; ** headline 2
+; ** headline 3
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-section)
+     (-map (function om-to-trimmed-string)))
+ ;; => '("sectional stuff")
+
+;; Given the following contents:
+; * headline 1
+; ** headline 2
+; ** headline 3
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-section)
+     (om-to-trimmed-string))
+ ;; => ""
+
+```
+
+#### om-headline-set-section `(children headline)`
+
+Return **`headline`** with section node containing **`children`**.
+If **`children`** is nil, return **`headline`** with no section node.
 
 ```el
 ;; Given the following contents:
 ; * headline
-; :PROPERTIES:
-; :Effort:   1:00
-; :END:
 
-(->> (om-parse-this-headline)
-     (om-headline-get-node-properties)
-     (-map (function om-to-trimmed-string)))
- ;; => '(":Effort:   1:00")
+(->> (om-parse-this-subtree)
+     (om-headline-set-section (list (om-build-paragraph! "x-section")))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      x-section"
 
 ;; Given the following contents:
 ; * headline
+; x-section
 
-(->> (om-parse-this-headline)
-     (om-headline-get-node-properties)
+(->> (om-parse-this-subtree)
+     (om-headline-set-section (list (om-build-paragraph! "x-guard")))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      x-guard"
+
+(->> (om-parse-this-subtree)
+     (om-headline-set-section nil)
+     (om-to-trimmed-string))
+ ;; => "* headline"
+
+```
+
+#### om-headline-map-section `(fun headline)`
+
+Return **`headline`** node with child section node modified by **`fun`**.
+
+**`fun`** is a unary function that takes a section node's children as a list
+returns a modified child list.
+
+```el
+;; Given the following contents:
+; * headline
+; x-section
+
+(->> (om-parse-this-subtree)
+     (om-headline-map-section* (cons (om-build-planning! :closed '(2019 1 1))
+				     it))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      CLOSED: <2019-01-01 Tue>
+ ;      x-section"
+
+```
+
+#### om-headline-get-subheadlines `(headline)`
+
+Return list of child headline nodes in **`headline`** node or nil if none.
+
+```el
+;; Given the following contents:
+; * headline 1
+; sectional stuff
+; ** headline 2
+; ** headline 3
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-subheadlines)
+     (-map (function om-to-trimmed-string)))
+ ;; => '("** headline 2" "** headline 3")
+
+;; Given the following contents:
+; * headline 1
+; sectional stuff
+
+(->> (om-parse-this-subtree)
+     (om-headline-get-subheadlines)
      (-map (function om-to-trimmed-string)))
  ;; => nil
 
 ```
 
-#### om-headline-get-properties-drawer `(headline)`
+#### om-headline-set-subheadlines `(subheadlines headline)`
 
-Return the properties drawer node in **`headline`**.
-
-If multiple are present (there shouldn't be) the first will be
-returned.
+Return **`headline`** node with **`subheadlines`** set to child subheadlines.
 
 ```el
 ;; Given the following contents:
-; * headline
-; :PROPERTIES:
-; :Effort:   1:00
-; :END:
+; * headline 1
+; sectional stuff
+; ** headline 2
+; ** headline 3
 
-(->> (om-parse-this-headline)
-     (om-headline-get-properties-drawer)
+(->> (om-parse-this-subtree)
+     (om-headline-set-subheadlines (list (om-build-headline! :level 2 :title-text "headline x")))
      (om-to-trimmed-string))
- ;; => ":PROPERTIES:
- ;      :Effort:   1:00
- ;      :END:"
+ ;; => "* headline 1
+ ;      sectional stuff
+ ;      ** headline x"
 
-;; Given the following contents:
-; * headline
-
-(->> (om-parse-this-headline)
-     (om-headline-get-properties-drawer)
+(->> (om-parse-this-subtree)
+     (om-headline-set-subheadlines nil)
      (om-to-trimmed-string))
- ;; => ""
+ ;; => "* headline 1
+ ;      sectional stuff"
 
 ```
+
+#### om-headline-map-subheadlines `(fun headline)`
+
+Return **`headline`** node with child headline nodes modified by **`fun`**.
+
+**`fun`** is a unary function that takes a list of headlines and returns
+a modified list of headlines.
+
+```el
+;; Given the following contents:
+; * headline 1
+; ** headline 2
+; ** headline 3
+
+(->> (om-parse-this-subtree)
+     (om-headline-map-subheadlines* (--map (om-set-property :todo-keyword "TODO" it)
+					   it))
+     (om-to-trimmed-string))
+ ;; => "* headline 1
+ ;      ** TODO headline 2
+ ;      ** TODO headline 3"
+
+```
+
+
+### Headline (metadata)
 
 #### om-headline-get-planning `(headline)`
 
@@ -4241,60 +4646,517 @@ Return the planning node in **`headline`** or nil if none.
 
 ```
 
-#### om-headline-get-subheadlines `(headline)`
+#### om-headline-set-planning `(planning headline)`
 
-Return list of subheadline nodes for **`headline`** node or nil if none.
+Return **`headline`** node with planning components set to **`planning`** node.
 
 ```el
 ;; Given the following contents:
-; * headline 1
-; sectional stuff
-; ** headline 2
-; ** headline 3
+; * headline
 
-(->> (om-parse-this-subtree)
-     (om-headline-get-subheadlines)
-     (-map (function om-to-trimmed-string)))
- ;; => '("** headline 2" "** headline 3")
+(->> (om-parse-this-headline)
+     (om-headline-set-planning (om-build-planning! :closed '(2019 1 1)))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      CLOSED: <2019-01-01 Tue>"
 
 ;; Given the following contents:
-; * headline 1
-; sectional stuff
+; * headline
+; CLOSED: <2019-01-01 Tue>
 
-(->> (om-parse-this-subtree)
-     (om-headline-get-subheadlines)
+(->> (om-parse-this-headline)
+     (om-headline-set-planning (om-build-planning! :scheduled '(2019 1 1)))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      SCHEDULED: <2019-01-01 Tue>"
+
+;; Given the following contents:
+; * headline
+; CLOSED: <2019-01-01 Tue>
+
+(->> (om-parse-this-headline)
+     (om-headline-set-planning nil)
+     (om-to-trimmed-string))
+ ;; => "* headline"
+
+```
+
+#### om-headline-map-planning `(fun headline)`
+
+Return **`headline`** node with planning node modified by **`fun`**.
+
+**`fun`** is a unary function that takes a planning node and returns a
+modified planning node.
+
+```el
+;; Given the following contents:
+; * headline
+; CLOSED: <2019-01-01 Tue>
+
+(->> (om-parse-this-headline)
+     (om-headline-map-planning* (om-map-property* :closed (om-timestamp-shift 1 'day
+									      it)
+						   it))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      CLOSED: <2019-01-02 Wed>"
+
+```
+
+#### om-headline-get-node-properties `(headline)`
+
+Return a list of node-properties nodes in **`headline`** or nil if none.
+
+```el
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :Effort:   1:00
+; :ID:       minesfake
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-get-node-properties)
+     (-map (function om-to-trimmed-string)))
+ ;; => '(":Effort:   1:00" ":ID:       minesfake")
+
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-get-node-properties)
      (-map (function om-to-trimmed-string)))
  ;; => nil
 
 ```
 
-#### om-headline-get-section `(headline)`
+#### om-headline-set-node-properties `(node-properties headline)`
 
-Return section node for headline **`headline`** node or nil if none.
+Return **`headline`** node with property drawer containing **`node-properties`**.
+**`node-properties`** is a list of node-property nodes.
 
 ```el
 ;; Given the following contents:
-; * headline 1
-; sectional stuff
-; ** headline 2
-; ** headline 3
+; * headline
+; :PROPERTIES:
+; :Effort:   1:00
+; :ID:       minesfake
+; :END:
 
-(->> (om-parse-this-subtree)
-     (om-headline-get-section)
+(->> (om-parse-this-headline)
+     (om-headline-set-node-properties (--map (apply (function om-build-node-property)
+						    it)
+					     '(("Effort" "0:01")
+						     ("ID" "easy"))))
      (om-to-trimmed-string))
- ;; => "sectional stuff"
-
-;; Given the following contents:
-; * headline 1
-; ** headline 2
-; ** headline 3
-
-(->> (om-parse-this-subtree)
-     (om-headline-get-section)
-     (om-to-trimmed-string))
- ;; => ""
+ ;; => "* headline
+ ;      :PROPERTIES:
+ ;      :Effort:   0:01
+ ;      :ID:       easy
+ ;      :END:"
 
 ```
+
+#### om-headline-map-node-properties `(fun headline)`
+
+Return **`headline`** node with property-drawer node modified by **`fun`**.
+
+**`fun`** is a unary function that takes a property-drawer node and returns
+a modified property-drawer node.
+
+```el
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :Effort:   1:00
+; :ID:       minesfake
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-map-node-properties* (cons (om-build-node-property "New" "world man")
+					     it))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :PROPERTIES:
+ ;      :New:      world man
+ ;      :Effort:   1:00
+ ;      :ID:       minesfake
+ ;      :END:"
+
+```
+
+#### om-headline-get-node-property `(key headline)`
+
+Return value of property with **`key`** in **`headline`** or nil if not found.
+If multiple properties with **`key`** are present, only return the first.
+
+```el
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :ID:       fake
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-get-node-property "ID"))
+ ;; => "fake"
+
+```
+
+#### om-headline-set-node-property `(key value headline)`
+
+Return **`headline`** with node property matching **`key`** set to **`value`**.
+If a property matching **`key`** is present, set it to **`value`**. If multiple
+properties matching **`key`** are present, only set the first.
+
+```el
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :ID:       fake
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-set-node-property "ID" "real")
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :PROPERTIES:
+ ;      :ID:       real
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-set-node-property "ID" "real")
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :PROPERTIES:
+ ;      :ID:       real
+ ;      :END:"
+
+(->> (om-parse-this-headline)
+     (om-headline-set-node-property "ID" nil)
+     (om-to-trimmed-string))
+ ;; => "* headline"
+
+```
+
+#### om-headline-map-node-property `(key fun headline)`
+
+Return **`headline`** node with property value matching **`key`** modified by **`fun`**.
+
+**`fun`** is a unary function that takes a node-property value and returns
+a modified node-property value.
+
+```el
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :ID:       fake
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-map-node-property "ID" (function s-upcase))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :PROPERTIES:
+ ;      :ID:       FAKE
+ ;      :END:"
+
+```
+
+#### om-headline-get-logbook `(headline)`
+
+Return the children of the logbook drawer of **`headline`**.
+This function assumes that the logbook entries are in a drawer
+immediately after planning and/or property-drawer nodes named
+via `org-log-into-drawer`. If `org-log-into-drawer` is nil, always
+return nil.
+
+```el
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - Refiled on [2019-01-01 Tue 00:00]
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-get-logbook)
+     (-map (function om-to-trimmed-string)))
+ ;; => '("- Refiled on [2019-01-01 Tue 00:00]")
+
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-get-logbook)
+     (-map (function om-to-trimmed-string)))
+ ;; => nil
+
+```
+
+#### om-headline-map-logbook `(fun headline)`
+
+Return **`headline`** node with property value matching `key` modified by **`fun`**.
+
+**`fun`** is a unary function that takes a list of child nodes from the
+logbook value and returns a modified list of child nodes.
+
+This function assumes that the logbook entries will be stored in a
+drawer immediately after planning and/or property-drawer nodes named
+via `org-log-into-drawer`. If `org-log-into-drawer` is nil, return
+**`headline`** unmodified.
+
+```el
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - Refiled on [2019-01-01 Tue 00:00]
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-map-logbook* (--map (om-match-map* '(:many timestamp)
+					(om-timestamp-shift 1 'day
+							    it)
+					it)
+				      it))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - Refiled on [2019-01-02 Wed 00:00]
+ ;      :END:"
+
+```
+
+#### om-headline-set-logbook `(children headline)`
+
+Return **`headline`** with logbook drawer filled with **`children`**.
+**`children`** must be a list of plain-list and/or clock nodes.
+
+This function assumes that the logbook entries will be stored in a
+drawer immediately after planning and/or property-drawer nodes named
+via `org-log-into-drawer`. If `org-log-into-drawer` is nil, return
+**`headline`** unmodified.
+
+```el
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - Refiled on [2019-01-01 Tue 00:00]
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-set-logbook (list (om-build-plain-list (om-build-item! :paragraph "note"))))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-set-logbook (list (om-build-plain-list (om-build-item! :paragraph "note"))))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - Refiled on [2019-01-01 Tue 00:00]
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-set-logbook nil)
+     (om-to-trimmed-string))
+ ;; => "* headline"
+
+```
+
+#### om-headline-logbook-append-entry `(item headline)`
+
+Return **`headline`** with **`item`** node appended to the front of its logbook.
+
+The same assumptions and restrictions for [`om-headline-map-logbook`](#om-headline-map-logbook-fun-headline)
+apply here.
+
+```el
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-append-entry (om-build-item! :paragraph "note"))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - old note
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-append-entry (om-build-item! :paragraph "note"))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - note
+ ;      - old note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-append-entry (om-build-item! :paragraph "note"))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - note
+ ;      CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00
+ ;      :END:"
+
+```
+
+#### om-headline-logbook-append-open-clock `(unixtime headline)`
+
+Return **`headline`** with an open clock append to front of its logbook.
+**`unixtime`** is an integer that will be used to build the clock node.
+
+This does the functional equivalent of `org-clock-in` on the logbook.
+
+```el
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-append-open-clock (- 1546300800 (car (current-time-zone))))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      CLOCK: [2019-01-01 Tue 00:00]
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - old note
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-append-open-clock (- 1546300800 (car (current-time-zone))))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      CLOCK: [2019-01-01 Tue 00:00]
+ ;      - old note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; CLOCK: [2019-01-01 Tue 00:00]
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-append-open-clock (- 1546300800 (car (current-time-zone))))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      CLOCK: [2019-01-01 Tue 00:00]
+ ;      CLOCK: [2019-01-01 Tue 00:00]
+ ;      :END:"
+
+```
+
+#### om-headline-logbook-close-open-clock `(unixtime note headline)`
+
+Return **`headline`** with the first clock closed.
+
+The clock will be closed to **`unixtime`**, and **`note`** will be appended
+as a clock out note if supplied (as string). If no open clocks
+are found, return **`headline`** unmodified.
+
+This does the functional equivalent of `org-clock-out` on the logbook.
+
+```el
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - old note
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-close-open-clock (- 1546300800 (car (current-time-zone)))
+					   nil)
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - old note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; CLOCK: [2018-12-31 Mon 00:00]
+; - old note
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-close-open-clock (- 1546300800 (car (current-time-zone)))
+					   nil)
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00
+ ;      - old note
+ ;      :END:"
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-close-open-clock (- 1546300800 (car (current-time-zone)))
+					   "new note")
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00
+ ;      - new note
+ ;      - old note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; CLOCK: [2018-12-31 Mon 00:00]
+; CLOCK: [2018-12-31 Mon 00:00]
+; - old note
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-close-open-clock (- 1546300800 (car (current-time-zone)))
+					   nil)
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00
+ ;      CLOCK: [2018-12-31 Mon 00:00]
+ ;      - old note
+ ;      :END:"
+
+```
+
+
+### Headline (misc)
 
 #### om-headline-get-path `(headline)`
 
@@ -5184,8 +6046,8 @@ which will replace the original.
 ;; Selectively mark headlines as DONE
 (->> (om-parse-this-subtree)
      (om-match-map '(headline)
-		   (lambda (it)
-		     (om-set-property :todo-keyword "DONE" it)))
+       (lambda (it)
+	 (om-set-property :todo-keyword "DONE" it)))
      (om-to-trimmed-string))
  ;; => "* headline one
  ;      ** DONE headline two
@@ -5194,7 +6056,7 @@ which will replace the original.
 
 (->> (om-parse-this-subtree)
      (om-match-map* '(:first headline)
-		    (om-set-property :todo-keyword "DONE" it))
+       (om-set-property :todo-keyword "DONE" it))
      (om-to-trimmed-string))
  ;; => "* headline one
  ;      ** DONE headline two
@@ -5203,33 +6065,13 @@ which will replace the original.
 
 (->> (om-parse-this-subtree)
      (om-match-map '(:last headline)
-		   (-partial (function om-set-property)
-			     :todo-keyword "DONE"))
+       (-partial (function om-set-property)
+		 :todo-keyword "DONE"))
      (om-to-trimmed-string))
  ;; => "* headline one
  ;      ** TODO headline two
  ;      ** headline three
  ;      ** DONE headline four"
-
-;; Given the following contents:
-; * headline
-; :PROPERTIES:
-; :Effort:   0:30
-; :END:
-
-;; Match the literal property-drawer node and map the node-property inside if
-;; the property-drawer exists
-(let ((hl (om-parse-this-headline)))
-  (-if-let (pd (om-headline-get-properties-drawer hl))
-      (->> hl (om-match-map* (\` ((\, pd)
-				  node-property))
-			     (om-set-property :value "1:30" it))
-	   (om-to-trimmed-string))
-    (print "...or do something else if no drawer")))
- ;; => "* headline
- ;      :PROPERTIES:
- ;      :Effort:   1:30
- ;      :END:"
 
 ```
 
@@ -5248,8 +6090,8 @@ nodes which will be spliced in place of the original node.
 
 (->> (om-parse-this-subtree)
      (om-match-mapcat* '(:first headline)
-		       (list (om-build-headline! :title-text "1.5" :level 2)
-			     it))
+       (list (om-build-headline! :title-text "1.5" :level 2)
+	     it))
      (om-to-trimmed-string))
  ;; => "* one
  ;      ** 1.5
@@ -5567,8 +6409,8 @@ current buffer.
 
 (->> (om-parse-this-headline)
      (om-update* (->> (om-match-map '(:many item)
-				    (function om-item-toggle-checkbox)
-				    it)
+			(function om-item-toggle-checkbox)
+			it)
 		      (om-headline-update-item-statistics))))
  ;; Output these buffer contents
  ;; $> "* win grammy [3/3]
@@ -5711,6 +6553,121 @@ Update section under **`point`** using **`fun`**.
 
 ```
 
+#### om-do-some-headlines `(begin end fun)`
+
+Update some headlines in the current using **`fun`**.
+
+Headlines are updated using `om-update-this-headline` (see this for
+use and meaning of **`fun`**). Iteration is only performed for headlines
+that begin between **`begin`** and **`end`** points in the buffer. If either of
+these are nil, use `point-min` and `point-max` respectively.
+
+```el
+;; Given the following contents:
+; * one
+; * two
+; * three
+
+(om-do-some-headlines* 2 nil (om-set-property :todo-keyword "DONE" it))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      * DONE two
+ ;      * DONE three"
+
+(om-do-some-headlines* 2 10 (om-set-property :todo-keyword "DONE" it))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      * DONE two
+ ;      * three"
+
+```
+
+#### om-do-headlines `(fun)`
+
+Update all headlines in the current buffer using **`fun`**.
+
+Headlines are updated using `om-update-this-headline` (see this for
+use and meaning of **`fun`**).
+
+```el
+;; Given the following contents:
+; * one
+; * two
+; * three
+
+(om-do-headlines* (om-set-property :todo-keyword "DONE" it))
+ ;; Output these buffer contents
+ ;; $> "* DONE one
+ ;      * DONE two
+ ;      * DONE three"
+
+```
+
+#### om-do-some-subtrees `(begin end fun)`
+
+Update some toplevel subtrees in the current buffer using **`fun`**.
+
+Subtrees are updated using `om-update-this-subtree` (see this for use
+and meaning of **`fun`**). Iteration is only performed for headlines that
+begin between **`begin`** and **`end`** points in the buffer. If either of these
+are nil, use `point-min` and `point-max` respectively.
+
+```el
+;; Given the following contents:
+; * one [/]
+; ** DONE _one
+; ** DONE _two
+; * two [/]
+; ** DONE _one
+; ** DONE _two
+
+
+;; Given the following contents:
+; * one [/]
+; ** DONE _one
+; ** DONE _two
+; * two [2/2]
+; ** DONE _one
+; ** DONE _two
+
+
+;; Given the following contents:
+; * one [2/2]
+; ** DONE _one
+; ** DONE _two
+; * two [/]
+; ** DONE _one
+; ** DONE _two
+
+```
+
+#### om-do-subtrees `(fun)`
+
+Update all toplevel subtrees in the current buffer using **`fun`**.
+
+Subtrees are updated using `om-update-this-subtree` (see this for use
+and meaning of **`fun`**).
+
+```el
+;; Given the following contents:
+; * one [/]
+; ** DONE _one
+; ** DONE _two
+; * two [/]
+; ** DONE _one
+; ** DONE _two
+
+
+;; Given the following contents:
+; * one [2/2]
+; ** DONE _one
+; ** DONE _two
+; * two [2/2]
+; ** DONE _one
+; ** DONE _two
+
+```
+
 
 ### Misc
 
@@ -5731,7 +6688,7 @@ no examples :(
 ```
 
 
-<!-- 1.0.0 -->
+<!-- 1.1.0 -->
 
 # Acknowledgements
 
