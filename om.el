@@ -2667,9 +2667,8 @@ If string NOTE is supplied, append a note to the log entry."
        (om--log-replace-timestamp unixtime nil t)
        (om--build-log-item note)))
 
-(om--defun-kw om-build-log-note-type (type &key old new unixtime
-                                           username full-username
-                                           note)
+(om--defun-kw om-build-log-type (type &key old new unixtime username
+                                      full-username note)
   "Return an item for an arbitrary log entry.
 
 TYPE is a symbol corresponding to the car of one of the cells in
@@ -2686,8 +2685,8 @@ placeholders):
 - OLD: like NEW but for the old state/timestamp placeholder (%S)
 - UNIXTIME: an integer corresponding to the time to be used for the
   timestamp placeholders (%t/%T/%d/%D)
-- USERNAME: a symbol for the username (%u)
-- FULL-USERNAME: a symbol for the full username (%U)
+- USERNAME: a string for the username (%u)
+- FULL-USERNAME: a string for the full username (%U)
 
 If any of these arguments are not supplied but their placeholders
 are present in the heading determined by TYPE, the placeholders will

@@ -964,7 +964,68 @@
           (om-build-log-reschedule (om-build-timestamp! '(2019 1 2)) "noteworthy")
           (om-to-trimmed-string))
       => (:result "- Rescheduled from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\"
-                  "  noteworthy"))))
+                  "  noteworthy"))
+
+    (defexamples om-build-log-type
+      (let ((org-log-note-headings '((test . "Changed %s from %S on %t by %u")))
+            (ut (- 1546300800 (car (current-time-zone)))))
+        (->> (om-build-log-type 'test :unixtime ut :old "TODO" :new
+                                "DONE" :username "shadowbrokers"
+                                :note "We're coming for you")
+             (om-to-trimmed-string)))
+      => (:result
+          "- Changed \"DONE\" from \"TODO\" on [2019-01-01 Tue 00:00] by shadowbrokers \\\\"
+          "  We're coming for you")
+      :begin-hidden
+      (let ((org-log-note-headings '((test . "My note is %t"))))
+        (->> (- 1546300800 (car (current-time-zone)))
+             (om-build-log-type 'test :unixtime)
+             (om-to-trimmed-string)))
+      => "- My note is [2019-01-01 Tue 00:00]"
+      (let ((org-log-note-headings '((test . "My note is %T"))))
+        (->> (- 1546300800 (car (current-time-zone)))
+             (om-build-log-type 'test :unixtime)
+             (om-to-trimmed-string)))
+      => "- My note is <2019-01-01 Tue 00:00>"
+      (let ((org-log-note-headings '((test . "My note is %d"))))
+        (->> (- 1546300800 (car (current-time-zone)))
+             (om-build-log-type 'test :unixtime)
+             (om-to-trimmed-string)))
+      => "- My note is [2019-01-01 Tue]"
+      (let ((org-log-note-headings '((test . "My note is %D"))))
+        (->> (- 1546300800 (car (current-time-zone)))
+             (om-build-log-type 'test :unixtime)
+             (om-to-trimmed-string)))
+      => "- My note is <2019-01-01 Tue>"
+      (let ((org-log-note-headings '((test . "My name is %u"))))
+        (->> (om-build-log-type 'test :username "slim")
+             (om-to-trimmed-string)))
+      => "- My name is slim"
+      (let ((org-log-note-headings '((test . "My name is %U"))))
+        (->> (om-build-log-type 'test :full-username "slimshady")
+             (om-to-trimmed-string)))
+      => "- My name is slimshady"
+      (let ((org-log-note-headings '((test . "My note is %S"))))
+        (->> (om-build-log-type 'test :old "DONE")
+             (om-to-trimmed-string)))
+      => "- My note is \"DONE\""
+      (let ((org-log-note-headings '((test . "My note is %S"))))
+        (->> (om-build-timestamp! '(2019 1 1 0 0))
+             (om-build-log-type 'test :old)
+             (om-to-trimmed-string)))
+      => "- My note is \"[2019-01-01 Tue 00:00]\""
+      (let ((org-log-note-headings '((test . "My note is %s"))))
+        (->> (om-build-log-type 'test :new "DONE")
+             (om-to-trimmed-string)))
+      => "- My note is \"DONE\""
+      (let ((org-log-note-headings '((test . "My note is %s"))))
+        (->> (om-build-timestamp! '(2019 1 1 0 0))
+             (om-build-log-type 'test :new)
+             (om-to-trimmed-string)))
+      => "- My note is \"[2019-01-01 Tue 00:00]\""
+      :end-hidden
+      )
+    ))
 
 (def-example-group "Type Predicates"
   "Test node types."
@@ -3635,6 +3696,383 @@
                   ":PROPERTIES:"
                   ":ID:       FAKE"
                   ":END:"))
+
+    (defexamples-content om-headline-get-logbook
+      nil
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "- Refiled on [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-get-logbook)
+           (-map #'om-to-trimmed-string))
+      => '("- Refiled on [2019-01-01 Tue 00:00]")
+      (:buffer "* headline")
+      (->> (om-parse-this-headline)
+           (om-headline-get-logbook)
+           (-map #'om-to-trimmed-string))
+      => nil
+      :begin-hidden
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue]"
+               ":LOGBOOK:"
+               "- Refiled on [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-get-logbook)
+           (-map #'om-to-trimmed-string))
+      => '("- Refiled on [2019-01-01 Tue 00:00]")
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue]"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:"
+               ":LOGBOOK:"
+               "- Refiled on [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-get-logbook)
+           (-map #'om-to-trimmed-string))
+      => '("- Refiled on [2019-01-01 Tue 00:00]")
+      :end-hidden
+      )
+
+    ;; assume that all cases of property-drawer and planning nodes
+    ;; before logbook have been tested
+    (defexamples-content om-headline-map-logbook
+      nil
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "- Refiled on [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-map-logbook*
+             (--map 
+              (om-match-map* '(:many timestamp)
+                (om-timestamp-shift 1 'day it) it)
+              it))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "- Refiled on [2019-01-02 Wed 00:00]"
+                  ":END:"))
+
+    (defexamples-content om-headline-set-logbook
+      nil
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "- Refiled on [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-logbook
+            (list (om-build-plain-list (om-build-item! :paragraph "note"))))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "- note"
+                  ":END:")
+      (:buffer "* headline")
+      (->> (om-parse-this-headline)
+           (om-headline-set-logbook
+            (list (om-build-plain-list (om-build-item! :paragraph "note"))))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "- note"
+                  ":END:")
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "- Refiled on [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-logbook nil)
+           (om-to-trimmed-string))
+      => "* headline"
+
+      :begin-hidden
+
+      ;; case where planning and prop-drawer present
+
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue]"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:"
+               ":LOGBOOK:"
+               "- Refiled on [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-logbook
+            (list (om-build-plain-list (om-build-item! :paragraph "note"))))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: [2019-01-01 Tue]"
+                  ":PROPERTIES:"
+                  ":ID:       fake"
+                  ":END:"
+                  ":LOGBOOK:"
+                  "- note"
+                  ":END:")
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue]"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-logbook
+            (list (om-build-plain-list (om-build-item! :paragraph "note"))))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: [2019-01-01 Tue]"
+                  ":PROPERTIES:"
+                  ":ID:       fake"
+                  ":END:"
+                  ":LOGBOOK:"
+                  "- note"
+                  ":END:")
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue]"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:"
+               ":LOGBOOK:"
+               "- Refiled on [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-logbook nil)
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: [2019-01-01 Tue]"
+                  ":PROPERTIES:"
+                  ":ID:       fake"
+                  ":END:")
+
+      ;; case where only planning present
+
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue]"
+               ":LOGBOOK:"
+               "- Refiled on [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-logbook
+            (list (om-build-plain-list (om-build-item! :paragraph "note"))))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: [2019-01-01 Tue]"
+                  ":LOGBOOK:"
+                  "- note"
+                  ":END:")
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue]")
+      (->> (om-parse-this-headline)
+           (om-headline-set-logbook
+            (list (om-build-plain-list (om-build-item! :paragraph "note"))))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: [2019-01-01 Tue]"
+                  ":LOGBOOK:"
+                  "- note"
+                  ":END:")
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue]"
+               ":LOGBOOK:"
+               "- Refiled on [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-logbook nil)
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: [2019-01-01 Tue]")
+
+      ;; case where only prop-drawer present
+
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:"
+               ":LOGBOOK:"
+               "- Refiled on [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-logbook
+            (list (om-build-plain-list (om-build-item! :paragraph "note"))))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":ID:       fake"
+                  ":END:"
+                  ":LOGBOOK:"
+                  "- note"
+                  ":END:")
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-logbook
+            (list (om-build-plain-list (om-build-item! :paragraph "note"))))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":ID:       fake"
+                  ":END:"
+                  ":LOGBOOK:"
+                  "- note"
+                  ":END:")
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:"
+               ":LOGBOOK:"
+               "- Refiled on [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-logbook nil)
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":ID:       fake"
+                  ":END:")
+      :end-hidden
+      )
+
+    ;; since these next three call `om-headline-map-logbook' assume
+    ;; that all metadata combinations will work with this and only
+    ;; test the simple cases where there is only a logbook
+    (defexamples-content om-headline-logbook-append-entry
+      nil
+      (:buffer "* headline")
+      (->> (om-parse-this-headline)
+           (om-headline-logbook-append-entry
+            (om-build-item! :paragraph "note"))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "- note"
+                  ":END:")
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "- old note"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-logbook-append-entry
+            (om-build-item! :paragraph "note"))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "- note"
+                  "- old note"
+                  ":END:")
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-logbook-append-entry
+            (om-build-item! :paragraph "note"))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "- note"
+                  "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00"
+                  ":END:"))
+
+    (defexamples-content om-headline-logbook-append-open-clock
+      nil
+      (:buffer "* headline")
+      (->> (om-parse-this-headline)
+           (om-headline-logbook-append-open-clock
+            (- 1546300800 (car (current-time-zone))))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "CLOCK: [2019-01-01 Tue 00:00]"
+                  ":END:")
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "- old note"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-logbook-append-open-clock
+            (- 1546300800 (car (current-time-zone))))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "CLOCK: [2019-01-01 Tue 00:00]"
+                  "- old note"
+                  ":END:")
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-logbook-append-open-clock
+            (- 1546300800 (car (current-time-zone))))
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "CLOCK: [2019-01-01 Tue 00:00]"
+                  "CLOCK: [2019-01-01 Tue 00:00]"
+                  ":END:"))
+
+    (defexamples-content om-headline-logbook-close-open-clock
+      nil
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "- old note"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-logbook-close-open-clock
+            (- 1546300800 (car (current-time-zone))) nil)
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "- old note"
+                  ":END:")
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "CLOCK: [2018-12-31 Mon 00:00]"
+               "- old note"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-logbook-close-open-clock
+            (- 1546300800 (car (current-time-zone))) nil)
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+                  "- old note"
+                  ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-logbook-close-open-clock
+            (- 1546300800 (car (current-time-zone))) "new note")
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+                  "- new note"
+                  "- old note"
+                  ":END:")
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "CLOCK: [2018-12-31 Mon 00:00]"
+               "CLOCK: [2018-12-31 Mon 00:00]"
+               "- old note"
+               ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-logbook-close-open-clock
+            (- 1546300800 (car (current-time-zone))) nil)
+           (om-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+                  "CLOCK: [2018-12-31 Mon 00:00]"
+                  "- old note"
+                  ":END:")))
+
+  (def-example-subgroup "Headline (misc)"
+    nil
 
     (defexamples-content om-headline-get-path
       nil

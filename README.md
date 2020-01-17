@@ -292,6 +292,7 @@ Build item nodes for inclusion in headline logbooks
 * [om-build-log-delschedule](#om-build-log-delschedule-unixtime-old-timestamp-optional-note) `(unixtime old-timestamp &optional note)`
 * [om-build-log-redeadline](#om-build-log-redeadline-unixtime-old-timestamp-optional-note) `(unixtime old-timestamp &optional note)`
 * [om-build-log-reschedule](#om-build-log-reschedule-unixtime-old-timestamp-optional-note) `(unixtime old-timestamp &optional note)`
+* [om-build-log-type](#om-build-log-type-type-key-old-new-unixtime-username-full-username-note) `(type &key old new unixtime username full-username note)`
 
 ## Type Predicates
 
@@ -436,6 +437,15 @@ Set, get, and map the children of branch nodes.
 * [om-headline-get-node-property](#om-headline-get-node-property-key-headline) `(key headline)`
 * [om-headline-set-node-property](#om-headline-set-node-property-key-value-headline) `(key value headline)`
 * [om-headline-map-node-property](#om-headline-map-node-property-key-fun-headline) `(key fun headline)`
+* [om-headline-get-logbook](#om-headline-get-logbook-headline) `(headline)`
+* [om-headline-map-logbook](#om-headline-map-logbook-fun-headline) `(fun headline)`
+* [om-headline-set-logbook](#om-headline-set-logbook-children-headline) `(children headline)`
+* [om-headline-logbook-append-entry](#om-headline-logbook-append-entry-item-headline) `(item headline)`
+* [om-headline-logbook-append-open-clock](#om-headline-logbook-append-open-clock-unixtime-headline) `(unixtime headline)`
+* [om-headline-logbook-close-open-clock](#om-headline-logbook-close-open-clock-unixtime-note-headline) `(unixtime note headline)`
+
+### Headline (misc)
+
 * [om-headline-get-path](#om-headline-get-path-headline) `(headline)`
 * [om-headline-update-item-statistics](#om-headline-update-item-statistics-headline) `(headline)`
 * [om-headline-update-todo-statistics](#om-headline-update-todo-statistics-headline) `(headline)`
@@ -2502,6 +2512,44 @@ If string **`note`** is supplied, append a note to the log entry.
     (om-to-trimmed-string))
  ;; => "- Rescheduled from \"[2019-01-02 Wed]\" on [2019-01-01 Tue 00:00] \\\\
  ;        noteworthy"
+
+```
+
+#### om-build-log-type `(type &key old new unixtime username full-username note)`
+
+Return an item for an arbitrary log entry.
+
+**`type`** is a symbol corresponding to the car of one of the cells in
+`org-log-note-headings`. Unlike the other log entry build functions
+in this package, this function will not use the default value of
+`org-log-note-headings` which means it can be used for customly
+formatted log entries.
+
+The arguments correspond to the following formatting placeholders
+(see `org-log-note-headings` for more information on these
+placeholders):
+- **`new`**: either a string or timestamp node that will replace the
+    new state/timestamp placeholder (%s)
+- **`old`**: like **`new`** but for the old state/timestamp placeholder (%S)
+- **`unixtime`**: an integer corresponding to the time to be used for the
+    timestamp placeholders (%t/%T/%d/%D)
+- **`username`**: a string for the username (%u)
+- **`full-username`**: a string for the full username (%U)
+
+If any of these arguments are not supplied but their placeholders
+are present in the heading determined by **`type`**, the placeholders will
+not be substituted.
+
+If string **`note`** is supplied, append a note to the log entry.
+
+```el
+(let ((org-log-note-headings '((test . "Changed %s from %S on %t by %u")))
+      (ut (- 1546300800 (car (current-time-zone)))))
+  (->> (om-build-log-type 'test
+			  :unixtime ut :old "TODO" :new "DONE" :username "shadowbrokers" :note "We're coming for you")
+       (om-to-trimmed-string)))
+ ;; => "- Changed \"DONE\" from \"TODO\" on [2019-01-01 Tue 00:00] by shadowbrokers \\\\
+ ;        We're coming for you"
 
 ```
 
@@ -4812,6 +4860,298 @@ a modified node-property value.
  ;      :END:"
 
 ```
+
+#### om-headline-get-logbook `(headline)`
+
+Return the children of the logbook drawer of **`headline`**.
+This function assumes that the logbook entries are in a drawer
+immediately after planning and/or property-drawer nodes named
+via `org-log-into-drawer`. If `org-log-into-drawer` is nil, always
+return nil.
+
+```el
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - Refiled on [2019-01-01 Tue 00:00]
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-get-logbook)
+     (-map (function om-to-trimmed-string)))
+ ;; => '("- Refiled on [2019-01-01 Tue 00:00]")
+
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-get-logbook)
+     (-map (function om-to-trimmed-string)))
+ ;; => nil
+
+```
+
+#### om-headline-map-logbook `(fun headline)`
+
+Return **`headline`** node with property value matching `key` modified by **`fun`**.
+
+**`fun`** is a unary function that takes a list of child nodes from the
+logbook value and returns a modified list of child nodes.
+
+This function assumes that the logbook entries will be stored in a
+drawer immediately after planning and/or property-drawer nodes named
+via `org-log-into-drawer`. If `org-log-into-drawer` is nil, return
+**`headline`** unmodified.
+
+```el
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - Refiled on [2019-01-01 Tue 00:00]
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-map-logbook* (--map (om-match-map* '(:many timestamp)
+					(om-timestamp-shift 1 'day
+							    it)
+					it)
+				      it))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - Refiled on [2019-01-02 Wed 00:00]
+ ;      :END:"
+
+```
+
+#### om-headline-set-logbook `(children headline)`
+
+Return **`headline`** with logbook drawer filled with **`children`**.
+**`children`** must be a list of plain-list and/or clock nodes.
+
+This function assumes that the logbook entries will be stored in a
+drawer immediately after planning and/or property-drawer nodes named
+via `org-log-into-drawer`. If `org-log-into-drawer` is nil, return
+**`headline`** unmodified.
+
+```el
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - Refiled on [2019-01-01 Tue 00:00]
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-set-logbook (list (om-build-plain-list (om-build-item! :paragraph "note"))))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-set-logbook (list (om-build-plain-list (om-build-item! :paragraph "note"))))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - Refiled on [2019-01-01 Tue 00:00]
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-set-logbook nil)
+     (om-to-trimmed-string))
+ ;; => "* headline"
+
+```
+
+#### om-headline-logbook-append-entry `(item headline)`
+
+Return **`headline`** with **`item`** node appended to the front of its logbook.
+
+The same assumptions and restrictions for [`om-headline-map-logbook`](#om-headline-map-logbook-fun-headline)
+apply here.
+
+```el
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-append-entry (om-build-item! :paragraph "note"))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - old note
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-append-entry (om-build-item! :paragraph "note"))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - note
+ ;      - old note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-append-entry (om-build-item! :paragraph "note"))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - note
+ ;      CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00
+ ;      :END:"
+
+```
+
+#### om-headline-logbook-append-open-clock `(unixtime headline)`
+
+Return **`headline`** with an open clock append to front of its logbook.
+**`unixtime`** is an integer that will be used to build the clock node.
+
+This does the functional equivalent of `org-clock-in` on the logbook.
+
+```el
+;; Given the following contents:
+; * headline
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-append-open-clock (- 1546300800 (car (current-time-zone))))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      CLOCK: [2019-01-01 Tue 00:00]
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - old note
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-append-open-clock (- 1546300800 (car (current-time-zone))))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      CLOCK: [2019-01-01 Tue 00:00]
+ ;      - old note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; CLOCK: [2019-01-01 Tue 00:00]
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-append-open-clock (- 1546300800 (car (current-time-zone))))
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      CLOCK: [2019-01-01 Tue 00:00]
+ ;      CLOCK: [2019-01-01 Tue 00:00]
+ ;      :END:"
+
+```
+
+#### om-headline-logbook-close-open-clock `(unixtime note headline)`
+
+Return **`headline`** with the first clock closed.
+
+The clock will be closed to **`unixtime`**, and **`note`** will be appended
+as a clock out note if supplied (as string). If no open clocks
+are found, return **`headline`** unmodified.
+
+This does the functional equivalent of `org-clock-out` on the logbook.
+
+```el
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - old note
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-close-open-clock (- 1546300800 (car (current-time-zone)))
+					   nil)
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - old note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; CLOCK: [2018-12-31 Mon 00:00]
+; - old note
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-close-open-clock (- 1546300800 (car (current-time-zone)))
+					   nil)
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00
+ ;      - old note
+ ;      :END:"
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-close-open-clock (- 1546300800 (car (current-time-zone)))
+					   "new note")
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00
+ ;      - new note
+ ;      - old note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; CLOCK: [2018-12-31 Mon 00:00]
+; CLOCK: [2018-12-31 Mon 00:00]
+; - old note
+; :END:
+
+(->> (om-parse-this-headline)
+     (om-headline-logbook-close-open-clock (- 1546300800 (car (current-time-zone)))
+					   nil)
+     (om-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00
+ ;      CLOCK: [2018-12-31 Mon 00:00]
+ ;      - old note
+ ;      :END:"
+
+```
+
+
+### Headline (misc)
 
 #### om-headline-get-path `(headline)`
 
