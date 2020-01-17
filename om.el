@@ -3530,13 +3530,15 @@ If multiple properties with KEY are present, only return the first."
 If a property matching KEY is present, set it to VALUE. If multiple
 properties matching KEY are present, only set the first."
   (om-headline-map-node-properties*
-    (let ((np (om-build-node-property key value)))
-      (if (not it) (list np)
-        ;; replace first np matching `KEY' or add to the front of
-        ;; np's if not found
-        (-if-let (i (--find-index (equal key (om-get-property :key it)) it))
-            (-replace-at i np it)
-          (cons np it))))
+    (-if-let (np (-some->> value (om-build-node-property key)))
+        (if (not it) (list np)
+          ;; replace first np matching `KEY' or add to the front of
+          ;; np's if not found
+          (-if-let (i (--find-index (equal key (om-get-property :key it)) it))
+              (-replace-at i np it)
+            (cons np it)))
+      ;; remove first property matching `KEY' if `VALUE' is nil
+      (--remove-first (equal key (om-get-property :value it)) it))
     headline))
 
 (om--defun* om-headline-map-node-property (key fun headline)

@@ -4835,6 +4835,11 @@ properties matching **`key`** are present, only set the first.
  ;      :ID:       real
  ;      :END:"
 
+(->> (om-parse-this-headline)
+     (om-headline-set-node-property "ID" nil)
+     (om-to-trimmed-string))
+ ;; => "* headline"
+
 ```
 
 #### om-headline-map-node-property `(key fun headline)`

@@ -3681,7 +3681,11 @@
       => (:result "* headline"
                   ":PROPERTIES:"
                   ":ID:       real"
-                  ":END:"))
+                  ":END:")
+      (->> (om-parse-this-headline)
+           (om-headline-set-node-property "ID" nil)
+           (om-to-trimmed-string))
+      => "* headline")
 
     (defexamples-content om-headline-map-node-property
       nil
