@@ -5286,12 +5286,12 @@
       (:buffer "* one"
                "* two"
                "* three")
-      (om-do-some-headlines* 2 nil
+      (om-do-some-headlines* [2 nil]
         (om-set-property :todo-keyword "DONE" it))
       $> (:result "* one"
                   "* DONE two"
                   "* DONE three")
-      (om-do-some-headlines* 2 10
+      (om-do-some-headlines* [2 10]
         (om-set-property :todo-keyword "DONE" it))
       $> (:result "* one"
                   "* DONE two"
@@ -5316,7 +5316,7 @@
                "* two [/]"
                "** DONE _one"
                "** DONE _two")
-      (om-do-some-subtrees* 2 nil
+      (om-do-some-subtrees* [2 nil]
         (om-headline-update-todo-statistics))
       $> (:buffer "* one [/]"
                   "** DONE _one"
@@ -5324,7 +5324,7 @@
                   "* two [2/2]"
                   "** DONE _one"
                   "** DONE _two")
-      (om-do-some-subtrees* nil 10
+      (om-do-some-subtrees* [nil 10]
         (om-headline-update-todo-statistics))
       $> (:buffer "* one [2/2]"
                   "** DONE _one"

@@ -184,6 +184,7 @@ Parse buffers to trees.
 * [om-parse-item-at](#om-parse-item-at-point) `(point)`
 * [om-parse-section-at](#om-parse-section-at-point) `(point)`
 * [om-parse-this-toplevel-section](#om-parse-this-toplevel-section-nil) `nil`
+* [om-this-buffer-has-headlines](#om-this-buffer-has-headlines-nil) `nil`
 
 ## Building
 
@@ -515,9 +516,9 @@ Map node manipulations into buffers.
 * [om-update-headline-at](#om-update-headline-at-point-fun) `(point fun)`
 * [om-update-subtree-at](#om-update-subtree-at-point-fun) `(point fun)`
 * [om-update-section-at](#om-update-section-at-point-fun) `(point fun)`
-* [om-do-some-headlines](#om-do-some-headlines-begin-end-fun) `(begin end fun)`
+* [om-do-some-headlines](#om-do-some-headlines-where-fun) `(where fun)`
 * [om-do-headlines](#om-do-headlines-fun) `(fun)`
-* [om-do-some-subtrees](#om-do-some-subtrees-begin-end-fun) `(begin end fun)`
+* [om-do-some-subtrees](#om-do-some-subtrees-where-fun) `(where fun)`
 * [om-do-subtrees](#om-do-subtrees-fun) `(fun)`
 
 ### Misc
@@ -879,6 +880,26 @@ If there is no such section, return nil.
 (->> (om-parse-this-toplevel-section)
      (om-to-trimmed-string))
  ;; => ""
+
+```
+
+#### om-this-buffer-has-headlines `nil`
+
+Return t if the current buffer has headlines, else return nil.
+
+```el
+;; Given the following contents:
+; not headline
+; * headline
+
+(om-this-buffer-has-headlines)
+ ;; => t
+
+;; Given the following contents:
+; not headline
+
+(om-this-buffer-has-headlines)
+ ;; => nil
 
 ```
 
@@ -6579,14 +6600,22 @@ Update section under **`point`** using **`fun`**.
 
 ```
 
-#### om-do-some-headlines `(begin end fun)`
+#### om-do-some-headlines `(where fun)`
 
 Update some headlines in the current using **`fun`**.
 
+**`where`** describes the location of headlines to be parsed and is one
+of the following:
+- `n`: parse up to index `n` headlines (where 0 is the first); if negative
+    start counting from the last headline (where -1 refers to the last)
+- `(m n)`: like `n` but parse after index `m` headlines; `m` and `n` may both
+    be similarly negative
+- [`a` `b`]: parse all headlines whose first point falls between points
+    `a` and `b` in the buffer; if `a` and `b` are nil, use `point-min` and
+    `point-max` respectively.
+
 Headlines are updated using `om-update-this-headline` (see this for
-use and meaning of **`fun`**). Iteration is only performed for headlines
-that begin between **`begin`** and **`end`** points in the buffer. If either of
-these are nil, use `point-min` and `point-max` respectively.
+use and meaning of **`fun`**).
 
 ```el
 ;; Given the following contents:
@@ -6594,13 +6623,15 @@ these are nil, use `point-min` and `point-max` respectively.
 ; * two
 ; * three
 
-(om-do-some-headlines* 2 nil (om-set-property :todo-keyword "DONE" it))
+(om-do-some-headlines* [2 nil]
+  (om-set-property :todo-keyword "DONE" it))
  ;; Output these buffer contents
  ;; $> "* one
  ;      * DONE two
  ;      * DONE three"
 
-(om-do-some-headlines* 2 10 (om-set-property :todo-keyword "DONE" it))
+(om-do-some-headlines* [2 10]
+  (om-set-property :todo-keyword "DONE" it))
  ;; Output these buffer contents
  ;; $> "* one
  ;      * DONE two
@@ -6629,14 +6660,13 @@ use and meaning of **`fun`**).
 
 ```
 
-#### om-do-some-subtrees `(begin end fun)`
+#### om-do-some-subtrees `(where fun)`
 
 Update some toplevel subtrees in the current buffer using **`fun`**.
 
 Subtrees are updated using `om-update-this-subtree` (see this for use
-and meaning of **`fun`**). Iteration is only performed for headlines that
-begin between **`begin`** and **`end`** points in the buffer. If either of these
-are nil, use `point-min` and `point-max` respectively.
+and meaning of **`fun`**). The meaning of **`where`** is the same as that of
+[`om-do-some-headlines`](#om-do-some-headlines-where-fun).
 
 ```el
 ;; Given the following contents:

@@ -4722,59 +4722,140 @@ returns a modified node."
 
 ;;; headline iteration
 
-(om--defun* om-do-some-headlines (begin end fun)
+(defun om--do-headlines-where (where fun-forward fun-backward
+                                     fun-region)
+  "Call functions depending on WHERE.
+FUN-FORWARD is a function to be applied for indices in the forward
+direction, FUN-BACKWARD is a function to be applied for indices in the
+backward direction, and FUN-REGION is a function to be applied between
+regions. All take two arguments (the bounds of the application)."
+  (declare (indent 1))
+  (cl-flet
+      ((int-or-nil-p
+        (x)
+        (or (null x) (integerp x))))
+    (pcase where
+      ;; parse N
+      ((and (pred integerp) n)
+       (if (<= 0 n) (funcall fun-forward 0 n)
+         (funcall fun-backward 0 (1- (- n)))))
+      ;; parse M-N
+      (`(,(and (pred integerp) m) ,(and (pred integerp) n))
+       (cond
+        ((<= 0 m n) (funcall fun-forward m n))
+        ((<= m n -1) (funcall fun-backward (1- (- n)) (1- (- m))))
+        ((< n m) (om--arg-error "M must be less than or equal to N"))
+        (t (om--arg-error "M and N must be the same sign"))))
+      ;; parse region between A and B
+      (`[,(and (pred int-or-nil-p) a) ,(and (pred int-or-nil-p) b)]
+       (let ((a (or a (point-min)))
+             (b (or b (point-max))))
+         (funcall fun-region a b)))
+      (_ (om--arg-error "Invalid 'where' specification: Got %S" where)))))
+
+(defmacro om--apply-n (m n re backward? iterate-form parse-form)
+  (declare (indent 4))
+  (let ((start (if backward? '(point-max) '(point-min)))
+        (search (if backward? 're-search-backward 're-search-forward)))
+    `(save-excursion
+       (goto-char ,start)
+       (when (,search ,re nil t)
+         (beginning-of-line)
+         (let ((i 0))
+           (when (= 0 ,m) ,parse-form)
+           (setq i (1+ i))
+           ;; loop through the rest
+           (while (and ,iterate-form (<= i ,n))
+             (when (<= ,m i) ,parse-form)
+             (setq i (1+ i))))))))
+
+(defmacro om--apply-region (begin end re iterate-form parse-form)
+  (declare (indent 3))
+  `(save-excursion
+     (goto-char ,end)
+       (when (re-search-backward ,re nil t)
+         (beginning-of-line)
+         ,parse-form
+         ;; loop through the rest
+         (while (and ,iterate-form (<= ,begin (point)))
+           ,parse-form))))
+
+(om--defun* om-do-some-headlines (where fun)
   "Update some headlines in the current using FUN.
 
+WHERE describes the location of headlines to be parsed and is one
+of the following:
+- N: parse up to index N headlines (where 0 is the first); if negative
+  start counting from the last headline (where -1 refers to the last)
+- (M N): like N but parse after index M headlines; M and N may both
+  be similarly negative
+- [A B]: parse all headlines whose first point falls between points
+  A and B in the buffer; if A and B are nil, use `point-min' and
+  `point-max' respectively.
+
 Headlines are updated using `om-update-this-headline' (see this for
-use and meaning of FUN). Iteration is only performed for headlines
-that begin between BEGIN and END points in the buffer. If either of
-these are nil, use `point-min' and `point-max' respectively."
-  (let ((begin (or begin (point-min)))
-        (end (or end (point-max))))
-    (save-excursion
-      (goto-char end)
-      ;; iterate backwards, its actually simpler since we don't need
-      ;; to worry about the toplevel section at the beginning
-      (while (and (outline-previous-heading) (<= begin (point)))
-        (om-update-this-headline fun)))))
+use and meaning of FUN)."
+  (cl-flet
+      ((apply-n-forward
+        (m n)
+        (om--apply-n m n "^\\*" nil
+          (outline-next-heading)
+          (om-update-this-headline fun)))
+       (apply-n-backward
+        (m n)
+        (om--apply-n m n "^\\*" t
+          (outline-previous-heading)
+          (om-update-this-headline fun)))
+       (apply-region
+        (begin end)
+        (om--apply-region begin end "^\\*"
+          (outline-previous-heading)
+          (om-update-this-headline fun))))
+    (om--do-headlines-where where
+      #'apply-n-forward
+      #'apply-n-backward
+      #'apply-region)))
 
 (om--defun* om-do-headlines (fun)
   "Update all headlines in the current buffer using FUN.
 
 Headlines are updated using `om-update-this-headline' (see this for
 use and meaning of FUN)."
-  (om-do-some-headlines nil nil fun))
+  (om-do-some-headlines [nil nil] fun))
 
-(om--defun* om-do-some-subtrees (begin end fun)
+(om--defun* om-do-some-subtrees (where fun)
   "Update some toplevel subtrees in the current buffer using FUN.
 
 Subtrees are updated using `om-update-this-subtree' (see this for use
-and meaning of FUN). Iteration is only performed for headlines that
-begin between BEGIN and END points in the buffer. If either of these
-are nil, use `point-min' and `point-max' respectively."
-  (let ((begin (or begin (point-min)))
-        (end (or end (point-max))))
-    (save-excursion
-      (goto-char end)
-      ;; goto last toplevel headline
-      (while (and (/= ?* (char-after)) (outline-previous-heading)))
-      ;; if on a headline, parse it
-      (when (= ?* (char-after))
-        (om-update-this-subtree fun))
-      ;; parse the rest of the headlines
-      (let ((cur-point (point)))
-        (org-backward-heading-same-level 1 t)
-        (while (and (/= (point) cur-point) (<= begin (point)))
-          (om-update-this-subtree fun)
-          (setq cur-point (point))
-          (org-backward-heading-same-level 1 t))))))
+and meaning of FUN). The meaning of WHERE is the same as that of
+`om-do-some-headlines'."
+  (cl-flet
+      ((apply-n-forward
+        (m n)
+        (om--apply-n m n "^\\* " nil
+          (org-forward-heading-same-level 1 t)
+          (om-update-this-subtree fun)))
+       (apply-n-backward
+        (m n)
+        (om--apply-n m n "^\\* " t
+          (org-backward-heading-same-level 1 t)
+          (om-update-this-subtree fun)))
+       (apply-region
+        (begin end)
+        (om--apply-region begin end "^\\* "
+          (org-backward-heading-same-level 1 t)
+          (om-update-this-subtree fun))))
+    (om--do-headlines-where where
+      #'apply-n-forward
+      #'apply-n-backward
+      #'apply-region)))
 
 (om--defun* om-do-subtrees (fun)
   "Update all toplevel subtrees in the current buffer using FUN.
 
 Subtrees are updated using `om-update-this-subtree' (see this for use
 and meaning of FUN)."
-  (om-do-some-subtrees nil nil fun))
+  (om-do-some-subtrees [nil nil] fun))
 
 (provide 'om)
 ;;; om.el ends here
