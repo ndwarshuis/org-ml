@@ -183,6 +183,7 @@ Parse buffers to trees.
 * [om-parse-subtree-at](#om-parse-subtree-at-point) `(point)`
 * [om-parse-item-at](#om-parse-item-at-point) `(point)`
 * [om-parse-section-at](#om-parse-section-at-point) `(point)`
+* [om-parse-this-toplevel-section](#om-parse-this-toplevel-section-nil) `nil`
 
 ## Building
 
@@ -851,6 +852,31 @@ the section at the top of the org buffer.
 
 ;; Return nil if no section at all
 (->> (om-parse-section-at 1)
+     (om-to-trimmed-string))
+ ;; => ""
+
+```
+
+#### om-parse-this-toplevel-section `nil`
+
+Return section node corresponding to the top of the current buffer.
+If there is no such section, return nil.
+
+```el
+;; Given the following contents:
+; over headline
+; * headline
+; under headline
+
+(->> (om-parse-this-toplevel-section)
+     (om-to-trimmed-string))
+ ;; => "over headline"
+
+;; Given the following contents:
+; * headline
+; under headline
+
+(->> (om-parse-this-toplevel-section)
      (om-to-trimmed-string))
  ;; => ""
 

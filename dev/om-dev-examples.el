@@ -225,7 +225,31 @@
     (:comment "Return nil if no section at all")
     (->> (om-parse-section-at 1)
          (om-to-trimmed-string))
-    => ""))
+    => "")
+
+  (defexamples-content om-parse-this-toplevel-section
+    nil
+    (:buffer "over headline"
+             "* headline"
+             "under headline")
+    (->> (om-parse-this-toplevel-section)
+         (om-to-trimmed-string))
+    => "over headline"
+    (:buffer "* headline"
+             "under headline")
+    (->> (om-parse-this-toplevel-section)
+         (om-to-trimmed-string))
+    => "")
+
+  (defexamples-content om-this-buffer-has-headlines
+    nil
+    (:buffer "not headline"
+             "* headline")
+    (om-this-buffer-has-headlines)
+    => t
+    (:buffer "not headline")
+    (om-this-buffer-has-headlines)
+    => nil))
 
 (def-example-group "Building"
   "Build new nodes."

@@ -4581,7 +4581,7 @@ the section at the top of the org buffer."
                (body `(,call (point))))
           (eval `(defun ,name () ,doc ,body)))))
 
-(defun om-parse-this-top-level-section ()
+(defun om-parse-this-toplevel-section ()
   "Return section node corresponding to the top of the current buffer.
 If there is no such section, return nil."
   (save-excursion
