@@ -6623,6 +6623,19 @@ use and meaning of **`fun`**).
 ; * two
 ; * three
 
+(om-do-some-headlines* 0 (om-set-property :todo-keyword "DONE" it))
+ ;; Output these buffer contents
+ ;; $> "* DONE one
+ ;      * two
+ ;      * three"
+
+(om-do-some-headlines* '(0 1)
+  (om-set-property :todo-keyword "DONE" it))
+ ;; Output these buffer contents
+ ;; $> "* DONE one
+ ;      * DONE two
+ ;      * three"
+
 (om-do-some-headlines* [2 nil]
   (om-set-property :todo-keyword "DONE" it))
  ;; Output these buffer contents
@@ -6672,28 +6685,46 @@ and meaning of **`fun`**). The meaning of **`where`** is the same as that of
 ;; Given the following contents:
 ; * one [/]
 ; ** DONE _one
-; ** DONE _two
 ; * two [/]
 ; ** DONE _one
-; ** DONE _two
+; * three [/]
+; ** DONE _one
+
+
+;; Given the following contents:
+; * one [1/1]
+; ** DONE _one
+; * two [/]
+; ** DONE _one
+; * three [/]
+; ** DONE _one
+
+
+;; Given the following contents:
+; * one [1/1]
+; ** DONE _one
+; * two [1/1]
+; ** DONE _one
+; * three [/]
+; ** DONE _one
 
 
 ;; Given the following contents:
 ; * one [/]
 ; ** DONE _one
-; ** DONE _two
-; * two [2/2]
+; * two [1/1]
 ; ** DONE _one
-; ** DONE _two
+; * three [1/1]
+; ** DONE _one
 
 
 ;; Given the following contents:
-; * one [2/2]
+; * one [1/1]
 ; ** DONE _one
-; ** DONE _two
 ; * two [/]
 ; ** DONE _one
-; ** DONE _two
+; * three [/]
+; ** DONE _one
 
 ```
 

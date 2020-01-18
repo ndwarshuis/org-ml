@@ -5286,6 +5286,16 @@
       (:buffer "* one"
                "* two"
                "* three")
+      (om-do-some-headlines* 0
+        (om-set-property :todo-keyword "DONE" it))
+      $> (:result "* DONE one"
+                  "* two"
+                  "* three")
+      (om-do-some-headlines* '(0 1)
+        (om-set-property :todo-keyword "DONE" it))
+      $> (:result "* DONE one"
+                  "* DONE two"
+                  "* three")
       (om-do-some-headlines* [2 nil]
         (om-set-property :todo-keyword "DONE" it))
       $> (:result "* one"
@@ -5312,26 +5322,42 @@
       nil
       (:buffer "* one [/]"
                "** DONE _one"
-               "** DONE _two"
                "* two [/]"
                "** DONE _one"
-               "** DONE _two")
+               "* three [/]"
+               "** DONE _one")
+      (om-do-some-subtrees* 0
+        (om-headline-update-todo-statistics))
+      $> (:buffer "* one [1/1]"
+                  "** DONE _one"
+                  "* two [/]"
+                  "** DONE _one"
+                  "* three [/]"
+                  "** DONE _one")
+      (om-do-some-subtrees* '(0 1)
+        (om-headline-update-todo-statistics))
+      $> (:buffer "* one [1/1]"
+                  "** DONE _one"
+                  "* two [1/1]"
+                  "** DONE _one"
+                  "* three [/]"
+                  "** DONE _one")
       (om-do-some-subtrees* [2 nil]
         (om-headline-update-todo-statistics))
       $> (:buffer "* one [/]"
                   "** DONE _one"
-                  "** DONE _two"
-                  "* two [2/2]"
+                  "* two [1/1]"
                   "** DONE _one"
-                  "** DONE _two")
-      (om-do-some-subtrees* [nil 10]
+                  "* three [1/1]"
+                  "** DONE _one")
+      (om-do-some-subtrees* [nil 5]
         (om-headline-update-todo-statistics))
-      $> (:buffer "* one [2/2]"
+      $> (:buffer "* one [1/1]"
                   "** DONE _one"
-                  "** DONE _two"
                   "* two [/]"
                   "** DONE _one"
-                  "** DONE _two"))
+                  "* three [/]"
+                  "** DONE _one"))
 
     (defexamples-content om-do-subtrees
       nil
