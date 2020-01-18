@@ -4751,7 +4751,7 @@ regions. All take two arguments (the bounds of the application)."
        (let ((a (or a (point-min)))
              (b (or b (point-max))))
          (funcall fun-region a b)))
-      (_ (om--arg-error "Invalid 'where' specification: Got %S" where)))))
+      (e (om--arg-error "Invalid 'where' specification: Got %S" e)))))
 
 (defmacro om--apply-n (m n re backward? iterate-form parse-form)
   (declare (indent 4))
