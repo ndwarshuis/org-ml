@@ -4581,6 +4581,14 @@ the section at the top of the org buffer."
                (body `(,call (point))))
           (eval `(defun ,name () ,doc ,body)))))
 
+(defun om-parse-this-top-level-section ()
+  "Return section node corresponding to the top of the current buffer.
+If there is no such section, return nil."
+  (save-excursion
+    (goto-char (point-min))
+    (unless (= ?* (char-after))
+      (om-parse-this-section))))
+
 (defun om-parse-this-buffer ()
   "Return org-data document tree for the current buffer.
 Contrary to the org-element specification, the org-data element
@@ -4589,6 +4597,12 @@ returned from this function will have :begin and :end properties."
          (b (if c (om--get-property-nocheck :begin (-first-item c)) 1))
          (e (if c (om--get-property-nocheck :end (-last-item c)) 1)))
     (om--construct 'org-data `(:begin ,b :end ,e) c)))
+
+(defun om-this-buffer-has-headlines ()
+  "Return t if the current buffer has headlines, else return nil."
+  (save-excursion
+    (goto-char (point-min))
+    (and (re-search-forward "^\\*" nil t) t)))
 
 ;;; BUFFER SIDE EFFECTS
 
