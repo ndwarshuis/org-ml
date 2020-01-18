@@ -4573,13 +4573,14 @@ the section at the top of the org buffer."
 
 ;;; parse at current point
 
-(-> '(object element table-row item headline subtree section)
-    (--each
-        (let* ((name (intern (format "om-parse-this-%s" it)))
-               (call (intern (format "om-parse-%s-at" it)))
-               (doc (format "Call `%s' with the current point." call))
-               (body `(,call (point))))
-          (eval `(defun ,name () ,doc ,body)))))
+(eval-when-compile
+  (-> '(object element table-row item headline subtree section)
+      (--each
+          (let* ((name (intern (format "om-parse-this-%s" it)))
+                 (call (intern (format "om-parse-%s-at" it)))
+                 (doc (format "Call `%s' with the current point." call))
+                 (body `(,call (point))))
+            (eval `(defun ,name () ,doc ,body))))))
 
 (defun om-parse-this-toplevel-section ()
   "Return section node corresponding to the top of the current buffer.
