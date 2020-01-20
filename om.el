@@ -4525,7 +4525,7 @@ if the node immediately under POINT is not a headline. If SUBTREE is
 t, parse the entire subtree, else just parse the top headline."
   (save-excursion
     (goto-char point)
-    (when (ignore-errors (org-back-to-heading))
+    (when (ignore-errors (org-back-to-heading t))
       (let ((b (point))
             (e (if subtree
                    (let ((orig-point (point)))
