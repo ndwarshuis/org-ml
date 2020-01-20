@@ -4612,7 +4612,7 @@ returned from this function will have :begin and :end properties."
 (defun om--nodes-to-string-maybe (nodes)
   "Return NODES as a string.
 NODES may either be a single node or a list of nodes."
-  (if (--all? #'om-is-node nodes)
+  (if (and (listp nodes) (-all? #'om--is-node nodes))
       (s-join "" (-map #'om-to-string nodes))
     (om-to-string nodes)))
 
