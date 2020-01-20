@@ -4787,8 +4787,8 @@ regions. All take two arguments (the bounds of the application)."
          (while (and ,iterate-form (<= ,begin (point)))
            ,parse-form))))
 
-(om--defun* om-do-some-headlines (where fun)
-  "Update some headlines in the current using FUN.
+(defun om-get-some-headlines (where)
+  "Return list of headline nodes from current buffer.
 
 WHERE describes the location of headlines to be parsed and is one
 of the following:
@@ -4799,6 +4799,83 @@ of the following:
 - [A B]: parse all headlines whose first point falls between points
   A and B in the buffer; if A and B are nil, use `point-min' and
   `point-max' respectively.
+
+Each headline is obtained with `om-parse-headline-at'."
+  (cl-flet
+      ((apply-n-forward
+        (m n)
+        (let ((acc))
+          (om--apply-n m n "^\\*" nil
+            (outline-next-heading)
+            (setq acc (cons (om-parse-this-headline) acc)))
+          (nreverse acc)))
+       (apply-n-backward
+        (m n)
+        (let ((acc))
+          (om--apply-n m n "^\\*" t
+            (outline-previous-heading)
+            (setq acc (cons (om-parse-this-headline) acc)))
+          acc))
+       (apply-region
+        (begin end)
+        (let ((acc))
+          (om--apply-region begin end "^\\*"
+            (outline-previous-heading)
+            (setq acc (cons (om-parse-this-headline) acc)))
+          acc)))
+    (om--do-headlines-where where
+      #'apply-n-forward
+      #'apply-n-backward
+      #'apply-region)))
+
+(defun om-get-headlines ()
+  "Return list of all headline nodes from current buffer.
+Each headline is obtained with `om-parse-headline-at'."
+  (om-get-some-headlines [nil nil]))
+
+(defun om-get-some-subtrees (where)
+  "Return list of subtree nodes from current buffer.
+
+See `om-get-some-headlines' for the meaning of WHERE.
+
+Each subtree is obtained with `om-parse-subtree-at'."
+  (cl-flet
+      ((apply-n-forward
+        (m n)
+        (let ((acc))
+          (om--apply-n m n "^\\*" nil
+            (org-forward-heading-same-level 1 t)
+            (setq acc (cons (om-parse-this-subtree) acc)))
+          (nreverse acc)))
+       (apply-n-backward
+        (m n)
+        (let ((acc))
+          (om--apply-n m n "^\\*" t
+            (org-backward-heading-same-level 1 t)
+            (setq acc (cons (om-parse-this-subtree) acc)))
+          acc))
+       (apply-region
+        (begin end)
+        (let ((acc))
+          (om--apply-region begin end "^\\*"
+            (org-backward-heading-same-level 1 t)
+            (setq acc (cons (om-parse-this-subtree) acc)))
+          acc)))
+    (om--do-headlines-where where
+      #'apply-n-forward
+      #'apply-n-backward
+      #'apply-region)))
+
+(defun om-get-subtrees ()
+  "Return list of all subtree nodes from current buffer.
+
+Each subtree is obtained with `om-parse-subtree-at'."
+  (om-get-some-subtrees [nil nil]))
+
+(om--defun* om-do-some-headlines (where fun)
+  "Update some headlines in the current using FUN.
+
+See `om-get-some-headlines' for the meaning of WHERE.
 
 Headlines are updated using `om-update-this-headline' (see this for
 use and meaning of FUN)."
@@ -4833,9 +4910,10 @@ use and meaning of FUN)."
 (om--defun* om-do-some-subtrees (where fun)
   "Update some toplevel subtrees in the current buffer using FUN.
 
+See `om-get-some-headlines' for the meaning of WHERE.
+
 Subtrees are updated using `om-update-this-subtree' (see this for use
-and meaning of FUN). The meaning of WHERE is the same as that of
-`om-do-some-headlines'."
+and meaning of FUN)."
   (cl-flet
       ((apply-n-forward
         (m n)
