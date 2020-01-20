@@ -4609,17 +4609,24 @@ returned from this function will have :begin and :end properties."
 
 ;;; insert
 
+(defun om--nodes-to-string-maybe (nodes)
+  "Return NODES as a string.
+NODES may either be a single node or a list of nodes."
+  (if (--all? #'om-is-node nodes)
+      (s-join "" (-map #'om-to-string nodes))
+    (om-to-string nodes)))
+
 (defun om-insert (point node)
   "Convert NODE to a string and insert at POINT in the current buffer.
-Return NODE."
+NODE may be a node or a list of nodes. Return NODE."
   (save-excursion
     (goto-char point)
-    (insert (om-to-string node)))
+    (insert (om--nodes-to-string-maybe node)))
   node)
 
 (defun om-insert-tail (point node)
   "Like `om-insert' but insert NODE at POINT and move to end of insertion."
-  (let ((s (om-to-string node)))
+  (let ((s (om--nodes-to-string-maybe node)))
     (save-excursion
       (goto-char point)
       (insert s))
@@ -4642,9 +4649,9 @@ Return NODE."
 
 (om--defun* om-update (fun node)
   "Replace NODE in the current buffer with a new one.
-FUN is a unary function that takes NODE and returns a modified NODE.
-This modified node is then written in place of the old node in the
-current buffer."
+FUN is a unary function that takes NODE and returns a modified node
+or list of nodes. This modified node is then written in place of the
+old node in the current buffer."
   ;; if node is of type 'org-data' it will have no props
   (let* ((begin (om--get-property-nocheck :begin node))
          (end (om--get-property-nocheck :end node))
