@@ -6396,7 +6396,7 @@ Map node manipulations into buffers.
 #### om-insert `(point node)`
 
 Convert **`node`** to a string and insert at **`point`** in the current buffer.
-Return **`node`**.
+**`node`** may be a node or a list of nodes. Return **`node`**.
 
 ```el
 ;; Given the following contents:
@@ -6434,9 +6434,9 @@ no examples :(
 #### om-update `(fun node)`
 
 Replace **`node`** in the current buffer with a new one.
-**`fun`** is a unary function that takes **`node`** and returns a modified **`node`**.
-This modified node is then written in place of the old node in the
-current buffer.
+**`fun`** is a unary function that takes **`node`** and returns a modified node
+or list of nodes. This modified node is then written in place of the
+old node in the current buffer.
 
 ```el
 ;; Given the following contents:
