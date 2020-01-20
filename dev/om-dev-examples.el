@@ -5161,9 +5161,17 @@
       nil
       (:buffer "* one"
                "")
+      (:comment "Insert single node")
       (->> (om-build-headline! :title-text "two")
            (om-insert (point-max)))
       $> (:result "* one"
+                  "* two")
+      (:comment "Insert multiple nodes")
+      (->> (om-build-headline! :title-text "two")
+           (list (om-build-headline! :title-text "more"))
+           (om-insert (point-max)))
+      $> (:result "* one"
+                  "* more"
                   "* two")
 
       (:buffer "a *game* or a /boy/")
@@ -5177,9 +5185,17 @@
       :begin-hidden
       (:buffer "* one"
                "")
+      (:comment "Insert single node")
       (->> (om-build-headline! :title-text "two")
            (om-insert-tail (point-max)))
       $> (:result "* one"
+                  "* two")
+      (:comment "Insert multiple nodes")
+      (->> (om-build-headline! :title-text "two")
+           (list (om-build-headline! :title-text "more"))
+           (om-insert (point-max)))
+      $> (:result "* one"
+                  "* more"
                   "* two")
 
       (:buffer "a *game* or a /boy/")

@@ -6403,10 +6403,20 @@ Convert **`node`** to a string and insert at **`point`** in the current buffer.
 ; * one
 ; 
 
+;; Insert single node
 (->> (om-build-headline! :title-text "two")
      (om-insert (point-max)))
  ;; Output these buffer contents
  ;; $> "* one
+ ;      * two"
+
+;; Insert multiple nodes
+(->> (om-build-headline! :title-text "two")
+     (list (om-build-headline! :title-text "more"))
+     (om-insert (point-max)))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      * more
  ;      * two"
 
 ;; Given the following contents:
