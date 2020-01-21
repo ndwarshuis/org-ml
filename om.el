@@ -4767,7 +4767,6 @@ regions. All take two arguments (the bounds of the application)."
     `(save-excursion
        (goto-char ,start)
        (when (,search ,re nil t)
-         (beginning-of-line)
          (let ((i 0))
            (when (= 0 ,m) ,parse-form)
            (setq i (1+ i))
@@ -4781,7 +4780,6 @@ regions. All take two arguments (the bounds of the application)."
   `(save-excursion
      (goto-char ,end)
        (when (re-search-backward ,re nil t)
-         (beginning-of-line)
          ,parse-form
          ;; loop through the rest
          (while (and ,iterate-form (<= ,begin (point)))
@@ -4843,22 +4841,23 @@ Each subtree is obtained with `om-parse-subtree-at'."
       ((apply-n-forward
         (m n)
         (let ((acc))
-          (om--apply-n m n "^\\*" nil
-            (org-forward-heading-same-level 1 t)
+          ;; TODO this can be refactored...
+          (om--apply-n m n "^\\* " nil
+            (re-search-forward "^\\* " nil t)
             (setq acc (cons (om-parse-this-subtree) acc)))
           (nreverse acc)))
        (apply-n-backward
         (m n)
         (let ((acc))
-          (om--apply-n m n "^\\*" t
-            (org-backward-heading-same-level 1 t)
+          (om--apply-n m n "^\\* " t
+            (re-search-backward "^\\* " nil t)
             (setq acc (cons (om-parse-this-subtree) acc)))
           acc))
        (apply-region
         (begin end)
         (let ((acc))
-          (om--apply-region begin end "^\\*"
-            (org-backward-heading-same-level 1 t)
+          (om--apply-region begin end "^\\* "
+            (re-search-backward "^\\* " nil t)
             (setq acc (cons (om-parse-this-subtree) acc)))
           acc)))
     (om--do-headlines-where where
@@ -4918,17 +4917,17 @@ and meaning of FUN)."
       ((apply-n-forward
         (m n)
         (om--apply-n m n "^\\* " nil
-          (org-forward-heading-same-level 1 t)
+          (re-search-forward "^\\* " nil t)
           (om-update-this-subtree fun)))
        (apply-n-backward
         (m n)
         (om--apply-n m n "^\\* " t
-          (org-backward-heading-same-level 1 t)
+          (re-search-backward "^\\* " nil t)
           (om-update-this-subtree fun)))
        (apply-region
         (begin end)
         (om--apply-region begin end "^\\* "
-          (org-backward-heading-same-level 1 t)
+          (re-search-backward "^\\* " nil t)
           (om-update-this-subtree fun))))
     (om--do-headlines-where where
       #'apply-n-forward

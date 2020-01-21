@@ -249,7 +249,100 @@
     => t
     (:buffer "not headline")
     (om-this-buffer-has-headlines)
-    => nil))
+    => nil)
+
+  (defexamples-content om-get-headlines
+    nil
+    (:buffer "not headline"
+             "* one"
+             "* two"
+             "* three")
+    (->> (om-get-headlines)
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "* two"
+                "* three"
+                "")
+    (:buffer "not headline")
+    (->> (om-get-headlines)
+         (-map #'om-to-string)
+         (s-join ""))
+    => "")
+
+  (defexamples-content om-get-some-headlines
+    nil
+    (:buffer "not headline"
+             "* one"
+             "* two"
+             "* three")
+    (->> (om-get-some-headlines 0)
+         (-map #'om-to-string)
+         (s-join ""))
+    => "* one\n"
+    (->> (om-get-some-headlines '(0 1))
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "* two\n")
+    (->> (om-get-some-headlines [10 25])
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "* two\n"))
+
+  (defexamples-content om-get-subtrees
+    nil
+    (:buffer "not headline"
+             "* one"
+             "** _one"
+             "* two"
+             "** _two"
+             "* three"
+             "** _three")
+    (->> (om-get-subtrees)
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "** _one"
+                "* two"
+                "** _two"
+                "* three"
+                "** _three\n")
+    (:buffer "not headline")
+    (->> (om-get-subtrees)
+         (-map #'om-to-string)
+         (s-join ""))
+    => "")
+
+  (defexamples-content om-get-some-subtrees
+    nil
+    (:buffer "not headline"
+             "* one"
+             "** _one"
+             "* two"
+             "** _two"
+             "* three"
+             "** _three")
+    (->> (om-get-some-subtrees 0)
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "** _one\n")
+    (->> (om-get-some-subtrees '(0 1))
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "** _one"
+                "* two"
+                "** _two\n")
+    (->> (om-get-some-subtrees [10 30])
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "** _one"
+                "* two"
+                "** _two\n")))
 
 (def-example-group "Building"
   "Build new nodes."
