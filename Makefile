@@ -22,6 +22,7 @@ unit:
 
 compile:
 	${CASK} build
+	${MAKE} unit
 
 clean-elc:
 	${CASK} clean-elc
