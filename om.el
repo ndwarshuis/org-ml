@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/om.el
 ;; Package-Requires: ((emacs "26.1") (dash "2.15") (s "1.12"))
-;; Version: 1.1.0
+;; Version: 1.2.0
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
