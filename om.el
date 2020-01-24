@@ -566,7 +566,7 @@ FUN is a predicate function that takes one argument."
 ;; this framework.
 
 ;; The center of this framework is the constant
-;; `om--node-property-alist' which holds the relationship of all node
+;; `om--property-alist' which holds the relationship of all node
 ;; types and their properties, type checkers, and encoders/decoders.
 ;; This alist has the following structure:
 
@@ -926,7 +926,7 @@ bounds."
 ;;; property alist
 
 (eval-and-compile
-  (defconst om--node-property-alist
+  (defconst om--property-alist
     (let ((bool (list :pred #'booleanp
                       :decode 'om--decode-boolean
                       :type-desc "nil or t"
@@ -1173,8 +1173,8 @@ bounds."
 ;; add post-blank functions to all entries
 (let ((post-blank-funs '(:post-blank :pred om--is-non-neg-integer
                                      :shift om--shift-non-neg-integer)))
-  (setq om--node-property-alist
-        (--map (-snoc it post-blank-funs) om--node-property-alist)))
+  (setq om--property-alist
+        (--map (-snoc it post-blank-funs) om--property-alist)))
 
 ;;; node property operations
 
@@ -1184,7 +1184,7 @@ bounds."
   "Return ATTRIBUTE for PROP of node TYPE.
 If NOERROR is non-nil, return nil instead of signaling an error
 if PROP in TYPE does not have ATTRIBUTE."
-  (-if-let (type-list (alist-get type om--node-property-alist))
+  (-if-let (type-list (alist-get type om--property-alist))
       (if (assoc prop type-list)
           (-when-let (plist (alist-get prop type-list))
             (plist-get plist attribute))
@@ -1330,7 +1330,7 @@ plist of properties for the node."
                   (if (member it '("a" "e" "i" "o" "u")) "an" "a"))))
       (format "%s %s" a string)))
 
-  (--each (--remove (eq 'plain-text (car it)) om--node-property-alist)
+  (--each (--remove (eq 'plain-text (car it)) om--property-alist)
     (let* ((type (car it))
            (element? (memq type org-element-all-elements))
            (name (intern (format "om-build-%s" type)))
@@ -2629,7 +2629,7 @@ and properties that may be used with this function."
 ;; TODO these docstrings suck :(
 (defun om--get-types-with-property-attribute (attr)
   "Return alist of all nodes types that contain ATTR."
-  (->> om--node-property-alist
+  (->> om--property-alist
        (--map (cons (car it) (--filter (plist-get (cdr it) attr) (cdr it))))
        (-filter #'cdr)))
 
