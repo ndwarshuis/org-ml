@@ -1203,19 +1203,6 @@ if PROP in TYPE does not have ATTRIBUTE."
             (plist-get plist attribute))
         (om--arg-error "Type '%s' does not have property '%s'"
                        type prop))
-        ;; (unless noerror
-        ;;   (let* ((msg1 "Property '%s' has no attribute '%s' for type '%s'")
-        ;;          (msg2
-        ;;           (or
-        ;;            (-some->>
-        ;;             type-list
-        ;;             (--filter (plist-get (cdr it) attribute))
-        ;;             (--map (symbol-name (car it)))
-        ;;             (s-join ", ")
-        ;;             (format "properties with this attribute are: %s"))
-        ;;            "this type has no properties with this attribute"))
-        ;;          (msg (format "%s; %s" msg1 msg2)))
-        ;;     (om--arg-error msg prop attribute type))))
     (om--arg-error "Tried to query property '%s' for non-existent type '%s'" prop type)))
 
 (defun om--get-property-encoder (type prop)
