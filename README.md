@@ -183,6 +183,12 @@ Parse buffers to trees.
 * [om-parse-subtree-at](#om-parse-subtree-at-point) `(point)`
 * [om-parse-item-at](#om-parse-item-at-point) `(point)`
 * [om-parse-section-at](#om-parse-section-at-point) `(point)`
+* [om-parse-this-toplevel-section](#om-parse-this-toplevel-section-nil) `nil`
+* [om-this-buffer-has-headlines](#om-this-buffer-has-headlines-nil) `nil`
+* [om-get-headlines](#om-get-headlines-nil) `nil`
+* [om-get-some-headlines](#om-get-some-headlines-where) `(where)`
+* [om-get-subtrees](#om-get-subtrees-nil) `nil`
+* [om-get-some-subtrees](#om-get-some-subtrees-where) `(where)`
 
 ## Building
 
@@ -514,9 +520,9 @@ Map node manipulations into buffers.
 * [om-update-headline-at](#om-update-headline-at-point-fun) `(point fun)`
 * [om-update-subtree-at](#om-update-subtree-at-point-fun) `(point fun)`
 * [om-update-section-at](#om-update-section-at-point-fun) `(point fun)`
-* [om-do-some-headlines](#om-do-some-headlines-begin-end-fun) `(begin end fun)`
+* [om-do-some-headlines](#om-do-some-headlines-where-fun) `(where fun)`
 * [om-do-headlines](#om-do-headlines-fun) `(fun)`
-* [om-do-some-subtrees](#om-do-some-subtrees-begin-end-fun) `(begin end fun)`
+* [om-do-some-subtrees](#om-do-some-subtrees-where-fun) `(where fun)`
 * [om-do-subtrees](#om-do-subtrees-fun) `(fun)`
 
 ### Misc
@@ -853,6 +859,208 @@ the section at the top of the org buffer.
 (->> (om-parse-section-at 1)
      (om-to-trimmed-string))
  ;; => ""
+
+```
+
+#### om-parse-this-toplevel-section `nil`
+
+Return section node corresponding to the top of the current buffer.
+If there is no such section, return nil.
+
+```el
+;; Given the following contents:
+; over headline
+; * headline
+; under headline
+
+(->> (om-parse-this-toplevel-section)
+     (om-to-trimmed-string))
+ ;; => "over headline"
+
+;; Given the following contents:
+; * headline
+; under headline
+
+(->> (om-parse-this-toplevel-section)
+     (om-to-trimmed-string))
+ ;; => ""
+
+```
+
+#### om-this-buffer-has-headlines `nil`
+
+Return t if the current buffer has headlines, else return nil.
+
+```el
+;; Given the following contents:
+; not headline
+; * headline
+
+(om-this-buffer-has-headlines)
+ ;; => t
+
+;; Given the following contents:
+; not headline
+
+(om-this-buffer-has-headlines)
+ ;; => nil
+
+```
+
+#### om-get-headlines `nil`
+
+Return list of all headline nodes from current buffer.
+Each headline is obtained with [`om-parse-headline-at`](#om-parse-headline-at-point).
+
+```el
+;; Given the following contents:
+; not headline
+; * one
+; * two
+; * three
+
+(->> (om-get-headlines)
+     (-map (function om-to-string))
+     (s-join ""))
+ ;; => "* one
+ ;      * two
+ ;      * three
+ ;      "
+
+;; Given the following contents:
+; not headline
+
+(->> (om-get-headlines)
+     (-map (function om-to-string))
+     (s-join ""))
+ ;; => ""
+
+```
+
+#### om-get-some-headlines `(where)`
+
+Return list of headline nodes from current buffer.
+
+**`where`** describes the location of headlines to be parsed and is one
+of the following:
+- `n`: parse up to index `n` headlines (where 0 is the first); if negative
+    start counting from the last headline (where -1 refers to the last)
+- `(m n)`: like `n` but parse after index `m` headlines; `m` and `n` may both
+    be similarly negative
+- [`a` `b`]: parse all headlines whose first point falls between points
+    `a` and `b` in the buffer; if `a` and `b` are nil, use `point-min` and
+    `point-max` respectively.
+
+Each headline is obtained with [`om-parse-headline-at`](#om-parse-headline-at-point).
+
+```el
+;; Given the following contents:
+; not headline
+; * one
+; * two
+; * three
+
+(->> (om-get-some-headlines 0)
+     (-map (function om-to-string))
+     (s-join ""))
+ ;; => "* one
+ ;      "
+
+(->> (om-get-some-headlines '(0 1))
+     (-map (function om-to-string))
+     (s-join ""))
+ ;; => "* one
+ ;      * two
+ ;      "
+
+(->> (om-get-some-headlines [10 25])
+     (-map (function om-to-string))
+     (s-join ""))
+ ;; => "* one
+ ;      * two
+ ;      "
+
+```
+
+#### om-get-subtrees `nil`
+
+Return list of all subtree nodes from current buffer.
+
+Each subtree is obtained with [`om-parse-subtree-at`](#om-parse-subtree-at-point).
+
+```el
+;; Given the following contents:
+; not headline
+; * one
+; ** _one
+; * two
+; ** _two
+; * three
+; ** _three
+
+(->> (om-get-subtrees)
+     (-map (function om-to-string))
+     (s-join ""))
+ ;; => "* one
+ ;      ** _one
+ ;      * two
+ ;      ** _two
+ ;      * three
+ ;      ** _three
+ ;      "
+
+;; Given the following contents:
+; not headline
+
+(->> (om-get-subtrees)
+     (-map (function om-to-string))
+     (s-join ""))
+ ;; => ""
+
+```
+
+#### om-get-some-subtrees `(where)`
+
+Return list of subtree nodes from current buffer.
+
+See [`om-get-some-headlines`](#om-get-some-headlines-where) for the meaning of **`where`**.
+
+Each subtree is obtained with [`om-parse-subtree-at`](#om-parse-subtree-at-point).
+
+```el
+;; Given the following contents:
+; not headline
+; * one
+; ** _one
+; * two
+; ** _two
+; * three
+; ** _three
+
+(->> (om-get-some-subtrees 0)
+     (-map (function om-to-string))
+     (s-join ""))
+ ;; => "* one
+ ;      ** _one
+ ;      "
+
+(->> (om-get-some-subtrees '(0 1))
+     (-map (function om-to-string))
+     (s-join ""))
+ ;; => "* one
+ ;      ** _one
+ ;      * two
+ ;      ** _two
+ ;      "
+
+(->> (om-get-some-subtrees [10 30])
+     (-map (function om-to-string))
+     (s-join ""))
+ ;; => "* one
+ ;      ** _one
+ ;      * two
+ ;      ** _two
+ ;      "
 
 ```
 
@@ -2894,9 +3102,6 @@ each type.
 #### om-get-property `(prop node)`
 
 Return the value of **`prop`** of **`node`**.
-
-See builder functions for a list of properties and their rules for
-each type.
 
 ```el
 ;; Given the following contents:
@@ -6349,17 +6554,27 @@ Map node manipulations into buffers.
 #### om-insert `(point node)`
 
 Convert **`node`** to a string and insert at **`point`** in the current buffer.
-Return **`node`**.
+**`node`** may be a node or a list of nodes. Return **`node`**.
 
 ```el
 ;; Given the following contents:
 ; * one
 ; 
 
+;; Insert single node
 (->> (om-build-headline! :title-text "two")
      (om-insert (point-max)))
  ;; Output these buffer contents
  ;; $> "* one
+ ;      * two"
+
+;; Insert multiple nodes
+(->> (om-build-headline! :title-text "two")
+     (list (om-build-headline! :title-text "more"))
+     (om-insert (point-max)))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      * more
  ;      * two"
 
 ;; Given the following contents:
@@ -6387,9 +6602,9 @@ no examples :(
 #### om-update `(fun node)`
 
 Replace **`node`** in the current buffer with a new one.
-**`fun`** is a unary function that takes **`node`** and returns a modified **`node`**.
-This modified node is then written in place of the old node in the
-current buffer.
+**`fun`** is a unary function that takes **`node`** and returns a modified node
+or list of nodes. This modified node is then written in place of the
+old node in the current buffer.
 
 ```el
 ;; Given the following contents:
@@ -6553,14 +6768,14 @@ Update section under **`point`** using **`fun`**.
 
 ```
 
-#### om-do-some-headlines `(begin end fun)`
+#### om-do-some-headlines `(where fun)`
 
 Update some headlines in the current using **`fun`**.
 
+See [`om-get-some-headlines`](#om-get-some-headlines-where) for the meaning of **`where`**.
+
 Headlines are updated using `om-update-this-headline` (see this for
-use and meaning of **`fun`**). Iteration is only performed for headlines
-that begin between **`begin`** and **`end`** points in the buffer. If either of
-these are nil, use `point-min` and `point-max` respectively.
+use and meaning of **`fun`**).
 
 ```el
 ;; Given the following contents:
@@ -6568,13 +6783,28 @@ these are nil, use `point-min` and `point-max` respectively.
 ; * two
 ; * three
 
-(om-do-some-headlines* 2 nil (om-set-property :todo-keyword "DONE" it))
+(om-do-some-headlines* 0 (om-set-property :todo-keyword "DONE" it))
+ ;; Output these buffer contents
+ ;; $> "* DONE one
+ ;      * two
+ ;      * three"
+
+(om-do-some-headlines* '(0 1)
+  (om-set-property :todo-keyword "DONE" it))
+ ;; Output these buffer contents
+ ;; $> "* DONE one
+ ;      * DONE two
+ ;      * three"
+
+(om-do-some-headlines* [2 nil]
+  (om-set-property :todo-keyword "DONE" it))
  ;; Output these buffer contents
  ;; $> "* one
  ;      * DONE two
  ;      * DONE three"
 
-(om-do-some-headlines* 2 10 (om-set-property :todo-keyword "DONE" it))
+(om-do-some-headlines* [2 10]
+  (om-set-property :todo-keyword "DONE" it))
  ;; Output these buffer contents
  ;; $> "* one
  ;      * DONE two
@@ -6603,41 +6833,59 @@ use and meaning of **`fun`**).
 
 ```
 
-#### om-do-some-subtrees `(begin end fun)`
+#### om-do-some-subtrees `(where fun)`
 
 Update some toplevel subtrees in the current buffer using **`fun`**.
 
+See [`om-get-some-headlines`](#om-get-some-headlines-where) for the meaning of **`where`**.
+
 Subtrees are updated using `om-update-this-subtree` (see this for use
-and meaning of **`fun`**). Iteration is only performed for headlines that
-begin between **`begin`** and **`end`** points in the buffer. If either of these
-are nil, use `point-min` and `point-max` respectively.
+and meaning of **`fun`**).
 
 ```el
 ;; Given the following contents:
 ; * one [/]
 ; ** DONE _one
-; ** DONE _two
 ; * two [/]
 ; ** DONE _one
-; ** DONE _two
+; * three [/]
+; ** DONE _one
+
+
+;; Given the following contents:
+; * one [1/1]
+; ** DONE _one
+; * two [/]
+; ** DONE _one
+; * three [/]
+; ** DONE _one
+
+
+;; Given the following contents:
+; * one [1/1]
+; ** DONE _one
+; * two [1/1]
+; ** DONE _one
+; * three [/]
+; ** DONE _one
 
 
 ;; Given the following contents:
 ; * one [/]
 ; ** DONE _one
-; ** DONE _two
-; * two [2/2]
+; * two [1/1]
 ; ** DONE _one
-; ** DONE _two
+; * three [1/1]
+; ** DONE _one
 
 
 ;; Given the following contents:
-; * one [2/2]
+; * one [1/1]
 ; ** DONE _one
-; ** DONE _two
 ; * two [/]
 ; ** DONE _one
-; ** DONE _two
+; * three [/]
+; ** DONE _one
 
 ```
 

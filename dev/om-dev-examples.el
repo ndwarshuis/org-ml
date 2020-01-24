@@ -225,7 +225,124 @@
     (:comment "Return nil if no section at all")
     (->> (om-parse-section-at 1)
          (om-to-trimmed-string))
-    => ""))
+    => "")
+
+  (defexamples-content om-parse-this-toplevel-section
+    nil
+    (:buffer "over headline"
+             "* headline"
+             "under headline")
+    (->> (om-parse-this-toplevel-section)
+         (om-to-trimmed-string))
+    => "over headline"
+    (:buffer "* headline"
+             "under headline")
+    (->> (om-parse-this-toplevel-section)
+         (om-to-trimmed-string))
+    => "")
+
+  (defexamples-content om-this-buffer-has-headlines
+    nil
+    (:buffer "not headline"
+             "* headline")
+    (om-this-buffer-has-headlines)
+    => t
+    (:buffer "not headline")
+    (om-this-buffer-has-headlines)
+    => nil)
+
+  (defexamples-content om-get-headlines
+    nil
+    (:buffer "not headline"
+             "* one"
+             "* two"
+             "* three")
+    (->> (om-get-headlines)
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "* two"
+                "* three"
+                "")
+    (:buffer "not headline")
+    (->> (om-get-headlines)
+         (-map #'om-to-string)
+         (s-join ""))
+    => "")
+
+  (defexamples-content om-get-some-headlines
+    nil
+    (:buffer "not headline"
+             "* one"
+             "* two"
+             "* three")
+    (->> (om-get-some-headlines 0)
+         (-map #'om-to-string)
+         (s-join ""))
+    => "* one\n"
+    (->> (om-get-some-headlines '(0 1))
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "* two\n")
+    (->> (om-get-some-headlines [10 25])
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "* two\n"))
+
+  (defexamples-content om-get-subtrees
+    nil
+    (:buffer "not headline"
+             "* one"
+             "** _one"
+             "* two"
+             "** _two"
+             "* three"
+             "** _three")
+    (->> (om-get-subtrees)
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "** _one"
+                "* two"
+                "** _two"
+                "* three"
+                "** _three\n")
+    (:buffer "not headline")
+    (->> (om-get-subtrees)
+         (-map #'om-to-string)
+         (s-join ""))
+    => "")
+
+  (defexamples-content om-get-some-subtrees
+    nil
+    (:buffer "not headline"
+             "* one"
+             "** _one"
+             "* two"
+             "** _two"
+             "* three"
+             "** _three")
+    (->> (om-get-some-subtrees 0)
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "** _one\n")
+    (->> (om-get-some-subtrees '(0 1))
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "** _one"
+                "* two"
+                "** _two\n")
+    (->> (om-get-some-subtrees [10 30])
+         (-map #'om-to-string)
+         (s-join ""))
+    => (:result "* one"
+                "** _one"
+                "* two"
+                "** _two\n")))
 
 (def-example-group "Building"
   "Build new nodes."
@@ -5137,9 +5254,17 @@
       nil
       (:buffer "* one"
                "")
+      (:comment "Insert single node")
       (->> (om-build-headline! :title-text "two")
            (om-insert (point-max)))
       $> (:result "* one"
+                  "* two")
+      (:comment "Insert multiple nodes")
+      (->> (om-build-headline! :title-text "two")
+           (list (om-build-headline! :title-text "more"))
+           (om-insert (point-max)))
+      $> (:result "* one"
+                  "* more"
                   "* two")
 
       (:buffer "a *game* or a /boy/")
@@ -5153,9 +5278,17 @@
       :begin-hidden
       (:buffer "* one"
                "")
+      (:comment "Insert single node")
       (->> (om-build-headline! :title-text "two")
            (om-insert-tail (point-max)))
       $> (:result "* one"
+                  "* two")
+      (:comment "Insert multiple nodes")
+      (->> (om-build-headline! :title-text "two")
+           (list (om-build-headline! :title-text "more"))
+           (om-insert (point-max)))
+      $> (:result "* one"
+                  "* more"
                   "* two")
 
       (:buffer "a *game* or a /boy/")
@@ -5262,12 +5395,22 @@
       (:buffer "* one"
                "* two"
                "* three")
-      (om-do-some-headlines* 2 nil
+      (om-do-some-headlines* 0
+        (om-set-property :todo-keyword "DONE" it))
+      $> (:result "* DONE one"
+                  "* two"
+                  "* three")
+      (om-do-some-headlines* '(0 1)
+        (om-set-property :todo-keyword "DONE" it))
+      $> (:result "* DONE one"
+                  "* DONE two"
+                  "* three")
+      (om-do-some-headlines* [2 nil]
         (om-set-property :todo-keyword "DONE" it))
       $> (:result "* one"
                   "* DONE two"
                   "* DONE three")
-      (om-do-some-headlines* 2 10
+      (om-do-some-headlines* [2 10]
         (om-set-property :todo-keyword "DONE" it))
       $> (:result "* one"
                   "* DONE two"
@@ -5288,26 +5431,42 @@
       nil
       (:buffer "* one [/]"
                "** DONE _one"
-               "** DONE _two"
                "* two [/]"
                "** DONE _one"
-               "** DONE _two")
-      (om-do-some-subtrees* 2 nil
+               "* three [/]"
+               "** DONE _one")
+      (om-do-some-subtrees* 0
+        (om-headline-update-todo-statistics))
+      $> (:buffer "* one [1/1]"
+                  "** DONE _one"
+                  "* two [/]"
+                  "** DONE _one"
+                  "* three [/]"
+                  "** DONE _one")
+      (om-do-some-subtrees* '(0 1)
+        (om-headline-update-todo-statistics))
+      $> (:buffer "* one [1/1]"
+                  "** DONE _one"
+                  "* two [1/1]"
+                  "** DONE _one"
+                  "* three [/]"
+                  "** DONE _one")
+      (om-do-some-subtrees* [2 nil]
         (om-headline-update-todo-statistics))
       $> (:buffer "* one [/]"
                   "** DONE _one"
-                  "** DONE _two"
-                  "* two [2/2]"
+                  "* two [1/1]"
                   "** DONE _one"
-                  "** DONE _two")
-      (om-do-some-subtrees* nil 10
+                  "* three [1/1]"
+                  "** DONE _one")
+      (om-do-some-subtrees* [nil 5]
         (om-headline-update-todo-statistics))
-      $> (:buffer "* one [2/2]"
+      $> (:buffer "* one [1/1]"
                   "** DONE _one"
-                  "** DONE _two"
                   "* two [/]"
                   "** DONE _one"
-                  "** DONE _two"))
+                  "* three [/]"
+                  "** DONE _one"))
 
     (defexamples-content om-do-subtrees
       nil

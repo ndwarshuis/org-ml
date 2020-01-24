@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/om.el
 ;; Package-Requires: ((emacs "26.1") (dash "2.15") (s "1.12"))
-;; Version: 1.1.0
+;; Version: 1.2.0
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -730,6 +730,11 @@ FUN is a predicate function that takes one argument."
   "Return STRING as either itself or \"\" if nil."
   (if (null string) "" string))
 
+(defun om--decode-string-or-nil (string)
+  "Return STRING without text properties if not nil."
+  (unless (null string)
+    (substring-no-properties string)))
+
 (defun om--encode-string-list-delim (string-list delim)
   "Return STRING-LIST as string joined by DELIM."
   (-some->> string-list (s-join delim)))
@@ -1037,7 +1042,8 @@ bounds."
                          :string-list t)
                   (:title :pred om--is-valid-headline-title
                           :type-desc "a secondary string")
-                  (:todo-keyword ,@ol-str-nil) ; TODO restrict this?
+                  (:todo-keyword ,@ol-str-nil
+                                 :decode om--decode-string-or-nil) ; TODO restrict this?
                   (:raw-value)
                   (:todo-type))
         (horizontal-rule)
@@ -1175,20 +1181,35 @@ bounds."
 ;; alist functions
 
 (defun om--get-property-attribute (attribute type prop)
-  "Return ATTRIBUTE for PROP of node TYPE."
+  "Return ATTRIBUTE for PROP of node TYPE.
+If NOERROR is non-nil, return nil instead of signaling an error
+if PROP in TYPE does not have ATTRIBUTE."
   (-if-let (type-list (alist-get type om--node-property-alist))
-      (-if-let (plist (alist-get prop type-list))
-          (plist-get plist attribute)
-        (om--arg-error "Unsettable property '%s' for type '%s' requested; settable properties are %s"
-               prop type (->> (--map (symbol-name (car it)) type-list)
-                              (s-join ", "))))
-    (om--arg-error "Tried to get property for non-existent type %s" type)))
+      (if (assoc prop type-list)
+          (-when-let (plist (alist-get prop type-list))
+            (plist-get plist attribute))
+        (om--arg-error "Type '%s' does not have property '%s'"
+                       type prop))
+        ;; (unless noerror
+        ;;   (let* ((msg1 "Property '%s' has no attribute '%s' for type '%s'")
+        ;;          (msg2
+        ;;           (or
+        ;;            (-some->>
+        ;;             type-list
+        ;;             (--filter (plist-get (cdr it) attribute))
+        ;;             (--map (symbol-name (car it)))
+        ;;             (s-join ", ")
+        ;;             (format "properties with this attribute are: %s"))
+        ;;            "this type has no properties with this attribute"))
+        ;;          (msg (format "%s; %s" msg1 msg2)))
+        ;;     (om--arg-error msg prop attribute type))))
+    (om--arg-error "Tried to query property '%s' for non-existent type '%s'" prop type)))
 
 (defun om--get-property-encoder (type prop)
   "Return the encoder function for PROP of node TYPE."
   (om--get-property-attribute :encode type prop))
 
-(defun om--get-property-nocheck-decoder (type prop)
+(defun om--get-property-decoder (type prop)
   "Return the decoder function for PROP of node TYPE."
   (om--get-property-attribute :decode type prop))
 
@@ -2429,17 +2450,20 @@ elements may have other elements as children."
 
 See builder functions for a list of properties and their rules for
 each type."
-  (let* ((type (om-get-type node))
-         (pred (om--get-property-attribute :pred type prop)))
-    (if (funcall pred value)
-        (let* ((encode-fun (om--get-property-encoder type prop))
-               (update-fun (om--get-property-cis-function type prop)))
-          (-->
-           (if encode-fun (funcall encode-fun value) value)
-           (om--set-property-nocheck prop it node)
-           (if update-fun (funcall update-fun it) it)))
-      (om--arg-error "Property '%s' in node of type '%s' must be %s. Got '%S'"
-             prop type (om--get-property-type-desc type prop) value))))
+  (let ((type (om-get-type node)))
+    (-if-let (pred (om--get-property-attribute :pred type prop))
+        (if (funcall pred value)
+            (let* ((encode-fun (om--get-property-encoder type prop))
+                   (update-fun (om--get-property-cis-function type prop)))
+              (-->
+               (if encode-fun (funcall encode-fun value) value)
+               (om--set-property-nocheck prop it node)
+               (if update-fun (funcall update-fun it) it)))
+          (om--arg-error
+           "Property '%s' in node of type '%s' must be %s. Got '%S'"
+           prop type (om--get-property-type-desc type prop) value))
+      (om--arg-error "Property '%s' is unsettable for type '%s'"
+                     prop type))))
 
 (defun om-set-properties (plist node)
   "Return NODE with all properties set to the values according to PLIST.
@@ -2452,14 +2476,19 @@ each type."
   (cl-flet
       ((filter
         (acc keyval type)
-        (-let* (((prop value) keyval)
-                (pred (om--get-property-attribute :pred type prop)))
-          (if (funcall pred value)
-              (let ((encode-fun (om--get-property-encoder type prop)))
-                (->> (if encode-fun (funcall encode-fun value) value)
-                     (funcall #'plist-put acc prop)))
-            (om--arg-error "Property '%s' in node of type '%s' must be %s. Got '%S'"
-                   prop type (om--get-property-type-desc type prop) value)))))
+        (-let* (((prop value) keyval))
+          ;; TODO this function doesn't smell DRY
+          (-if-let (pred (om--get-property-attribute :pred type prop))
+              (if (funcall pred value)
+                  (let ((encode-fun (om--get-property-encoder type prop)))
+                    (->> (if encode-fun (funcall encode-fun value) value)
+                         (funcall #'plist-put acc prop)))
+                (om--arg-error
+                 "Property '%s' in node of type '%s' must be %s. Got '%S'"
+                 prop type (om--get-property-type-desc type prop) value))
+            (om--arg-error
+             "Property '%s' is unsettable for type '%s'"
+             prop type)))))
     (if (om--is-plist plist)
         (let* ((cur-props (om--get-all-properties node))
                (type (om-get-type node))
@@ -2480,14 +2509,11 @@ each type."
 
 ;; TODO add plural version of this...
 (defun om-get-property (prop node)
-  "Return the value of PROP of NODE.
-
-See builder functions for a list of properties and their rules for
-each type."
-  (let ((filter-fun (-> (om-get-type node)
-                        (om--get-property-nocheck-decoder prop)))
+  "Return the value of PROP of NODE."
+  (let ((decoder-fun (-> (om-get-type node)
+                         (om--get-property-decoder prop)))
         (value (om--get-property-nocheck prop node)))
-    (if filter-fun (funcall filter-fun value) value)))
+    (if decoder-fun (funcall decoder-fun value) value)))
 
 (om--defun* om-map-property (prop fun node)
   "Return NODE with FUN applied to the value of PROP.
@@ -4518,7 +4544,7 @@ if the node immediately under POINT is not a headline. If SUBTREE is
 t, parse the entire subtree, else just parse the top headline."
   (save-excursion
     (goto-char point)
-    (when (ignore-errors (org-back-to-heading))
+    (when (ignore-errors (org-back-to-heading t))
       (let ((b (point))
             (e (if subtree
                    (let ((orig-point (point)))
@@ -4566,13 +4592,22 @@ the section at the top of the org buffer."
 
 ;;; parse at current point
 
-(-> '(object element table-row item headline subtree section)
-    (--each
-        (let* ((name (intern (format "om-parse-this-%s" it)))
-               (call (intern (format "om-parse-%s-at" it)))
-               (doc (format "Call `%s' with the current point." call))
-               (body `(,call (point))))
-          (eval `(defun ,name () ,doc ,body)))))
+(eval-and-compile
+  (-> '(object element table-row item headline subtree section)
+      (--each
+          (let* ((name (intern (format "om-parse-this-%s" it)))
+                 (call (intern (format "om-parse-%s-at" it)))
+                 (doc (format "Call `%s' with the current point." call))
+                 (body `(,call (point))))
+            (eval `(defun ,name () ,doc ,body))))))
+
+(defun om-parse-this-toplevel-section ()
+  "Return section node corresponding to the top of the current buffer.
+If there is no such section, return nil."
+  (save-excursion
+    (goto-char (point-min))
+    (unless (= ?* (char-after))
+      (om-parse-this-section))))
 
 (defun om-parse-this-buffer ()
   "Return org-data document tree for the current buffer.
@@ -4583,21 +4618,34 @@ returned from this function will have :begin and :end properties."
          (e (if c (om--get-property-nocheck :end (-last-item c)) 1)))
     (om--construct 'org-data `(:begin ,b :end ,e) c)))
 
+(defun om-this-buffer-has-headlines ()
+  "Return t if the current buffer has headlines, else return nil."
+  (save-excursion
+    (goto-char (point-min))
+    (and (re-search-forward "^\\*" nil t) t)))
+
 ;;; BUFFER SIDE EFFECTS
 
 ;;; insert
 
+(defun om--nodes-to-string-maybe (nodes)
+  "Return NODES as a string.
+NODES may either be a single node or a list of nodes."
+  (if (and (listp nodes) (-all? #'om--is-node nodes))
+      (s-join "" (-map #'om-to-string nodes))
+    (om-to-string nodes)))
+
 (defun om-insert (point node)
   "Convert NODE to a string and insert at POINT in the current buffer.
-Return NODE."
+NODE may be a node or a list of nodes. Return NODE."
   (save-excursion
     (goto-char point)
-    (insert (om-to-string node)))
+    (insert (om--nodes-to-string-maybe node)))
   node)
 
 (defun om-insert-tail (point node)
   "Like `om-insert' but insert NODE at POINT and move to end of insertion."
-  (let ((s (om-to-string node)))
+  (let ((s (om--nodes-to-string-maybe node)))
     (save-excursion
       (goto-char point)
       (insert s))
@@ -4620,9 +4668,9 @@ Return NODE."
 
 (om--defun* om-update (fun node)
   "Replace NODE in the current buffer with a new one.
-FUN is a unary function that takes NODE and returns a modified NODE.
-This modified node is then written in place of the old node in the
-current buffer."
+FUN is a unary function that takes NODE and returns a modified node
+or list of nodes. This modified node is then written in place of the
+old node in the current buffer."
   ;; if node is of type 'org-data' it will have no props
   (let* ((begin (om--get-property-nocheck :begin node))
          (end (om--get-property-nocheck :end node))
@@ -4700,59 +4748,219 @@ returns a modified node."
 
 ;;; headline iteration
 
-(om--defun* om-do-some-headlines (begin end fun)
+(defun om--do-headlines-where (where fun-forward fun-backward
+                                     fun-region)
+  "Call functions depending on WHERE.
+FUN-FORWARD is a function to be applied for indices in the forward
+direction, FUN-BACKWARD is a function to be applied for indices in the
+backward direction, and FUN-REGION is a function to be applied between
+regions. All take two arguments (the bounds of the application)."
+  (declare (indent 1))
+  (cl-flet
+      ((int-or-nil-p
+        (x)
+        (or (null x) (integerp x))))
+    (pcase where
+      ;; parse N
+      ((and (pred integerp) n)
+       (if (<= 0 n) (funcall fun-forward 0 n)
+         (funcall fun-backward 0 (1- (- n)))))
+      ;; parse M-N
+      (`(,(and (pred integerp) m) ,(and (pred integerp) n))
+       (cond
+        ((<= 0 m n) (funcall fun-forward m n))
+        ((<= m n -1) (funcall fun-backward (1- (- n)) (1- (- m))))
+        ((< n m) (om--arg-error "M must be less than or equal to N"))
+        (t (om--arg-error "M and N must be the same sign"))))
+      ;; parse region between A and B
+      (`[,(and (pred int-or-nil-p) a) ,(and (pred int-or-nil-p) b)]
+       (let ((a (or a (point-min)))
+             (b (or b (point-max))))
+         (funcall fun-region a b)))
+      (e (om--arg-error "Invalid 'where' specification: Got %S" e)))))
+
+(defmacro om--apply-n (m n re backward? parse-form)
+  (declare (indent 4))
+  (let ((start (if backward? '(point-max) '(point-min)))
+        (iterate-form
+         (if backward?
+             `(save-match-data
+                (re-search-backward ,re nil t))
+           `(save-match-data
+              ;; avoid matching the current headline if already there
+              (when (and (bolp) (not (eobp))) (forward-char 1))
+              (when (re-search-forward ,re nil t)
+                (goto-char (match-beginning 0)))))))
+    `(save-excursion
+       (goto-char ,start)
+       ;; parse headline(s) if we start on a headline or can move to
+       ;; a headline
+       (when (or (looking-at ,re) ,iterate-form)
+         (let ((i 0))
+           ;; parse the first if we want it
+           (when (= 0 ,m) ,parse-form)
+           (setq i (1+ i))
+           ;; loop through the rest and parse when appropriate
+           (while (and ,iterate-form (<= i ,n))
+             (when (<= ,m i) ,parse-form)
+             (setq i (1+ i))))))))
+
+(defmacro om--apply-region (begin end re parse-form)
+  (declare (indent 3))
+  (let ((iterate-form `(re-search-backward ,re nil t)))
+    `(save-excursion
+       (goto-char ,end)
+       (when ,iterate-form
+         ,parse-form
+         ;; loop through the rest
+         (while (and ,iterate-form (<= ,begin (point)))
+           ,parse-form)))))
+
+(defun om-get-some-headlines (where)
+  "Return list of headline nodes from current buffer.
+
+WHERE describes the location of headlines to be parsed and is one
+of the following:
+- N: parse up to index N headlines (where 0 is the first); if negative
+  start counting from the last headline (where -1 refers to the last)
+- (M N): like N but parse after index M headlines; M and N may both
+  be similarly negative
+- [A B]: parse all headlines whose first point falls between points
+  A and B in the buffer; if A and B are nil, use `point-min' and
+  `point-max' respectively.
+
+Each headline is obtained with `om-parse-headline-at'."
+  (cl-flet
+      ((apply-n-forward
+        (m n)
+        (let ((acc))
+          (om--apply-n m n "^\\*" nil
+            (setq acc (cons (om-parse-this-headline) acc)))
+          (nreverse acc)))
+       (apply-n-backward
+        (m n)
+        (let ((acc))
+          (om--apply-n m n "^\\*" t
+            (setq acc (cons (om-parse-this-headline) acc)))
+          acc))
+       (apply-region
+        (begin end)
+        (let ((acc))
+          (om--apply-region begin end "^\\*"
+            (setq acc (cons (om-parse-this-headline) acc)))
+          acc)))
+    (om--do-headlines-where where
+      #'apply-n-forward
+      #'apply-n-backward
+      #'apply-region)))
+
+(defun om-get-headlines ()
+  "Return list of all headline nodes from current buffer.
+Each headline is obtained with `om-parse-headline-at'."
+  (om-get-some-headlines [nil nil]))
+
+(defun om-get-some-subtrees (where)
+  "Return list of subtree nodes from current buffer.
+
+See `om-get-some-headlines' for the meaning of WHERE.
+
+Each subtree is obtained with `om-parse-subtree-at'."
+  (cl-flet
+      ((apply-n-forward
+        (m n)
+        (let ((acc))
+          (om--apply-n m n "^\\* " nil
+            (setq acc (cons (om-parse-this-subtree) acc)))
+          (nreverse acc)))
+       (apply-n-backward
+        (m n)
+        (let ((acc))
+          (om--apply-n m n "^\\* " t
+            (setq acc (cons (om-parse-this-subtree) acc)))
+          acc))
+       (apply-region
+        (begin end)
+        (let ((acc))
+          (om--apply-region begin end "^\\* "
+            (setq acc (cons (om-parse-this-subtree) acc)))
+          acc)))
+    (om--do-headlines-where where
+      #'apply-n-forward
+      #'apply-n-backward
+      #'apply-region)))
+
+(defun om-get-subtrees ()
+  "Return list of all subtree nodes from current buffer.
+
+Each subtree is obtained with `om-parse-subtree-at'."
+  (om-get-some-subtrees [nil nil]))
+
+(om--defun* om-do-some-headlines (where fun)
   "Update some headlines in the current using FUN.
 
+See `om-get-some-headlines' for the meaning of WHERE.
+
 Headlines are updated using `om-update-this-headline' (see this for
-use and meaning of FUN). Iteration is only performed for headlines
-that begin between BEGIN and END points in the buffer. If either of
-these are nil, use `point-min' and `point-max' respectively."
-  (let ((begin (or begin (point-min)))
-        (end (or end (point-max))))
-    (save-excursion
-      (goto-char end)
-      ;; iterate backwards, its actually simpler since we don't need
-      ;; to worry about the toplevel section at the beginning
-      (while (and (outline-previous-heading) (<= begin (point)))
-        (om-update-this-headline fun)))))
+use and meaning of FUN)."
+  (cl-flet
+      ((apply-n-forward
+        (m n)
+        (om--apply-n m n "^\\*" nil
+          (om-update-this-headline fun)))
+       (apply-n-backward
+        (m n)
+        (om--apply-n m n "^\\*" t
+          (om-update-this-headline fun)))
+       (apply-region
+        (begin end)
+        (om--apply-region begin end "^\\*"
+          (om-update-this-headline fun))))
+    (om--do-headlines-where where
+      #'apply-n-forward
+      #'apply-n-backward
+      #'apply-region)))
 
 (om--defun* om-do-headlines (fun)
   "Update all headlines in the current buffer using FUN.
 
 Headlines are updated using `om-update-this-headline' (see this for
 use and meaning of FUN)."
-  (om-do-some-headlines nil nil fun))
+  (om-do-some-headlines [nil nil] fun))
 
-(om--defun* om-do-some-subtrees (begin end fun)
+(om--defun* om-do-some-subtrees (where fun)
   "Update some toplevel subtrees in the current buffer using FUN.
 
+See `om-get-some-headlines' for the meaning of WHERE.
+
 Subtrees are updated using `om-update-this-subtree' (see this for use
-and meaning of FUN). Iteration is only performed for headlines that
-begin between BEGIN and END points in the buffer. If either of these
-are nil, use `point-min' and `point-max' respectively."
-  (let ((begin (or begin (point-min)))
-        (end (or end (point-max))))
-    (save-excursion
-      (goto-char end)
-      ;; goto last toplevel headline
-      (while (and (/= ?* (char-after)) (outline-previous-heading)))
-      ;; if on a headline, parse it
-      (when (= ?* (char-after))
-        (om-update-this-subtree fun))
-      ;; parse the rest of the headlines
-      (let ((cur-point (point)))
-        (org-backward-heading-same-level 1 t)
-        (while (and (/= (point) cur-point) (<= begin (point)))
-          (om-update-this-subtree fun)
-          (setq cur-point (point))
-          (org-backward-heading-same-level 1 t))))))
+and meaning of FUN)."
+  (cl-flet
+      ((apply-n-forward
+        (m n)
+        (om--apply-n m n "^\\* " nil
+          ;; (re-search-forward "^\\* " nil t)
+          (om-update-this-subtree fun)))
+       (apply-n-backward
+        (m n)
+        (om--apply-n m n "^\\* " t
+          ;; (re-search-backward "^\\* " nil t)
+          (om-update-this-subtree fun)))
+       (apply-region
+        (begin end)
+        (om--apply-region begin end "^\\* "
+          ;; (re-search-backward "^\\* " nil t)
+          (om-update-this-subtree fun))))
+    (om--do-headlines-where where
+      #'apply-n-forward
+      #'apply-n-backward
+      #'apply-region)))
 
 (om--defun* om-do-subtrees (fun)
   "Update all toplevel subtrees in the current buffer using FUN.
 
 Subtrees are updated using `om-update-this-subtree' (see this for use
 and meaning of FUN)."
-  (om-do-some-subtrees nil nil fun))
+  (om-do-some-subtrees [nil nil] fun))
 
 (provide 'om)
 ;;; om.el ends here
