@@ -4760,30 +4760,42 @@ regions. All take two arguments (the bounds of the application)."
          (funcall fun-region a b)))
       (e (om--arg-error "Invalid 'where' specification: Got %S" e)))))
 
-(defmacro om--apply-n (m n re backward? iterate-form parse-form)
+(defmacro om--apply-n (m n re backward? parse-form)
   (declare (indent 4))
   (let ((start (if backward? '(point-max) '(point-min)))
-        (search (if backward? 're-search-backward 're-search-forward)))
+        (iterate-form
+         (if backward?
+             `(save-match-data
+                (re-search-backward ,re nil t))
+           `(save-match-data
+              ;; avoid matching the current headline if already there
+              (when (and (bolp) (not (eobp))) (forward-char 1))
+              (when (re-search-forward ,re nil t)
+                (goto-char (match-beginning 0)))))))
     `(save-excursion
        (goto-char ,start)
-       (when (,search ,re nil t)
+       ;; parse headline(s) if we start on a headline or can move to
+       ;; a headline
+       (when (or (looking-at ,re) ,iterate-form)
          (let ((i 0))
+           ;; parse the first if we want it
            (when (= 0 ,m) ,parse-form)
            (setq i (1+ i))
-           ;; loop through the rest
+           ;; loop through the rest and parse when appropriate
            (while (and ,iterate-form (<= i ,n))
              (when (<= ,m i) ,parse-form)
              (setq i (1+ i))))))))
 
-(defmacro om--apply-region (begin end re iterate-form parse-form)
+(defmacro om--apply-region (begin end re parse-form)
   (declare (indent 3))
-  `(save-excursion
-     (goto-char ,end)
-       (when (re-search-backward ,re nil t)
+  (let ((iterate-form `(re-search-backward ,re nil t)))
+    `(save-excursion
+       (goto-char ,end)
+       (when ,iterate-form
          ,parse-form
          ;; loop through the rest
          (while (and ,iterate-form (<= ,begin (point)))
-           ,parse-form))))
+           ,parse-form)))))
 
 (defun om-get-some-headlines (where)
   "Return list of headline nodes from current buffer.
@@ -4804,21 +4816,18 @@ Each headline is obtained with `om-parse-headline-at'."
         (m n)
         (let ((acc))
           (om--apply-n m n "^\\*" nil
-            (outline-next-heading)
             (setq acc (cons (om-parse-this-headline) acc)))
           (nreverse acc)))
        (apply-n-backward
         (m n)
         (let ((acc))
           (om--apply-n m n "^\\*" t
-            (outline-previous-heading)
             (setq acc (cons (om-parse-this-headline) acc)))
           acc))
        (apply-region
         (begin end)
         (let ((acc))
           (om--apply-region begin end "^\\*"
-            (outline-previous-heading)
             (setq acc (cons (om-parse-this-headline) acc)))
           acc)))
     (om--do-headlines-where where
@@ -4841,23 +4850,19 @@ Each subtree is obtained with `om-parse-subtree-at'."
       ((apply-n-forward
         (m n)
         (let ((acc))
-          ;; TODO this can be refactored...
           (om--apply-n m n "^\\* " nil
-            (re-search-forward "^\\* " nil t)
             (setq acc (cons (om-parse-this-subtree) acc)))
           (nreverse acc)))
        (apply-n-backward
         (m n)
         (let ((acc))
           (om--apply-n m n "^\\* " t
-            (re-search-backward "^\\* " nil t)
             (setq acc (cons (om-parse-this-subtree) acc)))
           acc))
        (apply-region
         (begin end)
         (let ((acc))
           (om--apply-region begin end "^\\* "
-            (re-search-backward "^\\* " nil t)
             (setq acc (cons (om-parse-this-subtree) acc)))
           acc)))
     (om--do-headlines-where where
@@ -4882,17 +4887,14 @@ use and meaning of FUN)."
       ((apply-n-forward
         (m n)
         (om--apply-n m n "^\\*" nil
-          (outline-next-heading)
           (om-update-this-headline fun)))
        (apply-n-backward
         (m n)
         (om--apply-n m n "^\\*" t
-          (outline-previous-heading)
           (om-update-this-headline fun)))
        (apply-region
         (begin end)
         (om--apply-region begin end "^\\*"
-          (outline-previous-heading)
           (om-update-this-headline fun))))
     (om--do-headlines-where where
       #'apply-n-forward
@@ -4917,17 +4919,17 @@ and meaning of FUN)."
       ((apply-n-forward
         (m n)
         (om--apply-n m n "^\\* " nil
-          (re-search-forward "^\\* " nil t)
+          ;; (re-search-forward "^\\* " nil t)
           (om-update-this-subtree fun)))
        (apply-n-backward
         (m n)
         (om--apply-n m n "^\\* " t
-          (re-search-backward "^\\* " nil t)
+          ;; (re-search-backward "^\\* " nil t)
           (om-update-this-subtree fun)))
        (apply-region
         (begin end)
         (om--apply-region begin end "^\\* "
-          (re-search-backward "^\\* " nil t)
+          ;; (re-search-backward "^\\* " nil t)
           (om-update-this-subtree fun))))
     (om--do-headlines-where where
       #'apply-n-forward
