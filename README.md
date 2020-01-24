@@ -109,12 +109,15 @@ terminology more often used with tree data structures:
 
 ## Properties
 
+All properies specified by `org-element.el` are readable by this API
+(eg one can query them with functions like `om-get-property`).
+
 The properties `:begin`, `:end`, `:contents-begin`, `:contents-end`,
-and `post-affiliated` are not exposed by this API. They are not
-necessary for manipulating the functional representation of the parse
-tree. In addition to these, some properties unique to certain types
-are not exposed for the same reason. Each type's build function
-describes the properties that are available.
+`:parent`, and `post-affiliated` are not settable by this API as they
+are not necessary for manipulating the textual representation of the
+parse tree. In addition to these, some properties unique to certain
+types are not settable for the same reason. Each type's build function
+describes the properties that are settable.
 
 ## Threading
 
@@ -6936,7 +6939,7 @@ no examples :(
 ```
 
 
-<!-- 1.1.0 -->
+<!-- 1.2.0 -->
 
 # Acknowledgements
 

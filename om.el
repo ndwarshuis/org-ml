@@ -1187,7 +1187,10 @@ bounds."
          (underline)
          (verbatim (:value ,@str :require t))
          (verse-block))
-       (--map (-snoc it post-blank))))))
+       ;; add post-blank/begin/end to everything
+       (--map (-snoc it post-blank '(:begin) '(:end)))
+       (--map-when (memq (car it) om-branch-nodes)
+                   (-snoc it '(:contents-begin) '(:contents-end)))))))
 
 ;;; node property operations
 
