@@ -1181,20 +1181,35 @@ bounds."
 ;; alist functions
 
 (defun om--get-property-attribute (attribute type prop)
-  "Return ATTRIBUTE for PROP of node TYPE."
+  "Return ATTRIBUTE for PROP of node TYPE.
+If NOERROR is non-nil, return nil instead of signaling an error
+if PROP in TYPE does not have ATTRIBUTE."
   (-if-let (type-list (alist-get type om--node-property-alist))
-      (-if-let (plist (alist-get prop type-list))
-          (plist-get plist attribute)
-        (om--arg-error "Unsettable property '%s' for type '%s' requested; settable properties are %s"
-               prop type (->> (--map (symbol-name (car it)) type-list)
-                              (s-join ", "))))
-    (om--arg-error "Tried to get property for non-existent type %s" type)))
+      (if (assoc prop type-list)
+          (-when-let (plist (alist-get prop type-list))
+            (plist-get plist attribute))
+        (om--arg-error "Type '%s' does not have property '%s'"
+                       type prop))
+        ;; (unless noerror
+        ;;   (let* ((msg1 "Property '%s' has no attribute '%s' for type '%s'")
+        ;;          (msg2
+        ;;           (or
+        ;;            (-some->>
+        ;;             type-list
+        ;;             (--filter (plist-get (cdr it) attribute))
+        ;;             (--map (symbol-name (car it)))
+        ;;             (s-join ", ")
+        ;;             (format "properties with this attribute are: %s"))
+        ;;            "this type has no properties with this attribute"))
+        ;;          (msg (format "%s; %s" msg1 msg2)))
+        ;;     (om--arg-error msg prop attribute type))))
+    (om--arg-error "Tried to query property '%s' for non-existent type '%s'" prop type)))
 
 (defun om--get-property-encoder (type prop)
   "Return the encoder function for PROP of node TYPE."
   (om--get-property-attribute :encode type prop))
 
-(defun om--get-property-nocheck-decoder (type prop)
+(defun om--get-property-decoder (type prop)
   "Return the decoder function for PROP of node TYPE."
   (om--get-property-attribute :decode type prop))
 
@@ -2435,17 +2450,20 @@ elements may have other elements as children."
 
 See builder functions for a list of properties and their rules for
 each type."
-  (let* ((type (om-get-type node))
-         (pred (om--get-property-attribute :pred type prop)))
-    (if (funcall pred value)
-        (let* ((encode-fun (om--get-property-encoder type prop))
-               (update-fun (om--get-property-cis-function type prop)))
-          (-->
-           (if encode-fun (funcall encode-fun value) value)
-           (om--set-property-nocheck prop it node)
-           (if update-fun (funcall update-fun it) it)))
-      (om--arg-error "Property '%s' in node of type '%s' must be %s. Got '%S'"
-             prop type (om--get-property-type-desc type prop) value))))
+  (let ((type (om-get-type node)))
+    (-if-let (pred (om--get-property-attribute :pred type prop))
+        (if (funcall pred value)
+            (let* ((encode-fun (om--get-property-encoder type prop))
+                   (update-fun (om--get-property-cis-function type prop)))
+              (-->
+               (if encode-fun (funcall encode-fun value) value)
+               (om--set-property-nocheck prop it node)
+               (if update-fun (funcall update-fun it) it)))
+          (om--arg-error
+           "Property '%s' in node of type '%s' must be %s. Got '%S'"
+           prop type (om--get-property-type-desc type prop) value))
+      (om--arg-error "Property '%s' is unsettable for type '%s'"
+                     prop type))))
 
 (defun om-set-properties (plist node)
   "Return NODE with all properties set to the values according to PLIST.
@@ -2458,14 +2476,19 @@ each type."
   (cl-flet
       ((filter
         (acc keyval type)
-        (-let* (((prop value) keyval)
-                (pred (om--get-property-attribute :pred type prop)))
-          (if (funcall pred value)
-              (let ((encode-fun (om--get-property-encoder type prop)))
-                (->> (if encode-fun (funcall encode-fun value) value)
-                     (funcall #'plist-put acc prop)))
-            (om--arg-error "Property '%s' in node of type '%s' must be %s. Got '%S'"
-                   prop type (om--get-property-type-desc type prop) value)))))
+        (-let* (((prop value) keyval))
+          ;; TODO this function doesn't smell DRY
+          (-if-let (pred (om--get-property-attribute :pred type prop))
+              (if (funcall pred value)
+                  (let ((encode-fun (om--get-property-encoder type prop)))
+                    (->> (if encode-fun (funcall encode-fun value) value)
+                         (funcall #'plist-put acc prop)))
+                (om--arg-error
+                 "Property '%s' in node of type '%s' must be %s. Got '%S'"
+                 prop type (om--get-property-type-desc type prop) value))
+            (om--arg-error
+             "Property '%s' is unsettable for type '%s'"
+             prop type)))))
     (if (om--is-plist plist)
         (let* ((cur-props (om--get-all-properties node))
                (type (om-get-type node))
@@ -2486,14 +2509,11 @@ each type."
 
 ;; TODO add plural version of this...
 (defun om-get-property (prop node)
-  "Return the value of PROP of NODE.
-
-See builder functions for a list of properties and their rules for
-each type."
-  (let ((filter-fun (-> (om-get-type node)
-                        (om--get-property-nocheck-decoder prop)))
+  "Return the value of PROP of NODE."
+  (let ((decoder-fun (-> (om-get-type node)
+                         (om--get-property-decoder prop)))
         (value (om--get-property-nocheck prop node)))
-    (if filter-fun (funcall filter-fun value) value)))
+    (if decoder-fun (funcall decoder-fun value) value)))
 
 (om--defun* om-map-property (prop fun node)
   "Return NODE with FUN applied to the value of PROP.

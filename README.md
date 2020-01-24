@@ -3103,9 +3103,6 @@ each type.
 
 Return the value of **`prop`** of **`node`**.
 
-See builder functions for a list of properties and their rules for
-each type.
-
 ```el
 ;; Given the following contents:
 ; #+CALL: ktulu(x=4) :exports results
