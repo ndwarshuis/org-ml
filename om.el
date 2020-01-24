@@ -114,18 +114,17 @@
 ;; hold other element nodes as children
 
 ;; TODO `org-element-all-elements' does not exist in emacs <= 25
-(eval-when-compile
-  (defconst om-elements
-    (cons 'org-data org-element-all-elements)
-    "List of all element types including 'org-data'.")
+(defconst om-elements
+  (cons 'org-data org-element-all-elements)
+  "List of all element types including 'org-data'.")
 
-  (defconst om-objects
-    (cons 'plain-text org-element-all-objects)
-    "List of all object types including 'plain-text'.")
+(defconst om-objects
+  (cons 'plain-text org-element-all-objects)
+  "List of all object types including 'plain-text'.")
 
-  (defconst om-nodes
-    (append om-elements om-objects)
-    "List of all node types."))
+(defconst om-nodes
+  (append om-elements om-objects)
+  "List of all node types.")
 
 (defvaralias 'om-branch-nodes-permitting-child-objects
   'org-element-object-containers
@@ -926,7 +925,7 @@ bounds."
 
 ;;; property alist
 
-(eval-when-compile
+(eval-and-compile
   (defconst om--node-property-alist
     (let ((bool (list :pred #'booleanp
                       :decode 'om--decode-boolean
@@ -1304,7 +1303,7 @@ plist of properties for the node."
 
 ;; define all base builders using this automated monstrosity
 
-(eval-when-compile
+(eval-and-compile
   (defun om--kwd-to-sym (keyword)
     "Return KEYWORD as a string with no leading colon."
     (->> (symbol-name keyword) (s-chop-prefix ":") (intern)))
@@ -4573,7 +4572,7 @@ the section at the top of the org buffer."
 
 ;;; parse at current point
 
-(eval-when-compile
+(eval-and-compile
   (-> '(object element table-row item headline subtree section)
       (--each
           (let* ((name (intern (format "om-parse-this-%s" it)))
@@ -4674,7 +4673,7 @@ old node in the current buffer."
 
 ;; generate all update functions for corresponding parse functions
 ;; since all take function args, also generate anaphoric forms
-(eval-when-compile
+(eval-and-compile
   (--each '(object element table-row item headline subtree section)
     (let* ((update-at
             (intern (format "om-update-%s-at" it)))
