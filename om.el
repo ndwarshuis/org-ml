@@ -1272,52 +1272,30 @@ and ILLEGAL types were attempted to be set."
 
 ;;; build helpers
 
-(defconst om--object-properties
-  '(:begin :end :parent)
-  "Minimum properties for objects.")
-
-(defconst om--recursive-object-properties
-  (append om--object-properties '(:contents-begin :contents-end))
-  "Minimum properties for recursive objects.")
-
-(defconst om--element-properties
-  (cons :post-affiliated om--object-properties)
-  "Minimum properties for elements.")
-
-(defconst om--container-element-properties
-  (cons :post-affiliated om--recursive-object-properties)
-  "Minimum properties for container elements.")
-
 (defun om--init-properties (props)
   "Return a plist where the keys are PROPS and all values are nil."
   (--mapcat (list it nil) props))
 
-(defun om--build (type post-blank props)
-  "Return a new node assembled from TYPE, POST-BLANK, and PROPS.
-TYPE is a symbol, POST-BLANK is a postive integer, and PROPS is a
-plist of properties for the node."
-  (->> (om-set-property :post-blank (or post-blank 0) `(,type nil))
-       (om--set-properties-nocheck-nil props)))
+(defun om--build (type post-blank)
+  "Return a new node assembled from TYPE with POST-BLANK.
+TYPE is a symbol and POST-BLANK is a postive integer."
+  `(,type (:post-blank ,(or post-blank 0))))
 
-(defun om--build-object-node (type post-blank)
+(defun om--build-leaf-node (type post-blank)
   "Return a new object-typed node from TYPE and POST-BLANK."
-  (om--build type post-blank om--object-properties))
+  (om--build type post-blank))
 
-(defun om--build-branch-object-node (type post-blank children)
+(defun om--build-branch-node (type post-blank children)
   "Return a new branch object-typed node from TYPE, POST-BLANK, and CHILDREN."
-  (->> om--recursive-object-properties
-       (om--build type post-blank)
+  (->> (om--build type post-blank)
        (om-set-children children)))
 
-(defun om--build-element-node (type post-blank)
-  "Return a new element-typed node from TYPE and POST-BLANK."
-  (om--build type post-blank om--element-properties))
-
-(defun om--build-branch-element-node (type post-blank children)
-  "Return a new branch element-typed node from TYPE, POST-BLANK, and CHILDREN."
-  (->> om--container-element-properties
-       (om--build type post-blank)
-       (om-set-children children)))
+(defun om--build-blank-node (type)
+  "Return a new node of type TYPE with all properties set to nil."
+  (->> (alist-get type om--property-alist)
+       (-map #'car)
+       (om--init-properties)
+       (list type)))
 
 ;;; base builders
 
@@ -1423,15 +1401,8 @@ plist of properties for the node."
                prop "\n- POST-BLANK: a non-negative integer")))
            (builder
             (let ((a `(',type post-blank)))
-              (cond
-               ((and element? rest-arg)
-                `(om--build-branch-element-node ,@a ,rest-arg))
-               (element?
-                `(om--build-element-node ,@a))
-               (rest-arg
-                `(om--build-branch-object-node ,@a ,rest-arg))
-               (t
-                `(om--build-object-node ,@a)))))
+              (if rest-arg `(om--build-branch-node ,@a ,rest-arg)
+                `(om--build-leaf-node ,@a))))
            (body (if (or strict-props nil-props const-props)
                      `(->> ,@(-non-nil (list builder const-props
                                              nil-props strict-props)))
@@ -1897,19 +1868,16 @@ list. None of the builder functions add parent references, so
 (om--defun-kw om-build-timestamp-diary (form &key post-blank)
   "Return a new diary-sexp timestamp node from FORM.
 Optionally set POST-BLANK (a positive integer)."
-  (->> (om--build-object-node 'timestamp post-blank)
+  (->> (om--build-blank-node 'timestamp)
+       (om-set-property :post-blank (or post-blank 0))
        (om--set-property-nocheck :type 'diary)
-       (om-timestamp-diary-set-value form)
-       (om--set-properties-nocheck-nil
-        (list :repeater-type :repeater-unit :repeater-value
-              :warning-type :warning-unit :warning-value :year-start
-              :month-start :day-start :hour-start :minute-start
-              :year-end :month-end :day-end :hour-end :minute-end))))
+       (om-timestamp-diary-set-value form)))
 
 (om--defun-kw om-build-table-row-hline (&key post-blank)
   "Return a new rule-typed table-row node.
 Optionally set POST-BLANK (a positive integer)."
-  (->> (om--build-branch-element-node 'table-row post-blank nil)
+  (->> (om--build-blank-node 'table-row)
+       (om-set-property :post-blank (or post-blank 0))
        (om--set-property-nocheck :type 'rule)))
 
 ;;; shorthand builders
@@ -1958,13 +1926,13 @@ the three members correspond to the :repeater/warning-type, -value,
 and -unit properties in `om-build-timestamp'.
 
 Building a diary sexp timestamp is not possible with this function."
-  (->> (om--build-object-node 'timestamp post-blank)
+  (->> (om--build-blank-node 'timestamp)
+       (om-set-property :post-blank (or post-blank 0))
        (om--timestamp-set-start-time-nocheck start)
        (om--timestamp-set-end-time-nocheck end)
        (om--timestamp-set-active active)
        (om--timestamp-set-warning warning)
-       (om--timestamp-set-repeater repeater)
-       (om--set-property-nocheck-nil :raw-value)))
+       (om--timestamp-set-repeater repeater)))
 
 (om--defun-kw om-build-clock! (start &key end post-blank)
   "Return a new clock node.
