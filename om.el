@@ -1276,18 +1276,18 @@ and ILLEGAL types were attempted to be set."
   "Return a plist where the keys are PROPS and all values are nil."
   (--mapcat (list it nil) props))
 
-(defun om--build (type post-blank)
+(defun om--build-bare-node (type post-blank)
   "Return a new node assembled from TYPE with POST-BLANK.
 TYPE is a symbol and POST-BLANK is a postive integer."
   `(,type (:post-blank ,(or post-blank 0))))
 
 (defun om--build-leaf-node (type post-blank)
   "Return a new object-typed node from TYPE and POST-BLANK."
-  (om--build type post-blank))
+  (om--build-bare-node type post-blank))
 
 (defun om--build-branch-node (type post-blank children)
   "Return a new branch object-typed node from TYPE, POST-BLANK, and CHILDREN."
-  (->> (om--build type post-blank)
+  (->> (om--build-bare-node type post-blank)
        (om-set-children children)))
 
 (defun om--build-blank-node (type)
