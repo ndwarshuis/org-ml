@@ -5,6 +5,15 @@ A functional API for org-mode inspired by
 [dash.el](https://github.com/magnars/dash.el) and
 [s.el](https://github.com/magnars/s.el) libraries.
 
+# Upcoming Breaking Changes for 2.0
+
+* This packages will be renamed `org-ml` (org-metalanguage)
+* Functions will be renamed to be more consistent
+  * `om-get-headlines` and friends will become `om-parse-headlines`
+  * `om-do-headlines` and friends will become `om-update-headlines`
+* Match function syntax will change to be more regexp-like (eg `:many`
+  will be `:any *` or similar)
+
 # Installation
 
 This package is not yet in MELPA. To install, clone this repository
