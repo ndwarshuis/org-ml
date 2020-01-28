@@ -2913,6 +2913,61 @@ is the same as that described in `om-build-planning!'."
   (let ((ts (om--planning-list-to-timestamp planning-list)))
     (om-set-property prop ts planning)))
 
+;; affiliated keywords
+
+(defconst om--element-nodes-with-affiliated
+  (-difference om-elements
+               '(org-data comment clock headline inlinetask item
+                          node-property planning property-drawer
+                          section table-row)))
+
+(defun om-get-affiliated-keyword (key node)
+  (unless (or (memq key '(:caption :header :name :plot :results))
+              (s-starts-with? ":attr_" (symbol-name key)))
+    (om--arg-error "Invalid affiliated keyword requested: %s" key))
+  (om--get-property-nocheck key node))
+
+(defun om-set-affiliated-keyword (key value node)
+  "Set affiliated keyword KEY in NODE to VALUE.
+This is just like `om--set-property-nocheck except it will
+delete KEY from the plist if VALUE is nil."
+  (unless (om-is-any-type om--element-nodes-with-affiliated node)
+    (om--arg-error
+     "Node type '%s' does not allow affiliated keywords"
+     (om-get-type node)))
+  (let ((props
+         (if value
+             (plist-put (om--get-all-properties node) key value)
+           (om--plist-remove key (om--get-all-properties node)))))
+    (om--construct (om-get-type node) props (om-get-children node))))
+
+(om--defun* om--map-affiliated-keyword (key fun node)
+  "Apply FUN to value of KEY in NODE."
+  (-some--> (om-get-affiliated-keyword key node)
+            (funcall fun it)
+            (om-set-affiliated-keyword key it node)))
+
+(defun om-set-caption! (caption node)
+  (cl-flet
+      ((is-metacell
+        (cell)
+        (pcase cell (`(,(pred stringp) ,(pred stringp)) t)))
+       (convert-metacell
+        (cell)
+        (cons (om-build-secondary-string! (cadr cell)) (car cell))))
+    (let ((caption
+           (pcase caption
+             ((pred stringp)
+              (list (list (om-build-secondary-string! caption))))
+             ((pred is-metacell)
+              (list (convert-metacell caption)))
+             ((pred (lambda (x) (-all? #'is-metacell x)))
+              (-map #'convert-metacell caption))
+             (`nil nil)
+             (e (om--arg-error "Invalid caption given: %s" e)))))
+      (om-set-affiliated-keyword :caption caption node))))
+
+
 ;;; PUBLIC BRANCH/CHILD FUNCTIONS
 
 ;;; polymorphic
