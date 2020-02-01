@@ -4061,9 +4061,9 @@ terminate only when the entire tree is searched within PATTERN."
       (`(,(or :first :last :nth :slice) . ,_)
        (om--arg-error "Slicers can only appear at the front of pattern"))
       ;;
-      ;; :many! - if node matches add to accumulator, if not descend
+      ;; *! - if node matches add to accumulator, if not descend
       ;;   into node's children and keep searching
-      (`(:many! . (,condition . nil))
+      (`(:any . (*! . (,condition . nil)))
        (let ((pred (om--match-make-condition-form condition))
              (callback `(get-many acc ,get-children)))
          `(cl-labels
@@ -4072,9 +4072,9 @@ terminate only when the entire tree is searched within PATTERN."
                 (,@reduce (if ,pred ,accum ,callback) acc children)))
             ,callback)))
       ;;
-      ;; :many - flatten all children into a giant list and walk
+      ;; * - flatten all children into a giant list and walk
       ;;   through list, adding children to accumulator if they match
-      (`(:many . (,condition . nil))
+      (`(:any . (* . (,condition . nil)))
        (let ((pred (om--match-make-condition-form condition))
              (callback (if end? '(-snoc (flatten-children it) it)
                          '(cons it (flatten-children it)))))
@@ -4085,7 +4085,7 @@ terminate only when the entire tree is searched within PATTERN."
             (,@reduce (if ,pred ,accum acc) acc (flatten-children it)))))
       ;;
       ;; :many and :many! should only have one condition after them
-      (`(,(and (or :many :many!) wildcard) . ,_)
+      (`(:any . (,(and (or '* '*!) wildcard) . ,_))
        (om--arg-error "Exactly one condition should follow %s" wildcard))
       ;;
       ;; :any (at end of pattern) - add all nodes to accumulator

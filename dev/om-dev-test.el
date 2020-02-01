@@ -1011,13 +1011,13 @@ be parsed to TYPE."
     (should-error-arg (funcall fun '(bold :nth)))
     (should-error-arg (funcall fun '(bold :sub)))
     ;; :many by itself
-    (should-error-arg (funcall fun '(:many)))
+    (should-error-arg (funcall fun '(:any *)))
     ;; :many with too many arguments
-    (should-error-arg (funcall fun '(:many bold italic)))
+    (should-error-arg (funcall fun '(:any * bold italic)))
     ;; :many! by itself
-    (should-error-arg (funcall fun '(:many!)))
+    (should-error-arg (funcall fun '(:any *!)))
     ;; :many! with too many arguments
-    (should-error-arg (funcall fun '(:many! bold italic)))
+    (should-error-arg (funcall fun '(:any *! bold italic)))
     ;; just wrong...
     (should-error-arg (funcall fun nil))
     (should-error-arg (funcall fun '(:swaggart)))))
@@ -1192,8 +1192,8 @@ applied."
                     "- 6" "- 7" "- 8\n  - 9" "- 9"))
         (expected! '("- 1" "- 2\n  - 3" "- 4" "- 5\n  - 6" "- 7"
                      "- 8\n  - 9")))
-    (match-slicer-should-equal node expected (:many item))
-    (match-slicer-should-equal node expected! (:many! item))))
+    (match-slicer-should-equal node expected (:any * item))
+    (match-slicer-should-equal node expected! (:any *! item))))
 
 (provide 'om-dev-test)
 ;;; om-dev-test.el ends here

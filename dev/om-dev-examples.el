@@ -3869,7 +3869,7 @@
       (->> (om-parse-this-headline)
            (om-headline-map-logbook*
              (--map 
-              (om-match-map* '(:many timestamp)
+              (om-match-map* '(:any * timestamp)
                 (om-timestamp-shift 1 'day it) it)
               it))
            (om-to-trimmed-string))
@@ -4760,7 +4760,7 @@
               "nodes holding the items.")
     (->> (om-parse-this-subtree)
          (om-match '((:and (:todo-keyword "TODO") (:commentedp nil))
-                     :many
+                     :any *
                      (:and item (> 0))))
          (-map #'om-to-trimmed-string))
     => '("- item 2" "- item 3")
@@ -4976,20 +4976,20 @@
              "- 8"
              "  - 9")
     (->> (om-parse-this-element)
-         (om-match '(:many item))
+         (om-match '(:any * item))
          (--map (om-to-trimmed-string it)))
     => '("- 1" "- 2\n  - 3" "- 3" "- 4" "- 5\n  - 6" "- 6" "- 7"
          "- 8\n  - 9" "- 9")
     (->> (om-parse-this-element)
-         (om-match '(section plain-list :many item))
+         (om-match '(section plain-list :any * item))
          (--map (om-to-trimmed-string it)))
     => '("- 1" "- 2\n  - 3" "- 3")
     (->> (om-parse-this-element)
-         (om-match '(:many! item))
+         (om-match '(:any *! item))
          (--map (om-to-trimmed-string it)))
     => '("- 1" "- 2\n  - 3" "- 4" "- 5\n  - 6" "- 7" "- 8\n  - 9")
     (->> (om-parse-this-element)
-         (om-match '(section plain-list :many! item))
+         (om-match '(section plain-list :any *! item))
          (--map (om-to-trimmed-string it)))
     => '("- 1" "- 2\n  - 3")
 
@@ -5025,7 +5025,7 @@
     nil
     (:buffer "pull me /under/")
     (--> (om-parse-this-element)
-         (om-match-extract '(:many italic) it)
+         (om-match-extract '(:any * italic) it)
          (cons (-map #'om-to-trimmed-string (car it))
                (om-to-trimmed-string (cdr it))))
     => '(("/under/") . "pull me"))
@@ -5099,7 +5099,7 @@
     nil
     (:buffer "*1* 2 *3* 4 *5* 6 *7* 8 *9* 10")
     (->> (om-parse-this-element)
-         (om-match-replace '(:many bold)
+         (om-match-replace '(:any * bold)
            (om-build-bold :post-blank 1 "0"))
          (om-to-trimmed-string))
     => "*0* 2 *0* 4 *0* 6 *0* 8 *0* 10")
@@ -5316,7 +5316,7 @@
                "- [ ] sell 2 singles")
       (->> (om-parse-this-headline)
            (om-update*
-             (->> (om-match-map '(:many item) #'om-item-toggle-checkbox it)
+             (->> (om-match-map '(:any * item) #'om-item-toggle-checkbox it)
                   (om-headline-update-item-statistics))))
       $> (:result "* win grammy [3/3]"
                   "- [X] write punk song"
