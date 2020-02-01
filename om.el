@@ -4871,6 +4871,39 @@ only be used for block elements."
   "Unfold the children of NODE if they exist."
   (om--fold-flag-node nil node))
 
+(defun om-subtree-set-fold (fold-state headline)
+  "Set the fold state of HEADLINE node.
+This function will do nothing unless HEADLINE has children.
+FOLD-STATE may be one of:
+- `none`: hide everything
+- `children`: show section and 1st-level subheadlines only
+- `subtree`: show section and subheadline contents (but not drawers)
+- `all`: show everything"
+  (cl-flet
+      ((fold-drawers
+        (headline)
+        (-when-let (section (om-headline-get-section headline))
+          (-some->> section
+                    (--first (om-is-type 'property-drawer it))
+                    (om-fold))
+          (let ((drawers (-some->> (om-get-children section)
+                                   (--filter (om-is-type 'drawer it)))))
+            (--each drawers (om-fold it))))))
+    (cl-case fold-state
+      (none
+       (om-fold headline))
+      (children
+       (om-unfold headline)
+       (fold-drawers headline)
+       (--each (om-headline-get-subheadlines headline) (om-fold it)))
+      (subtree
+       (om-unfold headline)
+       (fold-drawers headline)
+       (--each (om-headline-get-subheadlines headline)
+         (om-subtree-set-fold fold-state it)))
+      (all
+       (om-unfold headline)))))
+
 ;;; headline iteration
 
 (defun om--do-headlines-where (where fun-forward fun-backward
