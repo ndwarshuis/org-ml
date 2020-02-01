@@ -4758,22 +4758,118 @@ returns a modified node."
 
 ;;; fold
 
-;; TODO this will fold items improperly
-(defun om--flag-elem-contents (flag node)
+(defun om--fold-get-contents-begin-maybe (node)
+  "Return :contents-begin minus one or nil if not found for NODE."
+  (-some-> (om-get-property :contents-begin node) (1-)))
+
+(defmacro om--fold-get-contents-begin-offset (node offset)
+  "Return the fold beginning boundary of NODE.
+Try `om--fold-get-contents-begin-maybe' first, and if this returns nil,
+use OFFSET to calculated the beginning fold boundary beginning.
+OFFSET can either be an integer or a form that evaluates to an
+integer."
+  (declare (indent 1) (debug (form form)))
+  `(or (om--fold-get-contents-begin-maybe ,node)
+       (+ ,offset (om-get-property :begin ,node))))
+
+(defun om--fold-get-begin-boundary (node)
+  "Return integer for point at the beginning of fold region for NODE."
+  (cl-case (om-get-type node)
+    ;; Blocks must be folded regardless of if they have children
+    (center-block
+     (om--fold-get-contents-begin-offset node 14))
+    (dynamic-block
+     (om--fold-get-contents-begin-offset node
+       (+ 9 (length (om-get-property :block-name node)))))
+    (drawer
+     (om--fold-get-contents-begin-offset node
+       (+ 2 (length (om-get-property :drawer-name node)))))
+    (property-drawer
+     (om--fold-get-contents-begin-offset node 12))
+    ((quote-block verse-block)
+     (om--fold-get-contents-begin-offset node 13))
+    (special-block
+     (om--fold-get-contents-begin-offset node
+       (+ 9 (length (om-get-property :type node)))))
+    ;; Headlines should only be folded if they have children
+    (headline
+     (om--fold-get-contents-begin-maybe node))
+    ;; Items are tricky since everything after the "first line" is
+    ;; folded. If the first child is a paragraph, need to figure out
+    ;; how long its first line is and add that to :contents-begin. DO
+    ;; nothing if there are no children
+    (item
+     (-when-let (first (-first-item (om-get-children node)))
+       (let ((offset (if (not (om-is-type 'paragraph first)) -1
+                       (->> (om-to-string first)
+                            (s-split "\n")
+                            (-first-item)
+                            (length)))))
+         (+ offset (om-get-property :contents-begin node)))))
+    ;; These elements are not branch types and thus don't have child
+    ;; boundaries, so will need to manually calculated where the
+    ;; boundaries should be
+    ((comment-block example-block)
+     (+ 15 (om-get-property :begin node)))
+    (export-block
+     (+ (om-get-property :begin node)
+        (-if-let (type (om-get-property :type node))
+            (1+ (length type)) 0)
+        14))
+    (src-block
+     (+ (om-get-property :begin node)
+        (-if-let (meta (-some->
+                        (list
+                         (om-get-property :language node)
+                         (om--get-property-nocheck :switches node)
+                         (om--get-property-nocheck :parameters node))
+                        (-non-nil)))
+            (1+ (length (s-join " " meta))) 0)
+        11))))
+
+(defun om--fold-flag-region-block (begin end flag)
+  "Set invisibility for region denoted by BEGIN and END.
+FLAG is a boolean (t for invisible). The overlays applied should
+only be used for block elements."
+  (remove-overlays begin end 'invisible)
+  ;; Code ripped off from `outline-flag-region' with overlay
+  ;; properties set to match those created in `org-hide-block-toggle'
+  (when flag
+    (let ((o (make-overlay begin end nil 'front-advance)))
+      (overlay-put o 'invisible 'org-hide-block)
+      (overlay-put o 'isearch-open-invisible
+                   ;; This is the search function from
+                   ;; `org-hide-block-toggle'. There are other choices
+                   ;; like `outline-isearch-open-invisible-function'
+                   ;; but this is what the source function uses
+                   (lambda (ov)
+                     (when (memq ov org-hide-block-overlays)
+                       (setq org-hide-block-overlays
+                             (delq ov org-hide-block-overlays)))
+                     (when (eq (overlay-get ov 'invisible) 'org-hide-block)
+                       (delete-overlay ov)))))))
+
+(defun om--fold-flag-node (flag node)
   "Set folding of buffer contents in NODE to FLAG."
-  (let ((b (om--get-property-nocheck :contents-begin node))
-        (e (cl-case (om-get-type node)
-             ((property-drawer drawer) (om--get-property-nocheck :end node))
-             (t (om--get-property-nocheck :contents-end node)))))
-    (outline-flag-region (1- b) (1- e) flag)))
+  (-when-let (begin (om--fold-get-begin-boundary node))
+    (let ((end (- (om-get-property :end node)
+                  (om-get-property :post-blank node)
+                  1)))
+      (cl-case (om-get-type node)
+        ((drawer headline item property-drawer)
+         (outline-flag-region begin end flag))
+        ((center-block comment-block dynamic-block example-block
+                       export-block quote-block special-block
+                       src-block verse-block)
+         (om--fold-flag-region-block begin end flag))))))
 
 (defun om-fold (node)
   "Fold the children of NODE if they exist."
-  (om--flag-elem-contents t node))
+  (om--fold-flag-node t node))
 
 (defun om-unfold (node)
   "Unfold the children of NODE if they exist."
-  (om--flag-elem-contents nil node))
+  (om--fold-flag-node nil node))
 
 ;;; headline iteration
 
