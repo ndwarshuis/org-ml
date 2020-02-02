@@ -4041,6 +4041,9 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       (`(,(and (pred keywordp) prop) . (,val . nil))
        `(equal (om--get-property-nocheck ,prop ,it-node) ,val))
       ;;
+      ;; :any
+      (:any t)
+      ;;
       (p (om--arg-error "Invalid condition: %s" p)))))
 
 (defun om--match-make-inner-pattern-form (end? limit pattern)
@@ -4087,17 +4090,6 @@ terminate only when the entire tree is searched within PATTERN."
       ;; :many and :many! should only have one condition after them
       (`(:any . (,(and (or '* '*!) wildcard) . ,_))
        (om--arg-error "Exactly one condition should follow %s" wildcard))
-      ;;
-      ;; :any (at end of pattern) - add all nodes to accumulator
-      (`(:any . nil)
-       `(,@reduce ,accum acc ,get-children))
-      ;;
-      ;; :any (with subpatterns after) - descend into the children
-      ;;   of all nodes and continue searching
-      (`(:any . ,ps)
-       (let ((inner (om--match-make-inner-pattern-form end? limit ps)))
-         `(,@reduce ,inner acc ,get-children)))
-      ;;
       ;; condition (at end of pattern) - add node to accumulator if
       ;;   it matches
       (`(,condition . nil)
