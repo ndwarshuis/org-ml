@@ -4079,6 +4079,17 @@ terminate only when the entire tree is searched within PATTERN."
                           acc children)))
             ,callback)))
       ;;
+      ;; *! (terminal) - like *! but use condition as the terminal
+      ;;    matching pattern
+      (`(,condition . (*! . nil))
+       (let ((pred (om--match-make-condition-form condition))
+             (callback `(get-many acc ,get-children)))
+         `(cl-labels
+              ((get-many
+                (acc children)
+                (,@reduce (if ,pred ,accum acc) acc children)))
+            ,callback)))
+      ;;
       ;; * - if condition0 and condition0 match, add node to
       ;;     accumulator and descend into child to repeat, if only
       ;;     condition0 matches just descend into child and continue
@@ -4104,6 +4115,28 @@ terminate only when the entire tree is searched within PATTERN."
                                 (,pred1 ,accum)
                                 (t acc))
                           acc children)))
+            (get-many acc ,get-children))))
+      ;;
+      ;; * (terminal) - like * but use condition as the terminal
+      ;;   pattern
+      (`(,condition . (* . nil))
+       (let* ((pred (om--match-make-condition-form condition))
+              ;; need to explicitly check limit here because not
+              ;; in reduce form where limit is build in, this doesn't
+              ;; conform to the pattern of the rest of this function
+              ;; :(
+              (add-maybe
+               (if (not limit) `(if ,pred ,accum acc)
+                 `(if (and (< (length acc) ,limit) ,pred) ,accum acc)))
+              (add-descend
+               (if end?
+                   `(let ((acc (get-many acc ,get-children)))
+                      ,add-maybe)
+                 `(get-many ,add-maybe ,get-children))))
+         `(cl-labels
+              ((get-many
+                (acc children)
+                (,@reduce (if ,pred ,add-descend acc) acc children)))
             (get-many acc ,get-children))))
       ;;
       ;; wildcards should only have one condition after them
