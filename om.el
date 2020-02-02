@@ -3965,7 +3965,7 @@ empty."
 ;; the limit will never be overshot.
 
 (defun om--get-children-indexed (node)
-  "Return list of children from NODE (it any) with index annotations."
+  "Return list of children from NODE (if any) with index annotations."
   (let* ((children (om-get-children node))
          (len (- (length children))))
     (--map-indexed (cons `(,it-index . ,(+ len it-index)) it) children)))
@@ -4065,30 +4065,49 @@ terminate only when the entire tree is searched within PATTERN."
        (om--arg-error "Slicers can only appear at the front of pattern"))
       ;;
       ;; *! - if node matches add to accumulator, if not descend
-      ;;   into node's children and keep searching
-      (`(:any . (*! . (,condition . nil)))
-       (let ((pred (om--match-make-condition-form condition))
+      ;;   into node's children and repeat
+      (`(,condition0 . (*! . (,condition1 . nil)))
+       (let ((pred0 (om--match-make-condition-form condition0))
+             (pred1 (om--match-make-condition-form condition1))
              (callback `(get-many acc ,get-children)))
          `(cl-labels
               ((get-many
                 (acc children)
-                (,@reduce (if ,pred ,accum ,callback) acc children)))
+                (,@reduce (cond (,pred1 ,accum)
+                                (,pred0 ,callback)
+                                (t acc))
+                          acc children)))
             ,callback)))
       ;;
-      ;; * - flatten all children into a giant list and walk
-      ;;   through list, adding children to accumulator if they match
-      (`(:any . (* . (,condition . nil)))
-       (let ((pred (om--match-make-condition-form condition))
-             (callback (if end? '(-snoc (flatten-children it) it)
-                         '(cons it (flatten-children it)))))
+      ;; * - if condition0 and condition0 match, add node to
+      ;;     accumulator and descend into child to repeat, if only
+      ;;     condition0 matches just descend into child and continue
+      (`(,condition0 . (* . (,condition1 . nil)))
+       (let* ((pred0 (om--match-make-condition-form condition0))
+              (pred1 (om--match-make-condition-form condition1))
+              ;; need to explicitly check limit here because not
+              ;; in reduce form where limit is build in, this doesn't
+              ;; conform to the pattern of the rest of this function
+              ;; :(
+              (add-maybe
+               (if (not limit) `(if ,pred1 ,accum acc)
+                 `(if (and (< (length acc) ,limit) ,pred1) ,accum acc)))
+              (add-descend
+               (if end?
+                   `(let ((acc (get-many acc ,get-children)))
+                      ,add-maybe)
+                 `(get-many ,add-maybe ,get-children))))
          `(cl-labels
-              ((flatten-children
-                (indexed-node)
-                (--mapcat ,callback ,get-children)))
-            (,@reduce (if ,pred ,accum acc) acc (flatten-children it)))))
+              ((get-many
+                (acc children)
+                (,@reduce (cond (,pred0 ,add-descend)
+                                (,pred1 ,accum)
+                                (t acc))
+                          acc children)))
+            (get-many acc ,get-children))))
       ;;
-      ;; :many and :many! should only have one condition after them
-      (`(:any . (,(and (or '* '*!) wildcard) . ,_))
+      ;; wildcards should only have one condition after them
+      (`(,_ . (,(and (or '* '*!) wildcard) . ,_))
        (om--arg-error "Exactly one condition should follow %s" wildcard))
       ;; condition (at end of pattern) - add node to accumulator if
       ;;   it matches
