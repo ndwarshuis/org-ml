@@ -4066,93 +4066,65 @@ terminate only when the entire tree is searched within PATTERN."
       ;;
       ;; *! - if node matches add to accumulator, if not descend
       ;;   into node's children and repeat
-      (`(,condition0 . (*! . (,condition1 . nil)))
-       (let ((pred0 (om--match-make-condition-form condition0))
-             (pred1 (om--match-make-condition-form condition1))
-             (callback `(get-many acc ,get-children)))
+      (`(,condition0 . (*! . ,ps))
+       (let* ((condition1 (car ps))
+              (ps (cdr ps))
+              (pred0 (om--match-make-condition-form condition0))
+              (pred1 (-some-> condition1 (om--match-make-condition-form)))
+              (inner
+               (if (not ps) accum
+                 (om--match-make-inner-pattern-form end? limit ps)))
+              (callback `(get-many acc ,get-children)))
          `(cl-labels
               ((get-many
                 (acc children)
-                (,@reduce (cond (,pred1 ,accum)
+                (,@reduce (cond (,pred1 ,inner)
                                 (,pred0 ,callback)
                                 (t acc))
                           acc children)))
             ,callback)))
       ;;
-      ;; *! (terminal) - like *! but use condition as the terminal
-      ;;    matching pattern
-      (`(,condition . (*! . nil))
-       (let ((pred (om--match-make-condition-form condition))
-             (callback `(get-many acc ,get-children)))
-         `(cl-labels
-              ((get-many
-                (acc children)
-                (,@reduce (if ,pred ,accum acc) acc children)))
-            ,callback)))
-      ;;
       ;; * - if condition0 and condition0 match, add node to
-      ;;     accumulator and descend into child to repeat, if only
-      ;;     condition0 matches just descend into child and continue
-      (`(,condition0 . (* . (,condition1 . nil)))
-       (let* ((pred0 (om--match-make-condition-form condition0))
-              (pred1 (om--match-make-condition-form condition1))
+      ;;   accumulator and descend into child to repeat, if only
+      ;;   condition0 matches just descend into child and continue
+      (`(,condition0 . (* . ,ps))
+       (let* ((condition1 (car ps))
+              (ps (cdr ps))
+              (pred0 (om--match-make-condition-form condition0))
+              (pred1 (if (not condition1) pred0
+                         (om--match-make-condition-form condition1)))
+              (inner
+               (if (not ps) accum
+                 (om--match-make-inner-pattern-form end? limit ps)))
               ;; need to explicitly check limit here because not
               ;; in reduce form where limit is build in, this doesn't
               ;; conform to the pattern of the rest of this function
               ;; :(
               (add-maybe
-               (if (not limit) `(if ,pred1 ,accum acc)
-                 `(if (and (< (length acc) ,limit) ,pred1) ,accum acc)))
+               (if (not limit) `(if ,pred1 ,inner acc)
+                 `(if (and (< (length acc) ,limit) ,pred1) ,inner acc)))
               (add-descend
                (if end?
                    `(let ((acc (get-many acc ,get-children)))
                       ,add-maybe)
-                 `(get-many ,add-maybe ,get-children))))
+                 `(get-many ,add-maybe ,get-children)))
+              (pred (if condition1 `(cond (,pred0 ,add-descend)
+                                          (,pred1 ,inner)
+                                          (t acc))
+                      `(if ,pred0 ,add-descend acc))))
          `(cl-labels
               ((get-many
                 (acc children)
-                (,@reduce (cond (,pred0 ,add-descend)
-                                (,pred1 ,accum)
-                                (t acc))
-                          acc children)))
+                (,@reduce ,pred acc children)))
             (get-many acc ,get-children))))
-      ;;
-      ;; * (terminal) - like * but use condition as the terminal
-      ;;   pattern
-      (`(,condition . (* . nil))
-       (let* ((pred (om--match-make-condition-form condition))
-              ;; need to explicitly check limit here because not
-              ;; in reduce form where limit is build in, this doesn't
-              ;; conform to the pattern of the rest of this function
-              ;; :(
-              (add-maybe
-               (if (not limit) `(if ,pred ,accum acc)
-                 `(if (and (< (length acc) ,limit) ,pred) ,accum acc)))
-              (add-descend
-               (if end?
-                   `(let ((acc (get-many acc ,get-children)))
-                      ,add-maybe)
-                 `(get-many ,add-maybe ,get-children))))
-         `(cl-labels
-              ((get-many
-                (acc children)
-                (,@reduce (if ,pred ,add-descend acc) acc children)))
-            (get-many acc ,get-children))))
-      ;;
-      ;; wildcards should only have one condition after them
-      (`(,_ . (,(and (or '* '*!) wildcard) . ,_))
-       (om--arg-error "Exactly one condition should follow %s" wildcard))
-      ;; condition (at end of pattern) - add node to accumulator if
-      ;;   it matches
-      (`(,condition . nil)
-       (let ((pred (om--match-make-condition-form condition)))
-         `(,@reduce (if ,pred ,accum acc) acc ,get-children)))
-      ;;
-      ;; condition (with subpatterns after) - descend into the
-      ;;   children of matching nodes and continue searching
+      ;; condition - descend into the children of matching nodes and
+      ;;   either continue searching or add to accumulator if no more
+      ;;   conditions to match
       (`(,condition . ,ps)
        (let ((pred (om--match-make-condition-form condition))
-             (inner (om--match-make-inner-pattern-form end? limit ps)))
+             (inner
+              (if (not ps) accum
+                (om--match-make-inner-pattern-form end? limit ps))))
          `(,@reduce (if ,pred ,inner acc) acc ,get-children)))
       ;;
       (ps (om--arg-error "Invalid pattern: %s" ps)))))

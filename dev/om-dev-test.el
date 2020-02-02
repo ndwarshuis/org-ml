@@ -1010,14 +1010,6 @@ be parsed to TYPE."
     (should-error-arg (funcall fun '(bold :last)))
     (should-error-arg (funcall fun '(bold :nth)))
     (should-error-arg (funcall fun '(bold :sub)))
-    ;; ;; :many by itself
-    ;; (should-error-arg (funcall fun '(:any *)))
-    ;; :many with too many arguments
-    (should-error-arg (funcall fun '(:any * bold italic)))
-    ;; ;; :many! by itself
-    ;; (should-error-arg (funcall fun '(:any *!)))
-    ;; :many! with too many arguments
-    (should-error-arg (funcall fun '(:any *! bold italic)))
     ;; just wrong...
     (should-error-arg (funcall fun nil))
     (should-error-arg (funcall fun '(:swaggart)))))
