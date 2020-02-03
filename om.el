@@ -4064,6 +4064,17 @@ terminate only when the entire tree is searched within PATTERN."
       (`(,(or :first :last :nth :slice) . ,_)
        (om--arg-error "Slicers can only appear at the front of pattern"))
       ;;
+      ;; ? - if node matches, descend into children and continue,
+      ;;   else descend into child if it matches the next condition
+      ;;   in pattern
+      (`(,condition . (\? . ,ps))
+       (let ((pred (om--match-make-condition-form condition))
+             (inner
+              (if (not ps) accum
+                (om--match-make-inner-pattern-form end? limit ps))))
+         `(let ((acc ,inner))
+           (,@reduce (if ,pred ,inner acc) acc ,get-children))))
+      ;;
       ;; *! - if node matches add to accumulator, if not descend
       ;;   into node's children and repeat
       (`(,condition0 . (*! . ,ps))
