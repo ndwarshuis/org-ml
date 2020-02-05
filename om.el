@@ -4180,16 +4180,37 @@ terminate only when the entire tree is searched within PATTERN."
 
 (defun om--match-make-substituted-form (pattern)
   "Return simplified form of PATTERN."
-  (->> pattern
-       (--reduce-from
-        (cond
-         ((eq '+ it)
-          (append (list '* (car acc)) acc))
-         ((eq '+! it)
-          (append (list '*! (car acc)) acc))
-         (t (cons it acc)))
-        nil)
-       (reverse)))
+  (cl-flet
+      ((append-n
+        (acc n)
+        (append (-repeat (1- n) (car acc)) acc))
+       (append-m-n
+        (acc m n)
+        (let ((alts (->> (-repeat n (car acc))
+                         (--unfold (when (<= m (length it))
+                                     (cons it (cdr it))))
+                         (-interpose '(|))
+                         (-flatten-n 1))))
+          (cons alts (cdr acc)))))
+    (->> pattern
+         (--reduce-from
+          (pcase it
+            ('+ (append (list '* (car acc)) acc))
+            ('+! (append (list '*! (car acc)) acc))
+            (`[,n]
+             (if (< 0 n) (append-n acc n)
+               (error "Bracket modifier must be greater than zero: got %s" n)))
+            (`[,m ,n]
+             (cond
+              ((or (< m 1) (< n 1))
+               (error "Digits in bracket range must be greater than zero: got %s and %s" m n))
+              ((< n m)
+               (error "First digit in bracket range must be larger than second: got %s and %s" m n))
+              ((= m n) (append-n acc n))
+              (t (append-m-n acc m n))))
+            (_ (cons it acc)))
+          nil)
+         (reverse))))
 
 (defun om--match-make-expanded-pattern-form (pattern node)
   "Return explicitly expanded PATTERN given a toplevel TYPE.
