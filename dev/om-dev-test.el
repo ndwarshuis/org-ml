@@ -1014,6 +1014,49 @@ be parsed to TYPE."
     (should-error-arg (funcall fun nil))
     (should-error-arg (funcall fun '(:swaggart)))))
 
+(defun should-expand-to (pattern expanded-pattern)
+  (should (equal (om--match-pattern-simplify-wildcards pattern)
+                 expanded-pattern)))
+
+(ert-deftest om--match-pattern-simplify-wildcards ()
+  ;; ensure the bracket and + wildcards expand properly
+  (unless (fboundp 'om--match-pattern-simplify-wildcards)
+    (error "Function not defined"))
+  ;; +
+  (should-expand-to '(x +) '(x x *))
+  (should-expand-to '(x + y) '(x x * y))
+  ;; non-recursive +
+  (should-expand-to '(x +!) '(x x *!))
+  (should-expand-to '(x +! y) '(x x *! y))
+  ;; brackets
+  (should-expand-to '(x [1]) '(x))
+  (should-expand-to '(x [2]) '(x x))
+  (should-expand-to '(x [2 2]) '(x x))
+  (should-expand-to '(x [1 2]) '((x x | x))))
+
+(ert-deftest om--match-pattern-simplify-wildcards/error ()
+  ;; test errors in wildcard expansion
+  ;; note, we assume that any malformed patterns are caught later
+  ;; so no need to test if we supply two +'s in a row and other garbage
+  (unless (fboundp 'om--match-pattern-simplify-wildcards)
+    (error "Function not defined"))
+  ;; single bracket
+  ;; zero not allowed
+  (should-error (om--match-pattern-simplify-wildcards '(x [0])))
+  ;; negative not allowed
+  (should-error (om--match-pattern-simplify-wildcards '(x [-1])))
+  ;; double brackets
+  ;; zeros not allowed
+  (should-error (om--match-pattern-simplify-wildcards '(x [0 1])))
+  (should-error (om--match-pattern-simplify-wildcards '(x [1 0])))
+  (should-error (om--match-pattern-simplify-wildcards '(x [0 0])))
+  ;; negatives not allowed
+  (should-error (om--match-pattern-simplify-wildcards '(x [-1 1])))
+  (should-error (om--match-pattern-simplify-wildcards '(x [1 -1])))
+  (should-error (om--match-pattern-simplify-wildcards '(x [-1 -1])))
+  ;; must be ascending order
+  (should-error (om--match-pattern-simplify-wildcards '(x [2 1]))))
+
 (ert-deftest om--make-make-slicer-form ()
   ;; Ensure `om--match-make-inner-form' will error when it supposed to
   ;; do so. All errors (in theory) should be tested here so that
