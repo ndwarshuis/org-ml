@@ -4086,10 +4086,18 @@ terminate only when the entire tree is searched within PATTERN."
               (if (not ps) accum
                 (om--match-make-inner-pattern-form end? limit ps))))
          `(let ((acc ,inner))
-           (,@reduce (if ,pred ,inner acc) acc ,get-children))))
+            (,@reduce (if ,pred ,inner acc) acc ,get-children))))
       ;;
       ;; *! - if node matches add to accumulator, if not descend
       ;;   into node's children and repeat
+      (`(,condition . (*! . nil))
+       (let ((pred (om--match-make-condition-form condition))
+             (callback `(get-many acc ,get-children)))
+         `(cl-labels
+              ((get-many
+                (acc children)
+                (,@reduce (if ,pred ,accum ,callback) acc children)))
+            (let ((acc ,accum)) ,callback))))
       (`(,condition0 . (*! . ,ps))
        (let* ((condition1 (car ps))
               (ps (cdr ps))
@@ -4113,12 +4121,29 @@ terminate only when the entire tree is searched within PATTERN."
       ;; * - if condition0 and condition0 match, add node to
       ;;   accumulator and descend into child to repeat, if only
       ;;   condition0 matches just descend into child and continue
+      (`(,condition . (* . nil))
+       (let* ((pred (om--match-make-condition-form condition))
+              ;; need to explicitly check limit here because not
+              ;; in reduce form where limit is build in, this doesn't
+              ;; conform to the pattern of the rest of this function
+              ;; :(
+              (add-maybe
+               (if limit `(if (< (length acc) ,limit) ,accum acc) accum))
+              (add-descend
+               (if (not end?) `(get-many ,add-maybe ,get-children)
+                 `(let ((acc (get-many acc ,get-children)))
+                    ,add-maybe))))
+         `(cl-labels
+              ((get-many
+                (acc children)
+                (,@reduce (if ,pred ,add-descend acc) acc children)))
+            (let ((acc ,accum))
+              (get-many acc ,get-children)))))
       (`(,condition0 . (* . ,ps))
        (let* ((condition1 (car ps))
               (ps (cdr ps))
               (pred0 (om--match-make-condition-form condition0))
-              (pred1 (if (not condition1) pred0
-                         (om--match-make-condition-form condition1)))
+              (pred1 (om--match-make-condition-form condition1))
               (inner
                (if (not ps) accum
                  (om--match-make-inner-pattern-form end? limit ps)))
@@ -4130,18 +4155,16 @@ terminate only when the entire tree is searched within PATTERN."
                (if (not limit) `(if ,pred1 ,inner acc)
                  `(if (and (< (length acc) ,limit) ,pred1) ,inner acc)))
               (add-descend
-               (if end?
-                   `(let ((acc (get-many acc ,get-children)))
-                      ,add-maybe)
-                 `(get-many ,add-maybe ,get-children)))
-              (pred (if condition1 `(cond (,pred0 ,add-descend)
-                                          (,pred1 ,inner)
-                                          (t acc))
-                      `(if ,pred0 ,add-descend acc))))
+               (if end? `(let ((acc (get-many acc ,get-children)))
+                           ,add-maybe)
+                 `(get-many ,add-maybe ,get-children))))
          `(cl-labels
               ((get-many
                 (acc children)
-                (,@reduce ,pred acc children)))
+                (,@reduce (cond (,pred0 ,add-descend)
+                                (,pred1 ,inner)
+                                (t acc))
+                          acc children)))
             (get-many acc ,get-children))))
       ;; condition - descend into the children of matching nodes and
       ;;   either continue searching or add to accumulator if no more
@@ -4154,6 +4177,19 @@ terminate only when the entire tree is searched within PATTERN."
          `(,@reduce (if ,pred ,inner acc) acc ,get-children)))
       ;;
       (ps (om--arg-error "Invalid pattern: %s" ps)))))
+
+(defun om--match-make-substituted-form (pattern)
+  "Return simplified form of PATTERN."
+  (->> pattern
+       (--reduce-from
+        (cond
+         ((eq '+ it)
+          (append (list '* (car acc)) acc))
+         ((eq '+! it)
+          (append (list '*! (car acc)) acc))
+         (t (cons it acc)))
+        nil)
+       (reverse)))
 
 (defun om--match-make-expanded-pattern-form (pattern node)
   "Return explicitly expanded PATTERN given a toplevel TYPE.
@@ -4180,9 +4216,10 @@ NODE is the target NODE to be matched"
           (error "Nodes must be first non-slicer in pattern"))
          ((is-node first)
           (let ((path (->> (om--get-property-nocheck :parent first)
-                           (expand-node nil))))
+                           (expand-node nil)))
+                (rest (om--match-make-substituted-form rest)))
             `(,@path ,first ,@rest)))
-         (t pattern))))))
+         (t (om--match-make-substituted-form pattern)))))))
 
 (defun om--match-make-pattern-form (end? limit pattern node)
   "Return non-slicer matching form for PATTERN.
