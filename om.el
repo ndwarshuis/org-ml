@@ -4098,14 +4098,16 @@ terminate only when the entire tree is searched within PATTERN."
               (inner
                (if (not ps) accum
                  (om--match-make-inner-pattern-form end? limit ps)))
-              (callback `(get-many acc ,get-children)))
+              (callback `(get-many acc ,get-children))
+              (pred (if condition1
+                        `(cond (,pred1 ,inner)
+                               (,pred0 ,callback)
+                               (t acc))
+                      `(if ,pred0 ,inner ,callback))))
          `(cl-labels
               ((get-many
                 (acc children)
-                (,@reduce (cond (,pred1 ,inner)
-                                (,pred0 ,callback)
-                                (t acc))
-                          acc children)))
+                (,@reduce ,pred acc children)))
             ,callback)))
       ;;
       ;; * - if condition0 and condition0 match, add node to
