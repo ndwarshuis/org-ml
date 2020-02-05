@@ -4178,8 +4178,10 @@ terminate only when the entire tree is searched within PATTERN."
       ;;
       (ps (om--arg-error "Invalid pattern: %s" ps)))))
 
-(defun om--match-make-substituted-form (pattern)
-  "Return simplified form of PATTERN."
+(defun om--match-pattern-simplify-wildcards (pattern)
+  "Return PATTERN with wildcards replaced by simpler syntax.
+Specifically, this means brackets and `+` wildcards will be put in
+terms of explicit conditions, alternative branches, and `*` wildcards."
   (cl-flet
       ((append-n
         (acc n)
@@ -4212,22 +4214,31 @@ terminate only when the entire tree is searched within PATTERN."
           nil)
          (reverse))))
 
+(defun om--match-make-node-path-pattern (target-node parent-node)
+  "Return matching form for TARGET-NODE within PARENT-NODE.
+The returned form will be a list of type symbols that trace the path
+from the root of PARENT-NODE to TARGET-NODE. It is assumed that
+TARGET-NODE is within PARENT-NODE (which is only enforced by checking
+the types of TARGET-TYPE's parents, grandparents, and so on)."
+  (let ((parent-type (om-get-type parent-node)))
+    (cl-labels
+        ((expand
+          (acc node)
+          (-if-let (cur-type (-some-> node (om-get-type)))
+              (if (om-is-type parent-type node) acc
+                (->> (om--get-property-nocheck :parent node)
+                     (expand (cons cur-type acc)))
+            (error "Node in pattern is not in target node")))))
+      (expand nil (om--get-property-nocheck :parent target-node)))))
+
 (defun om--match-make-expanded-pattern-form (pattern node)
   "Return explicitly expanded PATTERN given a toplevel TYPE.
 NODE is the target NODE to be matched"
-  (let ((target-type (om-get-type node)))
     (cl-labels
         ((is-node
           (node)
           (and (om--is-node node)
-               (not (om--match-is-alternate-form node))))
-         (expand-node
-          (acc node)
-          (-if-let (cur-type (-some-> node (om-get-type)))
-              (if (om-is-type target-type node) acc
-                (expand-node (cons cur-type acc)
-                             (om--get-property-nocheck :parent node)))
-            (error "Node in pattern is not in target node"))))
+               (not (om--match-is-alternate-form node)))))
       (let ((first (car pattern))
             (rest (cdr pattern)))
         (cond
@@ -4236,11 +4247,10 @@ NODE is the target NODE to be matched"
          ((-any? #'is-node rest)
           (error "Nodes must be first non-slicer in pattern"))
          ((is-node first)
-          (let ((path (->> (om--get-property-nocheck :parent first)
-                           (expand-node nil)))
-                (rest (om--match-make-substituted-form rest)))
+          (let ((path (om--match-make-node-path-pattern first node))
+                (rest (om--match-pattern-simplify-wildcards rest)))
             `(,@path ,first ,@rest)))
-         (t (om--match-make-substituted-form pattern)))))))
+         (t (om--match-pattern-simplify-wildcards pattern))))))
 
 (defun om--match-make-pattern-form (end? limit pattern node)
   "Return non-slicer matching form for PATTERN.
