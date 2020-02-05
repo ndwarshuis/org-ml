@@ -4046,6 +4046,10 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;;
       (p (om--arg-error "Invalid condition: %s" p)))))
 
+(defun om--match-is-alternate-form (form)
+  "Return t if FORM is an alternative pattern form (eg has `|`s)."
+  (and (listp form) (memq '| form)))
+
 (defun om--match-make-inner-pattern-form (end? limit pattern)
   "Return matching form for PATTERN.
 END? is a boolean describing if the search should be made in reverse.
@@ -4063,6 +4067,15 @@ terminate only when the entire tree is searched within PATTERN."
       ;; slicers should not be here
       (`(,(or :first :last :nth :slice) . ,_)
        (om--arg-error "Slicers can only appear at the front of pattern"))
+      ;;
+      ;; alternative - make multiple code paths to sequentially add
+      ;;   different matches to accumulator
+      (`(,(and (pred om--match-is-alternate-form) alts) . ,ps)
+       (let ((branches
+              (->> (-split-on '| alts)
+                   (--map (append it ps))
+                   (--map (om--match-make-inner-pattern-form end? limit it)))))
+         `(append ,@branches)))
       ;;
       ;; ? - if node matches, descend into children and continue,
       ;;   else descend into child if it matches the next condition
@@ -4145,7 +4158,11 @@ terminate only when the entire tree is searched within PATTERN."
 NODE is the target NODE to be matched"
   (let ((target-type (om-get-type node)))
     (cl-labels
-        ((expand-node
+        ((is-node
+          (node)
+          (and (om--is-node node)
+               (not (om--match-is-alternate-form node))))
+         (expand-node
           (acc node)
           (-if-let (cur-type (-some-> node (om-get-type)))
               (if (om-is-type target-type node) acc
@@ -4155,11 +4172,11 @@ NODE is the target NODE to be matched"
       (let ((first (car pattern))
             (rest (cdr pattern)))
         (cond
-         ((and (om--is-node first) (-any? #'om--is-node rest))
+         ((and (is-node first) (-any? #'is-node rest))
           (error "Multiple nodes in pattern"))
-         ((-any? #'om--is-node rest)
+         ((-any? #'is-node rest)
           (error "Nodes must be first non-slicer in pattern"))
-         ((om--is-node first)
+         ((is-node first)
           (let ((path (->> (om--get-property-nocheck :parent first)
                            (expand-node nil))))
             `(,@path ,first ,@rest)))
