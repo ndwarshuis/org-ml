@@ -1022,6 +1022,9 @@ be parsed to TYPE."
   ;; ensure the bracket and + wildcards expand properly
   (unless (fboundp 'om--match-pattern-simplify-wildcards)
     (error "Function not defined"))
+  ;; ?
+  (should-expand-to '(x \?) '((nil | x)))
+  (should-expand-to '(x \? y) '((nil | x) y))
   ;; +
   (should-expand-to '(x +) '(x x *))
   (should-expand-to '(x + y) '(x x * y))
@@ -1031,8 +1034,11 @@ be parsed to TYPE."
   ;; brackets
   (should-expand-to '(x [1]) '(x))
   (should-expand-to '(x [2]) '(x x))
+  (should-expand-to '(x [0 1]) '((nil | x)))
   (should-expand-to '(x [2 2]) '(x x))
-  (should-expand-to '(x [1 2]) '((x x | x))))
+  (should-expand-to '(x [1 2]) '((x | x x)))
+  (should-expand-to '(x [1 nil]) '(x x *))
+  (should-expand-to '(x [1 !]) '(x x *!)))
 
 (ert-deftest om--match-pattern-simplify-wildcards/error ()
   ;; test errors in wildcard expansion
@@ -1046,9 +1052,7 @@ be parsed to TYPE."
   ;; negative not allowed
   (should-error (om--match-pattern-simplify-wildcards '(x [-1])))
   ;; double brackets
-  ;; zeros not allowed
-  (should-error (om--match-pattern-simplify-wildcards '(x [0 1])))
-  (should-error (om--match-pattern-simplify-wildcards '(x [1 0])))
+  ;; double zeros not allowed
   (should-error (om--match-pattern-simplify-wildcards '(x [0 0])))
   ;; negatives not allowed
   (should-error (om--match-pattern-simplify-wildcards '(x [-1 1])))

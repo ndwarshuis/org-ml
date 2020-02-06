@@ -4174,39 +4174,66 @@ terminate only when the entire tree is searched within PATTERN."
 
 (defun om--match-pattern-simplify-wildcards (pattern)
   "Return PATTERN with wildcards replaced by simpler syntax.
-Specifically, this means brackets and `+` wildcards will be put in
+Specifically, this means brackets, `\\?`, `+` wildcards will be put in
 terms of explicit conditions, alternative branches, and `*` wildcards."
-  (cl-flet
+  (cl-flet*
       ((append-n
         (acc n)
         (append (-repeat (1- n) (car acc)) acc))
        (append-m-n
         (acc m n)
-        (let ((alts (->> (-repeat n (car acc))
-                         (--unfold (when (<= m (length it))
-                                     (cons it (cdr it))))
-                         (-interpose '(|))
-                         (-flatten-n 1))))
-          (cons alts (cdr acc)))))
-    (->> pattern
-         (--reduce-from
-          (pcase it
-            ('+ (append (list '* (car acc)) acc))
-            ('+! (append (list '*! (car acc)) acc))
-            (`[,n]
-             (if (< 0 n) (append-n acc n)
-               (error "Bracket modifier must be greater than zero: got %s" n)))
-            (`[,m ,n]
-             (cond
-              ((or (< m 1) (< n 1))
-               (error "Digits in bracket range must be greater than zero: got %s and %s" m n))
-              ((< n m)
-               (error "First digit in bracket range must be larger than second: got %s and %s" m n))
-              ((= m n) (append-n acc n))
-              (t (append-m-n acc m n))))
-            (_ (cons it acc)))
-          nil)
-         (reverse))))
+        (--> (-repeat n (car acc))
+             (-reductions-from (lambda (a b) (cons b a)) nil it)
+             (-drop m it)
+             (-interpose '(|) it)
+             (if (= m 0) (cons '(nil) it) it)
+             (-flatten-n 1 it)
+             (cons it (cdr acc))))
+       (expand
+        (acc sym)
+        (pcase sym
+          ;; match X at least once
+          ;; (X +) -> (X X *)
+          ('+
+           (append (list '* (car acc)) acc))
+          ;; match X at least once (non-recursive)
+          ;; (X +!) -> (X X *!)
+          ('+!
+           (append (list '*! (car acc)) acc))
+          ;; match X 0 or 1 times
+          ;; (X \?) -> ((nil | X))
+          ('\? (cons (list nil '| (car acc)) (cdr acc)))
+          ;; match X N times
+          ;; (X [N]) -> (X1 X2 ... XN)
+          (`[,(and (pred integerp) n)]
+           (if (< 0 n) (append-n acc n)
+             (error "In [N], N must be > 0: got %s" n)))
+          ;; match X at least M times
+          ;; (X [M nil]) -> (X1 X2 ... XN X *)
+          ;; (X [M !]) -> (X1 X2 ... XN X *!)
+          (`[,(and (pred integerp) m)
+             ,(and (pred (lambda (x) (or (null x) (eq '! x)))) n)]
+           (let ((wc (if (eq n '!) '*! '*)))
+             (if (< 0 m) (append (cons wc (-repeat m (car acc))) acc)
+               (error "In [M nil] M must be positive; got %s" m))))
+          ;; match X M to N times (inclusive)
+          ;; (X [M N]) -> (XM XM+1 ... XN-1 XN)
+          (`[,(and (pred integerp) m) ,(and (pred integerp) n)]
+           (cond
+            ;; if they are equal and greater than 0, same as [N]
+            ((= 0 m n)
+             (error "Both in [M N] cannot be zero"))
+            ((and (< 0 m) (< 0 n) (= m n))
+             (append-n acc n))
+            ((or (< m 0) (< n 0))
+             (error "Both in [M N] must be positive: got %s and %s" m n))
+            ((< n m)
+             (error "In [M N], M must be <= N: got %s and %s" m n))
+            (t
+             (append-m-n acc m n))))
+          ;; all else
+          (s (cons s acc)))))
+    (reverse (-reduce-from #'expand nil pattern))))
 
 (defun om--match-make-node-path-pattern (target-node parent-node)
   "Return matching form for TARGET-NODE within PARENT-NODE.
