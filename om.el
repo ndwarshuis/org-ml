@@ -4071,22 +4071,16 @@ terminate only when the entire tree is searched within PATTERN."
       ;; alternative - make multiple code paths to sequentially add
       ;;   different matches to accumulator
       (`(,(and (pred om--match-is-alternate-form) alts) . ,ps)
-       (let ((branches
-              (->> (-split-on '| alts)
-                   (--map (append it ps))
-                   (--map (om--match-make-inner-pattern-form end? limit it)))))
-         `(append ,@branches)))
-      ;;
-      ;; ? - if node matches, descend into children and continue,
-      ;;   else descend into child if it matches the next condition
-      ;;   in pattern
-      (`(,condition . (\? . ,ps))
-       (let ((pred (om--match-make-condition-form condition))
-             (inner
-              (if (not ps) accum
-                (om--match-make-inner-pattern-form end? limit ps))))
-         `(let ((acc ,inner))
-            (,@reduce (if ,pred ,inner acc) acc ,get-children))))
+       (--> (-split-on '| alts)
+            (-replace '(nil) nil it)
+            (--map (append it ps) it)
+            (--map (om--match-make-inner-pattern-form end? limit it) it)
+            ;; reverse if we want results in forward order since we
+            ;; apply another reverse after this function
+            (if end? it (reverse it))
+            ;; use nested let statements to keep track of accumulator
+            ;; note the comma usage to make this extra confusing :)
+            (--reduce `(let ((acc ,it)) ,acc) it)))
       ;;
       ;; *! - if node matches add to accumulator, if not descend
       ;;   into node's children and repeat
