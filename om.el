@@ -1438,16 +1438,19 @@ If fractional cookie, return `fraction'; if percentage cookie return
   "Return the unix time (integer seconds) of time list TIME.
 The returned value is dependent on the time zone of the operating
 system."
-  (let ((encoded
-         (if (om--time-is-long time)
-             (apply #'encode-time 0 (nreverse time))
-           (apply #'encode-time 0 0 0 (nreverse (-take 3 time))))))
-    (round (float-time encoded))))
+  (let* ((zone (list (current-time-zone)))
+         (encode-args
+          (if (om--time-is-long time)
+              (append '(0) (nreverse time) zone)
+            (append '(0 0 0) (nreverse (-take 3 time)) zone))))
+    (->> (apply #'encode-time encode-args)
+         (float-time)
+         (round))))
 
 (defun om-unixtime-to-time-long (unixtime)
   "Return the long time list of UNIXTIME.
 The list will be formatted like (YEAR MONTH DAY HOUR MIN)."
-  (nreverse (-slice (decode-time unixtime) 1 6)))
+  (nreverse (-slice (decode-time unixtime (current-time-zone)) 1 6)))
 
 (defun om-unixtime-to-time-short (unixtime)
   "Return the short time list of UNIXTIME.
