@@ -4238,6 +4238,8 @@ terms of explicit conditions, alternative branches, and `*` wildcards."
           (s (cons s acc)))))
     (reverse (-reduce-from #'expand nil pattern))))
 
+;; TODO this will fail if any parents of target node that are
+;; not the parent-node have the same type as parent-node
 (defun om--match-make-node-path-pattern (target-node parent-node)
   "Return matching form for TARGET-NODE within PARENT-NODE.
 The returned form will be a list of type symbols that trace the path
