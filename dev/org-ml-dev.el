@@ -1,6 +1,6 @@
-;;; om-dev.el --- Initialize om.el development -*- lexical-binding: t; -*-
+;;; org-ml-dev.el --- Initialize org-ml.el development -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2019 Nathan Dwarshuis
+;; Copyright (C) 2020 Nathan Dwarshuis
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -19,36 +19,36 @@
 
 ;;; Code:
 
-(defvar om-dev-path
+(defvar org-ml-dev-path
   (directory-file-name (file-name-directory load-file-name))
   "Path to development directory.")
 
-(defvar om-dev-root-path
-  (directory-file-name (file-name-directory om-dev-path))
+(defvar org-ml-dev-root-path
+  (directory-file-name (file-name-directory org-ml-dev-path))
   "Path to root directory.")
 
-(add-to-list 'load-path om-dev-root-path)
-(add-to-list 'load-path om-dev-path)
+(add-to-list 'load-path org-ml-dev-root-path)
+(add-to-list 'load-path org-ml-dev-path)
 
-(require 'om)
+(require 'org-ml)
 
-(defconst om-dev-defined-names nil
-  "Alist of all functions/macros defined in `om.el'.
+(defconst org-ml-dev-defined-names nil
+  "Alist of all functions/macros defined in `org-ml.el'.
 The two cells in the alist are 'private' and 'public'.")
 
 (mapatoms
  (lambda (x)
-   (when (and (fboundp x) (s-starts-with-p "om-" (symbol-name x)))
-     (push x om-dev-defined-names))))
+   (when (and (fboundp x) (s-starts-with-p "org-ml-" (symbol-name x)))
+     (push x org-ml-dev-defined-names))))
 
-(setq om-dev-defined-names
+(setq org-ml-dev-defined-names
       (--group-by
-       (if (s-starts-with-p "om--" (symbol-name it)) 'private 'public)
-       om-dev-defined-names))
+       (if (s-starts-with-p "org-ml--" (symbol-name it)) 'private 'public)
+       org-ml-dev-defined-names))
 
 ;; set up standard org environment
 
-(defmacro om--with-org-env (&rest body)
+(defmacro org-ml--with-org-env (&rest body)
   "Execute BODY in a standardized Org-mode buffer."
   `(let ((org-tags-column 20)
          (org-todo-keywords '((sequence "TODO" "DONE")))
@@ -61,5 +61,5 @@ The two cells in the alist are 'private' and 'public'.")
        (org-mode)
        ,@body)))
 
-(provide 'om-dev-init)
-;;; om-dev.el ends here
+(provide 'org-ml-dev-init)
+;;; org-ml-dev.el ends here

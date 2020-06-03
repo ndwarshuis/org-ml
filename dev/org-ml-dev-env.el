@@ -1,6 +1,6 @@
-;;; om-dev.el --- Initialize om.el development -*- lexical-binding: t; -*-
+;;; org-ml-dev.el --- Initialize om.el development -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2019 Nathan Dwarshuis
+;; Copyright (C) 2020 Nathan Dwarshuis
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -35,8 +35,8 @@ don't move point."
                            ;; Conservatively skip syntax errors.
                            (invalid-read-syntax)))
     ;; added my macro definitions here
-    (`(,(or 'om--defun-node 'om--defun-node* 'om--defun-kw 'om--defun
-            'om--defun* om--defun-nocheck* 'defun 'defvar 'defcustom
+    (`(,(or 'org-ml--defun-node 'org-ml--defun-node* 'org-ml--defun-kw 'org-ml--defun
+            'org-ml--defun* org-ml--defun-nocheck* 'defun 'defvar 'defcustom
             'defmacro 'defconst 'defsubst 'defadvice)
        ,(pred symbolp)
        ;; Require an initializer, i.e. ignore single-argument `defvar'
@@ -49,5 +49,5 @@ don't move point."
      (skip-chars-forward " \n\t")
      t)))
 
-(provide 'om-dev-env.el)
-;;; om-dev-env.el ends here
+(provide 'org-ml-dev-env.el)
+;;; org-ml-dev-env.el ends here
