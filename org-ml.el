@@ -3365,7 +3365,7 @@ This does the functional equivalent of `org-clock-out' on the logbook."
           (org-ml--map-at* index
             (org-ml-map-property* :value
               (->> (org-ml-timestamp-set-end-time time it)
-                   (org-ml-timestamp-set-collapsed nil))
+                   (org-ml--timestamp-set-type-ranged t))
               it)
             logbook-children)))
        (add-note-maybe
