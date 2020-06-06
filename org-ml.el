@@ -1146,8 +1146,8 @@ bounds."
          (target (:value ,@ol-str :require t))
          (timestamp (:type :pred org-ml--is-valid-timestamp-type
                            :type-desc ("a symbol from `inactive',"
-                                       "`active', `inactive-ranged', or"
-                                       "`active-ranged'")
+                                       "`active', `inactive-range', or"
+                                       "`active-range'")
                            :require t)
                     (:year-start ,@pos-int :require t)
                     (:month-start ,@pos-int :require t)
