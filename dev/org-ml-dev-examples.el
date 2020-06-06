@@ -533,9 +533,13 @@
       (->> (org-ml-build-clock (org-ml-build-timestamp! '(2019 1 1 0 0)))
            (org-ml-to-trimmed-string))
       => "CLOCK: [2019-01-01 Tue 00:00]"
-      (->> (org-ml-build-clock (org-ml-build-timestamp! '(2019 1 1 0 0) :end '(2019 1 1 1 0)))
+      (->> (org-ml-build-timestamp! '(2019 1 1 0 0) :end '(2019 1 1 1 0))
+           ;; TODO this is sloppy but also kinda a bad example anyways since
+           ;; the shortcut function exists
+           (org-ml-set-property :type 'inactive-range)
+           (org-ml-build-clock)
            (org-ml-to-trimmed-string))
-      => "CLOCK: [2019-01-01 Tue 00:00-01:00] =>  1:00")
+      => "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00] =>  1:00")
 
     (defexamples org-ml-build-comment
       ;; TODO there is a bug that makes a blank string return a
@@ -904,7 +908,7 @@
       => "CLOCK: [2019-01-01 Tue 12:00]"
       (->> (org-ml-build-clock! '(2019 1 1 12 0) :end '(2019 1 1 13 0))
            (org-ml-to-trimmed-string))
-      => "CLOCK: [2019-01-01 Tue 12:00-13:00] =>  1:00")
+      => "CLOCK: [2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00] =>  1:00")
 
     (defexamples org-ml-build-planning!
       (->> (org-ml-build-planning! :closed '(2019 1 1))
@@ -2028,7 +2032,7 @@
       (->> (org-ml-parse-this-element)
            (org-ml-map-property* :value (org-ml-timestamp-shift-end 1 'hour it))
            (org-ml-to-trimmed-string))
-      => "CLOCK: [2019-01-01 Tue 12:00-13:00] =>  1:00"
+      => "CLOCK: [2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00] =>  1:00"
 
       :end-hidden
       

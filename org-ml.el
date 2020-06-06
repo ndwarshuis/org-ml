@@ -871,18 +871,26 @@ This will be based on MACRO's key and value properties."
          (v (if as (format "%s(%s)" k (s-join "," as)) k)))
     (org-ml--set-property-nocheck :value (format "{{{%s}}}" v) macro)))
 
+;; TODO this name is inaccurate, also, clocks need additional help to handle
+;; the complexity and restrictions of ranges
 (defun org-ml--update-clock-duration (clock)
   "Return CLOCK node with its duration and status properties updated.
 This will be based on CLOCK's value property."
   (let* ((ts (org-ml--get-property-nocheck :value clock))
          (seconds (org-ml--timestamp-get-range ts))
-         (plist
-          (if (< 0 seconds)
-              (let* ((h (-> seconds (/ 3600) (floor)))
-                     (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
-                `(:duration ,(format "%2d:%02d" h m) :status running))
-            '(:duration nil :status closed))))
-    (org-ml--set-properties-nocheck plist clock)))
+         (ts* (if (/= seconds 0) (org-ml--timestamp-set-type-ranged t ts) ts)))
+    ;; TODO this case highlights that I'm using imprecise terminology for
+    ;; timestamps. Really the "range" in seconds should be "length" and the
+    ;; "range" should refer to the type since this actually uses the word
+    ;; "range"
+    (if (not (org-ml--timestamp-is-range-type ts*))
+        (org-ml--set-property-nocheck :value ts* clock)
+      (let* ((h (-> seconds (/ 3600) (floor)))
+             (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
+        (->> clock
+             (org-ml--set-property-nocheck :duration (format "%2d:%02d" h m))
+             (org-ml--set-property-nocheck :status 'running)
+             (org-ml--set-property-nocheck :value ts*))))))
 
 (defun org-ml--update-headline-tags (headline)
   "Return HEADLINE node with its tags updated.
@@ -984,7 +992,7 @@ bounds."
          (center-block)
          (clock (:value :pred org-ml--is-valid-clock-timestamp
                         :cis org-ml--update-clock-duration
-                        :type-desc ("an unranged, inactive timestamp"
+                        :type-desc ("a ranged or unranged inactive timestamp"
                                     "node with no warning or repeater")
                         :require t)
                 (:status)
@@ -1564,6 +1572,11 @@ TYPE given in DEC."
   "Return t if TIMESTAMP is an active type."
   (memq (org-ml--get-property-nocheck :type timestamp) '(active active-range)))
 
+(defun org-ml--timestamp-is-range-type (timestamp)
+  "Return t if TIMESTAMP has a range type."
+  (memq (org-ml--get-property-nocheck :type timestamp)
+        '(active-range inactive-range)))
+
 (defun org-ml--timestamp-is-ranged (timestamp)
   "Return t if TIMESTAMP has a range greater than 0 seconds."
   (/= 0 (org-ml--timestamp-get-range timestamp)))
@@ -1927,7 +1940,8 @@ Building a diary sexp timestamp is not possible with this function."
 
 START and END follow the same rules as their respective arguments in
 `org-ml-build-timestamp!'."
-  (let ((ts (org-ml-build-timestamp! start :end end)))
+  (let ((ts (->> (org-ml-build-timestamp! start :end end)
+                 (org-ml--timestamp-set-type-ranged (not (null end))))))
     (org-ml-build-clock ts :post-blank post-blank)))
 
 (org-ml--defun-kw org-ml-build-planning! (&key closed deadline scheduled
@@ -2838,6 +2852,8 @@ The node must have a type `eq' to `diary'. FORM is a quoted list."
 ;;; element nodes
 ;;
 ;; clock
+
+;; TODO add setters here since the timestamps follow a restricted pattern
 
 (defun org-ml-clock-is-running (clock)
   "Return t if CLOCK element is running (eg is open)."
