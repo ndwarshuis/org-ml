@@ -440,7 +440,7 @@ STRING and ARGS are analogous to `error'."
 TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
   `(,type ,props ,@children))
 
-(defun org-ml--frorg-ml-string (string)
+(defun org-ml--from-string (string)
   "Convert STRING to org-element representation."
   (with-temp-buffer
     (insert string)
@@ -1894,7 +1894,7 @@ object nodes. If the string does not represent a list of object nodes,
 throw an error."
   ;; fool parser to always parse objects, bold will parse to headlines
   ;; because of the stars
-  (-if-let (ss (->> (org-ml--frorg-ml-string (concat " " string))
+  (-if-let (ss (->> (org-ml--from-string (concat " " string))
                     (org-ml--get-descendent '(0))
                     (org-ml-get-children)))
       (cond
@@ -2562,7 +2562,7 @@ strings."
         (org-ml--arg-error "Property '%s' in node of type '%s' is not a string-list"
                        prop type)))))
 
-(defun org-ml-remove-frorg-ml-property (prop string node)
+(defun org-ml-remove-from-property (prop string node)
   "Return NODE with STRING removed from PROP if present.
 
 This only applies to properties that are represented as lists of
@@ -3959,7 +3959,7 @@ empty."
          (len (- (length children))))
     (--map-indexed (cons `(,it-index . ,(+ len it-index)) it) children)))
 
-(defmacro org-ml--reduce-frorg-ml-while (pred form initial-value list)
+(defmacro org-ml--reduce-from-while (pred form initial-value list)
   "Like `--reduce-from' but only reduce LIST while PRED is t.
 FORM and INITIAL-VALUE work the same way, and the exposed symbols `it'
 and `acc' carry the same meaning."
@@ -4051,7 +4051,7 @@ terminate only when the entire tree is searched within PATTERN."
           (if (not end?) '(org-ml--get-children-indexed (cdr it))
             '(reverse (org-ml--get-children-indexed (cdr it)))))
          (reduce (if (not limit) '(--reduce-from)
-                   `(org-ml--reduce-frorg-ml-while (< (length acc) ,limit)))))
+                   `(org-ml--reduce-from-while (< (length acc) ,limit)))))
     (pcase pattern
       ;; slicers should not be here
       (`(,(or :first :last :nth :slice) . ,_)

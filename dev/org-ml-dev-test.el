@@ -585,7 +585,7 @@ be parsed to TYPE."
 (defun org-ml--compare-object-props (elem string)
   (should-have-equal-properties
    elem
-   (->> (org-ml--frorg-ml-string (concat " " string))
+   (->> (org-ml--from-string (concat " " string))
         (org-ml--get-descendent '(0 1)))))
 
 (ert-deftest org-ml--code/valid-props ()
@@ -666,19 +666,19 @@ be parsed to TYPE."
 (ert-deftest org-ml--superscript/valid-props ()
   (should-have-equal-properties
    (org-ml-build-superscript)
-   (->> (org-ml--frorg-ml-string "thisis^super")
+   (->> (org-ml--from-string "thisis^super")
         (org-ml--get-descendent '(0 1)))))
 
 (ert-deftest org-ml--subscript/valid-props ()
   (should-have-equal-properties
    (org-ml-build-subscript)
-   (->> (org-ml--frorg-ml-string "thisis_subpar")
+   (->> (org-ml--from-string "thisis_subpar")
         (org-ml--get-descendent '(0 1)))))
 
 (ert-deftest org-ml--table-cell/valid-props ()
   (should-have-equal-properties
    (org-ml-build-table-cell "cell")
-   (->> (org-ml--frorg-ml-string "| cell |")
+   (->> (org-ml--from-string "| cell |")
         (org-ml--get-descendent '(0 0 0)))))
 
 (ert-deftest org-ml--underline/valid-props ()
@@ -690,7 +690,7 @@ be parsed to TYPE."
 (defun org-ml--compare-element-props (elem string)
   (should-have-equal-properties
    elem
-   (->> (org-ml--frorg-ml-string string)
+   (->> (org-ml--from-string string)
         (org-ml--get-descendent '(0)))))
 
 (ert-deftest org-ml--babel-call/valid-props ()
@@ -745,13 +745,13 @@ be parsed to TYPE."
 (ert-deftest org-ml--node-property/valid-props ()
   (should-have-equal-properties
    (org-ml-build-node-property "key" "value")
-   (->> (org-ml--frorg-ml-string "* dummy\n:PROPERTIES:\n:key: val\n:END:")
+   (->> (org-ml--from-string "* dummy\n:PROPERTIES:\n:key: val\n:END:")
         (org-ml--get-descendent '(0 0 0)))))
 
 (ert-deftest org-ml--planning/valid-props ()
   (should-have-equal-properties
    (org-ml-build-planning :closed (org-ml-build-timestamp! '(2019 1 1) :active t))
-   (->> (org-ml--frorg-ml-string "* dummy\nCLOSED: <2019-01-01 Tue>")
+   (->> (org-ml--from-string "* dummy\nCLOSED: <2019-01-01 Tue>")
         (org-ml--get-descendent '(0 0)))))
 
 (ert-deftest org-ml--src-block/valid-props ()
@@ -764,19 +764,19 @@ be parsed to TYPE."
 (ert-deftest org-ml--paragraph/valid-props ()
   (should-have-equal-properties
    (org-ml-build-paragraph)
-   (->> (org-ml--frorg-ml-string "text")
+   (->> (org-ml--from-string "text")
         (org-ml--get-descendent '(0)))))
 
 (ert-deftest org-ml--table-row/valid-props ()
   (should-have-equal-properties
    (org-ml-build-table-row)
-   (->> (org-ml--frorg-ml-string "| row |")
+   (->> (org-ml--from-string "| row |")
         (org-ml--get-descendent '(0 0)))))
 
 (ert-deftest org-ml--verse-block/valid-props ()
   (should-have-equal-properties
    (org-ml-build-verse-block)
-   (->> (org-ml--frorg-ml-string "#+BEGIN_VERSE\nthing\n#+END_VERSE")
+   (->> (org-ml--from-string "#+BEGIN_VERSE\nthing\n#+END_VERSE")
         (org-ml--get-descendent '(0)))))
 
 (ert-deftest org-ml--center-block/valid-props ()
@@ -801,12 +801,12 @@ be parsed to TYPE."
 (ert-deftest org-ml--headline/valid-props ()
   (should-have-equal-properties
    (org-ml-build-headline)
-   (org-ml--frorg-ml-string "* head")))
+   (org-ml--from-string "* head")))
 
 (ert-deftest org-ml--item/valid-props ()
   (should-have-equal-properties
    (org-ml-build-item)
-   (->> (org-ml--frorg-ml-string "- head")
+   (->> (org-ml--from-string "- head")
         (org-ml--get-descendent '(0 0)))))
 
 (ert-deftest org-ml--plain-list/valid-props ()
@@ -816,7 +816,7 @@ be parsed to TYPE."
 (ert-deftest org-ml--property-drawer/valid-props ()
   (should-have-equal-properties
    (org-ml-build-property-drawer)
-   (->> (org-ml--frorg-ml-string "* dummy\n:PROPERTIES:\n:END:")
+   (->> (org-ml--from-string "* dummy\n:PROPERTIES:\n:END:")
         (org-ml--get-descendent '(0 0)))))
 
 (ert-deftest org-ml--quote-block/valid-props ()
@@ -1191,7 +1191,7 @@ applied."
                              "4"
                              "** DONE five"
                              "5"))
-                   (org-ml--frorg-ml-string))))
+                   (org-ml--from-string))))
     (match-slicer-should-equal node
       '("2" "3" "4" "5") (headline section))))
 
@@ -1226,7 +1226,7 @@ applied."
                              "- 7"
                              "- 8"
                              "  - 9"))
-                   (org-ml--frorg-ml-string)))
+                   (org-ml--from-string)))
         (expected '("- 1" "- 2\n  - 3" "- 3" "- 4" "- 5\n  - 6"
                     "- 6" "- 7" "- 8\n  - 9" "- 9"))
         (expected! '("- 1" "- 2\n  - 3" "- 4" "- 5\n  - 6" "- 7"

@@ -2445,24 +2445,24 @@
                   "#+TBLFM: x=$2")
       :end-hidden)
 
-    (defexamples-content org-ml-remove-frorg-ml-property
+    (defexamples-content org-ml-remove-from-property
       nil
 
       (:buffer "#+CALL: ktulu(y=1)")
       (->> (org-ml-parse-this-element)
-           (org-ml-remove-frorg-ml-property :arguments "y=1")
+           (org-ml-remove-from-property :arguments "y=1")
            (org-ml-to-trimmed-string))
       => "#+CALL: ktulu()"
 
       (:comment "Do nothing if the string does not exist")
       (->> (org-ml-parse-this-element)
-           (org-ml-remove-frorg-ml-property :arguments "d=666")
+           (org-ml-remove-from-property :arguments "d=666")
            (org-ml-to-trimmed-string))
       => "#+CALL: ktulu(y=1)"
 
       (:comment "Throw error when removing from property that is not a string list")
       (->> (org-ml-parse-this-element)
-           (org-ml-remove-frorg-ml-property :end-header ":results")
+           (org-ml-remove-from-property :end-header ":results")
            (org-ml-to-trimmed-string))
       !!> arg-type-error
 
@@ -2470,34 +2470,34 @@
 
       (:buffer "* headline       :tag1:")
       (->> (org-ml-parse-this-headline)
-           (org-ml-remove-frorg-ml-property :tags "tag1")
+           (org-ml-remove-from-property :tags "tag1")
            (org-ml-to-trimmed-string))
       => "* headline"
 
       (:buffer "#+BEGIN_EXAMPLE -n"
                "#+END_EXAMPLE")
       (->> (org-ml-parse-this-element)
-           (org-ml-remove-frorg-ml-property :switches "-n")
+           (org-ml-remove-from-property :switches "-n")
            (org-ml-to-trimmed-string))
       => (:result "#+BEGIN_EXAMPLE"
                   "#+END_EXAMPLE")
 
       (:buffer "call_ktulu(y=1)")
       (->> (org-ml-parse-this-object)
-           (org-ml-remove-frorg-ml-property :arguments "y=1")
+           (org-ml-remove-from-property :arguments "y=1")
            (org-ml-to-trimmed-string))
       => "call_ktulu()"
 
       (:buffer "{{{economics(x=4)}}}")
       (->> (org-ml-parse-this-object)
-           (org-ml-remove-frorg-ml-property :args "x=4")
+           (org-ml-remove-from-property :args "x=4")
            (org-ml-to-trimmed-string))
       => "{{{economics}}}"
       
       (:buffer "#+BEGIN_SRC emacs-lisp -n"
                "#+END_SRC")
       (->> (org-ml-parse-this-element)
-           (org-ml-remove-frorg-ml-property :switches "-n")
+           (org-ml-remove-from-property :switches "-n")
            (org-ml-to-trimmed-string))
       => (:result "#+BEGIN_SRC emacs-lisp"
                   "#+END_SRC")
@@ -2505,7 +2505,7 @@
       (:buffer "| a |"
                "#+TBLFM: x=$2")
       (->> (org-ml-parse-this-element)
-           (org-ml-remove-frorg-ml-property :tblfm "x=$2")
+           (org-ml-remove-from-property :tblfm "x=$2")
            (org-ml-to-trimmed-string))
       => "| a |"
       :end-header)
