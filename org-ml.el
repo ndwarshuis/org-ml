@@ -4101,7 +4101,7 @@ terminate only when the entire tree is searched within PATTERN."
                 (,@reduce ,pred acc children)))
             ,callback)))
       ;;
-      ;; * - if condition0 and condition0 match, add node to accumulator and
+      ;; * - if condition0 and condition1 match, add node to accumulator and
       ;;   descend into child to repeat, if only condition0 matches just descend
       ;;   into child and continue
       (`(,condition . (* . nil))
@@ -4224,9 +4224,9 @@ terms of explicit conditions, alternative branches, and `*` wildcards."
 
 (defun org-ml--match-make-pattern-form (end? limit pattern)
   "Return non-slicer matching form for PATTERN.
-See `org-ml--match-make-inner-pattern-form' for meaning of END? and LIMIT
-which are passed directly through this function.
-NODE is the target node to be matched"
+See `org-ml--match-make-inner-pattern-form' for meaning of END?
+and LIMIT which are passed directly through this function. NODE
+is the target node to be matched"
   (let ((body (->> (org-ml--match-pattern-simplify-wildcards pattern)
                    (org-ml--match-make-inner-pattern-form end? limit))))
     ;; NOTE: the accumulator is assembled in reverse due to the nature of linked
@@ -4291,66 +4291,78 @@ NODE is the node to be matched."
 PATTERN is a list like ([SLICER [ARG1] [ARG2]] SUB1 [SUB2 ...]).
 
 SLICER is an optional prefix to the pattern describing how many
-and which matches to return. If not given, all matches are returned.
-Possible values are:
+and which matches to return. If not given, all matches are
+returned. Possible values are:
 
 - `:first' - return the first match
 - `:last' - return the last match
-- `:nth' ARG1 - return the nth match where ARG1 is an integer denoting
-  the index to return (starting at 0). ARG1 may be a negative number
-  to start counting at the end of the match list, in which case -1 is
-  the last index. Using 0 and -1 for ARG1 is equivalent to using
-  `:first' and `:last' respectively
-- `:sub' ARG1 ARG2 - return a sublist between indices ARG1 and ARG2.
-  ARG1 may not be greater than ARG2, and both must either be
-  non-negative integers or negative integers. In the case of negative
-  integers, the indices refer to the same counterparts as described in
-  `:nth'. If ARG1 and ARG2 are equal, this slicer has the same
-  behavior as `:nth'.
+- `:nth' ARG1 - return the nth match where ARG1 is an integer
+  denoting the index to return (starting at 0). ARG1 may be a
+  negative number to start counting at the end of the match list,
+  in which case -1 is the last index. Using 0 and -1 for ARG1 is
+  equivalent to using `:first' and `:last' respectively
+- `:sub' ARG1 ARG2 - return a sublist between indices ARG1 and
+  ARG2. ARG1 may not be greater than ARG2, and both must either
+  be non-negative integers or negative integers. In the case of
+  negative integers, the indices refer to the same counterparts
+  as described in `:nth'. If ARG1 and ARG2 are equal, this slicer
+  has the same behavior as `:nth'.
 
 SUBX denotes subpatterns that that match nodes in the parse tree.
 Subpatterns may either be wildcards or conditions.
 
-Conditions match exactly one level of the node tree being searched
-based on the node's type (the symbol returned by `org-ml-get-type'),
-properties (the value returned by `org-ml-get-property' for a valid
-property keyword), and index (the position of the node in the list
-returned by `org-ml-get-children'). For index, both left indices (where
-zero refers to the left end of the list) and right indices (where -1
-refers to the right end of the list) are understood. Conditions may
-either be atomic or compound, where compound conditions are themselves
-composed of atomic or compound conditions.
+Conditions match exactly one level of the node tree being
+searched based on the node's type (the symbol returned by
+`org-ml-get-type'), properties (the value returned by
+`org-ml-get-property' for a valid property keyword), and
+index (the position of the node in the list returned by
+`org-ml-get-children'). For index, both left indices (where zero
+refers to the left end of the list) and right indices (where -1
+refers to the right end of the list) are understood. Conditions
+may either be atomic or compound, where compound conditions are
+themselves composed of atomic or compound conditions.
 
 The types of atomic conditions are:
 
 - TYPE - match when the node's type is `eq' to TYPE (a symbol)
-- INDEX - match when the node's index is `=' to INDEX (an integer)
+- INDEX - match when the node's index is `=' to INDEX (an
+  integer)
 - (OP INDEX) - match when (OP NODE-INDEX INDEX) returns t. OP is
-  one of `<', `>', `<=', or `>=' and NODE-INDEX is the index of the
-  node being evaluated
-- (PROP VAL) - match nodes whose property PROP (a keyword) is `equal'
-  to VAL; VAL is obtained by evaluating `org-ml-get-property' with PROP
-  and the current node; if PROP is invalid, an error will be thrown
-- (:pred PRED) - match when PRED evaluates to t; PRED is a symbol for
-  a unary function that takes the current node as its argument
+  one of `<', `>', `<=', or `>=' and NODE-INDEX is the index of
+  the node being evaluated
+- (PROP VAL) - match nodes whose property PROP (a keyword) is
+  `equal' to VAL; VAL is obtained by evaluating
+  `org-ml-get-property' with PROP and the current node; if PROP
+  is invalid, an error will be thrown
+- (:pred PRED) - match when PRED evaluates to t; PRED is a symbol
+  for a unary function that takes the current node as its
+  argument
 
-Compound conditions start with an operator followed by their component
-conditions. In the syntax below, CX refers to a condition. The types
-of compound conditions are:
+Compound conditions start with an operator followed by their
+component conditions. The types of compound conditions are:
 
-- (:and C1 C2 [C3 ...]) - match when all conditions are true
-- (:or C1 C2 [C3 ...]) - match when at least one condition is true
-- (:not C) - match when condition is not true
+- (:and C1 C2 [C3 ...]) - match when all 'C' are true
+- (:or C1 C2 [C3 ...]) - match when at least one 'C' is true
+- (:not C) - match when 'C' is not true
 
-In addition to conditions, SUBX may be a wildcard keyword to match
-nodes independent of their type, properties, and index. The types of
-wildcards are:
+In addition, SUBX may be a wildcard keyword or symbol. These are
+analogous to the special characters found in POSIX extended
+regular expression (ERE) syntax:
 
-- `:any' - always match exactly one node
-- `:many' SUB - match SUB to nodes that are zero or more levels down
-  in the tree; SUB is a subpattern of either a condition or the `:any'
-  wildcard; only one subpattern is allowed after `:many'
-- `:many!' SUB - like `:many' but do not match within other matches"
+- `:any' - always match exactly one node (like `.' in ERE)
+- SUB `?' - match SUB zero or once (like `?' in ERE)
+- SUB `*' - match SUB zero or more times (like `*' in ERE)
+- SUB `*!' - like `*' but do not match within another match
+- SUB `+' - match SUB 1 or more times (like `+' in ERE)
+- SUB `+!' - like `+!' but do not match within another match
+- SUB [N] - match SUB N times (like '{N}' in ERE)
+- SUB [M N] - match SUB M to N times (inclusive); if M is nil,
+  this will match 'at most N times'; if M is `!', this will match
+  at most N times but will not include matches within other
+  matches; the converse of these is true for N being nil or
+  `!' (like '{M,N}', '{,N}', and '{M,}' in ERE)
+- [[SUB1]...] `|' [[SUB2]...] - match either subpattern SUB1 or
+  SUB2 on either side the `|' (like `|' in ERE)"
   (let ((match-fun (org-ml--match-make-lambda-form pattern node)))
     (funcall match-fun node)))
 

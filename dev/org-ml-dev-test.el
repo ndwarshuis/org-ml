@@ -1164,8 +1164,8 @@ applied."
 ;; - multi-level condition
 ;; - :any + condition
 ;; - condition + :any
-;; - :many
-;; - :many!
+;; - *
+;; - *!
 ;;
 ;; The reason for choosing these combinations is that all of them
 ;; combined should hit each of the valid form-building switches in
@@ -1210,9 +1210,9 @@ applied."
       '("_1_" "/2/" "*5*" "_6_") ((:or bold italic) :any))))
 
 (ert-deftest org-ml-match/slicer-many ()
-  ;; Test the :many and :many! paths with all slicers. Here the node
-  ;; is chosen such that some values are nested and thus :many will
-  ;; return them but :many! will not
+  ;; Test the * and *! paths with all slicers. Here the node
+  ;; is chosen such that some values are nested and thus * will
+  ;; return them but *! will not
   (let ((node (->> (s-join "\n"
                            '("* one"
                              "- 1"
