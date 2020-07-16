@@ -4222,53 +4222,12 @@ terms of explicit conditions, alternative branches, and `*` wildcards."
           (s (cons s acc)))))
     (reverse (-reduce-from #'expand nil pattern))))
 
-;; TODO this will fail if any parents of target node that are not the
-;; parent-node have the same type as parent-node
-(defun org-ml--match-make-node-path-pattern (target-node parent-node)
-  "Return matching form for TARGET-NODE within PARENT-NODE.
-The returned form will be a list of type symbols that trace the path
-from the root of PARENT-NODE to TARGET-NODE. It is assumed that
-TARGET-NODE is within PARENT-NODE (which is only enforced by checking
-the types of TARGET-TYPE's parents, grandparents, and so on)."
-  (let ((parent-type (org-ml-get-type parent-node)))
-    (cl-labels
-        ((expand
-          (acc node)
-          (-if-let (cur-type (-some-> node (org-ml-get-type)))
-              (if (org-ml-is-type parent-type node) acc
-                (->> (org-ml--get-property-nocheck :parent node)
-                     (expand (cons cur-type acc)))
-            (error "Node in pattern is not in target node")))))
-      (expand nil (org-ml--get-property-nocheck :parent target-node)))))
-
-(defun org-ml--match-make-expanded-pattern-form (pattern node)
-  "Return explicitly expanded PATTERN given a toplevel TYPE.
-NODE is the target NODE to be matched"
-    (cl-labels
-        ((is-node
-          (node)
-          (and (org-ml--is-node node)
-               (not (org-ml--match-is-alternate-form node)))))
-      (let ((first (car pattern))
-            (rest (cdr pattern)))
-        (cond
-         ((and (is-node first) (-any? #'is-node rest))
-          (error "Multiple nodes in pattern"))
-         ((-any? #'is-node rest)
-          (error "Nodes must be first non-slicer in pattern"))
-         ((is-node first)
-          (let ((path (org-ml--match-make-node-path-pattern first node))
-                (rest (org-ml--match-pattern-simplify-wildcards rest)))
-            `(,@path ,first ,@rest)))
-         (t (org-ml--match-pattern-simplify-wildcards pattern))))))
-
-(defun org-ml--match-make-pattern-form (end? limit pattern node)
+(defun org-ml--match-make-pattern-form (end? limit pattern)
   "Return non-slicer matching form for PATTERN.
 See `org-ml--match-make-inner-pattern-form' for meaning of END? and LIMIT
 which are passed directly through this function.
 NODE is the target node to be matched"
-  
-  (let ((body (->> (org-ml--match-make-expanded-pattern-form pattern node)
+  (let ((body (->> (org-ml--match-pattern-simplify-wildcards pattern)
                    (org-ml--match-make-inner-pattern-form end? limit))))
     ;; NOTE: the accumulator is assembled in reverse due to the nature of linked
     ;; lists. Consing to the front is a linear operation, while appending to the
@@ -4278,17 +4237,17 @@ NODE is the target node to be matched"
     ;; forward-order) and left reversed if `END?' is t (meaning backward order)
     (if end? body `(reverse ,body))))
 
-(defun org-ml--make-make-slicer-form (pattern node)
+(defun org-ml--make-make-slicer-form (pattern)
   "Return matching form with slicer operations for PATTERN.
 NODE is the node to be matched."
   (pcase pattern
     ;; :first - search until one match found and return that
     (`(:first . ,ps)
-     (org-ml--match-make-pattern-form nil 1 ps node))
+     (org-ml--match-make-pattern-form nil 1 ps))
     ;;
     ;; :last - search backwards until one match found and return that
     (`(:last . ,ps)
-     (org-ml--match-make-pattern-form t 1 ps node))
+     (org-ml--match-make-pattern-form t 1 ps))
     ;;
     ;; :nth - search until N matches found and return Nth; note that nil will be
     ;;   returned if N refers to anything outside the results list
@@ -4296,8 +4255,8 @@ NODE is the node to be matched."
      (unless (integerp n)
        (org-ml--arg-error ":nth argument must be an integer"))
      (if (<= 0 n)
-         `(-drop ,n ,(org-ml--match-make-pattern-form nil (1+ n) ps node))
-       `(-drop-last ,(1- (- n)) ,(org-ml--match-make-pattern-form t (- n) ps node))))
+         `(-drop ,n ,(org-ml--match-make-pattern-form nil (1+ n) ps))
+       `(-drop-last ,(1- (- n)) ,(org-ml--match-make-pattern-form t (- n) ps))))
     ;;
     ;; :sub - search until B matches found, drop A+1, and return; note that if B
     ;;   is longer than the results then all results will be dropped and nil
@@ -4309,19 +4268,19 @@ NODE is the node to be matched."
       ((> a b)
        (org-ml--arg-error ":sub left index must be less than right index"))
       ((and (<= 0 a) (<= 0 b))
-       `(-drop ,a ,(org-ml--match-make-pattern-form nil (1+ b) ps node)))
+       `(-drop ,a ,(org-ml--match-make-pattern-form nil (1+ b) ps)))
       ((and (< a 0) (< b 0))
-       `(-drop-last ,(1- (- b)) ,(org-ml--match-make-pattern-form t (- a) ps node)))
+       `(-drop-last ,(1- (- b)) ,(org-ml--match-make-pattern-form t (- a) ps)))
       (t
        (org-ml--arg-error "Both indices must be on the same side of zero"))))
     ;;
     ;; no slicer - search without limit and return all
-    (ps (org-ml--match-make-pattern-form nil nil ps node))))
+    (ps (org-ml--match-make-pattern-form nil nil ps))))
 
 (defun org-ml--match-make-lambda-form (pattern node)
   "Return callable lambda form for PATTERN.
 NODE is the node to be matched."
-  (let ((body (org-ml--make-make-slicer-form pattern node)))
+  (let ((body (org-ml--make-make-slicer-form pattern)))
     `(lambda (it) (let ((it (cons nil it)) (acc)) ,body))))
 
 ;;; match
@@ -4329,7 +4288,7 @@ NODE is the node to be matched."
 (defun org-ml-match (pattern node)
   "Return a list of child nodes matching PATTERN in NODE.
 
-PATTERN is a list like ([SLICER [ARG1] [ARG2]] [PNODE] SUB1 [SUB2 ...]).
+PATTERN is a list like ([SLICER [ARG1] [ARG2]] SUB1 [SUB2 ...]).
 
 SLICER is an optional prefix to the pattern describing how many
 and which matches to return. If not given, all matches are returned.
@@ -4348,11 +4307,6 @@ Possible values are:
   integers, the indices refer to the same counterparts as described in
   `:nth'. If ARG1 and ARG2 are equal, this slicer has the same
   behavior as `:nth'.
-
-PNODE is an optional literal node to be matched. If given, the
-matching process will start within PNODE wherever it happens to be in
-NODE. This is useful for 'reusing' previous matches without repeating
-the same pattern.
 
 SUBX denotes subpatterns that that match nodes in the parse tree.
 Subpatterns may either be wildcards or conditions.

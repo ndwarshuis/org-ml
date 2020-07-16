@@ -1074,24 +1074,24 @@ be parsed to TYPE."
     (error "Function not defined"))
   (let ((fun #'org-ml--make-make-slicer-form))
     ;; slicers by themselves
-    (should-error-arg (funcall fun '(:first) nil))
-    (should-error-arg (funcall fun '(:last) nil))
-    (should-error-arg (funcall fun '(:nth) nil))
-    (should-error-arg (funcall fun '(:sub) nil))
+    (should-error-arg (funcall fun '(:first)))
+    (should-error-arg (funcall fun '(:last)))
+    (should-error-arg (funcall fun '(:nth)))
+    (should-error-arg (funcall fun '(:sub)))
     ;; nth with non-integer
-    (should-error-arg (funcall fun '(:nth "1" bold) nil))
+    (should-error-arg (funcall fun '(:nth "1" bold)))
     ;; nth with integer but nothing after
-    (should-error-arg (funcall fun '(:nth 1) nil))
+    (should-error-arg (funcall fun '(:nth 1)))
     ;; sub with non-integers
-    (should-error-arg (funcall fun '(:sub "1" 2 bold) nil))
-    (should-error-arg (funcall fun '(:sub 1 "2" bold) nil))
+    (should-error-arg (funcall fun '(:sub "1" 2 bold)))
+    (should-error-arg (funcall fun '(:sub 1 "2" bold)))
     ;; sub with flipped integers
-    (should-error-arg (funcall fun '(:sub 2 1 bold) nil))
-    (should-error-arg (funcall fun '(:sub -1 -2 bold) nil))
+    (should-error-arg (funcall fun '(:sub 2 1 bold)))
+    (should-error-arg (funcall fun '(:sub -1 -2 bold)))
     ;; sub with split integers
-    (should-error-arg (funcall fun '(:sub -1 2 bold) nil))
+    (should-error-arg (funcall fun '(:sub -1 2 bold)))
     ;; sub with nothing after it
-    (should-error-arg (funcall fun '(:sub 1 2) nil))))
+    (should-error-arg (funcall fun '(:sub 1 2)))))
 
 (defmacro match-should-equal (node result &rest patterns)
   "Return form to test if all PATTERNS applied NODE return RESULT."
