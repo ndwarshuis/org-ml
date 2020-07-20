@@ -4940,11 +4940,13 @@
     ;; These test cases ensure that:
     ;; - the :any + condition path is correct
     ;; - the condition + :any path is correct
-    ;; - the :many path is correct
-    ;; - the :many! path is correct
-    ;; - the ordering of each above path is correct (assumed because
-    ;;   the tests contain nodes with multiple children that have a
-    ;;   defined order to be preserved)
+    ;; - the * path is correct
+    ;; - the *! path is correct
+    ;; - the + path is correct
+    ;; - the +! path is correct
+    ;; - the ordering of each above path is correct (assumed because the tests
+    ;;   contain nodes with multiple children that have a defined order to be
+    ;;   preserved)
     ;;
     ;; Note that all error cases are tested in `org-ml-test.el'
     ;;
