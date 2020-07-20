@@ -4063,11 +4063,17 @@ terminate only when the entire tree is searched within PATTERN."
        (--> (-split-on '| alts)
             (-replace '(nil) nil it)
             (--map (append it ps) it)
-            (--map (org-ml--match-make-inner-pattern-form end? limit it) it)
+            ;; if one of the branches is nil, just add whatever the current node
+            ;; is to the accumulator, else make a pattern for the children of
+            ;; the current node
+            ;; TODO there should not be multiple nils allowed
+            (--map (if (null it) `(,@reduce (identity it) acc (list ,accum))
+                     (org-ml--match-make-inner-pattern-form end? limit it))
+                   it)
             ;; reverse if we want results in forward order since we apply
             ;; another reverse after this function
             (if end? it (reverse it))
-            ;; use nested let statements to keep track of accumulator note the
+            ;; use nested let statements to keep track of accumulator note, the
             ;; comma usage to make this extra confusing :)
             (--reduce `(let ((acc ,it)) ,acc) it)))
       ;;
@@ -4185,6 +4191,10 @@ terms of explicit conditions, alternative branches, and `*` wildcards."
            (append (list '* (car acc)) acc))
           ;; match X at least once (non-recursive)
           ;; (X +!) -> (X X *!)
+          ;; TODO this does not have intuitive behavior as the expansion will
+          ;; include the first level child and thus the output will include the
+          ;; first level child, which is different behavior from *! (no first
+          ;; level child)
           ('+!
            (append (list '*! (car acc)) acc))
           ;; match X 0 or 1 times

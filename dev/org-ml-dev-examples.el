@@ -4999,6 +4999,32 @@
          (--map (org-ml-to-trimmed-string it)))
     => '("- 1" "- 2\n  - 3")
 
+    ;; + and ?
+    (:buffer "* one"
+             "** two"
+             "*** three"
+             "** four"
+             "*** five"
+             "**** six")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(headline +))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("** two\n*** three" "*** three" "** four\n*** five\n**** six"
+         "*** five\n**** six" "**** six")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(headline + headline))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("*** three" "*** five\n**** six" "**** six")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(headline headline \?))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("** two\n*** three" "*** three" "** four\n*** five\n**** six"
+         "*** five\n**** six")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(headline headline \? headline))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("*** three" "*** five\n**** six" "**** six")
+
     ;; slicer tests are not here, see `org-ml-test.el'
 
     :end-hidden)
