@@ -4966,7 +4966,7 @@
          (--map (org-ml-to-trimmed-string it)))
     => '("_1_" "/2/" "*5*" "_6_")
 
-    ;; :many/:many!
+    ;; * and *!
     (:buffer "* one"
              "- 1"
              "- 2"
