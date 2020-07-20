@@ -3352,7 +3352,7 @@
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-get-node-properties)
            (-map #'org-ml-get-type))
-      => '(node-property node-property) 
+      => '(node-property node-property)
 
       (:buffer "#+BEGIN_QUOTE"
                "no pity for the majority"
@@ -3872,7 +3872,7 @@
                ":END:")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-map-logbook*
-             (--map 
+             (--map
               (org-ml-match-map* '(:any * timestamp)
                 (org-ml-timestamp-shift 1 'day it) it)
               it))
