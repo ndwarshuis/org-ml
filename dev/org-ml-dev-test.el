@@ -1061,7 +1061,7 @@ be parsed to TYPE."
   ;; must be ascending order
   (should-error (org-ml--match-pattern-simplify-wildcards '(x [2 1]))))
 
-(ert-deftest org-ml--make-make-slicer-form ()
+(ert-deftest org-ml--match-make-slicer-form ()
   ;; Ensure `org-ml--match-make-inner-form' will error when it supposed to
   ;; do so. All errors (in theory) should be tested here so that
   ;; we don't need to bother testing them anywhere else when we test
@@ -1070,9 +1070,9 @@ be parsed to TYPE."
   ;; Assume that all invalid patterns at the predicate and wildcard
   ;; level will be caught by `org-ml--match-make-condition-form/error' and
   ;; `org-ml--match-make-inner-pattern-form/error'
-  (unless (fboundp 'org-ml--make-make-slicer-form)
+  (unless (fboundp 'org-ml--match-make-slicer-form)
     (error "Function not defined"))
-  (let ((fun #'org-ml--make-make-slicer-form))
+  (let ((fun #'org-ml--match-make-slicer-form))
     ;; slicers by themselves
     (should-error-arg (funcall fun '(:first)))
     (should-error-arg (funcall fun '(:last)))

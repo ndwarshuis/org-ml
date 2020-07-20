@@ -4237,7 +4237,7 @@ is the target node to be matched"
     ;; forward-order) and left reversed if `END?' is t (meaning backward order)
     (if end? body `(reverse ,body))))
 
-(defun org-ml--make-make-slicer-form (pattern)
+(defun org-ml--match-make-slicer-form (pattern)
   "Return matching form with slicer operations for PATTERN.
 NODE is the node to be matched."
   (pcase pattern
@@ -4277,10 +4277,10 @@ NODE is the node to be matched."
     ;; no slicer - search without limit and return all
     (ps (org-ml--match-make-pattern-form nil nil ps))))
 
-(defun org-ml--match-make-lambda-form (pattern node)
+(defun org-ml--match-make-lambda-form (pattern)
   "Return callable lambda form for PATTERN.
 NODE is the node to be matched."
-  (let ((body (org-ml--make-make-slicer-form pattern)))
+  (let ((body (org-ml--match-make-slicer-form pattern)))
     `(lambda (it) (let ((it (cons nil it)) (acc)) ,body))))
 
 ;;; match
@@ -4363,7 +4363,7 @@ regular expression (ERE) syntax:
   `!' (like '{M,N}', '{,N}', and '{M,}' in ERE)
 - [[SUB1]...] `|' [[SUB2]...] - match either subpattern SUB1 or
   SUB2 on either side the `|' (like `|' in ERE)"
-  (let ((match-fun (org-ml--match-make-lambda-form pattern node)))
+  (let ((match-fun (org-ml--match-make-lambda-form pattern)))
     (funcall match-fun node)))
 
 ;;; generalized tree modification
