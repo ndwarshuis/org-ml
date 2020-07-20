@@ -4941,9 +4941,7 @@
     ;; - the :any + condition path is correct
     ;; - the condition + :any path is correct
     ;; - the * path is correct
-    ;; - the *! path is correct
     ;; - the + path is correct
-    ;; - the +! path is correct
     ;; - the ordering of each above path is correct (assumed because the tests
     ;;   contain nodes with multiple children that have a defined order to be
     ;;   preserved)
@@ -4968,7 +4966,7 @@
          (--map (org-ml-to-trimmed-string it)))
     => '("_1_" "/2/" "*5*" "_6_")
 
-    ;; * and *!
+    ;; *
     (:buffer "* one"
              "- 1"
              "- 2"
@@ -4990,14 +4988,6 @@
          (org-ml-match '(section plain-list :any * item))
          (--map (org-ml-to-trimmed-string it)))
     => '("- 1" "- 2\n  - 3" "- 3")
-    (->> (org-ml-parse-this-element)
-         (org-ml-match '(:any *! item))
-         (--map (org-ml-to-trimmed-string it)))
-    => '("- 1" "- 2\n  - 3" "- 4" "- 5\n  - 6" "- 7" "- 8\n  - 9")
-    (->> (org-ml-parse-this-element)
-         (org-ml-match '(section plain-list :any *! item))
-         (--map (org-ml-to-trimmed-string it)))
-    => '("- 1" "- 2\n  - 3")
 
     ;; + and ?
     (:buffer "* one"

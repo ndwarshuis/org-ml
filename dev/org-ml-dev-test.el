@@ -1028,17 +1028,13 @@ be parsed to TYPE."
   ;; +
   (should-expand-to '(x +) '(x x *))
   (should-expand-to '(x + y) '(x x * y))
-  ;; non-recursive +
-  (should-expand-to '(x +!) '(x x *!))
-  (should-expand-to '(x +! y) '(x x *! y))
   ;; brackets
   (should-expand-to '(x [1]) '(x))
   (should-expand-to '(x [2]) '(x x))
   (should-expand-to '(x [0 1]) '((nil | x)))
   (should-expand-to '(x [2 2]) '(x x))
   (should-expand-to '(x [1 2]) '((x | x x)))
-  (should-expand-to '(x [1 nil]) '(x x *))
-  (should-expand-to '(x [1 !]) '(x x *!)))
+  (should-expand-to '(x [1 nil]) '(x x *)))
 
 (ert-deftest org-ml--match-pattern-simplify-wildcards/error ()
   ;; test errors in wildcard expansion
@@ -1165,7 +1161,6 @@ applied."
 ;; - :any + condition
 ;; - condition + :any
 ;; - *
-;; - *!
 ;;
 ;; The reason for choosing these combinations is that all of them
 ;; combined should hit each of the valid form-building switches in
@@ -1209,30 +1204,30 @@ applied."
     (match-slicer-should-equal node
       '("_1_" "/2/" "*5*" "_6_") ((:or bold italic) :any))))
 
-(ert-deftest org-ml-match/slicer-many ()
-  ;; Test the * and *! paths with all slicers. Here the node
-  ;; is chosen such that some values are nested and thus * will
-  ;; return them but *! will not
-  (let ((node (->> (s-join "\n"
-                           '("* one"
-                             "- 1"
-                             "- 2"
-                             "  - 3"
-                             "** two"
-                             "- 4"
-                             "- 5"
-                             "  - 6"
-                             "** three"
-                             "- 7"
-                             "- 8"
-                             "  - 9"))
-                   (org-ml--from-string)))
-        (expected '("- 1" "- 2\n  - 3" "- 3" "- 4" "- 5\n  - 6"
-                    "- 6" "- 7" "- 8\n  - 9" "- 9"))
-        (expected! '("- 1" "- 2\n  - 3" "- 4" "- 5\n  - 6" "- 7"
-                     "- 8\n  - 9")))
-    (match-slicer-should-equal node expected (:any * item))
-    (match-slicer-should-equal node expected! (:any *! item))))
+;; (ert-deftest org-ml-match/slicer-many ()
+;;   ;; Test the * paths with all slicers. Here the node
+;;   ;; is chosen such that some values are nested and thus * will
+;;   ;; return them but *! will not
+;;   (let ((node (->> (s-join "\n"
+;;                            '("* one"
+;;                              "- 1"
+;;                              "- 2"
+;;                              "  - 3"
+;;                              "** two"
+;;                              "- 4"
+;;                              "- 5"
+;;                              "  - 6"
+;;                              "** three"
+;;                              "- 7"
+;;                              "- 8"
+;;                              "  - 9"))
+;;                    (org-ml--from-string)))
+;;         (expected '("- 1" "- 2\n  - 3" "- 3" "- 4" "- 5\n  - 6"
+;;                     "- 6" "- 7" "- 8\n  - 9" "- 9"))
+;;         (expected! '("- 1" "- 2\n  - 3" "- 4" "- 5\n  - 6" "- 7"
+;;                      "- 8\n  - 9")))
+;;     (match-slicer-should-equal node expected (:any * item))
+;;     (match-slicer-should-equal node expected! (:any *! item))))
 
 (provide 'org-ml-dev-test)
 ;;; org-ml-dev-test.el ends here

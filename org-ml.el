@@ -4077,36 +4077,6 @@ terminate only when the entire tree is searched within PATTERN."
             ;; comma usage to make this extra confusing :)
             (--reduce `(let ((acc ,it)) ,acc) it)))
       ;;
-      ;; *! - if node matches add to accumulator, if not descend into node's
-      ;;   children and repeat
-      (`(,condition . (*! . nil))
-       (let ((pred (org-ml--match-make-condition-form condition))
-             (callback `(get-many acc ,get-children)))
-         `(cl-labels
-              ((get-many
-                (acc children)
-                (,@reduce (if ,pred ,accum ,callback) acc children)))
-            (let ((acc ,accum)) ,callback))))
-      (`(,condition0 . (*! . ,ps))
-       (let* ((condition1 (car ps))
-              (ps (cdr ps))
-              (pred0 (org-ml--match-make-condition-form condition0))
-              (pred1 (-some-> condition1 (org-ml--match-make-condition-form)))
-              (inner
-               (if (not ps) accum
-                 (org-ml--match-make-inner-pattern-form end? limit ps)))
-              (callback `(get-many acc ,get-children))
-              (pred (if condition1
-                        `(cond (,pred1 ,inner)
-                               (,pred0 ,callback)
-                               (t acc))
-                      `(if ,pred0 ,inner ,callback))))
-         `(cl-labels
-              ((get-many
-                (acc children)
-                (,@reduce ,pred acc children)))
-            ,callback)))
-      ;;
       ;; * - if condition0 and condition1 match, add node to accumulator and
       ;;   descend into child to repeat, if only condition0 matches just descend
       ;;   into child and continue
@@ -4189,14 +4159,6 @@ terms of explicit conditions, alternative branches, and `*` wildcards."
           ;; (X +) -> (X X *)
           ('+
            (append (list '* (car acc)) acc))
-          ;; match X at least once (non-recursive)
-          ;; (X +!) -> (X X *!)
-          ;; TODO this does not have intuitive behavior as the expansion will
-          ;; include the first level child and thus the output will include the
-          ;; first level child, which is different behavior from *! (no first
-          ;; level child)
-          ('+!
-           (append (list '*! (car acc)) acc))
           ;; match X 0 or 1 times
           ;; (X \?) -> ((nil | X))
           ('\? (cons (list nil '| (car acc)) (cdr acc)))
@@ -4362,15 +4324,11 @@ regular expression (ERE) syntax:
 - `:any' - always match exactly one node (like `.' in ERE)
 - SUB `?' - match SUB zero or once (like `?' in ERE)
 - SUB `*' - match SUB zero or more times (like `*' in ERE)
-- SUB `*!' - like `*' but do not match within another match
 - SUB `+' - match SUB 1 or more times (like `+' in ERE)
-- SUB `+!' - like `+!' but do not match within another match
 - SUB [N] - match SUB N times (like '{N}' in ERE)
-- SUB [M N] - match SUB M to N times (inclusive); if M is nil,
-  this will match 'at most N times'; if M is `!', this will match
-  at most N times but will not include matches within other
-  matches; the converse of these is true for N being nil or
-  `!' (like '{M,N}', '{,N}', and '{M,}' in ERE)
+- SUB [M N] - match SUB M to N times (inclusive); if M or N is
+  nil, this will match 'at most N times' or 'at least M times'
+  respectively (like '{M,N}', '{,N}', and '{M,}' in ERE)
 - [[SUB1]...] `|' [[SUB2]...] - match either subpattern SUB1 or
   SUB2 on either side the `|' (like `|' in ERE)"
   (let ((match-fun (org-ml--match-make-lambda-form pattern)))
