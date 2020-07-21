@@ -4137,8 +4137,6 @@ alternations in the original pattern.
 
 See `org-ml--match-pattern-make-inner-form' for the meaning of
 END? and LIMIT."
-  (when (-any? #'null alt-patterns)
-    (org-ml--arg-error "Empty patterns are not allowed"))
   (->> (if end? alt-patterns (reverse alt-patterns))
        (--map (org-ml--match-pattern-make-inner-form end? limit it))
        ;; use nested let statements to keep track of accumulator
@@ -4202,8 +4200,6 @@ terms of explicit conditions, alternative branches, and `*` wildcards."
              (append-m-n acc m n))))
           ;; all else
           (s (cons s acc)))))
-    ;; TODO add a better set of error messages for patterns that are not
-    ;; permitted (such as '(a ?)' and '((nil | a))')
     (reverse (-reduce-from #'expand nil pattern))))
 
 (defun org-ml--match-make-pattern-form (end? limit pattern)
@@ -4211,16 +4207,20 @@ terms of explicit conditions, alternative branches, and `*` wildcards."
 See `org-ml--match-pattern-make-inner-form' for meaning of END?
 and LIMIT which are passed directly through this function. NODE
 is the target node to be matched"
-  (let ((body (->> (org-ml--match-pattern-simplify-wildcards pattern)
-                   (org-ml--match-pattern-expand-alternations)
-                   (org-ml--match-pattern-process-alternations end? limit))))
-    ;; NOTE: the accumulator is assembled in reverse due to the nature of linked
-    ;; lists. Consing to the front is a linear operation, while appending to the
-    ;; back is a quadratic operation since the list needs to be fully traversed
-    ;; with each append and the list is growing. This means that the list here
-    ;; is reversed if `END?' is nil (which means we want the list in
-    ;; forward-order) and left reversed if `END?' is t (meaning backward order)
-    (if end? body `(reverse ,body))))
+  (-if-let (body (-some->>
+                  (org-ml--match-pattern-simplify-wildcards pattern)
+                  (org-ml--match-pattern-expand-alternations)
+                  (org-ml--match-pattern-process-alternations end? limit)))
+      ;; NOTE: the accumulator is assembled in reverse due to the nature of
+      ;; linked lists. Consing to the front is a linear operation, while
+      ;; appending to the back is a quadratic operation since the list needs to
+      ;; be fully traversed with each append and the list is growing. This means
+      ;; that the list is reversed here if `END?' is nil (which means we want
+      ;; the list in forward-order) and left in reverse order if `END?' is t
+      ;; (meaning backward order)
+      (if end? body `(reverse ,body))
+    ;; if no pattern, just return the current node as a singleton list
+    `(list (cdr it))))
 
 (defun org-ml--match-make-slicer-form (pattern)
   "Return matching form with slicer operations for PATTERN.
@@ -4273,7 +4273,7 @@ NODE is the node to be matched."
 (defun org-ml-match (pattern node)
   "Return a list of child nodes matching PATTERN in NODE.
 
-PATTERN is a list like ([SLICER [X] [Y]] SUB1 [SUB2 ...]).
+PATTERN is a list like ([SLICER [X] [Y]] [SUB1 ...]).
 
 SLICER is an optional prefix to the pattern describing how many
 and which matches to return. If not given, all matches are
