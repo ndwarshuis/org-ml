@@ -4342,8 +4342,9 @@ regular expression (ERE) syntax:
 - SUB [M N] - match SUB M to N times (inclusive); if M or N is
   nil, this will match 'at most N times' or 'at least M times'
   respectively (like '{M,N}', '{,N}', and '{M,}' in ERE)
-- [[SUB1]...] `|' [[SUB2]...] - match either subpattern SUB1 or
-  SUB2 on either side the `|' (like `|' in ERE)"
+- ([[SUB1]...] `|' [[SUB2]...]) - match either subpattern SUB1
+  or SUB2 on either side the `|'; these may be nested or in
+  series (like `|' in ERE)"
   (let ((match-fun (org-ml--match-make-lambda-form pattern)))
     (funcall match-fun node)))
 
