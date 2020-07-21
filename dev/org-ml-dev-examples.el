@@ -5008,7 +5008,7 @@
     (->> (org-ml-parse-this-element)
          (org-ml-match '(headline headline \?))
          (--map (org-ml-to-trimmed-string it)))
-    => '("** two\n*** three" "*** three" "** four\n*** five\n**** six"
+    => '("** two\n*** three" "** four\n*** five\n**** six" "*** three"
          "*** five\n**** six")
     (->> (org-ml-parse-this-element)
          (org-ml-match '(headline headline \? headline))

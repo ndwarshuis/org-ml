@@ -4035,11 +4035,7 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;;
       (p (org-ml--arg-error "Invalid condition: %s" p)))))
 
-(defun org-ml--match-is-alternate-form (form)
-  "Return t if FORM is an alternative pattern form (eg has `|`s)."
-  (and (listp form) (memq '| form)))
-
-(defun org-ml--match-make-inner-pattern-form (end? limit pattern)
+(defun org-ml--match-pattern-make-inner-form (end? limit pattern)
   "Return matching form for PATTERN.
 END? is a boolean describing if the search should be made in reverse.
 If t, reverse all children when obtaining from any given node. LIMIT
@@ -4056,27 +4052,6 @@ terminate only when the entire tree is searched within PATTERN."
       ;; slicers should not be here
       (`(,(or :first :last :nth :slice) . ,_)
        (org-ml--arg-error "Slicers can only appear at the front of pattern"))
-      ;;
-      ;; alternative - make multiple code paths to sequentially add different
-      ;;   matches to accumulator
-      (`(,(and (pred org-ml--match-is-alternate-form) alts) . ,ps)
-       (--> (-split-on '| alts)
-            (-replace '(nil) nil it)
-            (--map (append it ps) it)
-            ;; if one of the branches is nil, just add whatever the current node
-            ;; is to the accumulator, else make a pattern for the children of
-            ;; the current node
-            ;; TODO there should not be multiple nils allowed
-            (--map (if (null it) `(,@reduce (identity it) acc (list ,accum))
-                     (org-ml--match-make-inner-pattern-form end? limit it))
-                   it)
-            ;; reverse if we want results in forward order since we apply
-            ;; another reverse after this function
-            (if end? it (reverse it))
-            ;; use nested let statements to keep track of accumulator note, the
-            ;; comma usage to make this extra confusing :)
-            (--reduce `(let ((acc ,it)) ,acc) it)))
-      ;;
       ;; * - if condition0 and condition1 match, add node to accumulator and
       ;;   descend into child to repeat, if only condition0 matches just descend
       ;;   into child and continue
@@ -4104,7 +4079,7 @@ terminate only when the entire tree is searched within PATTERN."
               (pred1 (org-ml--match-make-condition-form condition1))
               (inner
                (if (not ps) accum
-                 (org-ml--match-make-inner-pattern-form end? limit ps)))
+                 (org-ml--match-pattern-make-inner-form end? limit ps)))
               ;; need to explicitly check limit here because not in reduce form
               ;; where limit is build in, this doesn't conform to the pattern of
               ;; the rest of this function
@@ -4130,10 +4105,46 @@ terminate only when the entire tree is searched within PATTERN."
        (let ((pred (org-ml--match-make-condition-form condition))
              (inner
               (if (not ps) accum
-                (org-ml--match-make-inner-pattern-form end? limit ps))))
+                (org-ml--match-pattern-make-inner-form end? limit ps))))
          `(,@reduce (if ,pred ,inner acc) acc ,get-children)))
       ;;
       (ps (org-ml--arg-error "Invalid pattern: %s" ps)))))
+
+(defun org-ml--match-is-alternate-form (form)
+  "Return t if FORM is an alternative pattern form (eg has `|`s)."
+  (and (listp form) (memq '| form)))
+
+(defun org-ml--match-pattern-expand-alternations (pattern)
+  "Convert PATTERN with alternations to a list of patterns.
+Eg given (a (b | c)), return ((a b) (a c)). This will act
+recursively on nested alternations."
+  (cl-labels
+      ((add-to-acc
+        (acc p)
+        (--map (append it p) acc))
+       (add-subpattern
+        (acc p)
+        (if (org-ml--match-is-alternate-form p)
+            (->> (-split-on '| p)
+                 (-replace '(nil) nil)
+                 (-mapcat #'org-ml--match-pattern-expand-alternations)
+                 (--mapcat (add-to-acc acc it)))
+          (add-to-acc acc (list p)))))
+    (-reduce-from #'add-subpattern '(()) pattern)))
+
+(defun org-ml--match-pattern-process-alternations (end? limit alt-patterns)
+  "Convert ALT-PATTERNS to a matching form.
+ALT-PATTERNS is a list of patterns created from expanded
+alternations in the original pattern.
+
+See `org-ml--match-pattern-make-inner-form' for the meaning of
+END? and LIMIT."
+  ;; TODO add a check for nil alternative patterns
+  (->> (if end? alt-patterns (reverse alt-patterns))
+       (--map (org-ml--match-pattern-make-inner-form end? limit it))
+       ;; use nested let statements to keep track of accumulator
+       ;; note the comma usage to make this extra confusing :)
+       (--reduce `(let ((acc ,it)) ,acc))))
 
 (defun org-ml--match-pattern-simplify-wildcards (pattern)
   "Return PATTERN with wildcards replaced by simpler syntax.
@@ -4196,11 +4207,12 @@ terms of explicit conditions, alternative branches, and `*` wildcards."
 
 (defun org-ml--match-make-pattern-form (end? limit pattern)
   "Return non-slicer matching form for PATTERN.
-See `org-ml--match-make-inner-pattern-form' for meaning of END?
+See `org-ml--match-pattern-make-inner-form' for meaning of END?
 and LIMIT which are passed directly through this function. NODE
 is the target node to be matched"
   (let ((body (->> (org-ml--match-pattern-simplify-wildcards pattern)
-                   (org-ml--match-make-inner-pattern-form end? limit))))
+                   (org-ml--match-pattern-expand-alternations)
+                   (org-ml--match-pattern-process-alternations end? limit))))
     ;; NOTE: the accumulator is assembled in reverse due to the nature of linked
     ;; lists. Consing to the front is a linear operation, while appending to the
     ;; back is a quadratic operation since the list needs to be fully traversed
