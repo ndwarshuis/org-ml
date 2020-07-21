@@ -7,12 +7,13 @@ A functional API for org-mode inspired by
 
 # Upcoming Breaking Changes for 2.0
 
-* This packages will be renamed `org-ml` (org-metalanguage)
-* Functions will be renamed to be more consistent
-  * `om-get-headlines` and friends will become `om-parse-headlines`
-  * `om-do-headlines` and friends will become `om-update-headlines`
-* Match function syntax will change to be more regexp-like (eg `:many` will be
-  `:any *` or similar)
+- [x]  This packages will be renamed `org-ml` (org-metalanguage)
+- [x]  Functions will be renamed to be more consistent
+  - [x]  `om-get-headlines` and friends will become `om-parse-headlines`
+  - [x]  `om-do-headlines` and friends will become `om-update-headlines`
+- [x]  Match function syntax will change to be more regexp-like (eg `:many` will
+  be `:any *` or similar)
+- [ ] Add affiliated keyword support
 
 # Installation
 
