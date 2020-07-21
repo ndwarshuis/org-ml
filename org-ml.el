@@ -4351,8 +4351,8 @@ function and POSIX extended regular expressions.:
   these expressions may be nested
 
 If PATTERN is nil, return NODE. Likewise, if any wildcard patterns
-match the nil pattern, also return nil. Examples of this would be
-\(SUB *), (SUB ?), and ((nil | SUB))."
+match the nil pattern, also return NODE along with anything else the wildcard
+matches. Examples of this would be (SUB *), (SUB ?), and ((nil | SUB))."
   (let ((match-fun (org-ml--match-make-lambda-form pattern)))
     (funcall match-fun node)))
 
