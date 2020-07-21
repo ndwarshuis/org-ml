@@ -332,7 +332,7 @@ Set, get, and map properties of nodes.
 * [org-ml-toggle-property](#org-ml-toggle-property-prop-node) `(prop node)`
 * [org-ml-shift-property](#org-ml-shift-property-prop-n-node) `(prop n node)`
 * [org-ml-insert-into-property](#org-ml-insert-into-property-prop-index-string-node) `(prop index string node)`
-* [org-ml-remove-frorg-ml-property](#org-ml-remove-frorg-ml-property-prop-string-node) `(prop string node)`
+* [org-ml-remove-from-property](#org-ml-remove-from-property-prop-string-node) `(prop string node)`
 * [org-ml-plist-put-property](#org-ml-plist-put-property-prop-key-value-node) `(prop key value node)`
 * [org-ml-plist-remove-property](#org-ml-plist-remove-property-prop-key-node) `(prop key node)`
 
@@ -1275,7 +1275,7 @@ The following properties are settable:
 Build a timestamp object node.
 
 The following properties are settable:
-- **`type`**: (required) a symbol from `inactive`, `active`, `inactive-ranged`, or `active-ranged`
+- **`type`**: (required) a symbol from `inactive`, `active`, `inactive-range`, or `active-range`
 - **`year-start`**: (required) a positive integer
 - **`month-start`**: (required) a positive integer
 - **`day-start`**: (required) a positive integer
@@ -1538,7 +1538,7 @@ The following properties are settable:
 Build a clock element node.
 
 The following properties are settable:
-- **`value`**: (required) an unranged, inactive timestamp node with no warning or repeater
+- **`value`**: (required) a ranged or unranged inactive timestamp node with no warning or repeater
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1546,10 +1546,12 @@ The following properties are settable:
      (org-ml-to-trimmed-string))
  ;; => "CLOCK: [2019-01-01 Tue 00:00]"
 
-(->> (org-ml-build-clock (org-ml-build-timestamp! '(2019 1 1 0 0)
-						  :end '(2019 1 1 1 0)))
+(->> (org-ml-build-timestamp! '(2019 1 1 0 0)
+			      :end '(2019 1 1 1 0))
+     (org-ml-set-property :type 'inactive-range)
+     (org-ml-build-clock)
      (org-ml-to-trimmed-string))
- ;; => "CLOCK: [2019-01-01 Tue 00:00-01:00] =>  1:00"
+ ;; => "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00] =>  1:00"
 
 ```
 
@@ -2286,7 +2288,7 @@ Return a new clock node.
 (->> (org-ml-build-clock! '(2019 1 1 12 0)
 			  :end '(2019 1 1 13 0))
      (org-ml-to-trimmed-string))
- ;; => "CLOCK: [2019-01-01 Tue 12:00-13:00] =>  1:00"
+ ;; => "CLOCK: [2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00] =>  1:00"
 
 ```
 
@@ -3339,7 +3341,7 @@ Error
 
 ```
 
-#### org-ml-remove-frorg-ml-property `(prop string node)`
+#### org-ml-remove-from-property `(prop string node)`
 
 Return **`node`** with **`string`** removed from **`prop`** if present.
 
@@ -3354,19 +3356,19 @@ and properties that may be used with this function.
 ; #+CALL: ktulu(y=1)
 
 (->> (org-ml-parse-this-element)
-     (org-ml-remove-frorg-ml-property :arguments "y=1")
+     (org-ml-remove-from-property :arguments "y=1")
      (org-ml-to-trimmed-string))
  ;; => "#+CALL: ktulu()"
 
 ;; Do nothing if the string does not exist
 (->> (org-ml-parse-this-element)
-     (org-ml-remove-frorg-ml-property :arguments "d=666")
+     (org-ml-remove-from-property :arguments "d=666")
      (org-ml-to-trimmed-string))
  ;; => "#+CALL: ktulu(y=1)"
 
 ;; Throw error when removing from property that is not a string list
 (->> (org-ml-parse-this-element)
-     (org-ml-remove-frorg-ml-property :end-header ":results")
+     (org-ml-remove-from-property :end-header ":results")
      (org-ml-to-trimmed-string))
 Error
 
@@ -6047,74 +6049,78 @@ Use pattern-matching to selectively perform operations on nodes in trees.
 
 Return a list of child nodes matching **`pattern`** in **`node`**.
 
-**`pattern`** is a list like `([slicer [arg1] [arg2]] [pnode] sub1 [sub2 ...])`.
+**`pattern`** is a list like `([slicer [arg1] [arg2]] sub1 [sub2 ...])`.
 
 `slicer` is an optional prefix to the pattern describing how many
-and which matches to return. If not given, all matches are returned.
-Possible values are:
+and which matches to return. If not given, all matches are
+returned. Possible values are:
 
 - `:first` - return the first match
 - `:last` - return the last match
-- `:nth` `arg1` - return the nth match where `arg1` is an integer denoting
-    the index to return (starting at 0). `arg1` may be a negative number
-    to start counting at the end of the match list, in which case -1 is
-    the last index. Using 0 and -1 for `arg1` is equivalent to using
-    `:first` and `:last` respectively
-- `:sub` `arg1` `arg2` - return a sublist between indices `arg1` and `arg2`.
-    `arg1` may not be greater than `arg2`, and both must either be
-    non-negative integers or negative integers. In the case of negative
-    integers, the indices refer to the same counterparts as described in
-    `:nth`. If `arg1` and `arg2` are equal, this slicer has the same
-    behavior as `:nth`.
-
-`pnode` is an optional literal node to be matched. If given, the
-matching process will start within `pnode` wherever it happens to be in
-**`node`**. This is useful for 'reusing' previous matches without repeating
-the same pattern.
+- `:nth` `arg1` - return the nth match where `arg1` is an integer
+    denoting the index to return (starting at 0). `arg1` may be a
+    negative number to start counting at the end of the match list,
+    in which case -1 is the last index. Using 0 and -1 for `arg1` is
+    equivalent to using `:first` and `:last` respectively
+- `:sub` `arg1` `arg2` - return a sublist between indices `arg1` and
+    `arg2`. `arg1` may not be greater than `arg2`, and both must either
+    be non-negative integers or negative integers. In the case of
+    negative integers, the indices refer to the same counterparts
+    as described in `:nth`. If `arg1` and `arg2` are equal, this slicer
+    has the same behavior as `:nth`.
 
 `subx` denotes subpatterns that that match nodes in the parse tree.
 Subpatterns may either be wildcards or conditions.
 
-Conditions match exactly one level of the node tree being searched
-based on the node's type (the symbol returned by [`org-ml-get-type`](#org-ml-get-type-node)),
-properties (the value returned by [`org-ml-get-property`](#org-ml-get-property-prop-node) for a valid
-property keyword), and index (the position of the node in the list
-returned by [`org-ml-get-children`](#org-ml-get-children-branch-node)). For index, both left indices (where
-zero refers to the left end of the list) and right indices (where -1
-refers to the right end of the list) are understood. Conditions may
-either be atomic or compound, where compound conditions are themselves
-composed of atomic or compound conditions.
+Conditions match exactly one level of the node tree being
+searched based on the node's type (the symbol returned by
+[`org-ml-get-type`](#org-ml-get-type-node)), properties (the value returned by
+[`org-ml-get-property`](#org-ml-get-property-prop-node) for a valid property keyword), and
+index (the position of the node in the list returned by
+[`org-ml-get-children`](#org-ml-get-children-branch-node)). For index, both left indices (where zero
+refers to the left end of the list) and right indices (where -1
+refers to the right end of the list) are understood. Conditions
+may either be atomic or compound, where compound conditions are
+themselves composed of atomic or compound conditions.
 
 The types of atomic conditions are:
 
 - `type` - match when the node's type is `eq` to `type` (a symbol)
-- `index` - match when the node's index is `=` to `index` (an integer)
+- `index` - match when the node's index is `=` to `index` (an
+    integer)
 - `(op index)` - match when `(op node-index index)` returns t. `op` is
-    one of `<`, `>`, `<=`, or `>=` and `node-index` is the index of the
-    node being evaluated
-- `(prop val)` - match nodes whose property `prop` (a keyword) is `equal`
-    to `val`; `val` is obtained by evaluating [`org-ml-get-property`](#org-ml-get-property-prop-node) with `prop`
-    and the current node; if `prop` is invalid, an error will be thrown
-- `(:pred pred)` - match when `pred` evaluates to t; `pred` is a symbol for
-    a unary function that takes the current node as its argument
+    one of `<`, `>`, `<=`, or `>=` and `node-index` is the index of
+    the node being evaluated
+- `(prop val)` - match nodes whose property `prop` (a keyword) is
+    `equal` to `val`; `val` is obtained by evaluating
+    [`org-ml-get-property`](#org-ml-get-property-prop-node) with `prop` and the current node; if `prop`
+    is invalid, an error will be thrown
+- `(:pred pred)` - match when `pred` evaluates to t; `pred` is a symbol
+    for a unary function that takes the current node as its
+    argument
 
-Compound conditions start with an operator followed by their component
-conditions. In the syntax below, `cx` refers to a condition. The types
-of compound conditions are:
+Compound conditions start with an operator followed by their
+component conditions. The types of compound conditions are:
 
-- `(:and c1 c2 [c3 ...])` - match when all conditions are true
-- `(:or c1 c2 [c3 ...])` - match when at least one condition is true
-- `(:not c)` - match when condition is not true
+- `(:and c1 c2 [c3 ...])` - match when all '`c`` are true
+- `(:or c1 c2 [c3 ...])` - match when at least one '`c`` is true
+- `(:not c)` - match when '`c`` is not true
 
-In addition to conditions, `subx` may be a wildcard keyword to match
-nodes independent of their type, properties, and index. The types of
-wildcards are:
+In addition, `subx` may be a wildcard keyword or symbol. These are
+analogous to the special characters found in `posix` extended
+regular expression `(ere)` syntax:
 
-- `:any` - always match exactly one node
-- `:many` `sub` - match `sub` to nodes that are zero or more levels down
-    in the tree; `sub` is a subpattern of either a condition or the `:any`
-    wildcard; only one subpattern is allowed after `:many`
-- `:many!` `sub` - like `:many` but do not match within other matches
+- `:any` - always match exactly one node (like `.` in `ere`)
+- `sub` `?` - match `sub` zero or once (like `?` in `ere`)
+- `sub` `*` - match `sub` zero or more times (like `*` in `ere`)
+- `sub` `+` - match `sub` 1 or more times (like `+` in `ere`)
+- `sub` [`n`] - match `sub` `n` times (like '{`n`}` in `ere`)
+- `sub` [`m` `n`] - match `sub` `m` to `n` times (inclusive); if `m` or `n` is
+    nil, this will match 'at most `n` times' or 'at least `m` times'
+    respectively (like '{`m`,`n`}`, '{,`n`}`, and '{`m`,}` in `ere`)
+- ([[`sub1`]...] `|` [[`sub2`]...]) - match either subpattern `sub1`
+    or `sub2` on either side the `|`; these may be nested or in
+    series (like `|` in `ere`)
 
 ```el
 ;; Given the following contents:
