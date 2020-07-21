@@ -4137,7 +4137,8 @@ alternations in the original pattern.
 
 See `org-ml--match-pattern-make-inner-form' for the meaning of
 END? and LIMIT."
-  ;; TODO add a check for nil alternative patterns
+  (when (-any? #'null alt-patterns)
+    (org-ml--arg-error "Empty patterns are not allowed"))
   (->> (if end? alt-patterns (reverse alt-patterns))
        (--map (org-ml--match-pattern-make-inner-form end? limit it))
        ;; use nested let statements to keep track of accumulator
@@ -4175,7 +4176,7 @@ terms of explicit conditions, alternative branches, and `*` wildcards."
           ;; (X [N]) -> (X1 X2 ... XN)
           (`[,(and (pred integerp) n)]
            (if (< 0 n) (append-n acc n)
-             (error "In [N], N must be > 0: got %s" n)))
+             (org-ml--arg-error "In [N], N must be > 0: got %s" n)))
           ;; match X at least M times
           ;; (X [M nil]) -> (X1 X2 ... XN X *)
           ;; (X [M !]) -> (X1 X2 ... XN X *!)
@@ -4183,24 +4184,26 @@ terms of explicit conditions, alternative branches, and `*` wildcards."
              ,(and (pred (lambda (x) (or (null x) (eq '! x)))) n)]
            (let ((wc (if (eq n '!) '*! '*)))
              (if (< 0 m) (append (cons wc (-repeat m (car acc))) acc)
-               (error "In [M nil] M must be positive; got %s" m))))
+               (org-ml--arg-error "In [M nil] M must be positive; got %s" m))))
           ;; match X M to N times (inclusive)
           ;; (X [M N]) -> (XM XM+1 ... XN-1 XN)
           (`[,(and (pred integerp) m) ,(and (pred integerp) n)]
            (cond
             ;; if they are equal and greater than 0, same as [N]
             ((= 0 m n)
-             (error "Both in [M N] cannot be zero"))
+             (org-ml--arg-error "Both in [M N] cannot be zero"))
             ((and (< 0 m) (< 0 n) (= m n))
              (append-n acc n))
             ((or (< m 0) (< n 0))
-             (error "Both in [M N] must be positive: got %s and %s" m n))
+             (org-ml--arg-error "Both in [M N] must be positive: got %s and %s" m n))
             ((< n m)
-             (error "In [M N], M must be <= N: got %s and %s" m n))
+             (org-ml--arg-error "In [M N], M must be <= N: got %s and %s" m n))
             (t
              (append-m-n acc m n))))
           ;; all else
           (s (cons s acc)))))
+    ;; TODO add a better set of error messages for patterns that are not
+    ;; permitted (such as '(a ?)' and '((nil | a))')
     (reverse (-reduce-from #'expand nil pattern))))
 
 (defun org-ml--match-make-pattern-form (end? limit pattern)

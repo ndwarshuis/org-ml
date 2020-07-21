@@ -987,7 +987,7 @@ be parsed to TYPE."
     (should-error-arg (funcall fun nil))
     (should-error-arg (funcall fun :1))))
 
-(ert-deftest org-ml--match-make-inner-pattern-form/error ()
+(ert-deftest org-ml--match-pattern-make-inner-form/error ()
   ;; Ensure `org-ml--match-make-inner-form' will error when it supposed to
   ;; do so. All errors (in theory) should be tested here so that
   ;; we don't need to bother testing them anywhere else when we test
@@ -998,9 +998,9 @@ be parsed to TYPE."
   ;;   `org-ml--match-make-condition-form/error'.
   ;; - these error paths are independent of `END?' and `LIMIT' so
   ;;   set them both to nil
-  (unless (fboundp 'org-ml--match-make-inner-pattern-form)
+  (unless (fboundp 'org-ml--match-pattern-make-inner-form)
     (error "Function not defined"))
-  (let ((fun (-partial #'org-ml--match-make-inner-pattern-form nil nil)))
+  (let ((fun (-partial #'org-ml--match-pattern-make-inner-form nil nil)))
     ;; slicers present
     (should-error-arg (funcall fun '(:first bold)))
     (should-error-arg (funcall fun '(:last bold)))
@@ -1091,18 +1091,18 @@ be parsed to TYPE."
     (error "Function not defined"))
   ;; single bracket
   ;; zero not allowed
-  (should-error (org-ml--match-pattern-simplify-wildcards '(x [0])))
+  (should-error-arg (org-ml--match-pattern-simplify-wildcards '(x [0])))
   ;; negative not allowed
-  (should-error (org-ml--match-pattern-simplify-wildcards '(x [-1])))
+  (should-error-arg (org-ml--match-pattern-simplify-wildcards '(x [-1])))
   ;; double brackets
   ;; double zeros not allowed
-  (should-error (org-ml--match-pattern-simplify-wildcards '(x [0 0])))
+  (should-error-arg (org-ml--match-pattern-simplify-wildcards '(x [0 0])))
   ;; negatives not allowed
-  (should-error (org-ml--match-pattern-simplify-wildcards '(x [-1 1])))
-  (should-error (org-ml--match-pattern-simplify-wildcards '(x [1 -1])))
-  (should-error (org-ml--match-pattern-simplify-wildcards '(x [-1 -1])))
+  (should-error-arg (org-ml--match-pattern-simplify-wildcards '(x [-1 1])))
+  (should-error-arg (org-ml--match-pattern-simplify-wildcards '(x [1 -1])))
+  (should-error-arg (org-ml--match-pattern-simplify-wildcards '(x [-1 -1])))
   ;; must be ascending order
-  (should-error (org-ml--match-pattern-simplify-wildcards '(x [2 1]))))
+  (should-error-arg (org-ml--match-pattern-simplify-wildcards '(x [2 1]))))
 
 (ert-deftest org-ml--match-make-slicer-form ()
   ;; Ensure `org-ml--match-make-inner-form' will error when it supposed to
@@ -1112,7 +1112,7 @@ be parsed to TYPE."
   ;;
   ;; Assume that all invalid patterns at the predicate and wildcard
   ;; level will be caught by `org-ml--match-make-condition-form/error' and
-  ;; `org-ml--match-make-inner-pattern-form/error'
+  ;; `org-ml--match-pattern-make-inner-form/error'
   (unless (fboundp 'org-ml--match-make-slicer-form)
     (error "Function not defined"))
   (let ((fun #'org-ml--match-make-slicer-form))
@@ -1211,7 +1211,7 @@ applied."
 ;;
 ;; The reason for choosing these combinations is that all of them
 ;; combined should hit each of the valid form-building switches in
-;; `org-ml--match-make-inner-pattern-form'. Since the behavior of these
+;; `org-ml--match-pattern-make-inner-form'. Since the behavior of these
 ;; depends on the value of `LIMIT' and `END?' and these are set
 ;; depending on the slicer, testing these combinations with all
 ;; reasonable slicer combination should ensure that every path with
