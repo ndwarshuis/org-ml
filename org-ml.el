@@ -4118,18 +4118,16 @@ terminate only when the entire tree is searched within PATTERN."
   "Convert PATTERN with alternations to a list of patterns.
 Eg given (a (b | c)), return ((a b) (a c)). This will act
 recursively on nested alternations."
-  (cl-labels
-      ((add-to-acc
-        (acc p)
-        (--map (append it p) acc))
-       (add-subpattern
+  (cl-flet
+      ((add-subpattern
         (acc p)
         (if (org-ml--match-is-alternate-form p)
-            (->> (-split-on '| p)
-                 (-replace '(nil) nil)
-                 (-mapcat #'org-ml--match-pattern-expand-alternations)
-                 (--mapcat (add-to-acc acc it)))
-          (add-to-acc acc (list p)))))
+            (let ((p* (->>
+                       (-split-on '| p)
+                       (-replace '(nil) nil)
+                       (-mapcat #'org-ml--match-pattern-expand-alternations))))
+              (-mapcat (lambda (a) (--map (append a it) p*)) acc))
+          (--map (append it (list p)) acc))))
     (-reduce-from #'add-subpattern '(()) pattern)))
 
 (defun org-ml--match-pattern-process-alternations (end? limit alt-patterns)

@@ -1014,12 +1014,59 @@ be parsed to TYPE."
     (should-error-arg (funcall fun nil))
     (should-error-arg (funcall fun '(:swaggart)))))
 
+(defun should-expand-to-alts (pattern alt-patterns)
+  (should (equal (org-ml--match-pattern-expand-alternations pattern)
+                 alt-patterns)))
+
+(ert-deftest org-ml--match-pattern-expand-alternations ()
+  ;; ensure that alternations expand properly
+  (unless (fboundp 'org-ml--match-pattern-expand-alternations)
+    (error "Function not defined"))
+  ;; no alternations
+  (should-expand-to-alts '(a) '((a)))
+  (should-expand-to-alts '(a b c) '((a b c)))
+  ;; 1-level alternations
+  (should-expand-to-alts '((x | y)) '((x) (y)))
+  (should-expand-to-alts '((x | y) a) '((x a) (y a)))
+  (should-expand-to-alts '(a (x | y)) '((a x) (a y)))
+  (should-expand-to-alts '(a (x | y) b) '((a x b) (a y b)))
+  ;; 1-level alternations with nil
+  (should-expand-to-alts '((nil | y)) '(nil (y)))
+  (should-expand-to-alts '((nil | y) a) '((a) (y a)))
+  (should-expand-to-alts '(a (nil | y)) '((a) (a y)))
+  (should-expand-to-alts '(a (nil | y) b) '((a b) (a y b)))
+  ;; 1-level serial alternations
+  (should-expand-to-alts '((m | n) (x | y)) '((m x) (m y) (n x) (n y)))
+  (should-expand-to-alts '(a (m | n) b (x | y) c) '((a m b x c) (a m b y c)
+                                                    (a n b x c) (a n b y c)))
+  ;; 1-level serial alternations with nil
+  (should-expand-to-alts '((nil | n) (x | y)) '((x) (y) (n x) (n y)))
+  (should-expand-to-alts '((m | n) (nil | y)) '((m) (m y) (n) (n y)))
+  (should-expand-to-alts '(a (nil | n) b (x | y) c) '((a b x c) (a b y c)
+                                                      (a n b x c) (a n b y c)))
+  (should-expand-to-alts '(a (m | n) b (nil | y) c) '((a m b c) (a m b y c)
+                                                      (a n b c) (a n b y c)))
+  ;; 2-level alternations
+  (should-expand-to-alts '((x | (m | n))) '((x) (m) (n)))
+  (should-expand-to-alts '(a (x | (m | n))) '((a x) (a m) (a n)))
+  (should-expand-to-alts '((x | y (m | n))) '((x) (y m) (y n)))
+  (should-expand-to-alts '(a (x | y (m | n))) '((a x) (a y m) (a y n)))
+  ;; 2-level alternations with nil
+  (should-expand-to-alts '((nil | (m | n))) '(nil (m) (n)))
+  (should-expand-to-alts '(a (nil | (m | n))) '((a) (a m) (a n)))
+  (should-expand-to-alts '((nil | y (m | n))) '(nil (y m) (y n)))
+  (should-expand-to-alts '(a (nil | y (m | n))) '((a) (a y m) (a y n)))
+  (should-expand-to-alts '((x | (nil | n))) '((x) nil (n)))
+  (should-expand-to-alts '(a (x | (nil | n))) '((a x) (a) (a n)))
+  (should-expand-to-alts '((x | y (nil | n))) '((x) (y) (y n)))
+  (should-expand-to-alts '(a (x | y (nil | n))) '((a x) (a y) (a y n))))
+
 (defun should-expand-to (pattern expanded-pattern)
   (should (equal (org-ml--match-pattern-simplify-wildcards pattern)
                  expanded-pattern)))
 
 (ert-deftest org-ml--match-pattern-simplify-wildcards ()
-  ;; ensure the bracket and + wildcards expand properly
+  ;; ensure that bracket and + wildcards expand properly
   (unless (fboundp 'org-ml--match-pattern-simplify-wildcards)
     (error "Function not defined"))
   ;; ?
