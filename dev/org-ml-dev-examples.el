@@ -5015,6 +5015,21 @@
          (--map (org-ml-to-trimmed-string it)))
     => '("*** three" "*** five\n**** six" "**** six")
 
+    ;; alternation
+    (:buffer "* one"
+             "** two"
+             "*a* /_b_/"
+             "*** three"
+             "*c* /_d_/")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(headline section paragraph (bold | italic underline)))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("*a*" "_b_")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(headline (nil | headline) section paragraph (bold | italic underline)))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("*a*" "_b_" "*c*" "_d_")
+
     ;; slicer tests are not here, see `org-ml-test.el'
 
     :end-hidden)
