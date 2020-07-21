@@ -222,7 +222,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
              (s-replace "]" "")
              (s-split " ")
              (--remove (equal it ""))
-             (--all? (or (member it '("t" "nil"))
+             (--all? (or (member it '("t" "nil" "|" "*" "?"))
                          (s-matches? "^[A-Z0-9\\-]+$" it)
                          (s-matches? "^\\(:\\|&\\)[a-z0-9-]+$" it)))))
        (is-form?

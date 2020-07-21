@@ -4273,7 +4273,7 @@ NODE is the node to be matched."
 (defun org-ml-match (pattern node)
   "Return a list of child nodes matching PATTERN in NODE.
 
-PATTERN is a list like ([SLICER [ARG1] [ARG2]] SUB1 [SUB2 ...]).
+PATTERN is a list like ([SLICER [X] [Y]] SUB1 [SUB2 ...]).
 
 SLICER is an optional prefix to the pattern describing how many
 and which matches to return. If not given, all matches are
@@ -4281,17 +4281,17 @@ returned. Possible values are:
 
 - `:first' - return the first match
 - `:last' - return the last match
-- `:nth' ARG1 - return the nth match where ARG1 is an integer
-  denoting the index to return (starting at 0). ARG1 may be a
-  negative number to start counting at the end of the match list,
-  in which case -1 is the last index. Using 0 and -1 for ARG1 is
-  equivalent to using `:first' and `:last' respectively
-- `:sub' ARG1 ARG2 - return a sublist between indices ARG1 and
-  ARG2. ARG1 may not be greater than ARG2, and both must either
-  be non-negative integers or negative integers. In the case of
-  negative integers, the indices refer to the same counterparts
-  as described in `:nth'. If ARG1 and ARG2 are equal, this slicer
-  has the same behavior as `:nth'.
+- `:nth' X - return the nth match where X is an integer denoting
+  the index to return (starting at 0). X may be a negative number
+  to start counting at the end of the match list, in which case
+  -1 is the last index. Using 0 and -1 for X is equivalent to
+  using `:first' and `:last' respectively
+- `:sub' X Y - return a sublist between indices X and Y. X may
+  not be greater than Y, and both must either be non-negative
+  integers or negative integers. In the case of negative
+  integers, the indices refer to the same counterparts as
+  described in `:nth'. If X and Y are equal, this slicer has the
+  same behavior as `:nth'.
 
 SUBX denotes subpatterns that that match nodes in the parse tree.
 Subpatterns may either be wildcards or conditions.
@@ -4326,25 +4326,33 @@ The types of atomic conditions are:
 Compound conditions start with an operator followed by their
 component conditions. The types of compound conditions are:
 
-- (:and C1 C2 [C3 ...]) - match when all 'C' are true
-- (:or C1 C2 [C3 ...]) - match when at least one 'C' is true
-- (:not C) - match when 'C' is not true
+- (:and C1 C2 [C3 ...]) - match when all `C' are true
+- (:or C1 C2 [C3 ...]) - match when at least one `C' is true
+- (:not C) - match when `C' is not true
 
 In addition, SUBX may be a wildcard keyword or symbol. These are
 analogous to the special characters found in POSIX extended
-regular expression (ERE) syntax:
+regular expression syntax. Specifically, `[' and `]' correspond
+to `{' and `}' respectively and `:any' corresponds to the `.'
+operator. All other characters have the same meaning between this
+function and POSIX extended regular expressions.:
 
-- `:any' - always match exactly one node (like `.' in ERE)
-- SUB `?' - match SUB zero or once (like `?' in ERE)
-- SUB `*' - match SUB zero or more times (like `*' in ERE)
-- SUB `+' - match SUB 1 or more times (like `+' in ERE)
-- SUB [N] - match SUB N times (like '{N}' in ERE)
+- `:any' - always match exactly one node
+- SUB `?' - match SUB zero or once
+- SUB `*' - match SUB zero or more times
+- SUB `+' - match SUB 1 or more times
+- SUB [N] - match SUB N times
 - SUB [M N] - match SUB M to N times (inclusive); if M or N is
   nil, this will match 'at most N times' or 'at least M times'
-  respectively (like '{M,N}', '{,N}', and '{M,}' in ERE)
-- ([[SUB1]...] `|' [[SUB2]...]) - match either subpattern SUB1
-  or SUB2 on either side the `|'; these may be nested or in
-  series (like `|' in ERE)"
+  respectively
+- (ALT-A1 [ALT-A2 ...] | ALT-B1 [ALT-B2 ...] [| ...]) - match
+  any of the ALT expressions separated by `|' where ALT is a list
+  of subpatterns as described above or nil to match nothing;
+  these expressions may be nested
+
+If PATTERN is nil, return NODE. Likewise, if any wildcard patterns
+match the nil pattern, also return nil. Examples of this would be
+\(SUB *), (SUB ?), and ((nil | SUB))."
   (let ((match-fun (org-ml--match-make-lambda-form pattern)))
     (funcall match-fun node)))
 

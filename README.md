@@ -6050,7 +6050,7 @@ Use pattern-matching to selectively perform operations on nodes in trees.
 
 Return a list of child nodes matching **`pattern`** in **`node`**.
 
-**`pattern`** is a list like `([slicer [arg1] [arg2]] sub1 [sub2 ...])`.
+**`pattern`** is a list like `([slicer [x] [y]] sub1 [sub2 ...])`.
 
 `slicer` is an optional prefix to the pattern describing how many
 and which matches to return. If not given, all matches are
@@ -6058,17 +6058,17 @@ returned. Possible values are:
 
 - `:first` - return the first match
 - `:last` - return the last match
-- `:nth` `arg1` - return the nth match where `arg1` is an integer
-    denoting the index to return (starting at 0). `arg1` may be a
-    negative number to start counting at the end of the match list,
-    in which case -1 is the last index. Using 0 and -1 for `arg1` is
-    equivalent to using `:first` and `:last` respectively
-- `:sub` `arg1` `arg2` - return a sublist between indices `arg1` and
-    `arg2`. `arg1` may not be greater than `arg2`, and both must either
-    be non-negative integers or negative integers. In the case of
-    negative integers, the indices refer to the same counterparts
-    as described in `:nth`. If `arg1` and `arg2` are equal, this slicer
-    has the same behavior as `:nth`.
+- `:nth` `x` - return the nth match where `x` is an integer denoting
+    the index to return (starting at 0). `x` may be a negative number
+    to start counting at the end of the match list, in which case
+    -1 is the last index. Using 0 and -1 for `x` is equivalent to
+    using `:first` and `:last` respectively
+- `:sub` `x` `y` - return a sublist between indices `x` and `y`. `x` may
+    not be greater than `y`, and both must either be non-negative
+    integers or negative integers. In the case of negative
+    integers, the indices refer to the same counterparts as
+    described in `:nth`. If `x` and `y` are equal, this slicer has the
+    same behavior as `:nth`.
 
 `subx` denotes subpatterns that that match nodes in the parse tree.
 Subpatterns may either be wildcards or conditions.
@@ -6103,25 +6103,33 @@ The types of atomic conditions are:
 Compound conditions start with an operator followed by their
 component conditions. The types of compound conditions are:
 
-- `(:and c1 c2 [c3 ...])` - match when all '`c`` are true
-- `(:or c1 c2 [c3 ...])` - match when at least one '`c`` is true
-- `(:not c)` - match when '`c`` is not true
+- `(:and c1 c2 [c3 ...])` - match when all ``c`` are true
+- `(:or c1 c2 [c3 ...])` - match when at least one ``c`` is true
+- `(:not c)` - match when ``c`` is not true
 
 In addition, `subx` may be a wildcard keyword or symbol. These are
 analogous to the special characters found in `posix` extended
-regular expression `(ere)` syntax:
+regular expression syntax. Specifically, `[` and `]` correspond
+to `{` and `}` respectively and `:any` corresponds to the `.`
+operator. All other characters have the same meaning between this
+function and `posix` extended regular expressions.:
 
-- `:any` - always match exactly one node (like `.` in `ere`)
-- `sub` `?` - match `sub` zero or once (like `?` in `ere`)
-- `sub` `*` - match `sub` zero or more times (like `*` in `ere`)
-- `sub` `+` - match `sub` 1 or more times (like `+` in `ere`)
-- `sub` [`n`] - match `sub` `n` times (like '{`n`}` in `ere`)
+- `:any` - always match exactly one node
+- `sub` `?` - match `sub` zero or once
+- `sub` `*` - match `sub` zero or more times
+- `sub` `+` - match `sub` 1 or more times
+- `sub` [`n`] - match `sub` `n` times
 - `sub` [`m` `n`] - match `sub` `m` to `n` times (inclusive); if `m` or `n` is
     nil, this will match 'at most `n` times' or 'at least `m` times'
-    respectively (like '{`m`,`n`}`, '{,`n`}`, and '{`m`,}` in `ere`)
-- ([[`sub1`]...] `|` [[`sub2`]...]) - match either subpattern `sub1`
-    or `sub2` on either side the `|`; these may be nested or in
-    series (like `|` in `ere`)
+    respectively
+- `(alt-a1 [alt-a2 ...] | alt-b1 [alt-b2 ...] [| ...])` - match
+    any of the `alt` expressions separated by `|` where `alt` is a list
+    of subpatterns as described above or nil to match nothing;
+    these expressions may be nested
+
+If **`pattern`** is nil, return **`node`**. Likewise, if any wildcard patterns
+match the nil pattern, also return nil. Examples of this would be
+`(sub *)`, `(sub ?)`, and `((nil | sub))`.
 
 ```el
 ;; Given the following contents:
