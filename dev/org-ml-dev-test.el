@@ -1011,7 +1011,6 @@ be parsed to TYPE."
     (should-error-arg (funcall fun '(bold :nth)))
     (should-error-arg (funcall fun '(bold :sub)))
     ;; just wrong...
-    (should-error-arg (funcall fun nil))
     (should-error-arg (funcall fun '(:swaggart)))))
 
 (defun should-expand-to-alts (pattern alt-patterns)
@@ -1241,6 +1240,28 @@ applied."
                "*_1_* */2/* _*3*_ _/4/_ /*5*/ /_6_/")))
     (match-slicer-should-equal node
       '("_1_" "/2/" "*5*" "_6_") ((:or bold italic) :any))))
+
+(ert-deftest org-ml-match/empty-patterns ()
+  (let ((node (->> (s-join "\n"
+                        '("* one"
+                          "** two"
+                          "** three"))
+                (org-ml--from-string))))
+    (cl-flet
+        ((match-empty
+          (n p)
+          (should (equal (list n) (org-ml-match p n)))))
+      ;; empty patterns
+      (match-empty node '())
+      (match-empty node '(:first))
+      (match-empty node '(:last))
+      (match-empty node '(:nth 0))
+      (match-empty node '(:sub 0 0))
+      ;; wildcards with the empty pattern
+      (match-empty node '(:first headline \?))
+      (match-empty node '(:first headline *))
+      (match-empty node '(:first (nil | headline)))
+      (match-empty node '(:last (headline | nil))))))
 
 ;; (ert-deftest org-ml-match/slicer-many ()
 ;;   ;; Test the * paths with all slicers. Here the node

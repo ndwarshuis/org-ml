@@ -4052,6 +4052,9 @@ terminate only when the entire tree is searched within PATTERN."
       ;; slicers should not be here
       (`(,(or :first :last :nth :slice) . ,_)
        (org-ml--arg-error "Slicers can only appear at the front of pattern"))
+      ;; empty pattern - add current node to accumulator as-is
+      ('nil
+       accum)
       ;; * - if condition0 and condition1 match, add node to accumulator and
       ;;   descend into child to repeat, if only condition0 matches just descend
       ;;   into child and continue
@@ -4117,7 +4120,8 @@ terminate only when the entire tree is searched within PATTERN."
 (defun org-ml--match-pattern-expand-alternations (pattern)
   "Convert PATTERN with alternations to a list of patterns.
 Eg given (a (b | c)), return ((a b) (a c)). This will act
-recursively on nested alternations."
+recursively on nested alternations. The returned list will
+be deduplicated."
   (cl-flet
       ((add-subpattern
         (acc p)
@@ -4128,7 +4132,7 @@ recursively on nested alternations."
                        (-mapcat #'org-ml--match-pattern-expand-alternations))))
               (-mapcat (lambda (a) (--map (append a it) p*)) acc))
           (--map (append it (list p)) acc))))
-    (-reduce-from #'add-subpattern '(()) pattern)))
+    (-uniq (-reduce-from #'add-subpattern '(()) pattern))))
 
 (defun org-ml--match-pattern-process-alternations (end? limit alt-patterns)
   "Convert ALT-PATTERNS to a matching form.
@@ -4207,20 +4211,17 @@ terms of explicit conditions, alternative branches, and `*` wildcards."
 See `org-ml--match-pattern-make-inner-form' for meaning of END?
 and LIMIT which are passed directly through this function. NODE
 is the target node to be matched"
-  (-if-let (body (-some->>
-                  (org-ml--match-pattern-simplify-wildcards pattern)
-                  (org-ml--match-pattern-expand-alternations)
-                  (org-ml--match-pattern-process-alternations end? limit)))
-      ;; NOTE: the accumulator is assembled in reverse due to the nature of
-      ;; linked lists. Consing to the front is a linear operation, while
-      ;; appending to the back is a quadratic operation since the list needs to
-      ;; be fully traversed with each append and the list is growing. This means
-      ;; that the list is reversed here if `END?' is nil (which means we want
-      ;; the list in forward-order) and left in reverse order if `END?' is t
-      ;; (meaning backward order)
-      (if end? body `(reverse ,body))
-    ;; if no pattern, just return the current node as a singleton list
-    `(list (cdr it))))
+  (let ((body (->> (org-ml--match-pattern-simplify-wildcards pattern)
+                   (org-ml--match-pattern-expand-alternations)
+                   (org-ml--match-pattern-process-alternations end? limit))))
+    ;; NOTE: the accumulator is assembled in reverse due to the nature of linked
+    ;; lists. Consing to the front is a linear operation, while appending to the
+    ;; back is a quadratic operation since the list needs to be fully traversed
+    ;; with each append and the list is growing. This means that the list is
+    ;; reversed here if `END?' is nil (which means we want the list in
+    ;; forward-order) and left in reverse order if `END?' is t (meaning backward
+    ;; order)
+    (if end? body `(reverse ,body))))
 
 (defun org-ml--match-make-slicer-form (pattern)
   "Return matching form with slicer operations for PATTERN.
