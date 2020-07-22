@@ -2008,6 +2008,28 @@
       (->> (org-ml-parse-this-object)
            (org-ml-get-property :post-blank))
       => 1
+
+      (:buffer "/*child*/")
+      (->> (org-ml-parse-this-object)
+           (org-ml-get-children)
+           (car)
+           (org-ml-get-property :parent)
+           (org-ml-to-trimmed-string))
+      => "/*child*/"
+
+      (:buffer "/16-chars-long/")
+      (->> (org-ml-parse-this-object)
+           (org-ml-get-property :begin))
+      => 1
+      (->> (org-ml-parse-this-object)
+           (org-ml-get-property :contents-begin))
+      => 2
+      (->> (org-ml-parse-this-object)
+           (org-ml-get-property :contents-end))
+      => 15
+      (->> (org-ml-parse-this-object)
+           (org-ml-get-property :end))
+      => 16
       
       :end-hidden
 
