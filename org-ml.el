@@ -4341,7 +4341,7 @@ function and POSIX extended regular expressions.:
 - `:any' - always match exactly one node
 - SUB `?' - match SUB zero or once
 - SUB `*' - match SUB zero or more times
-- SUB `+' - match SUB 1 or more times
+- SUB `+' - match SUB one or more times
 - SUB [N] - match SUB N times
 - SUB [M N] - match SUB M to N times (inclusive); if M or N is
   nil, this will match 'at most N times' or 'at least M times'
@@ -4351,9 +4351,10 @@ function and POSIX extended regular expressions.:
   of subpatterns as described above or nil to match nothing;
   these expressions may be nested
 
-If PATTERN is nil, return NODE. Likewise, if any wildcard patterns
-match the nil pattern, also return NODE along with anything else the wildcard
-matches. Examples of this would be (SUB *), (SUB ?), and ((nil | SUB))."
+If PATTERN is nil, return NODE. Likewise, if any wildcard
+patterns match the nil pattern, also return NODE along with
+anything else the wildcard matches. Examples of this would
+be (SUB *), (SUB ?), and ((nil | SUB))."
   (let ((match-fun (org-ml--match-make-lambda-form pattern)))
     (funcall match-fun node)))
 
