@@ -400,6 +400,13 @@ Functions to work with timestamp data
 
 * [org-ml-timestamp-diary-set-value](#org-ml-timestamp-diary-set-value-form-timestamp-diary) `(form timestamp-diary)`
 
+### Affiliated Keywords
+
+* [org-ml-get-affiliated-keyword](#org-ml-get-affiliated-keyword-key-node) `(key node)`
+* [org-ml-set-affiliated-keyword](#org-ml-set-affiliated-keyword-key-value-node) `(key value node)`
+* [org-ml-map-affiliated-keyword](#org-ml-map-affiliated-keyword-key-fun-node) `(key fun node)`
+* [org-ml-set-caption!](#org-ml-set-caption-caption-node) `(caption node)`
+
 ## Branch/Child Manipulation
 
 
@@ -4417,6 +4424,200 @@ The node must have a type `eq` to `diary`. **`form`** is a quoted list.
      (org-ml-timestamp-diary-set-value '(diary-float 1 3 2))
      (org-ml-to-string))
  ;; => "<%%(diary-float 1 3 2)>"
+
+```
+
+
+### Affiliated Keywords
+
+#### org-ml-get-affiliated-keyword `(key node)`
+
+Get the value of affiliated keyword **`key`** in **`node`**.
+
+See [`org-ml-set-affiliated-keyword`](#org-ml-set-affiliated-keyword-key-value-node) for the meaning of **`key`**.
+
+```el
+;; Given the following contents:
+; #+NAME: name
+; #+ATTR_FOO: bar
+; #+ATTR_FOO: BAR
+; #+PLOT: poo
+; #+RESULTS[hash]: res
+; #+HEADER: h1
+; #+BEGIN_SRC
+; echo test for echo
+; #+END_SRC
+
+;; Simply return NAME and PLOT
+(->> (org-ml-parse-this-element)
+     (org-ml-get-affiliated-keyword :name))
+ ;; => "name"
+
+(->> (org-ml-parse-this-element)
+     (org-ml-get-affiliated-keyword :plot))
+ ;; => "poo"
+
+;; Attribute FOO has multiple entries so return a list of all
+(->> (org-ml-parse-this-element)
+     (org-ml-get-affiliated-keyword :attr_foo))
+ ;; => '("BAR" "bar")
+
+;; HEADER may have multiple values so return a singleton list
+(->> (org-ml-parse-this-element)
+     (org-ml-get-affiliated-keyword :header))
+ ;; => '("h1")
+
+;; RESULTS returns a cons cell with the optional part
+(->> (org-ml-parse-this-element)
+     (org-ml-get-affiliated-keyword :results))
+ ;; => '("res" . "hash")
+
+```
+
+#### org-ml-set-affiliated-keyword `(key value node)`
+
+Set affiliated keyword **`key`** in **`node`** to **`value`**.
+This is just like `org-ml--set-property-nocheck` except it will
+delete **`key`** from the plist if **`value`** is nil.
+
+`note` that **`value`** should reflect the required value of affiliated
+keyword given by **`key`**. The format for each keyword is given below:
+- `name` ``string``: ``string``
+- `plot` ``string``: ``string``
+- `results`[``string1``] ``string2``: `(string2 . string1)`
+    where ``string1`` may be nil
+- `caption`[``string1``] ``string2``: `((string2 . string1) ...)`
+    where ``string1`` may be nil and multiple list members
+    correspond to multiple caption entries
+- `headers` ``string``: `(string ...)` where mulitple list members
+    correspond to multiple headers entries
+- `caption`[``string``] ``secstring``: `((string . secstring) ...)`
+    where ``string`` may be nil and multiple list members
+    correspond to multiple caption entries
+
+In the case of `attr`_`backend`, **`key`** is like `:attr_x` where `x`
+corresponds to `backend` and **`value`** is a list of strings
+corresponding to multiple entries of the attribute.
+
+```el
+;; Given the following contents:
+; short paragraph
+
+(->> (org-ml-parse-this-element)
+     (org-ml-set-affiliated-keyword :name "foo")
+     (org-ml-to-trimmed-string))
+ ;; => "#+NAME: foo
+ ;      short paragraph"
+
+(->> (org-ml-parse-this-element)
+     (org-ml-set-affiliated-keyword :attr_bar '("foo"))
+     (org-ml-to-trimmed-string))
+ ;; => "#+ATTR_BAR: foo
+ ;      short paragraph"
+
+(->> (org-ml-parse-this-element)
+     (org-ml-set-affiliated-keyword :header '("h1" "h2"))
+     (org-ml-to-trimmed-string))
+ ;; => "#+HEADER: h2
+ ;      #+HEADER: h1
+ ;      short paragraph"
+
+(->> (org-ml-parse-this-element)
+     (org-ml-set-affiliated-keyword :results '("foo" . "bar"))
+     (org-ml-to-trimmed-string))
+ ;; => "#+RESULTS[bar]: foo
+ ;      short paragraph"
+
+;; Given the following contents:
+; #+NAME: deleteme
+; short paragraph
+
+(->> (org-ml-parse-this-element)
+     (org-ml-set-affiliated-keyword :name nil)
+     (org-ml-to-trimmed-string))
+ ;; => "short paragraph"
+
+```
+
+#### org-ml-map-affiliated-keyword `(key fun node)`
+
+Apply **`fun`** to value of affiliated keyword **`key`** in **`node`**.
+
+See [`org-ml-set-affiliated-keyword`](#org-ml-set-affiliated-keyword-key-value-node) for the meaning of **`key`**.
+
+```el
+;; Given the following contents:
+; #+NAME: foo
+; short paragraph
+
+(->> (org-ml-parse-this-element)
+     (org-ml-map-affiliated-keyword :name (function upcase))
+     (org-ml-to-trimmed-string))
+ ;; => "#+NAME: FOO
+ ;      short paragraph"
+
+;; Given the following contents:
+; #+HEADER: foo
+; short paragraph
+
+(->> (org-ml-parse-this-element)
+     (org-ml-map-affiliated-keyword* :header (cons "bar" it))
+     (org-ml-to-trimmed-string))
+ ;; => "#+HEADER: foo
+ ;      #+HEADER: bar
+ ;      short paragraph"
+
+```
+
+#### org-ml-set-caption! `(caption node)`
+
+Set the caption affiliated keyword of **`node`**.
+
+**`caption`** can be one of the following:
+- `string`: produces #+**`caption`**: ``string``
+- `(string1 string2)`: produces #+**`caption`**[``string2``]: ``string1``
+- `((string1 string2) ...)`: like above but makes multiple
+    caption entries
+- nil: removes all captions
+
+```el
+;; Given the following contents:
+; short paragraph
+
+(->> (org-ml-parse-this-element)
+     (org-ml-set-caption! "cap")
+     (org-ml-to-trimmed-string))
+ ;; => "#+CAPTION: cap
+ ;      short paragraph"
+
+(->> (org-ml-parse-this-element)
+     (org-ml-set-caption! '("foo" "cap"))
+     (org-ml-to-trimmed-string))
+ ;; => "#+CAPTION[foo]: cap
+ ;      short paragraph"
+
+(->> (org-ml-parse-this-element)
+     (org-ml-set-caption! '("foo" "cap"))
+     (org-ml-to-trimmed-string))
+ ;; => "#+CAPTION[foo]: cap
+ ;      short paragraph"
+
+(->> (org-ml-parse-this-element)
+     (org-ml-set-caption! '(("foo" "cap")
+				  ("FOO" "CAP")))
+     (org-ml-to-trimmed-string))
+ ;; => "#+CAPTION[FOO]: CAP
+ ;      #+CAPTION[foo]: cap
+ ;      short paragraph"
+
+;; Given the following contents:
+; #+CAPTION: cap
+; short paragraph
+
+(->> (org-ml-parse-this-element)
+     (org-ml-set-caption! nil)
+     (org-ml-to-trimmed-string))
+ ;; => "short paragraph"
 
 ```
 

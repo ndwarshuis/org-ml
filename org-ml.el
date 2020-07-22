@@ -2926,6 +2926,9 @@ is the same as that described in `org-ml-build-planning!'."
                           section table-row)))
 
 (defun org-ml-get-affiliated-keyword (key node)
+  "Get the value of affiliated keyword KEY in NODE.
+
+See `org-ml-set-affiliated-keyword' for the meaning of KEY."
   (unless (or (memq key '(:caption :header :name :plot :results))
               (s-starts-with? ":attr_" (symbol-name key)))
     (org-ml--arg-error "Invalid affiliated keyword requested: %s" key))
@@ -2933,8 +2936,27 @@ is the same as that described in `org-ml-build-planning!'."
 
 (defun org-ml-set-affiliated-keyword (key value node)
   "Set affiliated keyword KEY in NODE to VALUE.
-This is just like `org-ml--set-property-nocheck except it will
-delete KEY from the plist if VALUE is nil."
+This is just like `org-ml--set-property-nocheck' except it will
+delete KEY from the plist if VALUE is nil.
+
+NOTE that VALUE should reflect the required value of affiliated
+keyword given by KEY. The format for each keyword is given below:
+- NAME `STRING': `STRING'
+- PLOT `STRING': `STRING'
+- RESULTS[`STRING1'] `STRING2': (STRING2 . STRING1)
+  where `STRING1' may be nil
+- CAPTION[`STRING1'] `STRING2': ((STRING2 . STRING1) ...)
+  where `STRING1' may be nil and multiple list members
+  correspond to multiple caption entries
+- HEADERS `STRING': (STRING ...) where mulitple list members
+  correspond to multiple headers entries
+- CAPTION[`STRING'] `SECSTRING': ((STRING . SECSTRING) ...)
+  where `STRING' may be nil and multiple list members
+  correspond to multiple caption entries
+
+In the case of ATTR_BACKEND, KEY is like `:attr_x' where `x'
+corresponds to BACKEND and VALUE is a list of strings
+corresponding to multiple entries of the attribute."
   (unless (org-ml-is-any-type org-ml--element-nodes-with-affiliated node)
     (org-ml--arg-error
      "Node type '%s' does not allow affiliated keywords"
@@ -2946,12 +2968,22 @@ delete KEY from the plist if VALUE is nil."
     (org-ml--construct (org-ml-get-type node) props (org-ml-get-children node))))
 
 (org-ml--defun* org-ml-map-affiliated-keyword (key fun node)
-  "Apply FUN to value of KEY in NODE."
+  "Apply FUN to value of affiliated keyword KEY in NODE.
+
+See `org-ml-set-affiliated-keyword' for the meaning of KEY."
   (-some--> (org-ml-get-affiliated-keyword key node)
             (funcall fun it)
             (org-ml-set-affiliated-keyword key it node)))
 
 (defun org-ml-set-caption! (caption node)
+  "Set the caption affiliated keyword of NODE.
+
+CAPTION can be one of the following:
+- STRING: produces #+CAPTION: `STRING'
+- (STRING1 STRING2): produces #+CAPTION[`STRING2']: `STRING1'
+- ((STRING1 STRING2) ...): like above but makes multiple
+  caption entries
+- nil: removes all captions"
   (cl-flet
       ((is-metacell
         (cell)
