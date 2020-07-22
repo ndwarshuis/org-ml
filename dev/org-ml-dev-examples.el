@@ -3241,7 +3241,129 @@
       (->> (org-ml-parse-this-object)
            (org-ml-timestamp-diary-set-value '(diary-float 1 3 2))
            (org-ml-to-string))
-      => "<%%(diary-float 1 3 2)>")))
+      => "<%%(diary-float 1 3 2)>"))
+
+  (def-example-subgroup "Affiliated Keywords"
+    nil
+
+    (defexamples-content org-ml-get-affiliated-keyword
+      nil
+      (:buffer "#+NAME: name"
+               "#+ATTR_FOO: bar"
+               "#+ATTR_FOO: BAR"
+               "#+PLOT: poo"
+               "#+RESULTS[hash]: res"
+               "#+HEADER: h1"
+               "#+BEGIN_SRC"
+               "echo test for echo"
+               "#+END_SRC")
+      (:comment "Simply return NAME and PLOT")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-affiliated-keyword :name))
+      => "name"
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-affiliated-keyword :plot))
+      => "poo"
+      (:comment "Attribute FOO has multiple entries so return a list of all")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-affiliated-keyword :attr_foo))
+      ;; TODO why are these reversed?
+      => '("BAR" "bar")
+      (:comment "HEADER may have multiple values so return a singleton list")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-affiliated-keyword :header))
+      => '("h1")
+      (:comment "RESULTS returns a cons cell with the optional part")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-affiliated-keyword :results))
+      => '("res" . "hash")
+      )
+
+    (defexamples-content org-ml-set-affiliated-keyword
+      nil
+
+      (:buffer "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-affiliated-keyword :name "foo")
+           (org-ml-to-trimmed-string))
+      => (:result "#+NAME: foo"
+                  "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-affiliated-keyword :attr_bar '("foo"))
+           (org-ml-to-trimmed-string))
+      => (:result "#+ATTR_BAR: foo"
+                  "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-affiliated-keyword :header '("h1" "h2"))
+           (org-ml-to-trimmed-string))
+      => (:result "#+HEADER: h2"
+                  "#+HEADER: h1"
+                  "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-affiliated-keyword :results '("foo" . "bar"))
+           (org-ml-to-trimmed-string))
+      => (:result "#+RESULTS[bar]: foo"
+                  "short paragraph")
+
+      (:buffer "#+NAME: deleteme"
+               "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-affiliated-keyword :name nil)
+           (org-ml-to-trimmed-string))
+      => "short paragraph")
+
+    (defexamples-content org-ml-map-affiliated-keyword
+      nil
+
+      (:buffer "#+NAME: foo"
+               "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-map-affiliated-keyword :name #'upcase)
+           (org-ml-to-trimmed-string))
+      => (:result "#+NAME: FOO"
+                  "short paragraph")
+
+      (:buffer "#+HEADER: foo"
+               "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-map-affiliated-keyword* :header (cons "bar" it))
+           (org-ml-to-trimmed-string))
+      => (:result "#+HEADER: foo"
+                  "#+HEADER: bar"
+                  "short paragraph"))
+
+    (defexamples-content org-ml-set-caption!
+      nil
+
+      (:buffer "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-caption! "cap")
+           (org-ml-to-trimmed-string))
+      => (:result "#+CAPTION: cap"
+                  "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-caption! '("foo" "cap"))
+           (org-ml-to-trimmed-string))
+      => (:result "#+CAPTION[foo]: cap"
+                  "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-caption! '("foo" "cap"))
+           (org-ml-to-trimmed-string))
+      => (:result "#+CAPTION[foo]: cap"
+                  "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-caption! '(("foo" "cap") ("FOO" "CAP")))
+           (org-ml-to-trimmed-string))
+      => (:result "#+CAPTION[FOO]: CAP"
+                  "#+CAPTION[foo]: cap"
+                  "short paragraph")
+      
+      (:buffer "#+CAPTION: cap"
+               "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-caption! nil)
+           (org-ml-to-trimmed-string))
+      => "short paragraph")))
 
 (def-example-group "Branch/Child Manipulation"
   "Set, get, and map the children of branch nodes."

@@ -6050,7 +6050,7 @@ Use pattern-matching to selectively perform operations on nodes in trees.
 
 Return a list of child nodes matching **`pattern`** in **`node`**.
 
-**`pattern`** is a list like `([slicer [x] [y]] sub1 [sub2 ...])`.
+**`pattern`** is a list like `([slicer [x] [y]] [sub1 ...])`.
 
 `slicer` is an optional prefix to the pattern describing how many
 and which matches to return. If not given, all matches are
@@ -6117,7 +6117,7 @@ function and `posix` extended regular expressions.:
 - `:any` - always match exactly one node
 - `sub` `?` - match `sub` zero or once
 - `sub` `*` - match `sub` zero or more times
-- `sub` `+` - match `sub` 1 or more times
+- `sub` `+` - match `sub` one or more times
 - `sub` [`n`] - match `sub` `n` times
 - `sub` [`m` `n`] - match `sub` `m` to `n` times (inclusive); if `m` or `n` is
     nil, this will match 'at most `n` times' or 'at least `m` times'
@@ -6127,9 +6127,10 @@ function and `posix` extended regular expressions.:
     of subpatterns as described above or nil to match nothing;
     these expressions may be nested
 
-If **`pattern`** is nil, return **`node`**. Likewise, if any wildcard patterns
-match the nil pattern, also return nil. Examples of this would be
-`(sub *)`, `(sub ?)`, and `((nil | sub))`.
+If **`pattern`** is nil, return **`node`**. Likewise, if any wildcard
+patterns match the nil pattern, also return **`node`** along with
+anything else the wildcard matches. Examples of this would
+be `(sub *)`, `(sub ?)`, and `((nil | sub))`.
 
 ```el
 ;; Given the following contents:

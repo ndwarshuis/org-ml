@@ -2945,7 +2945,7 @@ delete KEY from the plist if VALUE is nil."
            (org-ml--plist-remove key (org-ml--get-all-properties node)))))
     (org-ml--construct (org-ml-get-type node) props (org-ml-get-children node))))
 
-(org-ml--defun* org-ml--map-affiliated-keyword (key fun node)
+(org-ml--defun* org-ml-map-affiliated-keyword (key fun node)
   "Apply FUN to value of KEY in NODE."
   (-some--> (org-ml-get-affiliated-keyword key node)
             (funcall fun it)
