@@ -1,7 +1,7 @@
 (source gnu)
 (source melpa)
 
-(package-file "om.el")
+(package-file "org-ml.el")
 (files "*.el")
 
 (development

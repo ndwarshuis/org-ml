@@ -1,6 +1,6 @@
-;;; om-dev-doc.el --- Build documentation for om.el
+;;; org-ml-dev-doc.el --- Build documentation for org-ml.el
 
-;; Copyright (C) 2019 Nathan Dwarshuis
+;; Copyright (C) 2020 Nathan Dwarshuis
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -19,20 +19,20 @@
 
 ;;; Code:
 
-(require 'om-dev-examples-to-docs)
-(require 'om-dev-examples)
+(require 'org-ml-dev-examples-to-docs)
+(require 'org-ml-dev-examples)
 
-(let ((public-syms (alist-get 'public om-dev-defined-names))
-      (example-syms (->> (-remove #'stringp om-dev-examples-list)
+(let ((public-syms (alist-get 'public org-ml-dev-defined-names))
+      (example-syms (->> (-remove #'stringp org-ml-dev-examples-list)
                          (-map #'car))))
   (-some->> (-difference public-syms example-syms)
             (-map #'symbol-name)
             (--remove (s-ends-with? "*" it))
-            (--remove (s-starts-with? "om-update-this-" it))
-            (--remove (s-starts-with? "om-parse-this-" it))
+            (--remove (s-starts-with? "org-ml-update-this-" it))
+            (--remove (s-starts-with? "org-ml-parse-this-" it))
             (--map (format "  %s" it))
             (s-join "\n")
             (format "The following functions don't have examples:\n%s")
             (print)))
 
-;;; om-dev-doc.el ends here
+;;; org-ml-dev-doc.el ends here

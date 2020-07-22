@@ -1,4 +1,4 @@
-;;; om-dev-examples-to-tests.el --- Extract om.el's tests from examples.el
+;;; org-ml-dev-examples-to-tests.el --- Extract om.el's tests from examples.el
 
 ;; Copyright (C) 2015 Free Software Foundation, Inc.
 
@@ -47,13 +47,13 @@
                     (remove :end-hidden)
                     (-partition 3)
                     (--map (apply #'example-to-should it)))))
-    `(ert-deftest ,cmd () (om--with-org-env ,@tests))))
+    `(ert-deftest ,cmd () (org-ml--with-org-env ,@tests))))
 
 (defmacro defexamples-content (cmd _docstring &rest args)
   (cl-flet*
       ((make-test-form
         (test contents)
-        `(om--with-org-env
+        `(org-ml--with-org-env
           (when ,contents (insert ,contents))
           (goto-char (point-min))
           ,test))
@@ -79,5 +79,5 @@
 
 (defun def-example-group (&rest _)) ; ignore
 
-(provide 'om-dev-examples-to-tests)
-;;; om-dev-examples-to-tests.el ends here
+(provide 'org-ml-dev-examples-to-tests)
+;;; org-ml-dev-examples-to-tests.el ends here

@@ -10,14 +10,14 @@ test:
 
 docs:
 	${CASK} exec ${EMACS} -Q -batch \
-       -l dev/om-dev.el \
-       -l dev/om-dev-doc.el \
+       -l dev/org-ml-dev.el \
+       -l dev/org-ml-dev-doc.el \
        -f create-docs-file
 
 unit:
 	${CASK} exec ${EMACS} -Q -batch \
-       -l dev/om-dev.el \
-       -l dev/om-dev-test.el \
+       -l dev/org-ml-dev.el \
+       -l dev/org-ml-dev-test.el \
        -f ert-run-tests-batch-and-exit
 
 compile:
