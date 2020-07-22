@@ -1,4 +1,4 @@
-# org-ml.el ![Github Workflow Status](https://img.shields.io/github/workflow/status/ndwarshuis/om.el/CI)
+# org-ml ![Github Workflow Status](https://img.shields.io/github/workflow/status/ndwarshuis/org-ml/CI)
 
 A functional API for org-mode inspired by
 [@magnars](https://github.com/magnars)'s
@@ -11,13 +11,13 @@ This package is not yet in MELPA. To install, clone this repository somewhere
 into your load path:
 
 ```
-git clone https://github.com/ndwarshuis/org-ml.el
+git clone https://github.com/ndwarshuis/org-ml
 ```
 
 Then require in your emacs config:
 
 ```
-(require 'org-ml.el)
+(require 'org-ml)
 ```
 
 # Motivation
