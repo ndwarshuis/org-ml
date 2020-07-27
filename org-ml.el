@@ -3295,7 +3295,7 @@ a modified node-property value."
   "Return the children of the logbook drawer of HEADLINE.
 This function assumes that the logbook entries are in a drawer
 immediately after planning and/or property-drawer nodes named
-via `org-log-into-drawer'. If `org-log-into-drawer' is nil, always
+via symbol `org-log-into-drawer'. If this is nil, always
 return nil."
   ;; TODO this will not inherit the log-into-drawer property
   (-when-let (drawer-name (org-log-into-drawer))
@@ -3312,9 +3312,9 @@ return nil."
   "Return HEADLINE with logbook drawer filled with CHILDREN.
 CHILDREN must be a list of plain-list and/or clock nodes.
 
-This function assumes that the logbook entries will be stored in a
-drawer immediately after planning and/or property-drawer nodes named
-via `org-log-into-drawer'. If `org-log-into-drawer' is nil, return
+This function assumes that the logbook entries will be stored in
+a drawer immediately after planning and/or property-drawer nodes
+named via symbol `org-log-into-drawer'. If this is nil, return
 HEADLINE unmodified."
   (unless (--all? (org-ml-is-any-type '(plain-list clock) it) children)
     (org-ml--arg-error
@@ -5048,7 +5048,13 @@ regions. All take two arguments (the bounds of the application)."
          (funcall fun-region a b)))
       (e (org-ml--arg-error "Invalid 'where' specification: Got %S" e)))))
 
-(defmacro org-ml--apply-n (m n re backward? parse-form)
+(defmacro org-ml--apply-n (m n re backward? form)
+  "Apply FORM to matching strings a buffer.
+RE is a regular expression string, and FORM will be executed when
+the point is over the M to N matches (inclusive). If BACKWARD? is
+t, start searching backward from the end of the buffer. Note that
+RE is assumed to match lines, and thus should begin with a
+\"^\"."
   (declare (indent 4))
   (let ((start (if backward? '(point-max) '(point-min)))
         (iterate-form
@@ -5056,33 +5062,37 @@ regions. All take two arguments (the bounds of the application)."
              `(save-match-data
                 (re-search-backward ,re nil t))
            `(save-match-data
-              ;; avoid matching the current headline if already there
+              ;; avoid matching the current match already on one
+              ;; NOTE this assumes that `RE' contains the beginning of the line
               (when (and (bolp) (not (eobp))) (forward-char 1))
               (when (re-search-forward ,re nil t)
                 (goto-char (match-beginning 0)))))))
     `(save-excursion
        (goto-char ,start)
-       ;; parse headline(s) if we start on a headline or can move to a headline
+       ;; iterate match(es) if we start on a match or can move to a match
        (when (or (looking-at ,re) ,iterate-form)
          (let ((i 0))
-           ;; parse the first if we want it
-           (when (= 0 ,m) ,parse-form)
+           ;; apply form to the first if we want it
+           (when (= 0 ,m) ,form)
            (setq i (1+ i))
-           ;; loop through the rest and parse when appropriate
+           ;; loop through the rest and apply form when appropriate
            (while (and ,iterate-form (<= i ,n))
-             (when (<= ,m i) ,parse-form)
+             (when (<= ,m i) ,form)
              (setq i (1+ i))))))))
 
-(defmacro org-ml--apply-region (begin end re parse-form)
+(defmacro org-ml--apply-region (begin end re form)
+  "Apply FORM to a region in a buffer.
+RE is a regular expression string, and FORM will be execrated when the
+point on any match between BEGIN and END points in the buffer."
   (declare (indent 3))
   (let ((iterate-form `(re-search-backward ,re nil t)))
     `(save-excursion
        (goto-char ,end)
        (when ,iterate-form
-         ,parse-form
+         ,form
          ;; loop through the rest
          (while (and ,iterate-form (<= ,begin (point)))
-           ,parse-form)))))
+           ,form)))))
 
 (defun org-ml-get-some-headlines (where)
   "Return list of headline nodes from current buffer.
