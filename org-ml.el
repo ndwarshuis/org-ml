@@ -734,8 +734,7 @@ FUN is a predicate function that takes one argument."
 
 (defun org-ml--decode-string-or-nil (string)
   "Return STRING without text properties if not nil."
-  (unless (null string)
-    (substring-no-properties string)))
+  (when string (substring-no-properties string)))
 
 (defun org-ml--encode-string-list-delim (string-list delim)
   "Return STRING-LIST as string joined by DELIM."
