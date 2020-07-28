@@ -164,8 +164,8 @@ is the converse."
   (should (equal '("a" "b" "C") (org-ml--map-last* (s-upcase it) '("a" "b" "c"))))
   ;; identity should hold true for any length list (0, 1, and 1+)
   (let ((test-lists '(nil '(1) '(1 2))))
-    (--each test-lists (should (equal it (org-ml--map-first #'identity it))))
-    (--each test-lists (should (equal it (org-ml--map-last #'identity it))))))
+    (--each test-lists (should (equal it (org-ml--map-first* (identity it) it))))
+    (--each test-lists (should (equal it (org-ml--map-last* (identity it) it))))))
 
 ;;; PARSING INVERSION
 
