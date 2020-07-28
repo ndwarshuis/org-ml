@@ -1,4 +1,4 @@
-;;; org-ml-macs.el --- Macros for om.el -*- lexical-binding: t; -*-
+;;; org-ml-macs.el --- Macros for org-ml.el -*- lexical-binding: t; -*-
 
 ;; Author: Nathan Dwarshuis <ndwar@yavin4.ch>
 
@@ -155,20 +155,20 @@ call)."
        (make-plist arg nil))
       (_ (error "Invalid keyword argument: %s" kwarg)))))
 
-(defun org-ml--throw-kw-error (msg kws)
+(defmacro org-ml--throw-kw-error (msg kws)
   "Throw an error with MSG with formatted list of KWS."
-  (when kws
-    (->> (-map #'symbol-name kws)
-         (s-join ", ")
-         (error (concat msg ": %s")))))
+  `(when ,kws
+     (->> (-map #'symbol-name ,kws)
+          (s-join ", ")
+          (error (concat ,msg ": %s")))))
 
-(defun org-ml--partition-rest-args (args)
+(defmacro org-ml--partition-rest-args (args)
   "Partition ARGS into two keyword and rest argument lists.
 The keyword list is determined by partitioning all keyword-value
 pairs until this pattern is broken. Whatever is left is put into the
 rest list. Return a list like (KEYARGS RESTARGS)."
-  (->> (-partition-all 2 args)
-       (--split-with (keywordp (car it)))))
+  `(->> (-partition-all 2 ,args)
+        (--split-with (keywordp (car it)))))
 
 (defmacro org-ml--make-rest-partition-form (argsym kws use-rest?)
   "Return a form that will partition the args in ARGSYM.
@@ -362,6 +362,41 @@ function calls."
       (let ((res (org-ml--transform-lambda arglist body name)))
         `(defun ,name ,@res))
     (error "&key not used, use regular defun")))
+
+;; COMPILER MACROS
+
+(defmacro org-ml--defconst (symbol form &optional docstring)
+  "Like `defconst' but wrapped in `eval-and-compile'.
+SYMBOL and DOCSTRING have the same meaning as `defconst'.
+FORM is used to set the init value and is wrapped in
+`eval-when-compile.'"
+  (declare (indent 1))
+  `(eval-and-compile (defconst ,symbol (eval-when-compile ,form) ,docstring)))
+
+(defmacro org-ml--defvaralias (new-alias base-variable &optional docstring)
+  "Like `defvaralias' but wrapped in `eval-and-compile'.
+NEW-ALIAS, BASE-VARIABLE, and DOCSTRING have the same meaning as `defconst'."
+  (declare (indent 1))
+  `(eval-and-compile (defvaralias ,new-alias ,base-variable ,docstring)))
+
+;; FUNCTORS
+
+(defmacro org-ml--map-first* (form list)
+  "Return LIST with FORM applied to the first member.
+The first element is `it' in FORM which returns the modified member."
+  `(when ,list
+    (cons (funcall (lambda (it) ,form) (car ,list)) (cdr ,list))))
+
+  (defmacro org-ml--map-last* (form list)
+    "Return LIST with FORM applied to the last member.
+The last element is `it' in FORM which returns the modified member."
+    `(-some->> ,list (nreverse) (org-ml--map-first* ,form) (nreverse)))
+
+(defmacro org-ml--map-at* (n form list)
+  "Return LIST with FORM applied to the member at index N.
+The nth element is `it' in FORM which returns the modified member."
+  (declare (indent 1))
+  `(--> (nth ,n ,list) (funcall (lambda (it) ,form) it) (-replace-at ,n it ,list)))
 
 (provide 'org-ml-macs)
 ;;; org-ml-macs.el ends here

@@ -165,6 +165,11 @@ the examples below.
 
 # Changelog
 
+## 2.0.1
+
+- Fixed byte compile
+- Clean up docstrings
+
 ## 2.0.0 
 
 - Renamed from `om.el` to `org-ml` (org-metalanguage)

@@ -5272,7 +5272,7 @@ a modified node-property value.
 Return the children of the logbook drawer of **`headline`**.
 This function assumes that the logbook entries are in a drawer
 immediately after planning and/or property-drawer nodes named
-via `org-log-into-drawer`. If `org-log-into-drawer` is nil, always
+via symbol `org-log-into-drawer`. If this is nil, always
 return nil.
 
 ```el
@@ -5335,9 +5335,9 @@ via `org-log-into-drawer`. If `org-log-into-drawer` is nil, return
 Return **`headline`** with logbook drawer filled with **`children`**.
 **`children`** must be a list of plain-list and/or clock nodes.
 
-This function assumes that the logbook entries will be stored in a
-drawer immediately after planning and/or property-drawer nodes named
-via `org-log-into-drawer`. If `org-log-into-drawer` is nil, return
+This function assumes that the logbook entries will be stored in
+a drawer immediately after planning and/or property-drawer nodes
+named via symbol `org-log-into-drawer`. If this is nil, return
 **`headline`** unmodified.
 
 ```el
@@ -7145,9 +7145,14 @@ no examples :(
 ```
 
 
-<!-- 2.0.0 -->
+<!-- 2.0.1 -->
 
 # Changelog
+
+## 2.0.1
+
+- Fixed byte compile
+- Clean up docstrings
 
 ## 2.0.0 
 

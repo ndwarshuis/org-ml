@@ -31,6 +31,7 @@
 (add-to-list 'load-path org-ml-dev-path)
 
 (require 'org-ml)
+(require 'org-ml-macs)
 
 (defconst org-ml-dev-defined-names nil
   "Alist of all functions/macros defined in `org-ml.el'.

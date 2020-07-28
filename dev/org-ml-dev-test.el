@@ -164,8 +164,8 @@ is the converse."
   (should (equal '("a" "b" "C") (org-ml--map-last* (s-upcase it) '("a" "b" "c"))))
   ;; identity should hold true for any length list (0, 1, and 1+)
   (let ((test-lists '(nil '(1) '(1 2))))
-    (--each test-lists (should (equal it (org-ml--map-first #'identity it))))
-    (--each test-lists (should (equal it (org-ml--map-last #'identity it))))))
+    (--each test-lists (should (equal it (org-ml--map-first* (identity it) it))))
+    (--each test-lists (should (equal it (org-ml--map-last* (identity it) it))))))
 
 ;;; PARSING INVERSION
 
@@ -851,57 +851,6 @@ be parsed to TYPE."
   (should (equal (org-ml--make-header '("docstring" (print 'hi)) '(one two))
                  "docstring\n\n(fn ONE TWO)")))
 
-;; (ert-deftest org-ml--verify-pos-args/valid ()
-;;   (should (equal '(one two) (org-ml--verify-pos-args '(one two))))
-;;   (should (equal nil (org-ml--verify-pos-args nil))))
-
-;; (ert-deftest org-ml--verify-pos-args/error ()
-;;   (should-error (org-ml--verify-pos-args '(1)))
-;;   (should-error (org-ml--verify-pos-args '("one")))
-;;   (should-error (org-ml--verify-pos-args '((one)))))
-
-;; (ert-deftest org-ml--verify-rest-arg/valid ()
-;;   (should (equal 'one (org-ml--verify-rest-arg '(one))))
-;;   (should (equal nil (org-ml--verify-rest-arg nil))))
-
-;; (ert-deftest org-ml--verify-rest-arg/error ()
-;;   ;; too long
-;;   (should-error (org-ml--verify-rest-arg '(one two)))
-;;   ;; non-symbol
-;;   (should-error (org-ml--verify-rest-arg '(1)))
-;;   (should-error (org-ml--verify-rest-arg '("one")))
-;;   (should-error (org-ml--verify-rest-arg '((one)))))
-
-;; (ert-deftest org-ml--make-optarg-let/valid ()
-;;   (should (equal (org-ml--make-optarg-let 'one 0)
-;;                  '(one (nth 0 --opt-args))))
-;;   (should (equal (org-ml--make-optarg-let '(one 1) 0)
-;;                  '(one (or (nth 0 --opt-args) 1)))))
-
-;; (ert-deftest org-ml--make-optarg-let/error ()
-;;   ;; arg should be a symbol
-;;   (should-error (org-ml--make-optarg-let 1 0))
-;;   (should-error (org-ml--make-optarg-let "one" 0))
-;;   (should-error (org-ml--make-optarg-let '(one) 0))
-;;   ;; TODO this doesn't work yet
-;;   ;; (should-error (org-ml--make-optarg-let :one 0))
-;;   ;; wrong list length
-;;   (should-error (org-ml--make-optarg-let '(one one 1) 0)))
-
-;; (ert-deftest org-ml--make-kwarg-let/valid ()
-;;   (should
-;;    (equal (org-ml--make-kwarg-let 'k 'one)
-;;           '(:one one (cadr (plist-member k (quote :one))))))
-;;   ;; (should
-;;   ;;  (equal (org-ml--make-kwarg-let 'k '((:two one)))
-;;   ;;         '(:two one (cadr (plist-member k (quote :two))))))
-;;   (should
-;;    (equal (org-ml--make-kwarg-let 'k '(one 1))
-;;           '(:one one (or (cadr (plist-member k (quote :one))) 1)))))
-;;   ;; (should
-;;   ;;  (equal (org-ml--make-kwarg-let 'k '((:two one) 1))
-;;   ;;         '(:two one (or (cadr (plist-member k (quote :two))) 1)))))
-
 (ert-deftest org-ml--make-kwarg-let/error ()
   ;; list too long
   (should-error (org-ml--make-kwarg-let '(one two three)))
@@ -915,17 +864,9 @@ be parsed to TYPE."
   (should-error (org-ml--make-kwarg-let "one"))
   (should-error (org-ml--make-kwarg-let '(1))))
 
-;; (ert-deftest org-ml--make-rest-partition-form/kwargs ()
-;;   (should (equal '((:one one) nil) (org-ml--make-rest-partition-form '(:one one) '(:one) nil)))
-;;   (should (equal '((:one one) nil) (org-ml--make-rest-partition-form '(:one one) '(:one) t))))
-
 (ert-deftest org-ml--make-rest-partition-form/restargs ()
-  ;; (should (equal '(nil (one)) (org-ml--make-rest-partition-form '(one) nil nil)))
   (should (equal '(nil . (one)) (org-ml--make-rest-partition-form '(one) nil t)))
   (should (equal '(nil . (one two)) (org-ml--make-rest-partition-form '(one two) nil t))))
-
-;; (ert-deftest org-ml--make-rest-partition-form/combo ()
-;;   (should (equal '((:one one) (two)) (org-ml--make-rest-partition-form '(:one one two) '(:one) t))))
 
 (ert-deftest org-ml--make-rest-partition-form/error ()
   ;; invalid keywords
