@@ -1,4 +1,4 @@
-;;; org-ml-macs.el --- Macros for om.el -*- lexical-binding: t; -*-
+;;; org-ml-macs.el --- Macros for org-ml.el -*- lexical-binding: t; -*-
 
 ;; Author: Nathan Dwarshuis <ndwar@yavin4.ch>
 
