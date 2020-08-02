@@ -245,7 +245,7 @@ length of LIST is equal to LENGTH initially."
   (-slice plist 1 nil 2))
 
 (defun org-ml--plist-map-values (fun plist)
-  "Map FUN over over the values in PLIST.
+  "Map FUN over the values in PLIST.
 FUN is a unary function that returns a modified value."
   (let ((keys (org-ml--plist-get-keys plist)))
     (->> (org-ml--plist-get-vals plist)
@@ -1173,8 +1173,7 @@ bounds."
 
 (defun org-ml--get-property-attribute (attribute type prop)
   "Return ATTRIBUTE for PROP of node TYPE.
-If NOERROR is non-nil, return nil instead of signaling an error
-if PROP in TYPE does not have ATTRIBUTE."
+Signal an error if PROP in TYPE does not have ATTRIBUTE."
   (-if-let (type-list (alist-get type org-ml--property-alist))
       (if (assoc prop type-list)
           (-when-let (plist (alist-get prop type-list))
@@ -1251,7 +1250,7 @@ and ILLEGAL types were attempted to be set."
 
 (defun org-ml--build-bare-node (type post-blank)
   "Return a new node assembled from TYPE with POST-BLANK.
-TYPE is a symbol and POST-BLANK is a postive integer."
+TYPE is a symbol and POST-BLANK is a positive integer."
   `(,type (:post-blank ,(or post-blank 0))))
 
 (defun org-ml--build-leaf-node (type post-blank)
@@ -1852,7 +1851,7 @@ performed. TABLE is used to get the table width."
   "Return copy of NODE, which may be a circular tree.
 
 This is only necessary to copy nodes parsed using any of parsing
-functions from this this package (example, `org-ml-parse-this-headline')
+functions from this package (for example, `org-ml-parse-this-headline')
 because these retain parent references which makes the node a circular
 list. None of the builder functions add parent references, so
 `copy-tree' will be a faster alternative to this function."
@@ -2942,7 +2941,7 @@ keyword given by KEY. The format for each keyword is given below:
 - CAPTION[`STRING1'] `STRING2': ((STRING2 . STRING1) ...)
   where `STRING1' may be nil and multiple list members
   correspond to multiple caption entries
-- HEADERS `STRING': (STRING ...) where mulitple list members
+- HEADERS `STRING': (STRING ...) where multiple list members
   correspond to multiple headers entries
 - CAPTION[`STRING'] `SECSTRING': ((STRING . SECSTRING) ...)
   where `STRING' may be nil and multiple list members
@@ -3482,7 +3481,7 @@ subheadlines will not be counted)."
 
 ;;; plain-list
 
-;; TODO there seems to be a bug in the interpeter that prevents "+" bullets from
+;; TODO there seems to be a bug in the interpreter that prevents "+" bullets from
 ;; being recognized (as of org-9.1.9 they are simply read as "-")
 (defun org-ml-plain-list-set-type (type plain-list)
   "Return PLAIN-LIST node with type property set to TYPE.
