@@ -4,7 +4,7 @@
 
 ;; Author: Nathan Dwarshuis <ndwar@yavin4.ch>
 ;; Keywords: org-mode, outlines
-;; Homepage: https://github.com/ndwarshuis/org-ml.el
+;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (dash "2.15") (s "1.12"))
 ;; Version: 2.0.1
 
@@ -44,7 +44,7 @@
 ;; - writers: insert/update the contents of a buffer given a parse tree
 
 ;; For examples please see full documentation at:
-;; https://github.com/ndwarshuis/org-ml.el
+;; https://github.com/ndwarshuis/org-ml
 
 ;;; Code:
 
