@@ -78,7 +78,7 @@ to be a child depending on the type. There are three of these restrictions:
 - Branch elements with child objects (aka 'object containers'): these are
   element types that hold textual information (eg paragraph)
 - Branch objects with child objects (aka 'recursive objects'): these are object
-  types used primarily for text formating (bold, italic, underline, etc)
+  types used primarily for text formatting (bold, italic, underline, etc)
 
 Note: it is never allowed for an element type to be a child of a branch object
 type.
@@ -97,12 +97,12 @@ This package takes several deviations from the original terminology found in
 - 'branch' is used here instead of 'container'. Furthermore, 'leaf' is used to
   describe the converse of 'branch' (there does not seem to be an equivalent
   term in `org-element.el`)
-- `org-element.el` uses 'attribute(s)' and 'property(ies)' interchangably to
+- `org-element.el` uses 'attribute(s)' and 'property(ies)' interchangeably to
   describe nodes; here only 'property(ies)' is used
 
 ## Properties
 
-All properies specified by `org-element.el` are readable by this API (eg one can
+All properties specified by `org-element.el` are readable by this API (eg one can
 query them with functions like `om-get-property`).
 
 The properties `:begin`, `:end`, `:contents-begin`, `:contents-end`, `:parent`,
@@ -2151,7 +2151,7 @@ The following properties are settable:
 Return copy of **`node`**, which may be a circular tree.
 
 This is only necessary to copy nodes parsed using any of parsing
-functions from this this package (example, `org-ml-parse-this-headline`)
+functions from this package (for example, `org-ml-parse-this-headline`)
 because these retain parent references which makes the node a circular
 list. None of the builder functions add parent references, so
 `copy-tree` will be a faster alternative to this function.
@@ -4479,7 +4479,7 @@ keyword given by **`key`**. The format for each keyword is given below:
 - `caption`[``string1``] ``string2``: `((string2 . string1) ...)`
     where ``string1`` may be nil and multiple list members
     correspond to multiple caption entries
-- `headers` ``string``: `(string ...)` where mulitple list members
+- `headers` ``string``: `(string ...)` where multiple list members
     correspond to multiple headers entries
 - `caption`[``string``] ``secstring``: `((string . secstring) ...)`
     where ``string`` may be nil and multiple list members
