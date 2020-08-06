@@ -7,11 +7,16 @@ A functional API for org-mode inspired by
 
 # Installation
 
-This package is not yet in MELPA. To install, clone this repository somewhere
-into your load path:
+Install from MELPA:
 
 ```
-git clone https://github.com/ndwarshuis/org-ml
+M-x package-install RET org-sql RET
+```
+
+Alternatively, clone this repository to somewhere in your load path:
+
+```
+git clone https://github.com/ndwarshuis/org-ml ~/somewhere/in/load/path
 ```
 
 Then require in your emacs config:
@@ -35,7 +40,7 @@ a stateless abstract data structure is being transformed and queried.
 
 The `org-element.el` provides a minimal API for handling this parse-tree in a
 functional manner, but does not provide higher-level functions necessary for
-intuitive, large-scale use. The `org-ml.el` package is designed to provide this
+intuitive, large-scale use. The `org-ml` package is designed to provide this
 API. Furthermore, it is highly compatible with the `dash.el` package, which is a
 generalized functional library for emacs-lisp.
 
@@ -78,7 +83,7 @@ to be a child depending on the type. There are three of these restrictions:
 - Branch elements with child objects (aka 'object containers'): these are
   element types that hold textual information (eg paragraph)
 - Branch objects with child objects (aka 'recursive objects'): these are object
-  types used primarily for text formatting (bold, italic, underline, etc)
+  types used primarily for text formating (bold, italic, underline, etc)
 
 Note: it is never allowed for an element type to be a child of a branch object
 type.
@@ -97,12 +102,12 @@ This package takes several deviations from the original terminology found in
 - 'branch' is used here instead of 'container'. Furthermore, 'leaf' is used to
   describe the converse of 'branch' (there does not seem to be an equivalent
   term in `org-element.el`)
-- `org-element.el` uses 'attribute(s)' and 'property(ies)' interchangeably to
+- `org-element.el` uses 'attribute(s)' and 'property(ies)' interchangably to
   describe nodes; here only 'property(ies)' is used
 
 ## Properties
 
-All properties specified by `org-element.el` are readable by this API (eg one can
+All properies specified by `org-element.el` are readable by this API (eg one can
 query them with functions like `om-get-property`).
 
 The properties `:begin`, `:end`, `:contents-begin`, `:contents-end`, `:parent`,

@@ -1,4 +1,4 @@
-;;; org-ml-dev.el --- Initialize org-ml.el development -*- lexical-binding: t; -*-
+;;; org-ml-dev.el --- Initialize org-ml development -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2020 Nathan Dwarshuis
 

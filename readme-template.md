@@ -7,11 +7,16 @@ A functional API for org-mode inspired by
 
 # Installation
 
-This package is not yet in MELPA. To install, clone this repository somewhere
-into your load path:
+Install from MELPA:
 
 ```
-git clone https://github.com/ndwarshuis/org-ml
+M-x package-install RET org-sql RET
+```
+
+Alternatively, clone this repository to somewhere in your load path:
+
+```
+git clone https://github.com/ndwarshuis/org-ml ~/somewhere/in/load/path
 ```
 
 Then require in your emacs config:
@@ -35,7 +40,7 @@ a stateless abstract data structure is being transformed and queried.
 
 The `org-element.el` provides a minimal API for handling this parse-tree in a
 functional manner, but does not provide higher-level functions necessary for
-intuitive, large-scale use. The `org-ml.el` package is designed to provide this
+intuitive, large-scale use. The `org-ml` package is designed to provide this
 API. Furthermore, it is highly compatible with the `dash.el` package, which is a
 generalized functional library for emacs-lisp.
 

@@ -1,4 +1,4 @@
-;;; org-ml-macs.el --- Macros for org-ml.el -*- lexical-binding: t; -*-
+;;; org-ml-macs.el --- Macros for org-ml -*- lexical-binding: t; -*-
 
 ;; Author: Nathan Dwarshuis <ndwar@yavin4.ch>
 
@@ -17,7 +17,7 @@
 
 ;;; Commentary:
 
-;; This file contains macros essential for the `org-ml.el' package. The
+;; This file contains macros essential for the `org-ml' package. The
 ;; following functionality is implemented:
 ;; - automatic anaphoric form generation (`org-ml--defun*'): this macro will
 ;;   define an anaphoric form along with a regular function definition

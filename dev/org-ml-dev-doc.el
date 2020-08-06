@@ -1,4 +1,4 @@
-;;; org-ml-dev-doc.el --- Build documentation for org-ml.el
+;;; org-ml-dev-doc.el --- Build documentation for org-ml
 
 ;; Copyright (C) 2020 Nathan Dwarshuis
 
