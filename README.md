@@ -25,6 +25,12 @@ Then require in your emacs config:
 (require 'org-ml)
 ```
 
+## Dependencies
+
+- org-mode (v9.3)
+- dash
+- s
+
 # Motivation
 
 Org-mode comes with a powerful, built-in parse-tree generator specified in
@@ -250,9 +256,9 @@ Build new nodes.
 * [org-ml-build-center-block](#org-ml-build-center-block-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
 * [org-ml-build-drawer](#org-ml-build-drawer-drawer-name-key-post-blank-rest-element-nodes) `(drawer-name &key post-blank &rest element-nodes)`
 * [org-ml-build-dynamic-block](#org-ml-build-dynamic-block-block-name-key-arguments-post-blank-rest-element-nodes) `(block-name &key arguments post-blank &rest element-nodes)`
-* [org-ml-build-footnote-definition](#org-ml-build-footnote-definition-label-key-post-blank-rest-element-nodes) `(label &key post-blank &rest element-nodes)`
+* [org-ml-build-footnote-definition](#org-ml-build-footnote-definition-label-key-pre-blank-0-post-blank-rest-element-nodes) `(label &key (pre-blank 0) post-blank &rest element-nodes)`
 * [org-ml-build-headline](#org-ml-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-element-nodes) `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest element-nodes)`
-* [org-ml-build-item](#org-ml-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-element-nodes) `(&key (bullet '-) checkbox counter tag post-blank &rest element-nodes)`
+* [org-ml-build-item](#org-ml-build-item-key-bullet---pre-blank-0-checkbox-counter-tag-post-blank-rest-element-nodes) `(&key (bullet '-) (pre-blank 0) checkbox counter tag post-blank &rest element-nodes)`
 * [org-ml-build-plain-list](#org-ml-build-plain-list-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
 * [org-ml-build-property-drawer](#org-ml-build-property-drawer-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
 * [org-ml-build-quote-block](#org-ml-build-quote-block-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
@@ -549,11 +555,11 @@ Return **`node`** as an interpreted string without text properties.
 
 ```el
 (org-ml-to-string '(bold (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
-			       "text"))
+			 "text"))
  ;; => "*text*"
 
 (org-ml-to-string '(bold (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
-			       "text"))
+			 "text"))
  ;; => "*text*   "
 
 (org-ml-to-string nil)
@@ -567,11 +573,11 @@ Like [`org-ml-to-string`](#org-ml-to-string-node) but strip whitespace when retu
 
 ```el
 (org-ml-to-trimmed-string '(bold (:begin 1 :end 5 :parent nil :post-blank 0 :post-affiliated nil)
-				       "text"))
+				 "text"))
  ;; => "*text*"
 
 (org-ml-to-trimmed-string '(bold (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
-				       "text"))
+				 "text"))
  ;; => "*text*"
 
 (org-ml-to-trimmed-string nil)
@@ -625,7 +631,7 @@ specifically parse these, use the functions [`org-ml-parse-section-at`](#org-ml-
 
 ```el
 ;; Given the following contents:
-; #+CALL: ktulu()
+; #+call: ktulu()
 
 (->> (org-ml-parse-element-at 1)
      (car))
@@ -925,7 +931,7 @@ Each headline is obtained with [`org-ml-parse-headline-at`](#org-ml-parse-headli
 ; * three
 
 (->> (org-ml-get-headlines)
-     (-map (function org-ml-to-string))
+     (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
  ;      * two
@@ -936,7 +942,7 @@ Each headline is obtained with [`org-ml-parse-headline-at`](#org-ml-parse-headli
 ; not headline
 
 (->> (org-ml-get-headlines)
-     (-map (function org-ml-to-string))
+     (-map #'org-ml-to-string)
      (s-join ""))
  ;; => ""
 
@@ -966,20 +972,20 @@ Each headline is obtained with [`org-ml-parse-headline-at`](#org-ml-parse-headli
 ; * three
 
 (->> (org-ml-get-some-headlines 0)
-     (-map (function org-ml-to-string))
+     (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
  ;      "
 
 (->> (org-ml-get-some-headlines '(0 1))
-     (-map (function org-ml-to-string))
+     (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
  ;      * two
  ;      "
 
 (->> (org-ml-get-some-headlines [10 25])
-     (-map (function org-ml-to-string))
+     (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
  ;      * two
@@ -1004,7 +1010,7 @@ Each subtree is obtained with [`org-ml-parse-subtree-at`](#org-ml-parse-subtree-
 ; ** _three
 
 (->> (org-ml-get-subtrees)
-     (-map (function org-ml-to-string))
+     (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
  ;      ** _one
@@ -1018,7 +1024,7 @@ Each subtree is obtained with [`org-ml-parse-subtree-at`](#org-ml-parse-subtree-
 ; not headline
 
 (->> (org-ml-get-subtrees)
-     (-map (function org-ml-to-string))
+     (-map #'org-ml-to-string)
      (s-join ""))
  ;; => ""
 
@@ -1043,14 +1049,14 @@ Each subtree is obtained with [`org-ml-parse-subtree-at`](#org-ml-parse-subtree-
 ; ** _three
 
 (->> (org-ml-get-some-subtrees 0)
-     (-map (function org-ml-to-string))
+     (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
  ;      ** _one
  ;      "
 
 (->> (org-ml-get-some-subtrees '(0 1))
-     (-map (function org-ml-to-string))
+     (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
  ;      ** _one
@@ -1059,7 +1065,7 @@ Each subtree is obtained with [`org-ml-parse-subtree-at`](#org-ml-parse-subtree-
  ;      "
 
 (->> (org-ml-get-some-subtrees [10 30])
-     (-map (function org-ml-to-string))
+     (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
  ;      ** _one
@@ -1298,20 +1304,15 @@ The following properties are settable:
 - **`post-blank`**: a non-negative integer
 
 ```el
-(->> (org-ml-build-timestamp 'inactive
-			     2019 1 15 2019 1 15)
+(->> (org-ml-build-timestamp 'inactive 2019 1 15 2019 1 15)
      (org-ml-to-string))
  ;; => "[2019-01-15 Tue]"
 
-(->> (org-ml-build-timestamp 'active-range
-			     2019 1 15 2019 1 16)
+(->> (org-ml-build-timestamp 'active-range 2019 1 15 2019 1 16)
      (org-ml-to-string))
  ;; => "<2019-01-15 Tue>--<2019-01-16 Wed>"
 
-(->> (org-ml-build-timestamp 'inactive
-			     2019 1 15 2019 1 15 :warning-type 'all
-			     :warning-unit 'day
-			     :warning-value 1)
+(->> (org-ml-build-timestamp 'inactive 2019 1 15 2019 1 15 :warning-type 'all :warning-unit 'day :warning-value 1)
      (org-ml-to-string))
  ;; => "[2019-01-15 Tue -1d]"
 
@@ -1520,19 +1521,19 @@ The following properties are settable:
 ```el
 (->> (org-ml-build-babel-call "name")
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: name()"
+ ;; => "#+call: name()"
 
 (->> (org-ml-build-babel-call "name" :arguments '("arg=x"))
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: name(arg=x)"
+ ;; => "#+call: name(arg=x)"
 
 (->> (org-ml-build-babel-call "name" :inside-header '(:key val))
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: name[:key val]()"
+ ;; => "#+call: name[:key val]()"
 
 (->> (org-ml-build-babel-call "name" :end-header '(:key val))
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: name() :key val"
+ ;; => "#+call: name() :key val"
 
 ```
 
@@ -1550,7 +1551,7 @@ The following properties are settable:
  ;; => "CLOCK: [2019-01-01 Tue 00:00]"
 
 (->> (org-ml-build-timestamp! '(2019 1 1 0 0)
-			      :end '(2019 1 1 1 0))
+			       :end '(2019 1 1 1 0))
      (org-ml-set-property :type 'inactive-range)
      (org-ml-build-clock)
      (org-ml-to-trimmed-string))
@@ -1589,14 +1590,14 @@ The following properties are settable:
 ```el
 (->> (org-ml-build-comment-block)
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_COMMENT
- ;      #+END_COMMENT"
+ ;; => "#+begin_comment
+ ;      #+end_comment"
 
 (->> (org-ml-build-comment-block :value "text")
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_COMMENT
+ ;; => "#+begin_comment
  ;      text
- ;      #+END_COMMENT"
+ ;      #+end_comment"
 
 ```
 
@@ -1632,20 +1633,20 @@ The following properties are settable:
 ```el
 (->> (org-ml-build-example-block)
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_EXAMPLE
- ;      #+END_EXAMPLE"
+ ;; => "#+begin_example
+ ;      #+end_example"
 
 (->> (org-ml-build-example-block :value "text")
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_EXAMPLE
- ;      text
- ;      #+END_EXAMPLE"
+ ;; => "#+begin_example
+ ;        text
+ ;      #+end_example"
 
 (->> (org-ml-build-example-block :value "text" :switches '("switches"))
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_EXAMPLE switches
- ;      text
- ;      #+END_EXAMPLE"
+ ;; => "#+begin_example switches
+ ;        text
+ ;      #+end_example"
 
 ```
 
@@ -1661,9 +1662,9 @@ The following properties are settable:
 ```el
 (->> (org-ml-build-export-block "type" "value\n")
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_EXPORT type
+ ;; => "#+begin_export type
  ;      value
- ;      #+END_EXPORT"
+ ;      #+end_export"
 
 ```
 
@@ -1709,7 +1710,7 @@ The following properties are settable:
 ```el
 (->> (org-ml-build-keyword "FILETAGS" "tmsu")
      (org-ml-to-trimmed-string))
- ;; => "#+FILETAGS: tmsu"
+ ;; => "#+filetags: tmsu"
 
 ```
 
@@ -1758,17 +1759,17 @@ The following properties are settable:
 
 ```el
 (->> (org-ml-build-planning :closed (org-ml-build-timestamp! '(2019 1 1)
-							     :active t))
+							      :active t))
      (org-ml-to-trimmed-string))
  ;; => "CLOSED: <2019-01-01 Tue>"
 
 (->> (org-ml-build-planning :scheduled (org-ml-build-timestamp! '(2019 1 1)
-								:active t))
+								 :active t))
      (org-ml-to-trimmed-string))
  ;; => "SCHEDULED: <2019-01-01 Tue>"
 
 (->> (org-ml-build-planning :deadline (org-ml-build-timestamp! '(2019 1 1)
-							       :active t))
+								:active t))
      (org-ml-to-trimmed-string))
  ;; => "DEADLINE: <2019-01-01 Tue>"
 
@@ -1789,32 +1790,32 @@ The following properties are settable:
 ```el
 (->> (org-ml-build-src-block)
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_SRC
- ;      #+END_SRC"
+ ;; => "#+begin_src
+ ;      #+end_src"
 
 (->> (org-ml-build-src-block :value "body")
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_SRC
+ ;; => "#+begin_src
  ;        body
- ;      #+END_SRC"
+ ;      #+end_src"
 
 (->> (org-ml-build-src-block :value "body" :language "emacs-lisp")
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_SRC emacs-lisp
+ ;; => "#+begin_src emacs-lisp
  ;        body
- ;      #+END_SRC"
+ ;      #+end_src"
 
 (->> (org-ml-build-src-block :value "body" :switches '("-n 20" "-r"))
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_SRC -n 20 -r
+ ;; => "#+begin_src -n 20 -r
  ;        body
- ;      #+END_SRC"
+ ;      #+end_src"
 
 (->> (org-ml-build-src-block :value "body" :parameters '(:key val))
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_SRC :key val
+ ;; => "#+begin_src :key val
  ;        body
- ;      #+END_SRC"
+ ;      #+end_src"
 
 ```
 
@@ -1863,9 +1864,9 @@ The following properties are settable:
 ```el
 (->> (org-ml-build-verse-block "text\n")
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_VERSE
+ ;; => "#+begin_verse
  ;      text
- ;      #+END_VERSE"
+ ;      #+end_verse"
 
 ```
 
@@ -1883,15 +1884,15 @@ The following properties are settable:
 ```el
 (->> (org-ml-build-center-block)
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_CENTER
- ;      #+END_CENTER"
+ ;; => "#+begin_center
+ ;      #+end_center"
 
 (->> (org-ml-build-paragraph "text")
      (org-ml-build-center-block)
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_CENTER
+ ;; => "#+begin_center
  ;      text
- ;      #+END_CENTER"
+ ;      #+end_center"
 
 ```
 
@@ -1930,24 +1931,25 @@ The following properties are settable:
 ```el
 (->> (org-ml-build-dynamic-block "empty")
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN: empty
- ;      #+END:"
+ ;; => "#+begin: empty
+ ;      #+end:"
 
 (->> (org-ml-build-comment "I'm in here")
      (org-ml-build-dynamic-block "notempty")
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN: notempty
+ ;; => "#+begin: notempty
  ;      # I'm in here
- ;      #+END:"
+ ;      #+end:"
 
 ```
 
-#### org-ml-build-footnote-definition `(label &key post-blank &rest element-nodes)`
+#### org-ml-build-footnote-definition `(label &key (pre-blank 0) post-blank &rest element-nodes)`
 
 Build a footnote-definition element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`label`**: (required) a oneline string
+- **`pre-blank`**:  a non-negative integer
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1990,12 +1992,13 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-item `(&key (bullet '-) checkbox counter tag post-blank &rest element-nodes)`
+#### org-ml-build-item `(&key (bullet '-) (pre-blank 0) checkbox counter tag post-blank &rest element-nodes)`
 
 Build an item element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`bullet`**: (default `-`) a positive integer (ordered) or the symbol `-` (unordered)
+- **`pre-blank`**:  a non-negative integer
 - **`checkbox`**:  nil or the symbols `on`, `off`, or `trans`
 - **`counter`**:  a positive integer or nil
 - **`tag`**:  a secondary string
@@ -2080,15 +2083,15 @@ The following properties are settable:
 ```el
 (->> (org-ml-build-quote-block)
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_QUOTE
- ;      #+END_QUOTE"
+ ;; => "#+begin_quote
+ ;      #+end_quote"
 
 (->> (org-ml-build-paragraph "quoted stuff")
      (org-ml-build-quote-block)
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_QUOTE
+ ;; => "#+begin_quote
  ;      quoted stuff
- ;      #+END_QUOTE"
+ ;      #+end_quote"
 
 ```
 
@@ -2119,15 +2122,15 @@ The following properties are settable:
 ```el
 (->> (org-ml-build-special-block "monad")
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_monad
- ;      #+END_monad"
+ ;; => "#+begin_monad
+ ;      #+end_monad"
 
 (->> (org-ml-build-comment "Launch missiles")
      (org-ml-build-special-block "monad")
      (org-ml-to-trimmed-string))
- ;; => "#+BEGIN_monad
+ ;; => "#+begin_monad
  ;      # Launch missiles
- ;      #+END_monad"
+ ;      #+end_monad"
 
 ```
 
@@ -2186,15 +2189,15 @@ throw an error.
 
 ```el
 (->> (org-ml-build-secondary-string! "I'm plain")
-     (-map (function org-ml-get-type)))
+     (-map #'org-ml-get-type))
  ;; => '(plain-text)
 
 (->> (org-ml-build-secondary-string! "I'm *not* plain")
-     (-map (function org-ml-get-type)))
+     (-map #'org-ml-get-type))
  ;; => '(plain-text bold plain-text)
 
 (->> (org-ml-build-secondary-string! "* I'm not an object")
-     (-map (function org-ml-get-type)))
+     (-map #'org-ml-get-type))
 Error
 
 ```
@@ -2260,13 +2263,13 @@ Building a diary sexp timestamp is not possible with this function.
  ;; => "[2019-01-01 Tue]"
 
 (->> (org-ml-build-timestamp! '(2019 1 1 12 0)
-			      :active t :warning '(all 1 day)
-			      :repeater '(cumulate 1 month))
+			       :active t :warning '(all 1 day)
+			       :repeater '(cumulate 1 month))
      (org-ml-to-string))
  ;; => "<2019-01-01 Tue 12:00 +1m -1d>"
 
 (->> (org-ml-build-timestamp! '(2019 1 1)
-			      :end '(2019 1 2))
+			       :end '(2019 1 2))
      (org-ml-to-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
 
@@ -2289,7 +2292,7 @@ Return a new clock node.
  ;; => "CLOCK: [2019-01-01 Tue 12:00]"
 
 (->> (org-ml-build-clock! '(2019 1 1 12 0)
-			  :end '(2019 1 1 13 0))
+			   :end '(2019 1 1 13 0))
      (org-ml-to-trimmed-string))
  ;; => "CLOCK: [2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00] =>  1:00"
 
@@ -2405,14 +2408,13 @@ Return a new item node.
 **`children`** contains the nodes that will go under this item after
 **`paragraph`**.
 
-All other arguments follow the same rules as [`org-ml-build-item`](#org-ml-build-item-key-bullet-quote---checkbox-counter-tag-post-blank-rest-element-nodes).
+All other arguments follow the same rules as [`org-ml-build-item`](#org-ml-build-item-key-bullet---pre-blank-0-checkbox-counter-tag-post-blank-rest-element-nodes).
 
 ```el
-(->> (org-ml-build-item! :bullet 1 :tag "complicated *tag*" :paragraph "petulant /frenzy/" (org-ml-build-plain-list (org-ml-build-item! :bullet '-
-																	 :paragraph "below")))
+(->> (org-ml-build-item! :bullet 1 :tag "complicated *tag*" :paragraph "petulant /frenzy/" (org-ml-build-plain-list (org-ml-build-item! :bullet '- :paragraph "below")))
      (org-ml-to-trimmed-string))
  ;; => "1. complicated *tag* :: petulant /frenzy/
- ;         - below"
+ ;           - below"
 
 ```
 
@@ -2488,14 +2490,13 @@ All other arguments follow the same rules as [`org-ml-build-table`](#org-ml-buil
 
 ```el
 (->> (org-ml-build-table! '("R" "A")
-			  '("G" "E"))
+			   '("G" "E"))
      (org-ml-to-trimmed-string))
  ;; => "| R | A |
  ;      | G | E |"
 
 (->> (org-ml-build-table! '("L" "O")
-			  'hline
-			  '("V" "E"))
+			   'hline '("V" "E"))
      (org-ml-to-trimmed-string))
  ;; => "| L | O |
  ;      |---+---|
@@ -2760,8 +2761,7 @@ If string **`note`** is supplied, append a note to the log entry.
 ```el
 (let ((org-log-note-headings '((test . "Changed %s from %S on %t by %u")))
       (ut (- 1546300800 (car (current-time-zone)))))
-  (->> (org-ml-build-log-type 'test
-			      :unixtime ut :old "TODO" :new "DONE" :username "shadowbrokers" :note "We're coming for you")
+  (->> (org-ml-build-log-type 'test :unixtime ut :old "TODO" :new "DONE" :username "shadowbrokers" :note "We're coming for you")
        (org-ml-to-trimmed-string)))
  ;; => "- Changed \"DONE\" from \"TODO\" on [2019-01-01 Tue 00:00] by shadowbrokers \\\\
  ;        We're coming for you"
@@ -3025,7 +3025,7 @@ each type.
 
 ```el
 ;; Given the following contents:
-; #+CALL: ktulu()
+; #+call: ktulu()
 
 (->> (org-ml-parse-this-element)
      (org-ml-set-property :call "cthulhu")
@@ -3033,7 +3033,7 @@ each type.
      (org-ml-set-property :arguments '("x=4"))
      (org-ml-set-property :end-header '(:exports results))
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: cthulhu[:cache no](x=4) :exports results"
+ ;; => "#+call: cthulhu[:cache no](x=4) :exports results"
 
 ;; Given the following contents:
 ; call_kthulu()
@@ -3099,8 +3099,7 @@ each type.
 ; - thing
 
 (->> (org-ml-parse-this-item)
-     (org-ml-set-properties (list :bullet 1 :checkbox 'on
-				   :counter 2 :tag '("tmsu")))
+     (org-ml-set-properties (list :bullet 1 :checkbox 'on :counter 2 :tag '("tmsu")))
      (org-ml-to-trimmed-string))
  ;; => "1. [@2] [X] tmsu :: thing"
 
@@ -3112,7 +3111,7 @@ Return the value of **`prop`** of **`node`**.
 
 ```el
 ;; Given the following contents:
-; #+CALL: ktulu(x=4) :exports results
+; #+call: ktulu(x=4) :exports results
 
 (->> (org-ml-parse-this-element)
      (org-ml-get-property :call))
@@ -3147,13 +3146,13 @@ each type.
 ; ~learn to~
 
 (->> (org-ml-parse-this-object)
-     (org-ml-map-property :value (function s-upcase))
+     (org-ml-map-property :value #'s-upcase)
      (org-ml-to-trimmed-string))
  ;; => "~LEARN TO~"
 
 ;; Throw error if property doesn't exist
 (->> (org-ml-parse-this-object)
-     (org-ml-map-property :title (function s-upcase))
+     (org-ml-map-property :title #'s-upcase)
      (org-ml-to-trimmed-string))
 Error
 
@@ -3180,12 +3179,10 @@ each type.
 ; #+KEY: VAL
 
 (->> (org-ml-parse-this-element)
-     (org-ml-map-properties (list :key (-partial (function s-prepend)
-						 "OM_")
-				   :value (-partial (function s-prepend)
-						    "OM_")))
+     (org-ml-map-properties (list :key (-partial #'s-prepend "OM_")
+				   :value (-partial #'s-prepend "OM_")))
      (org-ml-to-trimmed-string))
- ;; => "#+OM_KEY: OM_VAL"
+ ;; => "#+om_key: OM_VAL"
 
 ```
 
@@ -3248,12 +3245,16 @@ The following types and properties are supported:
 all elements
 - :post-blank
 
+footnote-definition
+- :pre-blank
+
 headline
 - :level
 - :pre-blank
 - :priority
 
 item
+- :pre-blank
 - :counter
 
 ```el
@@ -3323,18 +3324,18 @@ table
 
 ```el
 ;; Given the following contents:
-; #+CALL: ktulu(y=1)
+; #+call: ktulu(y=1)
 
 (->> (org-ml-parse-this-element)
      (org-ml-insert-into-property :arguments 0 "x=4")
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: ktulu(x=4,y=1)"
+ ;; => "#+call: ktulu(x=4,y=1)"
 
 ;; Do nothing if the string is already in the list
 (->> (org-ml-parse-this-element)
      (org-ml-insert-into-property :arguments 0 "y=1")
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: ktulu(y=1)"
+ ;; => "#+call: ktulu(y=1)"
 
 ;; Throw error when inserting into a property that is not a list of strings
 (->> (org-ml-parse-this-element)
@@ -3356,18 +3357,18 @@ and properties that may be used with this function.
 
 ```el
 ;; Given the following contents:
-; #+CALL: ktulu(y=1)
+; #+call: ktulu(y=1)
 
 (->> (org-ml-parse-this-element)
      (org-ml-remove-from-property :arguments "y=1")
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: ktulu()"
+ ;; => "#+call: ktulu()"
 
 ;; Do nothing if the string does not exist
 (->> (org-ml-parse-this-element)
      (org-ml-remove-from-property :arguments "d=666")
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: ktulu(y=1)"
+ ;; => "#+call: ktulu(y=1)"
 
 ;; Throw error when removing from property that is not a string list
 (->> (org-ml-parse-this-element)
@@ -3405,24 +3406,24 @@ src-block
 
 ```el
 ;; Given the following contents:
-; #+CALL: ktulu[:cache no]()
+; #+call: ktulu[:cache no]()
 
 (->> (org-ml-parse-this-element)
      (org-ml-plist-put-property :end-header :results 'html)
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: ktulu[:cache no]() :results html"
+ ;; => "#+call: ktulu[:cache no]() :results html"
 
 ;; Change the value of key if it already is present
 (->> (org-ml-parse-this-element)
      (org-ml-plist-put-property :inside-header :cache 'yes)
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: ktulu[:cache yes]()"
+ ;; => "#+call: ktulu[:cache yes]()"
 
 ;; Do nothing if the key and value already exist
 (->> (org-ml-parse-this-element)
      (org-ml-plist-put-property :inside-header :cache 'no)
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: ktulu[:cache no]()"
+ ;; => "#+call: ktulu[:cache no]()"
 
 ;; Throw error if setting property that isn't a plist
 (->> (org-ml-parse-this-element)
@@ -3444,18 +3445,18 @@ and properties that may be used with this function.
 
 ```el
 ;; Given the following contents:
-; #+CALL: ktulu() :results html
+; #+call: ktulu() :results html
 
 (->> (org-ml-parse-this-element)
      (org-ml-plist-remove-property :end-header :results)
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: ktulu()"
+ ;; => "#+call: ktulu()"
 
 ;; Do nothing if the key is not present
 (->> (org-ml-parse-this-element)
      (org-ml-plist-remove-property :inside-header :cache)
      (org-ml-to-trimmed-string))
- ;; => "#+CALL: ktulu() :results html"
+ ;; => "#+call: ktulu() :results html"
 
 ;; Throw error if trying to remove key from non-plist property
 (->> (org-ml-parse-this-element)
@@ -4103,7 +4104,7 @@ Return **`timestamp`** node with start/end times set to **`time1`**/**`time2`** 
 ;; Make a range
 (->> (org-ml-parse-this-object)
      (org-ml-timestamp-set-double-time '(2019 1 2)
-				       '(2019 1 3))
+					'(2019 1 3))
      (org-ml-to-trimmed-string))
  ;; => "[2019-01-02 Wed]--[2019-01-03 Thu]"
 
@@ -4112,7 +4113,7 @@ Return **`timestamp`** node with start/end times set to **`time1`**/**`time2`** 
 
 (->> (org-ml-parse-this-object)
      (org-ml-timestamp-set-double-time '(2019 1 4)
-				       '(2019 1 5))
+					'(2019 1 5))
      (org-ml-to-trimmed-string))
  ;; => "[2019-01-04 Fri]--[2019-01-05 Sat]"
 
@@ -4121,7 +4122,7 @@ Return **`timestamp`** node with start/end times set to **`time1`**/**`time2`** 
 
 (->> (org-ml-parse-this-object)
      (org-ml-timestamp-set-double-time '(2019 1 1 0 0)
-				       '(2019 1 1 1 0))
+					'(2019 1 1 1 0))
      (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue 00:00-01:00]"
 
@@ -4433,15 +4434,15 @@ See [`org-ml-set-affiliated-keyword`](#org-ml-set-affiliated-keyword-key-value-n
 
 ```el
 ;; Given the following contents:
-; #+NAME: name
-; #+ATTR_FOO: bar
-; #+ATTR_FOO: BAR
-; #+PLOT: poo
-; #+RESULTS[hash]: res
-; #+HEADER: h1
-; #+BEGIN_SRC
+; #+name: name
+; #+attr_foo: bar
+; #+attr_foo: BAR
+; #+plot: poo
+; #+results[hash]: res
+; #+header: h1
+; #+begin_src
 ; echo test for echo
-; #+END_SRC
+; #+end_src
 
 ;; Simply return NAME and PLOT
 (->> (org-ml-parse-this-element)
@@ -4501,30 +4502,30 @@ corresponding to multiple entries of the attribute.
 (->> (org-ml-parse-this-element)
      (org-ml-set-affiliated-keyword :name "foo")
      (org-ml-to-trimmed-string))
- ;; => "#+NAME: foo
+ ;; => "#+name: foo
  ;      short paragraph"
 
 (->> (org-ml-parse-this-element)
      (org-ml-set-affiliated-keyword :attr_bar '("foo"))
      (org-ml-to-trimmed-string))
- ;; => "#+ATTR_BAR: foo
+ ;; => "#+attr_bar: foo
  ;      short paragraph"
 
 (->> (org-ml-parse-this-element)
      (org-ml-set-affiliated-keyword :header '("h1" "h2"))
      (org-ml-to-trimmed-string))
- ;; => "#+HEADER: h2
- ;      #+HEADER: h1
+ ;; => "#+header: h2
+ ;      #+header: h1
  ;      short paragraph"
 
 (->> (org-ml-parse-this-element)
      (org-ml-set-affiliated-keyword :results '("foo" . "bar"))
      (org-ml-to-trimmed-string))
- ;; => "#+RESULTS[bar]: foo
+ ;; => "#+results[bar]: foo
  ;      short paragraph"
 
 ;; Given the following contents:
-; #+NAME: deleteme
+; #+name: deleteme
 ; short paragraph
 
 (->> (org-ml-parse-this-element)
@@ -4542,24 +4543,24 @@ See [`org-ml-set-affiliated-keyword`](#org-ml-set-affiliated-keyword-key-value-n
 
 ```el
 ;; Given the following contents:
-; #+NAME: foo
+; #+name: foo
 ; short paragraph
 
 (->> (org-ml-parse-this-element)
-     (org-ml-map-affiliated-keyword :name (function upcase))
+     (org-ml-map-affiliated-keyword :name #'upcase)
      (org-ml-to-trimmed-string))
- ;; => "#+NAME: FOO
+ ;; => "#+name: FOO
  ;      short paragraph"
 
 ;; Given the following contents:
-; #+HEADER: foo
+; #+header: foo
 ; short paragraph
 
 (->> (org-ml-parse-this-element)
      (org-ml-map-affiliated-keyword* :header (cons "bar" it))
      (org-ml-to-trimmed-string))
- ;; => "#+HEADER: foo
- ;      #+HEADER: bar
+ ;; => "#+header: foo
+ ;      #+header: bar
  ;      short paragraph"
 
 ```
@@ -4582,31 +4583,31 @@ Set the caption affiliated keyword of **`node`**.
 (->> (org-ml-parse-this-element)
      (org-ml-set-caption! "cap")
      (org-ml-to-trimmed-string))
- ;; => "#+CAPTION: cap
+ ;; => "#+caption: cap
  ;      short paragraph"
 
 (->> (org-ml-parse-this-element)
      (org-ml-set-caption! '("foo" "cap"))
      (org-ml-to-trimmed-string))
- ;; => "#+CAPTION[foo]: cap
+ ;; => "#+caption[foo]: cap
  ;      short paragraph"
 
 (->> (org-ml-parse-this-element)
      (org-ml-set-caption! '("foo" "cap"))
      (org-ml-to-trimmed-string))
- ;; => "#+CAPTION[foo]: cap
+ ;; => "#+caption[foo]: cap
  ;      short paragraph"
 
 (->> (org-ml-parse-this-element)
      (org-ml-set-caption! '(("foo" "cap")
-				  ("FOO" "CAP")))
+			    ("FOO" "CAP")))
      (org-ml-to-trimmed-string))
- ;; => "#+CAPTION[FOO]: CAP
- ;      #+CAPTION[foo]: cap
+ ;; => "#+caption[FOO]: CAP
+ ;      #+caption[foo]: cap
  ;      short paragraph"
 
 ;; Given the following contents:
-; #+CAPTION: cap
+; #+caption: cap
 ; short paragraph
 
 (->> (org-ml-parse-this-element)
@@ -4655,7 +4656,7 @@ Return the children of **`branch-node`** as a list.
 ;; Return child nodes for branch nodes
 (->> (org-ml-parse-this-element)
      (org-ml-get-children)
-     (-map (function org-ml-get-type)))
+     (-map #'org-ml-get-type))
  ;; => '(italic plain-text bold)
 
 ;; Given the following contents:
@@ -4664,7 +4665,7 @@ Return the children of **`branch-node`** as a list.
 ;; Return nil if no children
 (->> (org-ml-parse-this-subtree)
      (org-ml-get-children)
-     (-map (function org-ml-get-type)))
+     (-map #'org-ml-get-type))
  ;; => nil
 
 ```
@@ -4765,7 +4766,7 @@ of its children and return children as a secondary string.
 ;; Remove the outer underline formatting
 (->> (org-ml-parse-this-object)
      (org-ml-unwrap)
-     (apply (function org-ml-build-paragraph))
+     (apply #'org-ml-build-paragraph)
      (org-ml-to-trimmed-string))
  ;; => "1 *2* 3 */4/* 5 /6/"
 
@@ -4786,7 +4787,7 @@ return the result as a secondary string.
 ;; Remove bold formatting at any level
 (->> (org-ml-parse-this-object)
      (org-ml-unwrap-types-deep '(bold))
-     (apply (function org-ml-build-paragraph))
+     (apply #'org-ml-build-paragraph)
      (org-ml-to-trimmed-string))
  ;; => "_1 2 3 /4/ 5 /6/_"
 
@@ -4803,7 +4804,7 @@ Return the children of **`object-node`** as plain-text wrapped in a list.
 ;; Remove all formatting
 (->> (org-ml-parse-this-object)
      (org-ml-unwrap-deep)
-     (apply (function org-ml-build-paragraph))
+     (apply #'org-ml-build-paragraph)
      (org-ml-to-trimmed-string))
  ;; => "1 2 3 4 5 6"
 
@@ -4823,7 +4824,7 @@ The unwrap operation will be done with [`org-ml-unwrap`](#org-ml-unwrap-object-n
 
 ;; Remove first level of formatting
 (->> (org-ml-parse-this-element)
-     (org-ml-map-children (function org-ml-flatten))
+     (org-ml-map-children #'org-ml-flatten)
      (org-ml-to-trimmed-string))
  ;; => "This (1 2 3 /4/ 5 6) is randomly formatted"
 
@@ -4841,7 +4842,7 @@ The unwrap operation will be done with [`org-ml-unwrap-types-deep`](#org-ml-unwr
 ;; Remove italic formatting at any level
 (->> (org-ml-parse-this-element)
      (org-ml-map-children* (org-ml-flatten-types-deep '(italic)
-						      it))
+						       it))
      (org-ml-to-trimmed-string))
  ;; => "This (1 *2* 3 *4* 5 6) is randomly formatted"
 
@@ -4858,7 +4859,7 @@ The unwrap operation will be done with [`org-ml-unwrap-deep`](#org-ml-unwrap-dee
 
 ;; Remove italic formatting at any level
 (->> (org-ml-parse-this-element)
-     (org-ml-map-children (function org-ml-flatten-deep))
+     (org-ml-map-children #'org-ml-flatten-deep)
      (org-ml-to-trimmed-string))
  ;; => "This (1 2 3 4 5 6) is randomly formatted"
 
@@ -4880,7 +4881,7 @@ Return children of section node in **`headline`** node or nil if none.
 
 (->> (org-ml-parse-this-subtree)
      (org-ml-headline-get-section)
-     (-map (function org-ml-to-trimmed-string)))
+     (-map #'org-ml-to-trimmed-string))
  ;; => '("sectional stuff")
 
 ;; Given the following contents:
@@ -4962,7 +4963,7 @@ Return list of child headline nodes in **`headline`** node or nil if none.
 
 (->> (org-ml-parse-this-subtree)
      (org-ml-headline-get-subheadlines)
-     (-map (function org-ml-to-trimmed-string)))
+     (-map #'org-ml-to-trimmed-string))
  ;; => '("** headline 2" "** headline 3")
 
 ;; Given the following contents:
@@ -4971,7 +4972,7 @@ Return list of child headline nodes in **`headline`** node or nil if none.
 
 (->> (org-ml-parse-this-subtree)
      (org-ml-headline-get-subheadlines)
-     (-map (function org-ml-to-trimmed-string)))
+     (-map #'org-ml-to-trimmed-string))
  ;; => nil
 
 ```
@@ -5100,8 +5101,7 @@ modified planning node.
 ; CLOSED: <2019-01-01 Tue>
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-map-planning* (org-ml-map-property* :closed (org-ml-timestamp-shift 1 'day
-											  it)
+     (org-ml-headline-map-planning* (org-ml-map-property* :closed (org-ml-timestamp-shift 1 'day it)
 							   it))
      (org-ml-to-trimmed-string))
  ;; => "* headline
@@ -5123,7 +5123,7 @@ Return a list of node-properties nodes in **`headline`** or nil if none.
 
 (->> (org-ml-parse-this-headline)
      (org-ml-headline-get-node-properties)
-     (-map (function org-ml-to-trimmed-string)))
+     (-map #'org-ml-to-trimmed-string))
  ;; => '(":Effort:   1:00" ":ID:       minesfake")
 
 ;; Given the following contents:
@@ -5131,7 +5131,7 @@ Return a list of node-properties nodes in **`headline`** or nil if none.
 
 (->> (org-ml-parse-this-headline)
      (org-ml-headline-get-node-properties)
-     (-map (function org-ml-to-trimmed-string)))
+     (-map #'org-ml-to-trimmed-string))
  ;; => nil
 
 ```
@@ -5150,10 +5150,9 @@ Return **`headline`** node with property drawer containing **`node-properties`**
 ; :END:
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-set-node-properties (--map (apply (function org-ml-build-node-property)
-							it)
+     (org-ml-headline-set-node-properties (--map (apply #'org-ml-build-node-property it)
 						 '(("Effort" "0:01")
-							 ("ID" "easy"))))
+						   ("ID" "easy"))))
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :PROPERTIES:
@@ -5263,7 +5262,7 @@ a modified node-property value.
 ; :END:
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-map-node-property "ID" (function s-upcase))
+     (org-ml-headline-map-node-property "ID" #'s-upcase)
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :PROPERTIES:
@@ -5289,7 +5288,7 @@ return nil.
 
 (->> (org-ml-parse-this-headline)
      (org-ml-headline-get-logbook)
-     (-map (function org-ml-to-trimmed-string)))
+     (-map #'org-ml-to-trimmed-string))
  ;; => '("- Refiled on [2019-01-01 Tue 00:00]")
 
 ;; Given the following contents:
@@ -5297,7 +5296,7 @@ return nil.
 
 (->> (org-ml-parse-this-headline)
      (org-ml-headline-get-logbook)
-     (-map (function org-ml-to-trimmed-string)))
+     (-map #'org-ml-to-trimmed-string))
  ;; => nil
 
 ```
@@ -5323,8 +5322,7 @@ via `org-log-into-drawer`. If `org-log-into-drawer` is nil, return
 
 (->> (org-ml-parse-this-headline)
      (org-ml-headline-map-logbook* (--map (org-ml-match-map* '(:any * timestamp)
-					    (org-ml-timestamp-shift 1 'day
-								    it)
+					    (org-ml-timestamp-shift 1 'day it)
 					    it)
 					  it))
      (org-ml-to-trimmed-string))
@@ -6350,9 +6348,9 @@ be `(sub *)`, `(sub ?)`, and `((nil | sub))`.
 ;; the items.
 (->> (org-ml-parse-this-subtree)
      (org-ml-match '((:and (:todo-keyword "TODO")
-				 (:commentedp nil))
-			   :any * (:and item (> 0))))
-     (-map (function org-ml-to-trimmed-string)))
+			   (:commentedp nil))
+		     :any * (:and item (> 0))))
+     (-map #'org-ml-to-trimmed-string))
  ;; => '("- item 2" "- item 3")
 
 ;; Given the following contents:
@@ -6361,31 +6359,31 @@ be `(sub *)`, `(sub ?)`, and `((nil | sub))`.
 ;; Return all bold nodes
 (->> (org-ml-parse-this-element)
      (org-ml-match '(bold))
-     (-map (function org-ml-to-trimmed-string)))
+     (-map #'org-ml-to-trimmed-string))
  ;; => '("*one*" "*two*" "*three*" "*four*" "*five*" "*six*")
 
 ;; Return first bold node
 (->> (org-ml-parse-this-element)
      (org-ml-match '(:first bold))
-     (-map (function org-ml-to-trimmed-string)))
+     (-map #'org-ml-to-trimmed-string))
  ;; => '("*one*")
 
 ;; Return last bold node
 (->> (org-ml-parse-this-element)
      (org-ml-match '(:last bold))
-     (-map (function org-ml-to-trimmed-string)))
+     (-map #'org-ml-to-trimmed-string))
  ;; => '("*six*")
 
 ;; Return a select bold node
 (->> (org-ml-parse-this-element)
      (org-ml-match '(:nth 2 bold))
-     (-map (function org-ml-to-trimmed-string)))
+     (-map #'org-ml-to-trimmed-string))
  ;; => '("*three*")
 
 ;; Return a sublist of matched bold nodes
 (->> (org-ml-parse-this-element)
      (org-ml-match '(:sub 1 3 bold))
-     (-map (function org-ml-to-trimmed-string)))
+     (-map #'org-ml-to-trimmed-string))
  ;; => '("*two*" "*three*" "*four*")
 
 ```
@@ -6439,9 +6437,8 @@ the cdr is the modified **`node`**.
 
 (--> (org-ml-parse-this-element)
      (org-ml-match-extract '(:any * italic)
-			   it)
-     (cons (-map (function org-ml-to-trimmed-string)
-		 (car it))
+			    it)
+     (cons (-map #'org-ml-to-trimmed-string (car it))
 	   (org-ml-to-trimmed-string (cdr it))))
  ;; => '(("/under/") . "pull me")
 
@@ -6484,8 +6481,7 @@ which will replace the original.
 
 (->> (org-ml-parse-this-subtree)
      (org-ml-match-map '(:last headline)
-       (-partial (function org-ml-set-property)
-		 :todo-keyword "DONE"))
+       (-partial #'org-ml-set-property :todo-keyword "DONE"))
      (org-ml-to-trimmed-string))
  ;; => "* headline one
  ;      ** TODO headline two
@@ -6838,8 +6834,7 @@ old node in the current buffer.
 
 (->> (org-ml-parse-this-headline)
      (org-ml-update* (->> (org-ml-match-map '(:any * item)
-			    (function org-ml-item-toggle-checkbox)
-			    it)
+			    #'org-ml-item-toggle-checkbox it)
 			  (org-ml-headline-update-item-statistics))))
  ;; Output these buffer contents
  ;; $> "* win grammy [3/3]
@@ -6872,7 +6867,7 @@ Update element under **`point`** using **`fun`**.
 
 ```el
 ;; Given the following contents:
-; #+CALL: ktulu()
+; #+call: ktulu()
 
 (org-ml-update-element-at* (point)
   (org-ml-set-properties (list :call "cthulhu" :inside-header '(:cache no)
@@ -6880,7 +6875,7 @@ Update element under **`point`** using **`fun`**.
 				:end-header '(:results html))
 			 it))
  ;; Output these buffer contents
- ;; $> "#+CALL: cthulhu[:cache no](x=4) :results html"
+ ;; $> "#+call: cthulhu[:cache no](x=4) :results html"
 
 ```
 
@@ -6965,19 +6960,18 @@ Update section under **`point`** using **`fun`**.
 
 ```el
 ;; Given the following contents:
-; #+KEY1: VAL1
-; #+KEY2: VAL2
+; #+key1: VAL1
+; #+key2: VAL2
 ; * irrelevant headline
 
 ;; Update the top buffer section before the headlines start
 (org-ml-update-section-at* (point)
-  (org-ml-map-children* (--map (org-ml-map-property :value (function s-downcase)
-						     it)
+  (org-ml-map-children* (--map (org-ml-map-property :value #'s-downcase it)
 			       it)
 			it))
  ;; Output these buffer contents
- ;; $> "#+KEY1: val1
- ;      #+KEY2: val2
+ ;; $> "#+key1: val1
+ ;      #+key2: val2
  ;      * irrelevant headline"
 
 ```
@@ -7150,9 +7144,13 @@ no examples :(
 ```
 
 
-<!-- 2.0.1 -->
+<!-- 3.0.0 -->
 
 # Changelog
+
+## 3.0.0
+
+- Update for org-mode 9.3
 
 ## 2.0.1
 

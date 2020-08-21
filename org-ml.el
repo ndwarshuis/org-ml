@@ -5,8 +5,8 @@
 ;; Author: Nathan Dwarshuis <ndwar@yavin4.ch>
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
-;; Package-Requires: ((emacs "26.1") (dash "2.15") (s "1.12"))
-;; Version: 2.0.1
+;; Package-Requires: ((emacs "27.1") (dash "2.17") (s "1.12"))
+;; Version: 3.0.0
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by

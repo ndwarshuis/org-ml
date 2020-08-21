@@ -25,6 +25,12 @@ Then require in your emacs config:
 (require 'org-ml)
 ```
 
+## Dependencies
+
+- org-mode (v9.3)
+- dash
+- s
+
 # Motivation
 
 Org-mode comes with a powerful, built-in parse-tree generator specified in
@@ -169,6 +175,10 @@ the examples below.
 <!-- [[ version ]] -->
 
 # Changelog
+
+## 3.0.0
+
+- Update for org-mode 9.3
 
 ## 2.0.1
 
