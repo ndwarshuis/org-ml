@@ -1009,7 +1009,10 @@ bounds."
        (export-snippet (:back-end ,@ol-str :require t)
                        (:value ,@str :require t))
        (fixed-width (:value ,@ol-str :decode s-trim-right :require t))
-       (footnote-definition (:label ,@ol-str :require t))
+       (footnote-definition (:label ,@ol-str :require t)
+                            (:pre-blank ,@nn-int
+                                        :shift org-ml--shift-non-neg-integer
+                                        :require 0))
        (footnote-reference (:label ,@ol-str-nil)
                            (:type))
        (headline (:archivedp ,@bool :cis org-ml--update-headline-tags)
@@ -1054,6 +1057,9 @@ bounds."
                       :type-desc ("a positive integer (ordered)"
                                   "or the symbol `-' (unordered)")
                       :require '-)
+             (:pre-blank ,@nn-int
+                         :shift org-ml--shift-non-neg-integer
+                         :require 0)
              (:checkbox :pred org-ml--is-valid-item-checkbox
                         :type-desc "nil or the symbols `on', `off', or `trans'")
              (:counter ,@pos-int-nil :shift org-ml--shift-pos-integer)

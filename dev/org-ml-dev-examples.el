@@ -76,7 +76,7 @@
 
   (defexamples-content org-ml-parse-element-at
     nil
-    (:buffer "#+CALL: ktulu()")
+    (:buffer "#+call: ktulu()")
     (->> (org-ml-parse-element-at 1)
          (car))
     => 'babel-call
@@ -518,16 +518,16 @@
     (defexamples org-ml-build-babel-call
       (->> (org-ml-build-babel-call "name")
            (org-ml-to-trimmed-string))
-      => "#+CALL: name()"
+      => "#+call: name()"
       (->> (org-ml-build-babel-call "name" :arguments '("arg=x"))
            (org-ml-to-trimmed-string))
-      => "#+CALL: name(arg=x)"
+      => "#+call: name(arg=x)"
       (->> (org-ml-build-babel-call "name" :inside-header '(:key val))
            (org-ml-to-trimmed-string))
-      => "#+CALL: name[:key val]()"
+      => "#+call: name[:key val]()"
       (->> (org-ml-build-babel-call "name" :end-header '(:key val))
            (org-ml-to-trimmed-string))
-      => "#+CALL: name() :key val")
+      => "#+call: name() :key val")
 
     (defexamples org-ml-build-clock
       (->> (org-ml-build-clock (org-ml-build-timestamp! '(2019 1 1 0 0)))
@@ -554,13 +554,13 @@
     (defexamples org-ml-build-comment-block
       (->> (org-ml-build-comment-block)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_COMMENT"
-                  "#+END_COMMENT")
+      => (:result "#+begin_comment"
+                  "#+end_comment")
       (->> (org-ml-build-comment-block :value "text")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_COMMENT"
+      => (:result "#+begin_comment"
                   "text"
-                  "#+END_COMMENT"))
+                  "#+end_comment"))
 
     (defexamples org-ml-build-diary-sexp
       (->> (org-ml-build-diary-sexp)
@@ -573,25 +573,25 @@
     (defexamples org-ml-build-example-block
       (->> (org-ml-build-example-block)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_EXAMPLE"
-                  "#+END_EXAMPLE")
+      => (:result "#+begin_example"
+                  "#+end_example")
       (->> (org-ml-build-example-block :value "text")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_EXAMPLE"
-                  "text"
-                  "#+END_EXAMPLE")
+      => (:result "#+begin_example"
+                  "  text"
+                  "#+end_example")
       (->> (org-ml-build-example-block :value "text" :switches '("switches"))
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_EXAMPLE switches"
-                  "text"
-                  "#+END_EXAMPLE"))
+      => (:result "#+begin_example switches"
+                  "  text"
+                  "#+end_example"))
 
     (defexamples org-ml-build-export-block
       (->> (org-ml-build-export-block "type" "value\n")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_EXPORT type"
+      => (:result "#+begin_export type"
                   "value"
-                  "#+END_EXPORT"))
+                  "#+end_export"))
 
     (defexamples org-ml-build-fixed-width
       (->> (org-ml-build-fixed-width "text")
@@ -606,7 +606,7 @@
     (defexamples org-ml-build-keyword
       (->> (org-ml-build-keyword "FILETAGS" "tmsu")
            (org-ml-to-trimmed-string))
-      => "#+FILETAGS: tmsu")
+      => "#+filetags: tmsu")
 
     (defexamples org-ml-build-latex-environment
       (->> (org-ml-build-latex-environment '("env" "text"))
@@ -634,30 +634,30 @@
     (defexamples org-ml-build-src-block
       (->> (org-ml-build-src-block)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_SRC"
-                  "#+END_SRC")
+      => (:result "#+begin_src"
+                  "#+end_src")
       (->> (org-ml-build-src-block :value "body")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_SRC"
+      => (:result "#+begin_src"
                   "  body"
-                  "#+END_SRC")
+                  "#+end_src")
       (->> (org-ml-build-src-block :value "body" :language "emacs-lisp")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_SRC emacs-lisp"
+      => (:result "#+begin_src emacs-lisp"
                   "  body"
-                  "#+END_SRC")
+                  "#+end_src")
       ;; TODO pretty sure this makes no sense...
       (->> (org-ml-build-src-block :value "body" :switches '("-n 20" "-r"))
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_SRC -n 20 -r"
+      => (:result "#+begin_src -n 20 -r"
                   "  body"
-                  "#+END_SRC")
+                  "#+end_src")
       ;; TODO and this...
       (->> (org-ml-build-src-block :value "body" :parameters '(:key val))
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_SRC :key val"
+      => (:result "#+begin_src :key val"
                   "  body"
-                  "#+END_SRC")))
+                  "#+end_src")))
 
   (def-example-subgroup "Branch Element Nodes with Child Object Nodes"
     nil
@@ -677,9 +677,9 @@
     (defexamples org-ml-build-verse-block
       (->> (org-ml-build-verse-block "text\n")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_VERSE"
+      => (:result "#+begin_verse"
                   "text"
-                  "#+END_VERSE")))
+                  "#+end_verse")))
 
   (def-example-subgroup "Branch Element Nodes with Child Element Nodes"
     nil
@@ -687,14 +687,14 @@
     (defexamples org-ml-build-center-block
       (->> (org-ml-build-center-block)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_CENTER"
-                  "#+END_CENTER")
+      => (:result "#+begin_center"
+                  "#+end_center")
       (->> (org-ml-build-paragraph "text")
            (org-ml-build-center-block)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_CENTER"
+      => (:result "#+begin_center"
                   "text"
-                  "#+END_CENTER"))
+                  "#+end_center"))
 
     (defexamples org-ml-build-drawer
       (->> (org-ml-build-drawer "NAME")
@@ -711,14 +711,14 @@
     (defexamples org-ml-build-dynamic-block
       (->> (org-ml-build-dynamic-block "empty")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN: empty"
-                  "#+END:")
+      => (:result "#+begin: empty"
+                  "#+end:")
       (->> (org-ml-build-comment "I'm in here")
            (org-ml-build-dynamic-block "notempty")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN: notempty"
+      => (:result "#+begin: notempty"
                   "# I'm in here"
-                  "#+END:"))
+                  "#+end:"))
 
     (defexamples org-ml-build-footnote-definition
       (->> (org-ml-build-paragraph "footnote contents")
@@ -808,14 +808,14 @@
     (defexamples org-ml-build-quote-block
       (->> (org-ml-build-quote-block)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_QUOTE"
-                  "#+END_QUOTE")
+      => (:result "#+begin_quote"
+                  "#+end_quote")
       (->> (org-ml-build-paragraph "quoted stuff")
            (org-ml-build-quote-block)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_QUOTE"
+      => (:result "#+begin_quote"
                   "quoted stuff"
-                  "#+END_QUOTE"))
+                  "#+end_quote"))
 
     (defexamples org-ml-build-section
       (->> (org-ml-build-paragraph "text")
@@ -826,14 +826,14 @@
     (defexamples org-ml-build-special-block
       (->> (org-ml-build-special-block "monad")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_monad"
-                  "#+END_monad")
+      => (:result "#+begin_monad"
+                  "#+end_monad")
       (->> (org-ml-build-comment "Launch missiles")
            (org-ml-build-special-block "monad")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_monad"
+      => (:result "#+begin_monad"
                   "# Launch missiles"
-                  "#+END_monad"))
+                  "#+end_monad"))
 
     (defexamples org-ml-build-table
       (->> (org-ml-build-table-cell "cell")
@@ -960,7 +960,7 @@
              (org-ml-build-item! :bullet '- :paragraph "below")))
            (org-ml-to-trimmed-string))
       => (:result "1. complicated *tag* :: petulant /frenzy/"
-                  "   - below"))
+                  "     - below"))
 
     (defexamples org-ml-build-paragraph!
       (->> (org-ml-build-paragraph! "stuff /with/ *formatting*" :post-blank 2)
@@ -1305,14 +1305,14 @@
     (defexamples-content org-ml-set-property
       nil
 
-      (:buffer "#+CALL: ktulu()")
+      (:buffer "#+call: ktulu()")
       (->> (org-ml-parse-this-element)
            (org-ml-set-property :call "cthulhu")
            (org-ml-set-property :inside-header '(:cache no))
            (org-ml-set-property :arguments '("x=4"))
            (org-ml-set-property :end-header '(:exports results))
            (org-ml-to-trimmed-string))
-      => "#+CALL: cthulhu[:cache no](x=4) :exports results"
+      => "#+call: cthulhu[:cache no](x=4) :exports results"
 
       :begin-hidden
       (:buffer "CLOCK: [2019-01-01 Tue]")
@@ -1334,15 +1334,15 @@
            (org-ml-to-trimmed-string))
       => "# still not here"
 
-      (:buffer "#+BEGIN_COMMENT"
+      (:buffer "#+begin_comment"
                "not here"
-               "#+END_COMMENT")
+               "#+end_comment")
       (->> (org-ml-parse-this-element)
            (org-ml-set-property :value "still not here")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_COMMENT"
+      => (:result "#+begin_comment"
                   "still not here"
-                  "#+END_COMMENT")
+                  "#+end_comment")
 
       (:buffer "%%(print :valueble)")
       (->> (org-ml-parse-this-element)
@@ -1358,14 +1358,14 @@
       => (:result ":BOOKOFSOULS:"
                   ":END:")
 
-      (:buffer "#+BEGIN: blockhead"
-               "#+END:")
+      (:buffer "#+begin: blockhead"
+               "#+end:")
       (->> (org-ml-parse-this-element)
            (org-ml-set-property :block-name "blockfoot")
            (org-ml-set-property :arguments '(:cache no))
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN: blockfoot :cache no"
-                  "#+END:")
+      => (:result "#+begin: blockfoot :cache no"
+                  "#+end:")
 
       (:buffer "\\pi")
       (->> (org-ml-parse-this-object)
@@ -1375,25 +1375,25 @@
       => "\\gamma{}"
 
       ;; TODO test preserve indentation...
-      (:buffer "#+BEGIN_EXAMPLE"
-               "#+END_EXAMPLE")
+      (:buffer "#+begin_example"
+               "#+end_example")
       (->> (org-ml-parse-this-element)
            (org-ml-set-property :switches '("-n"))
            (org-ml-set-property :value "example.com")
            (org-ml-to-trimmed-string))
-      => (:buffer "#+BEGIN_EXAMPLE -n"
-                  "example.com"
-                  "#+END_EXAMPLE")
+      => (:buffer "#+begin_example -n"
+                  "  example.com"
+                  "#+end_example")
 
-      (:buffer "#+BEGIN_EXPORT latex"
-               "#+END_EXPORT")
+      (:buffer "#+begin_export latex"
+               "#+end_export")
       (->> (org-ml-parse-this-element)
            (org-ml-set-property :type "domestic")
            (org-ml-set-property :value "bullets, bombs, and bigotry")
            (org-ml-to-trimmed-string))
-      => (:buffer "#+BEGIN_EXPORT domestic"
+      => (:buffer "#+begin_export domestic"
                   "bullets, bombs, and bigotry"
-                  "#+END_EXPORT")
+                  "#+end_export")
 
       (:buffer "@@back-end:value@@")
       (->> (org-ml-parse-this-object)
@@ -1526,17 +1526,17 @@
            (org-ml-to-trimmed-string))
       => "CLOSED: <2019-01-02 Wed>"
 
-      (:buffer "#+BEGIN_special"
-               "#+END_special")
+      (:buffer "#+begin_special"
+               "#+end_special")
       (->> (org-ml-parse-this-element)
            (org-ml-set-property :type "talent")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_talent"
-                  "#+END_talent")
+      => (:result "#+begin_talent"
+                  "#+end_talent")
 
-      (:buffer "#+BEGIN_SRC"
+      (:buffer "#+begin_src"
                "something amorphous"
-               "#+END_SRC")
+               "#+end_src")
       (->> (org-ml-parse-this-element)
            (org-ml-set-property :language "emacs")
            (org-ml-set-property :value "(print 'hi)")
@@ -1544,9 +1544,9 @@
            (org-ml-set-property :switches '("-n"))
            ;; TODO test preserver indent
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_SRC emacs -n :cache no"
+      => (:result "#+begin_src emacs -n :cache no"
                   "  (print 'hi)"
-                  "#+END_SRC")
+                  "#+end_src")
 
       (:buffer "* dummy [50%]")
       (->> (org-ml-parse-this-headline)
@@ -1649,7 +1649,7 @@
     (defexamples-content org-ml-get-property
       nil
 
-      (:buffer "#+CALL: ktulu(x=4) :exports results")
+      (:buffer "#+call: ktulu(x=4) :exports results")
       (->> (org-ml-parse-this-element)
            (org-ml-get-property :call))
       => "ktulu"
@@ -1682,9 +1682,9 @@
            (org-ml-get-property :value))
       => "not here"
 
-      (:buffer "#+BEGIN_COMMENT"
+      (:buffer "#+begin_comment"
                "not here"
-               "#+END_COMMENT")
+               "#+end_comment")
       (->> (org-ml-parse-this-element)
            (org-ml-get-property :value))
       => "not here"
@@ -1700,8 +1700,8 @@
            (org-ml-get-property :drawer-name))
       => "LOGBOOK"
 
-      (:buffer "#+BEGIN: blockhead :cache no"
-               "#+END:")
+      (:buffer "#+begin: blockhead :cache no"
+               "#+end:")
       (->> (org-ml-parse-this-element)
            (org-ml-get-property :block-name))
       => "blockhead"
@@ -1718,9 +1718,9 @@
       => t
 
       ;; TODO test preserve indentation...
-      => (:buffer "#+BEGIN_EXAMPLE -n"
+      => (:buffer "#+begin_example -n"
                   "example.com"
-                  "#+END_EXAMPLE")
+                  "#+end_example")
       (->> (org-ml-parse-this-element)
            (org-ml-get-property :switches))
       => '("-n")
@@ -1728,9 +1728,9 @@
            (org-ml-get-property :value))
       => "example.com"
 
-      (:buffer "#+BEGIN_EXPORT domestic"
+      (:buffer "#+begin_export domestic"
                "bullets, bombs, and bigotry"
-               "#+END_EXPORT")
+               "#+end_export")
       (->> (org-ml-parse-this-element)
            (org-ml-get-property :type))
       ;; TODO why capitalized?
@@ -1902,9 +1902,9 @@
            (org-ml-get-property :type))
       => "special"
 
-      (:buffer "#+BEGIN_SRC emacs -n :cache no"
+      (:buffer "#+begin_src emacs -n :cache no"
                "  (print 'hi)"
-               "#+END_SRC")
+               "#+end_src")
       (->> (org-ml-parse-this-element)
            (org-ml-get-property :language))
       => "emacs"
@@ -2044,11 +2044,11 @@
 
       :begin-hidden
 
-      (:buffer "#+CALL: ktulu()")
+      (:buffer "#+call: ktulu()")
       (->> (org-ml-parse-this-element)
            (org-ml-map-property :call #'s-upcase)
            (org-ml-to-trimmed-string))
-      => "#+CALL: KTULU()"
+      => "#+call: KTULU()"
 
       (:buffer "CLOCK: [2019-01-01 Tue 12:00]")
       (->> (org-ml-parse-this-element)
@@ -2082,15 +2082,15 @@
            (org-ml-to-trimmed-string))
       => "# NOT HERE"
 
-      (:buffer "#+BEGIN_COMMENT"
+      (:buffer "#+begin_comment"
                "not here"
-               "#+END_COMMENT")
+               "#+end_comment")
       (->> (org-ml-parse-this-element)
            (org-ml-map-property :value #'s-upcase)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_COMMENT"
+      => (:result "#+begin_comment"
                   "NOT HERE"
-                  "#+END_COMMENT")
+                  "#+end_comment")
 
       (:buffer "%%(diary-float t 1 -1)")
       (->> (org-ml-parse-this-element)
@@ -2106,36 +2106,36 @@
       => (:result ":Logbook:"
                   ":END:")
 
-      (:buffer "#+BEGIN: blockhead"
-               "#+END:")
+      (:buffer "#+begin: blockhead"
+               "#+end:")
       (->> (org-ml-parse-this-element)
            (org-ml-map-property :block-name #'s-upcase)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN: BLOCKHEAD"
-                  "#+END:")
+      => (:result "#+begin: BLOCKHEAD"
+                  "#+end:")
 
       ;; TODO add entity
 
-      (:buffer "#+BEGIN_EXAMPLE"
+      (:buffer "#+begin_example"
                "example.com"
-               "#+END_EXAMPLE")
+               "#+end_example")
       (->> (org-ml-parse-this-element)
            (org-ml-map-property* :value (concat "https://" it))
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_EXAMPLE"
-                  "https://example.com"
-                  "#+END_EXAMPLE")
+      => (:result "#+begin_example"
+                  "  https://example.com"
+                  "#+end_example")
 
-      (:buffer "#+BEGIN_EXPORT domestic"
+      (:buffer "#+begin_export domestic"
                "bullets, bombs, and bigotry"
-               "#+END_EXPORT")
+               "#+end_export")
       (->> (org-ml-parse-this-element)
            (org-ml-map-property :type #'s-upcase)
            (org-ml-map-property :value #'s-upcase)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_EXPORT DOMESTIC"
+      => (:result "#+begin_export DOMESTIC"
                   "BULLETS, BOMBS, AND BIGOTRY"
-                  "#+END_EXPORT")
+                  "#+end_export")
 
       (:buffer "@@back-end:value@@")
       (->> (org-ml-parse-this-object)
@@ -2180,12 +2180,12 @@
            (org-ml-to-trimmed-string))
       => "- TAG :: thing"
 
-      (:buffer "#+KEY: VAL")
+      (:buffer "#+key: VAL")
       (->> (org-ml-parse-this-element)
            (org-ml-map-property :key (-partial #'s-prepend "OM_"))
            (org-ml-map-property :value (-partial #'s-prepend "OM_"))
            (org-ml-to-trimmed-string))
-      => "#+OM_KEY: OM_VAL"
+      => "#+om_key: OM_VAL"
 
       ;; TODO add examples for latex frag/env
 
@@ -2215,13 +2215,13 @@
 
       ;; TODO add example for planning
 
-      (:buffer "#+BEGIN_special"
-               "#+END_special")
+      (:buffer "#+begin_special"
+               "#+end_special")
       (->> (org-ml-parse-this-element)
            (org-ml-map-property :type #'s-upcase)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_SPECIAL"
-                  "#+END_SPECIAL")
+      => (:result "#+begin_SPECIAL"
+                  "#+end_SPECIAL")
 
       ;; TODO add example for src block
 
@@ -2249,7 +2249,7 @@
             (list :key (-partial #'s-prepend "OM_")
                   :value (-partial #'s-prepend "OM_")))
            (org-ml-to-trimmed-string))
-      => "#+OM_KEY: OM_VAL"
+      => "#+om_key: OM_VAL"
       ;; TODO this makes the document parser puke
       ;; (:comment "Throw error if any of the properties are invalid")
       ;; (->> (org-ml-parse-this-element)
@@ -2403,17 +2403,17 @@
     (defexamples-content org-ml-insert-into-property
       nil
 
-      (:buffer "#+CALL: ktulu(y=1)")
+      (:buffer "#+call: ktulu(y=1)")
       (->> (org-ml-parse-this-element)
            (org-ml-insert-into-property :arguments 0 "x=4")
            (org-ml-to-trimmed-string))
-      => "#+CALL: ktulu(x=4,y=1)"
+      => "#+call: ktulu(x=4,y=1)"
 
       (:comment "Do nothing if the string is already in the list")
       (->> (org-ml-parse-this-element)
            (org-ml-insert-into-property :arguments 0 "y=1")
            (org-ml-to-trimmed-string))
-      => "#+CALL: ktulu(y=1)"
+      => "#+call: ktulu(y=1)"
 
       (:comment "Throw error when inserting into a property that is not a list of strings")
       (->> (org-ml-parse-this-element)
@@ -2429,13 +2429,13 @@
            (org-ml-to-trimmed-string))
       => "* headline          :tag0:tag1:"
 
-      (:buffer "#+BEGIN_EXAMPLE -n"
-               "#+END_EXAMPLE")
+      (:buffer "#+begin_example -n"
+               "#+end_example")
       (->> (org-ml-parse-this-element)
            (org-ml-insert-into-property :switches -1 "-r")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_EXAMPLE -n -r"
-                  "#+END_EXAMPLE")
+      => (:result "#+begin_example -n -r"
+                  "#+end_example")
 
       (:buffer "call_ktulu(y=1)")
       (->> (org-ml-parse-this-object)
@@ -2449,13 +2449,13 @@
            (org-ml-to-trimmed-string))
       => "{{{economics(z=2,x=4)}}}"
       
-      (:buffer "#+BEGIN_SRC emacs-lisp -n"
-               "#+END_SRC")
+      (:buffer "#+begin_src emacs-lisp -n"
+               "#+end_src")
       (->> (org-ml-parse-this-element)
            (org-ml-insert-into-property :switches -1 "-r")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_SRC emacs-lisp -n -r"
-                  "#+END_SRC")
+      => (:result "#+begin_src emacs-lisp -n -r"
+                  "#+end_src")
 
       (:buffer "| a |"
                "#+TBLFM: x=$2")
@@ -2470,17 +2470,17 @@
     (defexamples-content org-ml-remove-from-property
       nil
 
-      (:buffer "#+CALL: ktulu(y=1)")
+      (:buffer "#+call: ktulu(y=1)")
       (->> (org-ml-parse-this-element)
            (org-ml-remove-from-property :arguments "y=1")
            (org-ml-to-trimmed-string))
-      => "#+CALL: ktulu()"
+      => "#+call: ktulu()"
 
       (:comment "Do nothing if the string does not exist")
       (->> (org-ml-parse-this-element)
            (org-ml-remove-from-property :arguments "d=666")
            (org-ml-to-trimmed-string))
-      => "#+CALL: ktulu(y=1)"
+      => "#+call: ktulu(y=1)"
 
       (:comment "Throw error when removing from property that is not a string list")
       (->> (org-ml-parse-this-element)
@@ -2496,13 +2496,13 @@
            (org-ml-to-trimmed-string))
       => "* headline"
 
-      (:buffer "#+BEGIN_EXAMPLE -n"
-               "#+END_EXAMPLE")
+      (:buffer "#+begin_example -n"
+               "#+end_example")
       (->> (org-ml-parse-this-element)
            (org-ml-remove-from-property :switches "-n")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_EXAMPLE"
-                  "#+END_EXAMPLE")
+      => (:result "#+begin_example"
+                  "#+end_example")
 
       (:buffer "call_ktulu(y=1)")
       (->> (org-ml-parse-this-object)
@@ -2516,13 +2516,13 @@
            (org-ml-to-trimmed-string))
       => "{{{economics}}}"
       
-      (:buffer "#+BEGIN_SRC emacs-lisp -n"
-               "#+END_SRC")
+      (:buffer "#+begin_src emacs-lisp -n"
+               "#+end_src")
       (->> (org-ml-parse-this-element)
            (org-ml-remove-from-property :switches "-n")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_SRC emacs-lisp"
-                  "#+END_SRC")
+      => (:result "#+begin_src emacs-lisp"
+                  "#+end_src")
 
       (:buffer "| a |"
                "#+TBLFM: x=$2")
@@ -2535,21 +2535,21 @@
     (defexamples-content org-ml-plist-put-property
       nil
 
-      (:buffer "#+CALL: ktulu[:cache no]()")
+      (:buffer "#+call: ktulu[:cache no]()")
       (->> (org-ml-parse-this-element)
            (org-ml-plist-put-property :end-header :results 'html)
            (org-ml-to-trimmed-string))
-      => "#+CALL: ktulu[:cache no]() :results html"
+      => "#+call: ktulu[:cache no]() :results html"
       (:comment "Change the value of key if it already is present")
       (->> (org-ml-parse-this-element)
            (org-ml-plist-put-property :inside-header :cache 'yes)
            (org-ml-to-trimmed-string))
-      => "#+CALL: ktulu[:cache yes]()"
+      => "#+call: ktulu[:cache yes]()"
       (:comment "Do nothing if the key and value already exist")
       (->> (org-ml-parse-this-element)
            (org-ml-plist-put-property :inside-header :cache 'no)
            (org-ml-to-trimmed-string))
-      => "#+CALL: ktulu[:cache no]()"
+      => "#+call: ktulu[:cache no]()"
       (:comment "Throw error if setting property that isn't a plist")
       (->> (org-ml-parse-this-element)
            (org-ml-plist-put-property :arguments :cache 'no)
@@ -2558,13 +2558,13 @@
 
       :begin-hidden
 
-      (:buffer "#+BEGIN: blockhead :format \"[%s]\""
-               "#+END:")
+      (:buffer "#+begin: blockhead :format \"[%s]\""
+               "#+end:")
       (->> (org-ml-parse-this-element)
            (org-ml-plist-put-property :arguments :format "<%s>")
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN: blockhead :format \"<%s>\""
-                  "#+END:")
+      => (:result "#+begin: blockhead :format \"<%s>\""
+                  "#+end:")
 
       (:buffer "call_ktulu[:cache no]()")
       (->> (org-ml-parse-this-object)
@@ -2579,28 +2579,28 @@
            (org-ml-to-trimmed-string))
       => "src_emacs-lisp[:exports both]{}"
 
-      (:buffer "#+BEGIN_SRC emacs-lisp -n :exports results"
-               "#+END_SRC")
+      (:buffer "#+begin_src emacs-lisp -n :exports results"
+               "#+end_src")
       (->> (org-ml-parse-this-element)
            (org-ml-plist-put-property :parameters :exports 'both)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_SRC emacs-lisp -n :exports both"
-                  "#+END_SRC")
+      => (:result "#+begin_src emacs-lisp -n :exports both"
+                  "#+end_src")
       :end-hidden)
 
     (defexamples-content org-ml-plist-remove-property
       nil
 
-      (:buffer "#+CALL: ktulu() :results html")
+      (:buffer "#+call: ktulu() :results html")
       (->> (org-ml-parse-this-element)
            (org-ml-plist-remove-property :end-header :results)
            (org-ml-to-trimmed-string))
-      => "#+CALL: ktulu()"
+      => "#+call: ktulu()"
       (:comment "Do nothing if the key is not present")
       (->> (org-ml-parse-this-element)
            (org-ml-plist-remove-property :inside-header :cache)
            (org-ml-to-trimmed-string))
-      => "#+CALL: ktulu() :results html"
+      => "#+call: ktulu() :results html"
       (:comment "Throw error if trying to remove key from non-plist property")
       (->> (org-ml-parse-this-element)
            (org-ml-plist-remove-property :arguments :cache)
@@ -2609,13 +2609,13 @@
 
       :begin-hidden
 
-      (:buffer "#+BEGIN: blockhead :format \"[%s]\""
-               "#+END:")
+      (:buffer "#+begin: blockhead :format \"[%s]\""
+               "#+end:")
       (->> (org-ml-parse-this-element)
            (org-ml-plist-remove-property :arguments :format)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN: blockhead"
-                  "#+END:")
+      => (:result "#+begin: blockhead"
+                  "#+end:")
 
       (:buffer "call_ktulu[:cache no]()[:results html]")
       (->> (org-ml-parse-this-object)
@@ -2630,13 +2630,13 @@
            (org-ml-to-trimmed-string))
       => "src_emacs-lisp{}"
 
-      (:buffer "#+BEGIN_SRC emacs-lisp -n :exports results"
-               "#+END_SRC")
+      (:buffer "#+begin_src emacs-lisp -n :exports results"
+               "#+end_src")
       (->> (org-ml-parse-this-element)
            (org-ml-plist-remove-property :parameters :exports)
            (org-ml-to-trimmed-string))
-      => (:result "#+BEGIN_SRC emacs-lisp -n"
-                  "#+END_SRC")
+      => (:result "#+begin_src emacs-lisp -n"
+                  "#+end_src")
       :end-hidden)
 
     ;; (defexamples-content org-ml-property-is-nil-p
@@ -3270,15 +3270,15 @@
 
     (defexamples-content org-ml-get-affiliated-keyword
       nil
-      (:buffer "#+NAME: name"
-               "#+ATTR_FOO: bar"
-               "#+ATTR_FOO: BAR"
-               "#+PLOT: poo"
-               "#+RESULTS[hash]: res"
-               "#+HEADER: h1"
-               "#+BEGIN_SRC"
+      (:buffer "#+name: name"
+               "#+attr_foo: bar"
+               "#+attr_foo: BAR"
+               "#+plot: poo"
+               "#+results[hash]: res"
+               "#+header: h1"
+               "#+begin_src"
                "echo test for echo"
-               "#+END_SRC")
+               "#+end_src")
       (:comment "Simply return NAME and PLOT")
       (->> (org-ml-parse-this-element)
            (org-ml-get-affiliated-keyword :name))
@@ -3308,26 +3308,26 @@
       (->> (org-ml-parse-this-element)
            (org-ml-set-affiliated-keyword :name "foo")
            (org-ml-to-trimmed-string))
-      => (:result "#+NAME: foo"
+      => (:result "#+name: foo"
                   "short paragraph")
       (->> (org-ml-parse-this-element)
            (org-ml-set-affiliated-keyword :attr_bar '("foo"))
            (org-ml-to-trimmed-string))
-      => (:result "#+ATTR_BAR: foo"
+      => (:result "#+attr_bar: foo"
                   "short paragraph")
       (->> (org-ml-parse-this-element)
            (org-ml-set-affiliated-keyword :header '("h1" "h2"))
            (org-ml-to-trimmed-string))
-      => (:result "#+HEADER: h2"
-                  "#+HEADER: h1"
+      => (:result "#+header: h2"
+                  "#+header: h1"
                   "short paragraph")
       (->> (org-ml-parse-this-element)
            (org-ml-set-affiliated-keyword :results '("foo" . "bar"))
            (org-ml-to-trimmed-string))
-      => (:result "#+RESULTS[bar]: foo"
+      => (:result "#+results[bar]: foo"
                   "short paragraph")
 
-      (:buffer "#+NAME: deleteme"
+      (:buffer "#+name: deleteme"
                "short paragraph")
       (->> (org-ml-parse-this-element)
            (org-ml-set-affiliated-keyword :name nil)
@@ -3337,21 +3337,21 @@
     (defexamples-content org-ml-map-affiliated-keyword
       nil
 
-      (:buffer "#+NAME: foo"
+      (:buffer "#+name: foo"
                "short paragraph")
       (->> (org-ml-parse-this-element)
            (org-ml-map-affiliated-keyword :name #'upcase)
            (org-ml-to-trimmed-string))
-      => (:result "#+NAME: FOO"
+      => (:result "#+name: FOO"
                   "short paragraph")
 
-      (:buffer "#+HEADER: foo"
+      (:buffer "#+header: foo"
                "short paragraph")
       (->> (org-ml-parse-this-element)
            (org-ml-map-affiliated-keyword* :header (cons "bar" it))
            (org-ml-to-trimmed-string))
-      => (:result "#+HEADER: foo"
-                  "#+HEADER: bar"
+      => (:result "#+header: foo"
+                  "#+header: bar"
                   "short paragraph"))
 
     (defexamples-content org-ml-set-caption!
@@ -3361,26 +3361,26 @@
       (->> (org-ml-parse-this-element)
            (org-ml-set-caption! "cap")
            (org-ml-to-trimmed-string))
-      => (:result "#+CAPTION: cap"
+      => (:result "#+caption: cap"
                   "short paragraph")
       (->> (org-ml-parse-this-element)
            (org-ml-set-caption! '("foo" "cap"))
            (org-ml-to-trimmed-string))
-      => (:result "#+CAPTION[foo]: cap"
+      => (:result "#+caption[foo]: cap"
                   "short paragraph")
       (->> (org-ml-parse-this-element)
            (org-ml-set-caption! '("foo" "cap"))
            (org-ml-to-trimmed-string))
-      => (:result "#+CAPTION[foo]: cap"
+      => (:result "#+caption[foo]: cap"
                   "short paragraph")
       (->> (org-ml-parse-this-element)
            (org-ml-set-caption! '(("foo" "cap") ("FOO" "CAP")))
            (org-ml-to-trimmed-string))
-      => (:result "#+CAPTION[FOO]: CAP"
-                  "#+CAPTION[foo]: cap"
+      => (:result "#+caption[FOO]: CAP"
+                  "#+caption[foo]: cap"
                   "short paragraph")
       
-      (:buffer "#+CAPTION: cap"
+      (:buffer "#+caption: cap"
                "short paragraph")
       (->> (org-ml-parse-this-element)
            (org-ml-set-caption! nil)
@@ -3421,7 +3421,7 @@
            (-map #'org-ml-get-type))
       => nil
 
-      ;; (:buffer "#+CALL: ktulu()")
+      ;; (:buffer "#+call: ktulu()")
       ;; (:comment "Throw error when attempting to get contents of a non-branch node")
       ;; (->> (org-ml-parse-this-element)
       ;;      (org-ml-get-children)
@@ -3445,18 +3445,18 @@
            (-map #'org-ml-get-type))
       => '(table-cell table-cell)
 
-      (:buffer "#+BEGIN_VERSE"
+      (:buffer "#+begin_verse"
                "verse /666/"
-               "#+END_VERSE")
+               "#+end_verse")
       (->> (org-ml-parse-this-element)
            (org-ml-get-children)
            (-map #'org-ml-get-type))
       ;; plain-text for the newline at the end...I think
       => '(plain-text italic plain-text)
 
-      (:buffer "#+BEGIN_CENTER"
+      (:buffer "#+begin_center"
                "paragraph thing"
-               "#+END_CENTER")
+               "#+end_center")
       (->> (org-ml-parse-this-element)
            (org-ml-get-children)
            (-map #'org-ml-get-type))
@@ -3498,9 +3498,9 @@
            (-map #'org-ml-get-type))
       => '(node-property node-property)
 
-      (:buffer "#+BEGIN_QUOTE"
+      (:buffer "#+begin_quote"
                "no pity for the majority"
-               "#+END_QUOTE")
+               "#+end_quote")
       (->> (org-ml-parse-this-element)
            (org-ml-get-children)
            (-map #'org-ml-get-type))
@@ -3541,7 +3541,7 @@
       => (:result "* headline"
                   "** only me")
 
-      ;; (:buffer "#+CALL: ktulu()")
+      ;; (:buffer "#+call: ktulu()")
       ;; (:comment "Throw error when attempting to set children of a non-branch nodes")
       ;; (->> (org-ml-parse-this-element)
       ;;      (org-ml-set-children "nil by mouth")
@@ -3572,7 +3572,7 @@
       => (:result "* headline"
                   "*** subheadline")
 
-      ;; (:buffer "#+CALL: ktulu()")
+      ;; (:buffer "#+call: ktulu()")
       ;; (:comment "Throw error when attempting to map children of a non-branch node")
       ;; (->> (org-ml-parse-this-element)
       ;;      (org-ml-map-children #'ignore)
@@ -3597,7 +3597,7 @@
       (->> (org-ml-parse-this-headline)
            (org-ml-is-childless))
       => t
-      ;; (:buffer "#+CALL: ktulu()")
+      ;; (:buffer "#+call: ktulu()")
       ;; (:comment "Throw error when attempting to determine if non-branch node is empty")
       ;; (->> (org-ml-parse-this-element)
       ;;      (org-ml-is-childless))
@@ -5513,7 +5513,7 @@
 
     (defexamples-content org-ml-update-element-at
       nil
-      (:buffer "#+CALL: ktulu()")
+      (:buffer "#+call: ktulu()")
       (org-ml-update-element-at* (point)
         (org-ml-set-properties 
          (list :call "cthulhu"
@@ -5521,7 +5521,7 @@
                :arguments '("x=4")
                :end-header '(:results html))
          it))
-      $> "#+CALL: cthulhu[:cache no](x=4) :results html")
+      $> "#+call: cthulhu[:cache no](x=4) :results html")
 
     (defexamples-content org-ml-update-table-row-at
       nil
@@ -5561,14 +5561,14 @@
 
     (defexamples-content org-ml-update-section-at
       nil
-      (:buffer "#+KEY1: VAL1"
-               "#+KEY2: VAL2"
+      (:buffer "#+key1: VAL1"
+               "#+key2: VAL2"
                "* irrelevant headline")
       (:comment "Update the top buffer section before the headlines start")
       (org-ml-update-section-at* (point)
         (org-ml-map-children* (--map (org-ml-map-property :value #'s-downcase it) it) it))
-      $> (:result "#+KEY1: val1"
-                  "#+KEY2: val2"
+      $> (:result "#+key1: val1"
+                  "#+key2: val2"
                   "* irrelevant headline"))
 
     (defexamples-content org-ml-do-some-headlines
