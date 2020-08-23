@@ -1432,8 +1432,8 @@ system."
   (let* ((zone (list (current-time-zone)))
          (encode-args
           (if (org-ml--time-is-long time)
-              (append '(0) (nreverse time) zone)
-            (append '(0 0 0) (nreverse (-take 3 time)) zone))))
+              (append '(0) (reverse time) zone)
+            (append '(0 0 0) (reverse (-take 3 time)) zone))))
     (->> (apply #'encode-time encode-args)
          (float-time)
          (round))))
@@ -1441,7 +1441,7 @@ system."
 (defun org-ml-unixtime-to-time-long (unixtime)
   "Return the long time list of UNIXTIME.
 The list will be formatted like (YEAR MONTH DAY HOUR MIN)."
-  (nreverse (-slice (decode-time unixtime (current-time-zone)) 1 6)))
+  (reverse (-slice (decode-time unixtime (current-time-zone)) 1 6)))
 
 (defun org-ml-unixtime-to-time-short (unixtime)
   "Return the short time list of UNIXTIME.
@@ -1478,17 +1478,17 @@ N is an integer."
        (apply-shifts
         (shifts time)
         (->> (-zip-with #'+ time shifts)
-             (nreverse)
+             (reverse)
              (apply #'encode-time 0)
              (decode-time))))
     (if (org-ml--time-is-long time)
         (let ((shifts (get-shifts-long n unit)))
-          (nreverse (-slice (apply-shifts shifts time) 1 6)))
+          (reverse (-slice (apply-shifts shifts time) 1 6)))
       (let ((shifts (get-shifts-short n unit))
             (time* (-replace nil 0 time)))
         (->> (-slice (apply-shifts shifts time*) 3 6)
              (append '(nil nil))
-             (nreverse))))))
+             (reverse))))))
 
 (defun org-ml--time-format-props (time suffix)
   "Return plist representation of time list TIME.
