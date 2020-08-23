@@ -3262,9 +3262,9 @@ a modified property-drawer node."
 (defun org-ml-headline-get-node-property (key headline)
   "Return value of property with KEY in HEADLINE or nil if not found.
 If multiple properties with KEY are present, only return the first."
-  (->> (org-ml-headline-get-node-properties headline)
-       (--first (equal key (org-ml-get-property :key it)))
-       (org-ml-get-property :value)))
+  (-some->> (org-ml-headline-get-node-properties headline)
+    (--first (equal key (org-ml-get-property :key it)))
+    (org-ml-get-property :value)))
 
 (defun org-ml-headline-set-node-property (key value headline)
   "Return HEADLINE with node property matching KEY set to VALUE.
