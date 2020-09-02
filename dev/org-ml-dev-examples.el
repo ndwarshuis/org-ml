@@ -3924,7 +3924,15 @@
                ":END:")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-get-node-property "ID"))
-      => "fake")
+      => "fake"
+
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-node-property "READ_ID"))
+      => nil)
 
     (defexamples-content org-ml-headline-set-node-property
       nil
