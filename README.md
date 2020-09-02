@@ -7144,9 +7144,15 @@ no examples :(
 ```
 
 
-<!-- 3.0.0 -->
+<!-- 3.0.1 -->
 
 # Changelog
+
+## 3.0.1
+
+- Fix bugs
+  - Don't use `nreverse` unless needed
+  - Don't crash when `org-ml-headline-get-node-property` should return nil
 
 ## 3.0.0
 
