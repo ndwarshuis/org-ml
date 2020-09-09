@@ -10,7 +10,7 @@ A functional API for org-mode inspired by
 Install from MELPA:
 
 ```
-M-x package-install RET org-sql RET
+M-x package-install RET org-ml RET
 ```
 
 Alternatively, clone this repository to somewhere in your load path:

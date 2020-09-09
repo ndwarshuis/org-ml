@@ -10,7 +10,7 @@ A functional API for org-mode inspired by
 Install from MELPA:
 
 ```
-M-x package-install RET org-sql RET
+M-x package-install RET org-ml RET
 ```
 
 Alternatively, clone this repository to somewhere in your load path:
@@ -5205,6 +5205,16 @@ If multiple properties with **`key`** are present, only return the first.
 (->> (org-ml-parse-this-headline)
      (org-ml-headline-get-node-property "ID"))
  ;; => "fake"
+
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :ID:       fake
+; :END:
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-node-property "READ_ID"))
+ ;; => nil
 
 ```
 
