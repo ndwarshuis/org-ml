@@ -27,6 +27,7 @@ Then require in your emacs config:
 
 ## Dependencies
 
+- emacs (>= v26.1)
 - org-mode (v9.3)
 - dash
 - s
@@ -7154,9 +7155,14 @@ no examples :(
 ```
 
 
-<!-- 3.0.1 -->
+<!-- 3.0.2 -->
 
 # Changelog
+
+## 3.0.2
+
+- Update dependencies
+- Fix bugs
 
 ## 3.0.1
 
