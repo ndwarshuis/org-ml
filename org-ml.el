@@ -4975,23 +4975,14 @@ integer."
   "Set invisibility for region denoted by BEGIN and END.
 FLAG is a boolean (t for invisible). The overlays applied should
 only be used for block elements."
-  (remove-overlays begin end 'invisible)
-  ;; Code ripped off from `outline-flag-region' with overlay properties set to
+  ;; Code ripped off from `org-flag-region' with overlay properties set to
   ;; match those created in `org-hide-block-toggle'
+  (remove-overlays begin end 'invisible)
   (when flag
     (let ((o (make-overlay begin end nil 'front-advance)))
+      (overlay-put o 'evaporate t)
       (overlay-put o 'invisible 'org-hide-block)
-      (overlay-put o 'isearch-open-invisible
-                   ;; This is the search function from `org-hide-block-toggle'.
-                   ;; There are other choices like
-                   ;; `outline-isearch-open-invisible-function' but this is what
-                   ;; the source function uses
-                   (lambda (ov)
-                     (when (memq ov org-hide-block-overlays)
-                       (setq org-hide-block-overlays
-                             (delq ov org-hide-block-overlays)))
-                     (when (eq (overlay-get ov 'invisible) 'org-hide-block)
-                       (delete-overlay ov)))))))
+      (overlay-put o 'isearch-open-invisible #'delete-overlay))))
 
 (defun org-ml--fold-flag-node (flag node)
   "Set folding of buffer contents in NODE to FLAG."
