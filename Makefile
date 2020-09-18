@@ -6,7 +6,6 @@ all: test
 test:
 	${MAKE} unit
 	${MAKE} compile
-	${MAKE} clean-elc
 
 docs:
 	${CASK} exec ${EMACS} -Q -batch \
@@ -23,6 +22,7 @@ unit:
 compile:
 	${CASK} build
 	${MAKE} unit
+	${MAKE} clean-elc
 
 clean-elc:
 	${CASK} clean-elc
