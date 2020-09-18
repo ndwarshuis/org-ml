@@ -10,7 +10,7 @@ A functional API for org-mode inspired by
 Install from MELPA:
 
 ```
-M-x package-install RET org-sql RET
+M-x package-install RET org-ml RET
 ```
 
 Alternatively, clone this repository to somewhere in your load path:
@@ -27,6 +27,7 @@ Then require in your emacs config:
 
 ## Dependencies
 
+- emacs (>= v26.1)
 - org-mode (v9.3)
 - dash
 - s
@@ -5206,6 +5207,16 @@ If multiple properties with **`key`** are present, only return the first.
      (org-ml-headline-get-node-property "ID"))
  ;; => "fake"
 
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :ID:       fake
+; :END:
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-node-property "READ_ID"))
+ ;; => nil
+
 ```
 
 #### org-ml-headline-set-node-property `(key value headline)`
@@ -7144,9 +7155,14 @@ no examples :(
 ```
 
 
-<!-- 3.0.1 -->
+<!-- 3.0.2 -->
 
 # Changelog
+
+## 3.0.2
+
+- Update dependencies
+- Fix bugs
 
 ## 3.0.1
 
