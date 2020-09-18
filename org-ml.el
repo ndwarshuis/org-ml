@@ -798,7 +798,7 @@ Return value will conform to `org-ml--is-valid-item-bullet'."
 
 (defun org-ml--decode-headline-tags (tags)
   "Return TAGS with `org-archive-tag' removed."
-  (remove org-archive-tag tags))
+  (-map #'substring-no-properties (remove org-archive-tag tags)))
 
 (defun org-ml--encode-statistics-cookie-value (value)
   "Return VALUE as formatted string representing the cookie.
