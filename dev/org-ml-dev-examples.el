@@ -3974,379 +3974,518 @@
                   ":ID:       FAKE"
                   ":END:"))
 
-    (defexamples-content org-ml-headline-get-logbook
+    (defexamples-content org-ml-headline-get-logbook-loose
       nil
       (:buffer "* headline"
-               ":LOGBOOK:"
-               "- Refiled on [2019-01-01 Tue 00:00]"
-               ":END:")
+               "not a log")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-logbook)
-           (-map #'org-ml-to-trimmed-string))
-      => '("- Refiled on [2019-01-01 Tue 00:00]")
-      (:buffer "* headline")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-logbook)
+           (org-ml-headline-get-logbook-loose nil nil)
            (-map #'org-ml-to-trimmed-string))
       => nil
-      :begin-hidden
+
       (:buffer "* headline"
-               "CLOSED: [2019-01-01 Tue]"
-               ":LOGBOOK:"
-               "- Refiled on [2019-01-01 Tue 00:00]"
-               ":END:")
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               "- log1"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               "- log2"
+               ""
+               "- not log")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-logbook)
+           (org-ml-headline-get-logbook-loose nil nil)
            (-map #'org-ml-to-trimmed-string))
-      => '("- Refiled on [2019-01-01 Tue 00:00]")
+      => '("- log1"
+           "CLOCK: [2019-01-01 Tue 00:00]"
+           "- log2")
+
       (:buffer "* headline"
-               "CLOSED: [2019-01-01 Tue]"
-               ":PROPERTIES:"
-               ":ID:       fake"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               "- log1"
+               ":CLOCKS:"
+               "CLOCK: [2019-01-02 Wed 00:00]"
                ":END:"
-               ":LOGBOOK:"
-               "- Refiled on [2019-01-01 Tue 00:00]"
-               ":END:")
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               "- log2"
+               ""
+               "- not log")
+
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-logbook)
+           (org-ml-headline-get-logbook-loose nil nil)
            (-map #'org-ml-to-trimmed-string))
-      => '("- Refiled on [2019-01-01 Tue 00:00]")
-      :end-hidden
-      )
+      => '("- log1")
+
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-logbook-loose nil "CLOCKS")
+           (-map #'org-ml-to-trimmed-string))
+      => '("- log1"
+           "CLOCK: [2019-01-01 Tue 00:00]"
+           "- log2")
+
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":LOGS:"
+               "- log1"
+               ":END:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               "- clock note"
+               ""
+               "- not log")
+
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-logbook-loose nil nil)
+           (-map #'org-ml-to-trimmed-string))
+      => nil
+
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-logbook-loose "LOGS" nil)
+           (-map #'org-ml-to-trimmed-string))
+      => '("CLOCK: [2019-01-01 Tue 00:00]"
+           "- clock note"))
+
+    (defexamples-content org-ml-headline-get-contents
+      nil
+      (:buffer "* headline")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-contents nil nil)
+           (-map #'org-ml-to-trimmed-string))
+      => nil
+
+      (:buffer "* headline"
+               "something")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-contents nil nil)
+           (-map #'org-ml-to-trimmed-string))
+      => '("something")
+
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               "- log1"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               "- log2"
+               ""
+               "- not log")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-contents nil nil)
+           (-map #'org-ml-to-trimmed-string))
+      => '("- not log")
+
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               "- log1"
+               ":CLOCKS:"
+               "CLOCK: [2019-01-02 Wed 00:00]"
+               ":END:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               "- log2"
+               ""
+               "- not log")
+
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-contents nil nil)
+           (-map #'org-ml-to-trimmed-string))
+      => '(":CLOCKS:\nCLOCK: [2019-01-02 Wed 00:00]\n:END:"
+           "CLOCK: [2019-01-01 Tue 00:00]"
+           "- log2\n\n- not log")
+
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-contents nil "CLOCKS")
+           (-map #'org-ml-to-trimmed-string))
+      => '("- not log")
+
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":LOGS:"
+               "- log1"
+               ":END:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               "- clock note"
+               ""
+               "- not log")
+
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-contents nil nil)
+           (-map #'org-ml-to-trimmed-string))
+      => '(":LOGS:\n- log1\n:END:"
+           "CLOCK: [2019-01-01 Tue 00:00]"
+           "- clock note\n\n- not log")
+
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-contents "LOGS" nil)
+           (-map #'org-ml-to-trimmed-string))
+      => '("- not log"))
+
+    ;; (defexamples-content org-ml-headline-get-logbook
+    ;;   nil
+    ;;   (:buffer "* headline"
+    ;;            ":LOGBOOK:"
+    ;;            "- Refiled on [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-get-logbook)
+    ;;        (-map #'org-ml-to-trimmed-string))
+    ;;   => '("- Refiled on [2019-01-01 Tue 00:00]")
+    ;;   (:buffer "* headline")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-get-logbook)
+    ;;        (-map #'org-ml-to-trimmed-string))
+    ;;   => nil
+    ;;   :begin-hidden
+    ;;   (:buffer "* headline"
+    ;;            "CLOSED: [2019-01-01 Tue]"
+    ;;            ":LOGBOOK:"
+    ;;            "- Refiled on [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-get-logbook)
+    ;;        (-map #'org-ml-to-trimmed-string))
+    ;;   => '("- Refiled on [2019-01-01 Tue 00:00]")
+    ;;   (:buffer "* headline"
+    ;;            "CLOSED: [2019-01-01 Tue]"
+    ;;            ":PROPERTIES:"
+    ;;            ":ID:       fake"
+    ;;            ":END:"
+    ;;            ":LOGBOOK:"
+    ;;            "- Refiled on [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-get-logbook)
+    ;;        (-map #'org-ml-to-trimmed-string))
+    ;;   => '("- Refiled on [2019-01-01 Tue 00:00]")
+    ;;   :end-hidden
+    ;;   )
+
+    ;; (defexamples-content org-ml-headline-set-logbook
+    ;;   nil
+    ;;   (:buffer "* headline"
+    ;;            ":LOGBOOK:"
+    ;;            "- Refiled on [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-set-logbook
+    ;;         (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "- note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-set-logbook
+    ;;         (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "- note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            ":LOGBOOK:"
+    ;;            "- Refiled on [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-set-logbook nil)
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => "* headline"
+
+    ;;   :begin-hidden
+
+    ;;   ;; case where planning and prop-drawer present
+
+    ;;   (:buffer "* headline"
+    ;;            "CLOSED: [2019-01-01 Tue]"
+    ;;            ":PROPERTIES:"
+    ;;            ":ID:       fake"
+    ;;            ":END:"
+    ;;            ":LOGBOOK:"
+    ;;            "- Refiled on [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-set-logbook
+    ;;         (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               "CLOSED: [2019-01-01 Tue]"
+    ;;               ":PROPERTIES:"
+    ;;               ":ID:       fake"
+    ;;               ":END:"
+    ;;               ":LOGBOOK:"
+    ;;               "- note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            "CLOSED: [2019-01-01 Tue]"
+    ;;            ":PROPERTIES:"
+    ;;            ":ID:       fake"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-set-logbook
+    ;;         (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               "CLOSED: [2019-01-01 Tue]"
+    ;;               ":PROPERTIES:"
+    ;;               ":ID:       fake"
+    ;;               ":END:"
+    ;;               ":LOGBOOK:"
+    ;;               "- note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            "CLOSED: [2019-01-01 Tue]"
+    ;;            ":PROPERTIES:"
+    ;;            ":ID:       fake"
+    ;;            ":END:"
+    ;;            ":LOGBOOK:"
+    ;;            "- Refiled on [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-set-logbook nil)
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               "CLOSED: [2019-01-01 Tue]"
+    ;;               ":PROPERTIES:"
+    ;;               ":ID:       fake"
+    ;;               ":END:")
+
+    ;;   ;; case where only planning present
+
+    ;;   (:buffer "* headline"
+    ;;            "CLOSED: [2019-01-01 Tue]"
+    ;;            ":LOGBOOK:"
+    ;;            "- Refiled on [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-set-logbook
+    ;;         (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               "CLOSED: [2019-01-01 Tue]"
+    ;;               ":LOGBOOK:"
+    ;;               "- note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            "CLOSED: [2019-01-01 Tue]")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-set-logbook
+    ;;         (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               "CLOSED: [2019-01-01 Tue]"
+    ;;               ":LOGBOOK:"
+    ;;               "- note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            "CLOSED: [2019-01-01 Tue]"
+    ;;            ":LOGBOOK:"
+    ;;            "- Refiled on [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-set-logbook nil)
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               "CLOSED: [2019-01-01 Tue]")
+
+    ;;   ;; case where only prop-drawer present
+
+    ;;   (:buffer "* headline"
+    ;;            ":PROPERTIES:"
+    ;;            ":ID:       fake"
+    ;;            ":END:"
+    ;;            ":LOGBOOK:"
+    ;;            "- Refiled on [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-set-logbook
+    ;;         (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":PROPERTIES:"
+    ;;               ":ID:       fake"
+    ;;               ":END:"
+    ;;               ":LOGBOOK:"
+    ;;               "- note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            ":PROPERTIES:"
+    ;;            ":ID:       fake"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-set-logbook
+    ;;         (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":PROPERTIES:"
+    ;;               ":ID:       fake"
+    ;;               ":END:"
+    ;;               ":LOGBOOK:"
+    ;;               "- note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            ":PROPERTIES:"
+    ;;            ":ID:       fake"
+    ;;            ":END:"
+    ;;            ":LOGBOOK:"
+    ;;            "- Refiled on [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-set-logbook nil)
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":PROPERTIES:"
+    ;;               ":ID:       fake"
+    ;;               ":END:")
+    ;;   :end-hidden)
 
     ;; assume that all cases of property-drawer and planning nodes
     ;; before logbook have been tested
-    (defexamples-content org-ml-headline-map-logbook
-      nil
-      (:buffer "* headline"
-               ":LOGBOOK:"
-               "- Refiled on [2019-01-01 Tue 00:00]"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-map-logbook*
-             (--map
-              (org-ml-match-map* '(:any * timestamp)
-                (org-ml-timestamp-shift 1 'day it) it)
-              it))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "- Refiled on [2019-01-02 Wed 00:00]"
-                  ":END:"))
-
-    (defexamples-content org-ml-headline-set-logbook
-      nil
-      (:buffer "* headline"
-               ":LOGBOOK:"
-               "- Refiled on [2019-01-01 Tue 00:00]"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-logbook
-            (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "- note"
-                  ":END:")
-      (:buffer "* headline")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-logbook
-            (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "- note"
-                  ":END:")
-      (:buffer "* headline"
-               ":LOGBOOK:"
-               "- Refiled on [2019-01-01 Tue 00:00]"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-logbook nil)
-           (org-ml-to-trimmed-string))
-      => "* headline"
-
-      :begin-hidden
-
-      ;; case where planning and prop-drawer present
-
-      (:buffer "* headline"
-               "CLOSED: [2019-01-01 Tue]"
-               ":PROPERTIES:"
-               ":ID:       fake"
-               ":END:"
-               ":LOGBOOK:"
-               "- Refiled on [2019-01-01 Tue 00:00]"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-logbook
-            (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  "CLOSED: [2019-01-01 Tue]"
-                  ":PROPERTIES:"
-                  ":ID:       fake"
-                  ":END:"
-                  ":LOGBOOK:"
-                  "- note"
-                  ":END:")
-      (:buffer "* headline"
-               "CLOSED: [2019-01-01 Tue]"
-               ":PROPERTIES:"
-               ":ID:       fake"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-logbook
-            (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  "CLOSED: [2019-01-01 Tue]"
-                  ":PROPERTIES:"
-                  ":ID:       fake"
-                  ":END:"
-                  ":LOGBOOK:"
-                  "- note"
-                  ":END:")
-      (:buffer "* headline"
-               "CLOSED: [2019-01-01 Tue]"
-               ":PROPERTIES:"
-               ":ID:       fake"
-               ":END:"
-               ":LOGBOOK:"
-               "- Refiled on [2019-01-01 Tue 00:00]"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-logbook nil)
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  "CLOSED: [2019-01-01 Tue]"
-                  ":PROPERTIES:"
-                  ":ID:       fake"
-                  ":END:")
-
-      ;; case where only planning present
-
-      (:buffer "* headline"
-               "CLOSED: [2019-01-01 Tue]"
-               ":LOGBOOK:"
-               "- Refiled on [2019-01-01 Tue 00:00]"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-logbook
-            (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  "CLOSED: [2019-01-01 Tue]"
-                  ":LOGBOOK:"
-                  "- note"
-                  ":END:")
-      (:buffer "* headline"
-               "CLOSED: [2019-01-01 Tue]")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-logbook
-            (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  "CLOSED: [2019-01-01 Tue]"
-                  ":LOGBOOK:"
-                  "- note"
-                  ":END:")
-      (:buffer "* headline"
-               "CLOSED: [2019-01-01 Tue]"
-               ":LOGBOOK:"
-               "- Refiled on [2019-01-01 Tue 00:00]"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-logbook nil)
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  "CLOSED: [2019-01-01 Tue]")
-
-      ;; case where only prop-drawer present
-
-      (:buffer "* headline"
-               ":PROPERTIES:"
-               ":ID:       fake"
-               ":END:"
-               ":LOGBOOK:"
-               "- Refiled on [2019-01-01 Tue 00:00]"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-logbook
-            (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":PROPERTIES:"
-                  ":ID:       fake"
-                  ":END:"
-                  ":LOGBOOK:"
-                  "- note"
-                  ":END:")
-      (:buffer "* headline"
-               ":PROPERTIES:"
-               ":ID:       fake"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-logbook
-            (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":PROPERTIES:"
-                  ":ID:       fake"
-                  ":END:"
-                  ":LOGBOOK:"
-                  "- note"
-                  ":END:")
-      (:buffer "* headline"
-               ":PROPERTIES:"
-               ":ID:       fake"
-               ":END:"
-               ":LOGBOOK:"
-               "- Refiled on [2019-01-01 Tue 00:00]"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-logbook nil)
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":PROPERTIES:"
-                  ":ID:       fake"
-                  ":END:")
-      :end-hidden
-      )
+    ;; (defexamples-content org-ml-headline-map-logbook
+    ;;   nil
+    ;;   (:buffer "* headline"
+    ;;            ":LOGBOOK:"
+    ;;            "- Refiled on [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-map-logbook*
+    ;;          (--map
+    ;;           (org-ml-match-map* '(:any * timestamp)
+    ;;             (org-ml-timestamp-shift 1 'day it) it)
+    ;;           it))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "- Refiled on [2019-01-02 Wed 00:00]"
+    ;;               ":END:"))
 
     ;; since these next three call `org-ml-headline-map-logbook' assume
     ;; that all metadata combinations will work with this and only
     ;; test the simple cases where there is only a logbook
-    (defexamples-content org-ml-headline-logbook-append-entry
-      nil
-      (:buffer "* headline")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-append-entry
-            (org-ml-build-item! :paragraph "note"))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "- note"
-                  ":END:")
-      (:buffer "* headline"
-               ":LOGBOOK:"
-               "- old note"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-append-entry
-            (org-ml-build-item! :paragraph "note"))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "- note"
-                  "- old note"
-                  ":END:")
-      (:buffer "* headline"
-               ":LOGBOOK:"
-               "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-append-entry
-            (org-ml-build-item! :paragraph "note"))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "- note"
-                  "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00"
-                  ":END:"))
+    ;; (defexamples-content org-ml-headline-logbook-append-entry
+    ;;   nil
+    ;;   (:buffer "* headline")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-logbook-append-entry
+    ;;         (org-ml-build-item! :paragraph "note"))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "- note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            ":LOGBOOK:"
+    ;;            "- old note"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-logbook-append-entry
+    ;;         (org-ml-build-item! :paragraph "note"))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "- note"
+    ;;               "- old note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            ":LOGBOOK:"
+    ;;            "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-logbook-append-entry
+    ;;         (org-ml-build-item! :paragraph "note"))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "- note"
+    ;;               "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00"
+    ;;               ":END:"))
 
-    (defexamples-content org-ml-headline-logbook-append-open-clock
-      nil
-      (:buffer "* headline")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-append-open-clock
-            (- 1546300800 (car (current-time-zone))))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "CLOCK: [2019-01-01 Tue 00:00]"
-                  ":END:")
-      (:buffer "* headline"
-               ":LOGBOOK:"
-               "- old note"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-append-open-clock
-            (- 1546300800 (car (current-time-zone))))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "CLOCK: [2019-01-01 Tue 00:00]"
-                  "- old note"
-                  ":END:")
-      (:buffer "* headline"
-               ":LOGBOOK:"
-               "CLOCK: [2019-01-01 Tue 00:00]"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-append-open-clock
-            (- 1546300800 (car (current-time-zone))))
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "CLOCK: [2019-01-01 Tue 00:00]"
-                  "CLOCK: [2019-01-01 Tue 00:00]"
-                  ":END:"))
+    ;; (defexamples-content org-ml-headline-logbook-append-open-clock
+    ;;   nil
+    ;;   (:buffer "* headline")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-logbook-append-open-clock
+    ;;         (- 1546300800 (car (current-time-zone))))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "CLOCK: [2019-01-01 Tue 00:00]"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            ":LOGBOOK:"
+    ;;            "- old note"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-logbook-append-open-clock
+    ;;         (- 1546300800 (car (current-time-zone))))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "CLOCK: [2019-01-01 Tue 00:00]"
+    ;;               "- old note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            ":LOGBOOK:"
+    ;;            "CLOCK: [2019-01-01 Tue 00:00]"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-logbook-append-open-clock
+    ;;         (- 1546300800 (car (current-time-zone))))
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "CLOCK: [2019-01-01 Tue 00:00]"
+    ;;               "CLOCK: [2019-01-01 Tue 00:00]"
+    ;;               ":END:"))
 
-    (defexamples-content org-ml-headline-logbook-close-open-clock
-      nil
-      (:buffer "* headline"
-               ":LOGBOOK:"
-               "- old note"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-close-open-clock
-            (- 1546300800 (car (current-time-zone))) nil)
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "- old note"
-                  ":END:")
-      (:buffer "* headline"
-               ":LOGBOOK:"
-               "CLOCK: [2018-12-31 Mon 00:00]"
-               "- old note"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-close-open-clock
-            (- 1546300800 (car (current-time-zone))) nil)
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
-                  "- old note"
-                  ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-close-open-clock
-            (- 1546300800 (car (current-time-zone))) "new note")
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
-                  "- new note"
-                  "- old note"
-                  ":END:")
-      (:buffer "* headline"
-               ":LOGBOOK:"
-               "CLOCK: [2018-12-31 Mon 00:00]"
-               "CLOCK: [2018-12-31 Mon 00:00]"
-               "- old note"
-               ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-close-open-clock
-            (- 1546300800 (car (current-time-zone))) nil)
-           (org-ml-to-trimmed-string))
-      => (:result "* headline"
-                  ":LOGBOOK:"
-                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
-                  "CLOCK: [2018-12-31 Mon 00:00]"
-                  "- old note"
-                  ":END:")))
+    ;; (defexamples-content org-ml-headline-logbook-close-open-clock
+    ;;   nil
+    ;;   (:buffer "* headline"
+    ;;            ":LOGBOOK:"
+    ;;            "- old note"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-logbook-close-open-clock
+    ;;         (- 1546300800 (car (current-time-zone))) nil)
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "- old note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            ":LOGBOOK:"
+    ;;            "CLOCK: [2018-12-31 Mon 00:00]"
+    ;;            "- old note"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-logbook-close-open-clock
+    ;;         (- 1546300800 (car (current-time-zone))) nil)
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+    ;;               "- old note"
+    ;;               ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-logbook-close-open-clock
+    ;;         (- 1546300800 (car (current-time-zone))) "new note")
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+    ;;               "- new note"
+    ;;               "- old note"
+    ;;               ":END:")
+    ;;   (:buffer "* headline"
+    ;;            ":LOGBOOK:"
+    ;;            "CLOCK: [2018-12-31 Mon 00:00]"
+    ;;            "CLOCK: [2018-12-31 Mon 00:00]"
+    ;;            "- old note"
+    ;;            ":END:")
+    ;;   (->> (org-ml-parse-this-headline)
+    ;;        (org-ml-headline-logbook-close-open-clock
+    ;;         (- 1546300800 (car (current-time-zone))) nil)
+    ;;        (org-ml-to-trimmed-string))
+    ;;   => (:result "* headline"
+    ;;               ":LOGBOOK:"
+    ;;               "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+    ;;               "CLOCK: [2018-12-31 Mon 00:00]"
+    ;;               "- old note"
+    ;;               ":END:"))
+    )
 
   (def-example-subgroup "Headline (misc)"
     nil
