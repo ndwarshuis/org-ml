@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 3.0.2
+;; Version: 4.0.0
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -798,7 +798,7 @@ Return value will conform to `org-ml--is-valid-item-bullet'."
 
 (defun org-ml--decode-headline-tags (tags)
   "Return TAGS with `org-archive-tag' removed."
-  (remove org-archive-tag tags))
+  (-map #'substring-no-properties (remove org-archive-tag tags)))
 
 (defun org-ml--encode-statistics-cookie-value (value)
   "Return VALUE as formatted string representing the cookie.
@@ -1862,7 +1862,13 @@ because these retain parent references which makes the node a circular
 list. None of the builder functions add parent references, so
 `copy-tree' will be a faster alternative to this function."
   (let ((print-circle t))
-    (->> node (format "%S") (read))))
+    (read (format "%S" node))))
+
+(defun org-ml-clone-node-n (n node)
+  "Like `org-ml-clone-node' but make N copies of NODE."
+  (let ((ret))
+    (--dotimes n (!cons (org-ml-clone-node node) ret))
+    ret))
 
 (org-ml--defun-kw org-ml-build-timestamp-diary (form &key post-blank)
   "Return a new diary-sexp timestamp node from FORM.
@@ -2641,6 +2647,17 @@ and properties that may be used with this function."
      (org-ml--format-alist-operations)
      (org-ml--append-documentation 'org-ml-plist-put-property))
 
+(defun org-ml-get-parents (node)
+  "Return parents of NODE as a list.
+The toplevel parent will be the left-most member, and NODE itself
+will be the rightmost member."
+  (cl-labels
+      ((get-parents
+        (acc node)
+        (if (or (null node) (eq 'org-data (car node))) acc
+          (get-parents (cons node acc) (org-ml-get-property :parent node)))))
+    (get-parents nil node)))
+
 ;;; object nodes
 ;;
 ;; entity
@@ -3293,94 +3310,214 @@ a modified node-property value."
 
 ;; logbook
 
-(defun org-ml-headline-get-logbook (headline)
+(defun org-ml--node-is-drawer-with-name (drawer-name node)
+  "Return t if NODE is a drawer with DRAWER-NAME."
+  (and (org-ml-is-type 'drawer node)
+       (equal drawer-name (org-ml-get-property :drawer-name node))))
+
+(defun org-ml--node-is-drawer-with-names (drawer-names node)
+  "Return t if NODE is a drawer with one of DRAWER-NAMES."
+  (and (org-ml-is-type 'drawer node)
+       (member (org-ml-get-property :drawer-name node) drawer-names)))
+
+(defun org-ml--headline-logbook-node-has-blank (node)
+  "Return t if a logbook item has a blank line in it."
+  (cl-case (org-ml-get-type node)
+    ((clock drawer)
+     (and (< 0 (org-ml-get-property :post-blank node)) t))
+    (plain-list
+     (->> (org-ml-get-children node)
+          (--any? (< 0 (org-ml-get-property :post-blank it)))))
+    (t
+     (error "Invalid type"))))
+
+(defun org-ml--compile-logbook-loose-predicate (drawer-names)
+  "Return a predicate function to match logbook nodes.
+DRAWER-NAMES is a list of drawer names which may match the
+drawers that might be part of the logbook."
+  (let ((drawer-pred-form (-some--> drawer-names
+                            (if (= 1 (length it))
+                                `(org-ml--node-is-drawer-with-name ,(car it) it)
+                              `(org-ml--node-is-drawer-with-names ',it it)))))
+    (--> '(org-ml-is-any-type '(plain-list clock) it)
+         (if drawer-pred-form `(or ,it ,drawer-pred-form) it)
+         `(lambda (it) ,it))))
+
+;; TODO this will return multiple drawers if they have the same name
+(defun org-ml--headline-split-logbook-and-contents (drawer-names children)
+  "Return CHILDREN split by logbook and the remainder.
+DRAWER-NAMES is a list of drawer names which may match the
+drawers that might be part of the logbook."
+  (cl-flet
+      ((cons-maybe
+        (a b)
+        (if a (cons a b) b))
+       (snoc-maybe
+        (a b)
+        (if b (-snoc a b) a)))
+    (-let* ((pred (org-ml--compile-logbook-loose-predicate drawer-names))
+            ((logbook (unknown . content))
+             ;; split after last contiguous logbook nodes without blank lines
+             (--split-with (and (funcall pred it)
+                                (not (org-ml--headline-logbook-node-has-blank it)))
+                           children)))
+      ;; if unknown is not a valid logbook node, add it to the contents
+      (if (not (funcall pred unknown))
+          (list logbook (cons-maybe unknown content))
+        ;; if unknown is a logbook node but not a plain-list, add to logbook
+        (if (not (org-ml-is-type 'plain-list unknown))
+            (list (snoc-maybe logbook unknown) content)
+          ;; if unknown is a logbook node and a plain-list, split the plain list
+          ;; before the first blank
+          (-let ((unknown-items (org-ml-get-children unknown)))
+            (-if-let (i (--find-index (< 0 (org-ml-get-property :post-blank it))
+                                      unknown-items))
+                (-let* (((logbook-items content-items) (-split-at (1+ i) unknown-items))
+                        (logbook-plain-list (-some->> logbook-items
+                                              (apply #'org-ml-build-plain-list)))
+                        (content-plain-list (-some->> content-items
+                                              (apply #'org-ml-build-plain-list)))
+                        (logbook* (snoc-maybe logbook logbook-plain-list))
+                        (content* (cons-maybe content-plain-list content)))
+                  (list logbook* content*))
+              (list logbook (cons-maybe unknown content)))))))))
+
+(defun org-ml--drop-node-type (type children)
+  "Return cdr of CHILDREN if car is TYPE or return unchanged."
+  (if (org-ml-is-type type (car children)) (cdr children) children))
+
+(defun org-ml-headline-get-logbook-loose (log-into-drawer clock-into-drawer headline)
+  "Return loose logbook nodes of HEADLINE as a list.
+
+\"Loose entries\" will be defined here as logbook entries that
+are not in a drawer according to the variables
+`org-log-into-drawer' and `org-clock-into-drawer'. Org-mode does
+not define an exact specification for what separates \"the
+logbook\" from the rest of the headline, therefore this function
+will make several (possibly error-prone) assumptions:
+- the logbook always starts at the beginning of a headline after
+  the planning and property drawers if they exist.
+- the logbook ends when a node that is not a plain-list, clock,
+  or drawer named according to `org-log-into-drawer' or
+  `org-clock-into-drawer' is encountered, or when a blank line is
+  encountered (whichever occurs early in the buffer)
+
+LOG-INTO-DRAWER and CLOCK-INTO-DRAWER are variables corresponding
+to `org-log-into-drawer' and `org-clock-into-drawer' and may be
+strings or nil (this function is totally stateless and thus does
+not reference `org-log-into-drawer' or `org-clock-into-drawer').
+Note that this function only uses these parameters to determine
+the boundaries of the logbook and does not actually return the
+contents of the named drawers; use
+`org-ml-headline-get-logbook-drawer' for these."
+  (cl-flet
+      ((filter-drawers-maybe
+        (drawer-names children)
+        (if (not drawer-names) children
+          (--remove (org-ml--node-is-drawer-with-names drawer-names it) children))))
+    (let ((drawer-names (-uniq (-non-nil (list clock-into-drawer log-into-drawer)))))
+      (-some->> (org-ml-headline-get-section headline)
+        (org-ml--drop-node-type 'planning)
+        (org-ml--drop-node-type 'property-drawer)
+        (org-ml--headline-split-logbook-and-contents drawer-names)
+        (car)
+        (filter-drawers-maybe drawer-names)))))
+
+(defun org-ml-headline-get-contents (log-into-drawer clock-into-drawer headline)
+  "Return all non-metadata nodes of HEADLINE as a list.
+
+Non-metadata includes all nodes in HEADLINE's section that is not
+a planning node, property-drawer node, or part of the logbook (eg
+what would be returned by `org-ml-headline-get-logbook-loose'.
+
+See `org-ml-headline-get-logbook-loose' for the meaning of
+LOG-INTO-DRAWER and CLOCK-INTO-DRAWER. This function makes the
+same assumptions as this reference."
+  (let ((drawer-names (-uniq (-non-nil (list log-into-drawer clock-into-drawer)))))
+    (-some->> (org-ml-headline-get-section headline)
+      (org-ml--drop-node-type 'planning)
+      (org-ml--drop-node-type 'property-drawer)
+      (org-ml--headline-split-logbook-and-contents drawer-names)
+      (cadr))))
+
+(defun org-ml-headline-get-logbook-drawer (name other-name headline)
   "Return the children of the logbook drawer of HEADLINE.
-This function assumes that the logbook entries are in a drawer
-immediately after planning and/or property-drawer nodes named
-via symbol `org-log-into-drawer'. If this is nil, always
-return nil."
-  ;; TODO this will not inherit the log-into-drawer property
-  (-when-let (drawer-name (org-log-into-drawer))
-    (-some-->
-     (org-ml-headline-get-section headline)
-     (if (org-ml-is-type 'planning (car it)) (cdr it) it)
-     (if (org-ml-is-type 'property-drawer (car it)) (cdr it) it)
-     (car it)
-     (and (org-ml-is-type 'drawer it)
-          (equal drawer-name (org-ml-get-property :drawer-name it))
-          (org-ml-get-children it)))))
 
-(defun org-ml-headline-set-logbook (children headline)
+NAME is the name of the drawer to be set (a string), and
+OTHER-NAME is the name of the second logbook drawer (if
+any) which may be nil or a string. If drawer with NAME appears
+after the drawer with OTHER-NAME, OTHER-NAME must be given so
+that both drawers are considered as part of the logbook."
+  (let ((names (-uniq (-non-nil (list name other-name)))))
+    (-some->> (org-ml-headline-get-section headline)
+      (org-ml--drop-node-type 'planning)
+      (org-ml--drop-node-type 'property-drawer)
+      (org-ml--headline-split-logbook-and-contents names)
+      (car)
+      (--first (org-ml--node-is-drawer-with-name name it))
+      (org-ml-get-children))))
+
+(defun org-ml-headline-set-logbook-drawer (name other-name children headline)
   "Return HEADLINE with logbook drawer filled with CHILDREN.
-CHILDREN must be a list of plain-list and/or clock nodes.
 
-This function assumes that the logbook entries will be stored in
-a drawer immediately after planning and/or property-drawer nodes
-named via symbol `org-log-into-drawer'. If this is nil, return
-HEADLINE unmodified."
+NAME and OTHER-NAME have the same meaning as those in
+`org-ml-headline-get-logbook-drawer'."
   (unless (--all? (org-ml-is-any-type '(plain-list clock) it) children)
     (org-ml--arg-error
      "Logbook must only contain clock or plain-list nodes. Got %s"
      children))
-  (-if-let (drawer-name (org-log-into-drawer))
-      (cl-flet
-          ((is-logbook
-            (node)
-            (and (org-ml-is-type 'drawer node)
-                 (equal drawer-name (org-ml-get-property :drawer-name node)))))
-        (if children
-            (org-ml-headline-map-section*
-              (let ((lb (apply #'org-ml-build-drawer drawer-name children)))
-                (if (not it) (list lb)
-                  (-let (((n0 n1 n2) (-take 3 it)))
-                    (cond
-                     ((and (org-ml-is-type 'planning n0)
-                           (org-ml-is-type 'property-drawer n1)
-                           (is-logbook n2))
-                      (-replace-at 2 lb it))
-                     ((and (org-ml-is-type 'planning n0)
-                           (org-ml-is-type 'property-drawer n1))
-                      (-insert-at 2 lb it))
-                     ((and (or (org-ml-is-type 'planning n0)
-                               (org-ml-is-type 'property-drawer n0))
-                           (is-logbook n1))
-                      (-replace-at 1 lb it))
-                     ((or (org-ml-is-type 'planning n0)
-                          (org-ml-is-type 'property-drawer n0))
-                      (-insert-at 1 lb it))
-                     ((is-logbook n0)
-                      (-replace-at 0 lb it))
-                     (t
-                      (cons lb it))))))
-              headline)
-          (org-ml-headline-map-section*
-            ;; TODO make this more specific
-            (-remove-first #'is-logbook it)
-            headline)))
-    headline))
+  (cl-labels
+      ((set-logbook
+        (lb children)
+        (-if-let (i (--find-index (org-ml--node-is-drawer-with-name name it)
+                                  children))
+            (if lb (-replace-at i lb children) (-remove-at i children))
+          (if lb (cons lb children) children)))
+       (set-content
+        (lb children)
+        (-let (((l c) (-> (list name other-name)
+                          (-non-nil)
+                          (-uniq)
+                          (org-ml--headline-split-logbook-and-contents children))))
+          (append (set-logbook lb l) c))))
+    (org-ml-headline-map-section*
+      (let ((lb (-some->> children
+                  (apply #'org-ml-build-drawer name))))
+        (if (not it) (-some-> lb (list))
+          (-let* (((all &as n0 . rest*) it)
+                  ((n1-rest &as n1 . rest) rest*))
+            (cond
+             ((and (org-ml-is-type 'planning n0)
+                   (org-ml-is-type 'property-drawer n1))
+              (->> (set-content lb rest)
+                   (cons n1)
+                   (cons n0)))
+             ((org-ml-is-any-type '(planning property-drawer) n0)
+              (->> (set-content lb n1-rest)
+                   (cons n0)))
+             (t
+              (set-content lb all))))))
+      headline)))
 
-(org-ml--defun* org-ml-headline-map-logbook (fun headline)
+(org-ml--defun* org-ml-headline-map-logbook-drawer (name other-name fun headline)
   "Return HEADLINE node with property value matching KEY modified by FUN.
 
 FUN is a unary function that takes a list of child nodes from the
 logbook value and returns a modified list of child nodes.
 
-This function assumes that the logbook entries will be stored in a
-drawer immediately after planning and/or property-drawer nodes named
-via `org-log-into-drawer'. If `org-log-into-drawer' is nil, return
-HEADLINE unmodified."
-  (if (org-log-into-drawer)
-      (--> (org-ml-headline-get-logbook headline)
-           (funcall fun it)
-           (org-ml-headline-set-logbook it headline))
-    headline))
+NAME and OTHER-NAME have the same meaning as those in
+`org-ml-headline-get-logbook-drawer'."
+  (declare (indent 2))
+  (--> (org-ml-headline-get-logbook-drawer name other-name headline)
+       (funcall fun it)
+       (org-ml-headline-set-logbook-drawer name other-name it headline)))
 
-(defun org-ml-headline-logbook-append-entry (item headline)
+(defun org-ml-headline-logbook-drawer-append-entry (name other-name item headline)
   "Return HEADLINE with ITEM node appended to the front of its logbook.
 
-The same assumptions and restrictions for `org-ml-headline-map-logbook'
-apply here."
-  (org-ml-headline-map-logbook*
+NAME and OTHER-NAME have the same meaning as those in
+`org-ml-headline-get-logbook-drawer'."
+  (org-ml-headline-map-logbook-drawer* name other-name
     ;; if logbook starts with a plain-list, add item to front of
     ;; said plain list
     (if (org-ml-is-type 'plain-list (car it))
@@ -3389,25 +3526,31 @@ apply here."
       (cons (org-ml-build-plain-list item) it))
     headline))
 
-(defun org-ml-headline-logbook-append-open-clock (unixtime headline)
+(defun org-ml-headline-logbook-drawer-append-open-clock (name other-name unixtime headline)
   "Return HEADLINE with an open clock append to front of its logbook.
 UNIXTIME is an integer that will be used to build the clock node.
 
-This does the functional equivalent of `org-clock-in' on the logbook."
-  (org-ml-headline-map-logbook*
+This does the functional equivalent of `org-clock-in' on the logbook.
+
+NAME and OTHER-NAME have the same meaning as those in
+`org-ml-headline-get-logbook-drawer'."
+  (org-ml-headline-map-logbook-drawer* name other-name
     (-> (org-ml-unixtime-to-time-long unixtime)
         (org-ml-build-clock!)
         (cons it))
     headline))
 
-(defun org-ml-headline-logbook-close-open-clock (unixtime note headline)
+(defun org-ml-headline-logbook-drawer-close-open-clock (name other-name unixtime note headline)
   "Return HEADLINE with the first clock closed.
 
 The clock will be closed to UNIXTIME, and NOTE will be appended
 as a clock out note if supplied (as string). If no open clocks
 are found, return HEADLINE unmodified.
 
-This does the functional equivalent of `org-clock-out' on the logbook."
+This does the functional equivalent of `org-clock-out' on the logbook.
+
+NAME and OTHER-NAME have the same meaning as those in
+`org-ml-headline-get-logbook-drawer'."
   (cl-flet
       ((close-clock
         (index logbook-children)
@@ -3434,7 +3577,7 @@ This does the functional equivalent of `org-clock-out' on the logbook."
                   logbook-children)
               (-insert-at next (org-ml-build-plain-list item)
                           logbook-children))))))
-    (org-ml-headline-map-logbook*
+    (org-ml-headline-map-logbook-drawer* name other-name
       (-if-let (i (--find-index (and (org-ml-is-type 'clock it)
                                      (org-ml-clock-is-running it))
                                 it))
@@ -3442,19 +3585,15 @@ This does the functional equivalent of `org-clock-out' on the logbook."
         it)
       headline)))
 
+;; misc
+
 (defun org-ml-headline-get-path (headline)
   "Return tree path of HEADLINE node.
 
 The return value is a list of headline titles (including that from
 HEADLINE) leading to the root node."
-  (cl-labels
-      ((get-path
-        (hl)
-        (let ((title (org-ml--get-property-nocheck :raw-value hl)))
-          (-if-let (parent (org-ml--get-parent-headline hl))
-              (cons title (get-path parent))
-            (list title)))))
-    (reverse (get-path headline))))
+  (->> (org-ml-get-parents headline)
+       (--map (org-ml-get-property :raw-value it))))
 
 (defun org-ml-headline-update-item-statistics (headline)
   "Return HEADLINE node with updated statistics cookie via items.
@@ -4975,23 +5114,14 @@ integer."
   "Set invisibility for region denoted by BEGIN and END.
 FLAG is a boolean (t for invisible). The overlays applied should
 only be used for block elements."
-  (remove-overlays begin end 'invisible)
-  ;; Code ripped off from `outline-flag-region' with overlay properties set to
+  ;; Code ripped off from `org-flag-region' with overlay properties set to
   ;; match those created in `org-hide-block-toggle'
+  (remove-overlays begin end 'invisible)
   (when flag
     (let ((o (make-overlay begin end nil 'front-advance)))
+      (overlay-put o 'evaporate t)
       (overlay-put o 'invisible 'org-hide-block)
-      (overlay-put o 'isearch-open-invisible
-                   ;; This is the search function from `org-hide-block-toggle'.
-                   ;; There are other choices like
-                   ;; `outline-isearch-open-invisible-function' but this is what
-                   ;; the source function uses
-                   (lambda (ov)
-                     (when (memq ov org-hide-block-overlays)
-                       (setq org-hide-block-overlays
-                             (delq ov org-hide-block-overlays)))
-                     (when (eq (overlay-get ov 'invisible) 'org-hide-block)
-                       (delete-overlay ov)))))))
+      (overlay-put o 'isearch-open-invisible #'delete-overlay))))
 
 (defun org-ml--fold-flag-node (flag node)
   "Set folding of buffer contents in NODE to FLAG."

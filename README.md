@@ -270,6 +270,7 @@ Build new nodes.
 ### Miscellaneous Builders
 
 * [org-ml-clone-node](#org-ml-clone-node-node) `(node)`
+* [org-ml-clone-node-n](#org-ml-clone-node-n-n-node) `(n node)`
 * [org-ml-build-secondary-string!](#org-ml-build-secondary-string-string) `(string)`
 * [org-ml-build-table-row-hline](#org-ml-build-table-row-hline-key-post-blank) `(&key post-blank)`
 * [org-ml-build-timestamp-diary](#org-ml-build-timestamp-diary-form-key-post-blank) `(form &key post-blank)`
@@ -338,6 +339,7 @@ Set, get, and map properties of nodes.
 * [org-ml-remove-from-property](#org-ml-remove-from-property-prop-string-node) `(prop string node)`
 * [org-ml-plist-put-property](#org-ml-plist-put-property-prop-key-value-node) `(prop key value node)`
 * [org-ml-plist-remove-property](#org-ml-plist-remove-property-prop-key-node) `(prop key node)`
+* [org-ml-get-parents](#org-ml-get-parents-node) `(node)`
 
 ### Clock
 
@@ -455,12 +457,14 @@ Set, get, and map the children of branch nodes.
 * [org-ml-headline-get-node-property](#org-ml-headline-get-node-property-key-headline) `(key headline)`
 * [org-ml-headline-set-node-property](#org-ml-headline-set-node-property-key-value-headline) `(key value headline)`
 * [org-ml-headline-map-node-property](#org-ml-headline-map-node-property-key-fun-headline) `(key fun headline)`
-* [org-ml-headline-get-logbook](#org-ml-headline-get-logbook-headline) `(headline)`
-* [org-ml-headline-map-logbook](#org-ml-headline-map-logbook-fun-headline) `(fun headline)`
-* [org-ml-headline-set-logbook](#org-ml-headline-set-logbook-children-headline) `(children headline)`
-* [org-ml-headline-logbook-append-entry](#org-ml-headline-logbook-append-entry-item-headline) `(item headline)`
-* [org-ml-headline-logbook-append-open-clock](#org-ml-headline-logbook-append-open-clock-unixtime-headline) `(unixtime headline)`
-* [org-ml-headline-logbook-close-open-clock](#org-ml-headline-logbook-close-open-clock-unixtime-note-headline) `(unixtime note headline)`
+* [org-ml-headline-get-logbook-loose](#org-ml-headline-get-logbook-loose-log-into-drawer-clock-into-drawer-headline) `(log-into-drawer clock-into-drawer headline)`
+* [org-ml-headline-get-contents](#org-ml-headline-get-contents-log-into-drawer-clock-into-drawer-headline) `(log-into-drawer clock-into-drawer headline)`
+* [org-ml-headline-get-logbook-drawer](#org-ml-headline-get-logbook-drawer-name-other-name-headline) `(name other-name headline)`
+* [org-ml-headline-set-logbook-drawer](#org-ml-headline-set-logbook-drawer-name-other-name-children-headline) `(name other-name children headline)`
+* [org-ml-headline-map-logbook-drawer](#org-ml-headline-map-logbook-drawer-name-other-name-fun-headline) `(name other-name fun headline)`
+* [org-ml-headline-logbook-drawer-append-entry](#org-ml-headline-logbook-drawer-append-entry-name-other-name-item-headline) `(name other-name item headline)`
+* [org-ml-headline-logbook-drawer-append-open-clock](#org-ml-headline-logbook-drawer-append-open-clock-name-other-name-unixtime-headline) `(name other-name unixtime headline)`
+* [org-ml-headline-logbook-drawer-close-open-clock](#org-ml-headline-logbook-drawer-close-open-clock-name-other-name-unixtime-note-headline) `(name other-name unixtime note headline)`
 
 ### Headline (misc)
 
@@ -2181,6 +2185,32 @@ list. None of the builder functions add parent references, so
 
 ```
 
+#### org-ml-clone-node-n `(n node)`
+
+Like [`org-ml-clone-node`](#org-ml-clone-node-node) but make **`n`** copies of **`node`**.
+
+```el
+;; Given the following contents:
+; dolly
+
+(-let* ((node1 (org-ml-parse-this-element))
+	((node2 node3)
+	 (org-ml-clone-node-n 2 node1)))
+  (or (equal node1 node2)
+      (equal node1 node3)
+      (equal node2 node3)))
+ ;; => t
+
+(-let* ((node1 (org-ml-parse-this-element))
+	((node2 node3)
+	 (org-ml-clone-node-n 2 node1)))
+  (or (eq node1 node2)
+      (eq node1 node3)
+      (eq node2 node3)))
+ ;; => nil
+
+```
+
 #### org-ml-build-secondary-string! `(string)`
 
 Return a secondary string (list of object nodes) from **`string`**.
@@ -3464,6 +3494,34 @@ and properties that may be used with this function.
      (org-ml-plist-remove-property :arguments :cache)
      (org-ml-to-trimmed-string))
 Error
+
+```
+
+#### org-ml-get-parents `(node)`
+
+Return parents of **`node`** as a list.
+The toplevel parent will be the left-most member, and **`node`** itself
+will be the rightmost member.
+
+```el
+;; Given the following contents:
+; * one
+; ** two
+; *** three
+
+(->> (org-ml-parse-this-subtree)
+     (org-ml-get-parents)
+     (--map (org-ml-get-property :begin it)))
+ ;; => '(1)
+
+(->> (org-ml-parse-this-subtree)
+     (org-ml-headline-get-subheadlines)
+     (car)
+     (org-ml-headline-get-subheadlines)
+     (car)
+     (org-ml-get-parents)
+     (--map (org-ml-get-property :begin it)))
+ ;; => '(1 7 14)
 
 ```
 
@@ -5282,13 +5340,207 @@ a modified node-property value.
 
 ```
 
-#### org-ml-headline-get-logbook `(headline)`
+#### org-ml-headline-get-logbook-loose `(log-into-drawer clock-into-drawer headline)`
+
+Return loose logbook nodes of **`headline`** as a list.
+
+`"Loose entries"` will be defined here as logbook entries that
+are not in a drawer according to the variables
+`org-log-into-drawer` and `org-clock-into-drawer`. Org-mode does
+not define an exact specification for what separates `"the
+logbook"` from the rest of the headline, therefore this function
+will make several (possibly error-prone) assumptions:
+- the logbook always starts at the beginning of a headline after
+    the planning and property drawers if they exist.
+- the logbook ends when a node that is not a plain-list, clock,
+    or drawer named according to `org-log-into-drawer` or
+    `org-clock-into-drawer` is encountered, or when a blank line is
+    encountered (whichever occurs early in the buffer)
+
+**`log-into-drawer`** and **`clock-into-drawer`** are variables corresponding
+to `org-log-into-drawer` and `org-clock-into-drawer` and may be
+strings or nil (this function is totally stateless and thus does
+not reference `org-log-into-drawer` or `org-clock-into-drawer`).
+Note that this function only uses these parameters to determine
+the boundaries of the logbook and does not actually return the
+contents of the named drawers; use
+[`org-ml-headline-get-logbook-drawer`](#org-ml-headline-get-logbook-drawer-name-other-name-headline) for these.
+
+```el
+;; Given the following contents:
+; * headline
+; not a log
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-logbook-loose nil nil)
+     (-map #'org-ml-to-trimmed-string))
+ ;; => nil
+
+;; Given the following contents:
+; * headline
+; CLOSED: [2019-01-01 Tue 00:00]
+; - log1
+; CLOCK: [2019-01-01 Tue 00:00]
+; - log2
+; 
+; - not log
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-logbook-loose nil nil)
+     (-map #'org-ml-to-trimmed-string))
+ ;; => '("- log1" "CLOCK: [2019-01-01 Tue 00:00]" "- log2")
+
+;; Given the following contents:
+; * headline
+; CLOSED: [2019-01-01 Tue 00:00]
+; - log1
+; :CLOCKS:
+; CLOCK: [2019-01-02 Wed 00:00]
+; :END:
+; CLOCK: [2019-01-01 Tue 00:00]
+; - log2
+; 
+; - not log
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-logbook-loose nil nil)
+     (-map #'org-ml-to-trimmed-string))
+ ;; => '("- log1")
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-logbook-loose nil "CLOCKS")
+     (-map #'org-ml-to-trimmed-string))
+ ;; => '("- log1" "CLOCK: [2019-01-01 Tue 00:00]" "- log2")
+
+;; Given the following contents:
+; * headline
+; CLOSED: [2019-01-01 Tue 00:00]
+; :LOGS:
+; - log1
+; :END:
+; CLOCK: [2019-01-01 Tue 00:00]
+; - clock note
+; 
+; - not log
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-logbook-loose nil nil)
+     (-map #'org-ml-to-trimmed-string))
+ ;; => nil
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-logbook-loose "LOGS" nil)
+     (-map #'org-ml-to-trimmed-string))
+ ;; => '("CLOCK: [2019-01-01 Tue 00:00]" "- clock note")
+
+```
+
+#### org-ml-headline-get-contents `(log-into-drawer clock-into-drawer headline)`
+
+Return all non-metadata nodes of **`headline`** as a list.
+
+Non-metadata includes all nodes in **`headline`**`s section that is not
+a planning node, property-drawer node, or part of the logbook (eg
+what would be returned by [`org-ml-headline-get-logbook-loose`](#org-ml-headline-get-logbook-loose-log-into-drawer-clock-into-drawer-headline).
+
+See [`org-ml-headline-get-logbook-loose`](#org-ml-headline-get-logbook-loose-log-into-drawer-clock-into-drawer-headline) for the meaning of
+**`log-into-drawer`** and **`clock-into-drawer`**. This function makes the
+same assumptions as this reference.
+
+```el
+;; Given the following contents:
+; * headline
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-contents nil nil)
+     (-map #'org-ml-to-trimmed-string))
+ ;; => nil
+
+;; Given the following contents:
+; * headline
+; something
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-contents nil nil)
+     (-map #'org-ml-to-trimmed-string))
+ ;; => '("something")
+
+;; Given the following contents:
+; * headline
+; CLOSED: [2019-01-01 Tue 00:00]
+; - log1
+; CLOCK: [2019-01-01 Tue 00:00]
+; - log2
+; 
+; - not log
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-contents nil nil)
+     (-map #'org-ml-to-trimmed-string))
+ ;; => '("- not log")
+
+;; Given the following contents:
+; * headline
+; CLOSED: [2019-01-01 Tue 00:00]
+; - log1
+; :CLOCKS:
+; CLOCK: [2019-01-02 Wed 00:00]
+; :END:
+; CLOCK: [2019-01-01 Tue 00:00]
+; - log2
+; 
+; - not log
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-contents nil nil)
+     (-map #'org-ml-to-trimmed-string))
+ ;; => '(":CLOCKS:
+ ;     CLOCK: [2019-01-02 Wed 00:00]
+ ;     :END:" "CLOCK: [2019-01-01 Tue 00:00]" "- log2
+ ;     
+ ;     - not log")
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-contents nil "CLOCKS")
+     (-map #'org-ml-to-trimmed-string))
+ ;; => '("- not log")
+
+;; Given the following contents:
+; * headline
+; CLOSED: [2019-01-01 Tue 00:00]
+; :LOGS:
+; - log1
+; :END:
+; CLOCK: [2019-01-01 Tue 00:00]
+; - clock note
+; 
+; - not log
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-contents nil nil)
+     (-map #'org-ml-to-trimmed-string))
+ ;; => '(":LOGS:
+ ;     - log1
+ ;     :END:" "CLOCK: [2019-01-01 Tue 00:00]" "- clock note
+ ;     
+ ;     - not log")
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-get-contents "LOGS" nil)
+     (-map #'org-ml-to-trimmed-string))
+ ;; => '("- not log")
+
+```
+
+#### org-ml-headline-get-logbook-drawer `(name other-name headline)`
 
 Return the children of the logbook drawer of **`headline`**.
-This function assumes that the logbook entries are in a drawer
-immediately after planning and/or property-drawer nodes named
-via symbol `org-log-into-drawer`. If this is nil, always
-return nil.
+
+**`name`** is the name of the drawer to be set (a string), and
+**`other-name`** is the name of the second logbook drawer (if
+any) which may be nil or a string. If drawer with **`name`** appears
+after the drawer with **`other-name`**, **`other-name`** must be given so
+that both drawers are considered as part of the logbook.
 
 ```el
 ;; Given the following contents:
@@ -5298,7 +5550,7 @@ return nil.
 ; :END:
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-get-logbook)
+     (org-ml-headline-get-logbook-drawer "LOGBOOK" nil)
      (-map #'org-ml-to-trimmed-string))
  ;; => '("- Refiled on [2019-01-01 Tue 00:00]")
 
@@ -5306,23 +5558,18 @@ return nil.
 ; * headline
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-get-logbook)
+     (org-ml-headline-get-logbook-drawer "LOGBOOK" nil)
      (-map #'org-ml-to-trimmed-string))
  ;; => nil
 
 ```
 
-#### org-ml-headline-map-logbook `(fun headline)`
+#### org-ml-headline-set-logbook-drawer `(name other-name children headline)`
 
-Return **`headline`** node with property value matching `key` modified by **`fun`**.
+Return **`headline`** with logbook drawer filled with **`children`**.
 
-**`fun`** is a unary function that takes a list of child nodes from the
-logbook value and returns a modified list of child nodes.
-
-This function assumes that the logbook entries will be stored in a
-drawer immediately after planning and/or property-drawer nodes named
-via `org-log-into-drawer`. If `org-log-into-drawer` is nil, return
-**`headline`** unmodified.
+**`name`** and **`other-name`** have the same meaning as those in
+[`org-ml-headline-get-logbook-drawer`](#org-ml-headline-get-logbook-drawer-name-other-name-headline).
 
 ```el
 ;; Given the following contents:
@@ -5332,10 +5579,59 @@ via `org-log-into-drawer`. If `org-log-into-drawer` is nil, return
 ; :END:
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-map-logbook* (--map (org-ml-match-map* '(:any * timestamp)
-					    (org-ml-timestamp-shift 1 'day it)
-					    it)
-					  it))
+     (org-ml-headline-set-logbook-drawer "LOGBOOK" nil (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
+     (org-ml-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-set-logbook-drawer "LOGBOOK" nil (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
+     (org-ml-to-trimmed-string))
+ ;; => "* headline
+ ;      :LOGBOOK:
+ ;      - note
+ ;      :END:"
+
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - Refiled on [2019-01-01 Tue 00:00]
+; :END:
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-set-logbook-drawer "LOGBOOK" nil nil)
+     (org-ml-to-trimmed-string))
+ ;; => "* headline"
+
+```
+
+#### org-ml-headline-map-logbook-drawer `(name other-name fun headline)`
+
+Return **`headline`** node with property value matching `key` modified by **`fun`**.
+
+**`fun`** is a unary function that takes a list of child nodes from the
+logbook value and returns a modified list of child nodes.
+
+**`name`** and **`other-name`** have the same meaning as those in
+[`org-ml-headline-get-logbook-drawer`](#org-ml-headline-get-logbook-drawer-name-other-name-headline).
+
+```el
+;; Given the following contents:
+; * headline
+; :LOGBOOK:
+; - Refiled on [2019-01-01 Tue 00:00]
+; :END:
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-map-logbook-drawer* "LOGBOOK" nil (--map (org-ml-match-map* '(:any * timestamp)
+								 (org-ml-timestamp-shift 1 'day it)
+								 it)
+							       it))
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :LOGBOOK:
@@ -5344,68 +5640,19 @@ via `org-log-into-drawer`. If `org-log-into-drawer` is nil, return
 
 ```
 
-#### org-ml-headline-set-logbook `(children headline)`
-
-Return **`headline`** with logbook drawer filled with **`children`**.
-**`children`** must be a list of plain-list and/or clock nodes.
-
-This function assumes that the logbook entries will be stored in
-a drawer immediately after planning and/or property-drawer nodes
-named via symbol `org-log-into-drawer`. If this is nil, return
-**`headline`** unmodified.
-
-```el
-;; Given the following contents:
-; * headline
-; :LOGBOOK:
-; - Refiled on [2019-01-01 Tue 00:00]
-; :END:
-
-(->> (org-ml-parse-this-headline)
-     (org-ml-headline-set-logbook (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
-     (org-ml-to-trimmed-string))
- ;; => "* headline
- ;      :LOGBOOK:
- ;      - note
- ;      :END:"
-
-;; Given the following contents:
-; * headline
-
-(->> (org-ml-parse-this-headline)
-     (org-ml-headline-set-logbook (list (org-ml-build-plain-list (org-ml-build-item! :paragraph "note"))))
-     (org-ml-to-trimmed-string))
- ;; => "* headline
- ;      :LOGBOOK:
- ;      - note
- ;      :END:"
-
-;; Given the following contents:
-; * headline
-; :LOGBOOK:
-; - Refiled on [2019-01-01 Tue 00:00]
-; :END:
-
-(->> (org-ml-parse-this-headline)
-     (org-ml-headline-set-logbook nil)
-     (org-ml-to-trimmed-string))
- ;; => "* headline"
-
-```
-
-#### org-ml-headline-logbook-append-entry `(item headline)`
+#### org-ml-headline-logbook-drawer-append-entry `(name other-name item headline)`
 
 Return **`headline`** with **`item`** node appended to the front of its logbook.
 
-The same assumptions and restrictions for [`org-ml-headline-map-logbook`](#org-ml-headline-map-logbook-fun-headline)
-apply here.
+**`name`** and **`other-name`** have the same meaning as those in
+[`org-ml-headline-get-logbook-drawer`](#org-ml-headline-get-logbook-drawer-name-other-name-headline).
 
 ```el
 ;; Given the following contents:
 ; * headline
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-logbook-append-entry (org-ml-build-item! :paragraph "note"))
+     (org-ml-headline-logbook-drawer-append-entry "LOGBOOK" nil (org-ml-build-item! :paragraph "note"))
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :LOGBOOK:
@@ -5419,7 +5666,7 @@ apply here.
 ; :END:
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-logbook-append-entry (org-ml-build-item! :paragraph "note"))
+     (org-ml-headline-logbook-drawer-append-entry "LOGBOOK" nil (org-ml-build-item! :paragraph "note"))
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :LOGBOOK:
@@ -5434,7 +5681,7 @@ apply here.
 ; :END:
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-logbook-append-entry (org-ml-build-item! :paragraph "note"))
+     (org-ml-headline-logbook-drawer-append-entry "LOGBOOK" nil (org-ml-build-item! :paragraph "note"))
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :LOGBOOK:
@@ -5444,19 +5691,22 @@ apply here.
 
 ```
 
-#### org-ml-headline-logbook-append-open-clock `(unixtime headline)`
+#### org-ml-headline-logbook-drawer-append-open-clock `(name other-name unixtime headline)`
 
 Return **`headline`** with an open clock append to front of its logbook.
 **`unixtime`** is an integer that will be used to build the clock node.
 
 This does the functional equivalent of `org-clock-in` on the logbook.
 
+**`name`** and **`other-name`** have the same meaning as those in
+[`org-ml-headline-get-logbook-drawer`](#org-ml-headline-get-logbook-drawer-name-other-name-headline).
+
 ```el
 ;; Given the following contents:
 ; * headline
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-logbook-append-open-clock (- 1546300800 (car (current-time-zone))))
+     (org-ml-headline-logbook-drawer-append-open-clock "LOGBOOK" nil (- 1546300800 (car (current-time-zone))))
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :LOGBOOK:
@@ -5470,7 +5720,7 @@ This does the functional equivalent of `org-clock-in` on the logbook.
 ; :END:
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-logbook-append-open-clock (- 1546300800 (car (current-time-zone))))
+     (org-ml-headline-logbook-drawer-append-open-clock "LOGBOOK" nil (- 1546300800 (car (current-time-zone))))
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :LOGBOOK:
@@ -5485,7 +5735,7 @@ This does the functional equivalent of `org-clock-in` on the logbook.
 ; :END:
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-logbook-append-open-clock (- 1546300800 (car (current-time-zone))))
+     (org-ml-headline-logbook-drawer-append-open-clock "LOGBOOK" nil (- 1546300800 (car (current-time-zone))))
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :LOGBOOK:
@@ -5495,7 +5745,7 @@ This does the functional equivalent of `org-clock-in` on the logbook.
 
 ```
 
-#### org-ml-headline-logbook-close-open-clock `(unixtime note headline)`
+#### org-ml-headline-logbook-drawer-close-open-clock `(name other-name unixtime note headline)`
 
 Return **`headline`** with the first clock closed.
 
@@ -5505,6 +5755,9 @@ are found, return **`headline`** unmodified.
 
 This does the functional equivalent of `org-clock-out` on the logbook.
 
+**`name`** and **`other-name`** have the same meaning as those in
+[`org-ml-headline-get-logbook-drawer`](#org-ml-headline-get-logbook-drawer-name-other-name-headline).
+
 ```el
 ;; Given the following contents:
 ; * headline
@@ -5513,8 +5766,8 @@ This does the functional equivalent of `org-clock-out` on the logbook.
 ; :END:
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-logbook-close-open-clock (- 1546300800 (car (current-time-zone)))
-					       nil)
+     (org-ml-headline-logbook-drawer-close-open-clock "LOGBOOK" nil (- 1546300800 (car (current-time-zone)))
+						      nil)
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :LOGBOOK:
@@ -5529,8 +5782,8 @@ This does the functional equivalent of `org-clock-out` on the logbook.
 ; :END:
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-logbook-close-open-clock (- 1546300800 (car (current-time-zone)))
-					       nil)
+     (org-ml-headline-logbook-drawer-close-open-clock "LOGBOOK" nil (- 1546300800 (car (current-time-zone)))
+						      nil)
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :LOGBOOK:
@@ -5539,8 +5792,8 @@ This does the functional equivalent of `org-clock-out` on the logbook.
  ;      :END:"
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-logbook-close-open-clock (- 1546300800 (car (current-time-zone)))
-					       "new note")
+     (org-ml-headline-logbook-drawer-close-open-clock "LOGBOOK" nil (- 1546300800 (car (current-time-zone)))
+						      "new note")
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :LOGBOOK:
@@ -5558,8 +5811,8 @@ This does the functional equivalent of `org-clock-out` on the logbook.
 ; :END:
 
 (->> (org-ml-parse-this-headline)
-     (org-ml-headline-logbook-close-open-clock (- 1546300800 (car (current-time-zone)))
-					       nil)
+     (org-ml-headline-logbook-drawer-close-open-clock "LOGBOOK" nil (- 1546300800 (car (current-time-zone)))
+						      nil)
      (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :LOGBOOK:
@@ -5587,15 +5840,8 @@ The return value is a list of headline titles (including that from
 ; *** three
 
 (->> (org-ml-parse-this-subtree)
-     (org-ml-headline-get-subheadlines)
-     (car)
      (org-ml-headline-get-path))
- ;; => '("one" "two")
-
-;; Given the following contents:
-; * one
-; ** two
-; *** three
+ ;; => '("one")
 
 (->> (org-ml-parse-this-subtree)
      (org-ml-headline-get-subheadlines)
@@ -7155,9 +7401,18 @@ no examples :(
 ```
 
 
-<!-- 3.0.2 -->
+<!-- 4.0.0 -->
 
 # Changelog
+
+## 4.0.0
+
+- add `org-ml-get-parents`
+- add `org-ml-headline-get-logbook-loose` and `org-ml-headline-get-contents`
+- removed old `org-ml-headline-X-logbook` functions and replaced them with
+  `org-ml-headline-X-logbook-drawer` which can be made aware of other drawers
+  other than "LOGBOOK" or nothing
+- add `org-ml-clone-n`
 
 ## 3.0.2
 
