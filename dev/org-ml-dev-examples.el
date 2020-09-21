@@ -2715,12 +2715,6 @@
       (->> (org-ml-parse-this-subtree)
            (org-ml-headline-get-subheadlines)
            (car)
-           (org-ml-get-parents)
-           (--map (org-ml-get-property :begin it)))
-      => '(1 7)
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-get-subheadlines)
-           (car)
            (org-ml-headline-get-subheadlines)
            (car)
            (org-ml-get-parents)
@@ -4534,13 +4528,8 @@
                 "** two"
                 "*** three")
       (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-get-subheadlines)
-           (car)
            (org-ml-headline-get-path))
-      => '("one" "two")
-      (:buffer "* one"
-                "** two"
-                "*** three")
+      => '("one")
       (->> (org-ml-parse-this-subtree)
            (org-ml-headline-get-subheadlines)
            (car)
