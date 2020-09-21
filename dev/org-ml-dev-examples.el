@@ -857,6 +857,22 @@
         (eq node1 node2))
       => nil)
 
+    (defexamples-content org-ml-clone-node-n
+      nil
+      (:buffer "dolly")
+      (-let* ((node1 (org-ml-parse-this-element))
+              ((node2 node3) (org-ml-clone-node-n 2 node1)))
+        (or (equal node1 node2)
+            (equal node1 node3)
+            (equal node2 node3)))
+      => t
+      (-let* ((node1 (org-ml-parse-this-element))
+              ((node2 node3) (org-ml-clone-node-n 2 node1)))
+        (or (eq node1 node2)
+            (eq node1 node3)
+            (eq node2 node3)))
+      => nil)
+
     (defexamples org-ml-build-secondary-string!
       (->> (org-ml-build-secondary-string! "I'm plain")
            (-map #'org-ml-get-type))

@@ -1862,7 +1862,13 @@ because these retain parent references which makes the node a circular
 list. None of the builder functions add parent references, so
 `copy-tree' will be a faster alternative to this function."
   (let ((print-circle t))
-    (->> node (format "%S") (read))))
+    (read (format "%S" node))))
+
+(defun org-ml-clone-node-n (n node)
+  "Like `org-ml-clone-node' but make N copies of NODE."
+  (let ((ret))
+    (--dotimes n (!cons (org-ml-clone-node node) ret))
+    ret))
 
 (org-ml--defun-kw org-ml-build-timestamp-diary (form &key post-blank)
   "Return a new diary-sexp timestamp node from FORM.
