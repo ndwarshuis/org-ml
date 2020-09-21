@@ -2702,7 +2702,30 @@
     ;;        (org-ml-property-is-predicate-p*
     ;;         :title (s-contains? "dummy" (car it))))
     ;;   => t)
-    )
+
+    (defexamples-content org-ml-get-parents
+      nil
+      (:buffer "* one"
+               "** two"
+               "*** three")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-get-parents)
+           (--map (org-ml-get-property :begin it)))
+      => '(1)
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-get-subheadlines)
+           (car)
+           (org-ml-get-parents)
+           (--map (org-ml-get-property :begin it)))
+      => '(1 7)
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-get-subheadlines)
+           (car)
+           (org-ml-headline-get-subheadlines)
+           (car)
+           (org-ml-get-parents)
+           (--map (org-ml-get-property :begin it)))
+      => '(1 7 14)))
 
   (def-example-subgroup "Clock"
     nil

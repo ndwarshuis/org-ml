@@ -2647,6 +2647,17 @@ and properties that may be used with this function."
      (org-ml--format-alist-operations)
      (org-ml--append-documentation 'org-ml-plist-put-property))
 
+(defun org-ml-get-parents (node)
+  "Return parents of NODE as a list.
+The toplevel parent will be the left-most member, and NODE itself
+will be the rightmost member."
+  (cl-labels
+      ((get-parents
+        (acc node)
+        (if (or (null node) (eq 'org-data (car node))) acc
+          (get-parents (cons node acc) (org-ml-get-property :parent node)))))
+    (get-parents nil node)))
+
 ;;; object nodes
 ;;
 ;; entity
@@ -3581,14 +3592,8 @@ NAME and OTHER-NAME have the same meaning as those in
 
 The return value is a list of headline titles (including that from
 HEADLINE) leading to the root node."
-  (cl-labels
-      ((get-path
-        (hl)
-        (let ((title (org-ml--get-property-nocheck :raw-value hl)))
-          (-if-let (parent (org-ml--get-parent-headline hl))
-              (cons title (get-path parent))
-            (list title)))))
-    (reverse (get-path headline))))
+  (->> (org-ml-get-parents headline)
+       (--map (org-ml-get-property :raw-value it))))
 
 (defun org-ml-headline-update-item-statistics (headline)
   "Return HEADLINE node with updated statistics cookie via items.
