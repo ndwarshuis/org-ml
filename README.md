@@ -7401,9 +7401,18 @@ no examples :(
 ```
 
 
-<!-- 3.0.2 -->
+<!-- 4.0.0 -->
 
 # Changelog
+
+## 4.0.0
+
+- add `org-ml-get-parents`
+- add `org-ml-headline-get-logbook-loose` and `org-ml-headline-get-contents`
+- removed old `org-ml-headline-X-logbook` functions and replaced them with
+  `org-ml-headline-X-logbook-drawer` which can be made aware of other drawers
+  other than "LOGBOOK" or nothing
+- add `org-ml-clone-n`
 
 ## 3.0.2
 
