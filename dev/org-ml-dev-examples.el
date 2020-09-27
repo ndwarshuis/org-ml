@@ -96,9 +96,17 @@
 
   (defexamples-content org-ml-parse-table-row-at
     nil
-    (:buffer "| bow | stroke |")
+    (:buffer "| bow | stroke |"
+             "|-----+--------|"
+             "| wob | ekorts |")
     (:comment "Return the row itself")
     (->> (org-ml-parse-table-row-at 1)
+         (car))
+    => 'table-row
+    (->> (org-ml-parse-table-row-at 20)
+         (car))
+    => 'table-row
+    (->> (org-ml-parse-table-row-at 40)
          (car))
     => 'table-row
     (:comment "Also return the row when not at beginning of line")

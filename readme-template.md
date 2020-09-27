@@ -177,6 +177,11 @@ the examples below.
 
 # Changelog
 
+## 4.0.1
+
+- fix `org-ml-parse-this-table-row` and `org-ml-parse-table-row-at`
+  beyond first row of table
+
 ## 4.0.0
 
 - add `org-ml-get-parents`
