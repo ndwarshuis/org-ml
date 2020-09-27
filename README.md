@@ -668,9 +668,19 @@ Return table-row node under **`point`** or nil if not on a table-row.
 ```el
 ;; Given the following contents:
 ; | bow | stroke |
+; |-----+--------|
+; | wob | ekorts |
 
 ;; Return the row itself
 (->> (org-ml-parse-table-row-at 1)
+     (car))
+ ;; => 'table-row
+
+(->> (org-ml-parse-table-row-at 20)
+     (car))
+ ;; => 'table-row
+
+(->> (org-ml-parse-table-row-at 40)
      (car))
  ;; => 'table-row
 
@@ -7401,9 +7411,14 @@ no examples :(
 ```
 
 
-<!-- 4.0.0 -->
+<!-- 4.0.1 -->
 
 # Changelog
+
+## 4.0.1
+
+- fix `org-ml-parse-this-table-row` and `org-ml-parse-table-row-at`
+  beyond first row of table
 
 ## 4.0.0
 

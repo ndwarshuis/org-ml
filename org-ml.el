@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 4.0.0
+;; Version: 4.0.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -4778,14 +4778,14 @@ PATTERN follows the same rules as `org-ml-match'."
            (org-ml--get-descendent nesting)
            (org-ml--filter-types org-ml-objects)))))
 
-(defun org-ml--parse-element-at (point &optional type)
+(defun org-ml--parse-element-at (point type)
   "Return element node immediately under POINT.
 For a list of all possible return types refer to `org-ml-elements'; this
 will return everything in this list except 'section' which is
 ambiguous when referring to a single point.
 \(see `org-ml-parse-section-at').
 
-If TYPE is supplied, only return nil if the object under point is not
+If TYPE is non-nil, only return nil if the object under point is not
 of that type. TYPE is a symbol from `org-ml-elements'. Furthermore,
 setting TYPE to 'table-row' will prefer table-row elements over table
 elements and likewise when setting TYPE to 'item' for plain-list
@@ -4804,6 +4804,10 @@ elements vs item elements."
                             begin end 'first-section nil nil nil nil)))
                 (nesting (cl-case node-type
                            (headline nil)
+                           ;; `org-element-at-point' will return a table if on
+                           ;; the first row of a table, and a table-row
+                           ;; otherwise
+                           (table-row '(0 0))
                            (table (if (eq type 'table-row) '(0 0) '(0)))
                            (plain-list (if (eq type 'item) '(0 0) '(0)))
                            (t '(0)))))
@@ -4817,7 +4821,7 @@ This function will return every element available in `org-ml-elements'
 with the exception of `section', `item', and `table-row'. To
 specifically parse these, use the functions `org-ml-parse-section-at',
 `org-ml-parse-item-at', and `org-ml-parse-table-row-at'."
-  (org-ml--parse-element-at point))
+  (org-ml--parse-element-at point nil))
 
 (defun org-ml-parse-table-row-at (point)
   "Return table-row node under POINT or nil if not on a table-row."
