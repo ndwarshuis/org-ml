@@ -4085,6 +4085,8 @@ empty."
 
 (defun org-ml-to-string (node)
   "Return NODE as an interpreted string without text properties."
+  (unless (or (null node) (org-ml--is-node node))
+    (org-ml--arg-error "Can only stringify node or nil, got %s" node))
   (->> node
        ;; Some objects and greater elements should be removed if blank. Table
        ;; and plain list will error, and the others make no sense if they are
