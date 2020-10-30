@@ -878,6 +878,601 @@ be parsed to TYPE."
   ;; multiple keywords
   (should-error (org-ml--make-rest-partition-form '(:one one :one three two) (:one) nil)))
 
+;;; SUPERCONTENTS FRAMEWORK TESTING
+
+;; eight possible configurations for the logbook based on the values of
+;; `org-log-into-drawer' (L) and `org-clock-into-drawer' (C)
+;; - L = C = nil: 'mixed'
+;; - L = string, C = nil: 'single-items'
+;; - L = nil, C = string: 'single-clocks'
+;; - L = C = string: 'single-mixed'
+;; - L = string1, C = string2: 'dual'
+;; - L = nil, C = int: 'single-clocks-or-mixed'
+;; - L = string, C = int: 'single-items-or-dual'
+;; - L = "LOGBOOK", C = int: 'single-mixed-or-single-items'
+
+;; TODO be more thorough and do this for all the others (add blanks to the tests)
+(ert-deftest org-ml--supercontents-mixed ()
+  (let* ((config '(nil nil nil))
+         (config-notes '(nil nil t))
+         (i1 (org-ml-build-log-note 1603767576 "i1"))
+         (i2 (org-ml-build-item! :paragraph "clock note"))
+         (p1 (org-ml-build-plain-list i1))
+         (p2 (org-ml-build-plain-list i2))
+         (c1 (org-ml-build-clock (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))))
+         (r1 (org-ml-build-paragraph! "foo")))
+    ;; nothing
+    (should (equal (org-ml--supercontents-from-nodes config-notes nil)
+                   (org-ml--supercontents-init nil nil nil)))
+    ;; no logbook
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list r1))
+                   (org-ml--supercontents-init nil nil `(,r1))))
+    ;; all combinations of item, clock, and clock note, and rest
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p1 c1 p2 r1))
+                   (org-ml--supercontents-init `(,i1) `(,c1 ,i2) `(,r1))))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p1 p2 c1 r1))
+                   (org-ml--supercontents-init `(,i1) nil `(,p2 ,c1 ,r1))))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list c1 p2 p1 r1))
+                   (org-ml--supercontents-init `(,i1) `(,c1 ,i2) `(,r1))))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list c1 p1 p2 r1))
+                   (org-ml--supercontents-init `(,i1) `(,c1) `(,p2 ,r1))))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p2 p1 c1 r1))
+                   (org-ml--supercontents-init nil nil `(,p2 ,p1 ,c1 ,r1))))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p2 c1 p1 r1))
+                   (org-ml--supercontents-init nil nil `(,p2 ,c1 ,p1 ,r1))))
+    ;; same things without rest
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p1 c1 p2))
+                   (org-ml--supercontents-init `(,i1) `(,c1 ,i2) nil)))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p1 p2 c1))
+                   (org-ml--supercontents-init `(,i1) nil `(,p2 ,c1))))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list c1 p2 p1))
+                   (org-ml--supercontents-init `(,i1) `(,c1 ,i2) nil)))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list c1 p1 p2))
+                   (org-ml--supercontents-init `(,i1) `(,c1) `(,p2))))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p2 p1 c1))
+                   (org-ml--supercontents-init nil nil `(,p2 ,p1 ,c1))))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p2 c1 p1))
+                   (org-ml--supercontents-init nil nil `(,p2 ,c1 ,p1))))
+    ;; same things choose two
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p1 c1))
+                   (org-ml--supercontents-init `(,i1) `(,c1) nil)))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p1 p2))
+                   (org-ml--supercontents-init `(,i1) nil `(,p2))))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list c1 p2))
+                   (org-ml--supercontents-init nil `(,c1 ,i2) nil)))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list c1 p1))
+                   (org-ml--supercontents-init `(,i1) `(,c1) nil)))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p2 p1))
+                   (org-ml--supercontents-init nil nil `(,p2 ,p1))))
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p2 c1))
+                   (org-ml--supercontents-init nil nil `(,p2 ,c1))))
+    ;; ignore if not in right order (assume what comes after doesn't matter)
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list r1 p1))
+                   (org-ml--supercontents-init nil nil `(,r1 ,p1))))
+    ;; same tests but ignore clock notes
+    ;;
+    ;; nothing
+    (should (equal (org-ml--supercontents-from-nodes config nil)
+                   (org-ml--supercontents-init nil nil nil)))
+    ;; no logbook
+    (should (equal (org-ml--supercontents-from-nodes config (list r1))
+                   (org-ml--supercontents-init nil nil `(,r1))))
+    ;; all combinations of two items and one clock
+    (should (equal (org-ml--supercontents-from-nodes config (list p1 c1 p2 r1))
+                   (org-ml--supercontents-init `(,i1) `(,c1) `(,p2 ,r1))))
+    (should (equal (org-ml--supercontents-from-nodes config (list p1 p2 c1 r1))
+                   (org-ml--supercontents-init `(,i1) nil `(,p2 ,c1 ,r1))))
+    (should (equal (org-ml--supercontents-from-nodes config (list c1 p2 p1 r1))
+                   (org-ml--supercontents-init nil `(,c1) `(,p2 ,p1 ,r1))))
+    (should (equal (org-ml--supercontents-from-nodes config (list c1 p1 p2 r1))
+                   (org-ml--supercontents-init `(,i1) `(,c1) `(,p2 ,r1))))
+    (should (equal (org-ml--supercontents-from-nodes config (list p2 p1 c1 r1))
+                   (org-ml--supercontents-init nil nil `(,p2 ,p1 ,c1 ,r1))))
+    (should (equal (org-ml--supercontents-from-nodes config (list p2 c1 p1 r1))
+                   (org-ml--supercontents-init nil nil `(,p2 ,c1 ,p1 ,r1))))
+    ;; same things without rest
+    (should (equal (org-ml--supercontents-from-nodes config (list p1 c1 p2))
+                   (org-ml--supercontents-init `(,i1) `(,c1) `(,p2))))
+    (should (equal (org-ml--supercontents-from-nodes config (list p1 p2 c1))
+                   (org-ml--supercontents-init `(,i1) nil `(,p2 ,c1))))
+    (should (equal (org-ml--supercontents-from-nodes config (list c1 p2 p1))
+                   (org-ml--supercontents-init nil `(,c1) `(,p2 ,p1))))
+    (should (equal (org-ml--supercontents-from-nodes config (list c1 p1 p2))
+                   (org-ml--supercontents-init `(,i1) `(,c1) `(,p2))))
+    (should (equal (org-ml--supercontents-from-nodes config (list p2 p1 c1))
+                   (org-ml--supercontents-init nil nil `(,p2 ,p1 ,c1))))
+    (should (equal (org-ml--supercontents-from-nodes config (list p2 c1 p1))
+                   (org-ml--supercontents-init nil nil `(,p2 ,c1 ,p1))))
+    ;; same things choose two
+    (should (equal (org-ml--supercontents-from-nodes config (list p1 c1))
+                   (org-ml--supercontents-init `(,i1) `(,c1) nil)))
+    (should (equal (org-ml--supercontents-from-nodes config (list p1 p2))
+                   (org-ml--supercontents-init `(,i1) nil `(,p2))))
+    (should (equal (org-ml--supercontents-from-nodes config (list c1 p2))
+                   (org-ml--supercontents-init nil `(,c1) `(,p2))))
+    (should (equal (org-ml--supercontents-from-nodes config (list c1 p1))
+                   (org-ml--supercontents-init `(,i1) `(,c1) nil)))
+    (should (equal (org-ml--supercontents-from-nodes config (list p2 p1))
+                   (org-ml--supercontents-init nil nil `(,p2 ,p1))))
+    (should (equal (org-ml--supercontents-from-nodes config (list p2 c1))
+                   (org-ml--supercontents-init nil nil `(,p2 ,c1))))))
+
+(ert-deftest org-ml--supercontents-single-items ()
+  (let* ((id-name "LOGGING")
+         (config `(,id-name nil nil))
+         (config-notes `(,id-name nil t))
+         (i1 (org-ml-build-item! :paragraph "i1"))
+         (i2 (org-ml-build-log-note 1603767576 "log note"))
+         (i3 (org-ml-build-log-note 1603767576 "log note in drawer"))
+         (p1 (org-ml-build-plain-list i1))
+         (p2 (org-ml-build-plain-list i2))
+         (p3 (org-ml-build-plain-list i3))
+         (p4 (org-ml-build-plain-list i1 i2))
+         (drwr (org-ml-build-drawer id-name p3))
+         (ts1 (org-ml-build-timestamp! '(2112 1 1 0 0)
+                                       :end '(2112 1 2 0 0)))
+         (c1 (org-ml-build-clock ts1))
+         (r1 (org-ml-build-paragraph! "foo")))
+    ;; nothing
+    (should (equal
+             (org-ml--supercontents-from-nodes config nil)
+             (org-ml--supercontents-init nil nil nil)))
+    ;; no logbook
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list r1))
+             (org-ml--supercontents-init nil nil `(,r1))))
+    ;; clock followed by note
+    (should (equal
+             (org-ml--supercontents-from-nodes config-notes (list c1 p1 r1))
+             (org-ml--supercontents-init nil `(,c1 ,i1) `(,r1))))
+    ;; clock followed by log item
+    (should (equal
+             (org-ml--supercontents-from-nodes config-notes (list c1 p2 r1))
+             (org-ml--supercontents-init nil `(,c1) `(,p2 ,r1))))
+    ;; clock followed by note (no notes wanted)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 p1 r1))
+             (org-ml--supercontents-init nil `(,c1) `(,p1 ,r1))))
+    ;; clock followed by note and item
+    (should (equal
+             (org-ml--supercontents-from-nodes config-notes (list c1 p4 r1))
+             (org-ml--supercontents-init nil `(,c1 ,i1) `(,p2 ,r1))))
+    ;; clock followed by note and item (no notes wanted)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 p4 r1))
+             (org-ml--supercontents-init nil `(,c1) `(,p4 ,r1))))
+    ;; item followed by clock (store none)
+    ;; ASSUME the code that stops splitting
+    ;; after finding an invalid item is fully tested with this example and will
+    ;; therefore do the same in the permutations below
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list p1 c1 r1))
+             (org-ml--supercontents-init nil nil `(,p1 ,c1 ,r1))))
+    ;; drawer followed by clock (store both)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr c1 r1))
+             (org-ml--supercontents-init `(,i3) `(,c1) `(,r1))))
+    ;; clock followed by drawer (store both)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 drwr r1))
+             (org-ml--supercontents-init `(,i3) `(,c1) `(,r1))))
+    ;; clock followed by item and drawer (store all)
+    (should (equal
+             (org-ml--supercontents-from-nodes config-notes (list c1 p1 drwr r1))
+             (org-ml--supercontents-init `(,i3) `(,c1 ,i1) `(,r1))))
+    ;; clock followed by item and drawer (don't store note)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 p1 drwr r1))
+             (org-ml--supercontents-init nil `(,c1) `(,p1 ,drwr ,r1))))))
+
+(ert-deftest org-ml--supercontents-single-clocks ()
+  (let* ((cd-name "CLOCKING")
+         (config `(nil ,cd-name nil))
+         (config-notes `(nil ,cd-name t))
+         (i1 (org-ml-build-log-note 1603767576 "note 1"))
+         (i2 (org-ml-build-log-note 1603767576 "note 2"))
+         (i3 (org-ml-build-item! :paragraph "clock note"))
+         (p1 (org-ml-build-plain-list i1))
+         (p2 (org-ml-build-plain-list i2))
+         (p3 (org-ml-build-plain-list i3))
+         (ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0)))
+         (c1 (org-ml-build-clock ts1))
+         (drwr1 (org-ml-build-drawer cd-name c1))
+         (drwr2 (org-ml-build-drawer cd-name c1 p3))
+         (r1 (org-ml-build-paragraph! "foo")))
+    ;; nothing
+    (should (equal
+             (org-ml--supercontents-from-nodes config nil)
+             (org-ml--supercontents-init nil nil nil)))
+    ;; no logbook
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list r1))
+             (org-ml--supercontents-init nil nil `(,r1))))
+    ;; this only has six valid combinations
+    ;;
+    ;; plain-list, drawer, plain-list
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list p1 drwr1 p2 r1))
+             (org-ml--supercontents-init `(,i1 ,i2) `(,c1) `(,r1))))
+    ;; plain-list, drawer
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list p1 drwr1 r1))
+             (org-ml--supercontents-init `(,i1) `(,c1) `(,r1))))
+    ;; plain-list
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list p1 r1))
+             (org-ml--supercontents-init `(,i1) nil `(,r1))))
+    ;; drawer, plain-list
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr1 p1 r1))
+             (org-ml--supercontents-init `(,i1) `(,c1) `(,r1))))
+    ;; drawer
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr1 r1))
+             (org-ml--supercontents-init nil `(,c1) `(,r1))))
+    ;; drawer with clock notes
+    (should (equal
+             (org-ml--supercontents-from-nodes config-notes (list drwr2 r1))
+             (org-ml--supercontents-init nil `(,c1 ,i3) `(,r1))))
+    ;; invalid combinations
+    ;;
+    ;; loose clock anywhere
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 p1 r1))
+             (org-ml--supercontents-init nil nil `(,c1 ,p1 ,r1))))))
+
+
+(ert-deftest org-ml--supercontents-dual ()
+  (let* ((cd-name "CLOCKING")
+         (id-name "LOGGING")
+         (config `(,id-name ,cd-name nil))
+         (i1 (org-ml-build-log-note 1603767576 "note"))
+         (p1 (org-ml-build-plain-list i1))
+         (ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0)))
+         (c1 (org-ml-build-clock ts1))
+         (drwr1 (org-ml-build-drawer cd-name c1))
+         (drwr2 (org-ml-build-drawer id-name p1))
+         (r1 (org-ml-build-paragraph! "foo")))
+    ;; nothing
+    (should (equal
+             (org-ml--supercontents-from-nodes config nil)
+             (org-ml--supercontents-init nil nil nil)))
+    ;; no logbook
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list r1))
+             (org-ml--supercontents-init nil nil `(,r1))))
+    ;; one drawer
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr1 r1))
+             (org-ml--supercontents-init nil `(,c1) `(,r1))))
+    ;; one drawer (other one)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr2 r1))
+             (org-ml--supercontents-init `(,i1) nil `(,r1))))
+    ;; two drawers
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr1 drwr2 r1))
+             (org-ml--supercontents-init `(,i1) `(,c1) `(,r1))))
+    ;; two drawers (other order)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr2 drwr1 r1))
+             (org-ml--supercontents-init `(,i1) `(,c1) `(,r1))))
+    ;; clock outside (invalid)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 drwr2 r1))
+             (org-ml--supercontents-init nil nil `(,c1 ,drwr2 ,r1))))
+    ;; item outside (invalid)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list p1 drwr1 r1))
+             (org-ml--supercontents-init nil nil `(,p1 ,drwr1 ,r1))))))
+
+(ert-deftest org-ml--supercontents-single-mixed ()
+  (let* ((d-name "LOGBOOK")
+         (config '(t t nil))
+         (config-notes '(t t t))
+         (i1 (org-ml-build-log-note 1603767576 "note 2"))
+         (i2 (org-ml-build-item! :paragraph "clock note"))
+         (p1 (org-ml-build-plain-list i1))
+         (p2 (org-ml-build-plain-list i2))
+         (ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0)))
+         (c1 (org-ml-build-clock ts1))
+         (drwr1 (org-ml-build-drawer d-name c1 p1))
+         (drwr2 (org-ml-build-drawer d-name c1 p2 p1))
+         (r1 (org-ml-build-paragraph! "foo")))
+    ;; nothing
+    (should (equal
+             (org-ml--supercontents-from-nodes config nil)
+             (org-ml--supercontents-init nil nil nil)))
+    ;; no logging
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list r1))
+             (org-ml--supercontents-init nil nil `(,r1))))
+    ;; single drawer
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr1 r1))
+             (org-ml--supercontents-init `(,i1) `(,c1) `(,r1))))
+    ;; single drawer with notes
+    (should (equal
+             (org-ml--supercontents-from-nodes config-notes (list drwr2 r1))
+             (org-ml--supercontents-init `(,i1) `(,c1 ,i2) `(,r1))))
+    ;; clock outside (invalid)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 drwr1 r1))
+             (org-ml--supercontents-init nil nil `(,c1 ,drwr1 ,r1))))
+    ;; item outside (invalid)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list p1 drwr1 r1))
+             (org-ml--supercontents-init nil nil `(,p1 ,drwr1 ,r1))))))
+
+(ert-deftest org-ml--supercontents-single-clocks-or-mixed ()
+  ;; ASSUME clock notes are tested using the mixed and single-clocks tests
+  (let* ((clock-limit 1)
+         (config `(nil ,clock-limit nil))
+         (i1 (org-ml-build-log-note 1603767576 "note 1"))
+         (i2 (org-ml-build-log-note 1603767576 "note 2"))
+         (p1 (org-ml-build-plain-list i1))
+         (p2 (org-ml-build-plain-list i2))
+         (ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0)))
+         (c1 (org-ml-build-clock ts1))
+         (ts2 (org-ml-build-timestamp! '(2112 1 2 0 0) :end '(2112 1 3 0 0)))
+         (c2 (org-ml-build-clock ts1))
+         (drwr (org-ml-build-drawer "LOGBOOK" c1))
+         (r1 (org-ml-build-paragraph! "foo")))
+    ;; nothing
+    (should (equal
+             (org-ml--supercontents-from-nodes config nil)
+             (org-ml--supercontents-init nil nil nil)))
+    ;; no logbook
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list r1))
+             (org-ml--supercontents-init nil nil `(,r1))))
+    ;; same tests as single-clocks when over clock limit
+    ;;
+    ;; plain-list, drawer, plain-list
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list p1 drwr p2 r1))
+             (org-ml--supercontents-init `(,i1 ,i2) `(,c1) `(,r1))))
+    ;; plain-list, drawer
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list p1 drwr r1))
+             (org-ml--supercontents-init `(,i1) `(,c1) `(,r1))))
+    ;; plain-list
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list p1 r1))
+             (org-ml--supercontents-init `(,i1) nil `(,r1))))
+    ;; drawer, plain-list
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr p1 r1))
+             (org-ml--supercontents-init `(,i1) `(,c1) `(,r1))))
+    ;; drawer
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr r1))
+             (org-ml--supercontents-init nil `(,c1) `(,r1))))
+    ;; same as mixed
+    ;;
+    ;; loose clock under clock limit
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 p1 r1))
+             (org-ml--supercontents-init `(,i1) `(,c1) `(,r1))))
+    ;; too many clocks
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 c2 p1 r1))
+             (org-ml--supercontents-init nil `(,c1) `(,c2 ,p1 ,r1))))))
+
+(ert-deftest org-ml--supercontents-single-items-or-dual ()
+  (let* ((id-name "LOGGING")
+         (clock-limit 1)
+         (config `(,id-name ,clock-limit nil))
+         (i1 (org-ml-build-log-note 1603767576 "note 1"))
+         (i2 (org-ml-build-log-note 1603767576 "note 2"))
+         (i3 (org-ml-build-log-note 1603767576 "note 3"))
+         (p1 (org-ml-build-plain-list i1))
+         (p2 (org-ml-build-plain-list i1 i2))
+         (p3 (org-ml-build-plain-list i3))
+         (drwr1 (org-ml-build-drawer id-name p3))
+         (ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0)))
+         (c1 (org-ml-build-clock ts1))
+         (ts2 (org-ml-build-timestamp! '(2112 1 2 0 0) :end '(2112 1 3 0 0)))
+         (c2 (org-ml-build-clock ts2))
+         (drwr2 (org-ml-build-drawer "LOGBOOK" c1))
+         (r1 (org-ml-build-paragraph! "foo")))
+    ;; nothing
+    (should (equal
+             (org-ml--supercontents-from-nodes config nil)
+             (org-ml--supercontents-init nil nil nil)))
+    ;; no logbook
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list r1))
+             (org-ml--supercontents-init nil nil `(,r1))))
+    ;; same as single-items
+    ;;
+    ;; clock followed by one item (don't store note)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 p1 r1))
+             (org-ml--supercontents-init nil `(,c1) `(,p1 ,r1))))
+    ;; clock followed by two items (store only clock)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 p2 r1))
+             (org-ml--supercontents-init nil `(,c1) `(,p2 ,r1))))
+    ;; item followed by clock (store none)
+    ;; ASSUME the code that stops splitting
+    ;; after finding an invalid item is fully tested with this example and will
+    ;; therefore do the same in the permutations below
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list p1 c1 r1))
+             (org-ml--supercontents-init nil nil `(,p1 ,c1 ,r1))))
+    ;; drawer followed by clock (store both)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr1 c1 r1))
+             (org-ml--supercontents-init `(,i3) `(,c1) `(,r1))))
+    ;; clock followed by drawer (store both)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 drwr1 r1))
+             (org-ml--supercontents-init `(,i3) `(,c1) `(,r1))))
+    ;; drawer followed by clock and item (store only clock)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr1 c1 p1 r1))
+             (org-ml--supercontents-init `(,i3) `(,c1) `(,p1 ,r1))))
+    ;; clock followed by item and drawer (don't store note)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 p1 drwr1 r1))
+             (org-ml--supercontents-init nil `(,c1) `(,p1 ,drwr1 ,r1))))
+    ;; too many clocks
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 c2 p1 drwr1 r1))
+             (org-ml--supercontents-init nil `(,c1) `(,c2 ,p1 ,drwr1 ,r1))))
+    ;; dual drawer (clock only)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr2 r1))
+             (org-ml--supercontents-init nil `(,c1) `(,r1))))
+    ;; dual drawer (item only)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr1 r1))
+             (org-ml--supercontents-init `(,i3) nil `(,r1))))
+    ;; dual drawer (both)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr1 drwr2 r1))
+             (org-ml--supercontents-init `(,i3) `(,c1) `(,r1))))))
+
+(ert-deftest org-ml--supercontents-single-mixed-or-single-items ()
+  (let* ((clock-limit 1)
+         (config `(t ,clock-limit nil))
+         (i1 (org-ml-build-log-note 1603767576 "note 1"))
+         (p1 (org-ml-build-plain-list i1))
+         (ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0)))
+         (c1 (org-ml-build-clock ts1))
+         (ts2 (org-ml-build-timestamp! '(2112 1 2 0 0) :end '(2112 1 3 0 0)))
+         (c2 (org-ml-build-clock ts2))
+         (drwr1 (org-ml-build-drawer "LOGBOOK" c1 p1))
+         (drwr2 (org-ml-build-drawer "LOGBOOK" p1))
+         (r1 (org-ml-build-paragraph! "foo")))
+    ;; nothing
+    (should (equal
+             (org-ml--supercontents-from-nodes config nil)
+             (org-ml--supercontents-init nil nil nil)))
+    ;; no logging
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list r1))
+             (org-ml--supercontents-init nil nil `(,r1))))
+    ;; single drawer
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list drwr1 r1))
+             (org-ml--supercontents-init `(,i1) `(,c1) `(,r1))))
+    ;; clock outside and inside
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 drwr1 r1))
+             (org-ml--supercontents-init `(,i1) `(,c1) `(,r1))))
+    ;; clocks outside and not inside
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 drwr2 r1))
+             (org-ml--supercontents-init `(,i1) `(,c1) `(,r1))))
+    ;; too many clocks outside
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list c1 c2 drwr2 r1))
+             (org-ml--supercontents-init nil `(,c1) `(,c2 ,drwr2 ,r1))))
+    ;; item outside (invalid)
+    (should (equal
+             (org-ml--supercontents-from-nodes config (list p1 drwr1 r1))
+             (org-ml--supercontents-init nil nil `(,p1 ,drwr1 ,r1))))))
+
+;; logbook blank line testing
+;;
+;; assume these tests cover all code paths
+;; - any logbook type followed by a blank (item, clock, drawer)
+;; - in the case of clocks with notes, clocks followed by plain lists where the
+;;   first item has a blank after it
+
+(ert-deftest org-ml--supercontents-mixed-blank-line ()
+  (let* ((config '(nil nil nil))
+         (config-notes '(nil nil t))
+         (i1 (->> (org-ml-build-log-note 1603767576 "note 1")
+                  (org-ml-set-property :post-blank 1)))
+         (i2 (org-ml-build-log-note 1603767576 "note 2"))
+         (i3 (org-ml-build-item! :post-blank 1 :paragraph "clock note"))
+         (p1 (org-ml-build-plain-list i1 i2))
+         (p2 (org-ml-build-plain-list i1))
+         (p3 (org-ml-build-plain-list i2))
+         (p4 (org-ml-build-plain-list :post-blank 1 i1 i2))
+         (p5 (org-ml-build-plain-list :post-blank 1 i2))
+         (p6 (org-ml-build-plain-list i3 i2))
+         (p66 (org-ml-build-plain-list i2))
+         ;; (p6 (org-ml-build-plain-list i1))
+         (p7 (org-ml-build-plain-list :post-blank 1 i2))
+         (ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0)))
+         (c1 (org-ml-build-clock ts1))
+         (c2 (org-ml-build-clock ts1 :post-blank 1))
+         (r1 (org-ml-build-paragraph! "foo")))
+    ;; if plain-list has two items with a space between, add only first item
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p1 c1 r1))
+                   (org-ml--supercontents-init `(,i1) nil `(,p3 ,c1 ,r1))))
+    ;; ditto but after a clock
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list c1 p1 r1))
+                   (org-ml--supercontents-init `(,i1) `(,c1) `(,p3 ,r1))))
+    ;; ditto but with a clock note after the clock instead
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list c1 p6 r1))
+                   (org-ml--supercontents-init nil `(,c1 ,i3) `(,p66 ,r1))))
+    ;; if clock has blank, stop after clock
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list c2 p1 r1))
+                   (org-ml--supercontents-init nil `(,c2) `(,p1 ,r1))))
+    ;; if plain-list has two items with blanks after each of them, add only first
+    (should (equal (org-ml--supercontents-from-nodes config-notes (list p4 r1))
+                   (org-ml--supercontents-init `(,i1) nil `(,p7 ,r1))))
+    ;; ;; same tests without clock notes
+    ;; ;;
+    ;; if plain-list has two items with a space between, add only first item
+    (should (equal (org-ml--supercontents-from-nodes config (list p1 c1 r1))
+                   (org-ml--supercontents-init `(,i1) nil `(,p3 ,c1 ,r1))))
+    ;; ditto but after a clock
+    (should (equal (org-ml--supercontents-from-nodes config (list c1 p1 r1))
+                   (org-ml--supercontents-init `(,i1) `(,c1) `(,p3 ,r1))))
+    ;; ditto but with a clock note after the clock instead
+    (should (equal (org-ml--supercontents-from-nodes config (list c1 p6 r1))
+                   (org-ml--supercontents-init nil `(,c1) `(,p6 ,r1))))
+    ;; if clock has blank, stop after clock
+    (should (equal (org-ml--supercontents-from-nodes config (list c2 p1 r1))
+                   (org-ml--supercontents-init nil `(,c2) `(,p1 ,r1))))
+    ;; if plain-list has two items with blanks after each of them, add only first
+    (should (equal (org-ml--supercontents-from-nodes config (list p4 r1))
+                   (org-ml--supercontents-init `(,i1) nil `(,p7 ,r1))))))
+
+;; I'm not sure what this test was supposed to do...
+
+;; (ert-deftest org-ml--supercontents-single-items-blank-line ()
+;;   (let* ((config '(t nil nil))
+;;          (i1 (->> (org-ml-build-log-note 1603767576 "note 1")
+;;                   (org-ml-set-property :post-blank 1)))
+;;          (i2 (org-ml-build-log-note 1603767576 "note 2"))
+;;          (p1 (org-ml-build-plain-list i1 i2))
+;;          (p2 (org-ml-build-plain-list i1))
+;;          (p3 (org-ml-build-plain-list i2))
+;;          (p4 (org-ml-build-plain-list :post-blank 1 i1 i2))
+;;          (p5 (org-ml-build-plain-list :post-blank 1 i2))
+;;          (ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0)))
+;;          (drwr (org-ml-build-drawer "LOGBOOK" p3))
+;;          (c1 (org-ml-build-clock ts1))
+;;          (c2 (org-ml-build-clock ts1 :post-blank 1))
+;;          (r1 (org-ml-build-paragraph! "foo")))
+;;     ;; clocks with two items with space after first item (don't want notes)
+;;     (should (equal
+;;              (org-ml--supercontents-from-nodes config (list c1 p1 r1))
+;;              (org-ml--supercontents-init nil `(,c1) `(,p1 ,r1))))
+;;     ;; clocks with two items with space after first and second item (add clock and first item)
+;;     (should (equal
+;;              (org-ml--supercontents-from-nodes config (list c1 p4 r1))
+;;              (org-ml--supercontents-init nil `(,c1 ,p2) `(,p5 ,r1))))
+;;     ;; clocks with two items with space after first and second item (don't add notes)
+;;     (should (equal
+;;              (org-ml--supercontents-from-nodes nil (list c1 p4 r1))
+;;              (org-ml--supercontents-init nil `(,c1) `(,p4 ,r1))))
+;;     ;; clocks with space after (only add clock)
+;;     (should (equal
+;;              (org-ml--supercontents-from-nodes nil (list c2 p1 r1))
+;;              (org-ml--supercontents-init nil `(,c2) `(,p1 ,r1))))
+;;     ;; drawer with space after (only add drawer)
+;;     (should (equal
+;;              (org-ml--supercontents-from-nodes nil (list drwr p1 r1))
+;;              (org-ml--supercontents-init `(,p3) nil `(,p1 ,r1))))))
+
 ;;; MATCH FRAMEWORK TESTING
 
 ;; These are tests for `org-ml-match' and friends. Proceed with caution :)
