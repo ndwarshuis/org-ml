@@ -3328,34 +3328,35 @@ a modified node-property value."
     (->> (org-ml-get-children plain-list)
          (org-ml--map-last* (org-ml-set-property :post-blank pb it)))))
 
-(defun org-ml--plain-list-split (find-blanks? plain-list)
-  (cl-flet*
-      ((find-first-space-index
-        (children)
-        (-some->> (-find-index #'org-ml--node-has-trailing-space children) (1+)))
-       (find-first-non-logbook-entry
-        (children)
-        (--find-index (not (org-ml--is-logbook-note it)) children))
-       (min-maybe
-        (i j)
-        (cond
-         ((not i) j)
-         ((not j) i)
-         (t (min i j)))))
-    ;; TODO refactor the post-blank stuff?
-    (let ((children (org-ml-get-children plain-list)))
-      (-if-let (i (min-maybe (when find-blanks? (find-first-space-index children))
-                             (find-first-non-logbook-entry children)))
-          (if (= i (length children))
-              (let ((pb (org-ml-get-property :post-blank plain-list)))
-                (--> children
-                     (org-ml--map-last*
-                      (org-ml-set-property :post-blank pb it)
-                      it)
-                     (list it nil)))
-            (-let (((log-items rest-items) (-split-at i children)))
-              `(,log-items ,(org-ml-set-children rest-items plain-list))))
-        (list (org-ml--flatten-plain-list plain-list) nil)))))
+(defun org-ml--plain-list-split (enc-config find-blanks? plain-list)
+  (-let (((&alist :is-log-item-fun f) enc-config))
+    (cl-flet*
+        ((find-first-space-index
+          (children)
+          (-some->> (-find-index #'org-ml--node-has-trailing-space children) (1+)))
+         (find-first-non-logbook-entry
+          (children)
+          (--find-index (not (funcall f it)) children))
+         (min-maybe
+          (i j)
+          (cond
+           ((not i) j)
+           ((not j) i)
+           (t (min i j)))))
+      ;; TODO refactor the post-blank stuff?
+      (let ((children (org-ml-get-children plain-list)))
+        (-if-let (i (min-maybe (when find-blanks? (find-first-space-index children))
+                               (find-first-non-logbook-entry children)))
+            (if (= i (length children))
+                (let ((pb (org-ml-get-property :post-blank plain-list)))
+                  (--> children
+                       (org-ml--map-last*
+                        (org-ml-set-property :post-blank pb it)
+                        it)
+                       (list it nil)))
+              (-let (((log-items rest-items) (-split-at i children)))
+                `(,log-items ,(org-ml-set-children rest-items plain-list))))
+          (list (org-ml--flatten-plain-list plain-list) nil))))))
 
 (defun org-ml--flatten-logbook (children)
   (--splice (org-ml-is-type 'plain-list it)
@@ -3379,55 +3380,54 @@ a modified node-property value."
             (t (error "Unknown slot type")))))
     `(-let (((,items* ,clocks* ,unknown*) ,splitter)) ,ret-form)))
 
-(defun org-ml--separate-logbook (mode clock-notes? nodes)
-  ;; TODO supply this function with a different test for what a "logbook" vs
-  ;; "clock note" is
-  (cl-labels
-      ((separate-plain-list
-        (acc plain-list)
-        (-let (((log-items other-items)
-                (->> (org-ml--flatten-plain-list plain-list)
-                     (-separate #'org-ml--is-logbook-note))))
-          (--> (if (not log-items) acc
-                 (org-ml--drawer-splitter-map items
-                   (append (reverse log-items) it) acc))
-               (if (not other-items) it
-                 (org-ml--drawer-splitter-map unknown
-                   (append (reverse other-items) it) it)
-                 it))))
-       (split
-        (acc maybe-clock-note? nodes)
-        (-let* (((first . rest) nodes))
-          (if (not first) acc
-            (cond
-             ((and (org-ml-is-type 'plain-list first)
-                   (memq mode '(clocks mixed))
-                   clock-notes?
-                   maybe-clock-note?)
-              (-let (((note plain-list) (org-ml--split-clock-note first)))
-                (cond
-                 (note
-                  (-> (org-ml--drawer-splitter-map clocks (cons note it) acc)
-                      (split nil (if plain-list (cons plain-list rest) rest))))
-                 ((eq mode 'mixed)
-                  (-> (separate-plain-list acc first)
-                      (split nil rest)))
-                 (t
-                  (-> (org-ml--drawer-splitter-map unknown (cons first it) acc)
-                      (split nil rest))))))
-             ((and (org-ml-is-type 'plain-list first)
-                   (memq mode '(items mixed)))
-              (-> (separate-plain-list acc first)
-                  (split nil rest)))
-             ((and (org-ml-is-type 'clock first)
-                   (memq mode '(mixed clocks)))
-              (-> (org-ml--drawer-splitter-map clocks (cons first it) acc)
-                  (split t rest)))
-             (t
-              (-> (org-ml--drawer-splitter-map unknown (cons first it) acc)
-                  (split nil rest))))))))
-    (-let (((items clocks unknown) (split '(nil nil nil) nil nodes)))
-      (list items clocks unknown))))
+(defun org-ml--separate-logbook (mode enc-config nodes)
+  (-let (((&alist :clock-notes n :is-log-item-fun f) enc-config))
+    (cl-labels
+        ((separate-plain-list
+          (acc plain-list)
+          (-let (((log-items other-items)
+                  (->> (org-ml--flatten-plain-list plain-list)
+                       (-separate f))))
+            (--> (if (not log-items) acc
+                   (org-ml--drawer-splitter-map items
+                     (append (reverse log-items) it) acc))
+                 (if (not other-items) it
+                   (org-ml--drawer-splitter-map unknown
+                     (append (reverse other-items) it) it)
+                   it))))
+         (split
+          (acc maybe-clock-note? nodes)
+          (-let* (((first . rest) nodes))
+            (if (not first) acc
+              (cond
+               ((and (org-ml-is-type 'plain-list first)
+                     (memq mode '(clocks mixed))
+                     n
+                     maybe-clock-note?)
+                (-let (((note plain-list) (org-ml--split-clock-note enc-config first)))
+                  (cond
+                   (note
+                    (-> (org-ml--drawer-splitter-map clocks (cons note it) acc)
+                        (split nil (if plain-list (cons plain-list rest) rest))))
+                   ((eq mode 'mixed)
+                    (-> (separate-plain-list acc first)
+                        (split nil rest)))
+                   (t
+                    (-> (org-ml--drawer-splitter-map unknown (cons first it) acc)
+                        (split nil rest))))))
+               ((and (org-ml-is-type 'plain-list first)
+                     (memq mode '(items mixed)))
+                (-> (separate-plain-list acc first)
+                    (split nil rest)))
+               ((and (org-ml-is-type 'clock first)
+                     (memq mode '(mixed clocks)))
+                (-> (org-ml--drawer-splitter-map clocks (cons first it) acc)
+                    (split t rest)))
+               (t
+                (-> (org-ml--drawer-splitter-map unknown (cons first it) acc)
+                    (split nil rest))))))))
+      (-let (((items clocks unknown) (split '(nil nil nil) nil nodes)))
+        (list items clocks unknown)))))
 
 (defun org-ml--clocks-wrap-items (children)
   (cl-flet
@@ -3461,8 +3461,7 @@ a modified node-property value."
     ;; TODO need to preserve whitespace in the plain-list
     (-reduce-from #'cons-maybe nil (reverse nodes))))
 
-(defun org-ml--merge-logbook (clock-notes? items clocks)
-  ;; TODO add function to distinguish log items from clocks
+(defun org-ml--merge-logbook (enc-config items clocks)
   ;; TODO probably not the most efficient merge sort ever
   (cl-labels
       ((get-ts
@@ -3480,12 +3479,12 @@ a modified node-property value."
                          (error "Not an item: %s" it))
                        nil items))
        (prepare-clocks
-        (clocks)
+        (clock-notes? is-log-item-fun clocks)
         (--reduce-from (if clock-notes?
                            (cond
                             ;; if item but is a valid logbook item, throw error
                             ((and (org-ml-is-type 'item it)
-                                  (org-ml--is-logbook-note it))
+                                  (funcall is-log-item-fun it))
                              (error "Not a valid clock note: %s" it))
                             ;; if item and last on the accumulator is a clock,
                             ;; add it behind that clock
@@ -3504,34 +3503,35 @@ a modified node-property value."
        (merge
         (acc nodes-a nodes-b)
         (pcase (cons nodes-a nodes-b)
-         (`(nil . nil) acc)
-         (`(,as . nil) (append (reverse as) acc))
-         (`(nil . ,bs) (append (reverse bs) acc))
-         (`((,a . ,as) . (,b . ,bs))
-          (let ((ts-a (get-ts (car a)))
-                (ts-b (get-ts (car b))))
-            (cond
-             ((not ts-a)
-              (error "Could not get timestamp for logbook node: %s" a))
-             ((not ts-b)
-              (error "Could not get timestamp for logbook node: %s" b))
-             ((<= ts-b ts-a)
-              (merge (cons b acc) nodes-a bs))
-             ((< ts-a ts-b)
-              (merge (cons a acc) as nodes-b))
-             (t
-              (error "Unknown merge error")))))))
+          (`(nil . nil) acc)
+          (`(,as . nil) (append (reverse as) acc))
+          (`(nil . ,bs) (append (reverse bs) acc))
+          (`((,a . ,as) . (,b . ,bs))
+           (let ((ts-a (get-ts (car a)))
+                 (ts-b (get-ts (car b))))
+             (cond
+              ((not ts-a)
+               (error "Could not get timestamp for logbook node: %s" a))
+              ((not ts-b)
+               (error "Could not get timestamp for logbook node: %s" b))
+              ((<= ts-b ts-a)
+               (merge (cons b acc) nodes-a bs))
+              ((< ts-a ts-b)
+               (merge (cons a acc) as nodes-b))
+              (t
+               (error "Unknown merge error")))))))
        (merge-and-sort
         (nodes)
         (let ((L (length nodes)))
           (if (<= L 1) nodes
             (-let (((left right) (-split-at (/ L 2) nodes)))
               (merge nil (merge-and-sort right) (merge-and-sort left)))))))
-    (->> (prepare-clocks clocks)
-         (append (prepare-items items))
-         (merge-and-sort)
-         (-flatten-n 1)
-         (org-ml--lift-logbook))))
+    (-let (((&alist :clock-notes n :is-log-item-fun f) enc-config))
+      (->> (prepare-clocks n f clocks)
+           (append (prepare-items items))
+           (merge-and-sort)
+           (-flatten-n 1)
+           (org-ml--lift-logbook)))))
 
 (defun org-ml--node-has-trailing-space (node)
   (and (< 0 (org-ml-get-property :post-blank node)) t))
@@ -3587,7 +3587,7 @@ a modified node-property value."
       (->> (funcall add-fun split-list)
            (funcall next-fun)))))
 
-(defun org-ml--cs-split-drawer-maybe (name mode clock-notes? alt-fun next-fun split-list)
+(defun org-ml--cs-split-drawer-maybe (name mode enc-config alt-fun next-fun split-list)
   (let ((next (org-ml--cs-peek-next split-list)))
     (if (not (org-ml--node-is-drawer-with-name name next))
         (funcall alt-fun split-list)
@@ -3596,26 +3596,28 @@ a modified node-property value."
             (sl)
             (-let (((items* clocks* unknown*)
                     (->> (org-ml-get-children next)
-                         (org-ml--separate-logbook mode clock-notes?))))
+                         (org-ml--separate-logbook mode enc-config))))
               (->> (org-ml--cs-map items (append items* it) sl)
                    (org-ml--cs-map clocks (append clocks* it))
+                   ;; TODO this makes my tests flip out :(
+                   ;; (org-ml--cs-map unknown (append unknown* it))
                    (org-ml--cs-map rest (cdr it))))))
         (org-ml--cs-terminate-if-space #'add-fun next-fun split-list)))))
 
-(defun org-ml--cs-split-item-drawer-maybe (name alt-fun next-fun split-list)
-  (org-ml--cs-split-drawer-maybe name 'items nil alt-fun next-fun split-list))
+(defun org-ml--cs-split-item-drawer-maybe (name enc-config alt-fun next-fun split-list)
+  (org-ml--cs-split-drawer-maybe name 'items enc-config alt-fun next-fun split-list))
 
-(defun org-ml--cs-split-clock-drawer-maybe (name clock-notes? alt-fun next-fun split-list)
-  (org-ml--cs-split-drawer-maybe name 'clocks clock-notes? alt-fun next-fun split-list))
+(defun org-ml--cs-split-clock-drawer-maybe (name enc-config alt-fun next-fun split-list)
+  (org-ml--cs-split-drawer-maybe name 'clocks enc-config alt-fun next-fun split-list))
 
-(defun org-ml--cs-split-mixed-drawer-maybe (name clock-notes? alt-fun next-fun split-list)
-  (org-ml--cs-split-drawer-maybe name 'mixed clock-notes? alt-fun next-fun split-list))
+(defun org-ml--cs-split-mixed-drawer-maybe (name enc-config alt-fun next-fun split-list)
+  (org-ml--cs-split-drawer-maybe name 'mixed enc-config alt-fun next-fun split-list))
 
 ;; TODO wetter than most shorelines in 2040 :(
-(defun org-ml--cs-split-item-maybe (alt-fun next-fun split-list)
+(defun org-ml--cs-split-item-maybe (enc-config alt-fun next-fun split-list)
   (let ((next (org-ml--cs-peek-next split-list)))
     (if (org-ml-is-type 'plain-list next)
-        (-let (((log-items rest-plain-list) (org-ml--plain-list-split t next)))
+        (-let (((log-items rest-plain-list) (org-ml--plain-list-split enc-config t next)))
           (cond
            ((and log-items rest-plain-list)
             (->> (org-ml--cs-map rest (cons rest-plain-list (cdr it)) split-list)
@@ -3633,18 +3635,19 @@ a modified node-property value."
             (funcall alt-fun split-list))))
       (funcall alt-fun split-list))))
 
-(defun org-ml--split-clock-note (node)
-  (-if-let (first (and (org-ml-is-type 'plain-list node)
-                       (car (org-ml-get-children node))))
-      (if (not (org-ml--is-logbook-note first))
-          (list first (when (< 1 (length (org-ml-get-children node)))
-                        (org-ml-map-children* (cdr it) node)))
-        (list nil node))
-    (list nil node)))
+(defun org-ml--split-clock-note (enc-config node)
+  (-let (((&alist :is-log-item-fun f) enc-config))
+    (-if-let (first (and (org-ml-is-type 'plain-list node)
+                         (car (org-ml-get-children node))))
+        (if (not (funcall f first))
+            (list first (when (< 1 (length (org-ml-get-children node)))
+                          (org-ml-map-children* (cdr it) node)))
+          (list nil node))
+      (list nil node))))
 
-(defun org-ml--cs-split-clock-note-maybe (alt-fun next-fun split-list)
+(defun org-ml--cs-split-clock-note-maybe (enc-config alt-fun next-fun split-list)
   (-let* ((next (org-ml--cs-peek-next split-list))
-          ((note rest) (org-ml--split-clock-note next)))
+          ((note rest) (org-ml--split-clock-note enc-config next)))
     (if note
         (--> (org-ml--cs-map rest (cdr it) split-list)
              (if rest (org-ml--cs-map rest (cons rest it) it) it)
@@ -3666,123 +3669,122 @@ a modified node-property value."
                (org-ml--cs-terminate-if-space #'add-loose next-fun))
         (funcall alt-fun split-list)))))
 
-(defun org-ml--cs-split-items-clocks-maybe (clock-notes? alt-fun split-list)
-  (let* ((loop (-partial #'org-ml--cs-split-items-clocks-maybe clock-notes? alt-fun))
-         (split-item (-partial #'org-ml--cs-split-item-maybe #'org-ml--cs-terminate loop)))
-    (if clock-notes?
-        (org-ml--cs-split-clocks-and-notes-maybe split-item split-list)
-      (org-ml--cs-split-clock-maybe split-item loop split-list))))
+(defun org-ml--cs-split-items-clocks-maybe (enc-config alt-fun split-list)
+  (let* ((loop (-partial #'org-ml--cs-split-items-clocks-maybe enc-config alt-fun))
+         (split-item (-partial #'org-ml--cs-split-item-maybe enc-config #'org-ml--cs-terminate loop)))
+    (-let (((&alist :clock-notes n) enc-config))
+      (if n (org-ml--cs-split-clocks-and-notes-maybe enc-config split-item split-list)
+        (org-ml--cs-split-clock-maybe split-item loop split-list)))))
 
 (defun org-ml--cs-split-clocks-maybe (alt-fun split-list)
   (let ((loop (-partial #'org-ml--cs-split-clocks-maybe alt-fun)))
     (org-ml--cs-split-clock-maybe alt-fun loop split-list)))
 
-(defun org-ml--cs-split-clocks-and-notes-maybe (alt-fun split-list)
-  (let* ((loop (-partial #'org-ml--cs-split-clocks-and-notes-maybe alt-fun))
-         (try-item (-partial #'org-ml--cs-split-clock-note-maybe alt-fun loop))
-         (loop-try-item (-partial #'org-ml--cs-split-clocks-and-notes-maybe try-item)))
+(defun org-ml--cs-split-clocks-and-notes-maybe (enc-config alt-fun split-list)
+  (let* ((loop (-partial #'org-ml--cs-split-clocks-and-notes-maybe enc-config alt-fun))
+         (try-item (-partial #'org-ml--cs-split-clock-note-maybe enc-config alt-fun loop))
+         (loop-try-item (-partial #'org-ml--cs-split-clocks-and-notes-maybe enc-config try-item)))
     (org-ml--cs-split-clock-maybe alt-fun loop-try-item split-list)))
 
 ;; root splitters
 
-(defun org-ml--cs-split-mixed (clock-notes? split-list)
-  (org-ml--cs-split-items-clocks-maybe clock-notes? #'org-ml--cs-terminate split-list))
+(defun org-ml--cs-split-mixed (enc-config split-list)
+  (org-ml--cs-split-items-clocks-maybe enc-config #'org-ml--cs-terminate split-list))
 
-(defun org-ml--cs-split-single-clocks (name clock-notes? split-list)
-  (let* ((terminate (-partial #'org-ml--cs-split-item-maybe
+(defun org-ml--cs-split-single-clocks (name enc-config split-list)
+  (let* ((terminate (-partial #'org-ml--cs-split-item-maybe enc-config
                               #'org-ml--cs-terminate #'org-ml--cs-terminate))
          (try-drawer (-partial #'org-ml--cs-split-clock-drawer-maybe
-                               name clock-notes? #'org-ml--cs-terminate terminate)))
-    (org-ml--cs-split-item-maybe try-drawer try-drawer split-list)))
+                               name enc-config #'org-ml--cs-terminate terminate)))
+    (org-ml--cs-split-item-maybe enc-config try-drawer try-drawer split-list)))
 
-(defun org-ml--cs-split-single-items (name clock-notes? split-list)
-  (let* ((terminate (if clock-notes?
-                        (-partial #'org-ml--cs-split-clocks-and-notes-maybe
-                                  #'org-ml--cs-terminate)
-                      (-partial #'org-ml--cs-split-clocks-maybe
-                                #'org-ml--cs-terminate)))
-         (try-drawer (-partial #'org-ml--cs-split-item-drawer-maybe
-                               name #'org-ml--cs-terminate terminate)))
-    (if clock-notes?
-        (org-ml--cs-split-clocks-and-notes-maybe try-drawer split-list)
-      (org-ml--cs-split-clocks-maybe try-drawer split-list))))
+(defun org-ml--cs-split-single-items (name enc-config split-list)
+  (-let (((&alist :clock-notes n) enc-config))
+    (let* ((terminate (if n (-partial #'org-ml--cs-split-clocks-and-notes-maybe
+                                      enc-config #'org-ml--cs-terminate)
+                        (-partial #'org-ml--cs-split-clocks-maybe
+                                  #'org-ml--cs-terminate)))
+           (try-drawer (-partial #'org-ml--cs-split-item-drawer-maybe
+                                 name enc-config #'org-ml--cs-terminate terminate)))
+      (if n (org-ml--cs-split-clocks-and-notes-maybe enc-config try-drawer split-list)
+        (org-ml--cs-split-clocks-maybe try-drawer split-list)))))
 
-(defun org-ml--cs-split-single-mixed-or-single-items (name clock-notes? split-list)
-  (let* ((terminate (if clock-notes?
-                        (-partial #'org-ml--cs-split-clocks-and-notes-maybe
-                                  #'org-ml--cs-terminate)
-                      (-partial #'org-ml--cs-split-clocks-maybe
-                                #'org-ml--cs-terminate)))
-         (try-drawer (-partial #'org-ml--cs-split-mixed-drawer-maybe
-                               name clock-notes? #'org-ml--cs-terminate terminate)))
-    (if clock-notes?
-        (org-ml--cs-split-clocks-and-notes-maybe try-drawer split-list)
-      (org-ml--cs-split-clocks-maybe try-drawer split-list))))
+(defun org-ml--cs-split-single-mixed-or-single-items (name enc-config split-list)
+  (-let (((&alist :clock-notes n) enc-config))
+    (let* ((terminate (if n
+                          (-partial #'org-ml--cs-split-clocks-and-notes-maybe
+                                    enc-config #'org-ml--cs-terminate)
+                        (-partial #'org-ml--cs-split-clocks-maybe
+                                  #'org-ml--cs-terminate)))
+           (try-drawer (-partial #'org-ml--cs-split-mixed-drawer-maybe
+                                 name enc-config #'org-ml--cs-terminate terminate)))
+      (if n (org-ml--cs-split-clocks-and-notes-maybe enc-config try-drawer split-list)
+        (org-ml--cs-split-clocks-maybe try-drawer split-list)))))
 
-(defun org-ml--cs-split-single-mixed (d-name clock-notes? split-list)
-  (org-ml--cs-split-mixed-drawer-maybe d-name clock-notes?
+(defun org-ml--cs-split-single-mixed (d-name enc-config split-list)
+  (org-ml--cs-split-mixed-drawer-maybe d-name enc-config
                                        #'org-ml--cs-terminate
                                        #'org-ml--cs-terminate split-list))
 
-(defun org-ml--cs-split-dual (id-name cd-name clock-notes? split-list)
+(defun org-ml--cs-split-dual (id-name cd-name enc-config split-list)
   (let* ((terminate-id (-partial #'org-ml--cs-split-item-drawer-maybe
-                                 id-name #'org-ml--cs-terminate
+                                 id-name enc-config #'org-ml--cs-terminate
                                  #'org-ml--cs-terminate))
          (terminate-cd (-partial #'org-ml--cs-split-clock-drawer-maybe
-                                 cd-name clock-notes? #'org-ml--cs-terminate
+                                 cd-name enc-config #'org-ml--cs-terminate
                                  #'org-ml--cs-terminate))
          (try-cd (-partial #'org-ml--cs-split-clock-drawer-maybe
-                           cd-name clock-notes? #'org-ml--cs-terminate terminate-id)))
-    (org-ml--cs-split-item-drawer-maybe id-name try-cd terminate-cd split-list)))
+                           cd-name enc-config #'org-ml--cs-terminate terminate-id)))
+    (org-ml--cs-split-item-drawer-maybe id-name enc-config try-cd terminate-cd split-list)))
 
-(defun org-ml--cs-split-single-clocks-or-mixed (cd-name clock-notes? split-list)
+(defun org-ml--cs-split-single-clocks-or-mixed (cd-name enc-config split-list)
   ;; use cl-labels here because -partial won't be able to handle the recursive
   ;; loop
   (cl-labels
       ((terminate-item
         (sl)
-        (org-ml--cs-split-item-maybe #'org-ml--cs-terminate
+        (org-ml--cs-split-item-maybe enc-config #'org-ml--cs-terminate
                                      #'org-ml--cs-terminate sl))
        (terminate-items-clocks
         (sl)
         ;; TODO this won't split a clock note if it encounters one first (after
         ;; the first clock was called at the top of the loop)
-        (org-ml--cs-split-items-clocks-maybe clock-notes?
+        (org-ml--cs-split-items-clocks-maybe enc-config
                                              #'org-ml--cs-terminate sl))
        (try-items
         (sl)
-        (org-ml--cs-split-item-maybe #'org-ml--cs-terminate #'-loop sl))
+        (org-ml--cs-split-item-maybe enc-config #'org-ml--cs-terminate #'-loop sl))
        (try-drawer
         (sl)
-        (org-ml--cs-split-clock-drawer-maybe cd-name clock-notes? #'try-items #'terminate-item sl))
+        (org-ml--cs-split-clock-drawer-maybe cd-name enc-config #'try-items
+                                             #'terminate-item sl))
        (-loop
         (sl)
         (org-ml--cs-split-clock-maybe #'try-drawer #'terminate-items-clocks sl)))
     (-loop split-list)))
 
-(defun org-ml--cs-split-single-items-or-dual (ld-name cd-name clock-notes? split-list)
-  (let* ((terminate-ld (-partial #'org-ml--cs-split-item-drawer-maybe
-                                 ld-name #'org-ml--cs-terminate
-                                 #'org-ml--cs-terminate))
-         (terminate-clocks (if clock-notes?
-                               (-partial #'org-ml--cs-split-clocks-and-notes-maybe
-                                         #'org-ml--cs-terminate)
-                             (-partial #'org-ml--cs-split-clocks-maybe
-                                       #'org-ml--cs-terminate)))
-         (try-cd-or-clocks (-partial #'org-ml--cs-split-clock-drawer-maybe
-                                     cd-name clock-notes? terminate-clocks
-                                     #'org-ml--cs-terminate))
-         (try-ld-and-clocks (-partial #'org-ml--cs-split-item-drawer-maybe
-                                      ld-name #'org-ml--cs-terminate
-                                      terminate-clocks))
-         (try-clocks (if clock-notes?
-                         (-partial #'org-ml--cs-split-clocks-and-notes-maybe
-                               try-ld-and-clocks)
-                       (-partial #'org-ml--cs-split-clocks-maybe
-                                 try-ld-and-clocks)))
-         (try-ld (-partial #'org-ml--cs-split-item-drawer-maybe
-                           ld-name try-clocks try-cd-or-clocks)))
-    (org-ml--cs-split-clock-drawer-maybe cd-name clock-notes? try-ld terminate-ld split-list)))
+(defun org-ml--cs-split-single-items-or-dual (ld-name cd-name enc-config split-list)
+  (-let (((&alist :clock-notes n) enc-config))
+    (let* ((terminate-ld (-partial #'org-ml--cs-split-item-drawer-maybe
+                                   ld-name enc-config #'org-ml--cs-terminate
+                                   #'org-ml--cs-terminate))
+           (terminate-clocks (if n (-partial #'org-ml--cs-split-clocks-and-notes-maybe
+                                             enc-config #'org-ml--cs-terminate)
+                               (-partial #'org-ml--cs-split-clocks-maybe
+                                         #'org-ml--cs-terminate)))
+           (try-cd-or-clocks (-partial #'org-ml--cs-split-clock-drawer-maybe
+                                       cd-name enc-config terminate-clocks
+                                       #'org-ml--cs-terminate))
+           (try-ld-and-clocks (-partial #'org-ml--cs-split-item-drawer-maybe
+                                        ld-name enc-config #'org-ml--cs-terminate
+                                        terminate-clocks))
+           (try-clocks (if n (-partial #'org-ml--cs-split-clocks-and-notes-maybe
+                                       enc-config try-ld-and-clocks)
+                         (-partial #'org-ml--cs-split-clocks-maybe
+                                   try-ld-and-clocks)))
+           (try-ld (-partial #'org-ml--cs-split-item-drawer-maybe
+                             ld-name enc-config try-clocks try-cd-or-clocks)))
+      (org-ml--cs-split-clock-drawer-maybe cd-name enc-config try-ld terminate-ld split-list))))
 
 ;; headline logbook
 
@@ -3890,10 +3892,11 @@ a modified node-property value."
                   :clocks ,(and (not single-drawer?) cd-name)
                   :mixed ,(and single-drawer? id-name)
                   :clock-limit ,clock-limit)
-        (:clock-notes . ,notes)))))
+        (:clock-notes . ,notes)
+        (:is-log-item-fun . ,#'org-ml--is-logbook-note)))))
 
 (defun org-ml--lb-to-nodes (config logbook)
-  (-let (((&alist :drawers d :clock-notes n)
+  (-let (((enconf &as &alist :drawers d)
           (org-ml--supercontents-config-encode config)))
     (cl-flet*
       ((build-drawer
@@ -3909,7 +3912,7 @@ a modified node-property value."
        (merge
         (logbook)
         (-let (((&alist :items :clocks) logbook))
-          (org-ml--merge-logbook n items clocks)))
+          (org-ml--merge-logbook enconf items clocks)))
        (separate
         (logbook)
         (list (org-ml--lb-to-nodes-items logbook)
@@ -3970,49 +3973,49 @@ a modified node-property value."
         (e (error "This shouldn't happen: %s" e))))))
 
 (defun org-ml--supercontents-from-nodes (config nodes)
-  (-let (((&alist :drawers d :clock-notes n)
+  (-let (((enconf &as &alist :drawers d)
           (org-ml--supercontents-config-encode config)))
     (pcase d
 
       ;; items not in drawer, clocks not in drawer
       (`(:items nil :clocks nil :mixed nil :clock-limit nil)
        (->> (org-ml--cs-init nil nodes)
-            (org-ml--cs-split-mixed n)))
+            (org-ml--cs-split-mixed enconf)))
 
       ;; items and clocks in the same drawer
       (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
        (->> (org-ml--cs-init nil nodes)
-            (org-ml--cs-split-single-mixed m n)))
+            (org-ml--cs-split-single-mixed m enconf)))
 
       ;; items not in drawer, clocks in drawer
       (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
        (->> (org-ml--cs-init nil nodes)
-            (org-ml--cs-split-single-clocks c n)))
+            (org-ml--cs-split-single-clocks c enconf)))
 
       ;; items not in drawer, clocks might be in a drawer
       (`(:items nil :clocks ,c :mixed nil :clock-limit ,l)
        (->> (org-ml--cs-init l nodes)
-            (org-ml--cs-split-single-clocks-or-mixed c n)))
+            (org-ml--cs-split-single-clocks-or-mixed c enconf)))
 
       ;; items in drawer, clocks not in drawer
       (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
        (->> (org-ml--cs-init nil nodes)
-            (org-ml--cs-split-single-items i n)))
+            (org-ml--cs-split-single-items i enconf)))
 
       ;; items in drawer, clocks in a different drawer
       (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
        (->> (org-ml--cs-init nil nodes)
-            (org-ml--cs-split-dual i c n)))
+            (org-ml--cs-split-dual i c enconf)))
 
       ;; items in drawer, clocks either loose or in a different drawer
       (`(:items ,i :clocks ,c :mixed nil :clock-limit ,l)
        (->> (org-ml--cs-init l nodes)
-            (org-ml--cs-split-single-items-or-dual i c n)))
+            (org-ml--cs-split-single-items-or-dual i c enconf)))
 
       ;; items in drawer, clocks might be in the same drawer
       (`(:items nil :clocks nil :mixed ,m :clock-limit ,l)
        (->> (org-ml--cs-init l nodes)
-            (org-ml--cs-split-single-mixed-or-single-items m n)))
+            (org-ml--cs-split-single-mixed-or-single-items m enconf)))
 
       (e (error "This shouldn't happen: %s" e)))))
 
