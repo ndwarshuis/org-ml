@@ -4334,6 +4334,53 @@
                   ":END:"
                   ":CLOCKING:"
                   "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+                  ":END:"))
+
+    (defexamples-content org-ml-headline-logbook-convert-config
+      nil
+      (:buffer "* headline"
+               "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+               "- note taken on [2018-12-30 Sun 00:00]")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-convert-config nil
+            (list :log-into-drawer t :clock-into-drawer t))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+                  "- note taken on [2018-12-30 Sun 00:00]"
+                  ":END:")
+
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-convert-config nil
+            (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING"))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGGING:"
+                  "- note taken on [2018-12-30 Sun 00:00]"
+                  ":END:"
+                  ":CLOCKING:"
+                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+                  ":END:")
+
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+               "- note taken on [2018-12-30 Sun 00:00]"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-convert-config
+            (list :log-into-drawer t
+                  :clock-into-drawer t)
+            (list :log-into-drawer "LOGGING"
+                  :clock-into-drawer "CLOCKING"))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGGING:"
+                  "- note taken on [2018-12-30 Sun 00:00]"
+                  ":END:"
+                  ":CLOCKING:"
+                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
                   ":END:")))
 
   (def-example-subgroup "Headline (misc)"

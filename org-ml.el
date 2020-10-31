@@ -3816,8 +3816,9 @@ a modified node-property value."
           (when (org-ml-is-type 'paragraph first-child)
             (org-ml-get-children first-child)))))
     (let ((pchildren (get-paragraph-children item)))
-      (-when-let (i (-find-index #'is-line-break pchildren))
-        (is-long-inactive-timestamp (nth (1- i) pchildren))))))
+      (-if-let (i (-find-index #'is-line-break pchildren))
+          (is-long-inactive-timestamp (nth (1- i) pchildren))
+        (is-long-inactive-timestamp (-last-item pchildren))))))
 
 (defun org-ml--lb-to-nodes-items (logbook)
   (->> (alist-get :items logbook)
@@ -4115,6 +4116,10 @@ a modified node-property value."
     (org-ml--headline-map-lb* config
       (org-ml--lb-map-clocks #'close-first it)
       headline)))
+
+(defun org-ml-headline-logbook-convert-config (config1 config2 headline)
+  (--> (org-ml-headline-get-supercontents config1 headline)
+       (org-ml-headline-set-supercontents config2 it headline)))
 
 ;; (defun org-ml-headline-logbook-drawer-close-open-clock (name other-name unixtime note headline)
 ;;   "Return HEADLINE with the first clock closed.
