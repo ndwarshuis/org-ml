@@ -4086,14 +4086,14 @@
       nil
       (:buffer "* headline")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-contents '(t t t))
+           (org-ml-headline-get-contents (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t))
            (-map #'org-ml-to-trimmed-string))
       => nil
 
       (:buffer "* headline"
                "something")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-contents '(t t t))
+           (org-ml-headline-get-contents (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t))
            (-map #'org-ml-to-trimmed-string))
       => '("something")
 
@@ -4106,7 +4106,7 @@
                ""
                "- not log")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-contents '(t t t))
+           (org-ml-headline-get-contents (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t))
            (-map #'org-ml-to-trimmed-string))
       => '("- not log")
 
@@ -4122,7 +4122,7 @@
                "- not log")
 
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-contents '("LOGGING" "CLOCKING"))
+           (org-ml-headline-get-contents '(:log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING"))
            (-map #'org-ml-to-trimmed-string))
       => '("- not log"))
 
@@ -4131,7 +4131,7 @@
       (:buffer "* headline")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-set-contents
-            '(t t t) (list (org-ml-build-paragraph! "I'm new")))
+            (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t) (list (org-ml-build-paragraph! "I'm new")))
            (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "I'm new")
@@ -4140,7 +4140,7 @@
                "something")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-set-contents
-            '(t t t) (list (org-ml-build-paragraph! "I'm new")))
+            (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t) (list (org-ml-build-paragraph! "I'm new")))
            (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "I'm new")
@@ -4153,7 +4153,7 @@
                "something")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-set-contents
-            '(t t t) (list (org-ml-build-paragraph! "I'm new")))
+            (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t) (list (org-ml-build-paragraph! "I'm new")))
            (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
@@ -4169,7 +4169,7 @@
                ":END:"
                "something")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-contents '(t t t) nil)
+           (org-ml-headline-set-contents (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t) nil)
            (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
@@ -4183,7 +4183,7 @@
       (let ((ut (- 1546300800 (car (current-time-zone)))))
         (->> (org-ml-parse-this-headline)
              (org-ml-headline-logbook-append-item
-              '(t t t) (org-ml-build-log-note ut "new note"))
+              (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t) (org-ml-build-log-note ut "new note"))
              (org-ml-to-trimmed-string)))
       => (:result "* headline"
                   ":LOGBOOK:"
@@ -4199,7 +4199,7 @@
       (let ((ut (- 1546300800 (car (current-time-zone)))))
         (->> (org-ml-parse-this-headline)
              (org-ml-headline-logbook-append-item
-              '(t t t) (org-ml-build-log-note ut "new note"))
+              (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t) (org-ml-build-log-note ut "new note"))
              (org-ml-to-trimmed-string)))
       => (:result "* headline"
                   ":LOGBOOK:"
@@ -4220,7 +4220,7 @@
       (let ((ut (- 1546300800 (car (current-time-zone)))))
         (->> (org-ml-parse-this-headline)
              (org-ml-headline-logbook-append-item
-              '("LOGGING" "CLOCKING" nil) (org-ml-build-log-note ut "new note"))
+              '(:log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING") (org-ml-build-log-note ut "new note"))
              (org-ml-to-trimmed-string)))
       => (:result "* headline"
                   ":LOGGING:"
@@ -4239,7 +4239,7 @@
       (:buffer "* headline")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-logbook-append-open-clock
-            '(t t t) (- 1546300800 (car (current-time-zone))))
+            (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t) (- 1546300800 (car (current-time-zone))))
            (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
@@ -4252,7 +4252,7 @@
                ":END:")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-logbook-append-open-clock
-            '(t t t) (- 1546300800 (car (current-time-zone))))
+            (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t) (- 1546300800 (car (current-time-zone))))
            (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
@@ -4266,7 +4266,7 @@
                ":END:")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-logbook-append-open-clock
-            '("LOGGING" "CLOCKING" nil) (- 1546300800 (car (current-time-zone))))
+            '(:log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING") (- 1546300800 (car (current-time-zone))))
            (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGGING:"
@@ -4284,7 +4284,7 @@
                ":END:")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-logbook-close-open-clock
-            '(t t t) (- 1546300800 (car (current-time-zone))) nil)
+            (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t) (- 1546300800 (car (current-time-zone))) nil)
            (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
@@ -4298,7 +4298,7 @@
                ":END:")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-logbook-close-open-clock
-            '(t t t) (- 1546300800 (car (current-time-zone))) nil)
+            (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t) (- 1546300800 (car (current-time-zone))) nil)
            (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
@@ -4308,7 +4308,7 @@
 
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-logbook-close-open-clock
-            '(t t t) (- 1546300800 (car (current-time-zone))) "new note")
+            (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t) (- 1546300800 (car (current-time-zone))) "new note")
            (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
@@ -4319,24 +4319,22 @@
 
       (:buffer "* headline"
                ":LOGGING:"
-               "- old note"
+               "- note taken on [2018-12-30 Sun 00:00]"
                ":END:"
                ":CLOCKING:"
                "CLOCK: [2018-12-31 Mon 00:00]"
                ":END:")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-logbook-close-open-clock
-            '("LOGGING" "CLOCKING" t) (- 1546300800 (car (current-time-zone))) nil)
+            '(:log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING" :clock-out-notes t) (- 1546300800 (car (current-time-zone))) nil)
            (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGGING:"
-                  "- old note"
+                  "- note taken on [2018-12-30 Sun 00:00]"
                   ":END:"
                   ":CLOCKING:"
                   "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
-                  ":END:")
-
-      ))
+                  ":END:")))
 
   (def-example-subgroup "Headline (misc)"
     nil
