@@ -3471,6 +3471,8 @@ a modified node-property value."
            (-some->> (org-ml-get-property :value node)
              (org-ml--timestamp-get-start-unixtime)))
           (item
+           ;; TODO shouldn't hard this function since it could change depending
+           ;; on the definition of a logbook item
            (org-ml--item-get-logbook-timestamp node))))
        (prepare-items
         (items)
@@ -3495,17 +3497,17 @@ a modified node-property value."
                             ((org-ml-is-type 'clock it)
                              (cons (list it) acc))
                             (t
-                             (error "Not a clock: %s" it)))
+                             (error "Not a clock or note: %s" it)))
                          (if (org-ml-is-type 'clock it)
                              (cons (list it) acc)
                            (error "Not a clock: %s" it)))
                        nil clocks))
        (merge
-        (acc nodes-a nodes-b)
+        (nodes-a nodes-b)
         (pcase (cons nodes-a nodes-b)
-          (`(nil . nil) acc)
-          (`(,as . nil) (append (reverse as) acc))
-          (`(nil . ,bs) (append (reverse bs) acc))
+          (`(nil . nil) nil)
+          (`(,as . nil) as)
+          (`(nil . ,bs) bs)
           (`((,a . ,as) . (,b . ,bs))
            (let ((ts-a (get-ts (car a)))
                  (ts-b (get-ts (car b))))
@@ -3515,9 +3517,9 @@ a modified node-property value."
               ((not ts-b)
                (error "Could not get timestamp for logbook node: %s" b))
               ((<= ts-b ts-a)
-               (merge (cons b acc) nodes-a bs))
+               (cons a (merge as nodes-b)))
               ((< ts-a ts-b)
-               (merge (cons a acc) as nodes-b))
+               (cons b (merge nodes-a bs)))
               (t
                (error "Unknown merge error")))))))
        (merge-and-sort
@@ -3525,7 +3527,7 @@ a modified node-property value."
         (let ((L (length nodes)))
           (if (<= L 1) nodes
             (-let (((left right) (-split-at (/ L 2) nodes)))
-              (merge nil (merge-and-sort right) (merge-and-sort left)))))))
+              (merge (merge-and-sort left) (merge-and-sort right)))))))
     (-let (((&alist :clock-notes n :is-log-item-fun f) enc-config))
       (->> (prepare-clocks n f clocks)
            (append (prepare-items items))

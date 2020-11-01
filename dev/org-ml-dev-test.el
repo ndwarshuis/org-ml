@@ -880,6 +880,86 @@ be parsed to TYPE."
 
 ;;; SUPERCONTENTS FRAMEWORK TESTING
 
+(ert-deftest org-ml--merge-logbook ()
+  (let* ((enconf (org-ml--supercontents-config-encode nil))
+         (enconf-notes (org-ml--supercontents-config-encode '(:clock-out-notes t)))
+         (c1 (org-ml-build-clock! '(2020 1 1 0 0) :end '(2020 1 1 1 0)))
+         (i1 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 2 0 0)) "1"))
+         (c2 (org-ml-build-clock! '(2020 1 3 0 0) :end '(2020 1 3 1 0)))
+         (i2 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 4 0 0)) "2"))
+         (n1 (org-ml-build-item! :paragraph "clock note"))
+         (p1 (org-ml-build-plain-list i1))
+         (p2 (org-ml-build-plain-list i2))
+         (pn1 (org-ml-build-plain-list n1))
+         (p1n1 (org-ml-build-plain-list n1 i1))
+         ;; there should never be a p12 analogue since that's not the right order
+         (p21 (org-ml-build-plain-list i2 i1))
+         (x1 (org-ml-build-code "I should cause a fatal error")))
+    ;; no clock notes
+    ;;
+    ;; nothing
+    (should (equal nil
+                   (org-ml--merge-logbook enconf nil nil)))
+    ;; just clocks
+    (should (equal `(,c2 ,c1)
+                   (org-ml--merge-logbook enconf nil `(,c1 ,c2))))
+    ;; just items
+    (should (equal `(,p21)
+                   (org-ml--merge-logbook enconf `(,i1 ,i2) nil)))
+    ;; single clock and item
+    (should (equal `(,p1 ,c1)
+                   (org-ml--merge-logbook enconf `(,i1) `(,c1))))
+    ;; clocks and items
+    (should (equal `(,p2 ,c2 ,p1 ,c1)
+                   (org-ml--merge-logbook enconf `(,i1 ,i2) `(,c1 ,c2))))
+    ;; just clocks (note)
+    (should-error (org-ml--merge-logbook enconf nil `(,c1 ,n1 ,c2)))
+    ;; single clock (note) and item
+    (should-error (org-ml--merge-logbook enconf `(,i1) `(,c1 ,n1)))
+    ;; clocks (note) and items
+    (should-error (org-ml--merge-logbook enconf `(,i1 ,i2) `(,c1 ,n1 ,c2)))
+    ;; just clocks (note in wrong place)
+    (should-error (org-ml--merge-logbook enconf nil `(,n1 ,c1 ,c2)))
+    ;; just garbage (items)
+    (should-error (org-ml--merge-logbook enconf `(,x1) nil))
+    ;; just garbage (clocks)
+    (should-error (org-ml--merge-logbook enconf nil `(,x1)))
+    ;; clock notes
+    ;;
+    ;; nothing
+    (should (equal nil
+                   (org-ml--merge-logbook enconf-notes nil nil)))
+    ;; just clocks
+    (should (equal `(,c2 ,c1)
+                   (org-ml--merge-logbook enconf-notes nil `(,c1 ,c2))))
+    ;; just items
+    (should (equal `(,p21)
+                   (org-ml--merge-logbook enconf-notes `(,i1 ,i2) nil)))
+    ;; single clock and item
+    (should (equal `(,p1 ,c1)
+                   (org-ml--merge-logbook enconf-notes `(,i1) `(,c1))))
+    ;; clocks and items
+    (should (equal `(,p2 ,c2 ,p1 ,c1)
+                   (org-ml--merge-logbook enconf-notes `(,i1 ,i2) `(,c1 ,c2))))
+    ;; just clocks (note)
+    (should (equal `(,c2 ,c1 ,pn1)
+                   (org-ml--merge-logbook enconf-notes nil `(,c1 ,n1 ,c2))))
+    ;; single clock (note) and item
+    (should (equal `(,p1 ,c1 ,pn1)
+             (org-ml--merge-logbook enconf-notes `(,i1) `(,c1 ,n1))))
+    ;; clocks (note) and items
+    (should (equal `(,p2 ,c2 ,p1 ,c1 ,pn1)
+                   (org-ml--merge-logbook enconf-notes `(,i1 ,i2) `(,c1 ,n1 ,c2))))
+    ;; clocks (note) and items (different order)
+    (should (equal `(,p2 ,c2 ,p1n1 ,c1)
+                   (org-ml--merge-logbook enconf-notes `(,i1 ,i2) `(,c1 ,c2 ,n1))))
+    ;; just clocks (note in wrong place)
+    (should-error (org-ml--merge-logbook enconf-notes nil `(,n1 ,c1 ,c2)))
+    ;; just garbage (items)
+    (should-error (org-ml--merge-logbook enconf-notes `(,x1) nil))
+    ;; just garbage (clocks)
+    (should-error (org-ml--merge-logbook enconf-notes nil `(,x1)))))
+
 ;; eight possible configurations for the logbook based on the values of
 ;; `org-log-into-drawer' (L) and `org-clock-into-drawer' (C)
 ;; - L = C = nil: 'mixed'
