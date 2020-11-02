@@ -3308,20 +3308,137 @@ a modified node-property value."
         (funcall fun it)
         (org-ml-headline-set-node-property key it headline)))
 
-;; logbook
+;; logbook and contents
+
+;; logbook data structure
+
+(defun org-ml--logbook-init (items clocks unknown)
+  `((:items ,@items) (:clocks ,@clocks) (:unknown ,@unknown)))
+
+(defun org-ml-logbook-get-items (logbook)
+  (alist-get :items logbook))
+
+(defun org-ml-logbook-get-clocks (logbook)
+  (alist-get :clocks logbook))
+
+(defun org-ml--logbook-set-items (items logbook)
+  (-let (((&alist :clocks :unknown) logbook))
+    (org-ml--logbook-init items clocks unknown)))
+
+(defun org-ml--logbook-set-clocks (clocks logbook)
+  (-let (((&alist :items :unknown) logbook))
+    (org-ml--logbook-init items clocks unknown)))
+
+(org-ml--defun* org-ml--logbook-map-items (fun logbook)
+  "todo"
+  (--> (alist-get :items logbook)
+       (funcall fun it)
+       (org-ml--logbook-set-items it logbook)))
+
+(org-ml--defun* org-ml--logbook-map-clocks (fun logbook)
+  "todo"
+  (--> (alist-get :clocks logbook)
+       (funcall fun it)
+       (org-ml--logbook-set-clocks it logbook)))
+
+;; supercontents data structure
+
+(defun org-ml--supercontents-init-from-lb (lb contents)
+  `((:logbook ,@lb) (:contents ,@contents)))
+
+(defun org-ml--supercontents-init (items clocks unknown contents)
+  (let ((lb (org-ml--logbook-init items clocks unknown)))
+    (org-ml--supercontents-init-from-lb lb contents)))
+
+(defun org-ml-supercontents-get-contents (supercontents)
+  (alist-get :contents supercontents))
+
+(defun org-ml-supercontents-set-contents (contents supercontents)
+  (-let (((&alist :logbook) supercontents))
+    (org-ml--supercontents-init-from-lb logbook contents)))
+
+(org-ml--defun* org-ml-supercontents-map-contents (fun supercontents)
+  "todo"
+  (--> (org-ml-supercontents-get-contents supercontents)
+       (funcall fun it)
+       (org-ml-supercontents-set-contents it supercontents)))
+
+(defun org-ml-supercontents-get-logbook (supercontents)
+  (alist-get :logbook supercontents))
+
+(org-ml--defun* org-ml-supercontents-set-logbook (logbook supercontents)
+  "todo"
+  (-let (((&alist :contents) supercontents))
+    (org-ml--supercontents-init-from-lb logbook contents)))
+
+(org-ml--defun* org-ml-supercontents-map-logbook (fun supercontents)
+  "todo"
+  (--> (org-ml-supercontents-get-logbook supercontents)
+       (funcall fun it)
+       (org-ml-supercontents-set-logbook it supercontents)))
+
+;; config data structure
+
+(defun org-ml--item-get-logbook-timestamp (item)
+  (cl-flet
+      ((is-long-inactive-timestamp
+        (node)
+        (when (and (org-ml-is-type 'timestamp node)
+                   (org-ml--property-is-eq :type 'inactive node)
+                   ;; TODO this should be a public function
+                   (-some->> (org-ml--timestamp-get-start-time node)
+                     (org-ml--time-is-long)))
+          (org-ml--timestamp-get-start-unixtime node)))
+       (is-line-break
+        (node)
+        (or (org-ml-is-type 'line-break node)
+            (and (org-ml-is-type 'plain-text node)
+                 (equal "\n" node))))
+       ;; TODO this should be a public function
+       (get-paragraph-children
+        (item)
+        (-when-let (first-child (car (org-ml-get-children item)))
+          (when (org-ml-is-type 'paragraph first-child)
+            (org-ml-get-children first-child)))))
+    (when (org-ml-is-type 'item item)
+      (let ((pchildren (get-paragraph-children item)))
+        (-if-let (i (-find-index #'is-line-break pchildren))
+            (is-long-inactive-timestamp (nth (1- i) pchildren))
+          (is-long-inactive-timestamp (-last-item pchildren)))))))
+
+(defun org-ml--supercontents-config-encode (config)
+  (cl-flet*
+      ((select-name
+        (option)
+        (pcase option
+          (`t "LOGBOOK")
+          (`nil nil)
+          ((and (pred stringp) s) s)
+          (e (error "Invalid option: %s" e)))))
+    (-let* (((&plist :log-into-drawer lid
+                     :clock-into-drawer cid
+                     :clock-out-notes notes)
+             config)
+            (clock-limit (and (integerp cid) cid))
+            (id-name (select-name lid))
+            (cd-name (if clock-limit "LOGBOOK" (select-name cid)))
+            (single-drawer? (equal id-name cd-name)))
+      `((:drawers :items ,(and (not single-drawer?) id-name)
+                  :clocks ,(and (not single-drawer?) cd-name)
+                  :mixed ,(and single-drawer? id-name)
+                  :clock-limit ,clock-limit)
+        (:clock-notes . ,notes)
+        (:is-log-item-fun . ,#'org-ml--item-get-logbook-timestamp)))))
+
+;; nodes -> supercontents
+
+(defun org-ml--node-has-trailing-space (node)
+  (and (< 0 (org-ml-get-property :post-blank node)) t))
 
 (defun org-ml--node-is-drawer-with-name (drawer-name node)
   "Return t if NODE is a drawer with DRAWER-NAME."
   (and (org-ml-is-type 'drawer node)
        (equal drawer-name (org-ml-get-property :drawer-name node))))
-
-(defun org-ml--drop-node-type (type children)
-  "Return cdr of CHILDREN if car is TYPE or return unchanged."
-  (if (org-ml-is-type type (car children)) (cdr children) children))
-
-(defun org-ml--is-logbook-note (node)
-  ;; test for the line break and the timestamp
-  (and (org-ml-is-type 'item node) (org-ml--item-get-logbook-timestamp node)))
 
 (defun org-ml--flatten-plain-list (plain-list)
   (let ((pb (org-ml-get-property :post-blank plain-list)))
@@ -3354,14 +3471,11 @@ a modified node-property value."
                         (org-ml-set-property :post-blank pb it)
                         it)
                        (list it nil)))
+              ;; TODO if rest-items is nil, the last item in log-items should
+              ;; get the plain-list post-blank
               (-let (((log-items rest-items) (-split-at i children)))
                 `(,log-items ,(org-ml-set-children rest-items plain-list))))
           (list (org-ml--flatten-plain-list plain-list) nil))))))
-
-(defun org-ml--flatten-logbook (children)
-  (--splice (org-ml-is-type 'plain-list it)
-            (org-ml--flatten-plain-list it)
-            children))
 
 (defmacro org-ml--drawer-splitter-map (slot form splitter)
   (declare (indent 1))
@@ -3432,115 +3546,6 @@ a modified node-property value."
                     (split nil rest))))))))
       (-let (((items clocks unknown) (split '(nil nil nil) nil nodes)))
         (list items clocks unknown)))))
-
-(defun org-ml--clocks-wrap-items (children)
-  (cl-flet
-      ((cons-maybe
-        (acc node)
-        (cond
-         ((and (org-ml-is-type 'item node)
-               (org-ml-is-type 'plain-list (car acc)))
-          ;; TODO need to preserve whitespace in the plain-list
-          (org-ml-map-children* (cons node it) acc))
-         ((org-ml-is-type 'item node)
-          (cons (org-ml-build-plain-list node) acc))
-         (t
-          (cons node acc)))))
-    (-reduce-from #'cons-maybe nil (reverse children))))
-
-(defun org-ml--lift-logbook (nodes)
-  (cl-flet
-      ((cons-maybe
-        (acc node)
-        (cond
-         ((and (org-ml-is-type 'item node)
-               (org-ml-is-type 'plain-list (car acc)))
-          (cons (org-ml-map-children* (cons node it) (car acc)) (cdr acc)))
-         ((org-ml-is-type 'item node)
-          (cons (org-ml-build-plain-list node) acc))
-         ((org-ml-is-type 'clock node)
-          (cons node acc))
-         (t
-          (error "This should not happen")))))
-    ;; TODO need to preserve whitespace in the plain-list
-    (-reduce-from #'cons-maybe nil (reverse nodes))))
-
-(defun org-ml--merge-logbook (enc-config items clocks)
-  ;; TODO probably not the most efficient merge sort ever
-  (cl-labels
-      ((get-ts
-        (node)
-        (cl-case (org-ml-get-type node)
-          (clock
-           (-some->> (org-ml-get-property :value node)
-             (org-ml--timestamp-get-start-unixtime)))
-          (item
-           ;; TODO shouldn't hard this function since it could change depending
-           ;; on the definition of a logbook item
-           (org-ml--item-get-logbook-timestamp node))))
-       (prepare-items
-        (items)
-        (--reduce-from (if (org-ml-is-type 'item it)
-                           (cons (list it) acc)
-                         (error "Not an item: %s" it))
-                       nil items))
-       (prepare-clocks
-        (clock-notes? is-log-item-fun clocks)
-        (--reduce-from (if clock-notes?
-                           (cond
-                            ;; if item but is a valid logbook item, throw error
-                            ((and (org-ml-is-type 'item it)
-                                  (funcall is-log-item-fun it))
-                             (error "Not a valid clock note: %s" it))
-                            ;; if item and last on the accumulator is a clock,
-                            ;; add it behind that clock
-                            ((and (org-ml-is-type 'item it)
-                                  (org-ml-is-type 'clock (car (car acc))))
-                             (cons (list (car (car acc)) it) (cdr acc)))
-                            ;; if clock, wrap in list and add
-                            ((org-ml-is-type 'clock it)
-                             (cons (list it) acc))
-                            (t
-                             (error "Not a clock or note: %s" it)))
-                         (if (org-ml-is-type 'clock it)
-                             (cons (list it) acc)
-                           (error "Not a clock: %s" it)))
-                       nil clocks))
-       (merge
-        (nodes-a nodes-b)
-        (pcase (cons nodes-a nodes-b)
-          (`(nil . nil) nil)
-          (`(,as . nil) as)
-          (`(nil . ,bs) bs)
-          (`((,a . ,as) . (,b . ,bs))
-           (let ((ts-a (get-ts (car a)))
-                 (ts-b (get-ts (car b))))
-             (cond
-              ((not ts-a)
-               (error "Could not get timestamp for logbook node: %s" a))
-              ((not ts-b)
-               (error "Could not get timestamp for logbook node: %s" b))
-              ((<= ts-b ts-a)
-               (cons a (merge as nodes-b)))
-              ((< ts-a ts-b)
-               (cons b (merge nodes-a bs)))
-              (t
-               (error "Unknown merge error")))))))
-       (merge-and-sort
-        (nodes)
-        (let ((L (length nodes)))
-          (if (<= L 1) nodes
-            (-let (((left right) (-split-at (/ L 2) nodes)))
-              (merge (merge-and-sort left) (merge-and-sort right)))))))
-    (-let (((&alist :clock-notes n :is-log-item-fun f) enc-config))
-      (->> (prepare-clocks n f clocks)
-           (append (prepare-items items))
-           (merge-and-sort)
-           (-flatten-n 1)
-           (org-ml--lift-logbook)))))
-
-(defun org-ml--node-has-trailing-space (node)
-  (and (< 0 (org-ml-get-property :post-blank node)) t))
 
 (defun org-ml--cs-init (clock-limit nodes)
   `(,clock-limit nil nil nil ,nodes))
@@ -3619,7 +3624,6 @@ a modified node-property value."
 (defun org-ml--cs-split-mixed-drawer-maybe (name enc-config alt-fun next-fun split-list)
   (org-ml--cs-split-drawer-maybe name 'mixed enc-config alt-fun next-fun split-list))
 
-;; TODO wetter than most shorelines in 2040 :(
 (defun org-ml--cs-split-item-maybe (enc-config alt-fun next-fun split-list)
   (let ((next (org-ml--cs-peek-next split-list)))
     (if (org-ml-is-type 'plain-list next)
@@ -3691,8 +3695,6 @@ a modified node-property value."
          (try-item (-partial #'org-ml--cs-split-clock-note-maybe enc-config alt-fun loop))
          (loop-try-item (-partial #'org-ml--cs-split-clocks-and-notes-maybe enc-config try-item)))
     (org-ml--cs-split-clock-maybe alt-fun loop-try-item split-list)))
-
-;; root splitters
 
 (defun org-ml--cs-split-mixed (enc-config split-list)
   (org-ml--cs-split-items-clocks-maybe enc-config #'org-ml--cs-terminate split-list))
@@ -3792,192 +3794,6 @@ a modified node-property value."
                              ld-name enc-config try-clocks try-cd-or-clocks)))
       (org-ml--cs-split-clock-drawer-maybe cd-name enc-config try-ld terminate-ld split-list))))
 
-;; headline logbook
-
-(defun org-ml--lb-init (items clocks unknown)
-  `((:items ,@items) (:clocks ,@clocks) (:unknown ,@unknown)))
-
-(defun org-ml--items-to-plain-list (items)
-  (let ((pb (->> (-last-item items) (org-ml-get-property :post-blank))))
-    (->> (org-ml--map-last* (org-ml-set-property :post-blank 0 it) items)
-         (apply #'org-ml-build-plain-list :post-blank pb))))
-
-(defun org-ml--item-get-logbook-timestamp (item)
-  (cl-flet
-      ((is-long-inactive-timestamp
-        (node)
-        (when (and (org-ml-is-type 'timestamp node)
-                   (org-ml--property-is-eq :type 'inactive node)
-                   ;; TODO this should be a public function
-                   (-some->> (org-ml--timestamp-get-start-time node)
-                     (org-ml--time-is-long)))
-          (org-ml--timestamp-get-start-unixtime node)))
-       (is-line-break
-        (node)
-        (or (org-ml-is-type 'line-break node)
-            (and (org-ml-is-type 'plain-text node)
-                 (equal "\n" node))))
-       ;; TODO this should be a public function
-       (get-paragraph-children
-        (item)
-        (-when-let (first-child (car (org-ml-get-children item)))
-          (when (org-ml-is-type 'paragraph first-child)
-            (org-ml-get-children first-child)))))
-    (let ((pchildren (get-paragraph-children item)))
-      (-if-let (i (-find-index #'is-line-break pchildren))
-          (is-long-inactive-timestamp (nth (1- i) pchildren))
-        (is-long-inactive-timestamp (-last-item pchildren))))))
-
-(defun org-ml--lb-to-nodes-items (logbook)
-  (->> (alist-get :items logbook)
-       (org-ml--items-to-plain-list)
-       (list)))
-
-(defun org-ml--lb-to-nodes-clocks (logbook)
-  (->> (alist-get :clocks logbook)
-       (org-ml--clocks-wrap-items)))
-
-(defun org-ml--lb-set-items (items logbook)
-  (-let (((&alist :clocks :unknown) logbook))
-    (org-ml--lb-init items clocks unknown)))
-
-(defun org-ml--lb-set-clocks (clocks logbook)
-  (-let (((&alist :items :unknown) logbook))
-    (org-ml--lb-init items clocks unknown)))
-
-(org-ml--defun* org-ml--lb-map-items (fun logbook)
-  "todo"
-  (--> (alist-get :items logbook)
-       (funcall fun it)
-       (org-ml--lb-set-items it logbook)))
-
-(org-ml--defun* org-ml--lb-map-clocks (fun logbook)
-  "todo"
-  (--> (alist-get :clocks logbook)
-       (funcall fun it)
-       (org-ml--lb-set-clocks it logbook)))
-
-(defun org-ml--lb-cons-item (item logbook)
-  (org-ml--lb-map-items* (cons item it) logbook))
-
-(defun org-ml--lb-cons-clock (clock logbook)
-  (org-ml--lb-map-clocks* (cons clock it) logbook))
-
-;; supercontents
-
-(defun org-ml--supercontents-init-from-lb (lb contents)
-  `((:logbook ,@lb) (:contents ,@contents)))
-
-(defun org-ml--supercontents-init (items clocks unknown contents)
-  (let ((lb (org-ml--lb-init items clocks unknown)))
-    (org-ml--supercontents-init-from-lb lb contents)))
-
-(defun org-ml--supercontents-to-nodes (config supercontents)
-  (-let (((&alist :logbook :contents) supercontents))
-    (append (org-ml--lb-to-nodes config logbook) contents)))
-
-;; headline -> alist
-
-(defun org-ml--supercontents-config-encode (config)
-  (cl-flet*
-      ((select-name
-        (option)
-        (pcase option
-          (`t "LOGBOOK")
-          (`nil nil)
-          ((and (pred stringp) s) s)
-          (e (error "Invalid option: %s" e)))))
-    (-let* (((&plist :log-into-drawer lid
-                     :clock-into-drawer cid
-                     :clock-out-notes notes) config)
-            (clock-limit (and (integerp cid) cid))
-            (id-name (select-name lid))
-            (cd-name (if clock-limit "LOGBOOK" (select-name cid)))
-            (single-drawer? (equal id-name cd-name)))
-      `((:drawers :items ,(and (not single-drawer?) id-name)
-                  :clocks ,(and (not single-drawer?) cd-name)
-                  :mixed ,(and single-drawer? id-name)
-                  :clock-limit ,clock-limit)
-        (:clock-notes . ,notes)
-        (:is-log-item-fun . ,#'org-ml--is-logbook-note)))))
-
-(defun org-ml--lb-to-nodes (config logbook)
-  (-let (((enconf &as &alist :drawers d)
-          (org-ml--supercontents-config-encode config)))
-    (cl-flet*
-      ((build-drawer
-        (name children)
-        (apply #'org-ml-build-drawer name children))
-       (cons-drawer-maybe
-        (name drawer-nodes loose-nodes)
-        (let ((drawer (-some->> drawer-nodes (build-drawer name))))
-          (if drawer (cons drawer loose-nodes) loose-nodes)))
-       (below-limit
-        (limit logbook)
-        (<= (--count (org-ml-is-type 'clock it) (alist-get :clocks logbook)) limit))
-       (merge
-        (logbook)
-        (-let (((&alist :items :clocks) logbook))
-          (org-ml--merge-logbook enconf items clocks)))
-       (separate
-        (logbook)
-        (list (org-ml--lb-to-nodes-items logbook)
-              (org-ml--lb-to-nodes-clocks logbook))))
-      (pcase d
-
-        ;; items not in drawer, clocks not in drawer
-        (`(:items nil :clocks nil :mixed nil :clock-limit nil)
-         (merge logbook))
-
-        ;; items and clocks in the same drawer
-        (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
-         (-some->> (merge logbook)
-           (build-drawer m)
-           (list)))
-
-        ;; items in drawer, clocks not in drawer
-        (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
-         (-let* (((items clocks) (separate logbook)))
-           (cons-drawer-maybe i items clocks)))
-
-        ;; items not in drawer, clocks in drawer
-        (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
-         (-let* (((items clocks) (separate logbook)))
-           (cons-drawer-maybe c clocks items)))
-
-        ;; items in drawer, clocks might be in the same drawer
-        (`(:items nil :clocks nil :mixed ,m :clock-limit ,l)
-         (if (below-limit l logbook)
-             (-let* (((items clocks) (separate logbook)))
-               (cons-drawer-maybe m items clocks))
-           (-some->> (merge logbook)
-             (build-drawer m)
-             (list))))
-        
-        ;; items not in drawer, clocks might be in a drawer
-        (`(:items nil :clocks ,c :mixed nil :clock-limit ,l)
-         (if (below-limit l logbook)
-             (-let* (((items clocks) (separate logbook)))
-               (cons-drawer-maybe c clocks items))
-           (merge logbook)))
-
-        ;; items in drawer, clocks in a different drawer
-        (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
-         (-let* (((items clocks) (separate logbook))
-                 (items-drawer (-some->> items (build-drawer i)))
-                 (clocks-drawer (-some->> clocks (build-drawer c))))
-           (-non-nil (list items-drawer clocks-drawer))))
-
-        ;; items in drawer, clocks either loose or in a different drawer
-        (`(:items ,i :clocks ,c :mixed nil :clock-limit ,l)
-         (-let* (((items clocks) (separate logbook))
-                 (items-drawer (-some->> items (build-drawer i))))
-           (if (below-limit l logbook)
-               (if items-drawer (cons items-drawer clocks) clocks)
-             (-non-nil (list items-drawer (-some->> clocks (build-drawer c)))))))
-
-        (e (error "This shouldn't happen: %s" e))))))
-
 (defun org-ml--supercontents-from-nodes (config nodes)
   (-let (((enconf &as &alist :drawers d)
           (org-ml--supercontents-config-encode config)))
@@ -4025,11 +3841,207 @@ a modified node-property value."
 
       (e (error "This shouldn't happen: %s" e)))))
 
+;; supercontents -> nodes
+
+(defun org-ml--sort-logbook (enc-config nodes)
+  ;; TODO break this up into smaller functions?
+  ;; TODO optimize this depending on what we wish to sort?
+  (-let (((&alist :clock-notes n :is-log-item-fun f) enc-config))
+    (cl-labels
+        ((get-ts
+          (node)
+          (cl-case (org-ml-get-type node)
+            (clock
+             (-some->> (org-ml-get-property :value node)
+               (org-ml--timestamp-get-start-unixtime)))
+            (item
+             (funcall f node))))
+         (prepare
+          (nodes)
+          (--reduce-from (if n
+                             (cond
+                              ;; if item and last on the accumulator is a clock,
+                              ;; add it behind that clock
+                              ((and (org-ml-is-type 'item it)
+                                    (org-ml-is-type 'clock (car (car acc)))
+                                    (not (funcall f it)))
+                               (cons (list (car (car acc)) it) (cdr acc)))
+                              ;; if item but is a valid logbook item, throw error
+                              ((or (and (org-ml-is-type 'item it)
+                                        (funcall f it))
+                                   (org-ml-is-type 'clock it))
+                               (cons (list it) acc))
+                              (t
+                               (error "Not a valid clock, item, or note: %s" it)))
+                           (if (org-ml-is-any-type '(clock item) it)
+                               (cons (list it) acc)
+                             (error "Not a clock or item: %s" it)))
+                         nil nodes))
+         (merge
+          (nodes-a nodes-b)
+          (pcase (cons nodes-a nodes-b)
+            (`(nil . nil) nil)
+            (`(,as . nil) as)
+            (`(nil . ,bs) bs)
+            (`((,a . ,as) . (,b . ,bs))
+             (let ((ts-a (get-ts (car a)))
+                   (ts-b (get-ts (car b))))
+               (cond
+                ((not ts-a)
+                 (error "Could not get timestamp for logbook node: %s" a))
+                ((not ts-b)
+                 (error "Could not get timestamp for logbook node: %s" b))
+                ((<= ts-b ts-a)
+                 (cons a (merge as nodes-b)))
+                ((< ts-a ts-b)
+                 (cons b (merge nodes-a bs)))
+                (t
+                 (error "Unknown merge error")))))))
+         (merge-and-sort
+          (nodes)
+          (let ((L (length nodes)))
+            (if (<= L 1) nodes
+              (-let (((left right) (-split-at (/ L 2) nodes)))
+                (merge (merge-and-sort left) (merge-and-sort right))))))
+         (cons-maybe
+          (acc node)
+          (cond
+           ((and (org-ml-is-type 'item node)
+                 (org-ml-is-type 'plain-list (car acc)))
+            (cons (org-ml-map-children* (cons node it) (car acc)) (cdr acc)))
+           ((org-ml-is-type 'item node)
+            (cons (org-ml-build-plain-list node) acc))
+           ((org-ml-is-type 'clock node)
+            (cons node acc))
+           (t
+            (error "This should not happen"))))
+         (finalize
+          (nodes)
+          (-reduce-from #'cons-maybe nil (reverse nodes)))
+         (fix-whitespace
+          (nodes)
+          (--map-when (org-ml-is-type 'plain-list it)
+                      (let ((pb (->> (org-ml-get-children it)
+                                     (-last-item)
+                                     (org-ml-get-property :post-blank))))
+                        (->> (org-ml-set-property :post-blank pb it)
+                             (org-ml-map-children*
+                               (org-ml--map-last*
+                                (org-ml-set-property :post-blank 0 it)
+                                it))))
+                      nodes)))
+      (->> (prepare nodes)
+           (merge-and-sort)
+           (-flatten-n 1)
+           (finalize)
+           (fix-whitespace)))))
+
+(defun org-ml--merge-logbook (enc-config items clocks)
+  (org-ml--sort-logbook enc-config (append items clocks)))
+
+(defun org-ml--logbook-items-to-nodes (enc-config logbook)
+  (->> (org-ml-logbook-get-items logbook)
+       (org-ml--sort-logbook enc-config)))
+
+(defun org-ml--logbook-clocks-to-nodes (enc-config logbook)
+  (->> (org-ml-logbook-get-clocks logbook)
+       (org-ml--sort-logbook enc-config)))
+
+(defun org-ml--logbook-to-nodes (config logbook)
+  (-let (((enconf &as &alist :drawers d)
+          (org-ml--supercontents-config-encode config)))
+    (cl-flet*
+      ((build-drawer
+        (name children)
+        (apply #'org-ml-build-drawer name children))
+       (cons-drawer-maybe
+        (name drawer-nodes loose-nodes)
+        (let ((drawer (-some->> drawer-nodes (build-drawer name))))
+          (if drawer (cons drawer loose-nodes) loose-nodes)))
+       (below-limit
+        (limit logbook)
+        (<= (--count (org-ml-is-type 'clock it) (alist-get :clocks logbook)) limit))
+       (merge
+        (logbook)
+        (-let (((&alist :items :clocks) logbook))
+          (org-ml--merge-logbook enconf items clocks)))
+       (separate
+        (logbook)
+        (list (org-ml--logbook-items-to-nodes enconf logbook)
+              (org-ml--logbook-clocks-to-nodes enconf logbook))))
+      (pcase d
+
+        ;; items not in drawer, clocks not in drawer
+        (`(:items nil :clocks nil :mixed nil :clock-limit nil)
+         (merge logbook))
+
+        ;; items and clocks in the same drawer
+        (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
+         (-some->> (merge logbook)
+           (build-drawer m)
+           (list)))
+
+        ;; items in drawer, clocks not in drawer
+        (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
+         (-let* (((items clocks) (separate logbook)))
+           (cons-drawer-maybe i items clocks)))
+
+        ;; items not in drawer, clocks in drawer
+        (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
+         (-let* (((items clocks) (separate logbook)))
+           (cons-drawer-maybe c clocks items)))
+
+        ;; items in drawer, clocks might be in the same drawer
+        (`(:items nil :clocks nil :mixed ,m :clock-limit ,l)
+         (if (below-limit l logbook)
+             (-let* (((items clocks) (separate logbook)))
+               (cons-drawer-maybe m items clocks))
+           (-some->> (merge logbook)
+             (build-drawer m)
+             (list))))
+        
+        ;; items not in drawer, clocks might be in a drawer
+        (`(:items nil :clocks ,c :mixed nil :clock-limit ,l)
+         (if (below-limit l logbook) (merge logbook)
+           (-let* (((items clocks) (separate logbook)))
+             (cons-drawer-maybe c clocks items))))
+
+        ;; items in drawer, clocks in a different drawer
+        (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
+         (-let* (((items clocks) (separate logbook))
+                 (items-drawer (-some->> items (build-drawer i)))
+                 (clocks-drawer (-some->> clocks (build-drawer c))))
+           (-non-nil (list items-drawer clocks-drawer))))
+
+        ;; items in drawer, clocks either loose or in a different drawer
+        (`(:items ,i :clocks ,c :mixed nil :clock-limit ,l)
+         (-let* (((items clocks) (separate logbook))
+                 (items-drawer (-some->> items (build-drawer i))))
+           (if (below-limit l logbook)
+               (if items-drawer (cons items-drawer clocks) clocks)
+             (-non-nil (list items-drawer (-some->> clocks (build-drawer c)))))))
+
+        (e (error "This shouldn't happen: %s" e))))))
+
+(defun org-ml--supercontents-to-nodes (config supercontents)
+  (let ((logbook (->> (org-ml-supercontents-get-logbook supercontents)
+                      (org-ml--logbook-to-nodes config)))
+        (contents (org-ml-supercontents-get-contents supercontents)))
+    ;; TODO if the logbook ends with a plain-list and the contents starts with
+    ;; a plain list, join them
+    (append logbook contents)))
+
+;; headline supercontents
+
 (defun org-ml-headline-get-supercontents (config headline)
-  (->> (org-ml-headline-get-section headline)
-       (org-ml--drop-node-type 'planning)
-       (org-ml--drop-node-type 'property-drawer)
-       (org-ml--supercontents-from-nodes config)))
+  (cl-flet
+      ((drop-if-type
+        (type children)
+        (if (org-ml-is-type type (car children)) (cdr children) children)))
+    (->> (org-ml-headline-get-section headline)
+         (drop-if-type 'planning)
+         (drop-if-type 'property-drawer)
+         (org-ml--supercontents-from-nodes config))))
 
 (defun org-ml-headline-set-supercontents (config supercontents headline)
   (org-ml-headline-map-section*
@@ -4052,57 +4064,64 @@ a modified node-property value."
        (funcall fun it)
        (org-ml-headline-set-supercontents config it headline)))
 
-;; headline logbook
+;; headline logbook/contents
 
-;; TODO maybe will need these
-;; (defun org-ml--headine-get-logbook (log-into-drawer clock-into-drawer headline)
-;;     (->> (org-ml-headline-get-supercontents log-into-drawer
-;;                                              clock-into-drawer
-;;                                              headline)
-;;          (alist-get :logbook)))
+(defun org-ml-headline-get-logbook-items (config headline)
+  (->> (org-ml-headline-get-supercontents config headline)
+       (org-ml-supercontents-get-logbook)
+       (org-ml-logbook-get-items)))
 
-;; (defun org-ml--headine-set-logbook (log-into-drawer clock-into-drawer logbook headline)
-;;   (org-ml-headline-map-supercontents* log-into-drawer clock-into-drawer
-;;     `((:logbook . ,logbook) (:contents . ,(plist-get :contents it)))
-;;     headline))
-
-(org-ml--defun* org-ml--headline-map-lb (config fun headline)
-  "todo"
+(defun org-ml-headline-set-logbook-items (config items headline)
   (org-ml-headline-map-supercontents* config
-    (-let (((&alist :logbook :contents) it))
-      (org-ml--supercontents-init-from-lb (funcall fun logbook) contents))
+    (org-ml-supercontents-map-logbook* (org-ml--logbook-set-items items it) it)
     headline))
 
-;; headline contents
+(org-ml--defun* org-ml-headline-map-logbook-items (config fun headline)
+  "todo"
+  (--> (org-ml-headline-get-logbook-items config headline)
+       (funcall fun it)
+       (org-ml-headline-set-logbook-items config it headline)))
+
+(defun org-ml-headline-get-logbook-clocks (config headline)
+  (->> (org-ml-headline-get-supercontents config headline)
+       (org-ml-supercontents-get-logbook)
+       (org-ml-logbook-get-clocks)))
+
+(defun org-ml-headline-set-logbook-clocks (config clocks headline)
+  (org-ml-headline-map-supercontents* config
+    (org-ml-supercontents-map-logbook* (org-ml--logbook-set-clocks clocks it) it)
+    headline))
+
+(org-ml--defun* org-ml-headline-map-logbook-clocks (config fun headline)
+  "todo"
+  (--> (org-ml-headline-get-logbook-clocks config headline)
+       (funcall fun it)
+       (org-ml-headline-set-logbook-clocks config it headline)))
 
 (defun org-ml-headline-get-contents (config headline)
   (->> (org-ml-headline-get-supercontents config headline)
-       (alist-get :contents)))
+       (org-ml-supercontents-get-contents)))
 
-(defun org-ml-headline-set-contents (config children headline)
+(defun org-ml-headline-set-contents (config contents headline)
   (org-ml-headline-map-supercontents* config
-    (-let (((&alist :logbook) it))
-      (org-ml--supercontents-init-from-lb logbook children))
+    (org-ml-supercontents-set-contents contents it)
     headline))
 
 (org-ml--defun* org-ml-headline-map-contents (config fun headline)
   "Docstring"
-  (org-ml-headline-map-supercontents* config
-    (-let (((&alist :logbook :contents) it))
-      (org-ml--supercontents-init-from-lb logbook (funcall fun contents)))
-    headline))
+  (--> (org-ml-headline-get-contents config headline)
+       (funcall fun it)
+       (org-ml-headline-set-contents config it headline)))
 
 ;; headline logbook meta operations
 
 (defun org-ml-headline-logbook-append-item (config item headline)
-  (org-ml--headline-map-lb* config (org-ml--lb-cons-item item it) headline))
+  (org-ml-headline-map-logbook-items* config (cons item it) headline))
 
 (defun org-ml-headline-logbook-append-open-clock (config unixtime headline)
   (let ((clock (-> (org-ml-unixtime-to-time-long unixtime)
                    (org-ml-build-clock!))))
-    (org-ml--headline-map-lb* config
-      (org-ml--lb-cons-clock clock it)
-      headline)))
+    (org-ml-headline-map-logbook-clocks* config (cons clock it) headline)))
 
 (defun org-ml-headline-logbook-close-open-clock (config unixtime note headline)
   (cl-flet*
@@ -4122,58 +4141,11 @@ a modified node-property value."
                            (org-ml-build-paragraph)
                            (org-ml-build-item))))
               (if note* `(,closed ,note* ,@rest) (cons closed rest)))))))
-    (org-ml--headline-map-lb* config
-      (org-ml--lb-map-clocks #'close-first it)
-      headline)))
+    (org-ml-headline-map-logbook-clocks config #'close-first headline)))
 
 (defun org-ml-headline-logbook-convert-config (config1 config2 headline)
   (--> (org-ml-headline-get-supercontents config1 headline)
        (org-ml-headline-set-supercontents config2 it headline)))
-
-;; (defun org-ml-headline-logbook-drawer-close-open-clock (name other-name unixtime note headline)
-;;   "Return HEADLINE with the first clock closed.
-
-;; The clock will be closed to UNIXTIME, and NOTE will be appended
-;; as a clock out note if supplied (as string). If no open clocks
-;; are found, return HEADLINE unmodified.
-
-;; This does the functional equivalent of `org-clock-out' on the logbook.
-
-;; NAME and OTHER-NAME have the same meaning as those in
-;; `org-ml-headline-get-logbook-drawer'."
-;;   (cl-flet
-;;       ((close-clock
-;;         (index logbook-children)
-;;         (let ((time (org-ml-unixtime-to-time-long unixtime)))
-;;           (org-ml--map-at* index
-;;             (org-ml-map-property* :value
-;;               (->> (org-ml-timestamp-set-end-time time it)
-;;                    (org-ml--timestamp-set-type-ranged t))
-;;               it)
-;;             logbook-children)))
-;;        (add-note-maybe
-;;         (index logbook-children)
-;;         (if (not note) logbook-children
-;;           (let* ((next (1+ index))
-;;                  (target (nth next logbook-children))
-;;                  (item (->> (org-ml-build-paragraph note)
-;;                             (org-ml-build-item))))
-;;             ;; if plain-list is after the clock being closed, add the
-;;             ;; note to the front of the plain-list, otherwise insert
-;;             ;; a new plain-list
-;;             (if (org-ml-is-type 'plain-list target)
-;;                 (org-ml--map-at* next
-;;                   (org-ml-map-children* (cons item it) it)
-;;                   logbook-children)
-;;               (-insert-at next (org-ml-build-plain-list item)
-;;                           logbook-children))))))
-;;     (org-ml-headline-map-logbook-drawer* name other-name
-;;       (-if-let (i (--find-index (and (org-ml-is-type 'clock it)
-;;                                      (org-ml-clock-is-running it))
-;;                                 it))
-;;           (->> it (close-clock i) (add-note-maybe i))
-;;         it)
-;;       headline)))
 
 ;; misc
 

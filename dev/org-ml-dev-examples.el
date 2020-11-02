@@ -4015,72 +4015,131 @@
                   ":ID:       FAKE"
                   ":END:"))
 
-    ;; (defexamples-content org-ml-headline-get-logbook-loose
+    (defexamples-content org-ml-headline-get-supercontents
+      nil
+      
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort: 0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               "contents")
+
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-get-supercontents config)
+             (alist-get :logbook)
+             (alist-get :items)
+             (-map #'org-ml-to-trimmed-string)))
+      => '("- Note taken on [2018-12-31 Mon 00:00] \\\\\n  log note")
+
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-get-supercontents config)
+             (alist-get :logbook)
+             (alist-get :clocks)
+             (-map #'org-ml-to-trimmed-string)))
+      => '("CLOCK: [2019-01-01 Tue 00:00]")
+
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-get-supercontents config)
+             (alist-get :logbook)
+             (alist-get :unknown)
+             (-map #'org-ml-to-trimmed-string)))
+      => nil
+
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-get-supercontents config)
+             (alist-get :contents)
+             (-map #'org-ml-to-trimmed-string)))
+      => '("contents"))
+
+    (defexamples-content org-ml-headline-set-supercontents
+      nil
+      
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort:    0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               "contents")
+
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-set-supercontents
+              config `((:logbook nil) (:contents ,(org-ml-build-paragraph! "new contents"))))
+             (org-ml-to-trimmed-string)))
+      => (:result "* headline"
+                  "CLOSED: [2019-01-01 Tue 00:00]"
+                  ":PROPERTIES:"
+                  ":Effort:   0:30"
+                  ":END:"
+                  "new contents"))
+
+    ;; (defexamples-content org-ml-headline-map-supercontents
     ;;   nil
-    ;;   (:buffer "* headline"
-    ;;            "not a log")
-    ;;   (->> (org-ml-parse-this-headline)
-    ;;        (org-ml-headline-get-logbook-loose nil nil)
-    ;;        (-map #'org-ml-to-trimmed-string))
-    ;;   => nil
-
+      
     ;;   (:buffer "* headline"
     ;;            "CLOSED: [2019-01-01 Tue 00:00]"
-    ;;            "- log1"
-    ;;            "CLOCK: [2019-01-01 Tue 00:00]"
-    ;;            "- log2"
-    ;;            ""
-    ;;            "- not log")
-    ;;   (->> (org-ml-parse-this-headline)
-    ;;        (org-ml-headline-get-logbook-loose nil nil)
-    ;;        (-map #'org-ml-to-trimmed-string))
-    ;;   => '("- log1"
-    ;;        "CLOCK: [2019-01-01 Tue 00:00]"
-    ;;        "- log2")
-
-    ;;   (:buffer "* headline"
-    ;;            "CLOSED: [2019-01-01 Tue 00:00]"
-    ;;            "- log1"
-    ;;            ":CLOCKS:"
-    ;;            "CLOCK: [2019-01-02 Wed 00:00]"
+    ;;            ":PROPERTIES:"
+    ;;            ":Effort:    0:30"
     ;;            ":END:"
-    ;;            "CLOCK: [2019-01-01 Tue 00:00]"
-    ;;            "- log2"
-    ;;            ""
-    ;;            "- not log")
-
-    ;;   (->> (org-ml-parse-this-headline)
-    ;;        (org-ml-headline-get-logbook-loose nil nil)
-    ;;        (-map #'org-ml-to-trimmed-string))
-    ;;   => '("- log1")
-
-    ;;   (->> (org-ml-parse-this-headline)
-    ;;        (org-ml-headline-get-logbook-loose nil "CLOCKS")
-    ;;        (-map #'org-ml-to-trimmed-string))
-    ;;   => '("- log1"
-    ;;        "CLOCK: [2019-01-01 Tue 00:00]"
-    ;;        "- log2")
-
-    ;;   (:buffer "* headline"
-    ;;            "CLOSED: [2019-01-01 Tue 00:00]"
-    ;;            ":LOGS:"
-    ;;            "- log1"
+    ;;            ":LOGGING:"
+    ;;            "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+    ;;            "  log note"
     ;;            ":END:"
+    ;;            ":CLOCKING:"
     ;;            "CLOCK: [2019-01-01 Tue 00:00]"
-    ;;            "- clock note"
-    ;;            ""
-    ;;            "- not log")
+    ;;            ":END:"
+    ;;            "contents")
 
-    ;;   (->> (org-ml-parse-this-headline)
-    ;;        (org-ml-headline-get-logbook-loose nil nil)
-    ;;        (-map #'org-ml-to-trimmed-string))
-    ;;   => nil
+    ;;   (let ((config (list :log-into-drawer "LOGGING"
+    ;;                       :clock-into-drawer "CLOCKING")))
+    ;;     (->> (org-ml-parse-this-headline)
+    ;;          (org-ml-headline-map-supercontents*
+    ;;           config (cons (org-ml-build-paragraph! "new contents") it))
+    ;;          (org-ml-to-trimmed-string)))
+    ;;   => (:result "* headline"
+    ;;               "CLOSED: [2019-01-01 Tue 00:00]"
+    ;;               ":PROPERTIES:"
+    ;;               ":Effort:   0:30"
+    ;;               ":END:"
+    ;;               ":LOGGING:"
+    ;;               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+    ;;               "  log note"
+    ;;               ":END:"
+    ;;               ":CLOCKING:"
+    ;;               "CLOCK: [2019-01-01 Tue 00:00]"
+    ;;               ":END:"
+    ;;               "new contents"
+    ;;               "contents"))
 
-    ;;   (->> (org-ml-parse-this-headline)
-    ;;        (org-ml-headline-get-logbook-loose "LOGS" nil)
-    ;;        (-map #'org-ml-to-trimmed-string))
-    ;;   => '("CLOCK: [2019-01-01 Tue 00:00]"
-    ;;        "- clock note"))
+    ;; (defexamples-content org-ml-headline-set-supercontents
+    ;;   nil)
+
+    ;; (defexamples-content org-ml-headline-map-supercontents
+    ;;   nil)
 
     (defexamples-content org-ml-headline-get-contents
       nil
@@ -4100,7 +4159,8 @@
       (:buffer "* headline"
                "CLOSED: [2019-01-01 Tue 00:00]"
                ":LOGBOOK:"
-               "- log1"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
                "CLOCK: [2019-01-01 Tue 00:00]"
                ":END:"
                ""
@@ -4113,7 +4173,8 @@
       (:buffer "* headline"
                "CLOSED: [2019-01-01 Tue 00:00]"
                ":LOGGING:"
-               "- log1"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
                ":END:"
                ":CLOCKING:"
                "CLOCK: [2019-01-01 Tue 00:00]"
