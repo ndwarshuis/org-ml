@@ -3559,7 +3559,7 @@ a modified node-property value."
             (clocks
              `(list ,c* ,items* (funcall ,lambda-form ,clocks*) ,unknown* ,rest*))
             (unknown
-             `(list ,c* ,items* (funcall ,lambda-form ,unknown*) ,unknown* ,rest*))
+             `(list ,c* ,items* ,clocks* (funcall ,lambda-form ,unknown*) ,rest*))
             (rest
              `(list ,c* ,items* ,clocks* ,unknown* (funcall ,lambda-form ,rest*)))
             (t (error "Unknown slot type")))))
@@ -3606,7 +3606,7 @@ a modified node-property value."
               (->> (org-ml--cs-map items (append items* it) sl)
                    (org-ml--cs-map clocks (append clocks* it))
                    ;; TODO this makes my tests flip out :(
-                   ;; (org-ml--cs-map unknown (append unknown* it))
+                   (org-ml--cs-map unknown (append unknown* it))
                    (org-ml--cs-map rest (cdr it))))))
         (org-ml--cs-terminate-if-space #'add-fun next-fun split-list)))))
 
