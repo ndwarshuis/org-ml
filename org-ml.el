@@ -3380,7 +3380,7 @@ a modified node-property value."
             (t (error "Unknown slot type")))))
     `(-let (((,items* ,clocks* ,unknown*) ,splitter)) ,ret-form)))
 
-(defun org-ml--separate-logbook (mode enc-config nodes)
+(defun org-ml--separate-logbook (enc-config mode nodes)
   (-let (((&alist :clock-notes n :is-log-item-fun f) enc-config))
     (cl-labels
         ((separate-plain-list
@@ -3393,8 +3393,7 @@ a modified node-property value."
                      (append (reverse log-items) it) acc))
                  (if (not other-items) it
                    (org-ml--drawer-splitter-map unknown
-                     (append (reverse other-items) it) it)
-                   it))))
+                     (append (reverse other-items) it) it)))))
          (split
           (acc maybe-clock-note? nodes)
           (-let* (((first . rest) nodes))
@@ -3413,12 +3412,17 @@ a modified node-property value."
                     (-> (separate-plain-list acc first)
                         (split nil rest)))
                    (t
-                    (-> (org-ml--drawer-splitter-map unknown (cons first it) acc)
-                        (split nil rest))))))
+                    (let ((flat (reverse (org-ml--flatten-plain-list first))))
+                      (-> (org-ml--drawer-splitter-map unknown (append flat it) acc)
+                          (split nil rest)))))))
                ((and (org-ml-is-type 'plain-list first)
                      (memq mode '(items mixed)))
                 (-> (separate-plain-list acc first)
                     (split nil rest)))
+               ((and (org-ml-is-type 'plain-list first) (eq mode 'clocks))
+                (let ((flat (reverse (org-ml--flatten-plain-list first))))
+                  (-> (org-ml--drawer-splitter-map unknown (append flat it) acc)
+                      (split nil rest))))
                ((and (org-ml-is-type 'clock first)
                      (memq mode '(mixed clocks)))
                 (-> (org-ml--drawer-splitter-map clocks (cons first it) acc)
@@ -3598,7 +3602,7 @@ a modified node-property value."
             (sl)
             (-let (((items* clocks* unknown*)
                     (->> (org-ml-get-children next)
-                         (org-ml--separate-logbook mode enc-config))))
+                         (org-ml--separate-logbook enc-config mode))))
               (->> (org-ml--cs-map items (append items* it) sl)
                    (org-ml--cs-map clocks (append clocks* it))
                    ;; TODO this makes my tests flip out :(
