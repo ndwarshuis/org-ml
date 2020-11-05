@@ -163,9 +163,11 @@ is the converse."
   (should (equal '("A" "b" "c") (org-ml--map-first* (s-upcase it) '("a" "b" "c"))))
   (should (equal '("a" "b" "C") (org-ml--map-last* (s-upcase it) '("a" "b" "c"))))
   ;; identity should hold true for any length list (0, 1, and 1+)
-  (let ((test-lists '(nil '(1) '(1 2))))
+  (let ((test-lists '(nil (1) (1 2))))
     (--each test-lists (should (equal it (org-ml--map-first* (identity it) it))))
-    (--each test-lists (should (equal it (org-ml--map-last* (identity it) it))))))
+    (--each test-lists (should (equal it (org-ml--map-last* (identity it) it)))))
+
+  )
 
 ;;; PARSING INVERSION
 
@@ -881,8 +883,8 @@ be parsed to TYPE."
 ;;; SUPERCONTENTS FRAMEWORK TESTING
 
 (ert-deftest org-ml--merge-logbook ()
-  (let* ((enconf (org-ml--supercontents-config-encode nil))
-         (enconf-notes (org-ml--supercontents-config-encode '(:clock-out-notes t)))
+  (let* ((enconf (org-ml--scc-encode nil))
+         (enconf-notes (org-ml--scc-encode '(:clock-out-notes t)))
          (c1 (org-ml-build-clock! '(2020 1 1 0 0) :end '(2020 1 1 1 0)))
          (i1 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 2 0 0)) "1"))
          (c2 (org-ml-build-clock! '(2020 1 3 0 0) :end '(2020 1 3 1 0)))
@@ -967,8 +969,8 @@ be parsed to TYPE."
         ;; (print (format "%S" (org-ml--separate-logbook c m in)))
         (should (equal (list items clocks unknown)
                        (org-ml--separate-logbook c m in)))))
-    (let* ((enconf (org-ml--supercontents-config-encode nil))
-           (enconf-notes (org-ml--supercontents-config-encode '(:clock-out-notes t)))
+    (let* ((enconf (org-ml--scc-encode nil))
+           (enconf-notes (org-ml--scc-encode '(:clock-out-notes t)))
            (c1 (org-ml-build-clock! '(2020 1 1 0 0) :end '(2020 1 1 1 0)))
            (i1 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 2 0 0)) "1"))
            (c2 (org-ml-build-clock! '(2020 1 3 0 0) :end '(2020 1 3 1 0)))
@@ -987,189 +989,189 @@ be parsed to TYPE."
       ;; no clock notes
       ;;
       ;; nothing
-      (test enconf 'mixed nil nil nil nil)
+      (test enconf :mixed nil nil nil nil)
       ;; single item
-      (test enconf 'mixed `(,i1) nil nil `(,p1))
+      (test enconf :mixed `(,i1) nil nil `(,p1))
       ;; single clock
-      (test enconf 'mixed nil `(,c1) nil `(,c1))
+      (test enconf :mixed nil `(,c1) nil `(,c1))
       ;; single garbage entry
-      (test enconf 'mixed nil nil `(,x1) `(,x1))
+      (test enconf :mixed nil nil `(,x1) `(,x1))
       ;; single item and clock
-      (test enconf 'mixed `(,i1) `(,c1) nil `(,p1 ,c1))
+      (test enconf :mixed `(,i1) `(,c1) nil `(,p1 ,c1))
       ;; single item and garbage
-      (test enconf 'mixed `(,i1) nil `(,x1) `(,p1 ,x1))
+      (test enconf :mixed `(,i1) nil `(,x1) `(,p1 ,x1))
       ;; single clock and garbage
-      (test enconf 'mixed nil `(,c1) `(,x1) `(,c1 ,x1))
+      (test enconf :mixed nil `(,c1) `(,x1) `(,c1 ,x1))
       ;; single item, clock, and garbage
-      (test enconf 'mixed `(,i1) `(,c1) `(,x1) `(,p1 ,c1 ,x1))
+      (test enconf :mixed `(,i1) `(,c1) `(,x1) `(,p1 ,c1 ,x1))
       ;; multiple items and clocks
-      (test enconf 'mixed `(,i2 ,i1) `(,c2 ,c1) nil `(,p12 ,c1 ,c2))
+      (test enconf :mixed `(,i2 ,i1) `(,c2 ,c1) nil `(,p12 ,c1 ,c2))
       ;; multiple items and clocks (interlaced)
-      (test enconf 'mixed `(,i2 ,i1) `(,c2 ,c1) nil `(,p1 ,c1 ,p2 ,c2))
+      (test enconf :mixed `(,i2 ,i1) `(,c2 ,c1) nil `(,p1 ,c1 ,p2 ,c2))
       ;; clock with note
-      (test enconf 'mixed nil `(,c1) `(,n1) `(,c1 ,pn1))
+      (test enconf :mixed nil `(,c1) `(,n1) `(,c1 ,pn1))
       ;; clock with note in wrong place
-      (test enconf 'mixed nil `(,c1) `(,n1) `(,pn1 ,c1))
+      (test enconf :mixed nil `(,c1) `(,n1) `(,pn1 ,c1))
       ;; clock with note and item
-      (test enconf 'mixed `(,i1) `(,c1) `(,n1) `(,c1 ,pn11))
+      (test enconf :mixed `(,i1) `(,c1) `(,n1) `(,c1 ,pn11))
       ;; clock with item and note
-      (test enconf 'mixed `(,i1) `(,c1) `(,n1) `(,c1 ,p1n1))
+      (test enconf :mixed `(,i1) `(,c1) `(,n1) `(,c1 ,p1n1))
       ;; clock notes
       ;;
       ;; nothing
-      (test enconf-notes 'mixed nil nil nil nil)
+      (test enconf-notes :mixed nil nil nil nil)
       ;; single item
-      (test enconf-notes 'mixed `(,i1) nil nil `(,p1))
+      (test enconf-notes :mixed `(,i1) nil nil `(,p1))
       ;; single clock
-      (test enconf-notes 'mixed nil `(,c1) nil `(,c1))
+      (test enconf-notes :mixed nil `(,c1) nil `(,c1))
       ;; single garbage entry
-      (test enconf-notes 'mixed nil nil `(,x1) `(,x1))
+      (test enconf-notes :mixed nil nil `(,x1) `(,x1))
       ;; single item and clock
-      (test enconf-notes 'mixed `(,i1) `(,c1) nil `(,p1 ,c1))
+      (test enconf-notes :mixed `(,i1) `(,c1) nil `(,p1 ,c1))
       ;; single item and garbage
-      (test enconf-notes 'mixed `(,i1) nil `(,x1) `(,p1 ,x1))
+      (test enconf-notes :mixed `(,i1) nil `(,x1) `(,p1 ,x1))
       ;; single clock and garbage
-      (test enconf-notes 'mixed nil `(,c1) `(,x1) `(,c1 ,x1))
+      (test enconf-notes :mixed nil `(,c1) `(,x1) `(,c1 ,x1))
       ;; single item, clock, and garbage
-      (test enconf-notes 'mixed `(,i1) `(,c1) `(,x1) `(,p1 ,c1 ,x1))
+      (test enconf-notes :mixed `(,i1) `(,c1) `(,x1) `(,p1 ,c1 ,x1))
       ;; multiple items and clocks
-      (test enconf-notes 'mixed `(,i2 ,i1) `(,c2 ,c1) nil `(,p12 ,c1 ,c2))
+      (test enconf-notes :mixed `(,i2 ,i1) `(,c2 ,c1) nil `(,p12 ,c1 ,c2))
       ;; multiple items and clocks (interlaced)
-      (test enconf-notes 'mixed `(,i2 ,i1) `(,c2 ,c1) nil `(,p1 ,c1 ,p2 ,c2))
+      (test enconf-notes :mixed `(,i2 ,i1) `(,c2 ,c1) nil `(,p1 ,c1 ,p2 ,c2))
       ;; clock with note
-      (test enconf-notes 'mixed nil `(,n1 ,c1) nil `(,c1 ,pn1))
+      (test enconf-notes :mixed nil `(,n1 ,c1) nil `(,c1 ,pn1))
       ;; clock with note in wrong place
-      (test enconf-notes 'mixed nil `(,c1) `(,n1) `(,pn1 ,c1))
+      (test enconf-notes :mixed nil `(,c1) `(,n1) `(,pn1 ,c1))
       ;; clock with note and item
-      (test enconf-notes 'mixed `(,i1) `(,n1 ,c1) nil `(,c1 ,pn11))
+      (test enconf-notes :mixed `(,i1) `(,n1 ,c1) nil `(,c1 ,pn11))
       ;; clock with item and note
-      (test enconf-notes 'mixed `(,i1) `(,c1) `(,n1) `(,c1 ,p1n1))
+      (test enconf-notes :mixed `(,i1) `(,c1) `(,n1) `(,c1 ,p1n1))
 
       ;; MODE = ITEMS
       ;;
       ;; no clock notes
       ;;
       ;; nothing
-      (test enconf 'items nil nil nil nil)
+      (test enconf :items nil nil nil nil)
       ;; single item
-      (test enconf 'items `(,i1) nil nil `(,p1))
+      (test enconf :items `(,i1) nil nil `(,p1))
       ;; single clock
-      (test enconf 'items nil nil `(,c1) `(,c1))
+      (test enconf :items nil nil `(,c1) `(,c1))
       ;; single garbage entry
-      (test enconf 'items nil nil `(,x1) `(,x1))
+      (test enconf :items nil nil `(,x1) `(,x1))
       ;; single item and clock
-      (test enconf 'items `(,i1) nil `(,c1) `(,p1 ,c1))
+      (test enconf :items `(,i1) nil `(,c1) `(,p1 ,c1))
       ;; single item and garbage
-      (test enconf 'items `(,i1) nil `(,x1) `(,p1 ,x1))
+      (test enconf :items `(,i1) nil `(,x1) `(,p1 ,x1))
       ;; single clock and garbage
-      (test enconf 'items nil nil `(,x1 ,c1) `(,c1 ,x1))
+      (test enconf :items nil nil `(,x1 ,c1) `(,c1 ,x1))
       ;; single item, clock, and garbage
-      (test enconf 'items `(,i1) nil `(,x1 ,c1) `(,p1 ,c1 ,x1))
+      (test enconf :items `(,i1) nil `(,x1 ,c1) `(,p1 ,c1 ,x1))
       ;; multiple items and clocks
-      (test enconf 'items `(,i2 ,i1) nil `(,c2 ,c1) `(,p12 ,c1 ,c2))
+      (test enconf :items `(,i2 ,i1) nil `(,c2 ,c1) `(,p12 ,c1 ,c2))
       ;; multiple items and clocks (interlaced)
-      (test enconf 'items `(,i2 ,i1) nil `(,c2 ,c1) `(,p1 ,c1 ,p2 ,c2))
+      (test enconf :items `(,i2 ,i1) nil `(,c2 ,c1) `(,p1 ,c1 ,p2 ,c2))
       ;; clock with note
-      (test enconf 'items nil nil `(,n1 ,c1) `(,c1 ,pn1))
+      (test enconf :items nil nil `(,n1 ,c1) `(,c1 ,pn1))
       ;; clock with note in wrong place
-      (test enconf 'items nil nil `(,c1 ,n1) `(,pn1 ,c1))
+      (test enconf :items nil nil `(,c1 ,n1) `(,pn1 ,c1))
       ;; clock with note and item
-      (test enconf 'items `(,i1) nil `(,n1 ,c1) `(,c1 ,pn11))
+      (test enconf :items `(,i1) nil `(,n1 ,c1) `(,c1 ,pn11))
       ;; clock with item and note
-      (test enconf 'items `(,i1) nil `(,n1 ,c1) `(,c1 ,p1n1))
+      (test enconf :items `(,i1) nil `(,n1 ,c1) `(,c1 ,p1n1))
       ;; clock notes
       ;;
       ;; nothing
-      (test enconf-notes 'items nil nil nil nil)
+      (test enconf-notes :items nil nil nil nil)
       ;; single item
-      (test enconf-notes 'items `(,i1) nil nil `(,p1))
+      (test enconf-notes :items `(,i1) nil nil `(,p1))
       ;; single clock
-      (test enconf-notes 'items nil nil `(,c1) `(,c1))
+      (test enconf-notes :items nil nil `(,c1) `(,c1))
       ;; single garbage entry
-      (test enconf-notes 'items nil nil `(,x1) `(,x1))
+      (test enconf-notes :items nil nil `(,x1) `(,x1))
       ;; single item and clock
-      (test enconf-notes 'items `(,i1) nil `(,c1) `(,p1 ,c1))
+      (test enconf-notes :items `(,i1) nil `(,c1) `(,p1 ,c1))
       ;; single item and garbage
-      (test enconf-notes 'items `(,i1) nil `(,x1) `(,p1 ,x1))
+      (test enconf-notes :items `(,i1) nil `(,x1) `(,p1 ,x1))
       ;; single clock and garbage
-      (test enconf-notes 'items nil nil `(,x1 ,c1) `(,c1 ,x1))
+      (test enconf-notes :items nil nil `(,x1 ,c1) `(,c1 ,x1))
       ;; single item, clock, and garbage
-      (test enconf-notes 'items `(,i1) nil `(,x1 ,c1) `(,p1 ,c1 ,x1))
+      (test enconf-notes :items `(,i1) nil `(,x1 ,c1) `(,p1 ,c1 ,x1))
       ;; multiple items and clocks
-      (test enconf-notes 'items `(,i2 ,i1) nil `(,c2 ,c1) `(,p12 ,c1 ,c2))
+      (test enconf-notes :items `(,i2 ,i1) nil `(,c2 ,c1) `(,p12 ,c1 ,c2))
       ;; multiple items and clocks (interlaced)
-      (test enconf-notes 'items `(,i2 ,i1) nil `(,c2 ,c1) `(,p1 ,c1 ,p2 ,c2))
+      (test enconf-notes :items `(,i2 ,i1) nil `(,c2 ,c1) `(,p1 ,c1 ,p2 ,c2))
       ;; clock with note
-      (test enconf-notes 'items nil nil `(,n1 ,c1) `(,c1 ,pn1))
+      (test enconf-notes :items nil nil `(,n1 ,c1) `(,c1 ,pn1))
       ;; clock with note in wrong place
-      (test enconf-notes 'items nil nil `(,c1 ,n1) `(,pn1 ,c1))
+      (test enconf-notes :items nil nil `(,c1 ,n1) `(,pn1 ,c1))
       ;; clock with note and item
-      (test enconf-notes 'items `(,i1) nil `(,n1 ,c1) `(,c1 ,pn11))
+      (test enconf-notes :items `(,i1) nil `(,n1 ,c1) `(,c1 ,pn11))
       ;; clock with item and note
-      (test enconf-notes 'items `(,i1) nil `(,n1 ,c1) `(,c1 ,p1n1))
+      (test enconf-notes :items `(,i1) nil `(,n1 ,c1) `(,c1 ,p1n1))
 
       ;; MODE = CLOCKS
       ;;
       ;; no clock notes
       ;;
       ;; nothing
-      (test enconf 'clocks nil nil nil nil)
+      (test enconf :clocks nil nil nil nil)
       ;; single item
-      (test enconf 'clocks nil nil `(,i1) `(,p1))
+      (test enconf :clocks nil nil `(,i1) `(,p1))
       ;; single clock
-      (test enconf 'clocks nil `(,c1) nil `(,c1))
+      (test enconf :clocks nil `(,c1) nil `(,c1))
       ;; single garbage entry
-      (test enconf 'clocks nil nil `(,x1) `(,x1))
+      (test enconf :clocks nil nil `(,x1) `(,x1))
       ;; single item and clock
-      (test enconf 'clocks nil `(,c1) `(,i1) `(,p1 ,c1))
+      (test enconf :clocks nil `(,c1) `(,i1) `(,p1 ,c1))
       ;; single item and garbage
-      (test enconf 'clocks nil nil `(,x1 ,i1) `(,p1 ,x1))
+      (test enconf :clocks nil nil `(,x1 ,i1) `(,p1 ,x1))
       ;; single clock and garbage
-      (test enconf 'clocks nil `(,c1) `(,x1) `(,c1 ,x1))
+      (test enconf :clocks nil `(,c1) `(,x1) `(,c1 ,x1))
       ;; single item, clock, and garbage
-      (test enconf 'clocks nil `(,c1) `(,x1 ,i1) `(,p1 ,c1 ,x1))
+      (test enconf :clocks nil `(,c1) `(,x1 ,i1) `(,p1 ,c1 ,x1))
       ;; multiple items and clocks
-      (test enconf 'clocks nil `(,c2 ,c1) `(,i2 ,i1) `(,p12 ,c1 ,c2))
+      (test enconf :clocks nil `(,c2 ,c1) `(,i2 ,i1) `(,p12 ,c1 ,c2))
       ;; multiple items and clocks (interlaced)
-      (test enconf 'clocks nil `(,c2 ,c1) `(,i2 ,i1) `(,p1 ,c1 ,p2 ,c2))
+      (test enconf :clocks nil `(,c2 ,c1) `(,i2 ,i1) `(,p1 ,c1 ,p2 ,c2))
       ;; clock with note
-      (test enconf 'clocks nil `(,c1) `(,n1) `(,c1 ,pn1))
+      (test enconf :clocks nil `(,c1) `(,n1) `(,c1 ,pn1))
       ;; clock with note in wrong place
-      (test enconf 'clocks nil `(,c1) `(,n1) `(,pn1 ,c1))
+      (test enconf :clocks nil `(,c1) `(,n1) `(,pn1 ,c1))
       ;; clock with note and item
-      (test enconf 'clocks nil `(,c1) `(,i1 ,n1) `(,c1 ,pn11))
+      (test enconf :clocks nil `(,c1) `(,i1 ,n1) `(,c1 ,pn11))
       ;; clock with item and note
-      (test enconf 'clocks nil `(,c1) `(,n1 ,i1) `(,c1 ,p1n1))
+      (test enconf :clocks nil `(,c1) `(,n1 ,i1) `(,c1 ,p1n1))
       ;; clock notes
       ;;
       ;; nothing
-      (test enconf-notes 'clocks nil nil nil nil)
+      (test enconf-notes :clocks nil nil nil nil)
       ;; single item
-      (test enconf-notes 'clocks nil nil `(,i1) `(,p1))
+      (test enconf-notes :clocks nil nil `(,i1) `(,p1))
       ;; single clock
-      (test enconf-notes 'clocks nil `(,c1) nil `(,c1))
+      (test enconf-notes :clocks nil `(,c1) nil `(,c1))
       ;; single garbage entry
-      (test enconf-notes 'clocks nil nil `(,x1) `(,x1))
+      (test enconf-notes :clocks nil nil `(,x1) `(,x1))
       ;; single item and clock
-      (test enconf-notes 'clocks nil `(,c1) `(,i1) `(,p1 ,c1))
+      (test enconf-notes :clocks nil `(,c1) `(,i1) `(,p1 ,c1))
       ;; single item and garbage
-      (test enconf-notes 'clocks nil nil `(,x1 ,i1) `(,p1 ,x1))
+      (test enconf-notes :clocks nil nil `(,x1 ,i1) `(,p1 ,x1))
       ;; single clock and garbage
-      (test enconf-notes 'clocks nil `(,c1) `(,x1) `(,c1 ,x1))
+      (test enconf-notes :clocks nil `(,c1) `(,x1) `(,c1 ,x1))
       ;; single item, clock, and garbage
-      (test enconf-notes 'clocks nil `(,c1) `(,x1 ,i1) `(,p1 ,c1 ,x1))
+      (test enconf-notes :clocks nil `(,c1) `(,x1 ,i1) `(,p1 ,c1 ,x1))
       ;; multiple items and clocks
-      (test enconf-notes 'clocks nil `(,c2 ,c1) `(,i2 ,i1) `(,p12 ,c1 ,c2))
+      (test enconf-notes :clocks nil `(,c2 ,c1) `(,i2 ,i1) `(,p12 ,c1 ,c2))
       ;; multiple items and clocks (interlaced)
-      (test enconf-notes 'clocks nil `(,c2 ,c1) `(,i2 ,i1) `(,p1 ,c1 ,p2 ,c2))
+      (test enconf-notes :clocks nil `(,c2 ,c1) `(,i2 ,i1) `(,p1 ,c1 ,p2 ,c2))
       ;; clock with note
-      (test enconf-notes 'clocks nil `(,n1 ,c1) nil `(,c1 ,pn1))
+      (test enconf-notes :clocks nil `(,n1 ,c1) nil `(,c1 ,pn1))
       ;; clock with note in wrong place
-      (test enconf-notes 'clocks nil `(,c1) `(,n1) `(,pn1 ,c1))
+      (test enconf-notes :clocks nil `(,c1) `(,n1) `(,pn1 ,c1))
       ;; clock with note and item
-      (test enconf-notes 'clocks nil `(,n1 ,c1) `(,i1) `(,c1 ,pn11))
+      (test enconf-notes :clocks nil `(,n1 ,c1) `(,i1) `(,c1 ,pn11))
       ;; clock with item and note
-      (test enconf-notes 'clocks nil `(,c1) `(,n1 ,i1) `(,c1 ,p1n1)))))
+      (test enconf-notes :clocks nil `(,c1) `(,n1 ,i1) `(,c1 ,p1n1)))))
 
 (ert-deftest org-ml--logbook-to-nodes ()
   (cl-flet

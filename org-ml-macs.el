@@ -386,8 +386,9 @@ NEW-ALIAS, BASE-VARIABLE, and DOCSTRING have the same meaning as `defconst'."
 The first element is `it' in FORM which returns the modified member."
   `(when ,list
     (cons (funcall (lambda (it) ,form) (car ,list)) (cdr ,list))))
+    ;; (cons (let ((it (car ,list))) ,form) (cdr ,list))))
 
-  (defmacro org-ml--map-last* (form list)
+(defmacro org-ml--map-last* (form list)
     "Return LIST with FORM applied to the last member.
 The last element is `it' in FORM which returns the modified member."
     `(-some->> ,list (nreverse) (org-ml--map-first* ,form) (nreverse)))
