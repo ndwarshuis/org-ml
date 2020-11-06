@@ -3310,9 +3310,80 @@ a modified node-property value."
         (funcall fun it)
         (org-ml-headline-set-node-property key it headline)))
 
-;; logbook and contents
+;;; headline (logbook/contents)
+
+;; Everything after the planning and property drawer of the headline can be
+;; either part of the "logbook" or the "contents". The "logbook" contains two
+;; types of nodes, here called "log items" (or sometimes simply "items" if the
+;; context is obvious) and "clocks." The former include any plain-list/item node
+;; as given by `org-log-note-headings' (except for 'clock-out' which applies
+;; only to clocks), and clocks includes clock nodes and optionally
+;; plain-list/item nodes that represent the clock-out notes. Anything that comes
+;; after the logbook is deemed "contents." Together, the "logbook" and
+;; "contents" are hereafter referred collectively as the "supercontents."
+
+;; There are many ways to configure the logbook, and these are controlled by
+;; `org-log-into-drawer', `org-clock-into-drawer', and `org-log-note-clock-out'.
+;; These roughly control when the log items and/or clocks are in a named drawer
+;; or "loose" by themselves.
+;; 
+;; Aside from these variables, the logbook will be defined as follows:
+;; - a continuous string of multi-line text after the headline metadata (in
+;;   other words, the logbook cannot contain consecutive newlines)
+;; - any items that are parsed as log items must conform to
+;;   `org-log-note-headines', which (for now) means they must end with a
+;;   timestamp on the first line (in the future, this will be extended since it
+;;   is possible to modify `org-log-note-headings', even if it is not the best
+;;   idea). Note this also implies that any log item must have a timestamp
+;;   regardless of `org-log-note-headings', which makes sense for a log note to
+;;   have...
+;; - any clock not are defined as any item that is not a log item but after a
+;;   clock
+;;
+;; The first node that breaks any of the above conditions will be the dividing
+;; line between the logbook and contents. Note that the one loophole this
+;; creates is that it is theoretically possible (but unlikely) that an item
+;; immediately after a clock could be interpreted as a clock note even if it was
+;; not intended as one.
+
+;; Since there are many possible configurations for the logbook and consequently
+;; many details involved in determining what is "logbook" and what is
+;; "contents," there are several specialized data structures used for this
+;; process. The logbook itself is represented by an alist consisting of the
+;; items, clocks, and unknown nodes from the logbook. This alist is part of a
+;; larger list called the "supercontents" which consists of two keys for the
+;; logbook and contents. The config for the logbook will be representing on the
+;; user side by a plist which corresponds to the possible configuration
+;; variables noted above; internally it will be 'encoded' to a more
+;; readily-parsable alist.
+
+;; Any operation involving the logbook or contents will either require
+;; separating the supercontents of the headline into the supercontents object,
+;; merging (the reverse), or both. All cases will require the user-specified
+;; config to determine how to perform the separation/merge.
+;;
+;; Steps for separating a headlines section nodes to a supercontents list are:
+;; 1. determine the logbook configuration
+;; 2. initialize a "supercontents-splitter" (SCS) list (see below) using all
+;;    the nodes after the planning/property-drawer in the headline
+;; 3. use the SCS to "walk" down the nodes of the headline's section, sorting
+;;    them as items, clocks, or unknown
+;; 4. Stop "walking" when any of the conditions for the logbook are not met,
+;;    in which case all the remaining nodes are deemed "contents"
+;; 5. return a supercontents list using the sorted items/clocks/unknown nodes
+;;    from the walk and the contents
+;;
+;; Steps for merging a supercontents list to nodes are:
+;; 1. determine the logbook configuration
+;; 2. sort the items and clocks by their timestamp (most recent at the top)
+;; 3. merge the items and clocks if required by the config
+;; 4. encapsulate items and clocks in drawers if required
+;; 5. append items and clocks (or drawers if applicable)
+;; 6. append the logbook nodes from above with the contents from the contents
 
 ;; logbook data structure
+
+;; alist to store the separated nodes from a logbook
 
 (defun org-ml--logbook-init (items clocks unknown)
   "Create a new logbook alist.
@@ -3356,6 +3427,11 @@ new list of clocks."
        (org-ml--logbook-set-clocks it logbook)))
 
 ;; supercontents data structure
+
+;; alist to store the separated logbook and contents from a headline section
+
+;; NOTE: this is a structure that the user may interact with, so some of these
+;; functions are public
 
 (defun org-ml--supercontents-init-from-lb (logbook contents)
   "Create a supercontents alist.
@@ -3407,6 +3483,28 @@ logbook."
        (org-ml-supercontents-set-logbook it supercontents)))
 
 ;; supercontents config (scc) data structure
+
+;; Internal alist representing the user-specified config. The user form of the
+;; config is a plist with the keys :log-into-drawer, :clock-into-drawer, and
+;; :clock-notes which correspond to `org-log-into-drawer',
+;; `org-clock-into-drawer', and `org-log-note-clock-out' respectively.
+
+;; The options :log/clock-into-drawer control the "drawer configuration". Eight
+;; possible configurations are possible:
+;; 
+;; | log    | clock   | result                                                                  |
+;; |----------+----------+----------------------------------------------------------------------|
+;; | nil    | nil     | items and clocks loose                                                  |
+;; | t      | nil     | items in a drawer called LOGBOOK, clocks loose                          |
+;; | nil    | t       | clocks in a drawer called LOGBOOK, items loose                          |
+;; | STR1   | STR2    | items and clocks in different drawers called STR1 and STR2              |
+;; | STR/t  | STR/t   | items and clocks in the same drawer called STRING (or LOGBOOK if t)     |
+;; | nil    | INTEGER | items loose, clocks in a drawer called LOGBOOK if > INTEGER             |
+;; | t      | INTEGER | items in drawer called LOGBOOK, and same for clocks if > INTEGER        |
+;; | STR    | INTEGER | items in drawer called STR clocks in drawer called LOGBOOK if > INTEGER |
+;;
+;; :clock-out-notes applies to all the above cases and is thus an independent
+;; consideration
 
 (defun org-ml--item-get-logbook-timestamp (item)
   "Return the log timestamp of ITEM if it exists."
@@ -3474,7 +3572,12 @@ logbook."
   "Return the :is-log-item-fun slot from SCC."
   (alist-get :is-log-item-fun scc))
 
-;; nodes -> supercontents
+;; logbook separation (nodes -> supercontents)
+
+;; define a supercontents-splitter here which will "walk" through the target
+;; nodes and split them off depending on the configuration whether or not they
+;; are valid logbook nodes. This will then pass through a series of labyrinthine
+;; functions that will perform the actual splitting operations
 
 (defun org-ml--node-has-trailing-space (node)
   "Return t if NODE has at least one newline after it."
@@ -3980,6 +4083,9 @@ CONFIG is a valid plist to be accepted by `org-ml--scc-encode'."
 
       ;; items in drawer, clocks either loose or in a different drawer
       (`(:items ,_ :clocks ,_ :mixed nil :clock-limit ,_)
+       ;; TODO these partials are stupid; the functions and their arguments are
+       ;; known at COMPILE time, no need to constantly reapply things every time
+       ;; they are called
        (let* ((try-cd-or-clocks (-partial #'org-ml--scs-split-clock-drawer-then-else
                                           #'org-ml--scs-terminate
                                           #'org-ml--scs-split-clocks-last))
@@ -4000,7 +4106,7 @@ CONFIG is a valid plist to be accepted by `org-ml--scc-encode'."
 
       (e (error "This shouldn't happen: %s" e)))))
 
-;; supercontents -> nodes
+;; logbook merging (supercontents -> nodes)
 
 (defun org-ml--sort-logbook (scc nodes)
   "Sort NODES and return.
@@ -4212,7 +4318,7 @@ CONFIG."
     ;; a plain list, join them
     (append logbook contents)))
 
-;; headline supercontents
+;; public supercontents functions
 
 (defun org-ml-headline-get-supercontents (config headline)
   "Return the supercontents of HEADLINE node.
@@ -4283,7 +4389,7 @@ the structure of the supercontents list."
        (funcall fun it)
        (org-ml-headline-set-supercontents config it headline)))
 
-;; headline logbook/contents
+;; public logbook/contents getters/setters/mappers
 
 (defun org-ml-headline-get-logbook-items (config headline)
   "Return the logbook items of HEADLINE.
@@ -4368,7 +4474,7 @@ contents and returns a modified list of nodes. See
        (funcall fun it)
        (org-ml-headline-set-contents config it headline)))
 
-;; headline logbook meta operations
+;; public high-level logbook operations
 
 (defun org-ml-headline-logbook-append-item (config item headline)
   "Append ITEM to the logbook of HEADLINE.
