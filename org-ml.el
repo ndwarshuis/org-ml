@@ -3394,7 +3394,7 @@ new list of nodes."
   (alist-get :logbook supercontents))
 
 (defun org-ml-supercontents-set-logbook (logbook supercontents)
-  "Set the :logbook slot of SUPERCONTENTS to CONTENTS."
+  "Set the :logbook slot of SUPERCONTENTS to LOGBOOK."
   (-let (((&alist :contents) supercontents))
     (org-ml--supercontents-init-from-lb logbook contents)))
 
@@ -3633,7 +3633,8 @@ MODE is the mode by which to separate the nodes and is one of
 
 (defun org-ml--scs-init (scc nodes)
   "Return an initialized supercontents-splitter (SCS).
-SCC is a supercontents-config as given by `org-ml--scc-init'."
+SCC is a supercontents-config as given by `org-ml--scc-init'.
+NODES is the list of nodes to be split."
   `(,scc nil nil nil ,nodes))
 
 (defun org-ml--scs-peek-next (scs)
@@ -3642,7 +3643,7 @@ SCC is a supercontents-config as given by `org-ml--scc-init'."
     next))
 
 (defun org-ml--scs-get-scc (scs)
-  "Return the SCC object from SCS"
+  "Return the SCC object from SCS."
   (car scs))
 
 (defun org-ml--scs-is-under-limit (scs)
@@ -4124,8 +4125,7 @@ SCC is a supercontents-config as returned by
   "Return LOGBOOK as a list of NODES.
 Anything in the UNKNOWN slot will be ignored. The exact
 nodes (drawers, loose items, etc) will be determined by the SCC.
-SCC is a supercontents-config as returned by
-`org-ml--scc-encode'."
+CONFIG is a config plist to be given to `org-ml--scc-encode'."
   (-let (((enconf &as &alist :drawers d)
           (org-ml--scc-encode config)))
     (cl-flet*
@@ -4234,9 +4234,9 @@ returned.
 CONFIG is a plist representing the logbook configuration to
 target and will contain the following keys;
 - :log-into-drawer - corresponds to the value of
-  `org-log-into-drawer' and carriers the same meaning
+  symbol `org-log-into-drawer' and carriers the same meaning
 - :clock-into-drawer - corresponds to the value of
-  `org-clock-into-drawer' and carriers the same meaning
+  symbol `org-clock-into-drawer' and carriers the same meaning
 - :clock-out-notes - corresponds to the value of
   `org-log-note-clock-out'
 
@@ -4420,10 +4420,9 @@ error."
   "Convert the logbook of HEADLINE to a new configuration.
 CONFIG1 is the current config and CONFIG2 is the target config.
 Note that any logbook nodes that are invalid under CONFIG1 will
-be silently dropped, and that nodes which do not conform to
-CONFIG2 will trigger an error. See
-`org-ml-headline-get-supercontents' for the structure of both
-config lists."
+be silently dropped, and nodes which do not conform to CONFIG2
+will trigger an error. See `org-ml-headline-get-supercontents'
+for the structure of both config lists."
   (--> (org-ml-headline-get-supercontents config1 headline)
        (org-ml-headline-set-supercontents config2 it headline)))
 
