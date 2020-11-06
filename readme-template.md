@@ -180,6 +180,8 @@ the examples below.
 ## 5.0.0
 
 - add robust headline logbook and contents function
+- rename indent/unindent functions to better reflect native org function naming
+  conventions
 
 ## 4.0.1
 
