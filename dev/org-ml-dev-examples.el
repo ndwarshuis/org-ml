@@ -4800,39 +4800,39 @@
                   "** TODO good data"
                   "** DONE bad data"))
 
-    (defexamples-content org-ml-headline-indent-subheadline
+    (defexamples-content org-ml-headline-demote-subheadline
       nil
       (:buffer "* one"
                "** two"
                "** three"
                "*** four")
       (->> (org-ml-parse-element-at 1)
-           (org-ml-headline-indent-subheadline 0)
+           (org-ml-headline-demote-subheadline 0)
            (org-ml-to-trimmed-string))
       !!> error
       (->> (org-ml-parse-element-at 1)
-           (org-ml-headline-indent-subheadline 1)
+           (org-ml-headline-demote-subheadline 1)
            (org-ml-to-trimmed-string))
       => (:result "* one"
                   "** two"
                   "*** three"
                   "*** four"))
 
-    (defexamples-content org-ml-headline-indent-subtree
+    (defexamples-content org-ml-headline-demote-subtree
       nil
       (:buffer "* one"
                "** two"
                "** three"
                "*** four")
       (->> (org-ml-parse-element-at 1)
-           (org-ml-headline-indent-subtree 1)
+           (org-ml-headline-demote-subtree 1)
            (org-ml-to-trimmed-string))
       => (:result "* one"
                   "** two"
                   "*** three"
                   "**** four"))
 
-    (defexamples-content org-ml-headline-unindent-subheadline
+    (defexamples-content org-ml-headline-promote-subheadline
       nil
       (:buffer "* one"
                "** two"
@@ -4841,7 +4841,7 @@
                "*** four"
                "*** four")
       (->> (org-ml-parse-element-at 1)
-           (org-ml-headline-unindent-subheadline 1 1)
+           (org-ml-headline-promote-subheadline 1 1)
            (org-ml-to-trimmed-string))
       => (:result "* one"
                   "** two"
@@ -4850,7 +4850,7 @@
                   "** four"
                   "*** four"))
 
-    (defexamples-content org-ml-headline-unindent-all-subheadlines
+    (defexamples-content org-ml-headline-promote-all-subheadlines
       nil
       (:buffer "* one"
                "** two"
@@ -4859,7 +4859,7 @@
                "*** four"
                "*** four")
       (->> (org-ml-parse-element-at 1)
-           (org-ml-headline-unindent-all-subheadlines 1)
+           (org-ml-headline-promote-all-subheadlines 1)
            (org-ml-to-trimmed-string))
       => (:result "* one"
                   "** two"
@@ -4980,7 +4980,7 @@
                   "    - three"
                   "- four"))
 
-    (defexamples-content org-ml-plain-list-unindent-item
+    (defexamples-content org-ml-plain-list-outdent-item
       nil
       (:buffer "- one"
                "- two"
@@ -4989,7 +4989,7 @@
                "  - three"
                "- four")
       (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-unindent-item 1 0)
+           (org-ml-plain-list-outdent-item 1 0)
            (org-ml-to-trimmed-string))
       => (:result "- one"
                   "- two"
@@ -4998,7 +4998,7 @@
                   "  - three"
                   "- four")
       (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-unindent-item 1 1)
+           (org-ml-plain-list-outdent-item 1 1)
            (org-ml-to-trimmed-string))
       => (:result "- one"
                   "- two"
@@ -5007,7 +5007,7 @@
                   "  - three"
                   "- four")
       (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-unindent-item 2 1)
+           (org-ml-plain-list-outdent-item 2 1)
            (org-ml-to-trimmed-string))
       => (:result "- one"
                   "- two"
@@ -5016,7 +5016,7 @@
                   "  - three"
                   "- four"))
     
-    (defexamples-content org-ml-plain-list-unindent-all-items
+    (defexamples-content org-ml-plain-list-outdent-all-items
       nil
       (:buffer "- one"
                "- two"
@@ -5025,7 +5025,7 @@
                "  - three"
                "- four")
       (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-unindent-all-items 1)
+           (org-ml-plain-list-outdent-all-items 1)
            (org-ml-to-trimmed-string))
       => (:result "- one"
                   "- two"
@@ -5034,7 +5034,7 @@
                   "- three"
                   "- four")
       (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-unindent-all-items 2)
+           (org-ml-plain-list-outdent-all-items 2)
            (org-ml-to-trimmed-string))
       => (:result "- one"
                   "- two"
@@ -5907,7 +5907,7 @@
                "** three"
                "* not updated")
       (org-ml-update-subtree-at* (point)
-        (org-ml-headline-indent-subheadline 1 it))
+        (org-ml-headline-demote-subheadline 1 it))
       $> (:result "* one"
                   "** two"
                   "*** three"

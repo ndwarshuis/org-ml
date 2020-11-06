@@ -177,6 +177,10 @@ the examples below.
 
 # Changelog
 
+## 5.0.0
+
+- add robust headline logbook and contents function
+
 ## 4.0.1
 
 - fix `org-ml-parse-this-table-row` and `org-ml-parse-table-row-at`

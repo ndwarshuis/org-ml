@@ -482,18 +482,18 @@ Set, get, and map the children of branch nodes.
 * [org-ml-headline-get-path](#org-ml-headline-get-path-headline) `(headline)`
 * [org-ml-headline-update-item-statistics](#org-ml-headline-update-item-statistics-headline) `(headline)`
 * [org-ml-headline-update-todo-statistics](#org-ml-headline-update-todo-statistics-headline) `(headline)`
-* [org-ml-headline-indent-subheadline](#org-ml-headline-indent-subheadline-index-headline) `(index headline)`
-* [org-ml-headline-indent-subtree](#org-ml-headline-indent-subtree-index-headline) `(index headline)`
-* [org-ml-headline-unindent-subheadline](#org-ml-headline-unindent-subheadline-index-child-index-headline) `(index child-index headline)`
-* [org-ml-headline-unindent-all-subheadlines](#org-ml-headline-unindent-all-subheadlines-index-headline) `(index headline)`
+* [org-ml-headline-demote-subheadline](#org-ml-headline-demote-subheadline-index-headline) `(index headline)`
+* [org-ml-headline-demote-subtree](#org-ml-headline-demote-subtree-index-headline) `(index headline)`
+* [org-ml-headline-promote-subheadline](#org-ml-headline-promote-subheadline-index-child-index-headline) `(index child-index headline)`
+* [org-ml-headline-promote-all-subheadlines](#org-ml-headline-promote-all-subheadlines-index-headline) `(index headline)`
 
 ### Plain List
 
 * [org-ml-plain-list-set-type](#org-ml-plain-list-set-type-type-plain-list) `(type plain-list)`
 * [org-ml-plain-list-indent-item](#org-ml-plain-list-indent-item-index-plain-list) `(index plain-list)`
 * [org-ml-plain-list-indent-item-tree](#org-ml-plain-list-indent-item-tree-index-plain-list) `(index plain-list)`
-* [org-ml-plain-list-unindent-item](#org-ml-plain-list-unindent-item-index-child-index-plain-list) `(index child-index plain-list)`
-* [org-ml-plain-list-unindent-all-items](#org-ml-plain-list-unindent-all-items-index-plain-list) `(index plain-list)`
+* [org-ml-plain-list-outdent-item](#org-ml-plain-list-outdent-item-index-child-index-plain-list) `(index child-index plain-list)`
+* [org-ml-plain-list-outdent-all-items](#org-ml-plain-list-outdent-all-items-index-plain-list) `(index plain-list)`
 
 ### Table
 
@@ -6298,11 +6298,11 @@ subheadlines will not be counted).
 
 ```
 
-#### org-ml-headline-indent-subheadline `(index headline)`
+#### org-ml-headline-demote-subheadline `(index headline)`
 
-Return **`headline`** node with child headline at **`index`** indented.
-Unlike [`org-ml-headline-indent-subtree`](#org-ml-headline-indent-subtree-index-headline) this will not indent the
-indented headline node's children.
+Return **`headline`** node with child headline at **`index`** demoted.
+Unlike [`org-ml-headline-demote-subtree`](#org-ml-headline-demote-subtree-index-headline) this will not demote the
+demoted headline node's children.
 
 ```el
 ;; Given the following contents:
@@ -6312,12 +6312,12 @@ indented headline node's children.
 ; *** four
 
 (->> (org-ml-parse-element-at 1)
-     (org-ml-headline-indent-subheadline 0)
+     (org-ml-headline-demote-subheadline 0)
      (org-ml-to-trimmed-string))
 Error
 
 (->> (org-ml-parse-element-at 1)
-     (org-ml-headline-indent-subheadline 1)
+     (org-ml-headline-demote-subheadline 1)
      (org-ml-to-trimmed-string))
  ;; => "* one
  ;      ** two
@@ -6326,11 +6326,11 @@ Error
 
 ```
 
-#### org-ml-headline-indent-subtree `(index headline)`
+#### org-ml-headline-demote-subtree `(index headline)`
 
-Return **`headline`** node with child headline at **`index`** indented.
-Unlike [`org-ml-headline-indent-subheadline`](#org-ml-headline-indent-subheadline-index-headline) this will also indent the
-indented headline node's children.
+Return **`headline`** node with child headline at **`index`** demoted.
+Unlike [`org-ml-headline-demote-subheadline`](#org-ml-headline-demote-subheadline-index-headline) this will also demote the
+demoted headline node's children.
 
 ```el
 ;; Given the following contents:
@@ -6340,7 +6340,7 @@ indented headline node's children.
 ; *** four
 
 (->> (org-ml-parse-element-at 1)
-     (org-ml-headline-indent-subtree 1)
+     (org-ml-headline-demote-subtree 1)
      (org-ml-to-trimmed-string))
  ;; => "* one
  ;      ** two
@@ -6349,10 +6349,10 @@ indented headline node's children.
 
 ```
 
-#### org-ml-headline-unindent-subheadline `(index child-index headline)`
+#### org-ml-headline-promote-subheadline `(index child-index headline)`
 
-Return **`headline`** node with a child headline under **`index`** unindented.
-The specific child headline to unindent is selected by **`child-index`**.
+Return **`headline`** node with a child headline under **`index`** promoted.
+The specific child headline to promote is selected by **`child-index`**.
 
 ```el
 ;; Given the following contents:
@@ -6364,7 +6364,7 @@ The specific child headline to unindent is selected by **`child-index`**.
 ; *** four
 
 (->> (org-ml-parse-element-at 1)
-     (org-ml-headline-unindent-subheadline 1 1)
+     (org-ml-headline-promote-subheadline 1 1)
      (org-ml-to-trimmed-string))
  ;; => "* one
  ;      ** two
@@ -6375,9 +6375,9 @@ The specific child headline to unindent is selected by **`child-index`**.
 
 ```
 
-#### org-ml-headline-unindent-all-subheadlines `(index headline)`
+#### org-ml-headline-promote-all-subheadlines `(index headline)`
 
-Return **`headline`** node with all child headlines under **`index`** unindented.
+Return **`headline`** node with all child headlines under **`index`** promoted.
 
 ```el
 ;; Given the following contents:
@@ -6389,7 +6389,7 @@ Return **`headline`** node with all child headlines under **`index`** unindented
 ; *** four
 
 (->> (org-ml-parse-element-at 1)
-     (org-ml-headline-unindent-all-subheadlines 1)
+     (org-ml-headline-promote-all-subheadlines 1)
      (org-ml-to-trimmed-string))
  ;; => "* one
  ;      ** two
@@ -6491,10 +6491,10 @@ node's children.
 
 ```
 
-#### org-ml-plain-list-unindent-item `(index child-index plain-list)`
+#### org-ml-plain-list-outdent-item `(index child-index plain-list)`
 
-Return **`plain-list`** node with a child item under **`index`** unindented.
-The specific child item to unindent is selected by **`child-index`**.
+Return **`plain-list`** node with a child item under **`index`** outdented.
+The specific child item to outdent is selected by **`child-index`**.
 
 ```el
 ;; Given the following contents:
@@ -6506,7 +6506,7 @@ The specific child item to unindent is selected by **`child-index`**.
 ; - four
 
 (->> (org-ml-parse-element-at 1)
-     (org-ml-plain-list-unindent-item 1 0)
+     (org-ml-plain-list-outdent-item 1 0)
      (org-ml-to-trimmed-string))
  ;; => "- one
  ;      - two
@@ -6516,7 +6516,7 @@ The specific child item to unindent is selected by **`child-index`**.
  ;      - four"
 
 (->> (org-ml-parse-element-at 1)
-     (org-ml-plain-list-unindent-item 1 1)
+     (org-ml-plain-list-outdent-item 1 1)
      (org-ml-to-trimmed-string))
  ;; => "- one
  ;      - two
@@ -6526,7 +6526,7 @@ The specific child item to unindent is selected by **`child-index`**.
  ;      - four"
 
 (->> (org-ml-parse-element-at 1)
-     (org-ml-plain-list-unindent-item 2 1)
+     (org-ml-plain-list-outdent-item 2 1)
      (org-ml-to-trimmed-string))
  ;; => "- one
  ;      - two
@@ -6537,9 +6537,9 @@ The specific child item to unindent is selected by **`child-index`**.
 
 ```
 
-#### org-ml-plain-list-unindent-all-items `(index plain-list)`
+#### org-ml-plain-list-outdent-all-items `(index plain-list)`
 
-Return **`plain-list`** node with all child items under **`index`** unindented.
+Return **`plain-list`** node with all child items under **`index`** outdented.
 
 ```el
 ;; Given the following contents:
@@ -6551,7 +6551,7 @@ Return **`plain-list`** node with all child items under **`index`** unindented.
 ; - four
 
 (->> (org-ml-parse-element-at 1)
-     (org-ml-plain-list-unindent-all-items 1)
+     (org-ml-plain-list-outdent-all-items 1)
      (org-ml-to-trimmed-string))
  ;; => "- one
  ;      - two
@@ -6561,7 +6561,7 @@ Return **`plain-list`** node with all child items under **`index`** unindented.
  ;      - four"
 
 (->> (org-ml-parse-element-at 1)
-     (org-ml-plain-list-unindent-all-items 2)
+     (org-ml-plain-list-outdent-all-items 2)
      (org-ml-to-trimmed-string))
  ;; => "- one
  ;      - two
@@ -7566,7 +7566,7 @@ Update subtree under **`point`** using **`fun`**.
 ; * not updated
 
 (org-ml-update-subtree-at* (point)
-  (org-ml-headline-indent-subheadline 1 it))
+  (org-ml-headline-demote-subheadline 1 it))
  ;; Output these buffer contents
  ;; $> "* one
  ;      ** two
@@ -7766,9 +7766,13 @@ no examples :(
 ```
 
 
-<!-- 4.0.1 -->
+<!-- 5.0.0 -->
 
 # Changelog
+
+## 5.0.0
+
+- add robust headline logbook and contents function
 
 ## 4.0.1
 

@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 4.0.1
+;; Version: 5.0.0
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -4686,6 +4686,8 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
 
 ;;; INDENTATION FUNCTIONS
 
+;; NOTE: for headlines, promote = outdent, and demote = indent
+
 ;;; indentation (single and tree)
 
 ;; high level steps to indent
@@ -4731,12 +4733,12 @@ exist."
 
 ;; headline
 
-(defun org-ml-headline-indent-subtree (index headline)
-  "Return HEADLINE node with child headline at INDEX indented.
-Unlike `org-ml-headline-indent-subheadline' this will also indent the
-indented headline node's children."
+(defun org-ml-headline-demote-subtree (index headline)
+  "Return HEADLINE node with child headline at INDEX demoted.
+Unlike `org-ml-headline-demote-subheadline' this will also demote the
+demoted headline node's children."
   (cl-flet
-      ((append-indented
+      ((append-demoted
         (target-headline parent-headline)
         (let ((target-headline*
                (org-ml--headline-subtree-shift-level 1 target-headline)))
@@ -4746,15 +4748,15 @@ indented headline node's children."
            parent-headline))))
     (org-ml-headline-map-subheadlines
      (lambda (subheadlines)
-       (org-ml--indent-members #'append-indented index subheadlines))
+       (org-ml--indent-members #'append-demoted index subheadlines))
      headline)))
 
-(defun org-ml-headline-indent-subheadline (index headline)
-  "Return HEADLINE node with child headline at INDEX indented.
-Unlike `org-ml-headline-indent-subtree' this will not indent the
-indented headline node's children."
+(defun org-ml-headline-demote-subheadline (index headline)
+  "Return HEADLINE node with child headline at INDEX demoted.
+Unlike `org-ml-headline-demote-subtree' this will not demote the
+demoted headline node's children."
   (cl-flet
-      ((append-indented
+      ((append-demoted
         (target-headline parent-headline)
         (let ((target-headline*
                (->> target-headline
@@ -4768,7 +4770,7 @@ indented headline node's children."
            parent-headline))))
     (org-ml-headline-map-subheadlines
      (lambda (subheadlines)
-       (org-ml--indent-members #'append-indented index subheadlines))
+       (org-ml--indent-members #'append-demoted index subheadlines))
      headline)))
 
 ;; plain-list
@@ -4837,7 +4839,7 @@ item node's children."
 ;; parameters for unindenting a tree:
 ;; - the index whose children are to be unindented
 
-(defun org-ml--unindent-members (index trim-fun extract-fun tree)
+(defun org-ml--outdent-members (index trim-fun extract-fun tree)
   "Return TREE with children under INDEX unindented.
 TRIM-FUN is a unary function that is applied to the child list
 under INDEX and returns a modified child list with the unindented
@@ -4852,8 +4854,8 @@ will be spliced after INDEX."
 
 ;; headline
 
-(defun org-ml-headline-unindent-all-subheadlines (index headline)
-  "Return HEADLINE node with all child headlines under INDEX unindented."
+(defun org-ml-headline-promote-all-subheadlines (index headline)
+  "Return HEADLINE node with all child headlines under INDEX promoted."
   (cl-flet
       ((trim
         (parent)
@@ -4864,13 +4866,13 @@ will be spliced after INDEX."
              (--map (org-ml--headline-subtree-shift-level -1 it)))))
     (org-ml-headline-map-subheadlines
      (lambda (subheadlines)
-       (org-ml--unindent-members index #'trim #'extract subheadlines))
+       (org-ml--outdent-members index #'trim #'extract subheadlines))
      headline)))
 
 ;; plain-list
 
-(defun org-ml-plain-list-unindent-all-items (index plain-list)
-  "Return PLAIN-LIST node with all child items under INDEX unindented."
+(defun org-ml-plain-list-outdent-all-items (index plain-list)
+  "Return PLAIN-LIST node with all child items under INDEX outdented."
   (cl-flet
       ((trim
         (parent)
@@ -4885,7 +4887,7 @@ will be spliced after INDEX."
              (org-ml-get-children))))
     (org-ml--map-children-nocheck
      (lambda (items)
-       (org-ml--unindent-members index #'trim #'extract items))
+       (org-ml--outdent-members index #'trim #'extract items))
      plain-list)))
 
 ;;; unindentation (single target)
@@ -4921,9 +4923,9 @@ will be spliced after INDEX."
 
 ;; headline
 
-(defun org-ml-headline-unindent-subheadline (index child-index headline)
-  "Return HEADLINE node with a child headline under INDEX unindented.
-The specific child headline to unindent is selected by CHILD-INDEX."
+(defun org-ml-headline-promote-subheadline (index child-index headline)
+  "Return HEADLINE node with a child headline under INDEX promoted.
+The specific child headline to promote is selected by CHILD-INDEX."
   (cl-flet
       ((trim
         (parent)
@@ -4932,21 +4934,21 @@ The specific child headline to unindent is selected by CHILD-INDEX."
          parent))
        (extract
         (parent)
-        (->> (org-ml--indent-after #'org-ml-headline-indent-subtree
+        (->> (org-ml--indent-after #'org-ml-headline-demote-subtree
                                     child-index parent)
              (org-ml-get-children)
              (-drop child-index)
              (--map (org-ml--headline-subtree-shift-level -1 it)))))
     (org-ml-headline-map-subheadlines
      (lambda (subheadlines)
-       (org-ml--unindent-members index #'trim #'extract subheadlines))
+       (org-ml--outdent-members index #'trim #'extract subheadlines))
      headline)))
 
 ;; plain-list
 
-(defun org-ml-plain-list-unindent-item (index child-index plain-list)
-  "Return PLAIN-LIST node with a child item under INDEX unindented.
-The specific child item to unindent is selected by CHILD-INDEX."
+(defun org-ml-plain-list-outdent-item (index child-index plain-list)
+  "Return PLAIN-LIST node with a child item under INDEX outdented.
+The specific child item to outdent is selected by CHILD-INDEX."
   (cl-flet
       ((trim
         (parent)
@@ -4970,7 +4972,7 @@ The specific child item to unindent is selected by CHILD-INDEX."
          (-drop child-index))))
     (org-ml--map-children-nocheck
      (lambda (items)
-       (org-ml--unindent-members index #'trim #'extract items))
+       (org-ml--outdent-members index #'trim #'extract items))
      plain-list)))
 
 ;;; PRINTING FUNCTIONS
