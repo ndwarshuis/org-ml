@@ -3315,66 +3315,93 @@ a modified node-property value."
 ;; logbook data structure
 
 (defun org-ml--logbook-init (items clocks unknown)
+  "Create a new logbook alist.
+ITEMS, CLOCKS, and UNKNOWN correspond to a list of item nodes,
+clock notes (which may contain item nodes for notes) and other
+nodes."
   `((:items ,@items) (:clocks ,@clocks) (:unknown ,@unknown)))
 
 (defun org-ml-logbook-get-items (logbook)
+  "Return the :items slot from LOGBOOK."
   (alist-get :items logbook))
 
 (defun org-ml-logbook-get-clocks (logbook)
+  "Return the :clocks slot from LOGBOOK."
   (alist-get :clocks logbook))
 
 (defun org-ml--logbook-set-items (items logbook)
+  "Set the :items slot in LOGBOOK to ITEMS."
   (-let (((&alist :clocks :unknown) logbook))
     (org-ml--logbook-init items clocks unknown)))
 
 (defun org-ml--logbook-set-clocks (clocks logbook)
+  "Set the :clocks slot in LOGBOOK to CLOCKS."
   (-let (((&alist :items :unknown) logbook))
     (org-ml--logbook-init items clocks unknown)))
 
 (org-ml--defun* org-ml--logbook-map-items (fun logbook)
-  "todo"
+  "Apply function to :item slot in LOGBOOK.
+FUN is a unary function that takes a list of items and returns a
+new list of items."
   (--> (alist-get :items logbook)
        (funcall fun it)
        (org-ml--logbook-set-items it logbook)))
 
 (org-ml--defun* org-ml--logbook-map-clocks (fun logbook)
-  "todo"
+  "Apply function to :clocks slot in LOGBOOK.
+FUN is a unary function that takes a list of clocks and returns a
+new list of clocks."
   (--> (alist-get :clocks logbook)
        (funcall fun it)
        (org-ml--logbook-set-clocks it logbook)))
 
 ;; supercontents data structure
 
-(defun org-ml--supercontents-init-from-lb (lb contents)
-  `((:logbook ,@lb) (:contents ,@contents)))
+(defun org-ml--supercontents-init-from-lb (logbook contents)
+  "Create a supercontents alist.
+LOGBOOK is a logbook as given by `org-ml--logbook-init' and
+CONTENTS is a list of nodes corresponding to the headline
+contents (the stuff after the logbook)."
+  `((:logbook ,@logbook) (:contents ,@contents)))
 
 (defun org-ml--supercontents-init (items clocks unknown contents)
+  "Create a supercontents alist.
+ITEMS, CLOCKS, and UNKNOWN are lists corresponding to the
+arguments in `org-ml--logbook-init' and CONTENTS has the same
+meaning as `org-ml--supercontents-init-from-lb'."
   (let ((lb (org-ml--logbook-init items clocks unknown)))
     (org-ml--supercontents-init-from-lb lb contents)))
 
 (defun org-ml-supercontents-get-contents (supercontents)
+  "Return the :contents slot of SUPERCONTENTS."
   (alist-get :contents supercontents))
 
 (defun org-ml-supercontents-set-contents (contents supercontents)
+  "Set the :contents slot of SUPERCONTENTS to CONTENTS."
   (-let (((&alist :logbook) supercontents))
     (org-ml--supercontents-init-from-lb logbook contents)))
 
 (org-ml--defun* org-ml-supercontents-map-contents (fun supercontents)
-  "todo"
+  "Apply function to :contents slot in SUPERCONTENTS.
+FUN is a unary function that takes a list of nodes and returns a
+new list of nodes."
   (--> (org-ml-supercontents-get-contents supercontents)
        (funcall fun it)
        (org-ml-supercontents-set-contents it supercontents)))
 
 (defun org-ml-supercontents-get-logbook (supercontents)
+  "Return the :logbook slot of SUPERCONTENTS."
   (alist-get :logbook supercontents))
 
-(org-ml--defun* org-ml-supercontents-set-logbook (logbook supercontents)
-  "todo"
+(defun org-ml-supercontents-set-logbook (logbook supercontents)
+  "Set the :logbook slot of SUPERCONTENTS to CONTENTS."
   (-let (((&alist :contents) supercontents))
     (org-ml--supercontents-init-from-lb logbook contents)))
 
 (org-ml--defun* org-ml-supercontents-map-logbook (fun supercontents)
-  "todo"
+  "Apply function to :logbook slot in SUPERCONTENTS.
+FUN is a unary function that takes a logbook and returns a new
+logbook."
   (--> (org-ml-supercontents-get-logbook supercontents)
        (funcall fun it)
        (org-ml-supercontents-set-logbook it supercontents)))
@@ -3382,6 +3409,7 @@ a modified node-property value."
 ;; supercontents config (scc) data structure
 
 (defun org-ml--item-get-logbook-timestamp (item)
+  "Return the log timestamp of ITEM if it exists."
   (cl-flet
       ((is-long-inactive-timestamp
         (node)
@@ -3409,6 +3437,7 @@ a modified node-property value."
           (is-long-inactive-timestamp (-last-item pchildren)))))))
 
 (defun org-ml--scc-encode (config)
+  "Return a supercontents-config object from CONFIG."
   (cl-flet*
       ((select-name
         (option)
@@ -3433,18 +3462,22 @@ a modified node-property value."
         (:is-log-item-fun . ,#'org-ml--item-get-logbook-timestamp)))))
 
 (defun org-ml--scc-get-drawer-key (key scc)
+  "Return the drawer from SCC in slot denoted by KEY."
   (-let (((&alist :drawers) scc))
     (plist-get drawers key)))
 
 (defun org-ml--scc-get-clock-notes (scc)
+  "Return the :clock-notes slot from SCC."
   (alist-get :clock-notes scc))
 
 (defun org-ml--scc-get-log-item-fun (scc)
+  "Return the :is-log-item-fun slot from SCC."
   (alist-get :is-log-item-fun scc))
 
 ;; nodes -> supercontents
 
 (defun org-ml--node-has-trailing-space (node)
+  "Return t if NODE has at least one newline after it."
   (and (< 0 (org-ml-get-property :post-blank node)) t))
 
 (defun org-ml--node-is-drawer-with-name (drawer-name node)
@@ -3453,11 +3486,20 @@ a modified node-property value."
        (equal drawer-name (org-ml-get-property :drawer-name node))))
 
 (defun org-ml--plain-list-flatten (plain-list)
+  "Return PLAIN-LIST as a list of child item nodes.
+The last item in the returned list will have the same :post-blank
+value as PLAIN-LIST."
   (let ((pb (org-ml-get-property :post-blank plain-list)))
     (->> (org-ml-get-children plain-list)
          (org-ml--map-last* (org-ml-set-property :post-blank pb it)))))
 
-(defun org-ml--plain-list-split (scc find-blanks? plain-list)
+(defun org-ml--plain-list-split (scc plain-list)
+  "Return a list of separated nodes from PLAIN-LIST.
+The returned list will be like (LOG-ITEMS PLAIN-LIST-OTHER) where
+LOG-ITEMS are items that belong to the logbook and
+PLAIN-LIST-OTHER is PLAIN-LIST with LOG-ITEMS removed (or nil if
+an empty list). SCC is a supercontents-config object as given by
+`org-ml--scc-encode'."
   (let ((f (org-ml--scc-get-log-item-fun scc)))
     (cl-flet*
         ((find-first-space-index
@@ -3474,7 +3516,7 @@ a modified node-property value."
            (t (min i j)))))
       ;; TODO refactor the post-blank stuff?
       (let ((children (org-ml-get-children plain-list)))
-        (-if-let (i (min-maybe (when find-blanks? (find-first-space-index children))
+        (-if-let (i (min-maybe (find-first-space-index children)
                                (find-first-non-logbook-entry children)))
             (if (= i (length children))
                 (let ((pb (org-ml-get-property :post-blank plain-list)))
@@ -3489,17 +3531,29 @@ a modified node-property value."
                 `(,log-items ,(org-ml-set-children rest-items plain-list))))
           (list (org-ml--plain-list-flatten plain-list) nil))))))
 
-(defun org-ml--plain-list-split-clock-note (scc node)
+(defun org-ml--plain-list-split-clock-note (scc plain-list)
+  "Return a list with the separated clock note from PLAIN-LIST.
+The returned list will be like (NOTE-ITEM PLAIN_LIST-OTHER) where
+NOTE-ITEM is the clock note item (if found) and PLAIN-LIST-OTHER
+is PLAIN-LIST without the clock note (or nil if empty). SCC is a
+supercontents-config object as given by `org-ml--scc-encode'."
   (let ((f (org-ml--scc-get-log-item-fun scc)))
-    (-if-let (first (and (org-ml-is-type 'plain-list node)
-                         (car (org-ml-get-children node))))
+    (-if-let (first (and (org-ml-is-type 'plain-list plain-list)
+                         (car (org-ml-get-children plain-list))))
         (if (not (funcall f first))
-            (list first (when (< 1 (length (org-ml-get-children node)))
-                          (org-ml-map-children* (cdr it) node)))
-          (list nil node))
-      (list nil node))))
+            (list first (when (< 1 (length (org-ml-get-children plain-list)))
+                          (org-ml-map-children* (cdr it) plain-list)))
+          (list nil plain-list))
+      (list nil plain-list))))
 
-(defmacro org-ml--drawer-splitter-map (slot form splitter)
+(defmacro org-ml--drawer-splitter-map (slot form drawer-splitter)
+  "Map the value of SLOT in DRAWER-SPLITTER.
+FORM is a form that will return the new list to go in SLOT, where
+the symbol 'it' will be bound to the current value in SLOT. SLOT
+is one of 'items', 'clocks', or 'unknown'. SCS is the
+supercontents-splitter as given by `org-ml--scs-init'.
+
+This macro is only meant to be used by `org-ml--separate-logbook'."
   (declare (indent 1))
   (let* ((items* (make-symbol "items"))
          (clocks* (make-symbol "clocks"))
@@ -3514,9 +3568,14 @@ a modified node-property value."
             (unknown
              `(list ,items* ,clocks* (funcall ,lambda-form ,unknown*)))
             (t (error "Unknown slot type")))))
-    `(-let (((,items* ,clocks* ,unknown*) ,splitter)) ,ret-form)))
+    `(-let (((,items* ,clocks* ,unknown*) ,drawer-splitter)) ,ret-form)))
 
 (defun org-ml--separate-logbook (scc mode nodes)
+  "Separate NODES into logbook components.
+SCC is the supercontents-config as given by `org-ml--scc-encode'.
+MODE is the mode by which to separate the nodes and is one of
+'mixed' (items and clocks are mixed together), 'clocks', or
+'items'. The returned list will be like (ITEMS CLOCKS UNKNOWN)."
   (let ((n (org-ml--scc-get-clock-notes scc))
         (f (org-ml--scc-get-log-item-fun scc)))
     (cl-labels
@@ -3573,25 +3632,40 @@ a modified node-property value."
         (list items clocks unknown)))))
 
 (defun org-ml--scs-init (scc nodes)
+  "Return an initialized supercontents-splitter (SCS).
+SCC is a supercontents-config as given by `org-ml--scc-init'."
   `(,scc nil nil nil ,nodes))
 
 (defun org-ml--scs-peek-next (scs)
+  "Return the next unprocessed node from SCS."
   (-let (((_ _ _ _ (next . _)) scs))
     next))
 
 (defun org-ml--scs-get-scc (scs)
+  "Return the SCC object from SCS"
   (car scs))
 
 (defun org-ml--scs-is-under-limit (scs)
+  "Return t if the clocks slot in SCS is below the clock limit.
+The clock limit is stored internally as part of the SCC."
   (-let* (((scc _ clocks _ _) scs)
           (clock-limit (org-ml--scc-get-drawer-key :clock-limit scc)))
     (if clock-limit (< (length clocks) clock-limit) t)))
 
 (defun org-ml--scs-terminate (scs)
+  "Return a supercontents alist based on the current state of SCS.
+The items, clocks, and unknown slots in SCS correspond directly
+to the :logbook slot. The :contents slot is based on whatever is
+left unprocessed in the SCS."
   (-let (((_ i c u r) scs))
     (org-ml--supercontents-init (reverse i) (reverse c) (reverse u) r)))
 
 (defmacro org-ml--scs-map (slot form scs)
+  "Map a value in SLOT of SCS to a new value.
+FORM is a Lisp form that returns the new value for slot, and the
+symbol 'it' will be bound to the current value of SLOT. SLOT may
+be one of 'items', 'clocks', 'unknown', or 'rest' which
+correspond directly to the positions in the SCS."
   (let* ((c* (make-symbol "c"))
          (items* (make-symbol "items"))
          (clocks* (make-symbol "clocks"))
@@ -3613,6 +3687,11 @@ a modified node-property value."
        ,ret-form)))
 
 (defun org-ml--scs-terminate-if-space (add-fun next-fun scs)
+  "Stop processing SCS if the next node has a space.
+If the next node has a space following it, call ADD-FUN on the
+next node to add it to the appropriate slot in SCS, and then call
+`org-ml--scs-terminate'. If not, call NEXT-FUN on the SCS to
+continue processing."
   (let ((next (org-ml--scs-peek-next scs)))
     (if (org-ml--node-has-trailing-space next)
         (->> (funcall add-fun scs)
@@ -3621,6 +3700,14 @@ a modified node-property value."
            (funcall next-fun)))))
 
 (defun org-ml--scs-split-drawer-then-else (mode alt-fun next-fun scs)
+  "Maybe split a drawer from the SCS.
+If the next node to be processed in the SCS is a drawer with the
+proper name (see below), add it to the appropriate slot and call
+NEXT-FUN on th SCS. Else, call ALT-FUN on SCS. MODE is one of
+:items, :clocks, or :mixed and corresponds to the MODE argument
+in `org-ml--separate-logbook', and will also be used to determine
+the name of the drawer to be split based the on the internal SCC
+of the SCS"
   (let ((next (org-ml--scs-peek-next scs))
         (scc (org-ml--scs-get-scc scs))
         (name (->> (org-ml--scs-get-scc scs)
@@ -3640,19 +3727,37 @@ a modified node-property value."
         (org-ml--scs-terminate-if-space #'add-fun next-fun scs)))))
 
 (defun org-ml--scs-split-item-drawer-then-else (next-fun alt-fun scs)
+  "Maybe split an item drawer from the SCS.
+If the next node to be processed in the SCS is an item drawer,
+add it to the appropriate slots and call NEXT-FUN on th SCS. Else,
+call ALT-FUN on SCS."
   (org-ml--scs-split-drawer-then-else :items alt-fun next-fun scs))
 
 (defun org-ml--scs-split-clock-drawer-then-else (next-fun alt-fun scs)
+  "Maybe split a clock drawer from the SCS.
+If the next node to be processed in the SCS is a clock drawer,
+add it to the appropriate slots and call NEXT-FUN on th SCS. Else,
+call ALT-FUN on SCS."
   (org-ml--scs-split-drawer-then-else :clocks alt-fun next-fun scs))
 
 (defun org-ml--scs-split-mixed-drawer-then-else (next-fun alt-fun scs)
+  "Maybe split a mixed drawer from the SCS.
+If the next node to be processed in the SCS is a mixed drawer,
+add it to the appropriate slots and call NEXT-FUN on th SCS. Else,
+call ALT-FUN on SCS."
   (org-ml--scs-split-drawer-then-else :mixed alt-fun next-fun scs))
 
 (defun org-ml--scs-split-item-then-else (next-fun alt-fun scs)
+  "Maybe split an item from the SCS.
+If the next node to be processed in the SCS is a plain-list node,
+attempt to add all valid items (if any) and call NEXT-FUN on the
+SCS. Else, call ALT-FUN on SCS. Valid items processed until an
+items that ends in a space or is not a valid logbook item is
+encountered (whichever is first)."
   (let ((next (org-ml--scs-peek-next scs))
         (scc (org-ml--scs-get-scc scs)))
     (if (org-ml-is-type 'plain-list next)
-        (-let (((log-items rest-plain-list) (org-ml--plain-list-split scc t next)))
+        (-let (((log-items rest-plain-list) (org-ml--plain-list-split scc next)))
           (cond
            ((and log-items rest-plain-list)
             (->> (org-ml--scs-map rest (cons rest-plain-list (cdr it)) scs)
@@ -3671,6 +3776,10 @@ a modified node-property value."
       (funcall alt-fun scs))))
 
 (defun org-ml--scs-split-clock-note-then-else (next-fun alt-fun scs)
+  "Maybe split a clock-note from the SCS.
+If the next node to be processed in the SCS is a plain-list node,
+attempt to split off a clock note (if it exists) and call NEXT-FUN on the
+SCS. Else, call ALT-FUN on SCS."
   (-let* ((next (org-ml--scs-peek-next scs))
           (scc (org-ml--scs-get-scc scs))
           ((note rest) (org-ml--plain-list-split-clock-note scc next)))
@@ -3684,6 +3793,10 @@ a modified node-property value."
       (funcall alt-fun scs))))
 
 (defun org-ml--scs-split-clock-then-else (next-fun alt-fun scs)
+  "Maybe split a clock from the SCS.
+If the next node to be processed in the SCS is a clock node, add
+the node and call NEXT-FUN on the SCS. Else, call ALT-FUN on
+SCS."
   (cl-flet
       ((add-loose
         (sl)
@@ -3695,12 +3808,21 @@ a modified node-property value."
         (funcall alt-fun scs)))))
 
 (defun org-ml--scs-split-clocks-and-notes-else (alt-fun scs)
+  "Maybe split clocks and their notes from the SCS.
+If the next node to be processed in the SCS is a clock node or a
+plain-list node starting with a clock-note, add this node to the
+SCS and call this function recursively on the SCS to continue
+searching for more. Else, call ALT-FUN on SCS."
   (let* ((loop (-partial #'org-ml--scs-split-clocks-and-notes-else alt-fun))
          (try-item (-partial #'org-ml--scs-split-clock-note-then-else loop alt-fun))
          (loop-try-item (-partial #'org-ml--scs-split-clocks-and-notes-else try-item)))
     (org-ml--scs-split-clock-then-else loop-try-item alt-fun scs)))
 
 (defun org-ml--scs-split-clocks-else (alt-fun scs)
+  "Maybe split clocks from the SCS.
+If the next node to be processed in the SCS is a clock node add
+this node to the SCS and call this function recursively on the
+SCS to continue searching for more. Else, call ALT-FUN on SCS."
   (let ((n (->> (org-ml--scs-get-scc scs)
                 (org-ml--scc-get-clock-notes))))
     (if n (org-ml--scs-split-clocks-and-notes-else alt-fun scs)
@@ -3709,44 +3831,101 @@ a modified node-property value."
         (org-ml--scs-split-clock-then-else loop alt-fun scs)))))
 
 (defun org-ml--scs-split-item-drawer-last-then (next-fun scs)
+  "Split an item drawer from the SCS.
+If the next node to be processed in the SCS is an item drawer,
+node to the SCS and call NEXT-FUN on SCS. Else, call
+`org-ml--scs-terminate' to stop the splitting process."
   (org-ml--scs-split-item-drawer-then-else next-fun #'org-ml--scs-terminate scs))
 
 (defun org-ml--scs-split-clock-drawer-last-then (next-fun scs)
+  "Split a clock drawer from the SCS.
+If the next node to be processed in the SCS is a clock drawer,
+add this node to the SCS and call NEXT-FUN on SCS. Else,
+call `org-ml--scs-terminate' to stop the splitting process."
   (org-ml--scs-split-clock-drawer-then-else next-fun #'org-ml--scs-terminate scs))
 
 (defun org-ml--scs-split-mixed-drawer-last-then (next-fun scs)
+  "Split a mixed drawer from the SCS.
+If the next node to be processed in the SCS is a mixed drawer,
+add this node to the SCS and call NEXT-FUN on SCS. Else,
+call `org-ml--scs-terminate' to stop the splitting process."
   (org-ml--scs-split-mixed-drawer-then-else next-fun #'org-ml--scs-terminate scs))
 
 (defun org-ml--scs-split-item-last-then (next-fun scs)
+  "Split an item from the SCS.
+If the next node to be processed in the SCS is a plain-list, add
+all valid logbook items to the SCS and call NEXT-FUN on SCS.
+Else, call `org-ml--scs-terminate' to stop the splitting
+process."
   (org-ml--scs-split-item-then-else next-fun #'org-ml--scs-terminate scs))
 
-(defun org-ml--scs-split-items-clocks-maybe (alt-fun scs)
-  (let* ((loop (-partial #'org-ml--scs-split-items-clocks-maybe alt-fun))
+(defun org-ml--scs-split-items-clocks-else (alt-fun scs)
+  "Maybe split a items and clocks from the SCS.
+If the next node to be processed in the SCS is a clock or
+plain-list, add valid logbook items, clock-notes (if wanted), or
+clocks to the to the SCS and call this function recursively on
+SCS to continue searching. Else, call ALT-FUN on SCS."
+  (let* ((loop (-partial #'org-ml--scs-split-items-clocks-else alt-fun))
          (split-item (-partial #'org-ml--scs-split-item-last-then loop)))
     (org-ml--scs-split-clocks-else split-item scs)))
 
 (defun org-ml--scs-split-item-drawer-last (scs)
+  "Maybe split an item drawer from the SCS.
+If the next node to be processed in the SCS is an item drawer,
+node to the SCS and call NEXT-FUN on SCS. In any case, call
+`org-ml--scs-terminate' to stop the splitting process."
   (org-ml--scs-split-item-drawer-last-then #'org-ml--scs-terminate scs))
 
 (defun org-ml--scs-split-clock-drawer-last (scs)
+  "Maybe split a clock drawer from the SCS.
+If the next node to be processed in the SCS is a clock drawer,
+node to the SCS and call NEXT-FUN on SCS. In any case, call
+`org-ml--scs-terminate' to stop the splitting process."
   (org-ml--scs-split-clock-drawer-last-then #'org-ml--scs-terminate scs))
 
 (defun org-ml--scs-split-mixed-drawer-last (scs)
+  "Maybe split a mixed drawer from the SCS.
+If the next node to be processed in the SCS is a mixed drawer,
+node to the SCS and call NEXT-FUN on SCS. In any case, call
+`org-ml--scs-terminate' to stop the splitting process."
   (org-ml--scs-split-mixed-drawer-last-then #'org-ml--scs-terminate scs))
 
 (defun org-ml--scs-split-item-last (scs)
+  "Maybe split an item from the SCS.
+If the next node to be processed in the SCS is a plain-list, add
+all valid logbook items to the SCS and call NEXT-FUN on SCS. In
+any case, call `org-ml--scs-terminate' to stop the splitting
+process."
   (org-ml--scs-split-item-last-then #'org-ml--scs-terminate scs))
 
 (defun org-ml--scs-split-clocks-and-notes-last (scs)
+  "Maybe split clocks and their notes from the SCS.
+If the next node to be processed in the SCS is a clock node or a
+plain-list node starting with a clock-note, add this node to the
+SCS and continue searching for more clocks and notes. Call
+`org-ml--scs-terminate' when a clock note or clock is not found."
   (org-ml--scs-split-clocks-and-notes-else #'org-ml--scs-terminate scs))
 
 (defun org-ml--scs-split-items-clocks-last (scs)
-  (org-ml--scs-split-items-clocks-maybe #'org-ml--scs-terminate scs))
+  "Maybe split clocks from the SCS.
+If the next node to be processed in the SCS is a clock node or a
+plain-list node starting with valid log items, add this node to
+the SCS and continue searching for more clocks and notes. Call
+`org-ml--scs-terminate' when a clock note or log item is not
+found."
+  (org-ml--scs-split-items-clocks-else #'org-ml--scs-terminate scs))
 
 (defun org-ml--scs-split-clocks-last (scs)
+  "Maybe split clocks from the SCS.
+If the next node to be processed in the SCS is a clock node or a
+add this node to the SCS and continue searching for more clocks
+and notes. Call `org-ml--scs-terminate' when a clock is not
+found."
   (org-ml--scs-split-clocks-else #'org-ml--scs-terminate scs))
 
 (defun org-ml--supercontents-from-nodes (config nodes)
+  "Convert NODES to a supercontents alist.
+CONFIG is a valid plist to be accepted by `org-ml--scc-encode'."
   (-let* (((scc &as &alist :drawers d)
            (org-ml--scc-encode config))
           (scs (org-ml--scs-init scc nodes)))
@@ -3823,6 +4002,11 @@ a modified node-property value."
 ;; supercontents -> nodes
 
 (defun org-ml--sort-logbook (scc nodes)
+  "Sort NODES and return.
+NODES will be sorted according to their timestamps and are
+assumed to be valid log items or clocks/clock-notes (anything
+else will trigger an error). SCC is a supercontents-config as
+returned by `org-ml--scc-init'."
   ;; TODO break this up into smaller functions?
   ;; TODO optimize this depending on what we wish to sort?
   (-let (((&alist :clock-notes n :is-log-item-fun f) scc))
@@ -3916,17 +4100,32 @@ a modified node-property value."
            (fix-whitespace)))))
 
 (defun org-ml--merge-logbook (scc items clocks)
+  "Merge ITEMS and CLOCKS.
+Return these two inputs as a single sorted list (highest
+timestamp first) according to `org-ml--sort-logbook'. SCC is a
+supercontents-config as returned by `org-ml--scc-encode'."
   (org-ml--sort-logbook scc (append items clocks)))
 
 (defun org-ml--logbook-items-to-nodes (scc logbook)
+  "Return items in LOGBOOK as a sorted list of NODES.
+SCC is a supercontents-config as returned by
+`org-ml--scc-encode'."
   (->> (org-ml-logbook-get-items logbook)
        (org-ml--sort-logbook scc)))
 
 (defun org-ml--logbook-clocks-to-nodes (scc logbook)
+  "Return clocks in LOGBOOK as a sorted list of NODES.
+SCC is a supercontents-config as returned by
+`org-ml--scc-encode'."
   (->> (org-ml-logbook-get-clocks logbook)
        (org-ml--sort-logbook scc)))
 
 (defun org-ml--logbook-to-nodes (config logbook)
+  "Return LOGBOOK as a list of NODES.
+Anything in the UNKNOWN slot will be ignored. The exact
+nodes (drawers, loose items, etc) will be determined by the SCC.
+SCC is a supercontents-config as returned by
+`org-ml--scc-encode'."
   (-let (((enconf &as &alist :drawers d)
           (org-ml--scc-encode config)))
     (cl-flet*
@@ -4003,6 +4202,9 @@ a modified node-property value."
         (e (error "This shouldn't happen: %s" e))))))
 
 (defun org-ml--supercontents-to-nodes (config supercontents)
+  "Return SUPERCONTENTS as a list of nodes.
+The exact configuration of the returned nodes will depend on
+CONFIG."
   (let ((logbook (->> (org-ml-supercontents-get-logbook supercontents)
                       (org-ml--logbook-to-nodes config)))
         (contents (org-ml-supercontents-get-contents supercontents)))
@@ -4013,6 +4215,37 @@ a modified node-property value."
 ;; headline supercontents
 
 (defun org-ml-headline-get-supercontents (config headline)
+  "Return the supercontents of HEADLINE node.
+
+Supercontents will be like ((:logbook LB) (:contents CONTENTS))
+where LB is another alist representing the logbook, and CONTENTS
+is everything under the headline after the logbook and before the
+first subheadline (if present).
+
+The logbook will be have keys :items, :clocks, and :unknown,
+where the first two will include the item and clock nodes of the
+logbook respectively, and the third will contain anything that
+could not be identified as a valid logbook entry. Note that items
+are actually stored under a plain-list node but will be returned
+here as a flat list of items for convenience. Also note that the
+:clocks slot can also include item nodes if clock notes are
+returned.
+
+CONFIG is a plist representing the logbook configuration to
+target and will contain the following keys;
+- :log-into-drawer - corresponds to the value of
+  `org-log-into-drawer' and carriers the same meaning
+- :clock-into-drawer - corresponds to the value of
+  `org-clock-into-drawer' and carriers the same meaning
+- :clock-out-notes - corresponds to the value of
+  `org-log-note-clock-out'
+
+Any values not given will default to nil. Note that there is no
+way to infer what the logbook configuration should be, and thus
+this controls how the logbook will be parsed; this means it also
+determines which nodes will be returned in the :items/:clocks
+slots and which will be deemed :unknown (see above) so be sure
+this plist is set according to your desired target configuration."
   (cl-flet
       ((drop-if-type
         (type children)
@@ -4023,6 +4256,9 @@ a modified node-property value."
          (org-ml--supercontents-from-nodes config))))
 
 (defun org-ml-headline-set-supercontents (config supercontents headline)
+  "Set the HEADLINE's logbook and contents according to SUPERCONTENTS.
+See `org-ml-headline-get-supercontents' for the meaning of CONFIG
+and the structure of the SUPERCONTENTS list."
   (org-ml-headline-map-section*
     (let ((children (-some->> supercontents
                       (org-ml--supercontents-to-nodes config))))
@@ -4038,7 +4274,11 @@ a modified node-property value."
     headline))
 
 (org-ml--defun* org-ml-headline-map-supercontents (config fun headline)
-  "docstring"
+  "Map a function over the HEADLINE's supercontents.
+FUN is a unary function that takes a supercontents list and
+returns a modified supercontents list. See
+`org-ml-headline-get-supercontents' for the meaning of CONFIG and
+the structure of the supercontents list."
   (--> (org-ml-headline-get-supercontents config headline)
        (funcall fun it)
        (org-ml-headline-set-supercontents config it headline)))
@@ -4046,48 +4286,84 @@ a modified node-property value."
 ;; headline logbook/contents
 
 (defun org-ml-headline-get-logbook-items (config headline)
+  "Return the logbook items of HEADLINE.
+See `org-ml-headline-get-supercontents' for the meaning of
+CONFIG. The returned items will be a flat list of item nodes,
+not a plain-list node."
   (->> (org-ml-headline-get-supercontents config headline)
        (org-ml-supercontents-get-logbook)
        (org-ml-logbook-get-items)))
 
 (defun org-ml-headline-set-logbook-items (config items headline)
+  "Set the logbook items of HEADLINE to ITEMS.
+See `org-ml-headline-get-supercontents' for the meaning of
+CONFIG. ITEMS must be supplied as a flat list of valid logbook
+item nodes, not as a plain-list node."
   (org-ml-headline-map-supercontents* config
     (org-ml-supercontents-map-logbook* (org-ml--logbook-set-items items it) it)
     headline))
 
 (org-ml--defun* org-ml-headline-map-logbook-items (config fun headline)
-  "todo"
+  "Map a function over the logbook items of HEADLINE.
+FUN is a unary function that takes a list of item nodes and
+returns a modified list of item nodes. See
+`org-ml-headline-get-supercontents' for the meaning of CONFIG."
   (--> (org-ml-headline-get-logbook-items config headline)
        (funcall fun it)
        (org-ml-headline-set-logbook-items config it headline)))
 
 (defun org-ml-headline-get-logbook-clocks (config headline)
+  "Return the logbook clocks of HEADLINE.
+See `org-ml-headline-get-supercontents' for the meaning of
+CONFIG. The returned list will include clock nodes and maybe item
+nodes if :clock-out-notes is t in CONFIG."
   (->> (org-ml-headline-get-supercontents config headline)
        (org-ml-supercontents-get-logbook)
        (org-ml-logbook-get-clocks)))
 
 (defun org-ml-headline-set-logbook-clocks (config clocks headline)
+  "Set the logbook clocks of HEADLINE to CLOCKS.
+See `org-ml-headline-get-supercontents' for the meaning of
+CONFIG. CLOCKS must be supplied as a flat list of valid clock
+nodes and optionally item nodes if :clock-out-notes is t in
+CONFIG."
   (org-ml-headline-map-supercontents* config
     (org-ml-supercontents-map-logbook* (org-ml--logbook-set-clocks clocks it) it)
     headline))
 
 (org-ml--defun* org-ml-headline-map-logbook-clocks (config fun headline)
-  "todo"
+  "Map a function over the logbook clocks of HEADLINE.
+FUN is a unary function that takes a list of clock nodes and
+optionally item nodes to represent the clock notes and returns a
+modified list of said nodes. `org-ml-headline-get-supercontents'
+for the meaning of CONFIG."
   (--> (org-ml-headline-get-logbook-clocks config headline)
        (funcall fun it)
        (org-ml-headline-set-logbook-clocks config it headline)))
 
 (defun org-ml-headline-get-contents (config headline)
+  "Return the contents of HEADLINE.
+Contents is everything in the headline after the logbook and will
+be returned as a flat list of nodes. See
+`org-ml-headline-get-supercontents' for the meaning of CONFIG."
   (->> (org-ml-headline-get-supercontents config headline)
        (org-ml-supercontents-get-contents)))
 
 (defun org-ml-headline-set-contents (config contents headline)
+  "Set the contents of HEADLINE to CONTENTS.
+Contents is everything in the headline after the logbook, and
+CONTENTS must be a flat list of nodes. See
+`org-ml-headline-get-supercontents' for the meaning of CONFIG."
   (org-ml-headline-map-supercontents* config
     (org-ml-supercontents-set-contents contents it)
     headline))
 
 (org-ml--defun* org-ml-headline-map-contents (config fun headline)
-  "Docstring"
+  "Map a function over the contents of HEADLINE.
+Contents is everything in the headline after the logbook. FUN is
+a unary function that takes a list of nodes representing the
+contents and returns a modified list of nodes. See
+`org-ml-headline-get-supercontents' for the meaning of CONFIG."
   (--> (org-ml-headline-get-contents config headline)
        (funcall fun it)
        (org-ml-headline-set-contents config it headline)))
@@ -4095,14 +4371,32 @@ a modified node-property value."
 ;; headline logbook meta operations
 
 (defun org-ml-headline-logbook-append-item (config item headline)
+  "Append ITEM to the logbook of HEADLINE.
+See `org-ml-headline-get-supercontents' for the meaning of
+CONFIG. ITEM must be a valid logbook item. The logbook will be
+started if it does not already exist, else ITEM will be added in
+chronological order."
   (org-ml-headline-map-logbook-items* config (cons item it) headline))
 
 (defun org-ml-headline-logbook-append-open-clock (config unixtime headline)
+  "Append an open clock to the logbook of HEADLINE.
+See `org-ml-headline-get-supercontents' for the meaning of
+CONFIG. UNIXTIME will set the start time of the clock. The
+logbook will be started if it does not already exist, else the
+new clock will be added in chronological order."
   (let ((clock (-> (org-ml-unixtime-to-time-long unixtime)
                    (org-ml-build-clock!))))
     (org-ml-headline-map-logbook-clocks* config (cons clock it) headline)))
 
 (defun org-ml-headline-logbook-close-open-clock (config unixtime note headline)
+  "Close an open clock to the logbook of HEADLINE.
+See `org-ml-headline-get-supercontents' for the meaning of
+CONFIG. UNIXTIME will set the end time of the clock. This will
+only close an open clock if it is the most recent clock; else it
+will do nothing. NOTE is a string representing the clock-out
+note (or nil if not desired). Note that supplying a non-nil
+clock-note when it is not allowed by CONFIG will trigger an
+error."
   (cl-flet*
       ((close-clock
         (clock)
@@ -4123,6 +4417,13 @@ a modified node-property value."
     (org-ml-headline-map-logbook-clocks config #'close-first headline)))
 
 (defun org-ml-headline-logbook-convert-config (config1 config2 headline)
+  "Convert the logbook of HEADLINE to a new configuration.
+CONFIG1 is the current config and CONFIG2 is the target config.
+Note that any logbook nodes that are invalid under CONFIG1 will
+be silently dropped, and that nodes which do not conform to
+CONFIG2 will trigger an error. See
+`org-ml-headline-get-supercontents' for the structure of both
+config lists."
   (--> (org-ml-headline-get-supercontents config1 headline)
        (org-ml-headline-set-supercontents config2 it headline)))
 
