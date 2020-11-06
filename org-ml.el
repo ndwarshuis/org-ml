@@ -3400,31 +3400,31 @@ nodes."
   "Return the :clocks slot from LOGBOOK."
   (alist-get :clocks logbook))
 
-(defun org-ml--logbook-set-items (items logbook)
+(defun org-ml-logbook-set-items (items logbook)
   "Set the :items slot in LOGBOOK to ITEMS."
   (-let (((&alist :clocks :unknown) logbook))
     (org-ml--logbook-init items clocks unknown)))
 
-(defun org-ml--logbook-set-clocks (clocks logbook)
+(defun org-ml-logbook-set-clocks (clocks logbook)
   "Set the :clocks slot in LOGBOOK to CLOCKS."
   (-let (((&alist :items :unknown) logbook))
     (org-ml--logbook-init items clocks unknown)))
 
-(org-ml--defun* org-ml--logbook-map-items (fun logbook)
+(org-ml--defun* org-ml-logbook-map-items (fun logbook)
   "Apply function to :item slot in LOGBOOK.
 FUN is a unary function that takes a list of items and returns a
 new list of items."
   (--> (alist-get :items logbook)
        (funcall fun it)
-       (org-ml--logbook-set-items it logbook)))
+       (org-ml-logbook-set-items it logbook)))
 
-(org-ml--defun* org-ml--logbook-map-clocks (fun logbook)
+(org-ml--defun* org-ml-logbook-map-clocks (fun logbook)
   "Apply function to :clocks slot in LOGBOOK.
 FUN is a unary function that takes a list of clocks and returns a
 new list of clocks."
   (--> (alist-get :clocks logbook)
        (funcall fun it)
-       (org-ml--logbook-set-clocks it logbook)))
+       (org-ml-logbook-set-clocks it logbook)))
 
 ;; supercontents data structure
 
@@ -4362,7 +4362,7 @@ this plist is set according to your desired target configuration."
          (org-ml--supercontents-from-nodes config))))
 
 (defun org-ml-headline-set-supercontents (config supercontents headline)
-  "Set the HEADLINE's logbook and contents according to SUPERCONTENTS.
+  "Set logbook and contents of HEADLINE according to SUPERCONTENTS.
 See `org-ml-headline-get-supercontents' for the meaning of CONFIG
 and the structure of the SUPERCONTENTS list."
   (org-ml-headline-map-section*
@@ -4380,7 +4380,7 @@ and the structure of the SUPERCONTENTS list."
     headline))
 
 (org-ml--defun* org-ml-headline-map-supercontents (config fun headline)
-  "Map a function over the HEADLINE's supercontents.
+  "Map a function over the supercontents of HEADLINE.
 FUN is a unary function that takes a supercontents list and
 returns a modified supercontents list. See
 `org-ml-headline-get-supercontents' for the meaning of CONFIG and
@@ -4406,7 +4406,7 @@ See `org-ml-headline-get-supercontents' for the meaning of
 CONFIG. ITEMS must be supplied as a flat list of valid logbook
 item nodes, not as a plain-list node."
   (org-ml-headline-map-supercontents* config
-    (org-ml-supercontents-map-logbook* (org-ml--logbook-set-items items it) it)
+    (org-ml-supercontents-map-logbook* (org-ml-logbook-set-items items it) it)
     headline))
 
 (org-ml--defun* org-ml-headline-map-logbook-items (config fun headline)
@@ -4434,7 +4434,7 @@ CONFIG. CLOCKS must be supplied as a flat list of valid clock
 nodes and optionally item nodes if :clock-out-notes is t in
 CONFIG."
   (org-ml-headline-map-supercontents* config
-    (org-ml-supercontents-map-logbook* (org-ml--logbook-set-clocks clocks it) it)
+    (org-ml-supercontents-map-logbook* (org-ml-logbook-set-clocks clocks it) it)
     headline))
 
 (org-ml--defun* org-ml-headline-map-logbook-clocks (config fun headline)
