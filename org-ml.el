@@ -512,10 +512,12 @@ property list in NODE."
 FUN is a form that returns a modified value and contains `it'
 bound to the property value."
     (declare (indent 1))
-    `(--> (org-ml--get-property-nocheck ,prop ,node)
-          ;; (funcall (lambda (it) ,form) it)
-          ,form
-          (org-ml--set-property-nocheck ,prop it ,node))))
+    (let ((node* (make-symbol "node")))
+      `(let ((,node* ,node))
+         (--> (org-ml--get-property-nocheck ,prop ,node*)
+              ;; (funcall (lambda (it) ,form) it)
+              ,form
+              (org-ml--set-property-nocheck ,prop it ,node*))))))
 
 (defun org-ml--property-is-nil (prop node)
   "Return t if PROP in NODE is nil."
@@ -5051,6 +5053,32 @@ empty."
 (defun org-ml-to-trimmed-string (node)
   "Like `org-ml-to-string' but strip whitespace when returning NODE."
   (-some->> (org-ml-to-string node) (s-trim)))
+
+;;; inverse printing functions
+
+(defun org-ml-from-string (type string)
+  "Convert STRING to a node.
+TYPE is the node type intended by STRING; if STRING cannot be
+parsed into TYPE this function will return nil."
+  (let* ((level (cond
+                 ((eq type 'headline) nil)
+                 ((eq type 'section) nil)
+                 ((eq type 'paragraph) '(0))
+                 ((eq type 'item) '(0 0))
+                 ((eq type 'bold) '(0 1))
+                 ((memq type org-ml-objects) '(0 0))
+                 (t '(0))))
+         (string* (if (eq type 'bold) (concat " " string) string))
+         (node
+          (-some->> (org-ml--from-string string*)
+            (org-ml--get-descendent level)
+            (org-ml--set-property-nocheck :parent nil))))
+    (when node
+      (if (not (eq type 'bold)) node
+        (->> (org-ml--map-property-nocheck* :begin (1- it) node)
+             (org-ml--map-property-nocheck* :end (1- it))
+             (org-ml--map-property-nocheck* :contents-begin (1- it))
+             (org-ml--map-property-nocheck* :contents-end (1- it)))))))
 
 ;;; PATTERN MATCHING
 

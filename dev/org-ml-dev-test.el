@@ -169,6 +169,93 @@ is the converse."
 
   )
 
+
+;;; FROM STRING CONVERSTION
+
+(defun org-ml--plist-equal-p (exclude-props plist1 plist2)
+  (cl-flet
+      ((partition-plist
+        (props plist)
+        (->> (-partition 2 plist)
+             (--remove (memq (car it) props)))))
+    (let ((a (partition-plist exclude-props plist1))
+          (b (partition-plist exclude-props plist2)))
+      (and (equal (length a) (length b))
+           (cl-subsetp a b :test #'equal)
+           (cl-subsetp a b :test #'equal)))))
+
+(defun org-ml--equal (exclude-props node1 node2)
+  (cond
+   ((and (stringp node1) (stringp node2))
+    (equal node1 node2))
+   ((and (consp node1) (consp node2))
+    (-let (((type1 . (props1 . children1)) node1)
+           ((type2 . (props2 . children2)) node2))
+      (and (eq type1 type2)
+           (org-ml--plist-equal-p exclude-props props1 props2)
+           (->> (-zip-fill nil children1 children2)
+                (--all? (org-ml--equal exclude-props (car it) (cdr it)))))))))
+
+(defun org-ml--test-from-string (omit-props node string)
+  (let ((props (append omit-props '(:begin :contents-begin :end :contents-end :parent :post-affiliated)))
+        (type (org-ml-get-type node)))
+    (should (org-ml--equal props node (org-ml-from-string type string)))))
+
+(ert-deftest org-ml-from-string/non-nil ()
+  (org-ml--test-from-string '(:value) (org-ml-build-babel-call "name") "#+call: name()")
+  (org-ml--test-from-string nil (org-ml-build-bold "bold") "*bold*")
+  (org-ml--test-from-string nil (org-ml-build-center-block) "#+begin_center\n#+end_center")
+  ;; TODO cannot compare the values currently
+  ;; (org-ml--test-from-string nil (org-ml-build-clock! '(2020 1 1 0 0)) "CLOCK: [2020-01-01 Tue 00:00]")
+  (org-ml--test-from-string nil (org-ml-build-code "code") "~code~")
+  (org-ml--test-from-string nil (org-ml-build-comment "comment") "# comment")
+  (org-ml--test-from-string nil (org-ml-build-comment-block) "#+begin_comment\n#+end_comment")
+  (org-ml--test-from-string nil (org-ml-build-drawer "DRAW") ":DRAW:\n:END:")
+  (org-ml--test-from-string nil (org-ml-build-diary-sexp :value '(print 'hi)) "%%(print 'hi)")
+  (org-ml--test-from-string nil (org-ml-build-dynamic-block "name") "#+begin: name\n#+end")
+  (org-ml--test-from-string '(:latex :latex-math-p :ascii :html :latin1 :utf-8)
+                            (org-ml-build-entity "pi") "\\pi")
+  (org-ml--test-from-string '(:value :retain-labels :use-labels) (org-ml-build-example-block) "#+begin_example\n#+end_example")
+  (org-ml--test-from-string nil (org-ml-build-export-block "TYPE" "value\n") "#+begin_export TYPE\nvalue\n#+end_export")
+  (org-ml--test-from-string nil (org-ml-build-export-snippet "be" "val") "@@be:val@@")
+  (org-ml--test-from-string nil (org-ml-build-fixed-width "val") ": val")
+  ;; TODO add footnote definition
+  ;; TODO add footnote ref
+  (org-ml--test-from-string '(:raw-value) (org-ml-build-headline! :title-text "headline") "* headline")
+  (org-ml--test-from-string nil (org-ml-build-horizontal-rule) "------")
+  (org-ml--test-from-string '(:value) (org-ml-build-inline-babel-call "ktulu") "call_ktulu()")
+  (org-ml--test-from-string '(:value) (org-ml-build-inline-src-block "python") "src_python{}")
+  (org-ml--test-from-string nil (org-ml-build-italic "italic") "/italic/")
+  (org-ml--test-from-string '(:structure) (org-ml-build-item! :paragraph "item") "- item")
+  (org-ml--test-from-string nil (org-ml-build-keyword "K" "v") "#+K: v")
+  ;; TODO add latex env
+  ;; TODO add latex frag
+  (org-ml--test-from-string '(:raw-link :format) (org-ml-build-link "//example.com" :type "https") "https://example.com")
+  ;; TODO add macro
+  ;; TODO add node-property
+  (org-ml--test-from-string nil (org-ml-build-paragraph! "para") "para")
+  (org-ml--test-from-string '(:structure :type) (org-ml-build-plain-list (org-ml-build-item! :paragraph "item")) "- item")
+  ;; TODO add planing
+  ;; TODO add property drawer
+  ;; TODO add radio target
+  (org-ml--test-from-string nil (org-ml-build-section (org-ml-build-paragraph! "sec")) "sec")
+  ;; TODO add special block
+  ;; TODO add src block
+  ;; TODO add stats cookie
+  (org-ml--test-from-string nil (org-ml-build-strike-through "s") "+s+")
+  ;; TODO add subscript
+  ;; TODO add superscript
+  ;; TODO add table
+  ;; TODO add table-cell
+  ;; TODO add table-row
+  ;; TODO add target
+  ;; TODO timestamp does not have all props so can't compare :(
+  ;; (org-ml--test-from-string '(:raw-value) (org-ml-build-timestamp! '(2020 1 1)) "[2020-01-01 Tue]")
+  (org-ml--test-from-string nil (org-ml-build-underline "u") "_u_")
+  (org-ml--test-from-string nil (org-ml-build-verbatim "b") "=b=")
+  ;; TODO add verse block
+)
+
 ;;; PARSING INVERSION
 
 ;; For all org buffer contents, parsing and printing should be

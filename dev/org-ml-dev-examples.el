@@ -50,7 +50,16 @@
        (:begin 1 :end 5 :parent nil :post-blank 3 :post-affiliated nil)
        "text"))
     => "*text*"
-    (org-ml-to-trimmed-string nil) => ""))
+    (org-ml-to-trimmed-string nil) => "")
+
+  (defexamples org-ml-from-string
+    (org-ml-from-string 'bold "*text*")
+    => '(bold
+         (:begin 1 :end 7 :contents-begin 2 :contents-end 6 :post-blank 0 :parent nil)
+         "text")
+
+    (org-ml-from-string 'italic "*text*")
+    => nil))
 
 (def-example-group "Buffer Parsing"
   "Parse buffers to trees."

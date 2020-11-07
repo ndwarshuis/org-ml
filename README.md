@@ -175,6 +175,7 @@ Convert nodes to strings.
 
 * [org-ml-to-string](#org-ml-to-string-node) `(node)`
 * [org-ml-to-trimmed-string](#org-ml-to-trimmed-string-node) `(node)`
+* [org-ml-from-string](#org-ml-from-string-type-string) `(type string)`
 
 ## Buffer Parsing
 
@@ -598,6 +599,21 @@ Like [`org-ml-to-string`](#org-ml-to-string-node) but strip whitespace when retu
 
 (org-ml-to-trimmed-string nil)
  ;; => ""
+
+```
+
+#### org-ml-from-string `(type string)`
+
+Convert **`string`** to a node.
+**`type`** is the node type intended by **`string`**; if **`string`** cannot be
+parsed into **`type`** this function will return nil.
+
+```el
+(org-ml-from-string 'bold "*text*")
+ ;; => '(bold (:begin 1 :end 7 :contents-begin 2 :contents-end 6 :post-blank 0 :parent nil) "text")
+
+(org-ml-from-string 'italic "*text*")
+ ;; => nil
 
 ```
 
