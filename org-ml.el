@@ -3207,18 +3207,24 @@ a modified list of headlines."
 (defun org-ml-headline-set-planning (planning headline)
   "Return HEADLINE node with planning components set to PLANNING node."
   (if planning
-      (org-ml-headline-map-section*
-        ;; if no section, build new section with planning in it
-        (if (not it) (list planning)
-          ;; if section, test if planning already in front and override
-          ;; as needed
-          (let ((r (if (org-ml-is-type 'planning (car it)) (cdr it) it)))
-            (cons planning r)))
-        headline)
+      (let* ((pre-blank (org-ml-get-property :pre-blank headline))
+             (planning* (org-ml-map-property* :post-blank (+ pre-blank it) planning)))
+        (->> (org-ml-set-property :pre-blank 0 headline)
+             (org-ml-headline-map-section*
+               ;; if no section, build new section with planning in it
+               (if (not it) (list planning*)
+                 ;; if section, test if planning already in front and override
+                 ;; as needed
+                 (let ((r (if (org-ml-is-type 'planning (car it)) (cdr it) it)))
+                   (cons planning* r))))))
     ;; if `PLANNING' is nil, remove planning from section if present
-    (org-ml-headline-map-section*
-      (--remove-first (org-ml-is-type 'planning it) it)
-      headline)))
+    (let ((post-blank (or  (-some->> (org-ml-headline-get-planning headline)
+                             (org-ml-get-property :post-blank))
+                           0)))
+      (->> (org-ml-map-property* :pre-blank (+ post-blank it) headline)
+           (org-ml-headline-map-section*
+             (-let (((first . rest) it))
+               (if (org-ml-is-type 'planning first) rest it)))))))
 
 (org-ml--defun* org-ml-headline-map-planning (fun headline)
   "Return HEADLINE node with planning node modified by FUN.

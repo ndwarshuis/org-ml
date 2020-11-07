@@ -3853,7 +3853,30 @@
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-set-planning nil)
            (org-ml-to-trimmed-string))
-      => "* headline")
+      => "* headline"
+      :begin-hidden
+      (:buffer "* headline"
+               ""
+               "rest")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "SCHEDULED: <2019-01-01 Tue>"
+                  ""
+                  "rest")
+      (:buffer "* headline"
+               "SCHEDULED: <2019-01-01 Tue>"
+               ""
+               "rest")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-planning nil)
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ""
+                  "rest")
+      :end-hidden
+      )
 
     (defexamples-content org-ml-headline-map-planning
       nil
