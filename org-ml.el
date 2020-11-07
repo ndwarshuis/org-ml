@@ -3251,29 +3251,52 @@ modified planning node."
   "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
 NODE-PROPERTIES is a list of node-property nodes."
   (if node-properties
+      (let* ((pre-blank (org-ml-get-property :pre-blank headline))
+             (post-blank (-some->> (org-ml-headline-get-planning headline)
+                           (org-ml-get-property :post-blank)))
+             (pd (apply #'org-ml-build-property-drawer
+                        :post-blank (or post-blank pre-blank) node-properties)))
+        (->> (org-ml-set-property :pre-blank 0 headline)
+             (org-ml-headline-map-section*
+               ;; if no section, build new section with prop-drwr in it
+               (if (not it) (list pd)
+                 ;; the prop-drwr could either be the first child or second
+                 ;; if planning is in front
+                 (-let (((first . (second . rest)) it))
+                   (cond
+                    ((and (org-ml-is-type 'planning first)
+                          (org-ml-is-type 'property-drawer second))
+                     (cons (org-ml-set-property :post-blank 0 first)
+                           (cons pd rest)))
+                    ((org-ml-is-type 'property-drawer first)
+                     (cons pd (cdr it)))
+                    ((org-ml-is-type 'planning first)
+                     (cons (org-ml-set-property :post-blank 0 first)
+                           (cons pd (cdr it))))
+                    (t
+                     (cons pd it))))))))
+    (-let* (((first . (second . _)) (org-ml-headline-get-section headline))
+            (headline* (cond
+                        ((org-ml-is-type 'property-drawer second)
+                         (let ((pb (org-ml-get-property :post-blank second)))
+                           (org-ml-headline-map-planning*
+                             (org-ml-map-property* :post-blank (+ pb it) it)
+                             headline)))
+                        ((org-ml-is-type 'property-drawer first)
+                         (let ((pb (org-ml-get-property :post-blank first)))
+                           (org-ml-map-property* :pre-blank (+ pb it) headline)))
+                        (t
+                         headline))))
       (org-ml-headline-map-section*
-        (let ((pd (apply #'org-ml-build-property-drawer node-properties)))
-          ;; if no section, build new section with prop-drwr in it
-          (if (not it) (list pd)
-            ;; the prop-drwr could either be the first child or second
-            ;; if planning is in front
-            (let ((first (nth 0 it))
-                  (second (nth 1 it)))
-              (cond
-               ((and (org-ml-is-type 'planning first)
-                     (org-ml-is-type 'property-drawer second))
-                (-replace-at 1 pd it))
-               ((org-ml-is-type 'property-drawer first)
-                (-replace-at 0 pd it))
-               ((org-ml-is-type 'planning first)
-                (-insert-at 1 pd it))
-               (t
-                (cons pd it))))))
-        headline)
-    ;; if `NODE-PROPERTIES' is nil, remove from section if present
-    (org-ml-headline-map-section*
-      (--remove-first (org-ml-is-type 'property-drawer it) it)
-      headline)))
+        (-let (((first . (second . rest)) it))
+          (cond
+           ((org-ml-is-type 'property-drawer first)
+            (-remove-at 0 it))
+           ((org-ml-is-type 'property-drawer second)
+            (-remove-at 1 it))
+           (t
+            it)))
+        headline*))))
 
 (org-ml--defun* org-ml-headline-map-node-properties (fun headline)
   "Return HEADLINE node with property-drawer node modified by FUN.

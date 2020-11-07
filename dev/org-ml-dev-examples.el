@@ -3939,8 +3939,8 @@
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-set-node-properties nil)
            (org-ml-to-trimmed-string))
-      :begin-hidden
       => "* headline"
+      :begin-hidden
       (:buffer "* headline"
                "CLOSED: <2019-01-01 Tue>"
                ":PROPERTIES:"
@@ -3963,7 +3963,47 @@
            (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "CLOSED: <2019-01-01 Tue>")
-      :end-hidden)
+      (:buffer "* headline"
+               ""
+               "section")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":New:      world man"
+                  ":END:"
+                  ""
+                  "section")
+      (:buffer "* headline"
+               "CLOSED: <2019-01-01 Tue>"
+               ""
+               "section")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: <2019-01-01 Tue>"
+                  ":PROPERTIES:"
+                  ":New:      world man"
+                  ":END:"
+                  ""
+                  "section")
+      (:buffer "* headline"
+               "CLOSED: <2019-01-01 Tue>"
+               ":PROPERTIES:"
+               ":Effort:   0:01"
+               ":ID:       easy"
+               ":END:"
+               ""
+               "section")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-properties nil)
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: <2019-01-01 Tue>"
+                  ""
+                  "section"))
 
     (defexamples-content org-ml-headline-map-node-properties
       nil

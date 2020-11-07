@@ -5256,6 +5256,11 @@ Return **`headline`** node with property drawer containing **`node-properties`**
  ;      :ID:       easy
  ;      :END:"
 
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-set-node-properties nil)
+     (org-ml-to-trimmed-string))
+ ;; => "* headline"
+
 ```
 
 #### org-ml-headline-map-node-properties `(fun headline)`
