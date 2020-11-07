@@ -7791,6 +7791,7 @@ no examples :(
 - add robust headline logbook and contents function
 - rename indent/unindent functions to better reflect native org function naming
   conventions
+- add `org-ml-from-string`
 
 ## 4.0.1
 
