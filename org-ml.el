@@ -5858,8 +5858,13 @@ t, parse the entire subtree, else just parse the top headline."
     (when (ignore-errors (org-back-to-heading t))
       (let ((b (point))
             (e (if subtree
-                   (let ((eos (org-end-of-subtree)))
-                     (if (= eos (point-max)) eos (1+ eos)))
+                   (progn
+                     (org-end-of-subtree)
+                     ;; skip ahead to the next headline because
+                     ;; `org-end-of-subtree' does not by default, which misses
+                     ;; any spacing after headlines
+                     (or (outline-next-heading)
+                         (point-max)))
                  (or (outline-next-heading) (point-max)))))
         (car (org-element--parse-elements b e 'first-section
                                           nil nil nil nil))))))
