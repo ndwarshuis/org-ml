@@ -183,6 +183,7 @@ the examples below.
 - rename indent/unindent functions to better reflect native org function naming
   conventions
 - add `org-ml-from-string`
+- improve subtree parsing performance
 
 ## 4.0.1
 
