@@ -3416,12 +3416,16 @@ a modified node-property value."
 
 ;; alist to store the separated nodes from a logbook
 
-(defun org-ml--logbook-init (items clocks unknown)
+(defun org-ml--logbook-init (items clocks unknown post-blank)
   "Create a new logbook alist.
 ITEMS, CLOCKS, and UNKNOWN correspond to a list of item nodes,
 clock notes (which may contain item nodes for notes) and other
-nodes."
-  `((:items ,@items) (:clocks ,@clocks) (:unknown ,@unknown)))
+nodes. POST-BLANK corresponds to the number of extra newlines
+between the logbook and the contents."
+  `((:items ,@items)
+    (:clocks ,@clocks)
+    (:unknown ,@unknown)
+    (:post-blank . ,post-blank)))
 
 (defun org-ml-logbook-get-items (logbook)
   "Return the :items slot from LOGBOOK."
@@ -3433,13 +3437,13 @@ nodes."
 
 (defun org-ml-logbook-set-items (items logbook)
   "Set the :items slot in LOGBOOK to ITEMS."
-  (-let (((&alist :clocks :unknown) logbook))
-    (org-ml--logbook-init items clocks unknown)))
+  (-let (((&alist :clocks :unknown :post-blank) logbook))
+    (org-ml--logbook-init items clocks unknown post-blank)))
 
 (defun org-ml-logbook-set-clocks (clocks logbook)
   "Set the :clocks slot in LOGBOOK to CLOCKS."
-  (-let (((&alist :items :unknown) logbook))
-    (org-ml--logbook-init items clocks unknown)))
+  (-let (((&alist :items :unknown :post-blank) logbook))
+    (org-ml--logbook-init items clocks unknown post-blank)))
 
 (org-ml--defun* org-ml-logbook-map-items (fun logbook)
   "Apply function to :item slot in LOGBOOK.
@@ -3471,12 +3475,12 @@ CONTENTS is a list of nodes corresponding to the headline
 contents (the stuff after the logbook)."
   `((:logbook ,@logbook) (:contents ,@contents)))
 
-(defun org-ml--supercontents-init (items clocks unknown contents)
+(defun org-ml--supercontents-init (items clocks unknown post-blank contents)
   "Create a supercontents alist.
-ITEMS, CLOCKS, and UNKNOWN are lists corresponding to the
-arguments in `org-ml--logbook-init' and CONTENTS has the same
+ITEMS, CLOCKS, UNKNOWN, and POST-BLANK are lists corresponding to
+the arguments in `org-ml--logbook-init' and CONTENTS has the same
 meaning as `org-ml--supercontents-init-from-lb'."
-  (let ((lb (org-ml--logbook-init items clocks unknown)))
+  (let ((lb (org-ml--logbook-init items clocks unknown post-blank)))
     (org-ml--supercontents-init-from-lb lb contents)))
 
 (defun org-ml-supercontents-get-contents (supercontents)
@@ -3605,11 +3609,6 @@ logbook."
 
 ;; logbook separation (nodes -> supercontents)
 
-;; define a supercontents-splitter here which will "walk" through the target
-;; nodes and split them off depending on the configuration whether or not they
-;; are valid logbook nodes. This will then pass through a series of labyrinthine
-;; functions that will perform the actual splitting operations
-
 (defun org-ml--node-has-trailing-space (node)
   "Return t if NODE has at least one newline after it."
   (and (< 0 (org-ml-get-property :post-blank node)) t))
@@ -3627,82 +3626,25 @@ value as PLAIN-LIST."
     (->> (org-ml-get-children plain-list)
          (org-ml--map-last* (org-ml-set-property :post-blank pb it)))))
 
-(defun org-ml--plain-list-split (scc plain-list)
-  "Return a list of separated nodes from PLAIN-LIST.
-The returned list will be like (LOG-ITEMS PLAIN-LIST-OTHER) where
-LOG-ITEMS are items that belong to the logbook and
-PLAIN-LIST-OTHER is PLAIN-LIST with LOG-ITEMS removed (or nil if
-an empty list). SCC is a supercontents-config object as given by
-`org-ml--scc-encode'."
-  (let ((f (org-ml--scc-get-log-item-fun scc)))
-    (cl-flet*
-        ((find-first-space-index
-          (children)
-          (-some->> (-find-index #'org-ml--node-has-trailing-space children) (1+)))
-         (find-first-non-logbook-entry
-          (children)
-          (--find-index (not (funcall f it)) children))
-         (min-maybe
-          (i j)
-          (cond
-           ((not i) j)
-           ((not j) i)
-           (t (min i j)))))
-      ;; TODO refactor the post-blank stuff?
-      (let ((children (org-ml-get-children plain-list)))
-        (-if-let (i (min-maybe (find-first-space-index children)
-                               (find-first-non-logbook-entry children)))
-            (if (= i (length children))
-                (let ((pb (org-ml-get-property :post-blank plain-list)))
-                  (--> children
-                       (org-ml--map-last*
-                        (org-ml-set-property :post-blank pb it)
-                        it)
-                       (list it nil)))
-              ;; TODO if rest-items is nil, the last item in log-items should
-              ;; get the plain-list post-blank
-              (-let (((log-items rest-items) (-split-at i children)))
-                `(,log-items ,(org-ml-set-children rest-items plain-list))))
-          (list (org-ml--plain-list-flatten plain-list) nil))))))
+(defun org-ml--flatten-plain-lists (nodes)
+  (--splice (org-ml-is-type 'plain-list it) (org-ml--plain-list-flatten it) nodes))
 
-(defun org-ml--plain-list-split-clock-note (scc plain-list)
-  "Return a list with the separated clock note from PLAIN-LIST.
-The returned list will be like (NOTE-ITEM PLAIN_LIST-OTHER) where
-NOTE-ITEM is the clock note item (if found) and PLAIN-LIST-OTHER
-is PLAIN-LIST without the clock note (or nil if empty). SCC is a
-supercontents-config object as given by `org-ml--scc-encode'."
-  (let ((f (org-ml--scc-get-log-item-fun scc)))
-    (-if-let (first (and (org-ml-is-type 'plain-list plain-list)
-                         (car (org-ml-get-children plain-list))))
-        (if (not (funcall f first))
-            (list first (when (< 1 (length (org-ml-get-children plain-list)))
-                          (org-ml-map-children* (cdr it) plain-list)))
-          (list nil plain-list))
-      (list nil plain-list))))
-
-(defmacro org-ml--drawer-splitter-map (slot form drawer-splitter)
-  "Map the value of SLOT in DRAWER-SPLITTER.
-FORM is a form that will return the new list to go in SLOT, where
-the symbol 'it' will be bound to the current value in SLOT. SLOT
-is one of 'items', 'clocks', or 'unknown'. SCS is the
-supercontents-splitter as given by `org-ml--scs-init'.
-
-This macro is only meant to be used by `org-ml--separate-logbook'."
-  (declare (indent 1))
-  (let* ((items* (make-symbol "items"))
-         (clocks* (make-symbol "clocks"))
-         (unknown* (make-symbol "unknown"))
-         (lambda-form `(lambda (it) ,form))
-         (ret-form
-          (cl-case slot
-            (items
-             `(list (funcall ,lambda-form ,items*) ,clocks* ,unknown*))
-            (clocks
-             `(list ,items* (funcall ,lambda-form ,clocks*) ,unknown*))
-            (unknown
-             `(list ,items* ,clocks* (funcall ,lambda-form ,unknown*)))
-            (t (error "Unknown slot type")))))
-    `(-let (((,items* ,clocks* ,unknown*) ,drawer-splitter)) ,ret-form)))
+(defun org-ml--wrap-plain-lists (nodes)
+  (->> (reverse nodes)
+       (-reduce-from (lambda (acc node)
+                       (cond
+                        ((and (org-ml-is-type 'item node)
+                              (org-ml-is-type 'plain-list (car acc)))
+                         (cons (org-ml-map-children* (cons node it) (car acc))
+                               (cdr acc)))
+                        ((org-ml-is-type 'item node)
+                         (let* ((pb (org-ml-get-property :post-blank node))
+                                (pl (->> (org-ml-set-property :post-blank 0 node)
+                                         (org-ml-build-plain-list :post-blank pb))))
+                           (cons pl acc)))
+                        (t
+                         (cons node acc))))
+                     nil)))
 
 (defun org-ml--separate-logbook (scc mode nodes)
   "Separate NODES into logbook components.
@@ -3712,430 +3654,230 @@ MODE is the mode by which to separate the nodes and is one of
 'items'. The returned list will be like (ITEMS CLOCKS UNKNOWN)."
   (let ((n (org-ml--scc-get-clock-notes scc))
         (f (org-ml--scc-get-log-item-fun scc)))
-    (cl-labels
-        ((separate-plain-list
-          (acc plain-list)
-          (-let (((log-items other-items)
-                  (->> (org-ml--plain-list-flatten plain-list)
-                       (-separate f))))
-            (--> (if (not log-items) acc
-                   (org-ml--drawer-splitter-map items
-                     (append (reverse log-items) it) acc))
-                 (if (not other-items) it
-                   (org-ml--drawer-splitter-map unknown
-                     (append (reverse other-items) it) it)))))
-         (split
-          (acc maybe-clock-note? nodes)
-          (-let* (((first . rest) nodes))
-            (if (not first) acc
-              (cond
-               ((and (org-ml-is-type 'plain-list first)
-                     (memq mode '(:clocks :mixed))
-                     n
-                     maybe-clock-note?)
-                (-let (((note plain-list) (org-ml--plain-list-split-clock-note scc first)))
-                  (cond
-                   (note
-                    (-> (org-ml--drawer-splitter-map clocks (cons note it) acc)
-                        (split nil (if plain-list (cons plain-list rest) rest))))
-                   ((eq mode :mixed)
-                    ;; TODO this is redundant
-                    (-> (separate-plain-list acc first)
-                        (split nil rest)))
-                   (t
-                    ;; TODO this is redundant
-                    (let ((flat (reverse (org-ml--plain-list-flatten first))))
-                      (-> (org-ml--drawer-splitter-map unknown (append flat it) acc)
-                          (split nil rest)))))))
-               ((and (org-ml-is-type 'plain-list first)
-                     (memq mode '(:items :mixed)))
-                (-> (separate-plain-list acc first)
-                    (split nil rest)))
-               ((and (org-ml-is-type 'plain-list first) (eq mode :clocks))
-                (let ((flat (reverse (org-ml--plain-list-flatten first))))
-                  (-> (org-ml--drawer-splitter-map unknown (append flat it) acc)
-                      (split nil rest))))
-               ((and (org-ml-is-type 'clock first)
-                     (memq mode '(:mixed :clocks)))
-                (-> (org-ml--drawer-splitter-map clocks (cons first it) acc)
-                    (split t rest)))
-               (t
-                (-> (org-ml--drawer-splitter-map unknown (cons first it) acc)
-                    (split nil rest))))))))
-      (-let (((items clocks unknown) (split '(nil nil nil) nil nodes)))
-        (list items clocks unknown)))))
+    (cl-flet
+        ((split
+          (acc node)
+          (if (not node) acc
+            (cond
+             ((and (org-ml-is-type 'clock node)
+                   (memq mode '(:mixed :clocks)))
+              (cons (cons 'clocks node) acc))
+             ((and (org-ml-is-type 'item node)
+                   (memq mode '(:items :mixed))
+                   (funcall f node))
+              (cons (cons 'items node) acc))
+             ((and (org-ml-is-type 'item node)
+                   (memq mode '(:clocks :mixed))
+                   n
+                   (not (funcall f node))
+                   (org-ml-is-type 'clock (cdr (car acc))))
+              (cons (cons 'clocks node) acc))
+             (t
+              (cons (cons 'unknown node) acc))))))
+      (->> (org-ml--flatten-plain-lists nodes)
+           (-reduce-from #'split nil)))))
 
-(defun org-ml--scs-init (scc nodes)
-  "Return an initialized supercontents-splitter (SCS).
-SCC is a supercontents-config as given by `org-ml--scc-init'.
-NODES is the list of nodes to be split."
-  `(,scc nil nil nil ,nodes))
+(defmacro org-ml--state-slot (key limit eliminators next-fun)
+  (declare (indent 3))
+  `(list ,key
+         :limit ,limit
+         :eliminators ,eliminators
+         :next ,next-fun))
 
-(defun org-ml--scs-peek-next (scs)
-  "Return the next unprocessed node from SCS."
-  (-let (((_ _ _ _ (next . _)) scs))
-    next))
+(defun org-ml--state-add-slot (slot state)
+  (if (--any? (eq (car slot) (car it)) (cdr state)) state
+    (cons 'state (cons slot (cdr state)))))
 
-(defun org-ml--scs-get-scc (scs)
-  "Return the SCC object from SCS."
-  (car scs))
+(defun org-ml--state-remove-slot (key state)
+  (cons 'state (--remove-first (eq key (car it)) (cdr state))))
 
-(defun org-ml--scs-is-under-limit (scs)
-  "Return t if the clocks slot in SCS is below the clock limit.
-The clock limit is stored internally as part of the SCC."
-  (-let* (((scc _ clocks _ _) scs)
-          (clock-limit (org-ml--scc-get-drawer-key :clock-limit scc)))
-    (if clock-limit (< (length clocks) clock-limit) t)))
-
-(defun org-ml--scs-terminate (scs)
-  "Return a supercontents alist based on the current state of SCS.
-The items, clocks, and unknown slots in SCS correspond directly
-to the :logbook slot. The :contents slot is based on whatever is
-left unprocessed in the SCS."
-  (-let (((_ i c u r) scs))
-    (org-ml--supercontents-init (reverse i) (reverse c) (reverse u) r)))
-
-(defmacro org-ml--scs-map (slot form scs)
-  "Map a value in SLOT of SCS to a new value.
-FORM is a Lisp form that returns the new value for slot, and the
-symbol 'it' will be bound to the current value of SLOT. SLOT may
-be one of 'items', 'clocks', 'unknown', or 'rest' which
-correspond directly to the positions in the SCS."
-  (let* ((c* (make-symbol "c"))
-         (items* (make-symbol "items"))
-         (clocks* (make-symbol "clocks"))
-         (unknown* (make-symbol "clocks"))
-         (rest* (make-symbol "rest"))
-         (lambda-form `(lambda (it) ,form))
-         (ret-form
-          (cl-case slot
-            (items
-             `(list ,c* (funcall ,lambda-form ,items*) ,clocks* ,unknown* ,rest*))
-            (clocks
-             `(list ,c* ,items* (funcall ,lambda-form ,clocks*) ,unknown* ,rest*))
-            (unknown
-             `(list ,c* ,items* ,clocks* (funcall ,lambda-form ,unknown*) ,rest*))
-            (rest
-             `(list ,c* ,items* ,clocks* ,unknown* (funcall ,lambda-form ,rest*)))
-            (t (error "Unknown slot type")))))
-    `(-let (((,c* ,items* ,clocks* ,unknown* ,rest*) ,scs))
-       ,ret-form)))
-
-(defun org-ml--scs-terminate-if-space (add-fun next-fun scs)
-  "Stop processing SCS if the next node has a space.
-If the next node has a space following it, call ADD-FUN on the
-next node to add it to the appropriate slot in SCS, and then call
-`org-ml--scs-terminate'. If not, call NEXT-FUN on the SCS to
-continue processing."
-  (let ((next (org-ml--scs-peek-next scs)))
-    (if (org-ml--node-has-trailing-space next)
-        (->> (funcall add-fun scs)
-             (org-ml--scs-terminate))
-      (->> (funcall add-fun scs)
-           (funcall next-fun)))))
-
-(defun org-ml--scs-split-drawer-then-else (mode alt-fun next-fun scs)
-  "Maybe split a drawer from the SCS.
-If the next node to be processed in the SCS is a drawer with the
-proper name (see below), add it to the appropriate slot and call
-NEXT-FUN on th SCS. Else, call ALT-FUN on SCS. MODE is one of
-:items, :clocks, or :mixed and corresponds to the MODE argument
-in `org-ml--separate-logbook', and will also be used to determine
-the name of the drawer to be split based the on the internal SCC
-of the SCS"
-  (let ((next (org-ml--scs-peek-next scs))
-        (scc (org-ml--scs-get-scc scs))
-        (name (->> (org-ml--scs-get-scc scs)
-                   (org-ml--scc-get-drawer-key mode))))
-    (if (not (org-ml--node-is-drawer-with-name name next))
-        (funcall alt-fun scs)
-      (cl-flet
-          ((add-fun
-            (sl)
-            (-let (((items* clocks* unknown*)
-                    (->> (org-ml-get-children next)
-                         (org-ml--separate-logbook scc mode))))
-              (->> (org-ml--scs-map items (append items* it) sl)
-                   (org-ml--scs-map clocks (append clocks* it))
-                   (org-ml--scs-map unknown (append unknown* it))
-                   (org-ml--scs-map rest (cdr it))))))
-        (org-ml--scs-terminate-if-space #'add-fun next-fun scs)))))
-
-(defun org-ml--scs-split-item-drawer-then-else (next-fun alt-fun scs)
-  "Maybe split an item drawer from the SCS.
-If the next node to be processed in the SCS is an item drawer,
-add it to the appropriate slots and call NEXT-FUN on th SCS. Else,
-call ALT-FUN on SCS."
-  (org-ml--scs-split-drawer-then-else :items alt-fun next-fun scs))
-
-(defun org-ml--scs-split-clock-drawer-then-else (next-fun alt-fun scs)
-  "Maybe split a clock drawer from the SCS.
-If the next node to be processed in the SCS is a clock drawer,
-add it to the appropriate slots and call NEXT-FUN on th SCS. Else,
-call ALT-FUN on SCS."
-  (org-ml--scs-split-drawer-then-else :clocks alt-fun next-fun scs))
-
-(defun org-ml--scs-split-mixed-drawer-then-else (next-fun alt-fun scs)
-  "Maybe split a mixed drawer from the SCS.
-If the next node to be processed in the SCS is a mixed drawer,
-add it to the appropriate slots and call NEXT-FUN on th SCS. Else,
-call ALT-FUN on SCS."
-  (org-ml--scs-split-drawer-then-else :mixed alt-fun next-fun scs))
-
-(defun org-ml--scs-split-item-then-else (next-fun alt-fun scs)
-  "Maybe split an item from the SCS.
-If the next node to be processed in the SCS is a plain-list node,
-attempt to add all valid items (if any) and call NEXT-FUN on the
-SCS. Else, call ALT-FUN on SCS. Valid items processed until an
-items that ends in a space or is not a valid logbook item is
-encountered (whichever is first)."
-  (let ((next (org-ml--scs-peek-next scs))
-        (scc (org-ml--scs-get-scc scs)))
-    (if (org-ml-is-type 'plain-list next)
-        (-let (((log-items rest-plain-list) (org-ml--plain-list-split scc next)))
-          (cond
-           ((and log-items rest-plain-list)
-            (->> (org-ml--scs-map rest (cons rest-plain-list (cdr it)) scs)
-                 (org-ml--scs-map items (append log-items it))
-                 (org-ml--scs-terminate)))
-           ((and log-items (org-ml--node-has-trailing-space (-last-item log-items)))
-            (->> (org-ml--scs-map rest (cdr it) scs)
-                 (org-ml--scs-map items (append log-items it))
-                 (org-ml--scs-terminate)))
-           (log-items
-            (->> (org-ml--scs-map rest (cdr it) scs)
-                 (org-ml--scs-map items (append log-items it))
-                 (funcall next-fun)))
-           (t
-            (funcall alt-fun scs))))
-      (funcall alt-fun scs))))
-
-(defun org-ml--scs-split-clock-note-then-else (next-fun alt-fun scs)
-  "Maybe split a clock-note from the SCS.
-If the next node to be processed in the SCS is a plain-list node,
-attempt to split off a clock note (if it exists) and call NEXT-FUN on the
-SCS. Else, call ALT-FUN on SCS."
-  (-let* ((next (org-ml--scs-peek-next scs))
-          (scc (org-ml--scs-get-scc scs))
-          ((note rest) (org-ml--plain-list-split-clock-note scc next)))
-    (if note
-        (--> (org-ml--scs-map rest (cdr it) scs)
-             (if rest (org-ml--scs-map rest (cons rest it) it) it)
-             (org-ml--scs-map clocks (cons note it) it)
-             (if (org-ml--node-has-trailing-space note)
-                 (org-ml--scs-terminate it)
-               (funcall next-fun it)))
-      (funcall alt-fun scs))))
-
-(defun org-ml--scs-split-clock-then-else (next-fun alt-fun scs)
-  "Maybe split a clock from the SCS.
-If the next node to be processed in the SCS is a clock node, add
-the node and call NEXT-FUN on the SCS. Else, call ALT-FUN on
-SCS."
+(defun org-ml--state-tick (key state)
   (cl-flet
-      ((add-loose
-        (sl)
-        (->> (org-ml--scs-map clocks (cons (org-ml--scs-peek-next sl) it) sl)
-             (org-ml--scs-map rest (cdr it)))))
-    (let ((next (org-ml--scs-peek-next scs)))
-      (if (and (org-ml-is-type 'clock next) (org-ml--scs-is-under-limit scs))
-          (org-ml--scs-terminate-if-space #'add-loose next-fun scs)
-        (funcall alt-fun scs)))))
+      ((decrement
+        (slot)
+        (-let* (((key . (&plist :limit :eliminators :next)) slot)
+                (limit* (when limit (1- limit))))
+          (org-ml--state-slot key limit* eliminators next)))
+       (is-at-limit
+        (slot)
+        (let ((limit (plist-get (cdr slot) :limit)))
+          (when limit (= 0 limit))))
+       (can-eliminate
+        (key slot)
+        (let ((el (plist-get (cdr slot) :eliminators)))
+          (or (eq t el) (memq key el)))))
+    (->> (cdr state)
+         (--map-first (eq key (car it)) (decrement it))
+         (-remove #'is-at-limit)
+         (--remove (can-eliminate key it))
+         (cons 'state))))
 
-(defun org-ml--scs-split-clocks-and-notes-else (alt-fun scs)
-  "Maybe split clocks and their notes from the SCS.
-If the next node to be processed in the SCS is a clock node or a
-plain-list node starting with a clock-note, add this node to the
-SCS and call this function recursively on the SCS to continue
-searching for more. Else, call ALT-FUN on SCS."
-  (let* ((loop (-partial #'org-ml--scs-split-clocks-and-notes-else alt-fun))
-         (try-item (-partial #'org-ml--scs-split-clock-note-then-else loop alt-fun))
-         (loop-try-item (-partial #'org-ml--scs-split-clocks-and-notes-else try-item)))
-    (org-ml--scs-split-clock-then-else loop-try-item alt-fun scs)))
+(defun org-ml--item-next-state (scc state node)
+  (let ((f (org-ml--scc-get-log-item-fun scc)))
+    (when (and (org-ml-is-type 'item node) (funcall f node))
+      (list (org-ml--state-tick :item state) (list (cons 'items node))))))
 
-(defun org-ml--scs-split-clocks-else (alt-fun scs)
-  "Maybe split clocks from the SCS.
-If the next node to be processed in the SCS is a clock node add
-this node to the SCS and call this function recursively on the
-SCS to continue searching for more. Else, call ALT-FUN on SCS."
-  (let ((n (->> (org-ml--scs-get-scc scs)
-                (org-ml--scc-get-clock-notes))))
-    (if n (org-ml--scs-split-clocks-and-notes-else alt-fun scs)
-      ;; TODO calling self is redundant
-      (let ((loop (-partial #'org-ml--scs-split-clocks-else alt-fun)))
-        (org-ml--scs-split-clock-then-else loop alt-fun scs)))))
+(defun org-ml--clock-note-next-state (scc state node)
+  (-let ((f (org-ml--scc-get-log-item-fun scc)))
+    (when (and (org-ml-is-type 'item node) (not (funcall f node)))
+      (list (org-ml--state-tick :clock-note state)
+            (list (cons 'clocks node))))))
 
-(defun org-ml--scs-split-item-drawer-last-then (next-fun scs)
-  "Split an item drawer from the SCS.
-If the next node to be processed in the SCS is an item drawer,
-node to the SCS and call NEXT-FUN on SCS. Else, call
-`org-ml--scs-terminate' to stop the splitting process."
-  (org-ml--scs-split-item-drawer-then-else next-fun #'org-ml--scs-terminate scs))
+(defun org-ml--clock-next-state (scc state node)
+  (when (org-ml-is-type 'clock node)
+    (let* ((slot (org-ml--state-slot :clock-notes 1 t
+                   #'org-ml--clock-note-next-state))
+           (next-state (--> (org-ml--state-tick :clock state)
+                            (if (org-ml--scc-get-clock-notes scc)
+                                (org-ml--state-add-slot slot it)
+                              it))))
+      (list next-state (list (cons 'clocks node))))))
 
-(defun org-ml--scs-split-clock-drawer-last-then (next-fun scs)
-  "Split a clock drawer from the SCS.
-If the next node to be processed in the SCS is a clock drawer,
-add this node to the SCS and call NEXT-FUN on SCS. Else,
-call `org-ml--scs-terminate' to stop the splitting process."
-  (org-ml--scs-split-clock-drawer-then-else next-fun #'org-ml--scs-terminate scs))
+(defun org-ml--drawer-next-state (mode name scc state node)
+  (when (org-ml--node-is-drawer-with-name name node)
+    (let ((drawer-nodes (->> (org-ml-get-children node)
+                             (org-ml--separate-logbook scc mode)))
+                             ;; (reverse)))
+          (key (cl-case mode
+                 (items :item-drawer)
+                 (clocks :clock-drawer)
+                 (mixed :mixed-drawer))))
+      (list (org-ml--state-tick key state) drawer-nodes))))
 
-(defun org-ml--scs-split-mixed-drawer-last-then (next-fun scs)
-  "Split a mixed drawer from the SCS.
-If the next node to be processed in the SCS is a mixed drawer,
-add this node to the SCS and call NEXT-FUN on SCS. Else,
-call `org-ml--scs-terminate' to stop the splitting process."
-  (org-ml--scs-split-mixed-drawer-then-else next-fun #'org-ml--scs-terminate scs))
+(defun org-ml--clock-next-state* (scc state node)
+  (-let (((next-state log-nodes) (org-ml--clock-next-state scc state node)))
+    (when next-state
+      (let* ((name (org-ml--scc-get-drawer-key :mixed scc))
+             (slot (org-ml--state-slot :item-drawer 1 nil
+                     (-partial #'org-ml--drawer-next-state :items name)))
+             (next-state (->> (org-ml--state-add-slot slot state)
+                              (org-ml--state-remove-slot :mixed-drawer)
+                              (org-ml--state-tick :clock))))
+        (list next-state log-nodes)))))
 
-(defun org-ml--scs-split-item-last-then (next-fun scs)
-  "Split an item from the SCS.
-If the next node to be processed in the SCS is a plain-list, add
-all valid logbook items to the SCS and call NEXT-FUN on SCS.
-Else, call `org-ml--scs-terminate' to stop the splitting
-process."
-  (org-ml--scs-split-item-then-else next-fun #'org-ml--scs-terminate scs))
+(defun org-ml--mixed-drawer-next-state* (mode name scc state node)
+  (-let (((next-state log-nodes)
+          (org-ml--drawer-next-state mode name scc state node)))
+    (if (--any? (eq 'clocks (car it)) log-nodes)
+        (let ((next-state (->> (org-ml--state-remove-slot :clock state)
+                               (org-ml--state-tick :mixed-drawer))))
+          (list next-state log-nodes)))))
 
-(defun org-ml--scs-split-items-clocks-else (alt-fun scs)
-  "Maybe split a items and clocks from the SCS.
-If the next node to be processed in the SCS is a clock or
-plain-list, add valid logbook items, clock-notes (if wanted), or
-clocks to the to the SCS and call this function recursively on
-SCS to continue searching. Else, call ALT-FUN on SCS."
-  (let* ((loop (-partial #'org-ml--scs-split-items-clocks-else alt-fun))
-         (split-item (-partial #'org-ml--scs-split-item-last-then loop)))
-    (org-ml--scs-split-clocks-else split-item scs)))
+(defmacro org-ml--reduce-state (initial-state form list)
+  (declare (indent 1))
+  `(let ((next-state ,initial-state)
+         (acc nil)
+         (rest ,list))
+     (while (and next-state rest)
+       (-setq (next-state acc)
+         (let ((it-state next-state)
+               (it (car rest)))
+           ,form))
+       (when next-state
+         (setq rest (cdr rest))))
+     (list acc rest)))
 
-(defun org-ml--scs-split-item-drawer-last (scs)
-  "Maybe split an item drawer from the SCS.
-If the next node to be processed in the SCS is an item drawer,
-node to the SCS and call NEXT-FUN on SCS. In any case, call
-`org-ml--scs-terminate' to stop the splitting process."
-  (org-ml--scs-split-item-drawer-last-then #'org-ml--scs-terminate scs))
+(defun org-ml--init-state (scc)
+  (-let* (((&alist :drawers d :clock-notes n) scc)
+          (funs
+           (pcase d
 
-(defun org-ml--scs-split-clock-drawer-last (scs)
-  "Maybe split a clock drawer from the SCS.
-If the next node to be processed in the SCS is a clock drawer,
-node to the SCS and call NEXT-FUN on SCS. In any case, call
-`org-ml--scs-terminate' to stop the splitting process."
-  (org-ml--scs-split-clock-drawer-last-then #'org-ml--scs-terminate scs))
+             ;; items not in drawer, clocks not in drawer
+             (`(:items nil :clocks nil :mixed nil :clock-limit nil)
+              (list (org-ml--state-slot :item nil nil
+                      #'org-ml--item-next-state)
+                    (org-ml--state-slot :clock nil nil
+                      #'org-ml--clock-next-state)))
 
-(defun org-ml--scs-split-mixed-drawer-last (scs)
-  "Maybe split a mixed drawer from the SCS.
-If the next node to be processed in the SCS is a mixed drawer,
-node to the SCS and call NEXT-FUN on SCS. In any case, call
-`org-ml--scs-terminate' to stop the splitting process."
-  (org-ml--scs-split-mixed-drawer-last-then #'org-ml--scs-terminate scs))
+             ;; items and clocks in the same drawer
+             (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
+              (list (org-ml--state-slot :mixed-drawer 1 nil
+                      (-partial #'org-ml--drawer-next-state :mixed m))))
 
-(defun org-ml--scs-split-item-last (scs)
-  "Maybe split an item from the SCS.
-If the next node to be processed in the SCS is a plain-list, add
-all valid logbook items to the SCS and call NEXT-FUN on SCS. In
-any case, call `org-ml--scs-terminate' to stop the splitting
-process."
-  (org-ml--scs-split-item-last-then #'org-ml--scs-terminate scs))
+             ;; items not in drawer, clocks in drawer
+             (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
+              (list (org-ml--state-slot :item nil nil
+                      #'org-ml--item-next-state)
+                    (org-ml--state-slot :clock-drawer 1 nil
+                      (-partial #'org-ml--drawer-next-state :clocks c))))
 
-(defun org-ml--scs-split-clocks-and-notes-last (scs)
-  "Maybe split clocks and their notes from the SCS.
-If the next node to be processed in the SCS is a clock node or a
-plain-list node starting with a clock-note, add this node to the
-SCS and continue searching for more clocks and notes. Call
-`org-ml--scs-terminate' when a clock note or clock is not found."
-  (org-ml--scs-split-clocks-and-notes-else #'org-ml--scs-terminate scs))
+             ;; items not in drawer, clocks might be in a drawer
+             (`(:items nil :clocks ,c :mixed nil :clock-limit ,L)
+              (list (org-ml--state-slot :item nil nil
+                      #'org-ml--item-next-state)
+                    (org-ml--state-slot :clock L '(:clock-drawer)
+                      #'org-ml--clock-next-state)
+                    (org-ml--state-slot :clock-drawer 1 '(:clock)
+                      (-partial #'org-ml--drawer-next-state :clocks c))))
 
-(defun org-ml--scs-split-items-clocks-last (scs)
-  "Maybe split clocks from the SCS.
-If the next node to be processed in the SCS is a clock node or a
-plain-list node starting with valid log items, add this node to
-the SCS and continue searching for more clocks and notes. Call
-`org-ml--scs-terminate' when a clock note or log item is not
-found."
-  (org-ml--scs-split-items-clocks-else #'org-ml--scs-terminate scs))
+             ;; items in drawer, clocks not in drawer
+             (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
+              (list (org-ml--state-slot :clock nil nil
+                      #'org-ml--clock-next-state)
+                    (org-ml--state-slot :item-drawer 1 nil
+                      (-partial #'org-ml--drawer-next-state :items i))))
 
-(defun org-ml--scs-split-clocks-last (scs)
-  "Maybe split clocks from the SCS.
-If the next node to be processed in the SCS is a clock node or a
-add this node to the SCS and continue searching for more clocks
-and notes. Call `org-ml--scs-terminate' when a clock is not
-found."
-  (org-ml--scs-split-clocks-else #'org-ml--scs-terminate scs))
+             ;; items in drawer, clocks in a different drawer
+             (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
+              (list (org-ml--state-slot :item-drawer 1 nil
+                      (-partial #'org-ml--drawer-next-state :items i))
+                    (org-ml--state-slot :clock-drawer 1 nil
+                      (-partial #'org-ml--drawer-next-state :clocks c))))
+
+             ;; items in drawer, clocks either loose or in a different drawer
+             (`(:items ,i :clocks ,c :mixed nil :clock-limit ,L)
+              (list (org-ml--state-slot :item-drawer 1 nil
+                      (-partial #'org-ml--drawer-next-state :items i))
+                    (org-ml--state-slot :clock L '(:clock-drawer)
+                      #'org-ml--clock-next-state)
+                    (org-ml--state-slot :clock-drawer 1 '(:clock)
+                      (-partial #'org-ml--drawer-next-state :clocks c))))
+
+             ;; items in drawer, clocks might be in the same drawer
+             (`(:items nil :clocks nil :mixed ,m :clock-limit ,L)
+              (list (org-ml--state-slot :clock L nil
+                      #'org-ml--clock-next-state*)
+                    (org-ml--state-slot :mixed-drawer 1 nil
+                      (-partial #'org-ml--mixed-drawer-next-state* :mixed m))))
+
+             (e (error "This shouldn't happen: %s" e)))))
+    (cons 'state funs)))
 
 (defun org-ml--supercontents-from-nodes (config nodes)
-  "Convert NODES to a supercontents alist.
-CONFIG is a valid plist to be accepted by `org-ml--scc-encode'."
-  (-let* (((scc &as &alist :drawers d)
-           (org-ml--scc-encode config))
-          (scs (org-ml--scs-init scc nodes)))
-    (pcase d
-
-      ;; items not in drawer, clocks not in drawer
-      (`(:items nil :clocks nil :mixed nil :clock-limit nil)
-       (org-ml--scs-split-items-clocks-last scs))
-
-      ;; items and clocks in the same drawer
-      (`(:items nil :clocks nil :mixed ,_ :clock-limit nil)
-       (org-ml--scs-split-mixed-drawer-last scs))
-
-      ;; items not in drawer, clocks in drawer
-      (`(:items nil :clocks ,_ :mixed nil :clock-limit nil)
-       (let ((try-drawer (lambda (scs)
-                           (org-ml--scs-split-clock-drawer-last-then
-                            #'org-ml--scs-split-item-last scs))))
-         (org-ml--scs-split-item-then-else try-drawer try-drawer scs)))
-
-      ;; items not in drawer, clocks might be in a drawer
-      (`(:items nil :clocks ,_ :mixed nil :clock-limit ,_)
-       (cl-labels
-           ((try-items
-             (scs)
-             (org-ml--scs-split-item-last-then #'-loop scs))
-            (try-drawer
-             (scs)
-             (org-ml--scs-split-clock-drawer-then-else
-              #'org-ml--scs-split-item-last #'try-items scs))
-            (-loop
-             (scs)
-             (org-ml--scs-split-clock-then-else
-              #'org-ml--scs-split-items-clocks-last #'try-drawer scs)))
-         (-loop scs)))
-
-      ;; items in drawer, clocks not in drawer
-      (`(:items ,_ :clocks nil :mixed nil :clock-limit nil)
-       (let ((try-drawer (lambda (scs)
-                           (org-ml--scs-split-item-drawer-last-then
-                            #'org-ml--scs-split-clocks-last scs))))
-         (org-ml--scs-split-clocks-else try-drawer scs)))
-
-      ;; items in drawer, clocks in a different drawer
-      (`(:items ,_ :clocks ,_ :mixed nil :clock-limit nil)
-       (let ((try-cd (lambda (scs)
-                       (org-ml--scs-split-clock-drawer-last-then
-                        #'org-ml--scs-split-item-drawer-last scs))))
-         (org-ml--scs-split-item-drawer-then-else
-          #'org-ml--scs-split-clock-drawer-last try-cd scs)))
-
-      ;; items in drawer, clocks either loose or in a different drawer
-      (`(:items ,_ :clocks ,_ :mixed nil :clock-limit ,_)
-       ;; TODO these partials are stupid; the functions and their arguments are
-       ;; known at COMPILE time, no need to constantly reapply things every time
-       ;; they are called
-       (let* ((try-cd-or-clocks (-partial #'org-ml--scs-split-clock-drawer-then-else
-                                          #'org-ml--scs-terminate
-                                          #'org-ml--scs-split-clocks-last))
-              (try-ld-and-clocks (-partial #'org-ml--scs-split-item-drawer-last-then
-                                           #'org-ml--scs-split-clocks-last))
-              (try-clocks (-partial #'org-ml--scs-split-clocks-else try-ld-and-clocks))
-              (try-ld (-partial #'org-ml--scs-split-item-drawer-then-else
-                                try-cd-or-clocks try-clocks)))
-         (org-ml--scs-split-clock-drawer-then-else
-          #'org-ml--scs-split-item-drawer-last try-ld scs)))
-
-      ;; items in drawer, clocks might be in the same drawer
-      (`(:items nil :clocks nil :mixed ,_ :clock-limit ,_)
-       (let ((try-drawer (lambda (scs)
-                           (org-ml--scs-split-mixed-drawer-last-then
-                            #'org-ml--scs-split-clocks-last scs))))
-         (org-ml--scs-split-clocks-else try-drawer scs)))
-
-      (e (error "This shouldn't happen: %s" e)))))
+  (cl-flet
+      ((try-test-funs
+        (scc state node)
+        (-let ((test-funs (--map (plist-get (cdr it) :next) (cdr state))))
+          (--reduce-from (if acc acc (funcall it scc state node)) nil test-funs))))
+    (-let* ((scc (org-ml--scc-encode config))
+            (init-state (org-ml--init-state scc))
+            (flat (org-ml--flatten-plain-lists nodes))
+            (i (-some->> flat
+                 (-find-index #'org-ml--node-has-trailing-space)
+                 (1+)))
+            ((nodes-before-space nodes-after-space)
+             (if i (-split-at i flat) (list flat nil)))
+            (first-space-post-blank (-some->>
+                                        (-last-item nodes-before-space)
+                                      (org-ml-get-property :post-blank)))
+            ((logbook-nodes contents-nodes-before-space)
+             (org-ml--reduce-state init-state
+               (-let (((next-state logbook-nodes) (try-test-funs scc it-state it)))
+                 (if logbook-nodes
+                     (list next-state (append logbook-nodes acc))
+                   (list nil acc)))
+               nodes-before-space))
+            ((&alist 'items 'clocks 'unknown) (->> (reverse logbook-nodes)
+                                                   (-group-by #'car)))
+            (post-blank (when logbook-nodes
+                          (if contents-nodes-before-space 0 first-space-post-blank)))
+            (contents (->> nodes-after-space
+                           (append contents-nodes-before-space)
+                           (org-ml--wrap-plain-lists))))
+      (org-ml--supercontents-init (-map #'cdr items)
+                                  (-map #'cdr clocks)
+                                  (-map #'cdr unknown)
+                                  post-blank contents))))
 
 ;; logbook merging (supercontents -> nodes)
 
@@ -4338,12 +4080,16 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
 
         (e (error "This shouldn't happen: %s" e))))))
 
-(defun org-ml--supercontents-to-nodes (config supercontents)
+(defun org-ml--supercontents-to-nodes (config post-blank supercontents)
   "Return SUPERCONTENTS as a list of nodes.
 The exact configuration of the returned nodes will depend on
-CONFIG."
+CONFIG. POST-BLANK is the blank space to put between the logbook
+and the contents."
   (let ((logbook (->> (org-ml-supercontents-get-logbook supercontents)
-                      (org-ml--logbook-to-nodes config)))
+                      (org-ml--logbook-to-nodes config)
+                      (org-ml--map-last*
+                       (org-ml-map-property* :post-blank
+                         (+ it post-blank) it))))
         (contents (org-ml-supercontents-get-contents supercontents)))
     ;; TODO if the logbook ends with a plain-list and the contents starts with
     ;; a plain list, join them
@@ -4396,19 +4142,30 @@ this plist is set according to your desired target configuration."
   "Set logbook and contents of HEADLINE according to SUPERCONTENTS.
 See `org-ml-headline-get-supercontents' for the meaning of CONFIG
 and the structure of the SUPERCONTENTS list."
-  (org-ml-headline-map-section*
-    (let ((children (-some->> supercontents
-                      (org-ml--supercontents-to-nodes config))))
-      (-let (((first . (second . _)) it))
-        (cond
-         ((and (org-ml-is-type 'planning first)
-               (org-ml-is-type 'property-drawer second))
-          (cons first (cons second children)))
-         ((org-ml-is-any-type '(property-drawer planning) first)
-          (cons first children))
-         (t
-          children))))
-    headline))
+  ;; TODO this can be refactored...lots of redundant paths TODO need to get the
+  ;; supercontents first in order to get the post-blank after then logbook, but
+  ;; only if the logbook is to be set to nil
+  (let ((pre-blank (org-ml-get-property :pre-blank headline)))
+    (->> (org-ml-set-property :pre-blank 0 headline)
+         (org-ml-headline-map-section*
+           (-let (((first . (second . _)) it))
+             (cond
+              ((and (org-ml-is-type 'planning first)
+                    (org-ml-is-type 'property-drawer second))
+               (let* ((pb (org-ml-get-property :post-blank second))
+                      (pd (org-ml-set-property :post-blank 0 second))
+                      (nodes (-some->> supercontents
+                               (org-ml--supercontents-to-nodes config pb))))
+                 (cons first (cons pd nodes))))
+              ((org-ml-is-any-type '(property-drawer planning) first)
+               (let* ((pb (org-ml-get-property :post-blank first))
+                      (planning (org-ml-set-property :post-blank 0 first))
+                      (nodes (-some->> supercontents
+                               (org-ml--supercontents-to-nodes config pb))))
+                 (cons planning nodes)))
+              (t
+               (-some->> supercontents
+                 (org-ml--supercontents-to-nodes config pre-blank)))))))))
 
 (org-ml--defun* org-ml-headline-map-supercontents (config fun headline)
   "Map a function over the supercontents of HEADLINE.
