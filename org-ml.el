@@ -3396,12 +3396,15 @@ a modified node-property value."
 ;;
 ;; Steps for separating a headlines section nodes to a supercontents list are:
 ;; 1. determine the logbook configuration
-;; 2. initialize a "supercontents-splitter" (SCS) list (see below) using all
-;;    the nodes after the planning/property-drawer in the headline
-;; 3. use the SCS to "walk" down the nodes of the headline's section, sorting
-;;    them as items, clocks, or unknown
-;; 4. Stop "walking" when any of the conditions for the logbook are not met,
-;;    in which case all the remaining nodes are deemed "contents"
+;; 2. initialize a list of functions called the "state" which will be used to
+;;    identify and collect logbook nodes
+;; 3. use the state to "walk" down the nodes of the headline's section, sorting
+;;    them as items, clocks, or unknown; as the state iterates, the functions
+;;    in the state list will be modified to reflect valid logbook nodes that
+;;    can be subsequently parsed (hence the name)
+;; 4. Stop "walking" when the state node either runs out of functions or a node
+;;    is encountered that satisfies none of the state functions; all the
+;;    remaining nodes are deemed "contents"
 ;; 5. return a supercontents list using the sorted items/clocks/unknown nodes
 ;;    from the walk and the contents
 ;;
@@ -3629,6 +3632,9 @@ logbook."
        (equal drawer-name (org-ml-get-property :drawer-name node))))
 
 (defun org-ml--flatten-plain-lists (nodes)
+  "Return NODES with unwrapped plain-list nodes.
+\"Unwrapping\" means replacing the plain-list with its top-level
+items."
   (cl-flet
       ((flatten
         (plain-list)
@@ -3638,6 +3644,8 @@ logbook."
     (--splice (org-ml-is-type 'plain-list it) (flatten it) nodes)))
 
 (defun org-ml--wrap-plain-lists (nodes)
+  "Return NODES with all subsequent items wrapped as plain-lists.
+This is the dual of `org-ml--flatten-plain-lists'."
   (cl-flet
       ((wrap
         (acc node)
@@ -3702,9 +3710,16 @@ the respectibe values for the plist part of the slot."
     (cons 'state (cons slot (cdr state)))))
 
 (defun org-ml--state-remove-slot (key state)
+  "Remove slot from STATE given by KEY."
   (cons 'state (--remove-first (eq key (car it)) (cdr state))))
 
 (defun org-ml--state-tick (key state)
+  "Update STATE based on KEY.
+
+The following will happen:
+1) the slot named KEY will have its limit decremented by 1
+2) all slots with limits of 0 will be removed
+3) all slots with eliminators containing KEY will be removed"
   (cl-flet
       ((decrement
         (slot)
@@ -3726,17 +3741,35 @@ the respectibe values for the plist part of the slot."
          (cons 'state))))
 
 (defun org-ml--item-get-next-state (scc state node)
+  "Return updated state for NODE if it is a valid log item.
+SCC is given by `org-ml--scc-encode' and STATE is given by
+`org-ml--state-init'. STATE will be updated by called
+`org-ml--state-tick'."
   (let ((f (org-ml--scc-get-log-item-fun scc)))
     (when (and (org-ml-is-type 'item node) (funcall f node))
       (list (org-ml--state-tick :item state) (list (cons 'items node))))))
 
 (defun org-ml--clock-note-get-next-state (scc state node)
+  "Return updated state for NODE if it is a valid clock note.
+SCC is given by `org-ml--scc-encode' and STATE is given by
+`org-ml--state-init'. STATE will be updated by called
+`org-ml--state-tick'."
   (-let ((f (org-ml--scc-get-log-item-fun scc)))
     (when (and (org-ml-is-type 'item node) (not (funcall f node)))
       (list (org-ml--state-tick :clock-note state)
             (list (cons 'clocks node))))))
 
 (defun org-ml--clock-get-next-state (scc state node)
+  "Return updated state for NODE if it is a valid clock.
+
+This will distinguish between clocks and clock notes as
+appropriate, and if a clock as found and clock notes are allowed,
+STATE will be updated with a new slot to detect clock notes that
+will exist for one pass.
+
+SCC is given by `org-ml--scc-encode' and STATE is given by
+`org-ml--state-init'. STATE will be updated by called
+`org-ml--state-tick'."
   (when (org-ml-is-type 'clock node)
     (let* ((slot (org-ml--state-slot :clock-notes 1 t
                    #'org-ml--clock-note-get-next-state))
@@ -3747,6 +3780,14 @@ the respectibe values for the plist part of the slot."
       (list next-state (list (cons 'clocks node))))))
 
 (defun org-ml--drawer-get-next-state (mode name scc state node)
+  "Return updated state for NODE if it is a valid drawer.
+
+The drawer will be separated using `org-ml--separate-logbook'
+according to MODE but only if NAME matches.
+
+SCC is given by `org-ml--scc-encode' and STATE is given by
+`org-ml--state-init'. STATE will be updated by called
+`org-ml--state-tick'."
   (when (org-ml--node-is-drawer-with-name name node)
     (let ((drawer-nodes (->> (org-ml-get-children node)
                              (org-ml--separate-logbook scc mode)))
@@ -3758,6 +3799,17 @@ the respectibe values for the plist part of the slot."
       (list (org-ml--state-tick key state) drawer-nodes))))
 
 (defun org-ml--clock-get-next-state* (scc state node)
+  "Return updated state for NODE if it is a valid clock.
+
+Unlike `org-ml--clock-get-next-state' this will add a new slot to
+STATE that detects item drawers (using the :item-drawer name from
+SCC) and removes the slot that detects mixed drawers. This is only
+intended to be used for the configuration option where clocks may
+or may not be in a drawer with items.
+
+SCC is given by `org-ml--scc-encode' and STATE is given by
+`org-ml--state-init'. STATE will be updated by called
+`org-ml--state-tick'."
   (-let (((next-state log-nodes) (org-ml--clock-get-next-state scc state node)))
     (when next-state
       (let* ((name (org-ml--scc-get-drawer-key :mixed scc))
@@ -3769,6 +3821,16 @@ the respectibe values for the plist part of the slot."
         (list next-state log-nodes)))))
 
 (defun org-ml--mixed-drawer-get-next-state** (mode name scc state node)
+  "Return updated state for NODE if it is a valid mixed drawer.
+
+Unlike `org-ml--drawer-get-next-state' this will remove the slot
+that detects clocks This is only intended to be used for the
+configuration option where clocks may or may not be in a drawer
+with items. MODE and NAME carry the same meaning.
+
+SCC is given by `org-ml--scc-encode' and STATE is given by
+`org-ml--state-init'. STATE will be updated by called
+`org-ml--state-tick'."
   (-let (((next-state log-nodes)
           (org-ml--drawer-get-next-state mode name scc state node)))
     (if (--any? (eq 'clocks (car it)) log-nodes)
@@ -3777,6 +3839,15 @@ the respectibe values for the plist part of the slot."
           (list next-state log-nodes)))))
 
 (defun org-ml--init-state (scc)
+  "Create a new state from SCC.
+The state will be a list like (state SLOT1 SLOT2 ...) where SLOTX
+is given by `org-ml--state-slot'. The purpose of this data
+structure is to represent valid logbook nodes for a particular
+configuration as well as their order and number. The reason it is
+called a state is because it will be used in an iterator as the
+logbook is separated from the contents, and a 'stateful' iterator
+is needed because most logbook configurations have sequential
+dependencies for valid nodes."
   (-let ((funs
           (pcase (alist-get :drawers scc)
 
@@ -3842,6 +3913,16 @@ the respectibe values for the plist part of the slot."
     (cons 'state funs)))
 
 (defmacro org-ml--reduce-state (initial-state form list)
+  "Sort of like `--reduce` but with state.
+It is only 'sort of' like a standard reduce function for two
+reasons a) it keeps track of state and b) returns the remainder
+of LIST when the state is nil (which signifies termination of the
+loop). FORM is a form where `it' is bound to the current node,
+`acc' is bound to the accumulated nodes, and `it-state' is bound
+to the current state. FORM must return a list like
+\(NEW-STATE NEW-ACC), where NEW-STATE and NEW-ACC become the state
+and accumulator on the next iteration. INITIAL-STATE is bound to
+`it-state' on the first iteration."
   (declare (indent 1))
   `(let ((next-state ,initial-state)
          (acc nil)
@@ -3856,6 +3937,8 @@ the respectibe values for the plist part of the slot."
      (list acc rest)))
 
 (defun org-ml--supercontents-from-nodes (config nodes)
+  "Return a supercontents object based on NODES.
+CONFIG is a plist parsable by `org-ml--scc-encode'."
   (cl-flet
       ((map-cdr
         (list)
