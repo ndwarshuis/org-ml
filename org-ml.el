@@ -3218,9 +3218,9 @@ a modified list of headlines."
                  (let ((r (if (org-ml-is-type 'planning (car it)) (cdr it) it)))
                    (cons planning* r))))))
     ;; if `PLANNING' is nil, remove planning from section if present
-    (let ((post-blank (or  (-some->> (org-ml-headline-get-planning headline)
-                             (org-ml-get-property :post-blank))
-                           0)))
+    (let ((post-blank (or (-some->> (org-ml-headline-get-planning headline)
+                            (org-ml-get-property :post-blank))
+                          0)))
       (->> (org-ml-map-property* :pre-blank (+ post-blank it) headline)
            (org-ml-headline-map-section*
              (-let (((first . rest) it))
@@ -3250,6 +3250,7 @@ modified planning node."
 (defun org-ml-headline-set-node-properties (node-properties headline)
   "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
 NODE-PROPERTIES is a list of node-property nodes."
+  ;; TODO this can be refactored
   (if node-properties
       (let* ((pre-blank (org-ml-get-property :pre-blank headline))
              (post-blank (-some->> (org-ml-headline-get-planning headline)
@@ -3288,7 +3289,7 @@ NODE-PROPERTIES is a list of node-property nodes."
                         (t
                          headline))))
       (org-ml-headline-map-section*
-        (-let (((first . (second . rest)) it))
+        (-let (((first . (second . _)) it))
           (cond
            ((org-ml-is-type 'property-drawer first)
             (-remove-at 0 it))
@@ -3550,7 +3551,7 @@ logbook."
 ;; :clock-out-notes applies to all the above cases and is thus an independent
 ;; consideration
 
-(defun org-ml--item-get-logbook-timestamp (item)
+(defun org-ml-logbook-item-get-timestamp (item)
   "Return the log timestamp of ITEM if it exists."
   (cl-flet
       ((is-long-inactive-timestamp
@@ -3601,7 +3602,7 @@ logbook."
                   :mixed ,(and single-drawer? id-name)
                   :clock-limit ,clock-limit)
         (:clock-notes . ,notes)
-        (:is-log-item-fun . ,#'org-ml--item-get-logbook-timestamp)))))
+        (:is-log-item-fun . ,#'org-ml-logbook-item-get-timestamp)))))
 
 (defun org-ml--scc-get-drawer-key (key scc)
   "Return the drawer from SCC in slot denoted by KEY."
@@ -3627,33 +3628,32 @@ logbook."
   (and (org-ml-is-type 'drawer node)
        (equal drawer-name (org-ml-get-property :drawer-name node))))
 
-(defun org-ml--plain-list-flatten (plain-list)
-  "Return PLAIN-LIST as a list of child item nodes.
-The last item in the returned list will have the same :post-blank
-value as PLAIN-LIST."
-  (let ((pb (org-ml-get-property :post-blank plain-list)))
-    (->> (org-ml-get-children plain-list)
-         (org-ml--map-last* (org-ml-set-property :post-blank pb it)))))
-
 (defun org-ml--flatten-plain-lists (nodes)
-  (--splice (org-ml-is-type 'plain-list it) (org-ml--plain-list-flatten it) nodes))
+  (cl-flet
+      ((flatten
+        (plain-list)
+        (let ((pb (org-ml-get-property :post-blank plain-list)))
+          (->> (org-ml-get-children plain-list)
+               (org-ml--map-last* (org-ml-set-property :post-blank pb it))))))
+    (--splice (org-ml-is-type 'plain-list it) (flatten it) nodes)))
 
 (defun org-ml--wrap-plain-lists (nodes)
-  (->> (reverse nodes)
-       (-reduce-from (lambda (acc node)
-                       (cond
-                        ((and (org-ml-is-type 'item node)
-                              (org-ml-is-type 'plain-list (car acc)))
-                         (cons (org-ml-map-children* (cons node it) (car acc))
-                               (cdr acc)))
-                        ((org-ml-is-type 'item node)
-                         (let* ((pb (org-ml-get-property :post-blank node))
-                                (pl (->> (org-ml-set-property :post-blank 0 node)
-                                         (org-ml-build-plain-list :post-blank pb))))
-                           (cons pl acc)))
-                        (t
-                         (cons node acc))))
-                     nil)))
+  (cl-flet
+      ((wrap
+        (acc node)
+        (cond
+         ((and (org-ml-is-type 'item node)
+               (org-ml-is-type 'plain-list (car acc)))
+          (cons (org-ml-map-children* (cons node it) (car acc))
+                (cdr acc)))
+         ((org-ml-is-type 'item node)
+          (let* ((pb (org-ml-get-property :post-blank node))
+                 (pl (->> (org-ml-set-property :post-blank 0 node)
+                          (org-ml-build-plain-list :post-blank pb))))
+            (cons pl acc)))
+         (t
+          (cons node acc)))))
+    (-reduce-from #'wrap nil (reverse nodes))))
 
 (defun org-ml--separate-logbook (scc mode nodes)
   "Separate NODES into logbook components.
@@ -3725,28 +3725,28 @@ the respectibe values for the plist part of the slot."
          (--remove (can-eliminate key it))
          (cons 'state))))
 
-(defun org-ml--item-next-state (scc state node)
+(defun org-ml--item-get-next-state (scc state node)
   (let ((f (org-ml--scc-get-log-item-fun scc)))
     (when (and (org-ml-is-type 'item node) (funcall f node))
       (list (org-ml--state-tick :item state) (list (cons 'items node))))))
 
-(defun org-ml--clock-note-next-state (scc state node)
+(defun org-ml--clock-note-get-next-state (scc state node)
   (-let ((f (org-ml--scc-get-log-item-fun scc)))
     (when (and (org-ml-is-type 'item node) (not (funcall f node)))
       (list (org-ml--state-tick :clock-note state)
             (list (cons 'clocks node))))))
 
-(defun org-ml--clock-next-state (scc state node)
+(defun org-ml--clock-get-next-state (scc state node)
   (when (org-ml-is-type 'clock node)
     (let* ((slot (org-ml--state-slot :clock-notes 1 t
-                   #'org-ml--clock-note-next-state))
+                   #'org-ml--clock-note-get-next-state))
            (next-state (--> (org-ml--state-tick :clock state)
                             (if (org-ml--scc-get-clock-notes scc)
                                 (org-ml--state-add-slot slot it)
                               it))))
       (list next-state (list (cons 'clocks node))))))
 
-(defun org-ml--drawer-next-state (mode name scc state node)
+(defun org-ml--drawer-get-next-state (mode name scc state node)
   (when (org-ml--node-is-drawer-with-name name node)
     (let ((drawer-nodes (->> (org-ml-get-children node)
                              (org-ml--separate-logbook scc mode)))
@@ -3757,24 +3757,89 @@ the respectibe values for the plist part of the slot."
                  (mixed :mixed-drawer))))
       (list (org-ml--state-tick key state) drawer-nodes))))
 
-(defun org-ml--clock-next-state* (scc state node)
-  (-let (((next-state log-nodes) (org-ml--clock-next-state scc state node)))
+(defun org-ml--clock-get-next-state* (scc state node)
+  (-let (((next-state log-nodes) (org-ml--clock-get-next-state scc state node)))
     (when next-state
       (let* ((name (org-ml--scc-get-drawer-key :mixed scc))
              (slot (org-ml--state-slot :item-drawer 1 nil
-                     (-partial #'org-ml--drawer-next-state :items name)))
+                     (-partial #'org-ml--drawer-get-next-state :items name)))
              (next-state (->> (org-ml--state-add-slot slot state)
                               (org-ml--state-remove-slot :mixed-drawer)
                               (org-ml--state-tick :clock))))
         (list next-state log-nodes)))))
 
-(defun org-ml--mixed-drawer-next-state* (mode name scc state node)
+(defun org-ml--mixed-drawer-get-next-state** (mode name scc state node)
   (-let (((next-state log-nodes)
-          (org-ml--drawer-next-state mode name scc state node)))
+          (org-ml--drawer-get-next-state mode name scc state node)))
     (if (--any? (eq 'clocks (car it)) log-nodes)
-        (let ((next-state (->> (org-ml--state-remove-slot :clock state)
+        (let ((next-state (->> (org-ml--state-remove-slot :clock next-state)
                                (org-ml--state-tick :mixed-drawer))))
           (list next-state log-nodes)))))
+
+(defun org-ml--init-state (scc)
+  (-let ((funs
+          (pcase (alist-get :drawers scc)
+
+            ;; items not in drawer, clocks not in drawer
+            (`(:items nil :clocks nil :mixed nil :clock-limit nil)
+             (list (org-ml--state-slot :item nil nil
+                     #'org-ml--item-get-next-state)
+                   (org-ml--state-slot :clock nil nil
+                     #'org-ml--clock-get-next-state)))
+
+            ;; items and clocks in the same drawer
+            (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
+             (list (org-ml--state-slot :mixed-drawer 1 nil
+                     (-partial #'org-ml--drawer-get-next-state :mixed m))))
+
+            ;; items not in drawer, clocks in drawer
+            (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
+             (list (org-ml--state-slot :item nil nil
+                     #'org-ml--item-get-next-state)
+                   (org-ml--state-slot :clock-drawer 1 nil
+                     (-partial #'org-ml--drawer-get-next-state :clocks c))))
+
+            ;; items not in drawer, clocks might be in a drawer
+            (`(:items nil :clocks ,c :mixed nil :clock-limit ,L)
+             (list (org-ml--state-slot :item nil nil
+                     #'org-ml--item-get-next-state)
+                   (org-ml--state-slot :clock L '(:clock-drawer)
+                     #'org-ml--clock-get-next-state)
+                   (org-ml--state-slot :clock-drawer 1 '(:clock)
+                     (-partial #'org-ml--drawer-get-next-state :clocks c))))
+
+            ;; items in drawer, clocks not in drawer
+            (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
+             (list (org-ml--state-slot :clock nil nil
+                     #'org-ml--clock-get-next-state)
+                   (org-ml--state-slot :item-drawer 1 nil
+                     (-partial #'org-ml--drawer-get-next-state :items i))))
+
+            ;; items in drawer, clocks in a different drawer
+            (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
+             (list (org-ml--state-slot :item-drawer 1 nil
+                     (-partial #'org-ml--drawer-get-next-state :items i))
+                   (org-ml--state-slot :clock-drawer 1 nil
+                     (-partial #'org-ml--drawer-get-next-state :clocks c))))
+
+            ;; items in drawer, clocks either loose or in a different drawer
+            (`(:items ,i :clocks ,c :mixed nil :clock-limit ,L)
+             (list (org-ml--state-slot :item-drawer 1 nil
+                     (-partial #'org-ml--drawer-get-next-state :items i))
+                   (org-ml--state-slot :clock L '(:clock-drawer)
+                     #'org-ml--clock-get-next-state)
+                   (org-ml--state-slot :clock-drawer 1 '(:clock)
+                     (-partial #'org-ml--drawer-get-next-state :clocks c))))
+
+            ;; items in drawer, clocks might be in the same drawer
+            (`(:items nil :clocks nil :mixed ,m :clock-limit ,L)
+             (list (org-ml--state-slot :clock L nil
+                     #'org-ml--clock-get-next-state*)
+                   (org-ml--state-slot :mixed-drawer 1 nil
+                     (-partial #'org-ml--mixed-drawer-get-next-state** :mixed m))))
+
+            (e (error "This shouldn't happen: %s" e)))))
+    (cons 'state funs)))
 
 (defmacro org-ml--reduce-state (initial-state form list)
   (declare (indent 1))
@@ -3790,75 +3855,12 @@ the respectibe values for the plist part of the slot."
          (setq rest (cdr rest))))
      (list acc rest)))
 
-(defun org-ml--init-state (scc)
-  (-let* (((&alist :drawers d :clock-notes n) scc)
-          (funs
-           (pcase d
-
-             ;; items not in drawer, clocks not in drawer
-             (`(:items nil :clocks nil :mixed nil :clock-limit nil)
-              (list (org-ml--state-slot :item nil nil
-                      #'org-ml--item-next-state)
-                    (org-ml--state-slot :clock nil nil
-                      #'org-ml--clock-next-state)))
-
-             ;; items and clocks in the same drawer
-             (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
-              (list (org-ml--state-slot :mixed-drawer 1 nil
-                      (-partial #'org-ml--drawer-next-state :mixed m))))
-
-             ;; items not in drawer, clocks in drawer
-             (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
-              (list (org-ml--state-slot :item nil nil
-                      #'org-ml--item-next-state)
-                    (org-ml--state-slot :clock-drawer 1 nil
-                      (-partial #'org-ml--drawer-next-state :clocks c))))
-
-             ;; items not in drawer, clocks might be in a drawer
-             (`(:items nil :clocks ,c :mixed nil :clock-limit ,L)
-              (list (org-ml--state-slot :item nil nil
-                      #'org-ml--item-next-state)
-                    (org-ml--state-slot :clock L '(:clock-drawer)
-                      #'org-ml--clock-next-state)
-                    (org-ml--state-slot :clock-drawer 1 '(:clock)
-                      (-partial #'org-ml--drawer-next-state :clocks c))))
-
-             ;; items in drawer, clocks not in drawer
-             (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
-              (list (org-ml--state-slot :clock nil nil
-                      #'org-ml--clock-next-state)
-                    (org-ml--state-slot :item-drawer 1 nil
-                      (-partial #'org-ml--drawer-next-state :items i))))
-
-             ;; items in drawer, clocks in a different drawer
-             (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
-              (list (org-ml--state-slot :item-drawer 1 nil
-                      (-partial #'org-ml--drawer-next-state :items i))
-                    (org-ml--state-slot :clock-drawer 1 nil
-                      (-partial #'org-ml--drawer-next-state :clocks c))))
-
-             ;; items in drawer, clocks either loose or in a different drawer
-             (`(:items ,i :clocks ,c :mixed nil :clock-limit ,L)
-              (list (org-ml--state-slot :item-drawer 1 nil
-                      (-partial #'org-ml--drawer-next-state :items i))
-                    (org-ml--state-slot :clock L '(:clock-drawer)
-                      #'org-ml--clock-next-state)
-                    (org-ml--state-slot :clock-drawer 1 '(:clock)
-                      (-partial #'org-ml--drawer-next-state :clocks c))))
-
-             ;; items in drawer, clocks might be in the same drawer
-             (`(:items nil :clocks nil :mixed ,m :clock-limit ,L)
-              (list (org-ml--state-slot :clock L nil
-                      #'org-ml--clock-next-state*)
-                    (org-ml--state-slot :mixed-drawer 1 nil
-                      (-partial #'org-ml--mixed-drawer-next-state* :mixed m))))
-
-             (e (error "This shouldn't happen: %s" e)))))
-    (cons 'state funs)))
-
 (defun org-ml--supercontents-from-nodes (config nodes)
   (cl-flet
-      ((try-test-funs
+      ((map-cdr
+        (list)
+        (-map #'cdr list))
+       (try-test-funs
         (scc state node)
         (-let ((test-funs (--map (plist-get (cdr it) :next) (cdr state))))
           (--reduce-from (if acc acc (funcall it scc state node)) nil test-funs))))
@@ -3887,9 +3889,9 @@ the respectibe values for the plist part of the slot."
             (contents (->> nodes-after-space
                            (append contents-nodes-before-space)
                            (org-ml--wrap-plain-lists))))
-      (org-ml--supercontents-init (-map #'cdr items)
-                                  (-map #'cdr clocks)
-                                  (-map #'cdr unknown)
+      (org-ml--supercontents-init (map-cdr items)
+                                  (map-cdr clocks)
+                                  (map-cdr unknown)
                                   post-blank contents))))
 
 ;; logbook merging (supercontents -> nodes)
@@ -4018,23 +4020,32 @@ SCC is a supercontents-config as returned by
 Anything in the UNKNOWN slot will be ignored. The exact
 nodes (drawers, loose items, etc) will be determined by the SCC.
 CONFIG is a config plist to be given to `org-ml--scc-encode'."
-  ;; TODO refactor drawer/-some->> patterns
   (cl-flet*
       ((build-drawer
         (name children)
         (apply #'org-ml-build-drawer name children))
+       (build-drawer-maybe
+        (name children)
+        (-some->> children (build-drawer name)))
        (cons-drawer-maybe
         (name drawer-nodes loose-nodes)
         (let ((drawer (-some->> drawer-nodes (build-drawer name))))
           (if drawer (cons drawer loose-nodes) loose-nodes)))
        (below-limit
         (limit logbook)
-        (<= (--count (org-ml-is-type 'clock it) (alist-get :clocks logbook)) limit))
+        (->> (org-ml-logbook-get-clocks logbook)
+             (--count (org-ml-is-type 'clock it))
+             (>= limit)))
        (merge
         (enconf logbook)
         (-let (((&alist :items :clocks) logbook))
           (org-ml--merge-logbook enconf items clocks)))
-       (separate
+       (build-mixed-drawer-maybe
+        (enconf m logbook)
+        (-some->> (merge enconf logbook)
+          (build-drawer m)
+          (list)))
+       (to-item-clock-nodes
         (enconf logbook)
         (list (org-ml--logbook-items-to-nodes enconf logbook)
               (org-ml--logbook-clocks-to-nodes enconf logbook)))
@@ -4049,49 +4060,45 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
 
            ;; items and clocks in the same drawer
            (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
-            (-some->> (merge enconf logbook)
-              (build-drawer m)
-              (list)))
+            (build-mixed-drawer-maybe enconf m logbook))
 
            ;; items in drawer, clocks not in drawer
            (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
-            (-let* (((items clocks) (separate enconf logbook)))
+            (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
               (cons-drawer-maybe i items clocks)))
 
            ;; items not in drawer, clocks in drawer
            (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
-            (-let* (((items clocks) (separate enconf logbook)))
+            (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
               (cons-drawer-maybe c clocks items)))
 
            ;; items in drawer, clocks might be in the same drawer
            (`(:items nil :clocks nil :mixed ,m :clock-limit ,l)
             (if (below-limit l logbook)
-                (-let* (((items clocks) (separate enconf logbook)))
+                (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
                   (cons-drawer-maybe m items clocks))
-              (-some->> (merge enconf logbook)
-                (build-drawer m)
-                (list))))
+              (build-mixed-drawer-maybe enconf m logbook)))
            
            ;; items not in drawer, clocks might be in a drawer
            (`(:items nil :clocks ,c :mixed nil :clock-limit ,l)
             (if (below-limit l logbook) (merge enconf logbook)
-              (-let* (((items clocks) (separate enconf logbook)))
+              (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
                 (cons-drawer-maybe c clocks items))))
 
            ;; items in drawer, clocks in a different drawer
            (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
-            (-let* (((items clocks) (separate enconf logbook))
-                    (items-drawer (-some->> items (build-drawer i)))
-                    (clocks-drawer (-some->> clocks (build-drawer c))))
+            (-let* (((items clocks) (to-item-clock-nodes enconf logbook))
+                    (items-drawer (build-drawer-maybe i items))
+                    (clocks-drawer (build-drawer-maybe c clocks)))
               (-non-nil (list items-drawer clocks-drawer))))
 
            ;; items in drawer, clocks either loose or in a different drawer
            (`(:items ,i :clocks ,c :mixed nil :clock-limit ,l)
-            (-let* (((items clocks) (separate enconf logbook))
-                    (items-drawer (-some->> items (build-drawer i))))
+            (-let* (((items clocks) (to-item-clock-nodes enconf logbook))
+                    (items-drawer (build-drawer-maybe i items)))
               (if (below-limit l logbook)
                   (if items-drawer (cons items-drawer clocks) clocks)
-                (->> (-some->> clocks (build-drawer c))
+                (->> (build-drawer-maybe c clocks)
                      (list items-drawer)
                      (-non-nil)))))
 
