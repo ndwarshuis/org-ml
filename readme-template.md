@@ -177,6 +177,16 @@ the examples below.
 
 # Changelog
 
+## 5.0.0
+
+- add robust headline logbook and contents function
+- rename indent/unindent functions to better reflect native org function naming
+  conventions
+- add `org-ml-from-string`
+- improve subtree parsing performance
+- fix whitespace errors for
+  `org-ml-headline-set-planning/node-properties/supercontents` functions
+
 ## 4.0.1
 
 - fix `org-ml-parse-this-table-row` and `org-ml-parse-table-row-at`
