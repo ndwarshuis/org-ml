@@ -184,6 +184,8 @@ the examples below.
   conventions
 - add `org-ml-from-string`
 - improve subtree parsing performance
+- fix whitespace errors for
+  `org-ml-headline-set-planning/node-properties/supercontents` functions
 
 ## 4.0.1
 
