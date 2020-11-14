@@ -3435,6 +3435,10 @@ between the logbook and the contents."
   "Return the :clocks slot from LOGBOOK."
   (alist-get :clocks logbook))
 
+(defun org-ml-logbook-get-post-blank (logbook)
+  "Return the :clocks slot from LOGBOOK."
+  (alist-get :post-blank logbook))
+
 (defun org-ml-logbook-set-items (items logbook)
   "Set the :items slot in LOGBOOK to ITEMS."
   (-let (((&alist :clocks :unknown :post-blank) logbook))
@@ -3443,6 +3447,11 @@ between the logbook and the contents."
 (defun org-ml-logbook-set-clocks (clocks logbook)
   "Set the :clocks slot in LOGBOOK to CLOCKS."
   (-let (((&alist :items :unknown :post-blank) logbook))
+    (org-ml--logbook-init items clocks unknown post-blank)))
+
+(defun org-ml-logbook-set-post-blank (post-blank logbook)
+  "Set the :post-blank slot in LOGBOOK to POST-BLANK."
+  (-let (((&alist :items :clocks :unknown) logbook))
     (org-ml--logbook-init items clocks unknown post-blank)))
 
 (org-ml--defun* org-ml-logbook-map-items (fun logbook)
@@ -3678,6 +3687,9 @@ MODE is the mode by which to separate the nodes and is one of
            (-reduce-from #'split nil)))))
 
 (defmacro org-ml--state-slot (key limit eliminators next-fun)
+  "Return a new slot for logbook separator state.
+KEY is the slot's key and LIMIT, ELIMINATORS, and NEXT-FUN are
+the respectibe values for the plist part of the slot."
   (declare (indent 3))
   `(list ,key
          :limit ,limit
@@ -3685,6 +3697,7 @@ MODE is the mode by which to separate the nodes and is one of
          :next ,next-fun))
 
 (defun org-ml--state-add-slot (slot state)
+  "Add SLOT to STATE if SLOT's key is not already present."
   (if (--any? (eq (car slot) (car it)) (cdr state)) state
     (cons 'state (cons slot (cdr state)))))
 
@@ -4005,9 +4018,8 @@ SCC is a supercontents-config as returned by
 Anything in the UNKNOWN slot will be ignored. The exact
 nodes (drawers, loose items, etc) will be determined by the SCC.
 CONFIG is a config plist to be given to `org-ml--scc-encode'."
-  (-let (((enconf &as &alist :drawers d)
-          (org-ml--scc-encode config)))
-    (cl-flet*
+  ;; TODO refactor drawer/-some->> patterns
+  (cl-flet*
       ((build-drawer
         (name children)
         (apply #'org-ml-build-drawer name children))
@@ -4019,77 +4031,82 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
         (limit logbook)
         (<= (--count (org-ml-is-type 'clock it) (alist-get :clocks logbook)) limit))
        (merge
-        (logbook)
+        (enconf logbook)
         (-let (((&alist :items :clocks) logbook))
           (org-ml--merge-logbook enconf items clocks)))
        (separate
-        (logbook)
+        (enconf logbook)
         (list (org-ml--logbook-items-to-nodes enconf logbook)
-              (org-ml--logbook-clocks-to-nodes enconf logbook))))
-      (pcase d
+              (org-ml--logbook-clocks-to-nodes enconf logbook)))
+       (to-nodes
+        (config logbook)
+        (-let (((enconf &as &alist :drawers d) (org-ml--scc-encode config)))
+          (pcase d
 
-        ;; items not in drawer, clocks not in drawer
-        (`(:items nil :clocks nil :mixed nil :clock-limit nil)
-         (merge logbook))
+           ;; items not in drawer, clocks not in drawer
+           (`(:items nil :clocks nil :mixed nil :clock-limit nil)
+            (merge enconf logbook))
 
-        ;; items and clocks in the same drawer
-        (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
-         (-some->> (merge logbook)
-           (build-drawer m)
-           (list)))
+           ;; items and clocks in the same drawer
+           (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
+            (-some->> (merge enconf logbook)
+              (build-drawer m)
+              (list)))
 
-        ;; items in drawer, clocks not in drawer
-        (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
-         (-let* (((items clocks) (separate logbook)))
-           (cons-drawer-maybe i items clocks)))
+           ;; items in drawer, clocks not in drawer
+           (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
+            (-let* (((items clocks) (separate enconf logbook)))
+              (cons-drawer-maybe i items clocks)))
 
-        ;; items not in drawer, clocks in drawer
-        (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
-         (-let* (((items clocks) (separate logbook)))
-           (cons-drawer-maybe c clocks items)))
+           ;; items not in drawer, clocks in drawer
+           (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
+            (-let* (((items clocks) (separate enconf logbook)))
+              (cons-drawer-maybe c clocks items)))
 
-        ;; items in drawer, clocks might be in the same drawer
-        (`(:items nil :clocks nil :mixed ,m :clock-limit ,l)
-         (if (below-limit l logbook)
-             (-let* (((items clocks) (separate logbook)))
-               (cons-drawer-maybe m items clocks))
-           (-some->> (merge logbook)
-             (build-drawer m)
-             (list))))
-        
-        ;; items not in drawer, clocks might be in a drawer
-        (`(:items nil :clocks ,c :mixed nil :clock-limit ,l)
-         (if (below-limit l logbook) (merge logbook)
-           (-let* (((items clocks) (separate logbook)))
-             (cons-drawer-maybe c clocks items))))
+           ;; items in drawer, clocks might be in the same drawer
+           (`(:items nil :clocks nil :mixed ,m :clock-limit ,l)
+            (if (below-limit l logbook)
+                (-let* (((items clocks) (separate enconf logbook)))
+                  (cons-drawer-maybe m items clocks))
+              (-some->> (merge enconf logbook)
+                (build-drawer m)
+                (list))))
+           
+           ;; items not in drawer, clocks might be in a drawer
+           (`(:items nil :clocks ,c :mixed nil :clock-limit ,l)
+            (if (below-limit l logbook) (merge enconf logbook)
+              (-let* (((items clocks) (separate enconf logbook)))
+                (cons-drawer-maybe c clocks items))))
 
-        ;; items in drawer, clocks in a different drawer
-        (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
-         (-let* (((items clocks) (separate logbook))
-                 (items-drawer (-some->> items (build-drawer i)))
-                 (clocks-drawer (-some->> clocks (build-drawer c))))
-           (-non-nil (list items-drawer clocks-drawer))))
+           ;; items in drawer, clocks in a different drawer
+           (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
+            (-let* (((items clocks) (separate enconf logbook))
+                    (items-drawer (-some->> items (build-drawer i)))
+                    (clocks-drawer (-some->> clocks (build-drawer c))))
+              (-non-nil (list items-drawer clocks-drawer))))
 
-        ;; items in drawer, clocks either loose or in a different drawer
-        (`(:items ,i :clocks ,c :mixed nil :clock-limit ,l)
-         (-let* (((items clocks) (separate logbook))
-                 (items-drawer (-some->> items (build-drawer i))))
-           (if (below-limit l logbook)
-               (if items-drawer (cons items-drawer clocks) clocks)
-             (-non-nil (list items-drawer (-some->> clocks (build-drawer c)))))))
+           ;; items in drawer, clocks either loose or in a different drawer
+           (`(:items ,i :clocks ,c :mixed nil :clock-limit ,l)
+            (-let* (((items clocks) (separate enconf logbook))
+                    (items-drawer (-some->> items (build-drawer i))))
+              (if (below-limit l logbook)
+                  (if items-drawer (cons items-drawer clocks) clocks)
+                (->> (-some->> clocks (build-drawer c))
+                     (list items-drawer)
+                     (-non-nil)))))
 
-        (e (error "This shouldn't happen: %s" e))))))
+           (e (error "This shouldn't happen: %s" e))))))
+    (let ((pb (org-ml-logbook-get-post-blank logbook)))
+      (->> (to-nodes config logbook)
+           (org-ml--map-last* (org-ml-set-property :post-blank pb it))))))
 
-(defun org-ml--supercontents-to-nodes (config post-blank supercontents)
+(defun org-ml--supercontents-to-nodes (config supercontents)
   "Return SUPERCONTENTS as a list of nodes.
 The exact configuration of the returned nodes will depend on
 CONFIG. POST-BLANK is the blank space to put between the logbook
 and the contents."
   (let ((logbook (->> (org-ml-supercontents-get-logbook supercontents)
-                      (org-ml--logbook-to-nodes config)
-                      (org-ml--map-last*
-                       (org-ml-map-property* :post-blank
-                         (+ it post-blank) it))))
+                      (org-ml--logbook-to-nodes config)))
         (contents (org-ml-supercontents-get-contents supercontents)))
     ;; TODO if the logbook ends with a plain-list and the contents starts with
     ;; a plain list, join them
@@ -4142,30 +4159,60 @@ this plist is set according to your desired target configuration."
   "Set logbook and contents of HEADLINE according to SUPERCONTENTS.
 See `org-ml-headline-get-supercontents' for the meaning of CONFIG
 and the structure of the SUPERCONTENTS list."
-  ;; TODO this can be refactored...lots of redundant paths TODO need to get the
-  ;; supercontents first in order to get the post-blank after then logbook, but
-  ;; only if the logbook is to be set to nil
-  (let ((pre-blank (org-ml-get-property :pre-blank headline)))
-    (->> (org-ml-set-property :pre-blank 0 headline)
-         (org-ml-headline-map-section*
-           (-let (((first . (second . _)) it))
-             (cond
-              ((and (org-ml-is-type 'planning first)
-                    (org-ml-is-type 'property-drawer second))
-               (let* ((pb (org-ml-get-property :post-blank second))
-                      (pd (org-ml-set-property :post-blank 0 second))
-                      (nodes (-some->> supercontents
-                               (org-ml--supercontents-to-nodes config pb))))
-                 (cons first (cons pd nodes))))
-              ((org-ml-is-any-type '(property-drawer planning) first)
-               (let* ((pb (org-ml-get-property :post-blank first))
-                      (planning (org-ml-set-property :post-blank 0 first))
-                      (nodes (-some->> supercontents
-                               (org-ml--supercontents-to-nodes config pb))))
-                 (cons planning nodes)))
-              (t
-               (-some->> supercontents
-                 (org-ml--supercontents-to-nodes config pre-blank)))))))))
+  (cl-flet*
+      ((headline-has-metadata
+        (headline)
+        (or (org-ml-headline-get-planning headline)
+            (org-ml-headline-get-node-properties headline)))
+       (logbook-is-empty
+        (supercontents)
+        (let ((lb (org-ml-supercontents-get-logbook supercontents)))
+          (not (or (org-ml-logbook-get-items lb)
+                   (org-ml-logbook-get-clocks lb)))))
+       (swap-spacing
+        (prop headline config node supercontents)
+        (if (logbook-is-empty supercontents)
+            (let* ((cur-post-blank
+                    (-some->> (org-ml-headline-get-supercontents config headline)
+                      (org-ml-supercontents-get-logbook)
+                      (org-ml-logbook-get-post-blank)))
+                   (node* (if (not cur-post-blank) node
+                            (org-ml-set-property prop cur-post-blank node)))
+                   (nodes (-some->> supercontents
+                            (org-ml--supercontents-to-nodes config))))
+              (list node* nodes))
+          (let* ((pb (org-ml-get-property prop node))
+                 (node* (org-ml-set-property prop 0 node))
+                 (nodes (-some->> supercontents
+                          (org-ml-supercontents-map-logbook*
+                            (org-ml-logbook-set-post-blank pb it))
+                          (org-ml--supercontents-to-nodes config))))
+            (list node* nodes))))
+       (swap-spacing-headline
+        (headline config supercontents)
+        (swap-spacing :pre-blank headline config headline supercontents))
+       (swap-spacing-node
+        (headline config node supercontents)
+        (swap-spacing :post-blank headline config node supercontents)))
+    (if (not (headline-has-metadata headline))
+        (-let (((headline* supercontents-nodes)
+                (swap-spacing-headline headline config supercontents)))
+          (org-ml-headline-set-section supercontents-nodes headline*))
+      (org-ml-headline-map-section*
+        (-let (((first . (second . _)) it))
+          (cond
+           ((and (org-ml-is-type 'planning first)
+                 (org-ml-is-type 'property-drawer second))
+            (-let (((second* supercontents-nodes)
+                    (swap-spacing-node headline config second supercontents)))
+              `(,first ,second* ,@supercontents-nodes)))
+           ((org-ml-is-any-type '(property-drawer planning) first)
+            (-let (((first* supercontents-nodes)
+                    (swap-spacing-node headline config first supercontents)))
+              `(,first* ,@supercontents-nodes)))
+           (t
+            (-some->> supercontents (org-ml--supercontents-to-nodes config)))))
+        headline))))
 
 (org-ml--defun* org-ml-headline-map-supercontents (config fun headline)
   "Map a function over the supercontents of HEADLINE.

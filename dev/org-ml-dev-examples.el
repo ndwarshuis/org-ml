@@ -4262,7 +4262,32 @@
                    ":CLOCKING:"
                    "CLOCK: [2019-01-01 Tue 00:00]"
                    ":END:"
-                   "contents"))
+                   "contents")
+      :begin-hidden
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort: 0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ""
+               "contents")
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-set-logbook-items config nil)
+             (org-ml-to-trimmed-string)))
+      =>  (:result "* headline"
+                   "CLOSED: [2019-01-01 Tue 00:00]"
+                   ":PROPERTIES:"
+                   ":Effort:   0:30"
+                   ":END:"
+                   ""
+                   "contents")
+      :end-hidden)
 
     (defexamples-content org-ml-headline-map-logbook-items
       nil
