@@ -21,8 +21,8 @@
 
 ;;; Code:
 
-(require 'ert)
 (require 'dash)
+(require 'buttercup)
 
 (defun example-to-should (actual sym expected)
   (let ((expected
@@ -30,10 +30,11 @@
              (s-join "\n" (cdr expected))
            expected)))
     (cond ((eq sym '=>)
-           `(should (equal ,actual ,expected)))
+           `(expect ,actual :to-equal ,expected))
           ;; this will only work with defexamples-content
           ((eq sym '$>)
-           `(should (equal (progn ,actual (s-trim (buffer-string))) ,expected)))
+           `(expect (progn ,actual (s-trim (buffer-string))) :to-equal ,expected))
+          ;; TODO I never use this?
           ((eq sym '~>)
            `(should (approx-equal ,actual ,expected)))
           ((eq sym '!!>)
@@ -47,7 +48,8 @@
                     (remove :end-hidden)
                     (-partition 3)
                     (--map (apply #'example-to-should it)))))
-    `(ert-deftest ,cmd () (org-ml--with-org-env ,@tests))))
+    (when tests
+      `(it ,(format "%S" cmd) (org-ml--with-org-env ,@tests)))))
 
 (defmacro defexamples-content (cmd _docstring &rest args)
   (cl-flet*
@@ -73,11 +75,14 @@
                 (-partition-before-pred
                  (lambda (it) (eq (and (listp it) (car it)) :buffer)))
                 (-mapcat #'make-tests))))
-      `(ert-deftest ,cmd () ,@body))))
+      (when body
+        `(it ,(format "%S" cmd) ,@body)))))
 
-(defun def-example-subgroup (&rest _)) ; ignore
+(defmacro def-example-subgroup (title _subtitle &rest specs)
+  `(describe ,title ,@specs))
 
-(defun def-example-group (&rest _)) ; ignore
+(defmacro def-example-group (title _subtitle &rest specs)
+  `(describe ,title ,@specs))
 
 (provide 'org-ml-dev-examples-to-tests)
 ;;; org-ml-dev-examples-to-tests.el ends here

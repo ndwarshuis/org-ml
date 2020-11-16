@@ -14,10 +14,12 @@ docs:
        -f create-docs-file
 
 unit:
-	${CASK} exec ${EMACS} -Q -batch \
-       -l dev/org-ml-dev.el \
-       -l dev/org-ml-dev-test.el \
-       -f ert-run-tests-batch-and-exit
+	# ${CASK} exec ${EMACS} -Q -batch \
+    #    -l dev/org-ml-dev.el \
+    #    -l dev/org-ml-dev-test.el \
+    #    -f ert-run-tests-batch-and-exit
+	${CASK} exec buttercup -L . \
+        -l dev/org-ml-dev.el
 
 compile:
 	${CASK} build
