@@ -11,103 +11,70 @@
 
 ;;; LIST OPERATIONS
 
-(describe "internal list operations"
-  (before-each
-    (setq finite-list '(1 2 3)))
-  (it "zero length list with zero length"
-    (expect (org-ml--pad-or-truncate 0 'x nil) :to-equal nil))
-  (it "zero length list with positive length"
-    (expect (org-ml--pad-or-truncate 1 'x nil) :to-equal '(x)))
-  (it "positive length list; length is less"
-    (expect (org-ml--pad-or-truncate 2 'x finite-list) :to-equal '(1 2)))
-  (it "positive length list; length is equal"
-    (expect (org-ml--pad-or-truncate 3 'x finite-list) :to-equal '(1 2 3)))
-  (it "positive length list; length is greater"
-    (expect (org-ml--pad-or-truncate 4 'x finite-list) :to-equal '(1 2 3 x)))
-  (it "positive length list; length is zero"
-    (expect (org-ml--pad-or-truncate 0 'x finite-list) :to-equal nil)))
+(describe "internal list functions"
+  (describe "org-ml--pad-or-truncate"
+    (before-each
+      (setq finite-list '(1 2 3)))
+    (it "zero length list with zero length"
+      (expect (org-ml--pad-or-truncate 0 'x nil) :to-equal nil))
+    (it "zero length list with positive length"
+      (expect (org-ml--pad-or-truncate 1 'x nil) :to-equal '(x)))
+    (it "positive length list; length is less"
+      (expect (org-ml--pad-or-truncate 2 'x finite-list) :to-equal '(1 2)))
+    (it "positive length list; length is equal"
+      (expect (org-ml--pad-or-truncate 3 'x finite-list) :to-equal '(1 2 3)))
+    (it "positive length list; length is greater"
+      (expect (org-ml--pad-or-truncate 4 'x finite-list) :to-equal '(1 2 3 x)))
+    (it "positive length list; length is zero"
+      (expect (org-ml--pad-or-truncate 0 'x finite-list) :to-equal nil)))
 
-;; TODO add plist-get-keys?
-;; TODO add plist-get-vals?
-;; TODO add plist-map-values?
+  ;; TODO add plist-get-keys?
+  ;; TODO add plist-get-vals?
+  ;; TODO add plist-map-values?
 
-(describe "internal plist properties"
-  (it "finite plist"
-    (expect (org-ml--is-plist '(:one one :two 2 :three "3")) :to-be-truthy))
-  (it "zero-length plist"
-    (expect (org-ml--is-plist nil) :to-be-truthy))
-  (it "symbols instead of keywords"
-    (expect (org-ml--is-plist '(one one two 2 three "3")) :not :to-be-truthy))
-  (it "incomplete"
-    (expect (org-ml--is-plist '(:one one :two 2 :three)) :not :to-be-truthy))
-  (it "not list"
-    (expect (org-ml--is-plist ":one one :two 2 :three") :not :to-be-truthy)))
+  (describe "org-ml--is-plist"
+    (it "finite plist"
+      (expect (org-ml--is-plist '(:one one :two 2 :three "3")) :to-be-truthy))
+    (it "zero-length plist"
+      (expect (org-ml--is-plist nil) :to-be-truthy))
+    (it "symbols instead of keywords"
+      (expect (org-ml--is-plist '(one one two 2 three "3")) :not :to-be-truthy))
+    (it "incomplete"
+      (expect (org-ml--is-plist '(:one one :two 2 :three)) :not :to-be-truthy))
+    (it "not list"
+      (expect (org-ml--is-plist ":one one :two 2 :three") :not :to-be-truthy))))
 
 ;; TODO add plist-remove?
 
 ;;; inter-list operations
 
-;; These functions operate using indices that refer to spaces between
-;; list members. As such there is no such thing as a nonsensical index.
-;; Since there will always be the option to add to the front or the
-;; back of the list, even an empty list has a logical index that points
-;; to these locations (they just happen to be the same). Therefore,
-;; the only errors we need to catch here are those that refer to out
-;; of range indices.
-
 (defmacro org-ml--inter-list-ops-test (fun input output-single
-                                       output-upper output-lower)
+                                           output-upper output-lower)
   "Return form to test intra-index list operations using FUN.
 INPUT is an input list, OUTPUT-SINGLE is a list made as if FUN were
 applied to an empty list, OUTPUT-UPPER is the input list with FUN
 applied as if it was given the highest possible index, and OUTPUT-LOWER
 is the converse."
   (declare (indent 1))
-  `(let ((fun ,fun)
-         (input ,input)
-         (output-single ,output-single)
-         (output-upper ,output-upper)
-         (output-lower ,output-lower))
-     ;; zero length list at 0
-     (should (equal output-single (funcall fun 0 nil)))
-     (should (equal output-single (funcall fun -1 nil)))
-     ;; zero length list (overrange)
-     (should-error (funcall fun 100 nil))
-     (should (equal output-single (funcall fun 100 nil t)))
-     ;; zero length list (underrange)
-     (should-error (funcall fun -100 nil))
-     (should (equal output-single (funcall fun -100 nil t)))
-     ;; finite list (in range)
-     (should (equal output-lower (funcall fun 0 input)))
-     (should (equal output-upper (funcall fun -1 input)))
-     ;; finite list (overrange)
-     (should-error (funcall fun 100 '(1 2)))
-     (should (equal output-upper (funcall fun 100 input t)))
-     ;; finite list (underrange)
-     (should-error (funcall fun -100 '(1 2)))
-     (should (equal output-lower (funcall fun -100 input t)))))
-
-(describe "inter list operations"
-  (it "org-ml--insert-at"
-    (org-ml--inter-list-ops-test (lambda (n list &optional p)
-                                   (org-ml--insert-at n 'x list p))
-      '(1 2) '(x) '(1 2 x) '(x 1 2)))
-
-  (it "org-ml--split-at"
-    (org-ml--inter-list-ops-test #'org-ml--split-at
-      '(1 2) nil '((1 2) nil) '(nil (1 2))))
-
-  (it "org-ml--splice-at"
-    (org-ml--inter-list-ops-test (lambda (n list &optional p)
-                                   (org-ml--splice-at n '(x y) list p))
-      '(1 2) '(x y) '(1 2 x y) '(x y 1 2))))
-
-;; These functions operate using indices that refer to explicit
-;; members of a list. As such there will be no possible integers that
-;; will be valid for an empty list. This provides one extra error case
-;; to test, which is the possibility that we cannot operate on the
-;; list and thus return nil. All else is the same relative to the
-;; inter-list operations tests above
+  `(progn
+     (it "zero length list at 0"
+       (expect ,output-single :to-equal (funcall ,fun 0 nil))
+       (expect ,output-single :to-equal (funcall ,fun -1 nil)))
+     (it "zero length list (overrange)"
+       (should-error (funcall fun 100 nil))
+       (expect ,output-single :to-equal (funcall ,fun 100 nil t)))
+     (it "zero length list (underrange)"
+       (should-error (funcall fun -100 nil))
+       (expect ,output-single :to-equal (funcall ,fun -100 nil t)))
+     (it "finite list (in range)"
+       (expect ,output-lower :to-equal (funcall ,fun 0 ,input))
+       (expect ,output-upper :to-equal (funcall ,fun -1 ,input)))
+     (it "finite list (overrange)"
+       (should-error (funcall fun 100 '(1 2)))
+       (expect ,output-upper :to-equal (funcall ,fun 100 ,input t)))
+     (it "finite list (underrange)"
+       (should-error (funcall fun -100 '(1 2)))
+       (expect ,output-lower :to-equal (funcall ,fun -100 ,input t)))))
 
 (defmacro org-ml--intra-list-ops-test (fun input output-upper output-lower)
   "Return form to test intra-index list operations using FUN.
@@ -116,61 +83,88 @@ applied as if it was given the highest possible index, and OUTPUT-LOWER
 is the converse."
   (declare (indent 1))
   `(progn
-     (before-each
-       (setq fun ,fun
-             input ,input
-             output-upper ,output-upper
-             output-lower ,output-lower))
      (it "index 0 in an empty list"
-       (should-error (funcall fun 0 nil))
-       (should-error (funcall fun 0 nil t))
-       (should-not (funcall fun 0 nil 'permit-empty)))
+       (should-error (funcall ,fun 0 nil))
+       (should-error (funcall ,fun 0 nil t))
+       (expect (funcall ,fun 0 nil 'permit-empty) :not :to-be-truthy))
      (it "overrange in empty list"
-       (should-error (funcall fun 100 nil))
-       (should-error (funcall fun 100 nil t))
-       (should-not (funcall fun 100 nil 'permit-empty)))
+       (should-error (funcall ,fun 100 nil))
+       (should-error (funcall ,fun 100 nil t))
+       (expect (funcall ,fun 100 nil 'permit-empty) :not :to-be-truthy))
      (it "underrange in empty list"
-       (should-error (funcall fun -100 nil))
-       (should-error (funcall fun -100 nil t))
-       (should-not (funcall fun -100 nil 'permit-empty)))
+       (should-error (funcall ,fun -100 nil))
+       (should-error (funcall ,fun -100 nil t))
+       (expect (funcall ,fun -100 nil 'permit-empty) :not :to-be-truthy))
      (it "positive in finite list"
-       (should (equal output-lower (funcall fun 0 input))))
+       (expect ,output-lower :to-equal (funcall ,fun 0 ,input)))
      (it "negative in finite list"
-       (should (equal output-upper (funcall fun -1 input))))
+       (expect ,output-upper :to-equal (funcall ,fun -1 ,input)))
      (it "positive overrange in finite list"
-       (should (equal output-upper (funcall fun 100 input t)))
-       (should-error (funcall fun 100 input)))
+       (expect ,output-upper :to-equal (funcall ,fun 100 ,input t))
+       (should-error (funcall ,fun 100 input)))
      (it "negative underrange in finite list"
-       (should (equal output-lower (funcall fun -100 input t)))
-       (should-error (funcall fun -100 input)))))
+       (expect ,output-lower :to-equal (funcall ,fun -100 ,input t))
+       (should-error (funcall fun -100 ,input)))))
 
-(describe "org-ml--remove-at/properties"
-  (org-ml--intra-list-ops-test #'org-ml--remove-at '(1 2 3) '(1 2) '(2 3)))
+(describe "test consistency of internal list function index references"
+  (describe "inter-member references"
+    ;; These functions operate using indices that refer to spaces between list
+    ;; members. As such there is no such thing as a nonsensical index. Since
+    ;; there will always be the option to add to the front or the back of the
+    ;; list, even an empty list has a logical index that points to these
+    ;; locations (they just happen to be the same). Therefore, the only errors
+    ;; we need to catch here are those that refer to out of range indices.
 
-(describe "org-ml--replace-at/properties"
-  (org-ml--intra-list-ops-test (lambda (n list &optional p)
-                             (org-ml--replace-at n 'x list p))
-    '(1 2 3) '(1 2 x) '(x 2 3)))
+    (describe "org-ml--insert-at"
+      (org-ml--inter-list-ops-test (lambda (n list &optional p)
+                                     (org-ml--insert-at n 'x list p))
+        '(1 2) '(x) '(1 2 x) '(x 1 2)))
+    (describe "org-ml--split-at"
+      (org-ml--inter-list-ops-test #'org-ml--split-at
+        '(1 2) nil '((1 2) nil) '(nil (1 2))))
+    (describe "org-ml--splice-at"
+      (org-ml--inter-list-ops-test (lambda (n list &optional p)
+                                     (org-ml--splice-at n '(x y) list p))
+        '(1 2) '(x y) '(1 2 x y) '(x y 1 2))))
 
-(describe "org-ml--nth/properties"
-  (org-ml--intra-list-ops-test #'org-ml--nth '(1 2 3) 3 1))
+  (describe "intra-member references"
+    ;; These functions operate using indices that refer to explicit members of a
+    ;; list. As such there will be no possible integers that will be valid for
+    ;; an empty list. This provides one extra error case to test, which is the
+    ;; possibility that we cannot operate on the list and thus return nil. All
+    ;; else is the same relative to the inter-list operations tests above
 
-;;; list functors
+    (describe "org-ml--remove-at/properties"
+      (org-ml--intra-list-ops-test #'org-ml--remove-at '(1 2 3) '(1 2) '(2 3)))
 
-(describe "org-ml--map-first/last/properties"
-  (it "mapping empty list should always return empty list"
-    (should-not (org-ml--map-first* (s-upcase it) nil))
-    (should-not (org-ml--map-last* (s-upcase it) nil)))
-  (it "mapping list with one member should be same for both"
-    (should (equal '("X") (org-ml--map-first* (s-upcase it) '("x"))))
-    (should (equal '("X") (org-ml--map-last* (s-upcase it) '("x")))))
-  (it "mapping list with more than one member should be self-explanatory"
-    (should (equal '("A" "b" "c") (org-ml--map-first* (s-upcase it) '("a" "b" "c"))))
-    (should (equal '("a" "b" "C") (org-ml--map-last* (s-upcase it) '("a" "b" "c")))))
-  (it "identity should hold true for any length list (0, 1, and 1+)"
-    (let ((test-lists '(nil (1) (1 2))))
-      (--each test-lists (should (equal it (org-ml--map-first* (identity it) it))))
-      (--each test-lists (should (equal it (org-ml--map-last* (identity it) it)))))))
+    (describe "org-ml--replace-at/properties"
+      (org-ml--intra-list-ops-test (lambda (n list &optional p)
+                                     (org-ml--replace-at n 'x list p))
+                                   '(1 2 3) '(1 2 x) '(x 2 3)))
+
+    (describe "org-ml--nth/properties"
+      (org-ml--intra-list-ops-test #'org-ml--nth '(1 2 3) 3 1))))
+
+(defmacro org-ml--test-list-functor (fun map-fun single-a single-b multi-a multi-b)
+  (declare (indent 2))
+  `(progn
+    (it "mapping empty list should return empty list"
+      (expect (,fun (,map-fun it) nil) :not :to-be-truthy))
+    (it "mapping list with one member should return that member modified"
+      (expect ,single-a :to-equal (,fun (,map-fun it) ,single-b)))
+    (it "mapping list with multiple members should only modify one member"
+      (expect ,multi-a :to-equal (,fun (,map-fun it) ,multi-b)))
+    (it "identity should hold true for any length list (0, 1, and 1+)"
+      (--each '(nil (1) (1 2))
+        (expect it :to-equal (,fun (identity it) it))))))
+
+(describe "list functors"
+  (describe "org-ml--map-first"
+    (org-ml--test-list-functor org-ml--map-first* upcase
+      '("X") '("x") '("A" "b" "c") '("a" "b" "c")))
+  (describe "org-ml--map-last"
+    (org-ml--test-list-functor org-ml--map-last* upcase
+      '("X") '("x") '("a" "b" "C") '("a" "b" "c"))))
 
 ;;; FROM STRING CONVERSTION
 
@@ -261,7 +255,7 @@ is the converse."
     ;; TODO add verse block
     ))
 
-;;; PARSING INVERSION
+;;; PARSING INVERTABILITY
 
 ;; For all org buffer contents, parsing and printing should be
 ;; perfect inverses.
@@ -668,7 +662,8 @@ be parsed to TYPE."
   (cl-flet ((plist-get-keys (plist) (-slice plist 0 nil 2)))
     (let ((p1 (plist-get-keys (nth 1 e1)))
           (p2 (plist-get-keys (nth 1 e2))))
-      (should-not (or (-difference p1 p2) (-difference p2 p1))))))
+      (expect (-difference p1 p2) :not :to-be-truthy)
+      (expect (-difference p2 p1) :not :to-be-truthy))))
 
 (defun org-ml--compare-object-props (elem string)
   (should-have-equal-properties
@@ -926,48 +921,71 @@ be parsed to TYPE."
         (org-ml--compare-element-props
          (org-ml-build-table) "| table |")))))
 
-(defun should-equal (string elem)
-  (should (equal string (->> (org-ml-to-string elem) (s-trim)))))
+;; SPECIALIZED DEFUN MACRO TESTS
 
-(defun should-match (regexp elem)
-  (should (s-match regexp (->> (org-ml-to-string elem) (s-trim)))))
+(describe "org-ml--defun-kw internal definition"
+  (describe "org-ml--make-header"
+    (it "make header"
+      (expect (org-ml--make-header '("docstring" (print 'hi)) nil)
+              :to-equal
+              "docstring\n\n(fn)")
+      (expect (org-ml--make-header '("docstring" (print 'hi)) '(one))
+              :to-equal
+              "docstring\n\n(fn ONE)")
+      (expect (org-ml--make-header '("docstring" (print 'hi)) '(one two))
+              :to-equal
+              "docstring\n\n(fn ONE TWO)")))
 
-(describe "org-ml--make-header"
-  (it "make header"
-    (should (equal (org-ml--make-header '("docstring" (print 'hi)) nil)
-                   "docstring\n\n(fn)"))
-    (should (equal (org-ml--make-header '("docstring" (print 'hi)) '(one))
-                   "docstring\n\n(fn ONE)"))
-    (should (equal (org-ml--make-header '("docstring" (print 'hi)) '(one two))
-                   "docstring\n\n(fn ONE TWO)"))))
+  (describe "org-ml--make-kwarg-let/error"
+    (it "list too long"
+      (should-error (org-ml--make-kwarg-let '(one two three))))
+    (it "keyword slot must be a real keyword"
+      (should-error (org-ml--make-kwarg-let '((one two))))
+      (should-error (org-ml--make-kwarg-let '((one two) three))))
+    (it "single arg must be a symbol but not a keyword"
+      ;; TODO the keyword guard does not work yet
+      ;; (should-error (org-ml--make-kwarg-let :one))
+      (should-error (org-ml--make-kwarg-let 1))
+      (should-error (org-ml--make-kwarg-let "one"))
+      (should-error (org-ml--make-kwarg-let '(1)))))
 
-(describe "org-ml--make-kwarg-let/error"
-  (it "list too long"
-    (should-error (org-ml--make-kwarg-let '(one two three))))
-  (it "keyword slot must be a real keyword"
-    (should-error (org-ml--make-kwarg-let '((one two))))
-    (should-error (org-ml--make-kwarg-let '((one two) three))))
-  (it "single arg must be a symbol but not a keyword"
-    ;; TODO the keyword guard does not work yet
-    ;; (should-error (org-ml--make-kwarg-let :one))
-    (should-error (org-ml--make-kwarg-let 1))
-    (should-error (org-ml--make-kwarg-let "one"))
-    (should-error (org-ml--make-kwarg-let '(1)))))
+  (describe "org-ml--make-rest-partition-form"
+    (describe "valid restargs"
+      (it "single arg"
+        (expect '(nil . (one)) :to-equal
+                (org-ml--make-rest-partition-form '(one) nil t)))
+      (it "multiple args"
+        (expect '(nil . (one two)) :to-equal
+                (org-ml--make-rest-partition-form '(one two) nil t))))
 
-(describe "org-ml--make-rest-partition-form/restargs"
-  (it "restargs"
-    (should (equal '(nil . (one)) (org-ml--make-rest-partition-form '(one) nil t)))
-    (should (equal '(nil . (one two)) (org-ml--make-rest-partition-form '(one two) nil t)))))
-
-(describe "org-ml--make-rest-partition-form/error"
-  (it "invalid keywords"
-    (should-error (org-ml--make-rest-partition-form '(:one one) '(:two) nil)))
-  (it "too many arguments"
-    (should-error (org-ml--make-rest-partition-form '(:one one two) (:one) nil)))
-  (it "multiple keywords"
-    (should-error (org-ml--make-rest-partition-form '(:one one :one three two) (:one) nil))))
+    (describe "error"
+      (it "invalid keywords"
+        (should-error (org-ml--make-rest-partition-form '(:one one) '(:two) nil)))
+      (it "too many arguments"
+        (should-error (org-ml--make-rest-partition-form '(:one one two) (:one) nil)))
+      (it "multiple keywords"
+        (should-error (org-ml--make-rest-partition-form '(:one one :one three two) (:one) nil))))))
 
 ;;; SUPERCONTENTS FRAMEWORK TESTING
+
+(defun org-ml--test-merge-logbook-valid (config output items clocks)
+  `(expect (org-ml--merge-logbook ,config ,items ,clocks)
+           :to-equal ,output))
+
+(defun org-ml--test-merge-logbook-error (config items clocks)
+  `(should-error (org-ml--merge-logbook ,config ,items ,clocks)))
+
+(defmacro org-ml--test-merge-logbook-specs (config &rest specs)
+  (declare (indent 1))
+  (let ((forms
+         (->> (-partition 4 specs)
+              (--map
+               (-let (((title output items clocks) it))
+                 `(it ,title
+                    ,(if (eq output 'error)
+                         (org-ml--test-merge-logbook-error config items clocks)
+                       (org-ml--test-merge-logbook-valid config output items clocks))))))))
+    `(progn ,@forms)))
 
 (describe "org-ml--merge-logbook"
   (before-all
@@ -986,68 +1004,33 @@ be parsed to TYPE."
           p21 (org-ml-build-plain-list i2 i1)
           x1 (org-ml-build-code "I should cause a fatal error")))
   (describe "without clock notes"
-    (it "nothing"
-      (should (equal nil
-                     (org-ml--merge-logbook enconf nil nil))))
-    (it "just clocks"
-      (should (equal `(,c2 ,c1)
-                     (org-ml--merge-logbook enconf nil `(,c1 ,c2)))))
-    (it "just items"
-      (should (equal `(,p21)
-                     (org-ml--merge-logbook enconf `(,i1 ,i2) nil))))
-    (it "single clock and item"
-      (should (equal `(,p1 ,c1)
-                     (org-ml--merge-logbook enconf `(,i1) `(,c1)))))
-    (it "clocks and items"
-      (should (equal `(,p2 ,c2 ,p1 ,c1)
-                     (org-ml--merge-logbook enconf `(,i1 ,i2) `(,c1 ,c2)))))
-    (it "just clocks (note)"
-      (should-error (org-ml--merge-logbook enconf nil `(,c1 ,n1 ,c2))))
-    (it "single clock (note) and item"
-      (should-error (org-ml--merge-logbook enconf `(,i1) `(,c1 ,n1))))
-    (it "clocks (note) and items"
-      (should-error (org-ml--merge-logbook enconf `(,i1 ,i2) `(,c1 ,n1 ,c2))))
-    (it "just clocks (note in wrong place)"
-      (should-error (org-ml--merge-logbook enconf nil `(,n1 ,c1 ,c2))))
-    (it "just garbage (items)"
-      (should-error (org-ml--merge-logbook enconf `(,x1) nil)))
-    (it "just garbage (clocks)"
-      (should-error (org-ml--merge-logbook enconf nil `(,x1)))))
+    (org-ml--test-merge-logbook-specs enconf
+      "nothing" nil nil nil
+      "just clocks" `(,c2 ,c1) nil `(,c1 ,c2)
+      "just items" `(,p21) `(,i1 ,i2) nil
+      "single clock and item" `(,p1 ,c1) `(,i1) `(,c1)
+      "clocks and items" `(,p2 ,c2 ,p1 ,c1) `(,i1 ,i2) `(,c1 ,c2)
+      "just clocks (note)" error nil `(,c1 ,n1 ,c2)
+      "single clock (note) and item" error `(,i1) `(,c1 ,n1)
+      "clocks (note) and items" error `(,i1 ,i2) `(,c1 ,n1 ,c2)
+      "just clocks (note in wrong place)" error nil `(,n1 ,c1 ,c2)
+      "just garbage (items)" error `(,x1) nil
+      "just garbage (clocks)" error nil `(,x1)))
   
   (describe "with clock notes"
-    (it "nothing"
-      (should (equal nil
-                     (org-ml--merge-logbook enconf-notes nil nil))))
-    (it "just clocks"
-      (should (equal `(,c2 ,c1)
-                     (org-ml--merge-logbook enconf-notes nil `(,c1 ,c2)))))
-    (it "just items"
-      (should (equal `(,p21)
-                     (org-ml--merge-logbook enconf-notes `(,i1 ,i2) nil))))
-    (it "single clock and item"
-      (should (equal `(,p1 ,c1)
-                     (org-ml--merge-logbook enconf-notes `(,i1) `(,c1)))))
-    (it "clocks and items"
-      (should (equal `(,p2 ,c2 ,p1 ,c1)
-                     (org-ml--merge-logbook enconf-notes `(,i1 ,i2) `(,c1 ,c2)))))
-    (it "just clocks (note)"
-      (should (equal `(,c2 ,c1 ,pn1)
-                     (org-ml--merge-logbook enconf-notes nil `(,c1 ,n1 ,c2)))))
-    (it "single clock (note) and item"
-      (should (equal `(,p1 ,c1 ,pn1)
-                     (org-ml--merge-logbook enconf-notes `(,i1) `(,c1 ,n1)))))
-    (it "clocks (note) and items"
-      (should (equal `(,p2 ,c2 ,p1 ,c1 ,pn1)
-                     (org-ml--merge-logbook enconf-notes `(,i1 ,i2) `(,c1 ,n1 ,c2)))))
-    (it "clocks (note) and items (different order)"
-      (should (equal `(,p2 ,c2 ,p1n1 ,c1)
-                     (org-ml--merge-logbook enconf-notes `(,i1 ,i2) `(,c1 ,c2 ,n1)))))
-    (it "just clocks (note in wrong place)"
-      (should-error (org-ml--merge-logbook enconf-notes nil `(,n1 ,c1 ,c2))))
-    (it "just garbage (items)"
-      (should-error (org-ml--merge-logbook enconf-notes `(,x1) nil)))
-    (it "just garbage (clocks)"
-      (should-error (org-ml--merge-logbook enconf-notes nil `(,x1))))))
+    (org-ml--test-merge-logbook-specs enconf-notes
+      "nothing" nil nil nil
+      "just clocks" `(,c2 ,c1) nil `(,c1 ,c2)
+      "just items" `(,p21) `(,i1 ,i2) nil
+      "single clock and item" `(,p1 ,c1) `(,i1) `(,c1)
+      "clocks and items" `(,p2 ,c2 ,p1 ,c1) `(,i1 ,i2) `(,c1 ,c2)
+      "just clocks (note)" `(,c2 ,c1 ,pn1) nil `(,c1 ,n1 ,c2)
+      "single clock (note) and item" `(,p1 ,c1 ,pn1) `(,i1) `(,c1 ,n1)
+      "clocks (note) and items" `(,p2 ,c2 ,p1 ,c1 ,pn1) `(,i1 ,i2) `(,c1 ,n1 ,c2)
+      "clocks (note) and items (different order)" `(,p2 ,c2 ,p1n1 ,c1) `(,i1 ,i2) `(,c1 ,c2 ,n1)
+      "just clocks (note in wrong place)" error nil `(,n1 ,c1 ,c2)
+      "just garbage (items)" error `(,x1) nil
+      "just garbage (clocks)" error nil `(,x1))))
 
 (defmacro expect-separated (c m items clocks unknown in)
   `(-let (((&alist 'items i 'clocks c 'unknown u)
@@ -1057,6 +1040,15 @@ be parsed to TYPE."
              (list (-map #'cdr i)
                    (-map #'cdr c)
                    (-map #'cdr u)))))
+
+(defmacro org-ml--test-separate-logbook-specs (config mode &rest specs)
+  (declare (indent 2))
+  (let ((forms
+         (->> (-partition 5 specs)
+              (--map
+               (-let (((title items clocks unknown input) it))
+                 `(it ,title (expect-separated ,config ,mode ,items ,clocks ,unknown ,input)))))))
+    `(progn ,@forms)))
 
 (describe "org-ml--separate-logbook"
   (before-all
@@ -1077,230 +1069,171 @@ be parsed to TYPE."
 
   (describe "mixed mode"
     (describe "without clock notes"
-      (it "nothing"
-        (expect-separated enconf :mixed nil nil nil nil))
-      (it "single item"
-        (expect-separated enconf :mixed `(,i1) nil nil `(,p1)))
-      (it "single clock"
-        (expect-separated enconf :mixed nil `(,c1) nil `(,c1)))
-      (it "single garbage entry"
-        (expect-separated enconf :mixed nil nil `(,x1) `(,x1)))
-      (it "single item and clock"
-        (expect-separated enconf :mixed `(,i1) `(,c1) nil `(,p1 ,c1)))
-      (it "single item and garbage"
-        (expect-separated enconf :mixed `(,i1) nil `(,x1) `(,p1 ,x1)))
-      (it "single clock and garbage"
-        (expect-separated enconf :mixed nil `(,c1) `(,x1) `(,c1 ,x1)))
-      (it "single item, clock, and garbage"
-        (expect-separated enconf :mixed `(,i1) `(,c1) `(,x1) `(,p1 ,c1 ,x1)))
-      (it "multiple items and clocks"
-        (expect-separated enconf :mixed `(,i2 ,i1) `(,c2 ,c1) nil `(,p12 ,c1 ,c2)))
-      (it "multiple items and clocks (interlaced)"
-        (expect-separated enconf :mixed `(,i2 ,i1) `(,c2 ,c1) nil `(,p1 ,c1 ,p2 ,c2)))
-      (it "clock with note"
-        (expect-separated enconf :mixed nil `(,c1) `(,n1) `(,c1 ,pn1)))
-      (it "clock with note in wrong place"
-        (expect-separated enconf :mixed nil `(,c1) `(,n1) `(,pn1 ,c1)))
-      (it "clock with note and item"
-        (expect-separated enconf :mixed `(,i1) `(,c1) `(,n1) `(,c1 ,pn11)))
-      (it "clock with item and note"
-        (expect-separated enconf :mixed `(,i1) `(,c1) `(,n1) `(,c1 ,p1n1))))
+      (org-ml--test-separate-logbook-specs enconf :mixed
+        "nothing" nil nil nil nil
+        "single item" `(,i1) nil nil `(,p1)
+        "single clock" nil `(,c1) nil `(,c1)
+        "single garbage entry" nil nil `(,x1) `(,x1)
+        "single item and clock" `(,i1) `(,c1) nil `(,p1 ,c1)
+        "single item and garbage" `(,i1) nil `(,x1) `(,p1 ,x1)
+        "single clock and garbage" nil `(,c1) `(,x1) `(,c1 ,x1)
+        "single item, clock, and garbage" `(,i1) `(,c1) `(,x1) `(,p1 ,c1 ,x1)
+        "multiple items and clocks" `(,i2 ,i1) `(,c2 ,c1) nil `(,p12 ,c1 ,c2)
+        "multiple items and clocks (interlaced)" `(,i2 ,i1) `(,c2 ,c1) nil `(,p1 ,c1 ,p2 ,c2)
+        "clock with note" nil `(,c1) `(,n1) `(,c1 ,pn1)
+        "clock with note in wrong place" nil `(,c1) `(,n1) `(,pn1 ,c1)
+        "clock with note and item" `(,i1) `(,c1) `(,n1) `(,c1 ,pn11)
+        "clock with item and note" `(,i1) `(,c1) `(,n1) `(,c1 ,p1n1)))
     (describe "clock notes"
-      (it "nothing"
-        (expect-separated enconf-notes :mixed nil nil nil nil))
-      (it "single item"
-        (expect-separated enconf-notes :mixed `(,i1) nil nil `(,p1)))
-      (it "single clock"
-        (expect-separated enconf-notes :mixed nil `(,c1) nil `(,c1)))
-      (it "single garbage entry"
-        (expect-separated enconf-notes :mixed nil nil `(,x1) `(,x1)))
-      (it "single item and clock"
-        (expect-separated enconf-notes :mixed `(,i1) `(,c1) nil `(,p1 ,c1)))
-      (it "single item and garbage"
-        (expect-separated enconf-notes :mixed `(,i1) nil `(,x1) `(,p1 ,x1)))
-      (it "single clock and garbage"
-        (expect-separated enconf-notes :mixed nil `(,c1) `(,x1) `(,c1 ,x1)))
-      (it "single item, clock, and garbage"
-        (expect-separated enconf-notes :mixed `(,i1) `(,c1) `(,x1) `(,p1 ,c1 ,x1)))
-      (it "multiple items and clocks"
-        (expect-separated enconf-notes :mixed `(,i2 ,i1) `(,c2 ,c1) nil `(,p12 ,c1 ,c2)))
-      (it "multiple items and clocks (interlaced)"
-        (expect-separated enconf-notes :mixed `(,i2 ,i1) `(,c2 ,c1) nil `(,p1 ,c1 ,p2 ,c2)))
-      (it "clock with note"
-        (expect-separated enconf-notes :mixed nil `(,n1 ,c1) nil `(,c1 ,pn1)))
-      (it "clock with note in wrong place"
-        (expect-separated enconf-notes :mixed nil `(,c1) `(,n1) `(,pn1 ,c1)))
-      (it "clock with note and item"
-        (expect-separated enconf-notes :mixed `(,i1) `(,n1 ,c1) nil `(,c1 ,pn11)))
-      (it "clock with item and note"
-        (expect-separated enconf-notes :mixed `(,i1) `(,c1) `(,n1) `(,c1 ,p1n1)))))
+      (org-ml--test-separate-logbook-specs enconf-notes :mixed
+        "nothing" nil nil nil nil
+        "single item" `(,i1) nil nil `(,p1)
+        "single clock" nil `(,c1) nil `(,c1)
+        "single garbage entry" nil nil `(,x1) `(,x1)
+        "single item and clock" `(,i1) `(,c1) nil `(,p1 ,c1)
+        "single item and garbage" `(,i1) nil `(,x1) `(,p1 ,x1)
+        "single clock and garbage" nil `(,c1) `(,x1) `(,c1 ,x1)
+        "single item, clock, and garbage" `(,i1) `(,c1) `(,x1) `(,p1 ,c1 ,x1)
+        "multiple items and clocks" `(,i2 ,i1) `(,c2 ,c1) nil `(,p12 ,c1 ,c2)
+        "multiple items and clocks (interlaced)" `(,i2 ,i1) `(,c2 ,c1) nil `(,p1 ,c1 ,p2 ,c2)
+        "clock with note" nil `(,n1 ,c1) nil `(,c1 ,pn1)
+        "clock with note in wrong place" nil `(,c1) `(,n1) `(,pn1 ,c1)
+        "clock with note and item" `(,i1) `(,n1 ,c1) nil `(,c1 ,pn11)
+        "clock with item and note" `(,i1) `(,c1) `(,n1) `(,c1 ,p1n1))))
 
   (describe "items mode"
     (describe "without clock notes"
-      (it "nothing"
-        (expect-separated enconf :items nil nil nil nil))
-      (it "single item"
-        (expect-separated enconf :items `(,i1) nil nil `(,p1)))
-      (it "single clock"
-        (expect-separated enconf :items nil nil `(,c1) `(,c1)))
-      (it "single garbage entry"
-        (expect-separated enconf :items nil nil `(,x1) `(,x1)))
-      (it "single item and clock"
-        (expect-separated enconf :items `(,i1) nil `(,c1) `(,p1 ,c1)))
-      (it "single item and garbage"
-        (expect-separated enconf :items `(,i1) nil `(,x1) `(,p1 ,x1)))
-      (it "single clock and garbage"
-        (expect-separated enconf :items nil nil `(,x1 ,c1) `(,c1 ,x1)))
-      (it "single item, clock, and garbage"
-        (expect-separated enconf :items `(,i1) nil `(,x1 ,c1) `(,p1 ,c1 ,x1)))
-      (it "multiple items and clocks"
-        (expect-separated enconf :items `(,i2 ,i1) nil `(,c2 ,c1) `(,p12 ,c1 ,c2)))
-      (it "multiple items and clocks (interlaced)"
-        (expect-separated enconf :items `(,i2 ,i1) nil `(,c2 ,c1) `(,p1 ,c1 ,p2 ,c2)))
-      (it "clock with note"
-        (expect-separated enconf :items nil nil `(,n1 ,c1) `(,c1 ,pn1)))
-      (it "clock with note in wrong place"
-        (expect-separated enconf :items nil nil `(,c1 ,n1) `(,pn1 ,c1)))
-      (it "clock with note and item"
-        (expect-separated enconf :items `(,i1) nil `(,n1 ,c1) `(,c1 ,pn11)))
-      (it "clock with item and note"
-        (expect-separated enconf :items `(,i1) nil `(,n1 ,c1) `(,c1 ,p1n1))))
+      (org-ml--test-separate-logbook-specs enconf :items
+        "nothing" nil nil nil nil
+        "single item" `(,i1) nil nil `(,p1)
+        "single clock" nil nil `(,c1) `(,c1)
+        "single garbage entry" nil nil `(,x1) `(,x1)
+        "single item and clock" `(,i1) nil `(,c1) `(,p1 ,c1)
+        "single item and garbage" `(,i1) nil `(,x1) `(,p1 ,x1)
+        "single clock and garbage" nil nil `(,x1 ,c1) `(,c1 ,x1)
+        "single item, clock, and garbage" `(,i1) nil `(,x1 ,c1) `(,p1 ,c1 ,x1)
+        "multiple items and clocks" `(,i2 ,i1) nil `(,c2 ,c1) `(,p12 ,c1 ,c2)
+        "multiple items and clocks (interlaced)" `(,i2 ,i1) nil `(,c2 ,c1) `(,p1 ,c1 ,p2 ,c2)
+        "clock with note" nil nil `(,n1 ,c1) `(,c1 ,pn1)
+        "clock with note in wrong place" nil nil `(,c1 ,n1) `(,pn1 ,c1)
+        "clock with note and item" `(,i1) nil `(,n1 ,c1) `(,c1 ,pn11)
+        "clock with item and note" `(,i1) nil `(,n1 ,c1) `(,c1 ,p1n1)))
     (describe "with clock notes"
-      (it "nothing"
-        (expect-separated enconf-notes :items nil nil nil nil))
-      (it "single item"
-        (expect-separated enconf-notes :items `(,i1) nil nil `(,p1)))
-      (it "single clock"
-        (expect-separated enconf-notes :items nil nil `(,c1) `(,c1)))
-      (it "single garbage entry"
-        (expect-separated enconf-notes :items nil nil `(,x1) `(,x1)))
-      (it "single item and clock"
-        (expect-separated enconf-notes :items `(,i1) nil `(,c1) `(,p1 ,c1)))
-      (it "single item and garbage"
-        (expect-separated enconf-notes :items `(,i1) nil `(,x1) `(,p1 ,x1)))
-      (it "single clock and garbage"
-        (expect-separated enconf-notes :items nil nil `(,x1 ,c1) `(,c1 ,x1)))
-      (it "single item, clock, and garbage"
-        (expect-separated enconf-notes :items `(,i1) nil `(,x1 ,c1) `(,p1 ,c1 ,x1)))
-      (it "multiple items and clocks"
-        (expect-separated enconf-notes :items `(,i2 ,i1) nil `(,c2 ,c1) `(,p12 ,c1 ,c2)))
-      (it "multiple items and clocks (interlaced)"
-        (expect-separated enconf-notes :items `(,i2 ,i1) nil `(,c2 ,c1) `(,p1 ,c1 ,p2 ,c2)))
-      (it "clock with note"
-        (expect-separated enconf-notes :items nil nil `(,n1 ,c1) `(,c1 ,pn1)))
-      (it "clock with note in wrong place"
-        (expect-separated enconf-notes :items nil nil `(,c1 ,n1) `(,pn1 ,c1)))
-      (it "clock with note and item"
-        (expect-separated enconf-notes :items `(,i1) nil `(,n1 ,c1) `(,c1 ,pn11)))
-      (it "clock with item and note"
-        (expect-separated enconf-notes :items `(,i1) nil `(,n1 ,c1) `(,c1 ,p1n1)))))
+      (org-ml--test-separate-logbook-specs enconf-notes :items
+        "nothing" nil nil nil nil
+        "single item" `(,i1) nil nil `(,p1)
+        "single clock" nil nil `(,c1) `(,c1)
+        "single garbage entry" nil nil `(,x1) `(,x1)
+        "single item and clock" `(,i1) nil `(,c1) `(,p1 ,c1)
+        "single item and garbage" `(,i1) nil `(,x1) `(,p1 ,x1)
+        "single clock and garbage" nil nil `(,x1 ,c1) `(,c1 ,x1)
+        "single item, clock, and garbage" `(,i1) nil `(,x1 ,c1) `(,p1 ,c1 ,x1)
+        "multiple items and clocks" `(,i2 ,i1) nil `(,c2 ,c1) `(,p12 ,c1 ,c2)
+        "multiple items and clocks (interlaced)" `(,i2 ,i1) nil `(,c2 ,c1) `(,p1 ,c1 ,p2 ,c2)
+        "clock with note" nil nil `(,n1 ,c1) `(,c1 ,pn1)
+        "clock with note in wrong place" nil nil `(,c1 ,n1) `(,pn1 ,c1)
+        "clock with note and item" `(,i1) nil `(,n1 ,c1) `(,c1 ,pn11)
+        "clock with item and note" `(,i1) nil `(,n1 ,c1) `(,c1 ,p1n1))))
 
   (describe "clocks mode"
     (describe "without clock notes"
-      (it "nothing"
-        (expect-separated enconf :clocks nil nil nil nil))
-      (it "single item"
-        (expect-separated enconf :clocks nil nil `(,i1) `(,p1)))
-      (it "single clock"
-        (expect-separated enconf :clocks nil `(,c1) nil `(,c1)))
-      (it "single garbage entry"
-        (expect-separated enconf :clocks nil nil `(,x1) `(,x1)))
-      (it "single item and clock"
-        (expect-separated enconf :clocks nil `(,c1) `(,i1) `(,p1 ,c1)))
-      (it "single item and garbage"
-        (expect-separated enconf :clocks nil nil `(,x1 ,i1) `(,p1 ,x1)))
-      (it "single clock and garbage"
-        (expect-separated enconf :clocks nil `(,c1) `(,x1) `(,c1 ,x1)))
-      (it "single item, clock, and garbage"
-        (expect-separated enconf :clocks nil `(,c1) `(,x1 ,i1) `(,p1 ,c1 ,x1)))
-      (it "multiple items and clocks"
-        (expect-separated enconf :clocks nil `(,c2 ,c1) `(,i2 ,i1) `(,p12 ,c1 ,c2)))
-      (it "multiple items and clocks (interlaced)"
-        (expect-separated enconf :clocks nil `(,c2 ,c1) `(,i2 ,i1) `(,p1 ,c1 ,p2 ,c2)))
-      (it "clock with note"
-        (expect-separated enconf :clocks nil `(,c1) `(,n1) `(,c1 ,pn1)))
-      (it "clock with note in wrong place"
-        (expect-separated enconf :clocks nil `(,c1) `(,n1) `(,pn1 ,c1)))
-      (it "clock with note and item"
-        (expect-separated enconf :clocks nil `(,c1) `(,i1 ,n1) `(,c1 ,pn11)))
-      (it "clock with item and note"
-        (expect-separated enconf :clocks nil `(,c1) `(,n1 ,i1) `(,c1 ,p1n1))))
+      (org-ml--test-separate-logbook-specs enconf :clocks
+        "nothing" nil nil nil nil
+        "single item" nil nil `(,i1) `(,p1)
+        "single clock" nil `(,c1) nil `(,c1)
+        "single garbage entry" nil nil `(,x1) `(,x1)
+        "single item and clock" nil `(,c1) `(,i1) `(,p1 ,c1)
+        "single item and garbage" nil nil `(,x1 ,i1) `(,p1 ,x1)
+        "single clock and garbage" nil `(,c1) `(,x1) `(,c1 ,x1)
+        "single item, clock, and garbage" nil `(,c1) `(,x1 ,i1) `(,p1 ,c1 ,x1)
+        "multiple items and clocks" nil `(,c2 ,c1) `(,i2 ,i1) `(,p12 ,c1 ,c2)
+        "multiple items and clocks (interlaced)" nil `(,c2 ,c1) `(,i2 ,i1) `(,p1 ,c1 ,p2 ,c2)
+        "clock with note" nil `(,c1) `(,n1) `(,c1 ,pn1)
+        "clock with note in wrong place" nil `(,c1) `(,n1) `(,pn1 ,c1)
+        "clock with note and item" nil `(,c1) `(,i1 ,n1) `(,c1 ,pn11)
+        "clock with item and note" nil `(,c1) `(,n1 ,i1) `(,c1 ,p1n1)))
     (describe "with clock notes"
-      (it "nothing"
-        (expect-separated enconf-notes :clocks nil nil nil nil))
-      (it "single item"
-        (expect-separated enconf-notes :clocks nil nil `(,i1) `(,p1)))
-      (it "single clock"
-        (expect-separated enconf-notes :clocks nil `(,c1) nil `(,c1)))
-      (it "single garbage entry"
-        (expect-separated enconf-notes :clocks nil nil `(,x1) `(,x1)))
-      (it "single item and clock"
-        (expect-separated enconf-notes :clocks nil `(,c1) `(,i1) `(,p1 ,c1)))
-      (it "single item and garbage"
-        (expect-separated enconf-notes :clocks nil nil `(,x1 ,i1) `(,p1 ,x1)))
-      (it "single clock and garbage"
-        (expect-separated enconf-notes :clocks nil `(,c1) `(,x1) `(,c1 ,x1)))
-      (it "single item, clock, and garbage"
-        (expect-separated enconf-notes :clocks nil `(,c1) `(,x1 ,i1) `(,p1 ,c1 ,x1)))
-      (it "multiple items and clocks"
-        (expect-separated enconf-notes :clocks nil `(,c2 ,c1) `(,i2 ,i1) `(,p12 ,c1 ,c2)))
-      (it "multiple items and clocks (interlaced)"
-        (expect-separated enconf-notes :clocks nil `(,c2 ,c1) `(,i2 ,i1) `(,p1 ,c1 ,p2 ,c2)))
-      (it "clock with note"
-        (expect-separated enconf-notes :clocks nil `(,n1 ,c1) nil `(,c1 ,pn1)))
-      (it "clock with note in wrong place"
-        (expect-separated enconf-notes :clocks nil `(,c1) `(,n1) `(,pn1 ,c1)))
-      (it "clock with note and item"
-        (expect-separated enconf-notes :clocks nil `(,n1 ,c1) `(,i1) `(,c1 ,pn11)))
-      (it "clock with item and note"
-        (expect-separated enconf-notes :clocks nil `(,c1) `(,n1 ,i1) `(,c1 ,p1n1))))))
+      (org-ml--test-separate-logbook-specs enconf-notes :clocks
+        "nothing" nil nil nil nil
+        "single item" nil nil `(,i1) `(,p1)
+        "single clock" nil `(,c1) nil `(,c1)
+        "single garbage entry" nil nil `(,x1) `(,x1)
+        "single item and clock" nil `(,c1) `(,i1) `(,p1 ,c1)
+        "single item and garbage" nil nil `(,x1 ,i1) `(,p1 ,x1)
+        "single clock and garbage" nil `(,c1) `(,x1) `(,c1 ,x1)
+        "single item, clock, and garbage" nil `(,c1) `(,x1 ,i1) `(,p1 ,c1 ,x1)
+        "multiple items and clocks" nil `(,c2 ,c1) `(,i2 ,i1) `(,p12 ,c1 ,c2)
+        "multiple items and clocks (interlaced)" nil `(,c2 ,c1) `(,i2 ,i1) `(,p1 ,c1 ,p2 ,c2)
+        "clock with note" nil `(,n1 ,c1) nil `(,c1 ,pn1)
+        "clock with note in wrong place" nil `(,c1) `(,n1) `(,pn1 ,c1)
+        "clock with note and item" nil `(,n1 ,c1) `(,i1) `(,c1 ,pn11)
+        "clock with item and note" nil `(,c1) `(,n1 ,i1) `(,c1 ,p1n1)))))
 
-;; (describe "org-ml--logbook-to-nodes"
-;;   (before-all
-;;     (setq i-name "LOGGING"
-;;           c-name "CLOCKING"
-;;           m-name "LOGBOOK"
-;;           c1 (org-ml-build-clock! '(2020 1 1 0 0) :end '(2020 1 1 1 0))
-;;           i1 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 2 0 0)) "1")
-;;           c2 (org-ml-build-clock! '(2020 1 3 0 0) :end '(2020 1 3 1 0))
-;;           i2 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 4 0 0)) "2")
-;;           p1 (org-ml-build-plain-list i1)
-;;           p2 (org-ml-build-plain-list i2)
-;;           p21 (org-ml-build-plain-list i2 i1)
-;;           di (org-ml-build-drawer i-name p21)
-;;           di* (org-ml-build-drawer m-name p21)
-;;           dc (org-ml-build-drawer c-name c2 c1)
-;;           dc* (org-ml-build-drawer m-name c2 c1)
-;;           dm (org-ml-build-drawer m-name p2 c2 p1 c1))
-;;     (defun test (c out items clocks unknown)
-;;       (->> (org-ml--logbook-init items clocks unknown 0)
-;;            (org-ml--logbook-to-nodes c)
-;;            (equal out)
-;;            (should))))
-;;   ;; ASSUME the sorting function takes care of clock notes, and since
-;;   ;; everything passes through that, don't test it here
-;;   (it "to nodes"
-;;     (test nil `(,p2 ,c2 ,p1 ,c1) `(,i1 ,i2) `(,c1 ,c2) nil)
-;;     (test `(:log-into-drawer ,i-name)
-;;           `(,di ,c2 ,c1) `(,i1 ,i2) `(,c1 ,c2) nil)
-;;     (test `(:clock-into-drawer ,c-name)
-;;           `(,dc ,p21) `(,i1 ,i2) `(,c1 ,c2) nil)
-;;     (test `(:log-into-drawer ,i-name :clock-into-drawer ,c-name)
-;;           `(,di ,dc) `(,i1 ,i2) `(,c1 ,c2) nil)
-;;     (test '(:log-into-drawer t :clock-into-drawer t)
-;;           `(,dm) `(,i1 ,i2) `(,c1 ,c2) nil)
-;;     (test '(:log-into-drawer nil :clock-into-drawer 1)
-;;           `(,dc* ,p21) `(,i1 ,i2) `(,c1 ,c2) nil)
-;;     (test '(:log-into-drawer nil :clock-into-drawer 2)
-;;           `(,p2 ,c2 ,p1 ,c1) `(,i1 ,i2) `(,c1 ,c2) nil)
-;;     (test '(:log-into-drawer t :clock-into-drawer 1)
-;;           `(,dm) `(,i1 ,i2) `(,c1 ,c2) nil)
-;;     (test '(:log-into-drawer t :clock-into-drawer 2)
-;;           `(,di* ,c2 ,c1) `(,i1 ,i2) `(,c1 ,c2) nil)
-;;     (test `(:log-into-drawer ,i-name :clock-into-drawer 1)
-;;           `(,di ,dc*) `(,i1 ,i2) `(,c1 ,c2) nil)
-;;     (test `(:log-into-drawer ,i-name :clock-into-drawer 2)
-;;           `(,di ,c2 ,c1) `(,i1 ,i2) `(,c1 ,c2) nil)))
+(defmacro org-ml--test-logbook-to-nodes (c out items clocks)
+  `(->> (org-ml--logbook-init ,items ,clocks nil 0)
+        (org-ml--logbook-to-nodes ,c)
+        (equal ,out)
+        (should)))
+
+(defmacro org-ml--test-logbook-to-nodes-specs (&rest specs)
+  (let ((forms
+         (->> (-partition 5 specs)
+              (--map
+               (-let (((title config output items clocks) it))
+                 `(it ,title (org-ml--test-logbook-to-nodes ,config ,output ,items ,clocks)))))))
+    `(progn ,@forms)))
+
+(describe "logbook to nodes"
+  (before-all
+    (setq i-name "LOGGING"
+          c-name "CLOCKING"
+          m-name "LOGBOOK"
+          c1 (org-ml-build-clock! '(2020 1 1 0 0) :end '(2020 1 1 1 0))
+          i1 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 2 0 0)) "1")
+          c2 (org-ml-build-clock! '(2020 1 3 0 0) :end '(2020 1 3 1 0))
+          i2 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 4 0 0)) "2")
+          p1 (org-ml-build-plain-list i1)
+          p2 (org-ml-build-plain-list i2)
+          p21 (org-ml-build-plain-list i2 i1)
+          di (org-ml-build-drawer i-name p21)
+          di* (org-ml-build-drawer m-name p21)
+          dc (org-ml-build-drawer c-name c2 c1)
+          dc* (org-ml-build-drawer m-name c2 c1)
+          dm (org-ml-build-drawer m-name p2 c2 p1 c1)))
+  ;; ASSUME the sorting function takes care of clock notes, and since
+  ;; everything passes through that, don't test it here
+  (org-ml--test-logbook-to-nodes-specs
+   "no config" nil
+   `(,p2 ,c2 ,p1 ,c1) `(,i1 ,i2) `(,c1 ,c2)
+
+   "item drawer" `(:log-into-drawer ,i-name)
+   `(,di ,c2 ,c1) `(,i1 ,i2) `(,c1 ,c2)
+
+   "clock drawer" `(:clock-into-drawer ,c-name)
+   `(,dc ,p21) `(,i1 ,i2) `(,c1 ,c2)
+
+   "item and clock drawer (different)" `(:log-into-drawer ,i-name :clock-into-drawer ,c-name)
+   `(,di ,dc) `(,i1 ,i2) `(,c1 ,c2)
+
+   "items and clock drawer (same)" '(:log-into-drawer t :clock-into-drawer t)
+   `(,dm) `(,i1 ,i2) `(,c1 ,c2)
+   "clock limit" '(:log-into-drawer nil :clock-into-drawer 1)
+   `(,dc* ,p21) `(,i1 ,i2) `(,c1 ,c2)
+
+   "clock limit (higher)" '(:log-into-drawer nil :clock-into-drawer 2)
+   `(,p2 ,c2 ,p1 ,c1) `(,i1 ,i2) `(,c1 ,c2)
+   
+   "clock limit and item drawer (same)" '(:log-into-drawer t :clock-into-drawer 1)
+   `(,dm) `(,i1 ,i2) `(,c1 ,c2)
+   
+   "clock limit (higher) and item drawer (same)" '(:log-into-drawer t :clock-into-drawer 2)
+   `(,di* ,c2 ,c1) `(,i1 ,i2) `(,c1 ,c2)
+
+   "clock limit and item drawer (different)" `(:log-into-drawer ,i-name :clock-into-drawer 1)
+   `(,di ,dc*) `(,i1 ,i2) `(,c1 ,c2)
+
+   "clock limit (higher and item drawer (different)" `(:log-into-drawer ,i-name :clock-into-drawer 2)
+   `(,di ,c2 ,c1) `(,i1 ,i2) `(,c1 ,c2) nil))
 
 ;; eight possible configurations for the logbook based on the values of
 ;; `org-log-into-drawer' (L) and `org-clock-into-drawer' (C)
@@ -1320,6 +1253,16 @@ be parsed to TYPE."
            :to-equal
            (org-ml--supercontents-init ,items ,clocks ,unknown ,post-blank ,rest)))
 
+(defmacro org-ml--test-supercontents-specs (config &rest specs)
+  (declare (indent 1))
+  (let ((forms
+         (->> (-partition 7 specs)
+              (--map
+               (-let (((title input items clocks unknown post-blank contents) it))
+                 `(it ,title (expect-supercontents ,config ,input
+                               ,items ,clocks ,unknown ,post-blank ,contents)))))))
+    `(progn ,@forms)))
+
 (describe "org-ml--supercontents-mixed"
   (before-all
     (setq config nil
@@ -1333,61 +1276,51 @@ be parsed to TYPE."
           c1 (org-ml-build-clock (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0)))
           r1 (org-ml-build-paragraph! "foo")))
   (describe "with clock notes"
-    (it "nothing"
-      (expect-supercontents config-notes nil nil nil nil nil nil))
-    (it "no logbook"
-      (expect-supercontents config-notes (list r1) nil nil nil nil `(,r1)))
-    (it "all combinations of item, clock, and clock note, and rest"
-      (expect-supercontents config-notes (list p1 c1 p2 r1) `(,i1) `(,c1 ,i2) nil 0 `(,r1))
-      (expect-supercontents config-notes (list p1 p2 c1 r1) `(,i1) nil nil 0 `(,p2 ,c1 ,r1))
-      (expect-supercontents config-notes (list c1 p2 p1 r1) `(,i1) `(,c1 ,i2) nil 0 `(,r1))
-      (expect-supercontents config-notes (list c1 p1 p2 r1) `(,i1) `(,c1) nil 0 `(,p2 ,r1))
-      ;; NOTE lists will be joined if together in input
-      (expect-supercontents config-notes (list p2 p1 c1 r1) nil nil nil nil `(,p21 ,c1 ,r1))
-      (expect-supercontents config-notes (list p2 c1 p1 r1) nil nil nil nil `(,p2 ,c1 ,p1 ,r1)))
-    (it "same things without rest"
-      (expect-supercontents config-notes (list p1 c1 p2) `(,i1) `(,c1 ,i2) nil 0 nil)
-      (expect-supercontents config-notes (list p1 p2 c1) `(,i1) nil nil 0 `(,p2 ,c1))
-      (expect-supercontents config-notes (list c1 p2 p1) `(,i1) `(,c1 ,i2) nil 0 nil)
-      (expect-supercontents config-notes (list c1 p1 p2) `(,i1) `(,c1) nil 0 `(,p2))
-      (expect-supercontents config-notes (list p2 p1 c1) nil nil nil nil `(,p21 ,c1))
-      (expect-supercontents config-notes (list p2 c1 p1) nil nil nil nil `(,p2 ,c1 ,p1)))
-    (it "same things choose two"
-      (expect-supercontents config-notes (list p1 c1) `(,i1) `(,c1) nil 0 nil)
-      (expect-supercontents config-notes (list p1 p2) `(,i1) nil nil 0 `(,p2))
-      (expect-supercontents config-notes (list c1 p2) nil `(,c1 ,i2) nil 0 nil)
-      (expect-supercontents config-notes (list c1 p1) `(,i1) `(,c1) nil 0 nil)
-      (expect-supercontents config-notes (list p2 p1) nil nil nil nil `(,p21))
-      (expect-supercontents config-notes (list p2 c1) nil nil nil nil `(,p2 ,c1)))
-    (it "ignore if not in right order (assume what comes after doesn't matter)"
-      (expect-supercontents config-notes (list r1 p1) nil nil nil nil `(,r1 ,p1))))
+    (org-ml--test-supercontents-specs config-notes
+      "nothing" nil nil nil nil nil nil
+      "no logbook" (list r1) nil nil nil nil `(,r1)
+      "item clock note rest" (list p1 c1 p2 r1) `(,i1) `(,c1 ,i2) nil 0 `(,r1)
+      "item note clock rest" (list p1 p2 c1 r1) `(,i1) nil nil 0 `(,p2 ,c1 ,r1)
+      "clock item note rest" (list c1 p2 p1 r1) `(,i1) `(,c1 ,i2) nil 0 `(,r1)
+      "clock note item rest" (list c1 p1 p2 r1) `(,i1) `(,c1) nil 0 `(,p2 ,r1)
+      "note item clock rest" (list p2 p1 c1 r1) nil nil nil nil `(,p21 ,c1 ,r1)
+      "note clock item rest" (list p2 c1 p1 r1) nil nil nil nil `(,p2 ,c1 ,p1 ,r1)
+      "item clock note" (list p1 c1 p2) `(,i1) `(,c1 ,i2) nil 0 nil
+      "item note clock" (list p1 p2 c1) `(,i1) nil nil 0 `(,p2 ,c1)
+      "clock item note" (list c1 p2 p1) `(,i1) `(,c1 ,i2) nil 0 nil
+      "clock note item" (list c1 p1 p2) `(,i1) `(,c1) nil 0 `(,p2)
+      "note item clock" (list p2 p1 c1) nil nil nil nil `(,p21 ,c1)
+      "note clock item" (list p2 c1 p1) nil nil nil nil `(,p2 ,c1 ,p1)
+      "item clock" (list p1 c1) `(,i1) `(,c1) nil 0 nil
+      "item note" (list p1 p2) `(,i1) nil nil 0 `(,p2)
+      "clock note" (list c1 p2) nil `(,c1 ,i2) nil 0 nil
+      "clock item" (list c1 p1) `(,i1) `(,c1) nil 0 nil
+      "note item" (list p2 p1) nil nil nil nil `(,p21)
+      "note clock" (list p2 c1) nil nil nil nil `(,p2 ,c1)
+      "rest list" (list r1 p1) nil nil nil nil `(,r1 ,p1)))
 
   (describe "without clock notes"
-    (it "nothing"
-      (expect-supercontents config nil nil nil nil nil nil))
-    (it "no logbook"
-      (expect-supercontents config (list r1) nil nil nil nil `(,r1)))
-    (it "all combinations of two items and one clock"
-      (expect-supercontents config (list p1 c1 p2 r1) `(,i1) `(,c1) nil 0 `(,p2 ,r1))
-      (expect-supercontents config (list p1 p2 c1 r1) `(,i1) nil nil 0 `(,p2 ,c1 ,r1))
-      (expect-supercontents config (list c1 p2 p1 r1) nil `(,c1) nil 0 `(,p21 ,r1))
-      (expect-supercontents config (list c1 p1 p2 r1) `(,i1) `(,c1) nil 0 `(,p2 ,r1))
-      (expect-supercontents config (list p2 p1 c1 r1) nil nil nil nil `(,p21 ,c1 ,r1))
-      (expect-supercontents config (list p2 c1 p1 r1) nil nil nil nil `(,p2 ,c1 ,p1 ,r1)))
-    (it "same things without rest"
-      (expect-supercontents config (list p1 c1 p2) `(,i1) `(,c1) nil 0 `(,p2))
-      (expect-supercontents config (list p1 p2 c1) `(,i1) nil nil 0 `(,p2 ,c1))
-      (expect-supercontents config (list c1 p2 p1) nil `(,c1) nil 0 `(,p21))
-      (expect-supercontents config (list c1 p1 p2) `(,i1) `(,c1) nil 0 `(,p2))
-      (expect-supercontents config (list p2 p1 c1) nil nil nil nil `(,p21 ,c1))
-      (expect-supercontents config (list p2 c1 p1) nil nil nil nil `(,p2 ,c1 ,p1)))
-    (it "same things choose two"
-      (expect-supercontents config (list p1 c1) `(,i1) `(,c1) nil 0 nil)
-      (expect-supercontents config (list p1 p2) `(,i1) nil nil 0 `(,p2))
-      (expect-supercontents config (list c1 p2) nil `(,c1) nil 0 `(,p2))
-      (expect-supercontents config (list c1 p1) `(,i1) `(,c1) nil 0 nil)
-      (expect-supercontents config (list p2 p1) nil nil nil nil `(,p21))
-      (expect-supercontents config (list p2 c1) nil nil nil nil `(,p2 ,c1)))))
+    (org-ml--test-supercontents-specs config
+      "nothing" nil nil nil nil nil nil
+      "no logbook" (list r1) nil nil nil nil `(,r1)
+      "item clock note rest" (list p1 c1 p2 r1) `(,i1) `(,c1) nil 0 `(,p2 ,r1)
+      "item note clock rest" (list p1 p2 c1 r1) `(,i1) nil nil 0 `(,p2 ,c1 ,r1)
+      "clock item note rest" (list c1 p2 p1 r1) nil `(,c1) nil 0 `(,p21 ,r1)
+      "clock note item rest" (list c1 p1 p2 r1) `(,i1) `(,c1) nil 0 `(,p2 ,r1)
+      "note item clock rest" (list p2 p1 c1 r1) nil nil nil nil `(,p21 ,c1 ,r1)
+      "note clock item rest" (list p2 c1 p1 r1) nil nil nil nil `(,p2 ,c1 ,p1 ,r1)
+      "item clock note" (list p1 c1 p2) `(,i1) `(,c1) nil 0 `(,p2)
+      "item note clock" (list p1 p2 c1) `(,i1) nil nil 0 `(,p2 ,c1)
+      "clock item note" (list c1 p2 p1) nil `(,c1) nil 0 `(,p21)
+      "clock note item" (list c1 p1 p2) `(,i1) `(,c1) nil 0 `(,p2)
+      "note item clock" (list p2 p1 c1) nil nil nil nil `(,p21 ,c1)
+      "note clock item" (list p2 c1 p1) nil nil nil nil `(,p2 ,c1 ,p1)
+      "item note" (list p1 c1) `(,i1) `(,c1) nil 0 nil
+      "clock note" (list p1 p2) `(,i1) nil nil 0 `(,p2)
+      "clock item" (list c1 p2) nil `(,c1) nil 0 `(,p2)
+      "note item" (list c1 p1) `(,i1) `(,c1) nil 0 nil
+      "note clock" (list p2 p1) nil nil nil nil `(,p21)
+      "rest list" (list p2 c1) nil nil nil nil `(,p2 ,c1))))
 
 (describe "org-ml--supercontents-single-items"
   (before-all
@@ -1406,33 +1339,25 @@ be parsed to TYPE."
                                               :end '(2112 1 2 0 0)))
           c1 (org-ml-build-clock ts1)
           r1 (org-ml-build-paragraph! "foo")))
-  (it "nothing"
-    (expect-supercontents config nil nil nil nil nil nil))
-  (it "no logbook"
-    (expect-supercontents config (list r1) nil nil nil nil `(,r1)))
-  (it "clock followed by note"
-    (expect-supercontents config-notes (list c1 p1 r1) nil `(,c1 ,i1) nil 0 `(,r1)))
-  (it "clock followed by log item"
-    (expect-supercontents config-notes (list c1 p2 r1) nil `(,c1) nil 0 `(,p2 ,r1)))
-  (it "clock followed by note (no notes wanted)"
-    (expect-supercontents config (list c1 p1 r1) nil `(,c1) nil 0 `(,p1 ,r1)))
-  (it "clock followed by note and item"
-    (expect-supercontents config-notes (list c1 p4 r1) nil `(,c1 ,i1) nil 0 `(,p2 ,r1)))
-  (it "clock followed by note and item (no notes wanted)"
-    (expect-supercontents config (list c1 p4 r1) nil `(,c1) nil 0 `(,p4 ,r1)))
-  ;; item followed by clock (store none)
-  ;; ASSUME the code that stops splitting
-  ;; after finding an invalid item is fully tested with this example and will
-  (it "therefore do the same in the permutations below"
-    (expect-supercontents config (list p1 c1 r1) nil nil nil nil `(,p1 ,c1 ,r1)))
-  (it "drawer followed by clock (store both)"
-    (expect-supercontents config (list drwr c1 r1) `(,i3) `(,c1) nil 0 `(,r1)))
-  (it "clock followed by drawer (store both)"
-    (expect-supercontents config (list c1 drwr r1) `(,i3) `(,c1) nil 0 `(,r1)))
-  (it "clock followed by item and drawer (store all)"
-    (expect-supercontents config-notes (list c1 p1 drwr r1) `(,i3) `(,c1 ,i1) nil 0 `(,r1)))
-  (it "clock followed by item and drawer (don't store note)"
-    (expect-supercontents config (list c1 p1 drwr r1) nil `(,c1) nil 0 `(,p1 ,drwr ,r1))))
+  (describe "without clock notes"
+    (org-ml--test-supercontents-specs config
+      "nothing" nil nil nil nil nil nil
+      "no logbook" (list r1) nil nil nil nil `(,r1)
+      "clock note (no notes)" (list c1 p1 r1) nil `(,c1) nil 0 `(,p1 ,r1)
+      "clock note item (no notes)" (list c1 p4 r1) nil `(,c1) nil 0 `(,p4 ,r1)
+      ;; ASSUME the code that stops splitting after finding an invalid item is
+      ;; fully tested with this example and will therefore do the same in the
+      ;; permutations below
+      "item clock (store none)" (list p1 c1 r1) nil nil nil nil `(,p1 ,c1 ,r1)
+      "drawer clock (store both)" (list drwr c1 r1) `(,i3) `(,c1) nil 0 `(,r1)
+      "clock drawer (store both)" (list c1 drwr r1) `(,i3) `(,c1) nil 0 `(,r1)
+      "clock item drawer (don't store note)" (list c1 p1 drwr r1) nil `(,c1) nil 0 `(,p1 ,drwr ,r1)))
+  (describe "with clock notes"
+    (org-ml--test-supercontents-specs config-notes
+      "clock item drawer (store all)" (list c1 p1 drwr r1) `(,i3) `(,c1 ,i1) nil 0 `(,r1)
+      "clock note item" (list c1 p4 r1) nil `(,c1 ,i1) nil 0 `(,p2 ,r1)
+      "clock note" (list c1 p1 r1) nil `(,c1 ,i1) nil 0 `(,r1)
+      "clock item" (list c1 p2 r1) nil `(,c1) nil 0 `(,p2 ,r1))))
 
 (describe "org-ml--supercontents-single-clocks"
   (before-all
@@ -1450,28 +1375,22 @@ be parsed to TYPE."
           drwr1 (org-ml-build-drawer cd-name c1)
           drwr2 (org-ml-build-drawer cd-name c1 p3)
           r1 (org-ml-build-paragraph! "foo")))
-  (it "nothing"
-    (expect-supercontents config nil nil nil nil nil nil))
-  (it "no logbook"
-    (expect-supercontents config (list r1) nil nil nil nil `(,r1)))
-  ;; this only has six valid combinations
-  ;;
-  (it "plain-list, drawer, plain-list"
-    (expect-supercontents config (list p1 drwr1 p2 r1) `(,i1 ,i2) `(,c1) nil 0 `(,r1)))
-  (it "plain-list, drawer"
-    (expect-supercontents config (list p1 drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)))
-  (it "plain-list"
-    (expect-supercontents config (list p1 r1) `(,i1) nil nil 0 `(,r1)))
-  (it "drawer, plain-list"
-    (expect-supercontents config (list drwr1 p1 r1) `(,i1) `(,c1) nil 0 `(,r1)))
-  (it "drawer"
-    (expect-supercontents config (list drwr1 r1) nil `(,c1) nil 0 `(,r1)))
-  (it "drawer with clock notes"
-    (expect-supercontents config-notes (list drwr2 r1) nil `(,c1 ,i3) nil 0 `(,r1)))
-  ;; invalid combinations
-  ;;
-  (it "loose clock anywhere"
-    (expect-supercontents config (list c1 p1 r1) nil nil nil nil `(,c1 ,p1 ,r1))))
+  (describe "without clock notes"
+    (org-ml--test-supercontents-specs config
+      "nothing" nil nil nil nil nil nil
+      "no logbook" (list r1) nil nil nil nil `(,r1)
+      ;; this only has five valid combinations
+      ;;
+      "item, drawer, item" (list p1 drwr1 p2 r1) `(,i1 ,i2) `(,c1) nil 0 `(,r1)
+      "item, drawer" (list p1 drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+      "item" (list p1 r1) `(,i1) nil nil 0 `(,r1)
+      "drawer, item" (list drwr1 p1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+      "drawer" (list drwr1 r1) nil `(,c1) nil 0 `(,r1)
+      ;; invalid
+      "loose clock anywhere" (list c1 p1 r1) nil nil nil nil `(,c1 ,p1 ,r1)))
+  (describe "with clock notes"
+    (org-ml--test-supercontents-specs config-notes
+      "drawer with clock notes" (list drwr2 r1) nil `(,c1 ,i3) nil 0 `(,r1))))
 
 (describe "org-ml--supercontents-dual"
   (before-all
@@ -1485,22 +1404,15 @@ be parsed to TYPE."
           drwr1 (org-ml-build-drawer cd-name c1)
           drwr2 (org-ml-build-drawer id-name p1)
           r1 (org-ml-build-paragraph! "foo")))
-  (it "nothing"
-    (expect-supercontents config nil nil nil nil nil nil))
-  (it "no logbook"
-    (expect-supercontents config (list r1) nil nil nil nil `(,r1)))
-  (it "one drawer"
-    (expect-supercontents config (list drwr1 r1) nil `(,c1) nil 0 `(,r1)))
-  (it "one drawer (other one)"
-    (expect-supercontents config (list drwr2 r1) `(,i1) nil nil 0 `(,r1)))
-  (it "two drawers"
-    (expect-supercontents config (list drwr1 drwr2 r1) `(,i1) `(,c1) nil 0 `(,r1)))
-  (it "two drawers (other order)"
-    (expect-supercontents config (list drwr2 drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)))
-  (it "clock outside (invalid)"
-    (expect-supercontents config (list c1 drwr2 r1) nil nil nil nil `(,c1 ,drwr2 ,r1)))
-  (it "item outside (invalid)"
-    (expect-supercontents config (list p1 drwr1 r1) nil nil nil nil `(,p1 ,drwr1 ,r1))))
+  (org-ml--test-supercontents-specs config
+    "nothing" nil nil nil nil nil nil
+    "no logbook" (list r1) nil nil nil nil `(,r1)
+    "one drawer" (list drwr1 r1) nil `(,c1) nil 0 `(,r1)
+    "one drawer (other one)" (list drwr2 r1) `(,i1) nil nil 0 `(,r1)
+    "two drawers" (list drwr1 drwr2 r1) `(,i1) `(,c1) nil 0 `(,r1)
+    "two drawers (other order)" (list drwr2 drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+    "clock outside (invalid)" (list c1 drwr2 r1) nil nil nil nil `(,c1 ,drwr2 ,r1)
+    "item outside (invalid)" (list p1 drwr1 r1) nil nil nil nil `(,p1 ,drwr1 ,r1)))
 
 (describe "org-ml--supercontents-single-mixed"
   (before-all
@@ -1518,18 +1430,16 @@ be parsed to TYPE."
           drwr1 (org-ml-build-drawer d-name c1 p1)
           drwr2 (org-ml-build-drawer d-name c1 p2 p1)
           r1 (org-ml-build-paragraph! "foo")))
-  (it "nothing"
-    (expect-supercontents config nil nil nil nil nil nil))
-  (it "no logging"
-    (expect-supercontents config (list r1) nil nil nil nil `(,r1)))
-  (it "single drawer"
-    (expect-supercontents config (list drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)))
-  (it "single drawer with notes"
-    (expect-supercontents config-notes (list drwr2 r1) `(,i1) `(,c1 ,i2) nil 0 `(,r1)))
-  (it "clock outside (invalid)"
-    (expect-supercontents config (list c1 drwr1 r1) nil nil nil nil `(,c1 ,drwr1 ,r1)))
-  (it "item outside (invalid)"
-    (expect-supercontents config (list p1 drwr1 r1) nil nil nil nil `(,p1 ,drwr1 ,r1))))
+  (describe "without clock notes"
+    (org-ml--test-supercontents-specs config
+      "nothing" nil nil nil nil nil nil
+      "no logging" (list r1) nil nil nil nil `(,r1)
+      "single drawer" (list drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+      "clock outside (invalid)" (list c1 drwr1 r1) nil nil nil nil `(,c1 ,drwr1 ,r1)
+      "item outside (invalid)" (list p1 drwr1 r1) nil nil nil nil `(,p1 ,drwr1 ,r1)))
+  (describe "with clock notes"
+    (org-ml--test-supercontents-specs config-notes
+      "single drawer with notes" (list drwr2 r1) `(,i1) `(,c1 ,i2) nil 0 `(,r1))))
 
 (describe "org-ml--supercontents-single-clocks-or-mixed"
   ;; ASSUME clock notes are tested using the mixed and single-clocks tests
@@ -1546,28 +1456,20 @@ be parsed to TYPE."
           c2 (org-ml-build-clock ts1)
           drwr (org-ml-build-drawer "LOGBOOK" c1)
           r1 (org-ml-build-paragraph! "foo")))
-  (it "nothing"
-    (expect-supercontents config nil nil nil nil nil nil))
-  (it "no logbook"
-    (expect-supercontents config (list r1) nil nil nil nil `(,r1)))
-  ;; same tests as single-clocks when over clock limit
-  ;;
-  (it "plain-list, drawer, plain-list"
-    (expect-supercontents config (list p1 drwr p2 r1) `(,i1 ,i2) `(,c1) nil 0 `(,r1)))
-  (it "plain-list, drawer"
-    (expect-supercontents config (list p1 drwr r1) `(,i1) `(,c1) nil 0 `(,r1)))
-  (it "plain-list"
-    (expect-supercontents config (list p1 r1) `(,i1) nil nil 0 `(,r1)))
-  (it "drawer, plain-list"
-    (expect-supercontents config (list drwr p1 r1) `(,i1) `(,c1) nil 0 `(,r1)))
-  (it "drawer"
-    (expect-supercontents config (list drwr r1) nil `(,c1) nil 0 `(,r1)))
-  ;; same as mixed
-  ;;
-  (it "loose clock under clock limit"
-    (expect-supercontents config (list c1 p1 r1) `(,i1) `(,c1) nil 0 `(,r1)))
-  (it "too many clocks"
-    (expect-supercontents config (list c1 c2 p1 r1) nil `(,c1) nil 0 `(,c2 ,p1 ,r1))))
+  (org-ml--test-supercontents-specs config
+    "nothing" nil nil nil nil nil nil
+    "no logbook" (list r1) nil nil nil nil `(,r1)
+    ;; same tests as single-clocks when over clock limit
+    ;;
+    "plain-list, drawer, plain-list" (list p1 drwr p2 r1) `(,i1 ,i2) `(,c1) nil 0 `(,r1)
+    "plain-list, drawer" (list p1 drwr r1) `(,i1) `(,c1) nil 0 `(,r1)
+    "plain-list" (list p1 r1) `(,i1) nil nil 0 `(,r1)
+    "drawer, plain-list" (list drwr p1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+    "drawer" (list drwr r1) nil `(,c1) nil 0 `(,r1)
+    ;; same as mixed
+    ;;
+    "loose clock under clock limit" (list c1 p1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+    "too many clocks" (list c1 c2 p1 r1) nil `(,c1) nil 0 `(,c2 ,p1 ,r1)))
 
 (describe "org-ml--supercontents-single-items-or-dual"
   (before-all
@@ -1587,37 +1489,25 @@ be parsed to TYPE."
           c2 (org-ml-build-clock ts2)
           drwr2 (org-ml-build-drawer "LOGBOOK" c1)
           r1 (org-ml-build-paragraph! "foo")))
-  (it "nothing"
-    (expect-supercontents config nil nil nil nil nil nil))
-  (it "no logbook"
-    (expect-supercontents config (list r1) nil nil nil nil `(,r1)))
-  ;; same as single-items
-  ;;
-  (it "clock followed by one item (don't store note)"
-    (expect-supercontents config (list c1 p1 r1) nil `(,c1) nil 0 `(,p1 ,r1)))
-  (it "clock followed by two items (store only clock)"
-    (expect-supercontents config (list c1 p2 r1) nil `(,c1) nil 0 `(,p2 ,r1)))
-  ;; item followed by clock (store none)
-  ;; ASSUME the code that stops splitting
-  ;; after finding an invalid item is fully tested with this example and will
-  (it "therefore do the same in the permutations below"
-    (expect-supercontents config (list p1 c1 r1) nil nil nil nil `(,p1 ,c1 ,r1)))
-  (it "drawer followed by clock (store both)"
-    (expect-supercontents config (list drwr1 c1 r1) `(,i3) `(,c1) nil 0 `(,r1)))
-  (it "clock followed by drawer (store both)"
-    (expect-supercontents config (list c1 drwr1 r1) `(,i3) `(,c1) nil 0 `(,r1)))
-  (it "drawer followed by clock and item (store only clock)"
-    (expect-supercontents config (list drwr1 c1 p1 r1) `(,i3) `(,c1) nil 0 `(,p1 ,r1)))
-  (it "clock followed by item and drawer (don't store note)"
-    (expect-supercontents config (list c1 p1 drwr1 r1) nil `(,c1) nil 0 `(,p1 ,drwr1 ,r1)))
-  (it "too many clocks"
-    (expect-supercontents config (list c1 c2 p1 drwr1 r1) nil `(,c1) nil 0 `(,c2 ,p1 ,drwr1 ,r1)))
-  (it "dual drawer (clock only)"
-    (expect-supercontents config (list drwr2 r1) nil `(,c1) nil 0 `(,r1)))
-  (it "dual drawer (item only)"
-    (expect-supercontents config (list drwr1 r1) `(,i3) nil nil 0 `(,r1)))
-  (it "dual drawer (both)"
-    (expect-supercontents config (list drwr1 drwr2 r1) `(,i3) `(,c1) nil 0 `(,r1))))
+  (org-ml--test-supercontents-specs config
+    "nothing" nil nil nil nil nil nil
+    "no logbook" (list r1) nil nil nil nil `(,r1)
+    ;; same as single-items
+    ;;
+    "clock item (don't store note)" (list c1 p1 r1) nil `(,c1) nil 0 `(,p1 ,r1)
+    "clock items (store only clock)" (list c1 p2 r1) nil `(,c1) nil 0 `(,p2 ,r1)
+    ;; ASSUME the code that stops splitting
+    ;; after finding an invalid item is fully tested with this example and will
+    ;; therefore do the same in the permutations below
+    "item clock (store none)" (list p1 c1 r1) nil nil nil nil `(,p1 ,c1 ,r1)
+    "drawer clock (store both)" (list drwr1 c1 r1) `(,i3) `(,c1) nil 0 `(,r1)
+    "clock drawer (store both)" (list c1 drwr1 r1) `(,i3) `(,c1) nil 0 `(,r1)
+    "drawer clock item (store only clock)" (list drwr1 c1 p1 r1) `(,i3) `(,c1) nil 0 `(,p1 ,r1)
+    "clock item drawer (don't store note)" (list c1 p1 drwr1 r1) nil `(,c1) nil 0 `(,p1 ,drwr1 ,r1)
+    "too many clocks" (list c1 c2 p1 drwr1 r1) nil `(,c1) nil 0 `(,c2 ,p1 ,drwr1 ,r1)
+    "dual drawer (clock only)" (list drwr2 r1) nil `(,c1) nil 0 `(,r1)
+    "dual drawer (item only)" (list drwr1 r1) `(,i3) nil nil 0 `(,r1)
+    "dual drawer (both)" (list drwr1 drwr2 r1) `(,i3) `(,c1) nil 0 `(,r1)))
 
 (describe "org-ml--supercontents-single-mixed-or-single-items"
   (before-all
@@ -1632,20 +1522,14 @@ be parsed to TYPE."
           drwr1 (org-ml-build-drawer "LOGBOOK" c1 p1)
           drwr2 (org-ml-build-drawer "LOGBOOK" p1)
           r1 (org-ml-build-paragraph! "foo")))
-  (it "nothing"
-    (expect-supercontents config nil nil nil nil nil nil))
-  (it "no logging"
-    (expect-supercontents config (list r1) nil nil nil nil `(,r1)))
-  (it "single drawer"
-    (expect-supercontents config (list drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)))
-  (it "clock outside and inside"
-    (expect-supercontents config (list c1 drwr1 r1) `(,i1) `(,c1) `(,c1) 0 `(,r1)))
-  (it "clocks outside and not inside"
-    (expect-supercontents config (list c1 drwr2 r1) `(,i1) `(,c1) nil 0 `(,r1)))
-  (it "too many clocks outside"
-    (expect-supercontents config (list c1 c2 drwr2 r1) nil `(,c1) nil 0 `(,c2 ,drwr2 ,r1)))
-  (it "item outside (invalid)"
-    (expect-supercontents config (list p1 drwr1 r1) nil nil nil nil `(,p1 ,drwr1 ,r1))))
+  (org-ml--test-supercontents-specs config
+    "nothing" nil nil nil nil nil nil
+    "no logging" (list r1) nil nil nil nil `(,r1)
+    "single drawer" (list drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+    "clock outside and inside" (list c1 drwr1 r1) `(,i1) `(,c1) `(,c1) 0 `(,r1)
+    "clocks outside and not inside" (list c1 drwr2 r1) `(,i1) `(,c1) nil 0 `(,r1)
+    "too many clocks outside" (list c1 c2 drwr2 r1) nil `(,c1) nil 0 `(,c2 ,drwr2 ,r1)
+    "item outside (invalid)" (list p1 drwr1 r1) nil nil nil nil `(,p1 ,drwr1 ,r1)))
 
 ;; logbook blank line testing
 ;;
@@ -1677,31 +1561,24 @@ be parsed to TYPE."
           c2 (org-ml-build-clock ts1 :post-blank 1)
           drwr (org-ml-build-drawer "LOGBOOK" :post-blank 1 p2)
           r1 (org-ml-build-paragraph! "foo")))
-  (describe "without clock notes"
-    (it "if plain-list has two items with a space between, add only first item"
-      (expect-supercontents config-notes (list p1 c1 r1) `(,i1) nil nil 1 `(,p3 ,c1 ,r1)))
-    (it "ditto but after a clock"
-      (expect-supercontents config-notes (list c1 p1 r1) `(,i1) `(,c1) nil 1 `(,p3 ,r1)))
-    (it "ditto but with a clock note after the clock instead"
-      (expect-supercontents config-notes (list c1 p6 r1) nil `(,c1 ,i3) nil 1 `(,p66 ,r1)))
-    (it "if clock has blank, stop after clock"
-      (expect-supercontents config-notes (list c2 p1 r1) nil `(,c2) nil 1 `(,p1 ,r1)))
-    (it "if plain-list has two items with blanks after each of them, add only first"
-      (expect-supercontents config-notes (list p4 r1) `(,i1) nil nil 1 `(,p7 ,r1))))
   (describe "with clock notes"
-    (it "if plain-list has two items with a space between, add only first item"
-      (expect-supercontents config (list p1 c1 r1) `(,i1) nil nil 1 `(,p3 ,c1 ,r1)))
-    (it "ditto but after a clock"
-      (expect-supercontents config (list c1 p1 r1) `(,i1) `(,c1) nil 1 `(,p3 ,r1)))
-    (it "ditto but with a clock note after the clock instead"
-      (expect-supercontents config (list c1 p6 r1) nil `(,c1) nil 0 `(,p6 ,r1)))
-    (it "if clock has blank, stop after clock"
-      (expect-supercontents config (list c2 p1 r1) nil `(,c2) nil 1 `(,p1 ,r1)))
-    (it "if plain-list has two items with blanks after each of them, add only first"
-      (expect-supercontents config (list p4 r1) `(,i1) nil nil 1 `(,p7 ,r1)))
-    (it "space after drawer"
-      ;; TODO this has side effects :(
-      (expect-supercontents config-drawer (list drwr r1) `(,i1) nil nil 1 `(,r1)))))
+    (org-ml--test-supercontents-specs config-notes
+      "item space item" (list p1 c1 r1) `(,i1) nil nil 1 `(,p3 ,c1 ,r1)
+      "clock item space item" (list c1 p1 r1) `(,i1) `(,c1) nil 1 `(,p3 ,r1)
+      "clock note space item" (list c1 p6 r1) nil `(,c1 ,i3) nil 1 `(,p66 ,r1)
+      "clock space item" (list c2 p1 r1) nil `(,c2) nil 1 `(,p1 ,r1)
+      "item space item space" (list p4 r1) `(,i1) nil nil 1 `(,p7 ,r1)))
+  (describe "without clock notes"
+    (org-ml--test-supercontents-specs config
+      "item space item" (list p1 c1 r1) `(,i1) nil nil 1 `(,p3 ,c1 ,r1)
+      "clock item space item" (list c1 p1 r1) `(,i1) `(,c1) nil 1 `(,p3 ,r1)
+      "clock note space item" (list c1 p6 r1) nil `(,c1) nil 0 `(,p6 ,r1)
+      "clock space item" (list c2 p1 r1) nil `(,c2) nil 1 `(,p1 ,r1)
+      "item space item space" (list p4 r1) `(,i1) nil nil 1 `(,p7 ,r1)))
+  (describe "with drawer"
+    ;; TODO this has side effects :(
+    (org-ml--test-supercontents-specs config-drawer
+      "single drawer" (list drwr r1) `(,i1) nil nil 1 `(,r1))))
 
 ;;; MATCH FRAMEWORK TESTING
 
