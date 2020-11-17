@@ -1,4 +1,4 @@
-;;; org-ml-dev-examples.el --- Examples/tests for om.el's API  -*- lexical-binding: t -*-
+;;; org-ml-examples.el --- Examples for org.el's API  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2015 Free Software Foundation, Inc.
 
@@ -20,11 +20,13 @@
 ;;; Code:
 
 (require 's)
+(require 'dash)
+(require 'org-ml)
 
 (def-example-group "String Conversion"
   "Convert nodes to strings."
 
-  ;; these are more thoroughly tested in `org-ml-dev-test.el'
+  ;; these are more thoroughly tested in `org-ml-test-internal.el'
 
   (defexamples org-ml-to-string
     (org-ml-to-string
@@ -6126,5 +6128,5 @@
     (defexamples-content org-ml-unfold
       nil)))
 
-(provide 'org-ml-dev-examples)
-;;; org-ml-dev-examples.el ends here
+(provide 'org-ml-examples)
+;;; org-ml-examples.el ends here

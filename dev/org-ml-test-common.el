@@ -1,6 +1,6 @@
-;;; org-ml-dev-examples-to-tests.el --- Extract om.el's tests from examples.el
+;;; org-ml-test-common.el --- Common Test functions -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2015 Free Software Foundation, Inc.
+;; Copyright (C) 2020 Nathan Dwarshuis
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -17,12 +17,26 @@
 
 ;;; Commentary:
 
-;; FIXME: Lots of duplication with examples-to-info.el.
-
 ;;; Code:
 
+(require 's)
 (require 'dash)
 (require 'buttercup)
+
+;; set up standard org environment
+
+(defmacro org-ml--with-org-env (&rest body)
+  "Execute BODY in a standardized Org-mode buffer."
+  `(let ((org-tags-column 20)
+         (org-todo-keywords '((sequence "TODO" "DONE")))
+         (org-archive-tag "ARCHIVE")
+         (org-lowest-priority ?C)
+         (org-highest-priority ?A)
+         (org-list-allow-alphabetical nil)
+         (org-log-into-drawer "LOGBOOK"))
+     (with-temp-buffer
+       (org-mode)
+       ,@body)))
 
 (defun example-to-should (actual sym expected)
   (let ((expected
@@ -79,10 +93,12 @@
         `(it ,(format "%S" cmd) ,@body)))))
 
 (defmacro def-example-subgroup (title _subtitle &rest specs)
-  `(describe ,title ,@specs))
+  (when specs
+    `(describe ,title ,@specs)))
 
 (defmacro def-example-group (title _subtitle &rest specs)
-  `(describe ,title ,@specs))
+  (when specs
+    `(describe ,title ,@specs)))
 
-(provide 'org-ml-dev-examples-to-tests)
-;;; org-ml-dev-examples-to-tests.el ends here
+(provide 'org-ml-test-common)
+;;; org-ml-test-common.el ends here

@@ -1,13 +1,14 @@
-;;; org-ml-dev-test.el --- Tests for org-ml
+;;; org-ml-test-internal.el --- Internal tests for org-ml
 
 ;;; Commentary:
 
 ;;; Code:
 
+(require 's)
 (require 'dash)
-(require 'buttercup)
-(require 'org-ml-dev-examples-to-tests)
-(require 'org-ml-dev-examples)
+(require 'org-ml)
+(require 'org-ml-macs)
+(require 'org-ml-test-common)
 
 ;;; LIST OPERATIONS
 

@@ -1,4 +1,4 @@
-;;; org-ml-dev-examples-to-docs.el --- Extract om.el's doc from examples.el
+;;; org-ml-docs.el --- Extract org-ml's docs -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2015 Free Software Foundation, Inc.
 
@@ -375,5 +375,38 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
 
       (simplify-quotes))))
 
-(provide 'org-ml-dev-examples-to-docs)
-;;; org-ml-dev-examples-to-docs.el ends here
+;; require the examples
+
+(require 'org-ml-examples)
+
+;; tell user how many functions have no examples
+
+(defconst org-ml-dev-defined-names nil
+  "Alist of all functions/macros defined in `org-ml.el'.
+The two cells in the alist are 'private' and 'public'.")
+
+(mapatoms
+ (lambda (x)
+   (when (and (fboundp x) (s-starts-with-p "org-ml-" (symbol-name x)))
+     (push x org-ml-dev-defined-names))))
+
+(setq org-ml-dev-defined-names
+      (--group-by
+       (if (s-starts-with-p "org-ml--" (symbol-name it)) 'private 'public)
+       org-ml-dev-defined-names))
+
+(let ((public-syms (alist-get 'public org-ml-dev-defined-names))
+      (example-syms (->> (-remove #'stringp org-ml-dev-examples-list)
+                         (-map #'car))))
+  (-some->> (-difference public-syms example-syms)
+            (-map #'symbol-name)
+            (--remove (s-ends-with? "*" it))
+            (--remove (s-starts-with? "org-ml-update-this-" it))
+            (--remove (s-starts-with? "org-ml-parse-this-" it))
+            (--map (format "  %s" it))
+            (s-join "\n")
+            (format "The following functions don't have examples:\n%s")
+            (print)))
+
+(provide 'org-ml-docs)
+;;; org-ml-docs.el ends here

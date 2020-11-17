@@ -8,18 +8,22 @@ test:
 	${MAKE} compile
 
 docs:
-	${CASK} exec ${EMACS} -Q -batch \
-       -l dev/org-ml-dev.el \
-       -l dev/org-ml-dev-doc.el \
-       -f create-docs-file
+	${CASK} exec ${EMACS} -Q -L . -L dev -batch \
+		-l dev/org-ml-docs.el \
+		-f create-docs-file
 
-unit:
-	# ${CASK} exec ${EMACS} -Q -batch \
-    #    -l dev/org-ml-dev.el \
-    #    -l dev/org-ml-dev-test.el \
-    #    -f ert-run-tests-batch-and-exit
-	${CASK} exec buttercup -L . \
-        -l dev/org-ml-dev.el
+internal:
+	${CASK} exec buttercup -L . -L dev \
+		-l dev/org-ml-test-internal.el
+
+external:
+	${CASK} exec buttercup -L . -L dev \
+		-l dev/org-ml-test-external.el
+
+unit: 
+	${CASK} exec buttercup -L . -L dev \
+		-l dev/org-ml-test-external.el \
+		-l dev/org-ml-test-internal.el
 
 compile:
 	${CASK} build
