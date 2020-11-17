@@ -362,16 +362,14 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
 
 (defun create-docs-file ()
   (let ((org-ml-dev-examples-list (nreverse org-ml-dev-examples-list)))
-    (with-temp-file "./README.md"
-      (insert-file-contents-literally "./readme-template.md")
+    (with-temp-file "./doc/api-reference.md"
+      (insert "# API Reference")
 
-      (goto-and-remove "[[ function-list ]]")
       (insert (mapconcat 'function-summary org-ml-dev-examples-list "\n"))
 
-      (goto-and-remove "[[ function-docs ]]")
       (insert (mapconcat 'function-to-md org-ml-dev-examples-list "\n"))
 
-      (goto-and-replace-all "[[ version ]]" (org-ml-get-package-version))
+      (insert (org-ml-get-package-version))
 
       (simplify-quotes))))
 
