@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.2
+
+- fixed active timestamp bug for closed planning nodes
+
 ## 5.0.1
 
 - rearrange reference files

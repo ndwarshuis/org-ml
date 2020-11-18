@@ -836,7 +836,7 @@ be parsed to TYPE."
 
       (it "org-ml--planning"
         (should-have-equal-properties
-         (org-ml-build-planning :closed (org-ml-build-timestamp! '(2019 1 1) :active t))
+         (org-ml-build-planning :closed (org-ml-build-timestamp! '(2019 1 1) :active nil))
          (->> (org-ml--from-string "* dummy\nCLOSED: <2019-01-01 Tue>")
               (org-ml--get-descendent '(0 0)))))
 

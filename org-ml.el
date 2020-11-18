@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.0.1
+;; Version: 5.0.2
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -642,10 +642,15 @@ property value."
          (memq it '(inactive inactive-range)) x)
        (org-ml--property-is-nil :repeater-type x)))
 
-(defun org-ml--is-valid-planning-timestamp (x)
+(defun org-ml--is-valid-planning-unclosed-timestamp (x)
   "Return t if X is an allowed value for a planning node timestamp property."
   (or (null x) (and (org-ml-is-type 'timestamp x)
                     (org-ml--property-is-eq :type 'active x))))
+
+(defun org-ml--is-valid-planning-closed-timestamp (x)
+  "Return t if X is an allowed value for a planning node timestamp property."
+  (or (null x) (and (org-ml-is-type 'timestamp x)
+                    (org-ml--property-is-eq :type 'inactive x))))
 
 (defun org-ml--is-valid-entity-name (x)
   "Return t if X is an allowed value for an entity node name property."
@@ -957,8 +962,10 @@ bounds."
                          :pred #'org-ml--is-string-list
                          :string-list t
                          :type-desc "a list of oneline strings"))
-        (planning (list :pred #'org-ml--is-valid-planning-timestamp
-                        :type-desc "a zero-range, active timestamp node"))
+        (planning-unclosed (list :pred #'org-ml--is-valid-planning-unclosed-timestamp
+                                 :type-desc "a zero-range, active timestamp node"))
+        (planning-closed (list :pred #'org-ml--is-valid-planning-closed-timestamp
+                               :type-desc "a zero-range, inactive timestamp node"))
         (ts-unit (list :pred #'org-ml--is-valid-timestamp-unit
                        :type-desc '("nil or a symbol from `year' `month'"
                                     "`week' `day', or `hour'")))
@@ -1102,9 +1109,9 @@ bounds."
        (plain-list (:structure)
                    (:type))
        (plain-text)
-       (planning (:closed ,@planning)
-                 (:deadline ,@planning)
-                 (:scheduled ,@planning))
+       (planning (:closed ,@planning-closed)
+                 (:deadline ,@planning-unclosed)
+                 (:scheduled ,@planning-unclosed))
        (property-drawer)
        (quote-block)
        ;; TODO this should not have multiline strings in it
@@ -1736,7 +1743,7 @@ be greater than zero, and DONE must be less than or equal to TOTAL."
 
 ;; planning
 
-(defun org-ml--planning-list-to-timestamp (planning-list)
+(defun org-ml--planning-list-to-timestamp (active planning-list)
   "Return timestamp node from PLANNING-LIST.
 See `org-ml-build-planning!' for syntax of PLANNING-LIST."
   (when planning-list
@@ -1744,7 +1751,7 @@ See `org-ml-build-planning!' for syntax of PLANNING-LIST."
                (lambda (it) (memq it '(&warning &repeater)))
                planning-list)))
       (org-ml-build-timestamp! (car p)
-                           :active t
+                           :active active
                            :warning (alist-get '&warning p)
                            :repeater (alist-get '&repeater p)))))
 
@@ -1969,9 +1976,9 @@ VALUE, and UNIT fields correspond to the lists supplied to WARNING and
 REPEATER arguments. The order of warning and repeater does not
 matter."
   (org-ml-build-planning
-   :closed (org-ml--planning-list-to-timestamp closed)
-   :deadline (org-ml--planning-list-to-timestamp deadline)
-   :scheduled (org-ml--planning-list-to-timestamp scheduled)
+   :closed (org-ml--planning-list-to-timestamp nil closed)
+   :deadline (org-ml--planning-list-to-timestamp t deadline)
+   :scheduled (org-ml--planning-list-to-timestamp t scheduled)
    :post-blank post-blank))
 
 ;; TODO check keyvals somehow
@@ -2933,7 +2940,8 @@ PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
 is the same as that described in `org-ml-build-planning!'."
   (unless (memq prop '(:closed :deadline :scheduled))
     (org-ml--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
-  (let ((ts (org-ml--planning-list-to-timestamp planning-list)))
+  (let*((active (if (eq prop :closed) nil t))
+        (ts (org-ml--planning-list-to-timestamp active planning-list)))
     (org-ml-set-property prop ts planning)))
 
 ;; affiliated keywords
