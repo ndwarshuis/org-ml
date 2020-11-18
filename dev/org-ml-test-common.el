@@ -1,6 +1,6 @@
-;;; org-ml-dev-examples-to-tests.el --- Extract om.el's tests from examples.el
+;;; org-ml-test-common.el --- Common Test functions -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2015 Free Software Foundation, Inc.
+;; Copyright (C) 2020 Nathan Dwarshuis
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -17,12 +17,26 @@
 
 ;;; Commentary:
 
-;; FIXME: Lots of duplication with examples-to-info.el.
-
 ;;; Code:
 
-(require 'ert)
+(require 's)
 (require 'dash)
+(require 'buttercup)
+
+;; set up standard org environment
+
+(defmacro org-ml--with-org-env (&rest body)
+  "Execute BODY in a standardized Org-mode buffer."
+  `(let ((org-tags-column 20)
+         (org-todo-keywords '((sequence "TODO" "DONE")))
+         (org-archive-tag "ARCHIVE")
+         (org-lowest-priority ?C)
+         (org-highest-priority ?A)
+         (org-list-allow-alphabetical nil)
+         (org-log-into-drawer "LOGBOOK"))
+     (with-temp-buffer
+       (org-mode)
+       ,@body)))
 
 (defun example-to-should (actual sym expected)
   (let ((expected
@@ -30,10 +44,11 @@
              (s-join "\n" (cdr expected))
            expected)))
     (cond ((eq sym '=>)
-           `(should (equal ,actual ,expected)))
+           `(expect ,actual :to-equal ,expected))
           ;; this will only work with defexamples-content
           ((eq sym '$>)
-           `(should (equal (progn ,actual (s-trim (buffer-string))) ,expected)))
+           `(expect (progn ,actual (s-trim (buffer-string))) :to-equal ,expected))
+          ;; TODO I never use this?
           ((eq sym '~>)
            `(should (approx-equal ,actual ,expected)))
           ((eq sym '!!>)
@@ -47,7 +62,8 @@
                     (remove :end-hidden)
                     (-partition 3)
                     (--map (apply #'example-to-should it)))))
-    `(ert-deftest ,cmd () (org-ml--with-org-env ,@tests))))
+    (when tests
+      `(it ,(format "%S" cmd) (org-ml--with-org-env ,@tests)))))
 
 (defmacro defexamples-content (cmd _docstring &rest args)
   (cl-flet*
@@ -73,11 +89,16 @@
                 (-partition-before-pred
                  (lambda (it) (eq (and (listp it) (car it)) :buffer)))
                 (-mapcat #'make-tests))))
-      `(ert-deftest ,cmd () ,@body))))
+      (when body
+        `(it ,(format "%S" cmd) ,@body)))))
 
-(defun def-example-subgroup (&rest _)) ; ignore
+(defmacro def-example-subgroup (title _subtitle &rest specs)
+  (when specs
+    `(describe ,title ,@specs)))
 
-(defun def-example-group (&rest _)) ; ignore
+(defmacro def-example-group (title _subtitle &rest specs)
+  (when specs
+    `(describe ,title ,@specs)))
 
-(provide 'org-ml-dev-examples-to-tests)
-;;; org-ml-dev-examples-to-tests.el ends here
+(provide 'org-ml-test-common)
+;;; org-ml-test-common.el ends here
