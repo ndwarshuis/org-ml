@@ -5709,7 +5709,8 @@ elements vs item elements."
       (if (not (memq node-type org-ml-branch-nodes)) node
         ;; need to parse again if branch-node since
         ;; `org-element-at-point' does not parse children
-        (-let* (((&plist :begin :end) (org-ml--get-all-properties node))
+        (-let* (((&plist :begin :end :contents-end :post-blank)
+                 (org-ml--get-all-properties node))
                 (tree (car (org-element--parse-elements
                             begin end 'first-section nil nil nil nil)))
                 (nesting (cl-case node-type
@@ -5722,6 +5723,13 @@ elements vs item elements."
                            (plain-list (if (eq type 'item) '(0 0) '(0)))
                            (t '(0)))))
           (--> (org-ml--get-descendent nesting tree)
+               ;; TODO this will work here but I think this pattern is needed
+               ;; elsewhere (pretty much any time I get something using this
+               ;; `get-descendent' function
+               (org-ml--set-properties-nocheck (list :end end
+                                                     :contents-end contents-end
+                                                     :post-blank post-blank)
+                                               it)
                (if type (org-ml--filter-type type it) it)))))))
 
 (defun org-ml-parse-element-at (point)

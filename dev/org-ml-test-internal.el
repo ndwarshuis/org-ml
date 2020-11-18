@@ -267,14 +267,21 @@ is the converse."
 ;; - `org-ml-get-type'
 
 (defun org-ml--test-contents-parse-inversion (type parse-fun contents-list
-                                               &optional prefix suffix)
+                                                   &optional prefix suffix)
   "Return form to test the parse/print inversion of CONTENTS-LIST.
 Use PARSE-FUN to get the node tree from the contents. All should
 be parsed to TYPE."
   (declare (indent 2))
-  (let ((contents-list (--map (if (consp it) (s-join "\n" it) it)
-                              contents-list)))
-    (--each contents-list
+  (let* ((contents-list (--map (if (consp it) (s-join "\n" it) it)
+                               contents-list))
+         (suffix-char (if (memq type org-ml-elements) "\n" " "))
+         ;; TODO this little conditional implies that these nodes are invalid
+         ;; if they have a space after them; not sure if this is actually true
+         ;; (but if they have spaces after they don't pass this test)
+         (contents-list-space (unless (memq type '(node-property plain-text line-break table-cell))
+                                (--map (s-append suffix-char it) contents-list)))
+         (test-list (append contents-list contents-list-space)))
+    (--each test-list
       (let* ((at (if prefix (1+ (length prefix)) 1))
              (parsed (org-ml--with-org-env
                       (when prefix (insert prefix))
