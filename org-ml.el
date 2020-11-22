@@ -5977,14 +5977,20 @@ I."
     (->> (--zip-with (list it other) path (cdr path))
          (--map (-let ((((xa ya) (xb yb)) it))
                   (cond
-                   ((= xa xb) `(insert ,xa ,(elt str-b ya)))
+                   ((= xa xb) `(insert ,xa ,ya))
                    ((= ya yb) `(delete ,xa))
                    (t '(noop)))))
          (-partition-by #'car)
+         ;; TODO the only things that matter here are the first and last
+         ;; elements in subsequent edit blocks, which means most of the elements
+         ;; of the edit graph (L+D in length) are wasted
          (--map (cl-case (car (car it))
                   (insert
-                   (let ((i (nth 1 (car it))))
-                     `(insert ,i ,(apply #'string (--map (nth 2 it) it)))))
+                   (let* ((i (nth 1 (car it)))
+                          (m (nth 2 (car it)))
+                          (n (nth 2 (-last-item it)))
+                          (s (substring str-b m (1+ n))))
+                     `(insert ,i ,s)))
                   (delete
                    (let* ((i (nth 1 (car it)))
                           (j (nth 1 (-last-item it))))
