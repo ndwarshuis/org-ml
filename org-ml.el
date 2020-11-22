@@ -5910,19 +5910,20 @@ NODE may be a node or a list of nodes. Return NODE."
   "Return the edit path as given by the Myers diff algorithm.
 See `org-ml--diff-find-ses' for the meaning of D, K, VD, and DMAX."
   (let ((path))
-    (while (<= 0 D)
+    (while (< 0 D)
       (let* ((V (car Vd))
              (x (elt (car Vd) (+ Dmax k)))
              (y (- x k)))
-        (setq path (cons `(,x ,y) path))
         (let* ((vert? (or (= k (- D))
                           (and (/= k D) (< (elt V (+ (1- k) Dmax))
                                            (elt V (+ (1+ k) Dmax))))))
                (x* (if vert? (elt V (+ (1+ k) Dmax)) (1+ (elt V (+ (1- k) Dmax))))))
           (while (< x* x)
             (setq x (1- x)
-                  y (1- y)
-                  path (cons `(,x ,y) path)))
+                  y (1- y)))
+          (setq path (cons (if vert? `(ins ,(1- x) ,(1- y))
+                             `(del ,(1- x) ,(1- y)))
+                           path))
           (setq k (if vert? (1+ k) (1- k))
                 D (1- D)
                 Vd (cdr Vd)))))
@@ -5972,30 +5973,19 @@ STR-A into STR-B. Each member of the list is like (delete I J)
 or (insert I STR) where the former describes a deletion between
 indices I and J and the latter describes an insertion of STR at
 I."
-  (-let* (((D k Vd MAX) (org-ml--diff-find-ses str-a str-b))
-          (path (org-ml--diff-ses-to-path D k Vd MAX)))
-    (->> (--zip-with (list it other) path (cdr path))
-         (--map (-let ((((xa ya) (xb yb)) it))
-                  (cond
-                   ((= xa xb) `(insert ,xa ,ya))
-                   ((= ya yb) `(delete ,xa))
-                   (t '(noop)))))
-         (-partition-by #'car)
-         ;; TODO the only things that matter here are the first and last
-         ;; elements in subsequent edit blocks, which means most of the elements
-         ;; of the edit graph (L+D in length) are wasted
+  (-let* (((D k Vd MAX) (org-ml--diff-find-ses str-a str-b)))
+    (->> (org-ml--diff-ses-to-path D k Vd MAX)
+         (--partition-by (-let (((op x y) it)) (if (eq op 'del) y x)))
          (--map (cl-case (car (car it))
-                  (insert
-                   (let* ((i (nth 1 (car it)))
-                          (m (nth 2 (car it)))
-                          (n (nth 2 (-last-item it)))
-                          (s (substring str-b m (1+ n))))
-                     `(insert ,i ,s)))
-                  (delete
+                  (ins
+                   (-let* (((_ i m) (car it))
+                           (n (nth 2 (-last-item it)))
+                           (s (substring str-b m (1+ n))))
+                     `(ins ,i ,s)))
+                  (del
                    (let* ((i (nth 1 (car it)))
                           (j (nth 1 (-last-item it))))
-                     `(delete ,i ,j)))))
-         (-non-nil)
+                     `(del ,i ,j)))))
          (reverse))))
 
 (defun org-ml--diff-region (start end str)
@@ -6009,10 +5999,10 @@ applied to the buffer."
       (while cmds
         (-let (((first . rest) cmds))
           (pcase first
-            (`(insert ,i ,s)
-             (goto-char (+ start i))
+            (`(ins ,i ,s)
+             (goto-char (+ 1 start i))
              (insert s))
-            (`(delete ,i ,j)
+            (`(del ,i ,j)
              (delete-region (+ start i) (+ 1 start j))))
           (setq cmds rest))))))
 
