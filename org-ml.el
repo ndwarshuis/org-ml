@@ -5999,7 +5999,6 @@ be made to look like STR. Only differences as given by the Myers
 diff algorithm (eg insertions and deletions) will actually be
 applied to the buffer."
   (let ((cmds (org-ml--diff-strings (buffer-substring-no-properties start end) str)))
-    (print cmds)
     (save-excursion
       (while cmds
         (-let (((first . rest) cmds))
