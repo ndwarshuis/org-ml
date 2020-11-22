@@ -5921,10 +5921,8 @@ See `org-ml--diff-find-ses' for the meaning of D, K, VD, and DMAX."
           (while (< x* x)
             (setq x (1- x)
                   y (1- y)))
-          (setq path (cons (if vert? `(ins ,(1- x) ,(1- y))
-                             `(del ,(1- x) ,(1- y)))
-                           path))
-          (setq k (if vert? (1+ k) (1- k))
+          (setq path (cons (list (if vert? 'ins 'del) (1- x) (1- y)) path)
+                k (if vert? (1+ k) (1- k))
                 D (1- D)
                 Vd (cdr Vd)))))
     path))
@@ -5939,7 +5937,6 @@ of D."
   (let* ((M (length str-a))
          (N (length str-b))
          (Dmax (+ M N))
-         ;; TODO this seems too wide but this is verbatim from the paper
          (V (make-vector (1+ (* 2 Dmax)) nil))
          (D 0)
          k x y stop Vd)
@@ -5961,9 +5958,9 @@ of D."
           (when (and (>= x M) (>= y N))
             (setq stop t))
           (setq k (+ 2 k)))
+        (setq Vd (cons (vconcat V) Vd))
         (unless stop
-          (setq D (1+ D)))
-        (setq Vd (cons (vconcat V) Vd)))
+          (setq D (1+ D))))
       (list D (- M N) Vd Dmax))))
 
 (defun org-ml--diff-strings (str-a str-b)
@@ -5975,6 +5972,10 @@ indices I and J and the latter describes an insertion of STR at
 I."
   (-let* (((D k Vd MAX) (org-ml--diff-find-ses str-a str-b)))
     (->> (org-ml--diff-ses-to-path D k Vd MAX)
+         ;; TODO this is better than what I had before but it still throws away
+         ;; points in the edit graph that are not adjacent to a diagonal;
+         ;; perhaps these can be skipped in the previous step and I won't need
+         ;; this partition line
          (--partition-by (-let (((op x y) it)) (if (eq op 'del) y x)))
          (--map (cl-case (car (car it))
                   (ins
