@@ -5895,6 +5895,122 @@ NODE may be a node or a list of nodes. Return NODE."
           (--each (-partition 2 props) (apply #'overlay-put o* it)))))
     (-each os #'apply-overlays)))
 
+;; Myers diff algorithm
+;; Myers, E.W. AnO(ND) difference algorithm and its variations. Algorithmica 1,
+;; 251–266 (1986). https://doi.org/10.1007/BF01840446
+
+;; TODO There is a 99.99999% chance I can do way better than this. If the goal
+;; is to figure out what stringy bits to put into the buffer based on what has
+;; been modified, it makes more sense to make a crazy tree-based diff algorithm
+;; that is specialized for org-element nodes (which almost assuredly does not
+;; exist so I can't just steal a paper like I did with Myers) and only convert
+;; the things that have changes to strings and put those in the buffer. At least
+;; that seems to make sense, I haven't done complexity analysis yet.
+(defun org-ml--diff-ses-to-path (D k Vd Dmax)
+  "Return the edit path as given by the Myers diff algorithm.
+See `org-ml--diff-find-ses' for the meaning of D, K, VD, and DMAX."
+  (let ((path))
+    (while (<= 0 D)
+      (let* ((V (car Vd))
+             (x (elt (car Vd) (+ Dmax k)))
+             (y (- x k)))
+        (setq path (cons `(,x ,y) path))
+        (let* ((vert? (or (= k (- D))
+                          (and (/= k D) (< (elt V (+ (1- k) Dmax))
+                                           (elt V (+ (1+ k) Dmax))))))
+               (x* (if vert? (elt V (+ (1+ k) Dmax)) (1+ (elt V (+ (1- k) Dmax))))))
+          (while (< x* x)
+            (setq x (1- x)
+                  y (1- y)
+                  path (cons `(,x ,y) path)))
+          (setq k (if vert? (1+ k) (1- k))
+                D (1- D)
+                Vd (cdr Vd)))))
+    path))
+
+(defun org-ml--diff-find-ses (str-a str-b)
+  "Given STR-A and STR-B, find the shortest edit sequence (SES).
+Return a list like (D k Vd Dmax) where D is the length of the
+shortest edit sequence, k is the final diagonal on which the diff
+ends, Vd is a list of vectors describing the furthest, reaching
+paths at every D (which the highest D first), and Dmax is the max
+of D."
+  (let* ((M (length str-a))
+         (N (length str-b))
+         (Dmax (+ M N))
+         ;; TODO this seems too wide but this is verbatim from the paper
+         (V (make-vector (1+ (* 2 Dmax)) nil))
+         (D 0)
+         k x y stop Vd)
+    (if (= 0 Dmax) `(0 0 ,Vd ,Dmax)
+      (aset V (1+ Dmax) 0)
+      (while (and (not stop) (<= D Dmax))
+        (setq k (- D))
+        (while (and (not stop) (<= k D))
+          (if (or (= k (- D))
+                  (and (/= k D) (< (elt V (+ (1- k) Dmax))
+                                   (elt V (+ (1+ k) Dmax)))))
+              (setq x (elt V (+ (1+ k) Dmax)))
+            (setq x (1+ (elt V (+ (1- k) Dmax)))))
+          (setq y (- x k))
+          (while (and (< x M) (< y N) (= (elt str-a x) (elt str-b y)))
+            (setq x (1+ x)
+                  y (1+ y)))
+          (aset V (+ k Dmax) x)
+          (when (and (>= x M) (>= y N))
+            (setq stop t))
+          (setq k (+ 2 k)))
+        (unless stop
+          (setq D (1+ D)))
+        (setq Vd (cons (vconcat V) Vd)))
+      (list D (- M N) Vd Dmax))))
+
+(defun org-ml--diff-strings (str-a str-b)
+  "Given STR-A and STR-A, apply the Myers diff algorithm.
+Return a list of operations to perform in order to transform
+STR-A into STR-B. Each member of the list is like (delete I J)
+or (insert I STR) where the former describes a deletion between
+indices I and J and the latter describes an insertion of STR at
+I."
+  (-let* (((D k Vd MAX) (org-ml--diff-find-ses str-a str-b))
+          (path (org-ml--diff-ses-to-path D k Vd MAX)))
+    (->> (--zip-with (list it other) path (cdr path))
+         (--map (-let ((((xa ya) (xb yb)) it))
+                  (cond
+                   ((= xa xb) `(insert ,xa ,(elt str-b ya)))
+                   ((= ya yb) `(delete ,xa))
+                   (t '(noop)))))
+         (-partition-by #'car)
+         (--map (cl-case (car (car it))
+                  (insert
+                   (let ((i (nth 1 (car it))))
+                     `(insert ,i ,(apply #'string (--map (nth 2 it) it)))))
+                  (delete
+                   (let* ((i (nth 1 (car it)))
+                          (j (nth 1 (-last-item it))))
+                     `(delete ,i ,j)))))
+         (-non-nil)
+         (reverse))))
+
+(defun org-ml--diff-region (start end str)
+  "Use Myers Diff algorithm to update the current buffer.
+The region to be updated will be between START and END and will
+be made to look like STR. Only differences as given by the Myers
+diff algorithm (eg insertions and deletions) will actually be
+applied to the buffer."
+  (let ((cmds (org-ml--diff-strings (buffer-substring-no-properties start end) str)))
+    (print cmds)
+    (save-excursion
+      (while cmds
+        (-let (((first . rest) cmds))
+          (pcase first
+            (`(insert ,i ,s)
+             (goto-char (+ start i))
+             (insert s))
+            (`(delete ,i ,j)
+             (delete-region (+ start i) (+ 1 start j))))
+          (setq cmds rest))))))
+
 (org-ml--defun* org-ml-update (fun node)
   "Replace NODE in the current buffer with a new one.
 FUN is a unary function that takes NODE and returns a modified node
@@ -5917,8 +6033,7 @@ old node in the current buffer."
     (unless (equal node0 node*)
       ;; hacky way to add overlays to undo tree
       (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
-      (delete-region begin end)
-      (org-ml-insert begin node*)
+      (org-ml--diff-region begin end (org-ml-to-string node*))
       nil)))
 
 ;; generate all update functions for corresponding parse functions

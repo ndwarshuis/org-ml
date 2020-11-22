@@ -1940,5 +1940,56 @@ applied."
 ;;     (match-slicer-should-equal node expected (:any * item))
 ;;     (match-slicer-should-equal node expected! (:any *! item))))
 
+;; DIFF ALGORITHM
+
+(defmacro org-ml--test-lcs-specs (&rest specs)
+  (declare (indent 1))
+  (let ((forms
+         (->> (-partition 4 specs)
+              (--map
+               (-let (((title a b ses) it))
+                 `(it ,title
+                    (expect (car (org-ml--diff-find-ses ,a ,b)) :to-equal ,ses)))))))
+    `(progn ,@forms)))
+
+(describe "diff algorithm"
+  (describe "find SES"
+    (org-ml--test-lcs-specs
+        "empty strings" "" "" 0
+        "one identical char" "a" "a" 0
+        "two identical chars" "aa" "aa" 0
+
+        "zero chars, insert one (1)" "a" "" 1
+        "zero chars, insert one (2)" "" "a" 1
+
+        "one char, insert one (1)" "ba" "a" 1
+        "one char, insert one (2)" "ab" "a" 1
+        "one char, insert one (3)" "a" "ba" 1
+        "one char, insert one (4)" "a" "ab" 1
+        
+        "one char, insert two (1)" "a" "abc" 2
+        "one char, insert two (2)" "a" "acb" 2
+        "one char, insert two (3)" "a" "cab" 2
+        "one char, insert two (4)" "a" "cba" 2
+        "one char, insert two (5)" "a" "bca" 2
+        "one char, insert two (6)" "a" "bac" 2
+
+        "different chars" "a" "b" 2
+
+        "two chars, one different (1)" "aa" "ab" 2
+        "two chars, one different (2)" "aa" "ba" 2
+
+        "three chars, one different (1)" "aaa" "baa" 2
+        "three chars, one different (2)" "aaa" "aba" 2
+        "three chars, one different (3)" "aaa" "aab" 2
+
+        "three chars, two different (1)" "aaa" "abc" 4
+        "three chars, two different (2)" "aaa" "acb" 4
+        "three chars, two different (3)" "aaa" "bac" 4
+        "three chars, two different (4)" "aaa" "cab" 4
+        "three chars, two different (5)" "aaa" "cba" 4
+        "three chars, two different (6)" "aaa" "bca" 4
+        )))
+
 (provide 'org-ml-dev-test)
 ;;; org-ml-dev-test.el ends here
