@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.0.1
+;; Version: 5.0.2
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -642,10 +642,15 @@ property value."
          (memq it '(inactive inactive-range)) x)
        (org-ml--property-is-nil :repeater-type x)))
 
-(defun org-ml--is-valid-planning-timestamp (x)
+(defun org-ml--is-valid-planning-unclosed-timestamp (x)
   "Return t if X is an allowed value for a planning node timestamp property."
   (or (null x) (and (org-ml-is-type 'timestamp x)
                     (org-ml--property-is-eq :type 'active x))))
+
+(defun org-ml--is-valid-planning-closed-timestamp (x)
+  "Return t if X is an allowed value for a planning node timestamp property."
+  (or (null x) (and (org-ml-is-type 'timestamp x)
+                    (org-ml--property-is-eq :type 'inactive x))))
 
 (defun org-ml--is-valid-entity-name (x)
   "Return t if X is an allowed value for an entity node name property."
@@ -957,8 +962,10 @@ bounds."
                          :pred #'org-ml--is-string-list
                          :string-list t
                          :type-desc "a list of oneline strings"))
-        (planning (list :pred #'org-ml--is-valid-planning-timestamp
-                        :type-desc "a zero-range, active timestamp node"))
+        (planning-unclosed (list :pred #'org-ml--is-valid-planning-unclosed-timestamp
+                                 :type-desc "a zero-range, active timestamp node"))
+        (planning-closed (list :pred #'org-ml--is-valid-planning-closed-timestamp
+                               :type-desc "a zero-range, inactive timestamp node"))
         (ts-unit (list :pred #'org-ml--is-valid-timestamp-unit
                        :type-desc '("nil or a symbol from `year' `month'"
                                     "`week' `day', or `hour'")))
@@ -1102,9 +1109,9 @@ bounds."
        (plain-list (:structure)
                    (:type))
        (plain-text)
-       (planning (:closed ,@planning)
-                 (:deadline ,@planning)
-                 (:scheduled ,@planning))
+       (planning (:closed ,@planning-closed)
+                 (:deadline ,@planning-unclosed)
+                 (:scheduled ,@planning-unclosed))
        (property-drawer)
        (quote-block)
        ;; TODO this should not have multiline strings in it
@@ -1736,7 +1743,7 @@ be greater than zero, and DONE must be less than or equal to TOTAL."
 
 ;; planning
 
-(defun org-ml--planning-list-to-timestamp (planning-list)
+(defun org-ml--planning-list-to-timestamp (active planning-list)
   "Return timestamp node from PLANNING-LIST.
 See `org-ml-build-planning!' for syntax of PLANNING-LIST."
   (when planning-list
@@ -1744,7 +1751,7 @@ See `org-ml-build-planning!' for syntax of PLANNING-LIST."
                (lambda (it) (memq it '(&warning &repeater)))
                planning-list)))
       (org-ml-build-timestamp! (car p)
-                           :active t
+                           :active active
                            :warning (alist-get '&warning p)
                            :repeater (alist-get '&repeater p)))))
 
@@ -1969,9 +1976,9 @@ VALUE, and UNIT fields correspond to the lists supplied to WARNING and
 REPEATER arguments. The order of warning and repeater does not
 matter."
   (org-ml-build-planning
-   :closed (org-ml--planning-list-to-timestamp closed)
-   :deadline (org-ml--planning-list-to-timestamp deadline)
-   :scheduled (org-ml--planning-list-to-timestamp scheduled)
+   :closed (org-ml--planning-list-to-timestamp nil closed)
+   :deadline (org-ml--planning-list-to-timestamp t deadline)
+   :scheduled (org-ml--planning-list-to-timestamp t scheduled)
    :post-blank post-blank))
 
 ;; TODO check keyvals somehow
@@ -2933,7 +2940,8 @@ PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
 is the same as that described in `org-ml-build-planning!'."
   (unless (memq prop '(:closed :deadline :scheduled))
     (org-ml--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
-  (let ((ts (org-ml--planning-list-to-timestamp planning-list)))
+  (let*((active (if (eq prop :closed) nil t))
+        (ts (org-ml--planning-list-to-timestamp active planning-list)))
     (org-ml-set-property prop ts planning)))
 
 ;; affiliated keywords
@@ -5701,7 +5709,8 @@ elements vs item elements."
       (if (not (memq node-type org-ml-branch-nodes)) node
         ;; need to parse again if branch-node since
         ;; `org-element-at-point' does not parse children
-        (-let* (((&plist :begin :end) (org-ml--get-all-properties node))
+        (-let* (((&plist :begin :end :contents-end :post-blank)
+                 (org-ml--get-all-properties node))
                 (tree (car (org-element--parse-elements
                             begin end 'first-section nil nil nil nil)))
                 (nesting (cl-case node-type
@@ -5714,6 +5723,13 @@ elements vs item elements."
                            (plain-list (if (eq type 'item) '(0 0) '(0)))
                            (t '(0)))))
           (--> (org-ml--get-descendent nesting tree)
+               ;; TODO this will work here but I think this pattern is needed
+               ;; elsewhere (pretty much any time I get something using this
+               ;; `get-descendent' function
+               (org-ml--set-properties-nocheck (list :end end
+                                                     :contents-end contents-end
+                                                     :post-blank post-blank)
+                                               it)
                (if type (org-ml--filter-type type it) it)))))))
 
 (defun org-ml-parse-element-at (point)
@@ -5879,6 +5895,137 @@ NODE may be a node or a list of nodes. Return NODE."
           (--each (-partition 2 props) (apply #'overlay-put o* it)))))
     (-each os #'apply-overlays)))
 
+;; Myers diff algorithm
+;; Myers, E.W. AnO(ND) difference algorithm and its variations. Algorithmica 1,
+;; 251–266 (1986). https://doi.org/10.1007/BF01840446
+
+;; TODO There is a 99.99999% chance I can do way better than this. If the goal
+;; is to figure out what stringy bits to put into the buffer based on what has
+;; been modified, it makes more sense to make a crazy tree-based diff algorithm
+;; that is specialized for org-element nodes (which almost assuredly does not
+;; exist so I can't just steal a paper like I did with Myers) and only convert
+;; the things that have changes to strings and put those in the buffer. At least
+;; that seems to make sense, I haven't done complexity analysis yet.
+
+;; this is verbatim from the Myers paper and should have O(M+N+D^2) on average
+(defun org-ml--diff-find-ses (str-a str-b)
+  "Given STR-A and STR-B, find the shortest edit sequence (SES).
+Return a list like (D k Vd Dmax) where D is the length of the
+shortest edit sequence, k is the final diagonal on which the diff
+ends, Vd is a list of vectors describing the furthest, reaching
+paths at every D (which the highest D first), and Dmax is the max
+of D."
+  (let* ((M (length str-a))
+         (N (length str-b))
+         (Dmax (+ M N))
+         ;; this seems weird but it is much faster to use "strings" to hold
+         ;; the endpoints rather than vectors (since all we need is an array
+         ;; that holds positive integers, which is just a string)
+         (V (make-string (1+ (* 2 Dmax)) 0))
+         (D 0)
+         k x y stop Vd)
+    (if (= 0 Dmax) `(0 0 ,Vd ,Dmax)
+      (aset V (1+ Dmax) 0)
+      (while (and (not stop) (<= D Dmax))
+        (setq k (- D))
+        (while (and (not stop) (<= k D))
+          (if (or (= k (- D))
+                  (and (/= k D) (< (elt V (+ (1- k) Dmax))
+                                   (elt V (+ (1+ k) Dmax)))))
+              (setq x (elt V (+ (1+ k) Dmax)))
+            (setq x (1+ (elt V (+ (1- k) Dmax)))))
+          (setq y (- x k))
+          (while (and (< x M) (< y N) (= (elt str-a x) (elt str-b y)))
+            (setq x (1+ x)
+                  y (1+ y)))
+          (aset V (+ k Dmax) x)
+          (when (and (>= x M) (>= y N))
+            (setq stop t))
+          (setq k (+ 2 k)))
+        (setq Vd (cons (copy-sequence V) Vd))
+        (unless stop
+          (setq D (1+ D))))
+      (list D (- M N) Vd Dmax))))
+
+(defun org-ml--diff-ses-to-edits (D k Vd Dmax)
+  "Return the edit path as given by the Myers diff algorithm.
+See `org-ml--diff-find-ses' for the meaning of D, K, VD, and DMAX."
+  ;; backtrack overview: this will walk up the edit path backwards to make a
+  ;; condensed edit script (which is just like an edit script as referenced in
+  ;; the Myers paper except that consecutive edits are collapsed into one
+  ;; meta-edit).
+  ;;
+  ;; in order to get the collapsing part right, the basic idea is to define the
+  ;; start of any edit as the most left-bound point in any diagonal (which is
+  ;; stored as 'start-x' and 'start-y') and then traverse up/left until we hit a
+  ;; new diagonal, in which case we use the previous x and y as the end of the
+  ;; edit.
+  (let (path prev-x prev-y start-x start-y start-vert?)
+    (while (<= 0 D)
+      ;; for the given set of endpoints at D, find the current x and y given k
+      (let* ((V (car Vd))
+             (x (elt (car Vd) (+ Dmax k)))
+             (y (- x k)))
+        ;; determine direction of the next endpoint and it's x value
+        (let* ((vert? (or (= k (- D))
+                          (and (/= k D) (< (elt V (+ (1- k) Dmax))
+                                           (elt V (+ (1+ k) Dmax))))))
+               (x* (if vert? (elt V (+ (1+ k) Dmax)) (1+ (elt V (+ (1- k) Dmax))))))
+          ;; if current x = next x we must not be on a diagonal
+          (if (and (= x* x) (< 0 x*) (eq start-vert? vert?))
+              (progn
+                (unless start-x
+                  (setq start-x x
+                        start-y y
+                        start-vert? vert?))
+                (setq prev-x x
+                      prev-y y))
+            ;; if we are on a diagonal, close off the previously held point
+            ;; and add it to the edit path as either an insert of a delete
+            ;; depending on if we are traversing up or left
+            (when start-x
+              (setq path (cons (if start-vert?
+                                   `(ins ,(1- start-x)
+                                         ,(1- prev-y)
+                                         ,(1- start-y))
+                                 `(del ,(1- prev-x)
+                                       ,(1- start-x)))
+                               path)))
+            ;; then walk up the diagonal to get to the next horizontal/vertical
+            ;; sequence
+            (while (< x* x)
+              (setq x (1- x)
+                    y (1- y)))
+            (setq start-x x
+                  start-y y
+                  start-vert? vert?
+                  prev-x x
+                  prev-y y))
+          (setq k (if vert? (1+ k) (1- k))
+                D (1- D)
+                Vd (cdr Vd)))))
+    (nreverse path)))
+
+(defun org-ml--diff-region (start end new-str)
+  "Use Myers Diff algorithm to update the current buffer.
+The region to be updated will be between START and END and will
+be made to look like STR. Only differences as given by the Myers
+diff algorithm (eg insertions and deletions) will actually be
+applied to the buffer."
+  (-let* ((old-str (buffer-substring-no-properties start end))
+          ((D k Vd MAX) (org-ml--diff-find-ses old-str new-str))
+          (cmds (org-ml--diff-ses-to-edits D k Vd MAX)))
+    (save-excursion
+      (while cmds
+        (-let (((first . rest) cmds))
+          (pcase first
+            (`(ins ,i ,m ,n)
+             (goto-char (+ 1 start i))
+             (insert (substring new-str m (1+ n))))
+            (`(del ,i ,j)
+             (delete-region (+ start i) (+ 1 start j))))
+          (setq cmds rest))))))
+
 (org-ml--defun* org-ml-update (fun node)
   "Replace NODE in the current buffer with a new one.
 FUN is a unary function that takes NODE and returns a modified node
@@ -5901,8 +6048,7 @@ old node in the current buffer."
     (unless (equal node0 node*)
       ;; hacky way to add overlays to undo tree
       (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
-      (delete-region begin end)
-      (org-ml-insert begin node*)
+      (org-ml--diff-region begin end (org-ml-to-string node*))
       nil)))
 
 ;; generate all update functions for corresponding parse functions

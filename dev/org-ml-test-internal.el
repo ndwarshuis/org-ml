@@ -267,14 +267,21 @@ is the converse."
 ;; - `org-ml-get-type'
 
 (defun org-ml--test-contents-parse-inversion (type parse-fun contents-list
-                                               &optional prefix suffix)
+                                                   &optional prefix suffix)
   "Return form to test the parse/print inversion of CONTENTS-LIST.
 Use PARSE-FUN to get the node tree from the contents. All should
 be parsed to TYPE."
   (declare (indent 2))
-  (let ((contents-list (--map (if (consp it) (s-join "\n" it) it)
-                              contents-list)))
-    (--each contents-list
+  (let* ((contents-list (--map (if (consp it) (s-join "\n" it) it)
+                               contents-list))
+         (suffix-char (if (memq type org-ml-elements) "\n" " "))
+         ;; TODO this little conditional implies that these nodes are invalid
+         ;; if they have a space after them; not sure if this is actually true
+         ;; (but if they have spaces after they don't pass this test)
+         (contents-list-space (unless (memq type '(node-property plain-text line-break table-cell))
+                                (--map (s-append suffix-char it) contents-list)))
+         (test-list (append contents-list contents-list-space)))
+    (--each test-list
       (let* ((at (if prefix (1+ (length prefix)) 1))
              (parsed (org-ml--with-org-env
                       (when prefix (insert prefix))
@@ -836,7 +843,7 @@ be parsed to TYPE."
 
       (it "org-ml--planning"
         (should-have-equal-properties
-         (org-ml-build-planning :closed (org-ml-build-timestamp! '(2019 1 1) :active t))
+         (org-ml-build-planning :closed (org-ml-build-timestamp! '(2019 1 1) :active nil))
          (->> (org-ml--from-string "* dummy\nCLOSED: <2019-01-01 Tue>")
               (org-ml--get-descendent '(0 0)))))
 
@@ -1932,6 +1939,57 @@ applied."
 ;;                      "- 8\n  - 9")))
 ;;     (match-slicer-should-equal node expected (:any * item))
 ;;     (match-slicer-should-equal node expected! (:any *! item))))
+
+;; DIFF ALGORITHM
+
+(defmacro org-ml--test-lcs-specs (&rest specs)
+  (declare (indent 1))
+  (let ((forms
+         (->> (-partition 4 specs)
+              (--map
+               (-let (((title a b ses) it))
+                 `(it ,title
+                    (expect (car (org-ml--diff-find-ses ,a ,b)) :to-equal ,ses)))))))
+    `(progn ,@forms)))
+
+(describe "diff algorithm"
+  (describe "find SES"
+    (org-ml--test-lcs-specs
+        "empty strings" "" "" 0
+        "one identical char" "a" "a" 0
+        "two identical chars" "aa" "aa" 0
+
+        "zero chars, insert one (1)" "a" "" 1
+        "zero chars, insert one (2)" "" "a" 1
+
+        "one char, insert one (1)" "ba" "a" 1
+        "one char, insert one (2)" "ab" "a" 1
+        "one char, insert one (3)" "a" "ba" 1
+        "one char, insert one (4)" "a" "ab" 1
+        
+        "one char, insert two (1)" "a" "abc" 2
+        "one char, insert two (2)" "a" "acb" 2
+        "one char, insert two (3)" "a" "cab" 2
+        "one char, insert two (4)" "a" "cba" 2
+        "one char, insert two (5)" "a" "bca" 2
+        "one char, insert two (6)" "a" "bac" 2
+
+        "different chars" "a" "b" 2
+
+        "two chars, one different (1)" "aa" "ab" 2
+        "two chars, one different (2)" "aa" "ba" 2
+
+        "three chars, one different (1)" "aaa" "baa" 2
+        "three chars, one different (2)" "aaa" "aba" 2
+        "three chars, one different (3)" "aaa" "aab" 2
+
+        "three chars, two different (1)" "aaa" "abc" 4
+        "three chars, two different (2)" "aaa" "acb" 4
+        "three chars, two different (3)" "aaa" "bac" 4
+        "three chars, two different (4)" "aaa" "cab" 4
+        "three chars, two different (5)" "aaa" "cba" 4
+        "three chars, two different (6)" "aaa" "bca" 4
+        )))
 
 (provide 'org-ml-dev-test)
 ;;; org-ml-dev-test.el ends here

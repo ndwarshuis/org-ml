@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.0.2
+
+- fixed active timestamp bug for closed planning nodes
+- use Myers diff algorithm for update functions
+
 ## 5.0.1
 
 - rearrange reference files
