@@ -5918,7 +5918,10 @@ of D."
   (let* ((M (length str-a))
          (N (length str-b))
          (Dmax (+ M N))
-         (V (make-vector (1+ (* 2 Dmax)) nil))
+         ;; this seems weird but it is much faster to use "strings" to hold
+         ;; the endpoints rather than vectors (since all we need is an array
+         ;; that holds positive integers, which is just a string)
+         (V (make-string (1+ (* 2 Dmax)) 0))
          (D 0)
          k x y stop Vd)
     (if (= 0 Dmax) `(0 0 ,Vd ,Dmax)
@@ -5939,7 +5942,7 @@ of D."
           (when (and (>= x M) (>= y N))
             (setq stop t))
           (setq k (+ 2 k)))
-        (setq Vd (cons (vconcat V) Vd))
+        (setq Vd (cons (copy-sequence V) Vd))
         (unless stop
           (setq D (1+ D))))
       (list D (- M N) Vd Dmax))))
