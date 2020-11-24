@@ -5907,7 +5907,44 @@ NODE may be a node or a list of nodes. Return NODE."
 ;; the things that have changes to strings and put those in the buffer. At least
 ;; that seems to make sense, I haven't done complexity analysis yet.
 
-(defun org-ml--diff-ses-to-path (D k Vd Dmax)
+;; this is verbatim from the Myers paper and should have O(M+N+D^2) on average
+(defun org-ml--diff-find-ses (str-a str-b)
+  "Given STR-A and STR-B, find the shortest edit sequence (SES).
+Return a list like (D k Vd Dmax) where D is the length of the
+shortest edit sequence, k is the final diagonal on which the diff
+ends, Vd is a list of vectors describing the furthest, reaching
+paths at every D (which the highest D first), and Dmax is the max
+of D."
+  (let* ((M (length str-a))
+         (N (length str-b))
+         (Dmax (+ M N))
+         (V (make-vector (1+ (* 2 Dmax)) nil))
+         (D 0)
+         k x y stop Vd)
+    (if (= 0 Dmax) `(0 0 ,Vd ,Dmax)
+      (aset V (1+ Dmax) 0)
+      (while (and (not stop) (<= D Dmax))
+        (setq k (- D))
+        (while (and (not stop) (<= k D))
+          (if (or (= k (- D))
+                  (and (/= k D) (< (elt V (+ (1- k) Dmax))
+                                   (elt V (+ (1+ k) Dmax)))))
+              (setq x (elt V (+ (1+ k) Dmax)))
+            (setq x (1+ (elt V (+ (1- k) Dmax)))))
+          (setq y (- x k))
+          (while (and (< x M) (< y N) (= (elt str-a x) (elt str-b y)))
+            (setq x (1+ x)
+                  y (1+ y)))
+          (aset V (+ k Dmax) x)
+          (when (and (>= x M) (>= y N))
+            (setq stop t))
+          (setq k (+ 2 k)))
+        (setq Vd (cons (vconcat V) Vd))
+        (unless stop
+          (setq D (1+ D))))
+      (list D (- M N) Vd Dmax))))
+
+(defun org-ml--diff-ses-to-edits (D k Vd Dmax)
   "Return the edit path as given by the Myers diff algorithm.
 See `org-ml--diff-find-ses' for the meaning of D, K, VD, and DMAX."
   ;; backtrack overview: this will walk up the edit path backwards to make a
@@ -5966,59 +6003,22 @@ See `org-ml--diff-find-ses' for the meaning of D, K, VD, and DMAX."
                 Vd (cdr Vd)))))
     (nreverse path)))
 
-;; this is verbatim from the Myers paper and should have O(M+N+D^2) on average
-(defun org-ml--diff-find-ses (str-a str-b)
-  "Given STR-A and STR-B, find the shortest edit sequence (SES).
-Return a list like (D k Vd Dmax) where D is the length of the
-shortest edit sequence, k is the final diagonal on which the diff
-ends, Vd is a list of vectors describing the furthest, reaching
-paths at every D (which the highest D first), and Dmax is the max
-of D."
-  (let* ((M (length str-a))
-         (N (length str-b))
-         (Dmax (+ M N))
-         (V (make-vector (1+ (* 2 Dmax)) nil))
-         (D 0)
-         k x y stop Vd)
-    (if (= 0 Dmax) `(0 0 ,Vd ,Dmax)
-      (aset V (1+ Dmax) 0)
-      (while (and (not stop) (<= D Dmax))
-        (setq k (- D))
-        (while (and (not stop) (<= k D))
-          (if (or (= k (- D))
-                  (and (/= k D) (< (elt V (+ (1- k) Dmax))
-                                   (elt V (+ (1+ k) Dmax)))))
-              (setq x (elt V (+ (1+ k) Dmax)))
-            (setq x (1+ (elt V (+ (1- k) Dmax)))))
-          (setq y (- x k))
-          (while (and (< x M) (< y N) (= (elt str-a x) (elt str-b y)))
-            (setq x (1+ x)
-                  y (1+ y)))
-          (aset V (+ k Dmax) x)
-          (when (and (>= x M) (>= y N))
-            (setq stop t))
-          (setq k (+ 2 k)))
-        (setq Vd (cons (vconcat V) Vd))
-        (unless stop
-          (setq D (1+ D))))
-      (list D (- M N) Vd Dmax))))
-
-(defun org-ml--diff-region (start end str)
+(defun org-ml--diff-region (start end new-str)
   "Use Myers Diff algorithm to update the current buffer.
 The region to be updated will be between START and END and will
 be made to look like STR. Only differences as given by the Myers
 diff algorithm (eg insertions and deletions) will actually be
 applied to the buffer."
-  (-let* ((str-buf (buffer-substring-no-properties start end))
-          ((D k Vd MAX) (org-ml--diff-find-ses str-buf str))
-          (cmds (org-ml--diff-ses-to-path D k Vd MAX)))
+  (-let* ((old-str (buffer-substring-no-properties start end))
+          ((D k Vd MAX) (org-ml--diff-find-ses old-str new-str))
+          (cmds (org-ml--diff-ses-to-edits D k Vd MAX)))
     (save-excursion
       (while cmds
         (-let (((first . rest) cmds))
           (pcase first
             (`(ins ,i ,m ,n)
              (goto-char (+ 1 start i))
-             (insert (substring str m (1+ n))))
+             (insert (substring new-str m (1+ n))))
             (`(del ,i ,j)
              (delete-region (+ start i) (+ 1 start j))))
           (setq cmds rest))))))
