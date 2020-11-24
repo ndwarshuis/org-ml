@@ -5921,7 +5921,7 @@ of D."
          ;; this seems weird but it is much faster to use "strings" to hold
          ;; the endpoints rather than vectors (since all we need is an array
          ;; that holds positive integers, which is just a string)
-         (V (make-string (1+ (* 2 Dmax)) 0))
+         (V (string-to-multibyte (make-string (1+ (* 2 Dmax)) 0)))
          (D 0)
          k x y stop Vd)
     (if (= 0 Dmax) `(0 0 ,Vd ,Dmax)
