@@ -1654,6 +1654,60 @@
            (org-ml-to-string))
       => "*not plain* "
 
+      ;; affiliated keywords
+
+      (:buffer "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :name "foo")
+           (org-ml-to-trimmed-string))
+      => (:result "#+name: foo"
+                  "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :attr_bar '("foo"))
+           (org-ml-to-trimmed-string))
+      => (:result "#+attr_bar: foo"
+                  "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :header '((:k1 "h1") (:k2 "h2")))
+           (org-ml-to-trimmed-string))
+      => (:result "#+header: :k1 h1"
+                  "#+header: :k2 h2"
+                  "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :results '("bar" "foo"))
+           (org-ml-to-trimmed-string))
+      => (:result "#+results[bar]: foo"
+                  "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :caption '("cap"))
+           (org-ml-to-trimmed-string))
+      => (:result "#+caption: cap"
+                  "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :caption '(("foo" "cap")))
+           (org-ml-to-trimmed-string))
+      => (:result "#+caption[foo]: cap"
+                  "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :caption '(("FOO" "CAP") ("foo" "cap")))
+           (org-ml-to-trimmed-string))
+      => (:result "#+caption[FOO]: CAP"
+                  "#+caption[foo]: cap"
+                  "short paragraph")
+      
+      (:buffer "#+caption: cap"
+               "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :caption nil)
+           (org-ml-to-trimmed-string))
+      => "short paragraph"
+      (:buffer "#+name: deleteme"
+               "short paragraph")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :name nil)
+           (org-ml-to-trimmed-string))
+      => "short paragraph"
+
       :end-hidden
 
       (:buffer "* not valuable")
@@ -2063,6 +2117,40 @@
       (->> (org-ml-parse-this-object)
            (org-ml-get-property :end))
       => 16
+
+      ;; affiliated keywords
+
+      (:buffer "#+name: name"
+               "#+attr_foo: bar"
+               "#+attr_foo: BAR"
+               "#+plot: poo"
+               "#+caption: koo"
+               "#+caption[COO]: KOO"
+               "#+results[hash]: res"
+               "#+header: :k1 h1"
+               "#+header: :k2 h2"
+               "#+begin_src"
+               "echo test for echo"
+               "#+end_src")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-property :name))
+      => "name"
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-property :plot))
+      => "poo"
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-property :attr_foo))
+      ;; TODO why are these reversed?
+      => '("BAR" "bar")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-property :header))
+      => '((:k1 "h1") (:k2 "h2"))
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-property :results))
+      => '("hash" "res")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-property :caption))
+      => '("koo" ("COO" "KOO"))
       
       :end-hidden
 

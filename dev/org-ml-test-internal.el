@@ -194,7 +194,9 @@ is the converse."
                 (--all? (org-ml--equal exclude-props (car it) (cdr it)))))))))
 
 (defun org-ml--test-from-string (omit-props node string)
-  (let ((props (append omit-props '(:begin :contents-begin :end :contents-end :parent :post-affiliated)))
+  (let ((props (append omit-props '(:begin :contents-begin :end :contents-end
+                                           :parent :post-affiliated :name
+                                           :plot :header :results :caption)))
         (type (org-ml-get-type node)))
     (should (org-ml--equal props node (org-ml-from-string type string)))))
 
@@ -667,7 +669,13 @@ be parsed to TYPE."
 (defun should-have-equal-properties (e1 e2)
   (unless (eq (org-ml-get-type e1) (org-ml-get-type e2))
     (error "Type mismatch: %s\n\n%s" e1 e2))
-  (cl-flet ((plist-get-keys (plist) (-slice plist 0 nil 2)))
+  (cl-flet
+      ((plist-get-keys
+        (plist)
+        (let ((keys (-slice plist 0 nil 2)))
+          (if (org-ml-is-any-type org-ml--element-nodes-with-affiliated e1)
+              (-difference keys '(:name :plot :header :results :caption))
+            keys))))
     (let ((p1 (plist-get-keys (nth 1 e1)))
           (p2 (plist-get-keys (nth 1 e2))))
       (expect (-difference p1 p2) :not :to-be-truthy)
