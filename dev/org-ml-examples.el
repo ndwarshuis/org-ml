@@ -1349,146 +1349,146 @@
            (org-ml-to-trimmed-string))
       => "#+call: cthulhu[:cache no](x=4) :exports results"
 
-      ;; :begin-hidden
-      ;; (:buffer "CLOCK: [2019-01-01 Tue]")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-set-property
-      ;;       :value (org-ml-build-timestamp! '(2019 1 1) :end '(2019 1 2)))
-      ;;      (org-ml-to-trimmed-string))
-      ;; => "CLOCK: [2019-01-01 Tue]--[2019-01-02 Wed] => 24:00"
+      :begin-hidden
+      (:buffer "CLOCK: [2019-01-01 Tue]")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property
+            :value (org-ml-build-timestamp! '(2019 1 1) :end '(2019 1 2)))
+           (org-ml-to-trimmed-string))
+      => "CLOCK: [2019-01-01 Tue]--[2019-01-02 Wed] => 24:00"
 
-      ;; (:buffer "~learn to~")
-      ;; (->> (org-ml-parse-this-object)
-      ;;      (org-ml-set-property :value "why?")
-      ;;      (org-ml-to-trimmed-string))
-      ;; => "~why?~"
+      (:buffer "~learn to~")
+      (->> (org-ml-parse-this-object)
+           (org-ml-set-property :value "why?")
+           (org-ml-to-trimmed-string))
+      => "~why?~"
 
-      ;; (:buffer "# not here")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-set-property :value "still not here")
-      ;;      (org-ml-to-trimmed-string))
-      ;; => "# still not here"
+      (:buffer "# not here")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :value "still not here")
+           (org-ml-to-trimmed-string))
+      => "# still not here"
 
-      ;; (:buffer "#+begin_comment"
-      ;;          "not here"
-      ;;          "#+end_comment")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-set-property :value "still not here")
-      ;;      (org-ml-to-trimmed-string))
-      ;; => (:result "#+begin_comment"
-      ;;             "still not here"
-      ;;             "#+end_comment")
+      (:buffer "#+begin_comment"
+               "not here"
+               "#+end_comment")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :value "still not here")
+           (org-ml-to-trimmed-string))
+      => (:result "#+begin_comment"
+                  "still not here"
+                  "#+end_comment")
 
-      ;; (:buffer "%%(print :valueble)")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-set-property :value '(print :invaluble))
-      ;;      (org-ml-to-trimmed-string))
-      ;; => "%%(print :invaluble)"
+      (:buffer "%%(print :valueble)")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :value '(print :invaluble))
+           (org-ml-to-trimmed-string))
+      => "%%(print :invaluble)"
 
-      ;; (:buffer ":LOGBOOK:"
-      ;;          ":END:")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-set-property :drawer-name "BOOKOFSOULS")
-      ;;      (org-ml-to-trimmed-string))
-      ;; => (:result ":BOOKOFSOULS:"
-      ;;             ":END:")
+      (:buffer ":LOGBOOK:"
+               ":END:")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :drawer-name "BOOKOFSOULS")
+           (org-ml-to-trimmed-string))
+      => (:result ":BOOKOFSOULS:"
+                  ":END:")
 
-      ;; (:buffer "#+begin: blockhead"
-      ;;          "#+end:")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-set-property :block-name "blockfoot")
-      ;;      (org-ml-set-property :arguments '(:cache no))
-      ;;      (org-ml-to-trimmed-string))
-      ;; => (:result "#+begin: blockfoot :cache no"
-      ;;             "#+end:")
+      (:buffer "#+begin: blockhead"
+               "#+end:")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :block-name "blockfoot")
+           (org-ml-set-property :arguments '(:cache no))
+           (org-ml-to-trimmed-string))
+      => (:result "#+begin: blockfoot :cache no"
+                  "#+end:")
 
-      ;; (:buffer "\\pi")
-      ;; (->> (org-ml-parse-this-object)
-      ;;      (org-ml-set-property :name "gamma")
-      ;;      (org-ml-set-property :use-brackets-p t)
-      ;;      (org-ml-to-trimmed-string))
-      ;; => "\\gamma{}"
+      (:buffer "\\pi")
+      (->> (org-ml-parse-this-object)
+           (org-ml-set-property :name "gamma")
+           (org-ml-set-property :use-brackets-p t)
+           (org-ml-to-trimmed-string))
+      => "\\gamma{}"
 
-      ;; ;; TODO test preserve indentation...
-      ;; (:buffer "#+begin_example"
-      ;;          "#+end_example")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-set-property :switches '("-n"))
-      ;;      (org-ml-set-property :value "example.com")
-      ;;      (org-ml-to-trimmed-string))
-      ;; => (:buffer "#+begin_example -n"
-      ;;             "  example.com"
-      ;;             "#+end_example")
+      ;; TODO test preserve indentation...
+      (:buffer "#+begin_example"
+               "#+end_example")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :switches '("-n"))
+           (org-ml-set-property :value "example.com")
+           (org-ml-to-trimmed-string))
+      => (:buffer "#+begin_example -n"
+                  "  example.com"
+                  "#+end_example")
 
-      ;; (:buffer "#+begin_export latex"
-      ;;          "#+end_export")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-set-property :type "domestic")
-      ;;      (org-ml-set-property :value "bullets, bombs, and bigotry")
-      ;;      (org-ml-to-trimmed-string))
-      ;; => (:buffer "#+begin_export domestic"
-      ;;             "bullets, bombs, and bigotry"
-      ;;             "#+end_export")
+      (:buffer "#+begin_export latex"
+               "#+end_export")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :type "domestic")
+           (org-ml-set-property :value "bullets, bombs, and bigotry")
+           (org-ml-to-trimmed-string))
+      => (:buffer "#+begin_export domestic"
+                  "bullets, bombs, and bigotry"
+                  "#+end_export")
 
-      ;; (:buffer "@@back-end:value@@")
-      ;; (->> (org-ml-parse-this-object)
-      ;;      (org-ml-set-property :back-end "latex")
-      ;;      (org-ml-set-property :value "new-value")
-      ;;      (org-ml-to-trimmed-string))
-      ;; => "@@latex:new-value@@"
+      (:buffer "@@back-end:value@@")
+      (->> (org-ml-parse-this-object)
+           (org-ml-set-property :back-end "latex")
+           (org-ml-set-property :value "new-value")
+           (org-ml-to-trimmed-string))
+      => "@@latex:new-value@@"
 
-      ;; (:buffer ": fixed")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-set-property :value "unfixed")
-      ;;      (org-ml-to-trimmed-string))
-      ;; => ": unfixed"
+      (:buffer ": fixed")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :value "unfixed")
+           (org-ml-to-trimmed-string))
+      => ": unfixed"
 
-      ;; (:buffer "[fn:whitelabel] society")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-set-property :label "blacklabel")
-      ;;      (org-ml-to-trimmed-string))
-      ;; => "[fn:blacklabel] society"
+      (:buffer "[fn:whitelabel] society")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :label "blacklabel")
+           (org-ml-to-trimmed-string))
+      => "[fn:blacklabel] society"
 
-      ;; (:buffer "* dummy"
-      ;;          "stuff")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-set-property :archivedp t)
-      ;;      (org-ml-set-property :commentedp t)
-      ;;      (org-ml-set-property :level 2)
-      ;;      (org-ml-set-property :pre-blank 1)
-      ;;      (org-ml-set-property :priority ?A)
-      ;;      (org-ml-set-property :tags '("tmsu"))
-      ;;      (org-ml-set-property :title '("smartie"))
-      ;;      (org-ml-set-property :todo-keyword "TODO")
-      ;;      (org-ml-to-trimmed-string))
-      ;; => (:result "** TODO COMMENT [#A] smartie :tmsu:ARCHIVE:"
-      ;;             ""
-      ;;             "stuff")
-      ;; :begin-hidden
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-set-property :footnote-section-p t)
-      ;;      (org-ml-to-trimmed-string))
-      ;; => (:result "* Footnotes"
-      ;;             "stuff")
-      ;; :end-hidden
+      (:buffer "* dummy"
+               "stuff")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :archivedp t)
+           (org-ml-set-property :commentedp t)
+           (org-ml-set-property :level 2)
+           (org-ml-set-property :pre-blank 1)
+           (org-ml-set-property :priority ?A)
+           (org-ml-set-property :tags '("tmsu"))
+           (org-ml-set-property :title '("smartie"))
+           (org-ml-set-property :todo-keyword "TODO")
+           (org-ml-to-trimmed-string))
+      => (:result "** TODO COMMENT [#A] smartie :tmsu:ARCHIVE:"
+                  ""
+                  "stuff")
+      :begin-hidden
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-property :footnote-section-p t)
+           (org-ml-to-trimmed-string))
+      => (:result "* Footnotes"
+                  "stuff")
+      :end-hidden
 
-      ;; (:buffer "call_kthulu()")
-      ;; (->> (org-ml-parse-this-object)
-      ;;      (org-ml-set-property :call "cthulhu")
-      ;;      (org-ml-set-property :inside-header '(:cache no))
-      ;;      (org-ml-set-property :arguments '("x=4"))
-      ;;      (org-ml-set-property :end-header '(:exports results))
-      ;;      (org-ml-to-trimmed-string))
-      ;; => "call_cthulhu[:cache no](x=4)[:exports results]"
+      (:buffer "call_kthulu()")
+      (->> (org-ml-parse-this-object)
+           (org-ml-set-property :call "cthulhu")
+           (org-ml-set-property :inside-header '(:cache no))
+           (org-ml-set-property :arguments '("x=4"))
+           (org-ml-set-property :end-header '(:exports results))
+           (org-ml-to-trimmed-string))
+      => "call_cthulhu[:cache no](x=4)[:exports results]"
 
-      ;; (:buffer "src_emacs{(print 'yeah-boi)}")
-      ;; (->> (org-ml-parse-this-object)
-      ;;      (org-ml-set-property :language "python")
-      ;;      (org-ml-set-property :parameters '(:cache no))
-      ;;      (org-ml-set-property :value "print \"yeah boi\"")
-      ;;      (org-ml-to-trimmed-string))
-      ;; => "src_python[:cache no]{print \"yeah boi\"}"
-      ;; :end-hidden
+      (:buffer "src_emacs{(print 'yeah-boi)}")
+      (->> (org-ml-parse-this-object)
+           (org-ml-set-property :language "python")
+           (org-ml-set-property :parameters '(:cache no))
+           (org-ml-set-property :value "print \"yeah boi\"")
+           (org-ml-to-trimmed-string))
+      => "src_python[:cache no]{print \"yeah boi\"}"
+      :end-hidden
 
       (:buffer "- thing")
       (->> (org-ml-parse-this-item)
@@ -1873,7 +1873,6 @@
            (org-ml-get-property :value))
       => "VAL"
 
-      ;; this is stupid, who would ever do this?
       (:buffer "\begin{env}"
                "body"
                "\end{env}")
@@ -1883,7 +1882,6 @@
                   "body"
                   "\end{env}")
 
-      ;; TODO this is also stupid...
       (:buffer "$2+2=4$")
       (->> (org-ml-parse-this-object)
            (org-ml-get-property :value))
