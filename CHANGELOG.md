@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.1.0
+
+- fixed array overflow error in myers diff code
+- add affiliated keywords to polymorphic property interface and builder
+  functions
+
 ## 5.0.2
 
 - fixed active timestamp bug for closed planning nodes

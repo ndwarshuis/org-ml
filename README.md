@@ -5,6 +5,12 @@ A functional API for org-mode inspired by
 [dash.el](https://github.com/magnars/dash.el) and
 [s.el](https://github.com/magnars/s.el) libraries.
 
+# Upcoming Breaking Changes
+
+- `org-ml-get/set/map-affiliated-keyword` and `org-ml-set-caption!` have been
+  merged with `org-ml-get/set/map-property` and will be removed in a later
+  revision
+
 # Installation
 
 Install from MELPA:

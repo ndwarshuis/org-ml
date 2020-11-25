@@ -221,6 +221,15 @@ the car.")
          (cons 'plain-text)))
   "List of node types which may be used in item headline title properties.")
 
+;;; AFFILIATED KEYWORD NODES
+
+(org-ml--defconst org-ml--element-nodes-with-affiliated
+  (eval-when-compile
+    (-difference org-ml-elements
+                 '(org-data comment clock headline inlinetask item
+                            node-property planning property-drawer
+                            section table-row))))
+
 ;;; LIST OPERATIONS (EXTENDING DASH.el)
 
 (defun org-ml--pad-or-truncate (length pad list)
@@ -712,6 +721,26 @@ property value."
   "Return t if X is an allowed value for a diary-sexp node value property."
   (or (null x) (listp x)))
 
+(defun org-ml--is-valid-header (x)
+  "Return t if X is an allowed value for a header affiliated keyword property."
+  (and (listp x) (--all? (org-ml--is-plist it) x)))
+
+(defun org-ml--is-valid-results (x)
+  "Return t if X is an allowed value for a results affiliated keyword property."
+  (pcase x
+    (`nil t)
+    (`(,(pred stringp) ,(pred stringp)) t)
+    (`(,(pred stringp)) t)))
+
+(defun org-ml--is-valid-caption (x)
+  "Return t if X is an allowed value for a caption affiliated keyword property."
+  ;; TODO this is just like the above
+  (and (listp x)
+       (--all? (pcase it
+                 ((pred stringp) t)
+                 (`(,(pred stringp) ,(pred stringp)) t))
+               x)))
+
 ;;; encode/decode (general)
 
 (defun org-ml--decode-boolean (bool)
@@ -849,6 +878,53 @@ VALUE must conform to `org-ml--is-valid-diary-sexp-value'."
   "Return VALUE as a form.
 Return value will conform to `org-ml--is-valid-diary-sexp-value'."
   (->> (s-chop-prefix "%%" value) (read)))
+
+(defun org-ml--encode-header (plists)
+  "Return PLISTS as a list of strings."
+  (->> (reverse plists)
+       (--map (-some->> it
+                (-partition 2)
+                (--map (format "%S %s" (car it) (cadr it)))
+                (s-join " ")))))
+
+(defun org-ml--decode-header (headers)
+  "Return HEADERS (a list of strings) as a list of plists."
+  (->> (reverse headers)
+       (--map (->> (org-ml--decode-string-list-space-delim it)
+                   (--map-indexed (if (cl-evenp it-index) (intern it) it))))))
+
+(defun org-ml--encode-results (results)
+  "Return a encoded results affiliated keyword value.
+RESULTS should conform to `org-ml--is-valid-caption'."
+  (-let (((hash source) results))
+    (when source `(,source . ,hash))))
+
+(defun org-ml--decode-results (internal-results)
+  "Return a decoded results affiliated keyword value.
+The returned list will conform to `org-ml--is-valid-caption' given
+INTERNAL-RESULTS stored in a node."
+  (-let (((source . hash) internal-results))
+    (if hash (list hash source) source)))
+
+(defun org-ml--encode-caption (caption)
+  "Return a encoded caption affiliated keyword value.
+CAPTION should conform to `org-ml--is-valid-caption'."
+  (->> (reverse caption)
+       (--map (pcase it
+                ((and (pred stringp) long) `((,long)))
+                (`(,short ,long) (when long
+                                   (if short `((,long) ,short) `((,long)))))))
+       (-non-nil)))
+
+(defun org-ml--decode-caption (internal-caption)
+  "Return a decoded caption affiliated keyword value.
+The returned list will conform to `org-ml--is-valid-caption' given
+INTERNAL-CAPTION stored in a node."
+  (->> (reverse internal-caption)
+       (--map (-let ((((long) short) it))
+                (if short (list (substring-no-properties short)
+                                (substring-no-properties long))
+                  (substring-no-properties long))))))
 
 ;;; cis functions
 
@@ -1182,7 +1258,29 @@ bounds."
      (--map-when (memq (car it) org-ml-branch-nodes)
                  (-snoc it '(:contents-begin) '(:contents-end)))
      (--map-when (memq (car it) org-ml-elements)
-                 (-snoc it '(:post-affiliated))))))
+                 (-snoc it '(:post-affiliated)))
+     (--map-when (memq (car it) org-ml--element-nodes-with-affiliated)
+                 (append it
+                         `((:name ,@str-nil)
+                           (:plot ,@str-nil)
+                           (:header :encode org-ml--encode-header
+                                    :pred org-ml--is-valid-header
+                                    :decode org-ml--decode-header
+                                    :type-desc ("a list of plists where all"
+                                                "plist values are strings"))
+                           (:results :encode org-ml--encode-results
+                                     :pred org-ml--is-valid-results
+                                     :decode org-ml--decode-results
+                                     :type-desc ("a list like (SOURCE) or"
+                                                 "(HASH SOURCE) where HASH"
+                                                 "and SOURCE are strings."))
+                           (:caption :encode org-ml--encode-caption
+                                     :pred org-ml--is-valid-caption
+                                     :decode org-ml--decode-caption
+                                     :type-desc ("a list including (LONG) or"
+                                                 "(SHORT LONG) where SHORT and"
+                                                 "LONG are both strings representing"
+                                                 "the short and long captions"))))))))
 
 ;;; node property operations
 
@@ -1745,7 +1843,8 @@ be greater than zero, and DONE must be less than or equal to TOTAL."
 
 (defun org-ml--planning-list-to-timestamp (active planning-list)
   "Return timestamp node from PLANNING-LIST.
-See `org-ml-build-planning!' for syntax of PLANNING-LIST."
+See `org-ml-build-planning!' for syntax of PLANNING-LIST.
+ACTIVE is a flag denoting if the timestamp is to be active."
   (when planning-list
     (let* ((p (-partition-before-pred
                (lambda (it) (memq it '(&warning &repeater)))
@@ -1995,12 +2094,12 @@ like \":key: val\"."
        (apply #'org-ml-build-property-drawer :post-blank post-blank)))
 
 (org-ml--defun-kw org-ml-build-headline! (&key (level 1) title-text
-                                       todo-keyword tags pre-blank
-                                       priority commentedp archivedp
-                                       post-blank planning
-                                       statistics-cookie
-                                       section-children
-                                       &rest subheadlines)
+                                               todo-keyword tags pre-blank
+                                               priority commentedp archivedp
+                                               post-blank planning
+                                               statistics-cookie
+                                               section-children
+                                               &rest subheadlines)
   "Return a new headline node.
 
 TITLE-TEXT is a oneline string for the title of the headline.
@@ -2053,7 +2152,7 @@ valid textual representations of object nodes."
        (apply #'org-ml-build-paragraph :post-blank (or post-blank 0))))
 
 (org-ml--defun-kw org-ml-build-item! (&key post-blank bullet checkbox tag
-                                   paragraph counter &rest children)
+                                           paragraph counter &rest children)
   "Return a new item node.
 
 TAG is a string representing the tag (make with
@@ -2435,25 +2534,39 @@ elements may have other elements as children."
         (<= begin point end)
       (error "Node boundaries are not defined"))))
 
+(defun org-ml--property-is-attribute (prop)
+  "Return t if PROP is of the form :attr_X where X is anything."
+  (and (keywordp prop) (s-prefix-p ":attr_" (symbol-name prop) t)))
+
 (defun org-ml-set-property (prop value node)
   "Return NODE with PROP set to VALUE.
 
 See builder functions for a list of properties and their rules for
 each type."
   (let ((type (org-ml-get-type node)))
-    (-if-let (pred (org-ml--get-property-attribute :pred type prop))
-        (if (funcall pred value)
-            (let* ((encode-fun (org-ml--get-property-encoder type prop))
-                   (update-fun (org-ml--get-property-cis-function type prop)))
-              (-->
-               (if encode-fun (funcall encode-fun value) value)
-               (org-ml--set-property-nocheck prop it node)
-               (if update-fun (funcall update-fun it) it)))
+    ;; Specialized code to handle :attr_X properties which can't be put in
+    ;; `org-ml--property-alist'. Values for these can only be lists of strings
+    ;; and have no encoder or decoder.
+    (if (and (memq type org-ml--element-nodes-with-affiliated)
+             (org-ml--property-is-attribute prop))
+        (if (org-ml--is-string-list value)
+            (org-ml--set-property-nocheck prop value node)
           (org-ml--arg-error
-           "Property '%s' in node of type '%s' must be %s. Got '%S'"
-           prop type (org-ml--get-property-type-desc type prop) value))
-      (org-ml--arg-error "Property '%s' is unsettable for type '%s'"
-                     prop type))))
+           "Property '%s' in node of type '%s' must be a list of strings. Got '%S'"
+           prop type value))
+      (-if-let (pred (org-ml--get-property-attribute :pred type prop))
+          (if (funcall pred value)
+              (let* ((encode-fun (org-ml--get-property-encoder type prop))
+                     (update-fun (org-ml--get-property-cis-function type prop)))
+                (-->
+                 (if encode-fun (funcall encode-fun value) value)
+                 (org-ml--set-property-nocheck prop it node)
+                 (if update-fun (funcall update-fun it) it)))
+            (org-ml--arg-error
+             "Property '%s' in node of type '%s' must be %s. Got '%S'"
+             prop type (org-ml--get-property-type-desc type prop) value))
+        (org-ml--arg-error "Property '%s' is unsettable for type '%s'"
+                           prop type)))))
 
 (defun org-ml-set-properties (plist node)
   "Return NODE with all properties set to the values according to PLIST.
@@ -2500,9 +2613,11 @@ each type."
 ;; TODO add plural version of this...
 (defun org-ml-get-property (prop node)
   "Return the value of PROP of NODE."
-  (let ((decoder-fun (-> (org-ml-get-type node)
-                         (org-ml--get-property-decoder prop)))
-        (value (org-ml--get-property-nocheck prop node)))
+  (let* ((type (org-ml-get-type node))
+         (decoder-fun (unless (and (memq type org-ml--element-nodes-with-affiliated)
+                                   (org-ml--property-is-attribute prop))
+                        (org-ml--get-property-decoder type prop)))
+         (value (org-ml--get-property-nocheck prop node)))
     (if decoder-fun (funcall decoder-fun value) value)))
 
 (org-ml--defun* org-ml-map-property (prop fun node)
@@ -2946,17 +3061,14 @@ is the same as that described in `org-ml-build-planning!'."
 
 ;; affiliated keywords
 
-(defconst org-ml--element-nodes-with-affiliated
-  (eval-when-compile
-    (-difference org-ml-elements
-                 '(org-data comment clock headline inlinetask item
-                            node-property planning property-drawer
-                            section table-row))))
-
 (defun org-ml-get-affiliated-keyword (key node)
   "Get the value of affiliated keyword KEY in NODE.
 
-See `org-ml-set-affiliated-keyword' for the meaning of KEY."
+See `org-ml-set-affiliated-keyword' for the meaning of KEY.
+
+WARNING: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+`org-ml-get-property'."
   (unless (or (memq key '(:caption :header :name :plot :results))
               (s-starts-with? ":attr_" (symbol-name key)))
     (org-ml--arg-error "Invalid affiliated keyword requested: %s" key))
@@ -2984,7 +3096,11 @@ keyword given by KEY. The format for each keyword is given below:
 
 In the case of ATTR_BACKEND, KEY is like `:attr_x' where `x'
 corresponds to BACKEND and VALUE is a list of strings
-corresponding to multiple entries of the attribute."
+corresponding to multiple entries of the attribute.
+
+WARNING: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+`org-ml-set-property'"
   (unless (org-ml-is-any-type org-ml--element-nodes-with-affiliated node)
     (org-ml--arg-error
      "Node type '%s' does not allow affiliated keywords"
@@ -2998,7 +3114,11 @@ corresponding to multiple entries of the attribute."
 (org-ml--defun* org-ml-map-affiliated-keyword (key fun node)
   "Apply FUN to value of affiliated keyword KEY in NODE.
 
-See `org-ml-set-affiliated-keyword' for the meaning of KEY."
+See `org-ml-set-affiliated-keyword' for the meaning of KEY.
+
+WARNING: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+`org-ml-map-property'."
   (-some--> (org-ml-get-affiliated-keyword key node)
             (funcall fun it)
             (org-ml-set-affiliated-keyword key it node)))
@@ -3011,7 +3131,11 @@ CAPTION can be one of the following:
 - (STRING1 STRING2): produces #+CAPTION[`STRING2']: `STRING1'
 - ((STRING1 STRING2) ...): like above but makes multiple
   caption entries
-- nil: removes all captions"
+- nil: removes all captions
+
+WARNING: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+`org-ml-set-property'."
   (cl-flet
       ((is-metacell
         (cell)
@@ -5921,7 +6045,7 @@ of D."
          ;; this seems weird but it is much faster to use "strings" to hold
          ;; the endpoints rather than vectors (since all we need is an array
          ;; that holds positive integers, which is just a string)
-         (V (make-string (1+ (* 2 Dmax)) 0))
+         (V (string-to-multibyte (make-string (1+ (* 2 Dmax)) 0)))
          (D 0)
          k x y stop Vd)
     (if (= 0 Dmax) `(0 0 ,Vd ,Dmax)
@@ -6009,7 +6133,7 @@ See `org-ml--diff-find-ses' for the meaning of D, K, VD, and DMAX."
 (defun org-ml--diff-region (start end new-str)
   "Use Myers Diff algorithm to update the current buffer.
 The region to be updated will be between START and END and will
-be made to look like STR. Only differences as given by the Myers
+be made to look like NEW-STR. Only differences as given by the Myers
 diff algorithm (eg insertions and deletions) will actually be
 applied to the buffer."
   (-let* ((old-str (buffer-substring-no-properties start end))

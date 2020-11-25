@@ -64,41 +64,41 @@ Build new nodes.
 
 ### Leaf Element Nodes
 
-* [org-ml-build-babel-call](#org-ml-build-babel-call-call-key-inside-header-arguments-end-header-post-blank) `(call &key inside-header arguments end-header post-blank)`
+* [org-ml-build-babel-call](#org-ml-build-babel-call-call-key-inside-header-arguments-end-header-name-plot-header-results-caption-post-blank) `(call &key inside-header arguments end-header name plot header results caption post-blank)`
 * [org-ml-build-clock](#org-ml-build-clock-value-key-post-blank) `(value &key post-blank)`
 * [org-ml-build-comment](#org-ml-build-comment-value-key-post-blank) `(value &key post-blank)`
-* [org-ml-build-comment-block](#org-ml-build-comment-block-key-value--post-blank) `(&key (value "") post-blank)`
-* [org-ml-build-diary-sexp](#org-ml-build-diary-sexp-key-value-post-blank) `(&key value post-blank)`
-* [org-ml-build-example-block](#org-ml-build-example-block-key-preserve-indent-switches-value--post-blank) `(&key preserve-indent switches (value "") post-blank)`
-* [org-ml-build-export-block](#org-ml-build-export-block-type-value-key-post-blank) `(type value &key post-blank)`
-* [org-ml-build-fixed-width](#org-ml-build-fixed-width-value-key-post-blank) `(value &key post-blank)`
-* [org-ml-build-horizontal-rule](#org-ml-build-horizontal-rule-key-post-blank) `(&key post-blank)`
-* [org-ml-build-keyword](#org-ml-build-keyword-key-value-key-post-blank) `(key value &key post-blank)`
-* [org-ml-build-latex-environment](#org-ml-build-latex-environment-value-key-post-blank) `(value &key post-blank)`
+* [org-ml-build-comment-block](#org-ml-build-comment-block-key-value--name-plot-header-results-caption-post-blank) `(&key (value "") name plot header results caption post-blank)`
+* [org-ml-build-diary-sexp](#org-ml-build-diary-sexp-key-value-name-plot-header-results-caption-post-blank) `(&key value name plot header results caption post-blank)`
+* [org-ml-build-example-block](#org-ml-build-example-block-key-preserve-indent-switches-value--name-plot-header-results-caption-post-blank) `(&key preserve-indent switches (value "") name plot header results caption post-blank)`
+* [org-ml-build-export-block](#org-ml-build-export-block-type-value-key-name-plot-header-results-caption-post-blank) `(type value &key name plot header results caption post-blank)`
+* [org-ml-build-fixed-width](#org-ml-build-fixed-width-value-key-name-plot-header-results-caption-post-blank) `(value &key name plot header results caption post-blank)`
+* [org-ml-build-horizontal-rule](#org-ml-build-horizontal-rule-key-name-plot-header-results-caption-post-blank) `(&key name plot header results caption post-blank)`
+* [org-ml-build-keyword](#org-ml-build-keyword-key-value-key-name-plot-header-results-caption-post-blank) `(key value &key name plot header results caption post-blank)`
+* [org-ml-build-latex-environment](#org-ml-build-latex-environment-value-key-name-plot-header-results-caption-post-blank) `(value &key name plot header results caption post-blank)`
 * [org-ml-build-node-property](#org-ml-build-node-property-key-value-key-post-blank) `(key value &key post-blank)`
 * [org-ml-build-planning](#org-ml-build-planning-key-closed-deadline-scheduled-post-blank) `(&key closed deadline scheduled post-blank)`
-* [org-ml-build-src-block](#org-ml-build-src-block-key-value--language-parameters-preserve-indent-switches-post-blank) `(&key (value "") language parameters preserve-indent switches post-blank)`
+* [org-ml-build-src-block](#org-ml-build-src-block-key-value--language-parameters-preserve-indent-switches-name-plot-header-results-caption-post-blank) `(&key (value "") language parameters preserve-indent switches name plot header results caption post-blank)`
 
 ### Branch Element Nodes with Child Object Nodes
 
-* [org-ml-build-paragraph](#org-ml-build-paragraph-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
+* [org-ml-build-paragraph](#org-ml-build-paragraph-key-name-plot-header-results-caption-post-blank-rest-object-nodes) `(&key name plot header results caption post-blank &rest object-nodes)`
 * [org-ml-build-table-row](#org-ml-build-table-row-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
-* [org-ml-build-verse-block](#org-ml-build-verse-block-key-post-blank-rest-object-nodes) `(&key post-blank &rest object-nodes)`
+* [org-ml-build-verse-block](#org-ml-build-verse-block-key-name-plot-header-results-caption-post-blank-rest-object-nodes) `(&key name plot header results caption post-blank &rest object-nodes)`
 
 ### Branch Element Nodes with Child Element Nodes
 
-* [org-ml-build-center-block](#org-ml-build-center-block-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
-* [org-ml-build-drawer](#org-ml-build-drawer-drawer-name-key-post-blank-rest-element-nodes) `(drawer-name &key post-blank &rest element-nodes)`
-* [org-ml-build-dynamic-block](#org-ml-build-dynamic-block-block-name-key-arguments-post-blank-rest-element-nodes) `(block-name &key arguments post-blank &rest element-nodes)`
-* [org-ml-build-footnote-definition](#org-ml-build-footnote-definition-label-key-pre-blank-0-post-blank-rest-element-nodes) `(label &key (pre-blank 0) post-blank &rest element-nodes)`
+* [org-ml-build-center-block](#org-ml-build-center-block-key-name-plot-header-results-caption-post-blank-rest-element-nodes) `(&key name plot header results caption post-blank &rest element-nodes)`
+* [org-ml-build-drawer](#org-ml-build-drawer-drawer-name-key-name-plot-header-results-caption-post-blank-rest-element-nodes) `(drawer-name &key name plot header results caption post-blank &rest element-nodes)`
+* [org-ml-build-dynamic-block](#org-ml-build-dynamic-block-block-name-key-arguments-name-plot-header-results-caption-post-blank-rest-element-nodes) `(block-name &key arguments name plot header results caption post-blank &rest element-nodes)`
+* [org-ml-build-footnote-definition](#org-ml-build-footnote-definition-label-key-pre-blank-0-name-plot-header-results-caption-post-blank-rest-element-nodes) `(label &key (pre-blank 0) name plot header results caption post-blank &rest element-nodes)`
 * [org-ml-build-headline](#org-ml-build-headline-key-archivedp-commentedp-footnote-section-p-level-1-pre-blank-0-priority-tags-title-todo-keyword-post-blank-rest-element-nodes) `(&key archivedp commentedp footnote-section-p (level 1) (pre-blank 0) priority tags title todo-keyword post-blank &rest element-nodes)`
 * [org-ml-build-item](#org-ml-build-item-key-bullet---pre-blank-0-checkbox-counter-tag-post-blank-rest-element-nodes) `(&key (bullet '-) (pre-blank 0) checkbox counter tag post-blank &rest element-nodes)`
-* [org-ml-build-plain-list](#org-ml-build-plain-list-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
+* [org-ml-build-plain-list](#org-ml-build-plain-list-key-name-plot-header-results-caption-post-blank-rest-element-nodes) `(&key name plot header results caption post-blank &rest element-nodes)`
 * [org-ml-build-property-drawer](#org-ml-build-property-drawer-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
-* [org-ml-build-quote-block](#org-ml-build-quote-block-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
+* [org-ml-build-quote-block](#org-ml-build-quote-block-key-name-plot-header-results-caption-post-blank-rest-element-nodes) `(&key name plot header results caption post-blank &rest element-nodes)`
 * [org-ml-build-section](#org-ml-build-section-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
-* [org-ml-build-special-block](#org-ml-build-special-block-type-key-post-blank-rest-element-nodes) `(type &key post-blank &rest element-nodes)`
-* [org-ml-build-table](#org-ml-build-table-key-tblfm-post-blank-rest-element-nodes) `(&key tblfm post-blank &rest element-nodes)`
+* [org-ml-build-special-block](#org-ml-build-special-block-type-key-name-plot-header-results-caption-post-blank-rest-element-nodes) `(type &key name plot header results caption post-blank &rest element-nodes)`
+* [org-ml-build-table](#org-ml-build-table-key-tblfm-name-plot-header-results-caption-post-blank-rest-element-nodes) `(&key tblfm name plot header results caption post-blank &rest element-nodes)`
 
 ### Miscellaneous Builders
 
@@ -1377,7 +1377,7 @@ The following properties are settable:
 
 ### Leaf Element Nodes
 
-#### org-ml-build-babel-call `(call &key inside-header arguments end-header post-blank)`
+#### org-ml-build-babel-call `(call &key inside-header arguments end-header name plot header results caption post-blank)`
 
 Build a babel-call element node.
 
@@ -1386,6 +1386,11 @@ The following properties are settable:
 - **`inside-header`**:  a plist
 - **`arguments`**:  a list of oneline strings
 - **`end-header`**:  a plist
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1449,12 +1454,17 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-comment-block `(&key (value "") post-blank)`
+#### org-ml-build-comment-block `(&key (value "") name plot header results caption post-blank)`
 
 Build a comment-block element node.
 
 The following properties are settable:
 - **`value`**: (default `""`) a string
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1471,12 +1481,17 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-diary-sexp `(&key value post-blank)`
+#### org-ml-build-diary-sexp `(&key value name plot header results caption post-blank)`
 
 Build a diary-sexp element node.
 
 The following properties are settable:
 - **`value`**:  a list form or nil
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1490,7 +1505,7 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-example-block `(&key preserve-indent switches (value "") post-blank)`
+#### org-ml-build-example-block `(&key preserve-indent switches (value "") name plot header results caption post-blank)`
 
 Build an example-block element node.
 
@@ -1498,6 +1513,11 @@ The following properties are settable:
 - **`preserve-indent`**:  nil or t
 - **`switches`**:  a list of oneline strings
 - **`value`**: (default `""`) a string
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1520,13 +1540,18 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-export-block `(type value &key post-blank)`
+#### org-ml-build-export-block `(type value &key name plot header results caption post-blank)`
 
 Build an export-block element node.
 
 The following properties are settable:
 - **`type`**: (required) a oneline string
 - **`value`**: (required) a string
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1538,12 +1563,17 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-fixed-width `(value &key post-blank)`
+#### org-ml-build-fixed-width `(value &key name plot header results caption post-blank)`
 
 Build a fixed-width element node.
 
 The following properties are settable:
 - **`value`**: (required) a oneline string
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1553,12 +1583,16 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-horizontal-rule `(&key post-blank)`
+#### org-ml-build-horizontal-rule `(&key name plot header results caption post-blank)`
 
 Build a horizontal-rule element node.
 
 The following properties are settable:
-
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1568,13 +1602,18 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-keyword `(key value &key post-blank)`
+#### org-ml-build-keyword `(key value &key name plot header results caption post-blank)`
 
 Build a keyword element node.
 
 The following properties are settable:
 - **`key`**: (required) a oneline string
 - **`value`**: (required) a oneline string
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1584,12 +1623,17 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-latex-environment `(value &key post-blank)`
+#### org-ml-build-latex-environment `(value &key name plot header results caption post-blank)`
 
 Build a latex-environment element node.
 
 The following properties are settable:
 - **`value`**: (required) a list of strings like `(env body)` or `(env)`
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1645,7 +1689,7 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-src-block `(&key (value "") language parameters preserve-indent switches post-blank)`
+#### org-ml-build-src-block `(&key (value "") language parameters preserve-indent switches name plot header results caption post-blank)`
 
 Build a src-block element node.
 
@@ -1655,6 +1699,11 @@ The following properties are settable:
 - **`parameters`**:  a plist
 - **`preserve-indent`**:  nil or t
 - **`switches`**:  a list of oneline strings
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1692,12 +1741,16 @@ The following properties are settable:
 
 ### Branch Element Nodes with Child Object Nodes
 
-#### org-ml-build-paragraph `(&key post-blank &rest object-nodes)`
+#### org-ml-build-paragraph `(&key name plot header results caption post-blank &rest object-nodes)`
 
 Build a paragraph element node with **`object-nodes`** as children.
 
 The following properties are settable:
-
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1723,12 +1776,16 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-verse-block `(&key post-blank &rest object-nodes)`
+#### org-ml-build-verse-block `(&key name plot header results caption post-blank &rest object-nodes)`
 
 Build a verse-block element node with **`object-nodes`** as children.
 
 The following properties are settable:
-
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1743,12 +1800,16 @@ The following properties are settable:
 
 ### Branch Element Nodes with Child Element Nodes
 
-#### org-ml-build-center-block `(&key post-blank &rest element-nodes)`
+#### org-ml-build-center-block `(&key name plot header results caption post-blank &rest element-nodes)`
 
 Build a center-block element node with **`element-nodes`** as children.
 
 The following properties are settable:
-
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1766,12 +1827,17 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-drawer `(drawer-name &key post-blank &rest element-nodes)`
+#### org-ml-build-drawer `(drawer-name &key name plot header results caption post-blank &rest element-nodes)`
 
 Build a drawer element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`drawer-name`**: (required) a oneline string
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1789,13 +1855,18 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-dynamic-block `(block-name &key arguments post-blank &rest element-nodes)`
+#### org-ml-build-dynamic-block `(block-name &key arguments name plot header results caption post-blank &rest element-nodes)`
 
 Build a dynamic-block element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`block-name`**: (required) a oneline string
 - **`arguments`**:  a plist
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1813,13 +1884,18 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-footnote-definition `(label &key (pre-blank 0) post-blank &rest element-nodes)`
+#### org-ml-build-footnote-definition `(label &key (pre-blank 0) name plot header results caption post-blank &rest element-nodes)`
 
 Build a footnote-definition element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`label`**: (required) a oneline string
 - **`pre-blank`**:  a non-negative integer
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1902,12 +1978,16 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-plain-list `(&key post-blank &rest element-nodes)`
+#### org-ml-build-plain-list `(&key name plot header results caption post-blank &rest element-nodes)`
 
 Build a plain-list element node with **`element-nodes`** as children.
 
 The following properties are settable:
-
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1942,12 +2022,16 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-quote-block `(&key post-blank &rest element-nodes)`
+#### org-ml-build-quote-block `(&key name plot header results caption post-blank &rest element-nodes)`
 
 Build a quote-block element node with **`element-nodes`** as children.
 
 The following properties are settable:
-
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -1981,12 +2065,17 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-special-block `(type &key post-blank &rest element-nodes)`
+#### org-ml-build-special-block `(type &key name plot header results caption post-blank &rest element-nodes)`
 
 Build a special-block element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`type`**: (required) a oneline string
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -2004,12 +2093,17 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-table `(&key tblfm post-blank &rest element-nodes)`
+#### org-ml-build-table `(&key tblfm name plot header results caption post-blank &rest element-nodes)`
 
 Build a table element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`tblfm`**:  a list of oneline strings
+- **`name`**:  a string or nil
+- **`plot`**:  a string or nil
+- **`header`**:  a list of plists where all plist values are strings
+- **`results`**:  a list like `(source)` or `(hash source)` where `hash` and `source` are strings.
+- **`caption`**:  a list including `(long)` or `(short long)` where `short` and `long` are both strings representing the short and long captions
 - **`post-blank`**: a non-negative integer
 
 ```el
@@ -2382,7 +2476,7 @@ Return a new table node.
 to a table-row node via [`org-ml-build-table-row!`](#org-ml-build-table-row-row-list) (see that function for
 restrictions).
 
-All other arguments follow the same rules as [`org-ml-build-table`](#org-ml-build-table-key-tblfm-post-blank-rest-element-nodes).
+All other arguments follow the same rules as [`org-ml-build-table`](#org-ml-build-table-key-tblfm-name-plot-header-results-caption-post-blank-rest-element-nodes).
 
 ```el
 (->> (org-ml-build-table! '("R" "A")
@@ -2930,6 +3024,27 @@ each type.
      (org-ml-set-property :end-header '(:exports results))
      (org-ml-to-trimmed-string))
  ;; => "#+call: cthulhu[:cache no](x=4) :exports results"
+
+;; Given the following contents:
+; call_kthulu()
+
+(->> (org-ml-parse-this-object)
+     (org-ml-set-property :call "cthulhu")
+     (org-ml-set-property :inside-header '(:cache no))
+     (org-ml-set-property :arguments '("x=4"))
+     (org-ml-set-property :end-header '(:exports results))
+     (org-ml-to-trimmed-string))
+ ;; => "call_cthulhu[:cache no](x=4)[:exports results]"
+
+;; Given the following contents:
+; src_emacs{(print 'yeah-boi)}
+
+(->> (org-ml-parse-this-object)
+     (org-ml-set-property :language "python")
+     (org-ml-set-property :parameters '(:cache no))
+     (org-ml-set-property :value "print \"yeah boi\"")
+     (org-ml-to-trimmed-string))
+ ;; => "src_python[:cache no]{print \"yeah boi\"}"
 
 ;; Given the following contents:
 ; - thing
@@ -4335,6 +4450,10 @@ Get the value of affiliated keyword **`key`** in **`node`**.
 
 See [`org-ml-set-affiliated-keyword`](#org-ml-set-affiliated-keyword-key-value-node) for the meaning of **`key`**.
 
+`warning`: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+[`org-ml-get-property`](#org-ml-get-property-prop-node).
+
 ```el
 ;; Given the following contents:
 ; #+name: name
@@ -4398,6 +4517,10 @@ In the case of `attr`_`backend`, **`key`** is like `:attr_x` where `x`
 corresponds to `backend` and **`value`** is a list of strings
 corresponding to multiple entries of the attribute.
 
+`warning`: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+[`org-ml-set-property`](#org-ml-set-property-prop-value-node)
+
 ```el
 ;; Given the following contents:
 ; short paragraph
@@ -4444,6 +4567,10 @@ Apply **`fun`** to value of affiliated keyword **`key`** in **`node`**.
 
 See [`org-ml-set-affiliated-keyword`](#org-ml-set-affiliated-keyword-key-value-node) for the meaning of **`key`**.
 
+`warning`: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+[`org-ml-map-property`](#org-ml-map-property-prop-fun-node).
+
 ```el
 ;; Given the following contents:
 ; #+name: foo
@@ -4478,6 +4605,10 @@ Set the caption affiliated keyword of **`node`**.
 - `((string1 string2) ...)`: like above but makes multiple
     caption entries
 - nil: removes all captions
+
+`warning`: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+[`org-ml-set-property`](#org-ml-set-property-prop-value-node).
 
 ```el
 ;; Given the following contents:
