@@ -68,11 +68,13 @@
   `(-let (((res1 time1) (org-ml-bench-with-org-file ,repeated-pattern ,n ,form1))
           ((res2 time2) (org-ml-bench-with-org-file ,repeated-pattern ,n ,form2)))
      (unless (equal res1 res2)
-       (print ("WARNING: forms produced different buffer strings")))
+       (print "WARNING: forms produced different buffer strings")
+       (print (cadr (s-lines res1)))
+       (print (cadr (s-lines res2))))
      (list time1 time2)))
 
 (defun org-ml-bench-format-result-row (title n time1 time2)
-  (format "| %-20s | %6s | %10.5f | %10.5f | %10.2f |" title n time1 time2
+  (format "| %-40s | %6s | %10.5f | %10.5f | %10.2f |" title n time1 time2
           (/ time2 time1)))
 
 (defmacro org-ml-defbench (title pattern n form1 form2)
@@ -107,7 +109,7 @@ order they are defined with this macro."
                ""
                (org-ml-bench-get-sys-info)
                ""
-               (format "| %-20s | %6s | %10s | %10s | %10s |"
+               (format "| %-40s | %6s | %10s | %10s | %10s |"
                        "Test name" "N" "Native" "org-ml" "X Increase"))
               test-rows
               (list ""))))))
