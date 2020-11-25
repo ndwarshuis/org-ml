@@ -4450,6 +4450,10 @@ Get the value of affiliated keyword **`key`** in **`node`**.
 
 See [`org-ml-set-affiliated-keyword`](#org-ml-set-affiliated-keyword-key-value-node) for the meaning of **`key`**.
 
+`warning`: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+[`org-ml-get-property`](#org-ml-get-property-prop-node).
+
 ```el
 ;; Given the following contents:
 ; #+name: name
@@ -4513,6 +4517,10 @@ In the case of `attr`_`backend`, **`key`** is like `:attr_x` where `x`
 corresponds to `backend` and **`value`** is a list of strings
 corresponding to multiple entries of the attribute.
 
+`warning`: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+[`org-ml-set-property`](#org-ml-set-property-prop-value-node)
+
 ```el
 ;; Given the following contents:
 ; short paragraph
@@ -4559,6 +4567,10 @@ Apply **`fun`** to value of affiliated keyword **`key`** in **`node`**.
 
 See [`org-ml-set-affiliated-keyword`](#org-ml-set-affiliated-keyword-key-value-node) for the meaning of **`key`**.
 
+`warning`: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+[`org-ml-map-property`](#org-ml-map-property-prop-fun-node).
+
 ```el
 ;; Given the following contents:
 ; #+name: foo
@@ -4593,6 +4605,10 @@ Set the caption affiliated keyword of **`node`**.
 - `((string1 string2) ...)`: like above but makes multiple
     caption entries
 - nil: removes all captions
+
+`warning`: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+[`org-ml-set-property`](#org-ml-set-property-prop-value-node).
 
 ```el
 ;; Given the following contents:

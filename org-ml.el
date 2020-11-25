@@ -3064,7 +3064,11 @@ is the same as that described in `org-ml-build-planning!'."
 (defun org-ml-get-affiliated-keyword (key node)
   "Get the value of affiliated keyword KEY in NODE.
 
-See `org-ml-set-affiliated-keyword' for the meaning of KEY."
+See `org-ml-set-affiliated-keyword' for the meaning of KEY.
+
+WARNING: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+`org-ml-get-property'."
   (unless (or (memq key '(:caption :header :name :plot :results))
               (s-starts-with? ":attr_" (symbol-name key)))
     (org-ml--arg-error "Invalid affiliated keyword requested: %s" key))
@@ -3092,7 +3096,11 @@ keyword given by KEY. The format for each keyword is given below:
 
 In the case of ATTR_BACKEND, KEY is like `:attr_x' where `x'
 corresponds to BACKEND and VALUE is a list of strings
-corresponding to multiple entries of the attribute."
+corresponding to multiple entries of the attribute.
+
+WARNING: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+`org-ml-set-property'"
   (unless (org-ml-is-any-type org-ml--element-nodes-with-affiliated node)
     (org-ml--arg-error
      "Node type '%s' does not allow affiliated keywords"
@@ -3106,7 +3114,11 @@ corresponding to multiple entries of the attribute."
 (org-ml--defun* org-ml-map-affiliated-keyword (key fun node)
   "Apply FUN to value of affiliated keyword KEY in NODE.
 
-See `org-ml-set-affiliated-keyword' for the meaning of KEY."
+See `org-ml-set-affiliated-keyword' for the meaning of KEY.
+
+WARNING: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+`org-ml-map-property'."
   (-some--> (org-ml-get-affiliated-keyword key node)
             (funcall fun it)
             (org-ml-set-affiliated-keyword key it node)))
@@ -3119,7 +3131,11 @@ CAPTION can be one of the following:
 - (STRING1 STRING2): produces #+CAPTION[`STRING2']: `STRING1'
 - ((STRING1 STRING2) ...): like above but makes multiple
   caption entries
-- nil: removes all captions"
+- nil: removes all captions
+
+WARNING: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+`org-ml-set-property'."
   (cl-flet
       ((is-metacell
         (cell)
