@@ -181,7 +181,7 @@ is the converse."
            (cl-subsetp a b :test #'equal)
            (cl-subsetp a b :test #'equal)))))
 
-(defun org-ml--equal (exclude-props node1 node2)
+(defun org-ml--equal~ (exclude-props node1 node2)
   (cond
    ((and (stringp node1) (stringp node2))
     (equal node1 node2))
@@ -191,14 +191,14 @@ is the converse."
       (and (eq type1 type2)
            (org-ml--plist-equal-p exclude-props props1 props2)
            (->> (-zip-fill nil children1 children2)
-                (--all? (org-ml--equal exclude-props (car it) (cdr it)))))))))
+                (--all? (org-ml--equal~ exclude-props (car it) (cdr it)))))))))
 
 (defun org-ml--test-from-string (omit-props node string)
   (let ((props (append omit-props '(:begin :contents-begin :end :contents-end
                                            :parent :post-affiliated :name
                                            :plot :header :results :caption)))
         (type (org-ml-get-type node)))
-    (should (org-ml--equal props node (org-ml-from-string type string)))))
+    (should (org-ml--equal~ props node (org-ml-from-string type string)))))
 
 (describe "converting from string"
   (it "object nodes"
