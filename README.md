@@ -176,6 +176,42 @@ the examples below.
 For comprehensive documentation of all available functions see the [API
 reference](docs/api-reference.md).
 
+# Performance
+
+Benchmarking this library is still in the early stages.
+
+Intuitively, the most costly operations are going to be those that go
+back-and-forth between raw buffer text (here called "buffer space") and its node
+representations (here called "node space") since those involve complicated
+string formating, regular expressions, buffer searching, etc (examples:
+`org-ml-parse-this-THING`, `org-ml-update-this-THING` and friends). Once the
+data is in node space, execution should be very fast since nodes are just lists.
+Thus if you have performance-intensive code that requires many small edits to
+org-mode files, it might be better to use org-mode's build-in functions. On the
+other hand, if most of the complicated processing can be done in node space
+while limiting the number of conversions to/from buffer space, `org-ml` will be
+much faster.
+
+To be more scientific, the current tests in the suite (see
+[here](bench/org-ml-benchmarks.el)) seem to support the following when comparing
+`org-ml` to equivalent code written using built-in ord-mode functions (in line
+with the intuitions above):
+* reading data (a one way conversion from buffer to node space) is up to an
+  order of magnitude slower, specifically when the data to be obtained isn't
+  very large (eg, reading the TODO state from a headline)
+* manipulating text (going from buffer to node space, then modifiying the node,
+  then going back to buffer space) is several times slower for single
+  modifications (eg setting the TODO state of a headline)
+* larger numbers of manipulations on one node at once are faster (eg changing
+  the TODO state, setting a property, and setting a SCHEDULED timestamp on a
+  headline)
+
+To run the benchmark suite:
+
+``` sh
+make benchmark
+```
+
 # Version History
 
 See [changelog](CHANGELOG.md).
