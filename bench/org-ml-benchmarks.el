@@ -94,7 +94,7 @@
     (org-ml-do-headlines*
       (org-ml-headline-set-section (list para) it))))
 
-(org-ml-defbench "headline effort/TODO/scheduled" "\n* headline" 1000
+(org-ml-defbench "set headline effort/TODO/scheduled" "\n* headline" 1000
   (let ((org-log-done 'time)
         (org-todo-keywords '((sequence "TODO" "|" "DONE")))
         (org-adapt-indentation nil))
