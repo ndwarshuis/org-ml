@@ -2325,9 +2325,9 @@ matter.
 
 Return a new property-drawer node.
 
-Each member in **`keyvals`** is a list of symbols like `(key val)`, where each
-list will generate a node-property node in the property-drawer node
-like `":key: val"`.
+Each member in **`keyvals`** is a list like `(key val)` where `key` and `val`
+are both strings, where each list will generate a node-property
+node in the property-drawer node like `":key: val"`.
 
 ```el
 (->> (org-ml-build-property-drawer! '(key val))
@@ -7761,4 +7761,4 @@ Unfold the children of **`node`** if they exist.
 ```el
 no examples :(
 ```
-Version: 5.1.0
+Version: 5.2.0

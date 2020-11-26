@@ -111,7 +111,6 @@
 ;; is considered a branch node of class element that is permitted to
 ;; hold other element nodes as children
 
-;; TODO `org-element-all-elements' does not exist in emacs <= 25
 (org-ml--defconst org-ml-elements
   (cons 'org-data org-element-all-elements)
   "List of all element types including 'org-data'.")
@@ -734,7 +733,6 @@ property value."
 
 (defun org-ml--is-valid-caption (x)
   "Return t if X is an allowed value for a caption affiliated keyword property."
-  ;; TODO this is just like the above
   (and (listp x)
        (--all? (pcase it
                  ((pred stringp) t)
@@ -868,7 +866,6 @@ Return value will conform to `org-ml--is-valid-statistics-cookie-value'."
      (cdar)
      (-map #'string-to-number)))))
 
-;; TODO this will make quotes turn to (quote )
 (defun org-ml--encode-diary-sexp-value (value)
   "Return VALUE as a string.
 VALUE must conform to `org-ml--is-valid-diary-sexp-value'."
@@ -1166,14 +1163,13 @@ bounds."
              (:format :pred org-ml--is-valid-link-format
                       :type-desc "the symbol `plain', `bracket' or `angle'")
              (:type :pred org-ml--is-valid-link-type
-                    ;; TODO make this desc better
                     :type-desc ("a oneline string from `org-link-types'"
                                 "or \"coderef\", \"custorg-ml-id\","
                                 "\"file\", \"id\", \"radio\", or"
                                 "\"fuzzy\"")
                     ;; TODO is fuzzy a good default?
                     :require "fuzzy")
-             (:raw-link) ; TODO update children through this?
+             (:raw-link)
              (:application)
              (:search-option))
        (macro (:args ,@slist :cis org-ml--update-macro-value)
@@ -2020,7 +2016,7 @@ throw an error."
     (org-ml--arg-error "Could not make secondary string from %S" string)))
 
 (org-ml--defun-kw org-ml-build-timestamp! (start &key end active repeater
-                                         warning post-blank)
+                                                 warning post-blank)
   "Return a new timestamp node.
 
 START specifies the start time and is a list of integers in one of
@@ -2059,7 +2055,7 @@ START and END follow the same rules as their respective arguments in
     (org-ml-build-clock ts :post-blank post-blank)))
 
 (org-ml--defun-kw org-ml-build-planning! (&key closed deadline scheduled
-                                       post-blank)
+                                               post-blank)
   "Return a new planning node.
 
 CLOSED, DEADLINE, and SCHEDULED are lists with the following structure
@@ -2080,13 +2076,12 @@ matter."
    :scheduled (org-ml--planning-list-to-timestamp t scheduled)
    :post-blank post-blank))
 
-;; TODO check keyvals somehow
 (org-ml--defun-kw org-ml-build-property-drawer! (&key post-blank &rest keyvals)
   "Return a new property-drawer node.
 
-Each member in KEYVALS is a list of symbols like (KEY VAL), where each
-list will generate a node-property node in the property-drawer node
-like \":key: val\"."
+Each member in KEYVALS is a list like (KEY VAL) where KEY and VAL
+are both strings, where each list will generate a node-property
+node in the property-drawer node like \":key: val\"."
   (->> keyvals
        (--map (let ((key (symbol-name (car it)))
                     (val (symbol-name (cadr it))))
