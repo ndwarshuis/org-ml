@@ -115,13 +115,13 @@ This package takes several deviations from the original terminology found in
 - 'branch' is used here instead of 'container'. Furthermore, 'leaf' is used to
   describe the converse of 'branch' (there does not seem to be an equivalent
   term in `org-element.el`)
-- `org-element.el` uses 'attribute(s)' and 'property(ies)' interchangably to
+- `org-element.el` uses 'attribute(s)' and 'property(ies)' interchangeably to
   describe nodes; here only 'property(ies)' is used
 
 ## Properties
 
-All properies specified by `org-element.el` are readable by this API (eg one can
-query them with functions like `om-get-property`).
+All properties specified by `org-element.el` are readable by this API (eg one
+can query them with functions like `om-get-property`).
 
 The properties `:begin`, `:end`, `:contents-begin`, `:contents-end`, `:parent`,
 and `post-affiliated` are not settable by this API as they are not necessary for
@@ -193,13 +193,13 @@ while limiting the number of conversions to/from buffer space, `org-ml` will be
 much faster.
 
 To be more scientific, the current tests in the suite (see
-[here](bench/org-ml-benchmarks.el)) seem to support the following when comparing
-`org-ml` to equivalent code written using built-in ord-mode functions (in line
-with the intuitions above):
+[here](bench/org-ml-benchmarks.el)) seem to support the following conclusions
+when comparing `org-ml` to equivalent code written using built-in org-mode
+functions (in line with the intuitions above):
 * reading data (a one way conversion from buffer to node space) is up to an
   order of magnitude slower, specifically when the data to be obtained isn't
   very large (eg, reading the TODO state from a headline)
-* manipulating text (going from buffer to node space, then modifiying the node,
+* manipulating text (going from buffer to node space, then modifying the node,
   then going back to buffer space) is several times slower for single
   modifications (eg setting the TODO state of a headline)
 * larger numbers of manipulations on one node at once are faster (eg changing
@@ -216,7 +216,7 @@ make benchmark
 
 See [changelog](CHANGELOG.md).
 
-# Acknowledgements
+# Acknowledgments
 
 - Nicolas Goaziou: author of `org-element.el`
 - [@magnars](https://github.com/magnars):
