@@ -133,10 +133,10 @@ Each type's build function describes the properties that are settable.
 
 Each function that operates on an element/object will take the element/object as
 its right-most argument. This allows convenient function chaining using
-`dash.el`'s right-threading operators (`->>` and `-some->>`). The examples below
-almost exclusively demonstrate this pattern. Additionally, the right-argument
-convention also allows convenient partial application using `-partial` from
-`dash.el`.
+`dash.el`'s right-threading operators (`->>` and `-some->>`). The examples in
+the [API reference](docs/api-reference.md) almost exclusively demonstrate this
+pattern. Additionally, the right-argument convention also allows convenient
+partial application using `-partial` from `dash.el`.
 
 ## Higher-order functions
 
@@ -169,7 +169,7 @@ meaning, but `OPERATION` is done at the current point and `point` is not an
 argument to the function.
 
 For the sake of brevity, only the former form of these functions are given in
-the examples below.
+the [API reference](docs/api-reference.md).
 
 # Usage
 
