@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.2.0
+
+- add benchmark framework
+- add intermediate functions to control Myers diff algorithm application
+- fix potential infinite loop using native `equal` function for node comparison
+
 ## 5.1.0
 
 - fixed array overflow error in myers diff code
