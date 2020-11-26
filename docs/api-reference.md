@@ -7394,8 +7394,25 @@ no examples :(
 
 Replace **`node`** in the current buffer with a new one.
 **`fun`** is a unary function that takes **`node`** and returns a modified node
-or list of nodes. This modified node is then written in place of the
-old node in the current buffer.
+or list of nodes.
+
+The modified **`node`** will be converted to a string and then compared
+to the old buffer string using the Myers diff algorithm. This has
+an average time complexity of `o`(`m`+`n`+`d`^2) where `m` and `n` are the
+lengths of the old and new strings respectively and `d` is the
+number of inserts or deletes required to change one into the
+other. At the cost of performance, only the parts of the buffer
+that need to be modified will actually be changed, which is less
+likely to disturb overlays and move the cursor (and is also more
+like how org-mode's build-in imperative functions behave).
+
+If one does not need this level of precision, use the function
+`org-ml~update` and supply nil for the `diff-mode` argument. This
+will simply replace the old node's string representation with the
+modified node's string in its entirety. This will likely be
+faster but could destroy overlays (eg folding) and will
+reposition the cursor to the beginning of **`node`** if it is in the
+middle of **`node`**.
 
 ```el
 ;; Given the following contents:
@@ -7430,6 +7447,9 @@ old node in the current buffer.
 Update object under **`point`** using **`fun`**.
 **`fun`** takes an object and returns a modified object
 
+This function uses the Myers diff algorithm.
+See [`org-ml-update`](#org-ml-update-fun-node) for what this means.
+
 ```el
 ;; Given the following contents:
 ; [[http://example.com][desc]]
@@ -7445,6 +7465,9 @@ Update object under **`point`** using **`fun`**.
 
 Update element under **`point`** using **`fun`**.
 **`fun`** takes an element and returns a modified element
+
+This function uses the Myers diff algorithm.
+See [`org-ml-update`](#org-ml-update-fun-node) for what this means.
 
 ```el
 ;; Given the following contents:
@@ -7465,6 +7488,9 @@ Update element under **`point`** using **`fun`**.
 Update table-row under **`point`** using **`fun`**.
 **`fun`** takes an table-row and returns a modified table-row
 
+This function uses the Myers diff algorithm.
+See [`org-ml-update`](#org-ml-update-fun-node) for what this means.
+
 ```el
 ;; Given the following contents:
 ; | a | b |
@@ -7483,6 +7509,9 @@ Update table-row under **`point`** using **`fun`**.
 Update item under **`point`** using **`fun`**.
 **`fun`** takes an item and returns a modified item
 
+This function uses the Myers diff algorithm.
+See [`org-ml-update`](#org-ml-update-fun-node) for what this means.
+
 ```el
 ;; Given the following contents:
 ; - [ ] thing
@@ -7498,6 +7527,9 @@ Update item under **`point`** using **`fun`**.
 
 Update headline under **`point`** using **`fun`**.
 **`fun`** takes an headline and returns a modified headline
+
+This function uses the Myers diff algorithm.
+See [`org-ml-update`](#org-ml-update-fun-node) for what this means.
 
 ```el
 ;; Given the following contents:
@@ -7516,6 +7548,9 @@ Update headline under **`point`** using **`fun`**.
 
 Update subtree under **`point`** using **`fun`**.
 **`fun`** takes an subtree and returns a modified subtree
+
+This function uses the Myers diff algorithm.
+See [`org-ml-update`](#org-ml-update-fun-node) for what this means.
 
 ```el
 ;; Given the following contents:
@@ -7538,6 +7573,9 @@ Update subtree under **`point`** using **`fun`**.
 
 Update section under **`point`** using **`fun`**.
 **`fun`** takes an section and returns a modified section
+
+This function uses the Myers diff algorithm.
+See [`org-ml-update`](#org-ml-update-fun-node) for what this means.
 
 ```el
 ;; Given the following contents:
@@ -7563,8 +7601,8 @@ Update some headlines in the current using **`fun`**.
 
 See [`org-ml-get-some-headlines`](#org-ml-get-some-headlines-where) for the meaning of **`where`**.
 
-Headlines are updated using `org-ml-update-this-headline` (see this for
-use and meaning of **`fun`**).
+Headlines are updated using `org-ml~update-this-headline` with
+`diff-arg` set to nil (see this for use and meaning of **`fun`**).
 
 ```el
 ;; Given the following contents:
@@ -7723,4 +7761,4 @@ Unfold the children of **`node`** if they exist.
 ```el
 no examples :(
 ```
-Version: 5.0.2
+Version: 5.1.0

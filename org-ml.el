@@ -6196,11 +6196,18 @@ order."
                        p2 (cdr (cdr p2))))
                (and (not p2) plist-matches))))))))
 
-(org-ml--defun* org-ml-update (fun node)
+(org-ml--defun* org-ml~update (diff-mode fun node)
   "Replace NODE in the current buffer with a new one.
 FUN is a unary function that takes NODE and returns a modified node
-or list of nodes. This modified node is then written in place of the
-old node in the current buffer."
+or list of nodes.
+
+DIFF-MODE describes how the buffer will be updated and can be one of
+the following:
+- t: use the Myers diff algorithm to compare the old buffer
+  string with the new string from the modified NODE, and only
+  edit the the regions that are different
+- nil: use no diff algorithm; just replace the old buffer string
+  entirely with the new one."
   ;; if node is of type 'org-data' it will have no props
   (let* ((begin (org-ml--get-property-nocheck :begin node))
          (end (org-ml--get-property-nocheck :end node))
@@ -6217,35 +6224,89 @@ old node in the current buffer."
     (unless (org-ml--equal node0 node*)
       ;; hacky way to add overlays to undo tree
       (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
-      (org-ml--diff-region begin end (org-ml-to-string node*))
+      (if diff-mode
+          (org-ml--diff-region begin end (org-ml-to-string node*))
+        (progn
+          (delete-region begin end)
+          (org-ml-insert begin node*)))
       nil)))
+
+(org-ml--defun* org-ml-update (fun node)
+  "Replace NODE in the current buffer with a new one.
+FUN is a unary function that takes NODE and returns a modified node
+or list of nodes.
+
+The modified NODE will be converted to a string and then compared
+to the old buffer string using the Myers diff algorithm. This has
+an average time complexity of O(M+N+D^2) where M and N are the
+lengths of the old and new strings respectively and D is the
+number of inserts or deletes required to change one into the
+other. At the cost of performance, only the parts of the buffer
+that need to be modified will actually be changed, which is less
+likely to disturb overlays and move the cursor (and is also more
+like how org-mode's build-in imperative functions behave).
+
+If one does not need this level of precision, use the function
+`org-ml~update' and supply nil for the DIFF-MODE argument. This
+will simply replace the old node's string representation with the
+modified node's string in its entirety. This will likely be
+faster but could destroy overlays (eg folding) and will
+reposition the cursor to the beginning of NODE if it is in the
+middle of NODE."
+  (org-ml~update t fun node))
 
 ;; generate all update functions for corresponding parse functions
 ;; since all take function args, also generate anaphoric forms
 (eval-when-compile
   (defun org-ml--autodef-update-node-forms (name)
     "Return defun and defmacro forms for NAME."
-    (let* ((update-at (intern (format "org-ml-update-%s-at" name)))
-           (update-this (intern (format "org-ml-update-this-%s" name)))
-           (update-at-doc
-            (--> (list "Update %1$s under POINT using FUN."
-                       "FUN takes an %1$s and returns a modified %1$s")
-                 (s-join "\n" it)
-                 (format it name)))
-           (update-this-doc
-            (--> (list "Update %1$s under current point using FUN."
-                       "FUN takes an %1$s and returns a modified %1$s")
-                 (s-join "\n" it)
-                 (format it name)))
-           (call (intern (format "org-ml-parse-%s-at" name)))
-           (update-at-body `(org-ml-update fun (,call point)))
-           (update-this-body `(,update-at (point) fun)))
-      (list `(org-ml--defun* ,update-at (point fun)
-               ,update-at-doc
-               ,update-at-body)
-            `(org-ml--defun* ,update-this (fun)
-               ,update-this-doc
-               ,update-this-body))))
+    (cl-flet
+        ((format-doc
+          (name doclist)
+          (--> (s-join "\n" doclist)
+               (format it name))))
+      (let* ((update-at (intern (format "org-ml-update-%s-at" name)))
+             (update-this (intern (format "org-ml-update-this-%s" name)))
+             (update-at~ (intern (format "org-ml~update-%s-at" name)))
+             (update-this~ (intern (format "org-ml~update-this-%s" name)))
+             (myers-doc (list "This function uses the Myers diff algorithm."
+                              "See `org-ml-update' for what this means."))
+             (diff-doc (list "See `org-ml~update' for the meaning of DIFF-MODE"))
+             (update-at-doc-header
+              (list "Update %1$s under POINT using FUN."
+                    "FUN takes an %1$s and returns a modified %1$s"))
+             (update-this-doc-header
+              (list "Update %1$s under current point using FUN."
+                    "FUN takes an %1$s and returns a modified %1$s"))
+             (update-at-doc~
+              (->> (append update-at-doc-header '("") diff-doc)
+                   (format-doc name)))
+             (update-this-doc~
+              (->> (append update-this-doc-header '("") diff-doc)
+                   (format-doc name)))
+             (update-at-doc
+              (->> (append update-at-doc-header '("") myers-doc)
+                   (format-doc name)))
+             (update-this-doc
+              (->> (append update-this-doc-header '("") myers-doc)
+                   (format-doc name)))
+             (call (intern (format "org-ml-parse-%s-at" name)))
+             (update-at-body~ `(org-ml~update diff-mode fun (,call point)))
+             (update-this-body~ `(,update-at~ diff-mode (point) fun))
+             (update-at-body `(,update-at~ t point fun))
+             (update-this-body `(,update-this~ t fun)))
+        (list `(org-ml--defun* ,update-at~ (diff-mode point fun)
+                 ,update-at-doc~
+                 ,update-at-body~)
+              `(org-ml--defun* ,update-this~ (diff-mode fun)
+                 ,update-this-doc~
+                 ,update-this-body~)
+              `(org-ml--defun* ,update-at (point fun)
+                 ,update-at-doc
+                 ,update-at-body)
+              `(org-ml--defun* ,update-this (fun)
+                 ,update-this-doc
+                 ,update-this-body)))))
 
   (defmacro org-ml--autodef-update-node-functions ()
     "Define all update-node functions and macros."
@@ -6564,21 +6625,23 @@ Each subtree is obtained with `org-ml-parse-subtree-at'."
 
 See `org-ml-get-some-headlines' for the meaning of WHERE.
 
-Headlines are updated using `org-ml-update-this-headline' (see this for
-use and meaning of FUN)."
+Headlines are updated using `org-ml~update-this-headline' with
+DIFF-ARG set to nil (see this for use and meaning of FUN)."
+  ;; don't use the myers diff algorithm here since these functions are meant for
+  ;; batch processing.
   (cl-flet
       ((apply-n-forward
         (m n)
         (org-ml--apply-n m n "^\\*" nil
-          (org-ml-update-this-headline fun)))
+          (org-ml~update-this-headline nil fun)))
        (apply-n-backward
         (m n)
         (org-ml--apply-n m n "^\\*" t
-          (org-ml-update-this-headline fun)))
+          (org-ml~update-this-headline nil fun)))
        (apply-region
         (begin end)
         (org-ml--apply-region begin end "^\\*"
-          (org-ml-update-this-headline fun))))
+          (org-ml~update-this-headline nil fun))))
     (org-ml--do-headlines-where where
       #'apply-n-forward
       #'apply-n-backward
@@ -6603,17 +6666,17 @@ and meaning of FUN)."
         (m n)
         (org-ml--apply-n m n "^\\* " nil
           ;; (re-search-forward "^\\* " nil t)
-          (org-ml-update-this-subtree fun)))
+          (org-ml~update-this-subtree nil fun)))
        (apply-n-backward
         (m n)
         (org-ml--apply-n m n "^\\* " t
           ;; (re-search-backward "^\\* " nil t)
-          (org-ml-update-this-subtree fun)))
+          (org-ml~update-this-subtree nil fun)))
        (apply-region
         (begin end)
         (org-ml--apply-region begin end "^\\* "
           ;; (re-search-backward "^\\* " nil t)
-          (org-ml-update-this-subtree fun))))
+          (org-ml~update-this-subtree nil fun))))
     (org-ml--do-headlines-where where
       #'apply-n-forward
       #'apply-n-backward
