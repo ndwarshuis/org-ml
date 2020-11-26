@@ -30,6 +30,13 @@ compile:
 	${MAKE} unit
 	${MAKE} clean-elc
 
+benchmark:
+	${CASK} build
+	${CASK} exec ${EMACS} -Q -L . -L bench -batch \
+		-l bench/org-ml-benchmarks.el \
+		-f org-ml-bench-run
+	${MAKE} clean-elc
+
 clean-elc:
 	${CASK} clean-elc
 

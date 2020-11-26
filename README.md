@@ -115,13 +115,13 @@ This package takes several deviations from the original terminology found in
 - 'branch' is used here instead of 'container'. Furthermore, 'leaf' is used to
   describe the converse of 'branch' (there does not seem to be an equivalent
   term in `org-element.el`)
-- `org-element.el` uses 'attribute(s)' and 'property(ies)' interchangably to
+- `org-element.el` uses 'attribute(s)' and 'property(ies)' interchangeably to
   describe nodes; here only 'property(ies)' is used
 
 ## Properties
 
-All properies specified by `org-element.el` are readable by this API (eg one can
-query them with functions like `om-get-property`).
+All properties specified by `org-element.el` are readable by this API (eg one
+can query them with functions like `om-get-property`).
 
 The properties `:begin`, `:end`, `:contents-begin`, `:contents-end`, `:parent`,
 and `post-affiliated` are not settable by this API as they are not necessary for
@@ -133,10 +133,10 @@ Each type's build function describes the properties that are settable.
 
 Each function that operates on an element/object will take the element/object as
 its right-most argument. This allows convenient function chaining using
-`dash.el`'s right-threading operators (`->>` and `-some->>`). The examples below
-almost exclusively demonstrate this pattern. Additionally, the right-argument
-convention also allows convenient partial application using `-partial` from
-`dash.el`.
+`dash.el`'s right-threading operators (`->>` and `-some->>`). The examples in
+the [API reference](docs/api-reference.md) almost exclusively demonstrate this
+pattern. Additionally, the right-argument convention also allows convenient
+partial application using `-partial` from `dash.el`.
 
 ## Higher-order functions
 
@@ -169,18 +169,54 @@ meaning, but `OPERATION` is done at the current point and `point` is not an
 argument to the function.
 
 For the sake of brevity, only the former form of these functions are given in
-the examples below.
+the [API reference](docs/api-reference.md).
 
 # Usage
 
 For comprehensive documentation of all available functions see the [API
 reference](docs/api-reference.md).
 
+# Performance
+
+Benchmarking this library is still in the early stages.
+
+Intuitively, the most costly operations are going to be those that go
+back-and-forth between raw buffer text (here called "buffer space") and its node
+representations (here called "node space") since those involve complicated
+string formating, regular expressions, buffer searching, etc (examples:
+`org-ml-parse-this-THING`, `org-ml-update-this-THING` and friends). Once the
+data is in node space, execution should be very fast since nodes are just lists.
+Thus if you have performance-intensive code that requires many small edits to
+org-mode files, it might be better to use org-mode's build-in functions. On the
+other hand, if most of the complicated processing can be done in node space
+while limiting the number of conversions to/from buffer space, `org-ml` will be
+much faster.
+
+To be more scientific, the current tests in the suite (see
+[here](bench/org-ml-benchmarks.el)) seem to support the following conclusions
+when comparing `org-ml` to equivalent code written using built-in org-mode
+functions (in line with the intuitions above):
+* reading data (a one way conversion from buffer to node space) is up to an
+  order of magnitude slower, specifically when the data to be obtained isn't
+  very large (eg, reading the TODO state from a headline)
+* manipulating text (going from buffer to node space, then modifying the node,
+  then going back to buffer space) is several times slower for single
+  modifications (eg setting the TODO state of a headline)
+* larger numbers of manipulations on one node at once are faster (eg changing
+  the TODO state, setting a property, and setting a SCHEDULED timestamp on a
+  headline)
+
+To run the benchmark suite:
+
+``` sh
+make benchmark
+```
+
 # Version History
 
 See [changelog](CHANGELOG.md).
 
-# Acknowledgements
+# Acknowledgments
 
 - Nicolas Goaziou: author of `org-element.el`
 - [@magnars](https://github.com/magnars):
