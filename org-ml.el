@@ -5795,19 +5795,31 @@ PATTERN follows the same rules as `org-ml-match'."
 
 ;;; parse at specific point
 
+(defun org-ml--parse-objects (type begin end)
+  "Return a parsed object defined in the buffer by BEGIN and END.
+TYPE is the type of the node to be parsed."
+  (if (eq type 'link)
+      ;; NOTE these two variables will change the parsed link representation in
+      ;; an irreversible and non-obvious way, thus set them to nil (which means
+      ;; that parsing and then printing will compose to the identity)
+      (let ((org-link-abbrev-alist nil)
+            (org-link-translation-function nil))
+        (org-element--parse-elements begin end 'first-section nil nil nil nil))
+    (org-element--parse-elements begin end 'first-section nil nil nil nil)))
+
 ;; TODO add test for plain-text parsing
 (defun org-ml-parse-object-at (point)
   "Return object node under POINT or nil if not on an object."
   (save-excursion
     (goto-char point)
     (-let* ((context (org-element-context))
-            ((offset nesting) (cl-case (org-ml-get-type context)
+            (type (org-ml-get-type context))
+            ((offset nesting) (cl-case type
                                 ((superscript subscript) '(-1 (0 1)))
                                 (table-cell '(-1 (0 0 0)))
                                 (t '(0 (0 0)))))
             ((&plist :begin :end) (org-ml--get-all-properties context))
-            (tree (org-element--parse-elements
-                   (+ begin offset) end 'first-section nil nil nil nil)))
+            (tree (org-ml--parse-objects type (+ begin offset) end)))
       (->> (car tree)
            (org-ml--get-descendent nesting)
            (org-ml--filter-types org-ml-objects)))))

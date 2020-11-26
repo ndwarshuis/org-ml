@@ -387,14 +387,17 @@ be parsed to TYPE."
           (list "/italic/")))
 
       (it "link"
-        (org-ml--test-contents-parse-inversion 'link #'org-ml-parse-object-at
-          ;; this is not exhaustive but hopefully good enough
-          (list "https://downloadmoreram.com"
-                "mailto:vladimirputin@pwned.ru"
-                "file:/home/kalilinux/pwneddata"
-                "<https://downloadmoreram.com>"
-                "[[https://downloadmoreram.com]]"
-                "[[https://downloadmoreram.com][legit advice]]")))
+        ;; ignore the value of `org-link-abbrev-alist'
+        (let ((org-link-abbrev-alist '(("test" . "fail"))))
+          (org-ml--test-contents-parse-inversion 'link #'org-ml-parse-object-at
+            ;; this is not exhaustive but hopefully good enough
+            (list "https://downloadmoreram.com"
+                  "mailto:vladimirputin@pwned.ru"
+                  "file:/home/kalilinux/pwneddata"
+                  "<https://downloadmoreram.com>"
+                  "[[test:foo]]"
+                  "[[https://downloadmoreram.com]]"
+                  "[[https://downloadmoreram.com][legit advice]]"))))
 
       (it "radio-target"
         (org-ml--test-contents-parse-inversion 'radio-target #'org-ml-parse-object-at
