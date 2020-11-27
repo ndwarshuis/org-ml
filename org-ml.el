@@ -2836,6 +2836,7 @@ The return value will be a list as specified by the TIME argument in
   (and (org-ml--timestamp-is-ranged timestamp)
        (org-ml--timestamp-get-end-time timestamp)))
 
+;; TODO this should be ""-get-length
 (defun org-ml-timestamp-get-range (timestamp)
   "Return the range of TIMESTAMP node in seconds as an integer.
 If non-ranged, this function will return 0. If ranged but
@@ -2886,6 +2887,7 @@ TIME1 and TIME2 are lists analogous to the TIME argument specified in
 `org-ml-build-timestamp!'."
   (org-ml--timestamp-set-double-time time1 time2 timestamp))
 
+;; TODO this should be ""-set-length
 (defun org-ml-timestamp-set-range (range timestamp)
   "Return TIMESTAMP node with range set to RANGE.
 If TIMESTAMP is ranged, keep start time the same and adjust the end
