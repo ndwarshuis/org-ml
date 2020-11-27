@@ -2731,17 +2731,24 @@ and properties that may be used with this function."
         (org-ml-map-property* prop (org-ml--plist-remove key it) node)
       (org-ml--arg-error "Not a plist property"))))
 
-;; update polymorphic property function documentation
+;; update polymorphic property function documentation:
+;;
+;; For the functions immediately above, modify the docstrings to inform the user
+;; which node types and property combinations may be used. This information is
+;; stored in `org-ml--property-alist'.
 
-;; TODO these docstrings suck :(
 (defun org-ml--get-types-with-property-attribute (attr)
-  "Return alist of all nodes types that contain ATTR."
+  "Return alist of all nodes types that contain ATTR.
+Return a list like ((TYPE (PROP1 ...)) ...) where TYPE is the
+node type and PROPX are the properties that contain ATTR."
   (->> org-ml--property-alist
        (--map (cons (car it) (--filter (plist-get (cdr it) attr) (cdr it))))
        (-filter #'cdr)))
 
 (defun org-ml--format-alist-operations (type-alist)
-  "Return a formatted string of TYPE-ALIST."
+  "Return a formatted string of TYPE-ALIST.
+TYPE-ALIST is a list like that given by
+`org-ml--format-alist-operations'."
   (->> type-alist
        (--map (cons (car it) (-map #'car (cdr it))))
        (--map (format "\n%s\n%s"
@@ -2751,10 +2758,13 @@ and properties that may be used with this function."
 
 (defun org-ml--append-documentation (fun string)
   "Append STRING to the docstring of FUN."
-  (let ((msg "\n\nThe following types and properties are supported:\n"))
-    (--> (documentation fun)
-         (concat it msg string)
-         (function-put fun 'function-documentation it))))
+  (let ((msg "\n\nThe following types and properties are supported:\n")
+        (doc (documentation fun)))
+    ;; ensure we only update once, otherwise reloads will keep adding to the
+    ;; docstrings
+    (unless (s-contains? msg doc)
+      (->> (concat doc msg string)
+           (function-put fun 'function-documentation)))))
 
 (->> (org-ml--get-types-with-property-attribute :toggle)
      (org-ml--format-alist-operations)
