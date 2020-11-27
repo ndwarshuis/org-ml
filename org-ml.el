@@ -1123,7 +1123,7 @@ bounds."
                  (:title :pred org-ml--is-valid-headline-title
                          :type-desc "a secondary string")
                  (:todo-keyword ,@ol-str-nil
-                                :decode org-ml--decode-string-or-nil) ; TODO restrict this?
+                                :decode org-ml--decode-string-or-nil)
                  (:raw-value)
                  (:todo-type))
        (horizontal-rule)
