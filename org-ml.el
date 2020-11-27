@@ -3303,8 +3303,8 @@ returns a modified child list."
 
 (defun org-ml-headline-get-subheadlines (headline)
   "Return list of child headline nodes in HEADLINE node or nil if none."
-  (-some->> (org-ml-get-children headline)
-            (--filter (org-ml-is-type 'headline it))))
+  (let ((children (org-ml-get-children headline)))
+    (if (org-ml-is-type 'section (car children)) (cdr children) children)))
 
 (defun org-ml-headline-set-subheadlines (subheadlines headline)
   "Return HEADLINE node with SUBHEADLINES set to child subheadlines."
