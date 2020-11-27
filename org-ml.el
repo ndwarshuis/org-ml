@@ -951,7 +951,7 @@ This will be based on CLOCK's value property."
              (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
         (->> clock
              (org-ml--set-property-nocheck :duration (format "%2d:%02d" h m))
-             (org-ml--set-property-nocheck :status 'running)
+             (org-ml--set-property-nocheck :status 'closed)
              (org-ml--set-property-nocheck :value ts*))))))
 
 (defun org-ml--update-headline-tags (headline)
