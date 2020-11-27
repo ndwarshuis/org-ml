@@ -933,22 +933,24 @@ This will be based on MACRO's key and value properties."
          (v (if as (format "%s(%s)" k (s-join "," as)) k)))
     (org-ml--set-property-nocheck :value (format "{{{%s}}}" v) macro)))
 
-;; TODO this name is inaccurate, also, clocks need additional help to handle
-;; the complexity and restrictions of ranges
-(defun org-ml--update-clock-duration (clock)
+(defun org-ml--update-clock-duration-and-status (clock)
   "Return CLOCK node with its duration and status properties updated.
 This will be based on CLOCK's value property."
   (let* ((ts (org-ml--get-property-nocheck :value clock))
-         (seconds (org-ml--timestamp-get-range ts))
-         (ts* (if (/= seconds 0) (org-ml--timestamp-set-type-ranged t ts) ts)))
-    ;; TODO this case highlights that I'm using imprecise terminology for
-    ;; timestamps. Really the "range" in seconds should be "length" and the
-    ;; "range" should refer to the type since this actually uses the word
-    ;; "range"
-    (if (not (org-ml--timestamp-is-range-type ts*))
-        (org-ml--set-property-nocheck :value ts* clock)
+         (seconds (org-ml--timestamp-get-range ts)))
+    (if (= seconds 0)
+        (->> (org-ml--set-property-nocheck :duration nil clock)
+             (org-ml--set-property-nocheck :status 'running))
       (let* ((h (-> seconds (/ 3600) (floor)))
-             (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
+             (m (-> seconds (- (* h 3600)) (/ 60) (floor)))
+             ;; if the clock is going from non-ranged to ranged, it may not be
+             ;; in collapsed form; ensure it is not in collapsed form
+             ;;
+             ;; TODO it may be cleaner to simply restrict the clocks to being in
+             ;; non-collapsed form (eg at using the :pred slot in the master
+             ;; property-alist table) however...I'm pretty sure collapsed clocks
+             ;; are still valid org-syntax, even if they don't appear by default
+             (ts* (org-ml-timestamp-set-collapsed nil ts)))
         (->> clock
              (org-ml--set-property-nocheck :duration (format "%2d:%02d" h m))
              (org-ml--set-property-nocheck :status 'closed)
@@ -1053,7 +1055,7 @@ bounds."
        (bold)
        (center-block)
        (clock (:value :pred org-ml--is-valid-clock-timestamp
-                      :cis org-ml--update-clock-duration
+                      :cis org-ml--update-clock-duration-and-status
                       :type-desc ("a ranged or unranged inactive timestamp"
                                   "node with no warning or repeater")
                       :require t)
@@ -2050,8 +2052,7 @@ Building a diary sexp timestamp is not possible with this function."
 
 START and END follow the same rules as their respective arguments in
 `org-ml-build-timestamp!'."
-  (let ((ts (->> (org-ml-build-timestamp! start :end end)
-                 (org-ml--timestamp-set-type-ranged (not (null end))))))
+  (let ((ts (org-ml-build-timestamp! start :end end)))
     (org-ml-build-clock ts :post-blank post-blank)))
 
 (org-ml--defun-kw org-ml-build-planning! (&key closed deadline scheduled
@@ -4560,8 +4561,7 @@ error."
         (clock)
         (let ((time (org-ml-unixtime-to-time-long unixtime)))
           (org-ml-map-property* :value
-            (->> (org-ml-timestamp-set-end-time time it)
-                 (org-ml--timestamp-set-type-ranged t))
+            (org-ml-timestamp-set-end-time time it)
             clock)))
        (close-first
         (clocks)
