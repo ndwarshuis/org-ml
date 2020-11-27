@@ -2533,6 +2533,25 @@ elements may have other elements as children."
   "Return t if PROP is of the form :attr_X where X is anything."
   (and (keywordp prop) (s-prefix-p ":attr_" (symbol-name prop) t)))
 
+(defun org-ml--property-error-unsettable (prop type)
+  "Throw error signifying that PROP is unsettable of node TYPE."
+  (org-ml--arg-error "Property '%s' is unsettable for type '%s'" prop type))
+
+(defun org-ml--property-error-wrong-type (prop type value)
+  "Throw error signifying that VALUE is wrong for PROP of node TYPE."
+  (let ((msg "Property '%s' in node of type '%s' must be %s. Got '%S'")
+        (correct-type (org-ml--get-property-type-desc type prop)))
+    (org-ml--arg-error msg prop type correct-type value)))
+
+(defun org-ml--property-encode (prop value type)
+  "Given TYPE and PROP, return encoded VALUE."
+  (-if-let (pred (org-ml--get-property-attribute :pred type prop))
+      (if (funcall pred value)
+          (let ((encode-fun (org-ml--get-property-encoder type prop)))
+            (if encode-fun (funcall encode-fun value) value))
+        (org-ml--property-error-wrong-type prop type value))
+    (org-ml--property-error-unsettable prop type)))
+
 (defun org-ml-set-property (prop value node)
   "Return NODE with PROP set to VALUE.
 
@@ -2546,22 +2565,12 @@ each type."
              (org-ml--property-is-attribute prop))
         (if (org-ml--is-string-list value)
             (org-ml--set-property-nocheck prop value node)
-          (org-ml--arg-error
-           "Property '%s' in node of type '%s' must be a list of strings. Got '%S'"
-           prop type value))
-      (-if-let (pred (org-ml--get-property-attribute :pred type prop))
-          (if (funcall pred value)
-              (let* ((encode-fun (org-ml--get-property-encoder type prop))
-                     (update-fun (org-ml--get-property-cis-function type prop)))
-                (-->
-                 (if encode-fun (funcall encode-fun value) value)
-                 (org-ml--set-property-nocheck prop it node)
-                 (if update-fun (funcall update-fun it) it)))
-            (org-ml--arg-error
-             "Property '%s' in node of type '%s' must be %s. Got '%S'"
-             prop type (org-ml--get-property-type-desc type prop) value))
-        (org-ml--arg-error "Property '%s' is unsettable for type '%s'"
-                           prop type)))))
+          (org-ml--arg-error "All attributes like '%s' must be a list of strings. Got '%S'"
+           prop value))
+      (let ((value* (org-ml--property-encode prop value type))
+            (update-fun (org-ml--get-property-cis-function type prop)))
+        (--> (org-ml--set-property-nocheck prop value* node)
+             (if update-fun (funcall update-fun it) it))))))
 
 (defun org-ml-set-properties (plist node)
   "Return NODE with all properties set to the values according to PLIST.
@@ -2572,38 +2581,36 @@ property list in NODE.
 See builder functions for a list of properties and their rules for
 each type."
   (cl-flet
-      ((filter
+      ((split-keyvals-maybe
+        (type keyvals)
+        (if (not (memq type org-ml--element-nodes-with-affiliated))
+            (list keyvals nil)
+          (--> keyvals
+               (--group-by (org-ml--property-is-attribute (car it)) it)
+               (list (alist-get nil it) (alist-get t it)))))
+       (put
+        (acc keyval)
+        (plist-put acc (car keyval) (cadr keyval)))
+       (put-encode
         (acc keyval type)
         (-let* (((prop value) keyval))
-          ;; TODO this function doesn't smell DRY
-          (-if-let (pred (org-ml--get-property-attribute :pred type prop))
-              (if (funcall pred value)
-                  (let ((encode-fun (org-ml--get-property-encoder type prop)))
-                    (->> (if encode-fun (funcall encode-fun value) value)
-                         (funcall #'plist-put acc prop)))
-                (org-ml--arg-error
-                 "Property '%s' in node of type '%s' must be %s. Got '%S'"
-                 prop type (org-ml--get-property-type-desc type prop) value))
-            (org-ml--arg-error
-             "Property '%s' is unsettable for type '%s'"
-             prop type)))))
-    (if (org-ml--is-plist plist)
-        (let* ((cur-props (org-ml--get-all-properties node))
-               (type (org-ml-get-type node))
-               (keyvals (-partition 2 plist))
-               (update-funs
-                (->> (-map #'car keyvals)
-                     (--map (org-ml--get-property-cis-function type it))
-                     (-uniq)
-                     (-non-nil)))
-               (node*
-                (org-ml--construct
-                 (org-ml-get-type node)
-                 (--reduce-from (filter acc it type) cur-props keyvals)
-                 (org-ml-get-children node))))
-          (if (not update-funs) node*
-            (--reduce-from (funcall it acc) node* update-funs)))
-      (org-ml--arg-error "Not a plist: %S" plist))))
+          (plist-put acc prop (org-ml--property-encode prop value type)))))
+    (if (not (org-ml--is-plist plist))
+        (org-ml--arg-error "Not a plist: %S" plist)
+      (-let* ((type (org-ml-get-type node))
+              (keyvals (-partition 2 plist))
+              ;; this will divide the keywords to those that are of the form
+              ;; :attr_X which must be set differently
+              ((kv kv-attrs) (split-keyvals-maybe type keyvals))
+              (update-funs
+               (->> (--map (org-ml--get-property-cis-function type (car it)) kv)
+                    (-uniq)
+                    (-non-nil))))
+        (--> (org-ml--get-all-properties node)
+             (if kv (--reduce-from (put-encode acc it type) it kv) it)
+             (if kv-attrs (-reduce-from #'put it kv-attrs) it)
+             (org-ml--construct type it (org-ml-get-children node))
+             (if update-funs (--reduce-from (funcall it acc) it update-funs) it))))))
 
 ;; TODO add plural version of this...
 (defun org-ml-get-property (prop node)

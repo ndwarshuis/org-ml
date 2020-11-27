@@ -3093,6 +3093,16 @@ each type.
      (org-ml-to-trimmed-string))
  ;; => "1. [@2] [X] tmsu :: thing"
 
+;; Given the following contents:
+; - plain
+
+(->> (org-ml-parse-this-element)
+     (org-ml-set-properties (list :name "plain name" :attr_XXX '("tmsu")))
+     (org-ml-to-trimmed-string))
+ ;; => "#+name: plain name
+ ;      #+attr_xxx: tmsu
+ ;      - plain"
+
 ```
 
 #### org-ml-get-property `(prop node)`

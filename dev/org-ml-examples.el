@@ -1733,7 +1733,16 @@
                                         :counter 2
                                         :tag '("tmsu")))
            (org-ml-to-trimmed-string))
-      => "1. [@2] [X] tmsu :: thing")
+      => "1. [@2] [X] tmsu :: thing"
+
+      (:buffer "- plain")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-properties (list :name "plain name"
+                                        :attr_XXX '("tmsu")))
+           (org-ml-to-trimmed-string))
+      => (:result "#+name: plain name"
+                  "#+attr_xxx: tmsu"
+                  "- plain"))
 
     (defexamples-content org-ml-get-property
       nil
