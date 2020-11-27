@@ -1870,10 +1870,9 @@ and child nodes)."
 (defun org-ml--headline-set-level (level headline)
   "Return HEADLINE node with its level set to LEVEL.
 Additionally set all child headline nodes to be (+ 1 level) for
-first layer, (+ 2 level for second, and so on."
+first layer, (+ 2 level) for second, and so on."
   (->> (org-ml-set-property :level level headline)
-       (org-ml--map-children-nocheck
-         ;; TODO won't this also try to 'indent' the section?
+       (org-ml-headline-map-subheadlines
          (lambda (subheadlines)
            (--map (org-ml--headline-set-level (1+ level) it) subheadlines)))))
 
