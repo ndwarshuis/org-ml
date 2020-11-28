@@ -3687,7 +3687,6 @@ logbook."
         (node)
         (when (and (org-ml-is-type 'timestamp node)
                    (org-ml--property-is-eq :type 'inactive node)
-                   ;; TODO this should be a public function
                    (-some->> (org-ml--timestamp-get-start-time node)
                      (org-ml-time-is-long)))
           (org-ml--timestamp-get-start-unixtime node)))
@@ -4321,12 +4320,20 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
 The exact configuration of the returned nodes will depend on
 CONFIG. POST-BLANK is the blank space to put between the logbook
 and the contents."
-  (let ((logbook (->> (org-ml-supercontents-get-logbook supercontents)
-                      (org-ml--logbook-to-nodes config)))
-        (contents (org-ml-supercontents-get-contents supercontents)))
-    ;; TODO if the logbook ends with a plain-list and the contents starts with
-    ;; a plain list, join them
-    (append logbook contents)))
+  (let* ((logbook (->> (org-ml-supercontents-get-logbook supercontents)
+                       (org-ml--logbook-to-nodes config)))
+         (contents (org-ml-supercontents-get-contents supercontents))
+         (last-log (-last-item logbook))
+         (first-contents (car contents)))
+    ;; if logbook ends with a plain-list and contents starts with one, join them
+    (if (and (org-ml-is-type 'plain-list last-log)
+             (org-ml-is-type 'plain-list first-contents))
+        (let ((pb (org-ml-get-property :post-blank last-log)))
+          (--> (org-ml-get-children last-log)
+               (org-ml--map-last* (org-ml-set-property :post-blank pb it) it)
+               (org-ml-map-children (lambda (contents-it) (append it contents-it)) it)
+               (append (-drop-last 1 logbook) it)))
+      (append logbook contents))))
 
 ;; public supercontents functions
 
