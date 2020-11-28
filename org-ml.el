@@ -1524,7 +1524,7 @@ If fractional cookie, return `fraction'; if percentage cookie return
 
 ;; timestamp (auxiliary functions)
 
-(defun org-ml--time-is-long (time)
+(defun org-ml-time-is-long (time)
   "Return t if TIME is a long format time list."
   (pcase time
     (`(,(pred integerp) ,(pred integerp) ,(pred integerp)
@@ -1538,7 +1538,7 @@ The returned value is dependent on the time zone of the operating
 system."
   (let* ((zone (list (current-time-zone)))
          (encode-args
-          (if (org-ml--time-is-long time)
+          (if (org-ml-time-is-long time)
               (append '(0) (reverse time) zone)
             (append '(0 0 0) (reverse (-take 3 time)) zone))))
     (->> (apply #'encode-time encode-args)
@@ -1588,7 +1588,7 @@ N is an integer."
              (reverse)
              (apply #'encode-time 0)
              (decode-time))))
-    (if (org-ml--time-is-long time)
+    (if (org-ml-time-is-long time)
         (let ((shifts (get-shifts-long n unit)))
           (reverse (-slice (apply-shifts shifts time) 1 6)))
       (let ((shifts (get-shifts-short n unit))
@@ -1734,7 +1734,7 @@ TYPE given in DEC."
 (defun org-ml--timestamp-set-range (range timestamp)
   "Return TIMESTAMP with end time shifted to RANGE seconds from start time."
   (let* ((start (org-ml--timestamp-get-start-time timestamp))
-         (long? (org-ml--time-is-long start))
+         (long? (org-ml-time-is-long start))
          (range (* range (if long? 60 86400)))
          (t2 (--> (org-ml-time-to-unixtime start)
                   (+ it range)
@@ -3689,7 +3689,7 @@ logbook."
                    (org-ml--property-is-eq :type 'inactive node)
                    ;; TODO this should be a public function
                    (-some->> (org-ml--timestamp-get-start-time node)
-                     (org-ml--time-is-long)))
+                     (org-ml-time-is-long)))
           (org-ml--timestamp-get-start-unixtime node)))
        (is-line-break
         (node)
