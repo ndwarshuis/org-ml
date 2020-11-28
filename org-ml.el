@@ -3555,7 +3555,7 @@ between the logbook and the contents."
   `((:items ,@items)
     (:clocks ,@clocks)
     (:unknown ,@unknown)
-    (:post-blank . ,post-blank)))
+    (:post-blank . ,(or post-blank 0))))
 
 (defun org-ml-logbook-get-items (logbook)
   "Return the :items slot from LOGBOOK."
@@ -4375,60 +4375,35 @@ this plist is set according to your desired target configuration."
   "Set logbook and contents of HEADLINE according to SUPERCONTENTS.
 See `org-ml-headline-get-supercontents' for the meaning of CONFIG
 and the structure of the SUPERCONTENTS list."
-  (cl-flet*
-      ((headline-has-metadata
-        (headline)
-        (or (org-ml-headline-get-planning headline)
-            (org-ml-headline-get-node-properties headline)))
-       (logbook-is-empty
-        (supercontents)
-        (let ((lb (org-ml-supercontents-get-logbook supercontents)))
-          (not (or (org-ml-logbook-get-items lb)
-                   (org-ml-logbook-get-clocks lb)))))
-       (swap-spacing
-        (prop headline config node supercontents)
-        (if (logbook-is-empty supercontents)
-            (let* ((cur-post-blank
-                    (-some->> (org-ml-headline-get-supercontents config headline)
-                      (org-ml-supercontents-get-logbook)
-                      (org-ml-logbook-get-post-blank)))
-                   (node* (if (not cur-post-blank) node
-                            (org-ml-set-property prop cur-post-blank node)))
-                   (nodes (-some->> supercontents
-                            (org-ml--supercontents-to-nodes config))))
-              (list node* nodes))
-          (let* ((pb (org-ml-get-property prop node))
-                 (node* (org-ml-set-property prop 0 node))
-                 (nodes (-some->> supercontents
-                          (org-ml-supercontents-map-logbook*
-                            (org-ml-logbook-set-post-blank pb it))
-                          (org-ml--supercontents-to-nodes config))))
-            (list node* nodes))))
-       (swap-spacing-headline
-        (headline config supercontents)
-        (swap-spacing :pre-blank headline config headline supercontents))
-       (swap-spacing-node
-        (headline config node supercontents)
-        (swap-spacing :post-blank headline config node supercontents)))
-    (if (not (headline-has-metadata headline))
-        (-let (((headline* supercontents-nodes)
-                (swap-spacing-headline headline config supercontents)))
-          (org-ml-headline-set-section supercontents-nodes headline*))
-      (org-ml-headline-map-section*
-        (-let (((first . (second . _)) it))
-          (cond
-           ((and (org-ml-is-type 'planning first)
-                 (org-ml-is-type 'property-drawer second))
-            (-let (((second* supercontents-nodes)
-                    (swap-spacing-node headline config second supercontents)))
-              `(,first ,second* ,@supercontents-nodes)))
-           ((org-ml-is-any-type '(property-drawer planning) first)
-            (-let (((first* supercontents-nodes)
-                    (swap-spacing-node headline config first supercontents)))
-              `(,first* ,@supercontents-nodes)))
-           (t
-            (-some->> supercontents (org-ml--supercontents-to-nodes config)))))
-        headline))))
+  (cl-flet
+      ((set-blank
+        (new-logbook? config headline prop node)
+        (if new-logbook? (org-ml-set-property prop 0 node)
+          (-if-let (pb (-some->> headline
+                         (org-ml-headline-get-supercontents config)
+                         (org-ml-supercontents-get-logbook)
+                         (org-ml-logbook-get-post-blank)))
+              (org-ml-set-property prop pb node)
+            node))))
+    (-let* (((first . (second . _)) (org-ml-headline-get-section headline))
+            (t1 (org-ml-get-type first))
+            (t2 (org-ml-get-type second))
+            (nodes (org-ml--supercontents-to-nodes config supercontents))
+            (new-logbook? (--> (org-ml-supercontents-get-logbook supercontents)
+                               (or (org-ml-logbook-get-items it)
+                                   (org-ml-logbook-get-clocks it)))))
+      (cond
+       ((and (eq t1 'planning) (eq t2 'property-drawer))
+        (--> (set-blank new-logbook? config headline :post-blank second)
+             `(,first ,it ,@nodes)
+             (org-ml-headline-set-section it headline)))
+       ((or (eq t1 'planning) (eq t1 'property-drawer))
+        (--> (set-blank new-logbook? config headline :post-blank first)
+             (cons it nodes)
+             (org-ml-headline-set-section it headline)))
+       (t
+        (->> (set-blank new-logbook? config headline :pre-blank headline)
+             (org-ml-headline-set-section nodes)))))))
 
 (org-ml--defun* org-ml-headline-map-supercontents (config fun headline)
   "Map a function over the supercontents of HEADLINE.
