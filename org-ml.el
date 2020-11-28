@@ -999,53 +999,53 @@ bounds."
 ;;; property alist
 
 (org-ml--defconst org-ml--property-alist
-  (let ((bool (list :pred #'booleanp
-                    :decode 'org-ml--decode-boolean
-                    :type-desc "nil or t"
-                    :toggle t))
-        (pos-int (list :pred #'org-ml--is-pos-integer
-                       :type-desc "a positive integer"))
-        (pos-int-nil (list :pred #'org-ml--is-pos-integer-or-nil
-                           :type-desc "a positive integer or nil"))
-        (nn-int (list :pred #'org-ml--is-non-neg-integer
-                      :type-desc "a non-negative integer"))
-        (nn-int-nil (list :pred #'org-ml--is-non-neg-integer-or-nil
-                          :type-desc "a non-negative integer or nil"))
-        (str (list :pred #'stringp
-                   :type-desc "a string"))
-        (str-nil (list :pred #'string-or-null-p
-                       :type-desc "a string or nil"))
-        (ol-str (list :pred #'org-ml--is-oneline-string
-                      :type-desc "a oneline string"))
-        (ol-str-nil (list :pred #'org-ml--is-oneline-string-or-nil
-                          :type-desc "a oneline string or nil"))
-        (plist (list :encode 'org-ml--encode-plist
-                     :pred #'org-ml--is-plist
-                     :decode 'org-ml--decode-plist
-                     :plist t
-                     :type-desc "a plist"))
-        (slist (list :pred #'org-ml--is-string-list
-                     :string-list t
-                     :type-desc "a list of oneline strings"))
-        (slist-com (list :encode 'org-ml--encode-string-list-comma-delim
-                         :decode 'org-ml--decode-string-list-comma-delim
-                         :pred #'org-ml--is-string-list
-                         :string-list t
-                         :type-desc "a list of oneline strings"))
-        (slist-spc (list :encode 'org-ml--encode-string-list-space-delim
-                         :decode 'org-ml--decode-string-list-space-delim
-                         :pred #'org-ml--is-string-list
-                         :string-list t
-                         :type-desc "a list of oneline strings"))
-        (planning-unclosed (list :pred #'org-ml--is-valid-planning-unclosed-timestamp
-                                 :type-desc "a zero-range, active timestamp node"))
-        (planning-closed (list :pred #'org-ml--is-valid-planning-closed-timestamp
-                               :type-desc "a zero-range, inactive timestamp node"))
-        (ts-unit (list :pred #'org-ml--is-valid-timestamp-unit
-                       :type-desc '("nil or a symbol from `year' `month'"
-                                    "`week' `day', or `hour'")))
-        (post-blank (list :post-blank :pred #'org-ml--is-non-neg-integer
-                          :shift #'org-ml--shift-non-neg-integer)))
+  (let* ((bool (list :pred #'booleanp
+                     :decode 'org-ml--decode-boolean
+                     :type-desc "nil or t"
+                     :toggle t))
+         (pos-int (list :pred #'org-ml--is-pos-integer
+                        :type-desc "a positive integer"))
+         (pos-int-nil (list :pred #'org-ml--is-pos-integer-or-nil
+                            :type-desc "a positive integer or nil"))
+         (nn-int (list :pred #'org-ml--is-non-neg-integer
+                       :type-desc "a non-negative integer"))
+         (nn-int-nil (list :pred #'org-ml--is-non-neg-integer-or-nil
+                           :type-desc "a non-negative integer or nil"))
+         (str (list :pred #'stringp
+                    :type-desc "a string"))
+         (str-nil (list :pred #'string-or-null-p
+                        :type-desc "a string or nil"))
+         (ol-str (list :pred #'org-ml--is-oneline-string
+                       :type-desc "a oneline string"))
+         (ol-str-nil (list :pred #'org-ml--is-oneline-string-or-nil
+                           :type-desc "a oneline string or nil"))
+         (plist (list :encode 'org-ml--encode-plist
+                      :pred #'org-ml--is-plist
+                      :decode 'org-ml--decode-plist
+                      :plist t
+                      :type-desc "a plist"))
+         (slist (list :pred #'org-ml--is-string-list
+                      :string-list t
+                      :type-desc "a list of oneline strings"))
+         (slist-com (list :encode 'org-ml--encode-string-list-comma-delim
+                          :decode 'org-ml--decode-string-list-comma-delim
+                          :pred #'org-ml--is-string-list
+                          :string-list t
+                          :type-desc "a list of oneline strings"))
+         (slist-spc (list :encode 'org-ml--encode-string-list-space-delim
+                          :decode 'org-ml--decode-string-list-space-delim
+                          :pred #'org-ml--is-string-list
+                          :string-list t
+                          :type-desc "a list of oneline strings"))
+         (planning-unclosed (list :pred #'org-ml--is-valid-planning-unclosed-timestamp
+                                  :type-desc "a zero-range, active timestamp node"))
+         (planning-closed (list :pred #'org-ml--is-valid-planning-closed-timestamp
+                                :type-desc "a zero-range, inactive timestamp node"))
+         (ts-unit (list :pred #'org-ml--is-valid-timestamp-unit
+                        :type-desc '("nil or a symbol from `year' `month'"
+                                     "`week' `day', or `hour'")))
+         (post-blank `(:post-blank ,@nn-int
+                                   :shift org-ml--shift-non-neg-integer)))
     (->>
      `((babel-call (:call ,@ol-str :require t)
                    (:inside-header ,@plist)
