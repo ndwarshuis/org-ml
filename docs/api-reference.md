@@ -206,6 +206,7 @@ Set, get, and map properties of nodes.
 
 Functions to work with timestamp data
 
+* [org-ml-time-is-long](#org-ml-time-is-long-time) `(time)`
 * [org-ml-time-to-unixtime](#org-ml-time-to-unixtime-time) `(time)`
 * [org-ml-unixtime-to-time-long](#org-ml-unixtime-to-time-long-unixtime) `(unixtime)`
 * [org-ml-unixtime-to-time-short](#org-ml-unixtime-to-time-short-unixtime) `(unixtime)`
@@ -3771,6 +3772,14 @@ Return t is **`statistics-cookie`** node is complete.
 
 
 Functions to work with timestamp data
+
+#### org-ml-time-is-long `(time)`
+
+Return t if **`time`** is a long format time list.
+
+```el
+no examples :(
+```
 
 #### org-ml-time-to-unixtime `(time)`
 

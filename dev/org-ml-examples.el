@@ -3000,8 +3000,12 @@
            (org-ml-statistics-cookie-is-complete))
       => nil))
 
+  ;; TODO add these
   (def-example-subgroup "Timestamp (Auxiliary)"
     "Functions to work with timestamp data"
+    
+    (defexamples-content org-ml-time-is-long
+      nil)
 
     (defexamples-content org-ml-time-to-unixtime
       nil)
