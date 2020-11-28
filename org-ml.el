@@ -3287,6 +3287,31 @@ The unwrap operation will be done with `org-ml-unwrap-types-deep'."
 The unwrap operation will be done with `org-ml-unwrap-deep'."
   (org-ml--mapcat-normalize (org-ml-unwrap-deep it) secondary-string))
 
+;;; item
+
+(defun org-ml-item-get-paragraph (item)
+  "Return the first paragraph's children of ITEM or nil if none."
+  (-when-let (first-child (car (org-ml-get-children item)))
+    (when (org-ml-is-type 'paragraph first-child)
+      (org-ml-get-children first-child))))
+
+(defun org-ml-item-set-paragraph (secondary-string item)
+  "Set the first paragraph's children of ITEM to SECONDARY-STRING."
+  (org-ml-map-children*
+    (if (org-ml-is-type 'paragraph (car it))
+        (if (not secondary-string) (cdr it)
+          (cons (org-ml-set-children secondary-string (car it)) (cdr it)))
+      (cons (apply #'org-ml-build-paragraph secondary-string) it))
+    item))
+
+(org-ml--defun* org-ml-item-map-paragraph (fun item)
+  "Apply FUN to the first paragraph's children in ITEM.
+FUN is a UNARY function that takes the secondary-string of the
+first paragraph and returns modified secondary-string."
+  (--> (org-ml-item-get-paragraph item)
+       (funcall fun it)
+       (org-ml-item-set-paragraph it item)))
+
 ;;; headline
 
 (defun org-ml-headline-get-section (headline)

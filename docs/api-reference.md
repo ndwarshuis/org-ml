@@ -271,6 +271,12 @@ Set, get, and map the children of branch nodes.
 * [org-ml-flatten-types-deep](#org-ml-flatten-types-deep-types-secondary-string) `(types secondary-string)`
 * [org-ml-flatten-deep](#org-ml-flatten-deep-secondary-string) `(secondary-string)`
 
+### Item
+
+* [org-ml-item-get-paragraph](#org-ml-item-get-paragraph-item) `(item)`
+* [org-ml-item-set-paragraph](#org-ml-item-set-paragraph-secondary-string-item) `(secondary-string item)`
+* [org-ml-item-map-paragraph](#org-ml-item-map-paragraph-fun-item) `(fun item)`
+
 ### Headline
 
 * [org-ml-headline-get-section](#org-ml-headline-get-section-headline) `(headline)`
@@ -4915,6 +4921,73 @@ The unwrap operation will be done with [`org-ml-unwrap-deep`](#org-ml-unwrap-dee
      (org-ml-map-children #'org-ml-flatten-deep)
      (org-ml-to-trimmed-string))
  ;; => "This (1 2 3 4 5 6) is randomly formatted"
+
+```
+
+
+### Item
+
+#### org-ml-item-get-paragraph `(item)`
+
+Return the first paragraph's children of **`item`** or nil if none.
+
+```el
+;; Given the following contents:
+; - one
+
+(->> (org-ml-parse-this-item)
+     (org-ml-item-get-paragraph))
+ ;; => '("one")
+
+;; Given the following contents:
+; - 
+
+(->> (org-ml-parse-this-item)
+     (org-ml-item-get-paragraph))
+ ;; => nil
+
+```
+
+#### org-ml-item-set-paragraph `(secondary-string item)`
+
+Set the first paragraph's children of **`item`** to **`secondary-string`**.
+
+```el
+;; Given the following contents:
+; - one
+
+(->> (org-ml-parse-this-item)
+     (org-ml-item-set-paragraph '("two"))
+     (org-ml-to-string))
+ ;; => "- two
+ ;      "
+
+;; Given the following contents:
+; - one
+
+(->> (org-ml-parse-this-item)
+     (org-ml-item-set-paragraph nil)
+     (org-ml-to-string))
+ ;; => "- 
+ ;      "
+
+```
+
+#### org-ml-item-map-paragraph `(fun item)`
+
+Apply **`fun`** to the first paragraph's children in **`item`**.
+**`fun`** is a `unary` function that takes the secondary-string of the
+first paragraph and returns modified secondary-string.
+
+```el
+;; Given the following contents:
+; - one
+
+(->> (org-ml-parse-this-item)
+     (org-ml-item-map-paragraph* (-map #'upcase it))
+     (org-ml-to-string))
+ ;; => "- ONE
+ ;      "
 
 ```
 

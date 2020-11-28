@@ -2930,7 +2930,7 @@
     nil
 
     ;; TODO add shortcut tag setter
-    
+
     (defexamples-content org-ml-item-toggle-checkbox
       nil
       (:buffer "- [ ] one")
@@ -3817,6 +3817,41 @@
            (org-ml-map-children #'org-ml-flatten-deep)
            (org-ml-to-trimmed-string))
       => "This (1 2 3 4 5 6) is randomly formatted"))
+
+  (def-example-subgroup "Item"
+    nil
+
+    (defexamples-content org-ml-item-get-paragraph
+      nil
+      (:buffer "- one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-get-paragraph))
+      => '("one")
+      (:buffer "- ")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-get-paragraph))
+      => nil)
+
+    (defexamples-content org-ml-item-set-paragraph
+      nil
+      (:buffer "- one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-set-paragraph '("two"))
+           (org-ml-to-string))
+      => "- two\n"
+      (:buffer "- one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-set-paragraph nil)
+           (org-ml-to-string))
+      => "- \n")
+
+    (defexamples-content org-ml-item-map-paragraph
+      nil
+      (:buffer "- one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-map-paragraph* (-map #'upcase it))
+           (org-ml-to-string))
+      => "- ONE\n"))
 
   (def-example-subgroup "Headline"
     nil
