@@ -6137,6 +6137,23 @@ applied to the buffer."
              (delete-region (+ start i) (+ 1 start j))))
           (setq cmds rest))))))
 
+(defun org-ml--properties-equal (type prop value1 value2)
+  "Return t if VALUE1 and VALUE2 are 'the same'.
+If TYPE and PROP are 'headline/:title or 'item/:tag respectively,
+compare using `org-ml--equal' on all their members (as these are
+secondary strings). Otherwise use `equal'. This function is meant
+to avoid infinite loops which may be caused by comparing the
+parent nodes in secondary strings."
+  (if (or (and (eq type 'headline) (eq prop :title))
+          (and (eq type 'item) (eq prop :tag)))
+      (let ((matches t))
+        (while (and value1 matches)
+          (setq matches (org-ml--equal (car value1) (car value2))
+                value1 (cdr value1)
+                value2 (cdr value2)))
+        (and (not value1) matches))
+    (equal value1 value2)))
+
 (defun org-ml--equal (node1 node2)
   "Test of NODE1 is 'the same' as NODE2.
 'The same' means that both nodes have the same type, children,
@@ -6175,10 +6192,8 @@ order."
                  ;; skip over parents since these could make circular lists
                  (setq plist-matches (and (eq (car p1) (car p2))
                                           (or (eq p1 :parent)
-                                              ;; TODO this might hit an infinite
-                                              ;; loop for secondary string
-                                              ;; properties
-                                              (equal (cadr p1) (cadr p2))))
+                                              (org-ml--properties-equal
+                                               t1 (car p1) (cadr p1) (cadr p2))))
                        p1 (cdr (cdr p1))
                        p2 (cdr (cdr p2))))
                (and (not p2) plist-matches))))))))
