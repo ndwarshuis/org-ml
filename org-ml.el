@@ -4129,13 +4129,13 @@ CONFIG is a plist parsable by `org-ml--scc-encode'."
 
 ;; logbook merging (supercontents -> nodes)
 
-(defun org-ml--sort-logbook (scc nodes)
+(defun org-ml--sort-logbook (mode scc nodes)
   "Sort NODES and return.
 NODES will be sorted according to their timestamps and are
 assumed to be valid log items or clocks/clock-notes (anything
 else will trigger an error). SCC is a supercontents-config as
-returned by `org-ml--scc-init'."
-  ;; TODO optimize this depending on what we wish to sort?
+returned by `org-ml--scc-init'. MODE is one of :mixed, :items,
+or :clocks depending on what is intended to be sorted."
   (-let (((&alist :clock-notes n :is-log-item-fun f) scc))
     (cl-labels
         ((get-ts
@@ -4146,24 +4146,37 @@ returned by `org-ml--scc-init'."
                (org-ml--timestamp-get-start-unixtime)))
             (item
              (funcall f node))))
-         (group-clock-notes
+         (prepare-node
           (acc node)
           ;; Return a list like (NODE . NOTE) where NODE is a clock or item and
           ;; NOTE is a clock note, which is only added to NODE if the type of
           ;; NODE is a clock and NOTE appears immediately after.
-          (if (not n)
-              (if (org-ml-is-any-type '(clock item) node) (cons (list node) acc)
-                (error "Not a clock or item: %s" node))
-            (cond
-             ((and (org-ml-is-type 'item node)
-                   (org-ml-is-type 'clock (car (car acc)))
-                   (not (funcall f node)))
-              (cons (list (car (car acc)) node) (cdr acc)))
-             ((or (and (org-ml-is-type 'item node) (funcall f node))
-                  (org-ml-is-type 'clock node))
-              (cons (list node) acc))
-             (t
-              (error "Not a valid clock, item, or note: %s" node)))))
+          (cond
+           ((and n
+                 (memq mode '(:clocks :mixed))
+                 (org-ml-is-type 'item node)
+                 (org-ml-is-type 'clock (car (car acc)))
+                 (not (funcall f node)))
+            (cons (list (car (car acc)) node) (cdr acc)))
+           ((or (and (memq mode '(:items :mixed))
+                     (org-ml-is-type 'item node)
+                     (funcall f node))
+                (and (memq mode '(:clocks :mixed))
+                     (org-ml-is-type 'clock node)))
+            (cons (list node) acc))
+           (t
+            (let ((msg (cond
+                        ((and n (eq mode :clocks))
+                         "Not a valid clock or note: %s")
+                        ((and n (eq mode :mixed))
+                         "Not a valid item, clock, or note: %s")
+                        ((eq mode :clocks)
+                         "Not a valid clock: %s")
+                        ((eq mode :items)
+                         "Not a valid item: %s")
+                        (t
+                         "Not a valid clock or item: %s"))))
+              (error msg node)))))
          (merge
           (nodes-a nodes-b)
           (pcase (cons nodes-a nodes-b)
@@ -4190,7 +4203,7 @@ returned by `org-ml--scc-init'."
             (if (<= L 1) nodes
               (-let (((left right) (-split-at (/ L 2) nodes)))
                 (merge (merge-and-sort left) (merge-and-sort right)))))))
-      (->> (-reduce-from #'group-clock-notes nil nodes)
+      (->> (-reduce-from #'prepare-node nil nodes)
            (merge-and-sort)
            (-flatten-n 1)
            (org-ml--wrap-plain-lists)))))
@@ -4200,21 +4213,21 @@ returned by `org-ml--scc-init'."
 Return these two inputs as a single sorted list (highest
 timestamp first) according to `org-ml--sort-logbook'. SCC is a
 supercontents-config as returned by `org-ml--scc-encode'."
-  (org-ml--sort-logbook scc (append items clocks)))
+  (org-ml--sort-logbook :mixed scc (append items clocks)))
 
 (defun org-ml--logbook-items-to-nodes (scc logbook)
   "Return items in LOGBOOK as a sorted list of NODES.
 SCC is a supercontents-config as returned by
 `org-ml--scc-encode'."
   (->> (org-ml-logbook-get-items logbook)
-       (org-ml--sort-logbook scc)))
+       (org-ml--sort-logbook :items scc)))
 
 (defun org-ml--logbook-clocks-to-nodes (scc logbook)
   "Return clocks in LOGBOOK as a sorted list of NODES.
 SCC is a supercontents-config as returned by
 `org-ml--scc-encode'."
   (->> (org-ml-logbook-get-clocks logbook)
-       (org-ml--sort-logbook scc)))
+       (org-ml--sort-logbook :clocks scc)))
 
 (defun org-ml--logbook-to-nodes (config logbook)
   "Return LOGBOOK as a list of NODES.
