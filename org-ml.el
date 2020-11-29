@@ -4963,9 +4963,7 @@ will be spliced after INDEX."
 ;; - parent index (in this case 1 for 1.)
 ;; - child index (in this case 1 for 1.1)
 
-;; TODO this is a bit sketchy...it depends on the indentation function to make
-;; the children list one element shorter, which is usually true but makes a
-;; really hard error to catch when it fails
+;; TODO these algorithms smell slow...and they are pretty confusing to read
 (defun org-ml--indent-after (indent-fun index node)
   "Return NODE with INDENT-FUN applied to all child nodes after INDEX."
   (if (< index (1- (length (org-ml-get-children node))))
