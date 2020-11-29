@@ -1723,27 +1723,6 @@
            (org-ml-to-trimmed-string))
       !!> arg-type-error)
 
-    (defexamples-content org-ml-set-properties
-      nil
-      
-      (:buffer "- thing")
-      (->> (org-ml-parse-this-item)
-           (org-ml-set-properties (list :bullet 1
-                                        :checkbox 'on
-                                        :counter 2
-                                        :tag '("tmsu")))
-           (org-ml-to-trimmed-string))
-      => "1. [@2] [X] tmsu :: thing"
-
-      (:buffer "- plain")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-properties (list :name "plain name"
-                                        :attr_XXX '("tmsu")))
-           (org-ml-to-trimmed-string))
-      => (:result "#+name: plain name"
-                  "#+attr_xxx: tmsu"
-                  "- plain"))
-
     (defexamples-content org-ml-get-property
       nil
 
@@ -2370,25 +2349,6 @@
       => "=I AM NOT A CROOK="
       :end-hidden)
 
-    (defexamples-content org-ml-map-properties
-      nil
-
-      (:buffer "#+KEY: VAL")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-properties
-            (list :key (-partial #'s-prepend "OM_")
-                  :value (-partial #'s-prepend "OM_")))
-           (org-ml-to-trimmed-string))
-      => "#+om_key: OM_VAL"
-      ;; TODO this makes the document parser puke
-      ;; (:comment "Throw error if any of the properties are invalid")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-map-properties*
-      ;;       (:title (s-prepend "OM_" it) :value (s-prepend "OM_" it)))
-      ;;      (org-ml-to-trimmed-string))
-      ;; !!> error
-      )
-
     (defexamples-content org-ml-toggle-property
       nil
 
@@ -2816,6 +2776,63 @@
     ;;        (org-ml-property-is-predicate-p*
     ;;         :title (s-contains? "dummy" (car it))))
     ;;   => t)
+
+    (defexamples-content org-ml-get-properties
+      nil
+
+      (:buffer "call_ktulu[:cache no](x=4)[:exports results]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-get-properties '(:call :inside-header :arguments :end-header)))
+      => '("ktulu" (:cache no) ("x=4") (:exports results)))
+
+    (defexamples-content org-ml-get-all-properties
+      nil
+
+      (:buffer "*bold*")
+      (--> (org-ml-parse-this-object)
+           (org-ml-get-all-properties it)
+           (plist-put it :parent nil))
+      => '(:begin 1 :end 7 :contents-begin 2 :contents-end 6 :post-blank 0 :parent nil))
+
+    (defexamples-content org-ml-set-properties
+      nil
+      
+      (:buffer "- thing")
+      (->> (org-ml-parse-this-item)
+           (org-ml-set-properties (list :bullet 1
+                                        :checkbox 'on
+                                        :counter 2
+                                        :tag '("tmsu")))
+           (org-ml-to-trimmed-string))
+      => "1. [@2] [X] tmsu :: thing"
+
+      (:buffer "- plain")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-properties (list :name "plain name"
+                                        :attr_XXX '("tmsu")))
+           (org-ml-to-trimmed-string))
+      => (:result "#+name: plain name"
+                  "#+attr_xxx: tmsu"
+                  "- plain"))
+
+    (defexamples-content org-ml-map-properties
+      nil
+
+      (:buffer "#+KEY: VAL")
+      (->> (org-ml-parse-this-element)
+           (org-ml-map-properties
+            (list :key (-partial #'s-prepend "OM_")
+                  :value (-partial #'s-prepend "OM_")))
+           (org-ml-to-trimmed-string))
+      => "#+om_key: OM_VAL"
+      ;; TODO this makes the document parser puke
+      ;; (:comment "Throw error if any of the properties are invalid")
+      ;; (->> (org-ml-parse-this-element)
+      ;;      (org-ml-map-properties*
+      ;;       (:title (s-prepend "OM_" it) :value (s-prepend "OM_" it)))
+      ;;      (org-ml-to-trimmed-string))
+      ;; !!> error
+      )
 
     (defexamples-content org-ml-get-parents
       nil

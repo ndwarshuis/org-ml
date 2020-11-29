@@ -461,15 +461,15 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 
 ;;; INTERNAL NODE PROPERTY FUNCTIONS
 
+(defun org-ml-get-all-properties (node)
+  "Return the properties list of NODE."
+  (if (stringp node) (text-properties-at 0 node) (nth 1 node)))
+
 (defun org-ml--get-property-nocheck (prop node)
   "Return PROP from NODE."
   (if (and (stringp node) (eq prop :post-blank))
       (length (car (s-match "[ ]*$" node)))
     (org-element-property prop node)))
-
-(defun org-ml--get-all-properties (node)
-  "Return the properties list of NODE."
-  (if (stringp node) (text-properties-at 0 node) (nth 1 node)))
 
 (defun org-ml--get-parent (node)
   "Return the parent of NODE."
@@ -489,7 +489,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
         (org-add-props node nil prop value))
     (org-ml--construct
      (org-ml-get-type node)
-     (plist-put (org-ml--get-all-properties node) prop value)
+     (plist-put (org-ml-get-all-properties node) prop value)
      (org-ml-get-children node))))
 
 (defun org-ml--set-properties-nocheck (plist node)
@@ -497,7 +497,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 PLIST is a list of property-value pairs that correspond to the
 property list in NODE."
   (if (org-ml--is-plist plist)
-      (let ((props (org-ml--get-all-properties node)))
+      (let ((props (org-ml-get-all-properties node)))
         (org-ml--construct
          (org-ml-get-type node)
          (->> (-partition 2 plist)
@@ -1646,14 +1646,14 @@ TYPE given in DEC."
   "Return the time list of the start time in TIMESTAMP."
   (-let (((&plist :minute-start n :hour-start h :day-start d
                   :month-start m :year-start y)
-          (org-ml--get-all-properties timestamp)))
+          (org-ml-get-all-properties timestamp)))
     `(,y ,m ,d ,h ,n)))
 
 (defun org-ml--timestamp-get-end-time (timestamp)
   "Return the time list of the end time in TIMESTAMP."
   (-let (((&plist :minute-end n :hour-end h :day-end d
                   :month-end m :year-end y)
-          (org-ml--get-all-properties timestamp)))
+          (org-ml-get-all-properties timestamp)))
     `(,y ,m ,d ,h ,n)))
 
 (defun org-ml--timestamp-get-start-unixtime (timestamp)
@@ -2524,7 +2524,7 @@ elements may have other elements as children."
 
 (defun org-ml-contains-point-p (point node)
   "Return t if POINT is within the boundaries of NODE."
-  (-let (((&plist :begin :end) (org-ml--get-all-properties node)))
+  (-let (((&plist :begin :end) (org-ml-get-all-properties node)))
     (if (and (integerp begin) (integerp end))
         (<= begin point end)
       (error "Node boundaries are not defined"))))
@@ -2606,13 +2606,12 @@ each type."
                (->> (--map (org-ml--get-property-cis-function type (car it)) kv)
                     (-uniq)
                     (-non-nil))))
-        (--> (org-ml--get-all-properties node)
+        (--> (org-ml-get-all-properties node)
              (if kv (--reduce-from (put-encode acc it type) it kv) it)
              (if kv-attrs (-reduce-from #'put it kv-attrs) it)
              (org-ml--construct type it (org-ml-get-children node))
              (if update-funs (--reduce-from (funcall it acc) it update-funs) it))))))
 
-;; TODO add plural version of this...
 (defun org-ml-get-property (prop node)
   "Return the value of PROP of NODE."
   (let* ((type (org-ml-get-type node))
@@ -2621,6 +2620,14 @@ each type."
                         (org-ml--get-property-decoder type prop)))
          (value (org-ml--get-property-nocheck prop node)))
     (if decoder-fun (funcall decoder-fun value) value)))
+
+(defun org-ml-get-properties (props node)
+  "Return all the values of PROPS from NODE.
+PROPS is a list of all the properties desired, and the returned
+list will be the values of these properties in the order
+requested. To get the raw plist of NODE, use
+`org-ml--get-all-properties'."
+  (--map (org-ml-get-property it node) props))
 
 (org-ml--defun* org-ml-map-property (prop fun node)
   "Return NODE with FUN applied to the value of PROP.
@@ -3119,8 +3126,8 @@ future major revision. Its functionality has been merged with
      (org-ml-get-type node)))
   (let ((props
          (if value
-             (plist-put (org-ml--get-all-properties node) key value)
-           (org-ml--plist-remove key (org-ml--get-all-properties node)))))
+             (plist-put (org-ml-get-all-properties node) key value)
+           (org-ml--plist-remove key (org-ml-get-all-properties node)))))
     (org-ml--construct (org-ml-get-type node) props (org-ml-get-children node))))
 
 (org-ml--defun* org-ml-map-affiliated-keyword (key fun node)
@@ -3175,7 +3182,7 @@ future major revision. Its functionality has been merged with
 (defun org-ml-children-contain-point (point branch-node)
   "Return t if POINT is within the boundaries of BRANCH-NODE's children."
   (-let (((&plist :contents-begin :contents-end)
-          (org-ml--get-all-properties branch-node)))
+          (org-ml-get-all-properties branch-node)))
     (if (and (integerp contents-begin) (integerp contents-end))
         (<= contents-begin point contents-end)
       (error "Node boundaries are not defined"))))
@@ -5811,7 +5818,7 @@ TYPE is the type of the node to be parsed."
                                 ((superscript subscript) '(-1 (0 1)))
                                 (table-cell '(-1 (0 0 0)))
                                 (t '(0 (0 0)))))
-            ((&plist :begin :end) (org-ml--get-all-properties context))
+            ((&plist :begin :end) (org-ml-get-all-properties context))
             (tree (org-ml--parse-objects type (+ begin offset) end)))
       (->> (car tree)
            (org-ml--get-descendent nesting)
@@ -5839,7 +5846,7 @@ elements vs item elements."
         ;; need to parse again if branch-node since
         ;; `org-element-at-point' does not parse children
         (-let* (((&plist :begin :end :contents-end :post-blank)
-                 (org-ml--get-all-properties node))
+                 (org-ml-get-all-properties node))
                 (tree (car (org-element--parse-elements
                             begin end 'first-section nil nil nil nil)))
                 (nesting (cl-case node-type
