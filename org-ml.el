@@ -3289,6 +3289,23 @@ The unwrap operation will be done with `org-ml-unwrap-deep'."
 
 ;;; item
 
+(defun org-ml--append-join-plain-lists (nodes1 nodes2)
+  "Append NODES1 and NODES2 into one list.
+If the last node in NODES1 and the first node in NODES2 are
+plain-lists, join the two lists together."
+  (let* ((last (-last-item nodes1))
+         (first (car nodes2)))
+    (if (and (org-ml-is-type 'plain-list last)
+             (org-ml-is-type 'plain-list first))
+        (let ((pb (org-ml-get-property :post-blank last)))
+          (--> (org-ml-get-children last)
+               (org-ml--map-last* (org-ml-set-property :post-blank pb it) it)
+               (append it (org-ml-get-children first))
+               (org-ml-set-children it last)
+               (cons it (cdr nodes2))
+               (append (-drop-last 1 nodes1) it)))
+      (append nodes1 nodes2))))
+
 (defun org-ml-item-get-paragraph (item)
   "Return the first paragraph's children of ITEM or nil if none."
   (-when-let (first-child (car (org-ml-get-children item)))
@@ -4328,18 +4345,8 @@ CONFIG. POST-BLANK is the blank space to put between the logbook
 and the contents."
   (let* ((logbook (->> (org-ml-supercontents-get-logbook supercontents)
                        (org-ml--logbook-to-nodes config)))
-         (contents (org-ml-supercontents-get-contents supercontents))
-         (last-log (-last-item logbook))
-         (first-contents (car contents)))
-    ;; if logbook ends with a plain-list and contents starts with one, join them
-    (if (and (org-ml-is-type 'plain-list last-log)
-             (org-ml-is-type 'plain-list first-contents))
-        (let ((pb (org-ml-get-property :post-blank last-log)))
-          (--> (org-ml-get-children last-log)
-               (org-ml--map-last* (org-ml-set-property :post-blank pb it) it)
-               (org-ml-map-children (lambda (contents-it) (append it contents-it)) it)
-               (append (-drop-last 1 logbook) it)))
-      (append logbook contents))))
+         (contents (org-ml-supercontents-get-contents supercontents)))
+    (org-ml--append-join-plain-lists logbook contents)))
 
 ;; public supercontents functions
 
@@ -4832,6 +4839,8 @@ node's children."
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `org-ml-item-indent-item-tree' this will not indent the indented
 item node's children."
+  ;; TODO use remove/filter here might not be precise enough if the plain-list
+  ;; contains more than just items
   (cl-flet
       ((append-indented
         (target-item parent-item)
@@ -4839,16 +4848,22 @@ item node's children."
                (->> target-item
                     (org-ml--map-children-nocheck
                       (lambda (items)
-                        (--remove (org-ml-is-type 'plain-list it) items)))
-                    (org-ml-build-plain-list)))
-              (items-in-target
+                        (--remove (org-ml-is-type 'plain-list it) items)))))
+              (plain-lists-in-target
                (->> (org-ml-get-children target-item)
                     (--filter (org-ml-is-type 'plain-list it)))))
           (org-ml--map-children-nocheck
            (lambda (item-children)
-             ;; TODO technically the target-item* should go in an
-             ;; existing plain list but I don't this matters (for now)
-             (append item-children (list target-item*) items-in-target))
+             (let ((plain-lists*
+                    (if plain-lists-in-target
+                        (org-ml--map-first*
+                         (org-ml--map-children-nocheck
+                          (lambda (items)
+                            (cons target-item* items))
+                          it)
+                         plain-lists-in-target)
+                      (list (org-ml-build-plain-list target-item*)))))
+               (org-ml--append-join-plain-lists item-children plain-lists*)))
            parent-item))))
     (org-ml--map-children-nocheck
      (lambda (items)
