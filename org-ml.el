@@ -5838,9 +5838,9 @@ elements and likewise when setting TYPE to 'item' for plain-list
 elements vs item elements."
   (save-excursion
     (goto-char point)
-    (let*
-        ((node (org-element-at-point))
-         (node-type (org-ml-get-type node)))
+    ;; TODO this seems really inefficient; essentially we are parsing twice
+    (let* ((node (org-element-at-point))
+           (node-type (org-ml-get-type node)))
       ;; NOTE this will not filter by type if it is a leaf node
       (if (not (memq node-type org-ml-branch-nodes)) node
         ;; need to parse again if branch-node since
@@ -5859,9 +5859,8 @@ elements vs item elements."
                            (plain-list (if (eq type 'item) '(0 0) '(0)))
                            (t '(0)))))
           (--> (org-ml--get-descendent nesting tree)
-               ;; TODO this will work here but I think this pattern is needed
-               ;; elsewhere (pretty much any time I get something using this
-               ;; `get-descendent' function
+               ;; set ending boundaries according to what we get from
+               ;; `org-element-at-point'
                (org-ml--set-properties-nocheck (list :end end
                                                      :contents-end contents-end
                                                      :post-blank post-blank)
