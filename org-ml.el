@@ -4753,8 +4753,6 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
 ;; parameters for indenting:
 ;; - index of target to indent (1 in above example)
 
-;; TODO throw error when index out of range?
-
 (defun org-ml--indent-members (fun index tree)
   "Return TREE with member at INDEX indented.
 FUN is a binary function that takes the members of TREE immediately
@@ -4764,10 +4762,11 @@ target as its child, or appends it to the end of its children if they
 exist."
   (unless (and (integerp index) (< 0 index))
     (error "Cannot indent topmost item at this level"))
-  (-let* (((head tail) (-split-at index tree))
-          (target (-first-item tail))
-          (head* (org-ml--map-last* (funcall fun target it) head)))
-    (append head* (-drop 1 tail))))
+  (-let (((head tail) (-split-at index tree)))
+    (if (not tail) (error "Index over range: %s" index)
+      (let* ((target (-first-item tail))
+             (head* (org-ml--map-last* (funcall fun target it) head)))
+        (append head* (-drop 1 tail))))))
 
 ;; headline
 
