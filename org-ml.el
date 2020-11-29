@@ -4135,7 +4135,6 @@ NODES will be sorted according to their timestamps and are
 assumed to be valid log items or clocks/clock-notes (anything
 else will trigger an error). SCC is a supercontents-config as
 returned by `org-ml--scc-init'."
-  ;; TODO break this up into smaller functions?
   ;; TODO optimize this depending on what we wish to sort?
   (-let (((&alist :clock-notes n :is-log-item-fun f) scc))
     (cl-labels
@@ -4147,27 +4146,24 @@ returned by `org-ml--scc-init'."
                (org-ml--timestamp-get-start-unixtime)))
             (item
              (funcall f node))))
-         (prepare
-          (nodes)
-          (--reduce-from (if n
-                             (cond
-                              ;; if item and last on the accumulator is a clock,
-                              ;; add it behind that clock
-                              ((and (org-ml-is-type 'item it)
-                                    (org-ml-is-type 'clock (car (car acc)))
-                                    (not (funcall f it)))
-                               (cons (list (car (car acc)) it) (cdr acc)))
-                              ;; if item but is a valid logbook item, throw error
-                              ((or (and (org-ml-is-type 'item it)
-                                        (funcall f it))
-                                   (org-ml-is-type 'clock it))
-                               (cons (list it) acc))
-                              (t
-                               (error "Not a valid clock, item, or note: %s" it)))
-                           (if (org-ml-is-any-type '(clock item) it)
-                               (cons (list it) acc)
-                             (error "Not a clock or item: %s" it)))
-                         nil nodes))
+         (group-clock-notes
+          (acc node)
+          ;; Return a list like (NODE . NOTE) where NODE is a clock or item and
+          ;; NOTE is a clock note, which is only added to NODE if the type of
+          ;; NODE is a clock and NOTE appears immediately after.
+          (if (not n)
+              (if (org-ml-is-any-type '(clock item) node) (cons (list node) acc)
+                (error "Not a clock or item: %s" node))
+            (cond
+             ((and (org-ml-is-type 'item node)
+                   (org-ml-is-type 'clock (car (car acc)))
+                   (not (funcall f node)))
+              (cons (list (car (car acc)) node) (cdr acc)))
+             ((or (and (org-ml-is-type 'item node) (funcall f node))
+                  (org-ml-is-type 'clock node))
+              (cons (list node) acc))
+             (t
+              (error "Not a valid clock, item, or note: %s" node)))))
          (merge
           (nodes-a nodes-b)
           (pcase (cons nodes-a nodes-b)
@@ -4193,39 +4189,11 @@ returned by `org-ml--scc-init'."
           (let ((L (length nodes)))
             (if (<= L 1) nodes
               (-let (((left right) (-split-at (/ L 2) nodes)))
-                (merge (merge-and-sort left) (merge-and-sort right))))))
-         (cons-maybe
-          (acc node)
-          (cond
-           ((and (org-ml-is-type 'item node)
-                 (org-ml-is-type 'plain-list (car acc)))
-            (cons (org-ml-map-children* (cons node it) (car acc)) (cdr acc)))
-           ((org-ml-is-type 'item node)
-            (cons (org-ml-build-plain-list node) acc))
-           ((org-ml-is-type 'clock node)
-            (cons node acc))
-           (t
-            (error "This should not happen"))))
-         (finalize
-          (nodes)
-          (-reduce-from #'cons-maybe nil (reverse nodes)))
-         (fix-whitespace
-          (nodes)
-          (--map-when (org-ml-is-type 'plain-list it)
-                      (let ((pb (->> (org-ml-get-children it)
-                                     (-last-item)
-                                     (org-ml-get-property :post-blank))))
-                        (->> (org-ml-set-property :post-blank pb it)
-                             (org-ml-map-children*
-                               (org-ml--map-last*
-                                (org-ml-set-property :post-blank 0 it)
-                                it))))
-                      nodes)))
-      (->> (prepare nodes)
+                (merge (merge-and-sort left) (merge-and-sort right)))))))
+      (->> (-reduce-from #'group-clock-notes nil nodes)
            (merge-and-sort)
            (-flatten-n 1)
-           (finalize)
-           (fix-whitespace)))))
+           (org-ml--wrap-plain-lists)))))
 
 (defun org-ml--merge-logbook (scc items clocks)
   "Merge ITEMS and CLOCKS.
