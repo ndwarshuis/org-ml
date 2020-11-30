@@ -162,16 +162,18 @@ Set, get, and map properties of nodes.
 
 * [org-ml-contains-point-p](#org-ml-contains-point-p-point-node) `(point node)`
 * [org-ml-set-property](#org-ml-set-property-prop-value-node) `(prop value node)`
-* [org-ml-set-properties](#org-ml-set-properties-plist-node) `(plist node)`
 * [org-ml-get-property](#org-ml-get-property-prop-node) `(prop node)`
 * [org-ml-map-property](#org-ml-map-property-prop-fun-node) `(prop fun node)`
-* [org-ml-map-properties](#org-ml-map-properties-plist-node) `(plist node)`
 * [org-ml-toggle-property](#org-ml-toggle-property-prop-node) `(prop node)`
 * [org-ml-shift-property](#org-ml-shift-property-prop-n-node) `(prop n node)`
 * [org-ml-insert-into-property](#org-ml-insert-into-property-prop-index-string-node) `(prop index string node)`
 * [org-ml-remove-from-property](#org-ml-remove-from-property-prop-string-node) `(prop string node)`
 * [org-ml-plist-put-property](#org-ml-plist-put-property-prop-key-value-node) `(prop key value node)`
 * [org-ml-plist-remove-property](#org-ml-plist-remove-property-prop-key-node) `(prop key node)`
+* [org-ml-get-properties](#org-ml-get-properties-props-node) `(props node)`
+* [org-ml-get-all-properties](#org-ml-get-all-properties-node) `(node)`
+* [org-ml-set-properties](#org-ml-set-properties-plist-node) `(plist node)`
+* [org-ml-map-properties](#org-ml-map-properties-plist-node) `(plist node)`
 * [org-ml-get-parents](#org-ml-get-parents-node) `(node)`
 
 ### Clock
@@ -206,6 +208,7 @@ Set, get, and map properties of nodes.
 
 Functions to work with timestamp data
 
+* [org-ml-time-is-long](#org-ml-time-is-long-time) `(time)`
 * [org-ml-time-to-unixtime](#org-ml-time-to-unixtime-time) `(time)`
 * [org-ml-unixtime-to-time-long](#org-ml-unixtime-to-time-long-unixtime) `(unixtime)`
 * [org-ml-unixtime-to-time-short](#org-ml-unixtime-to-time-short-unixtime) `(unixtime)`
@@ -269,6 +272,12 @@ Set, get, and map the children of branch nodes.
 * [org-ml-flatten](#org-ml-flatten-secondary-string) `(secondary-string)`
 * [org-ml-flatten-types-deep](#org-ml-flatten-types-deep-types-secondary-string) `(types secondary-string)`
 * [org-ml-flatten-deep](#org-ml-flatten-deep-secondary-string) `(secondary-string)`
+
+### Item
+
+* [org-ml-item-get-paragraph](#org-ml-item-get-paragraph-item) `(item)`
+* [org-ml-item-set-paragraph](#org-ml-item-set-paragraph-secondary-string-item) `(secondary-string item)`
+* [org-ml-item-map-paragraph](#org-ml-item-map-paragraph-fun-item) `(fun item)`
 
 ### Headline
 
@@ -2325,9 +2334,9 @@ matter.
 
 Return a new property-drawer node.
 
-Each member in **`keyvals`** is a list of symbols like `(key val)`, where each
-list will generate a node-property node in the property-drawer node
-like `":key: val"`.
+Each member in **`keyvals`** is a list like `(key val)` where `key` and `val`
+are both strings, where each list will generate a node-property
+node in the property-drawer node like `":key: val"`.
 
 ```el
 (->> (org-ml-build-property-drawer! '(key val))
@@ -3074,27 +3083,6 @@ Error
 
 ```
 
-#### org-ml-set-properties `(plist node)`
-
-Return **`node`** with all properties set to the values according to **`plist`**.
-
-**`plist`** is a list of property-value pairs that corresponds to the
-property list in **`node`**.
-
-See builder functions for a list of properties and their rules for
-each type.
-
-```el
-;; Given the following contents:
-; - thing
-
-(->> (org-ml-parse-this-item)
-     (org-ml-set-properties (list :bullet 1 :checkbox 'on :counter 2 :tag '("tmsu")))
-     (org-ml-to-trimmed-string))
- ;; => "1. [@2] [X] tmsu :: thing"
-
-```
-
 #### org-ml-get-property `(prop node)`
 
 Return the value of **`prop`** of **`node`**.
@@ -3151,28 +3139,6 @@ Error
      (org-ml-map-property* :value (if it 1 0))
      (org-ml-to-trimmed-string))
 Error
-
-```
-
-#### org-ml-map-properties `(plist node)`
-
-Return **`node`** with functions applied to the values of properties.
-
-**`plist`** is a property list where the keys are properties of **`node`** and
-its values are unary functions to be mapped to these properties.
-
-See builder functions for a list of properties and their rules for
-each type.
-
-```el
-;; Given the following contents:
-; #+KEY: VAL
-
-(->> (org-ml-parse-this-element)
-     (org-ml-map-properties (list :key (-partial #'s-prepend "OM_")
-				   :value (-partial #'s-prepend "OM_")))
-     (org-ml-to-trimmed-string))
- ;; => "#+om_key: OM_VAL"
 
 ```
 
@@ -3453,6 +3419,92 @@ and properties that may be used with this function.
      (org-ml-plist-remove-property :arguments :cache)
      (org-ml-to-trimmed-string))
 Error
+
+```
+
+#### org-ml-get-properties `(props node)`
+
+Return all the values of **`props`** from **`node`**.
+**`props`** is a list of all the properties desired, and the returned
+list will be the values of these properties in the order
+requested. To get the raw plist of **`node`**, use
+`org-ml--get-all-properties`.
+
+```el
+;; Given the following contents:
+; call_ktulu[:cache no](x=4)[:exports results]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-get-properties '(:call :inside-header :arguments :end-header)))
+ ;; => '("ktulu" (:cache no) ("x=4") (:exports results))
+
+```
+
+#### org-ml-get-all-properties `(node)`
+
+Return the properties list of **`node`**.
+
+```el
+;; Given the following contents:
+; *bold*
+
+(--> (org-ml-parse-this-object)
+     (org-ml-get-all-properties it)
+     (plist-put it :parent nil))
+ ;; => '(:begin 1 :end 7 :contents-begin 2 :contents-end 6 :post-blank 0 :parent nil)
+
+```
+
+#### org-ml-set-properties `(plist node)`
+
+Return **`node`** with all properties set to the values according to **`plist`**.
+
+**`plist`** is a list of property-value pairs that corresponds to the
+property list in **`node`**.
+
+See builder functions for a list of properties and their rules for
+each type.
+
+```el
+;; Given the following contents:
+; - thing
+
+(->> (org-ml-parse-this-item)
+     (org-ml-set-properties (list :bullet 1 :checkbox 'on :counter 2 :tag '("tmsu")))
+     (org-ml-to-trimmed-string))
+ ;; => "1. [@2] [X] tmsu :: thing"
+
+;; Given the following contents:
+; - plain
+
+(->> (org-ml-parse-this-element)
+     (org-ml-set-properties (list :name "plain name" :attr_XXX '("tmsu")))
+     (org-ml-to-trimmed-string))
+ ;; => "#+name: plain name
+ ;      #+attr_xxx: tmsu
+ ;      - plain"
+
+```
+
+#### org-ml-map-properties `(plist node)`
+
+Return **`node`** with functions applied to the values of properties.
+
+**`plist`** is a property list where the keys are properties of **`node`** and
+its values are unary functions to be mapped to these properties.
+
+See builder functions for a list of properties and their rules for
+each type.
+
+```el
+;; Given the following contents:
+; #+KEY: VAL
+
+(->> (org-ml-parse-this-element)
+     (org-ml-map-properties (list :key (-partial #'s-prepend "OM_")
+				   :value (-partial #'s-prepend "OM_")))
+     (org-ml-to-trimmed-string))
+ ;; => "#+om_key: OM_VAL"
 
 ```
 
@@ -3761,6 +3813,14 @@ Return t is **`statistics-cookie`** node is complete.
 
 
 Functions to work with timestamp data
+
+#### org-ml-time-is-long `(time)`
+
+Return t if **`time`** is a long format time list.
+
+```el
+no examples :(
+```
 
 #### org-ml-time-to-unixtime `(time)`
 
@@ -4896,6 +4956,73 @@ The unwrap operation will be done with [`org-ml-unwrap-deep`](#org-ml-unwrap-dee
      (org-ml-map-children #'org-ml-flatten-deep)
      (org-ml-to-trimmed-string))
  ;; => "This (1 2 3 4 5 6) is randomly formatted"
+
+```
+
+
+### Item
+
+#### org-ml-item-get-paragraph `(item)`
+
+Return the first paragraph's children of **`item`** or nil if none.
+
+```el
+;; Given the following contents:
+; - one
+
+(->> (org-ml-parse-this-item)
+     (org-ml-item-get-paragraph))
+ ;; => '("one")
+
+;; Given the following contents:
+; - 
+
+(->> (org-ml-parse-this-item)
+     (org-ml-item-get-paragraph))
+ ;; => nil
+
+```
+
+#### org-ml-item-set-paragraph `(secondary-string item)`
+
+Set the first paragraph's children of **`item`** to **`secondary-string`**.
+
+```el
+;; Given the following contents:
+; - one
+
+(->> (org-ml-parse-this-item)
+     (org-ml-item-set-paragraph '("two"))
+     (org-ml-to-string))
+ ;; => "- two
+ ;      "
+
+;; Given the following contents:
+; - one
+
+(->> (org-ml-parse-this-item)
+     (org-ml-item-set-paragraph nil)
+     (org-ml-to-string))
+ ;; => "- 
+ ;      "
+
+```
+
+#### org-ml-item-map-paragraph `(fun item)`
+
+Apply **`fun`** to the first paragraph's children in **`item`**.
+**`fun`** is a `unary` function that takes the secondary-string of the
+first paragraph and returns modified secondary-string.
+
+```el
+;; Given the following contents:
+; - one
+
+(->> (org-ml-parse-this-item)
+     (org-ml-item-map-paragraph* (-map #'upcase it))
+     (org-ml-to-string))
+ ;; => "- ONE
+ ;      "
 
 ```
 
@@ -7761,4 +7888,4 @@ Unfold the children of **`node`** if they exist.
 ```el
 no examples :(
 ```
-Version: 5.1.0
+Version: 5.3.0

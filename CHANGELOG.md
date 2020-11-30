@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.3.0
+
+- add `org-ml-get-properties`
+- add `org-ml-item-get/set/map-paragraph`
+- make `org-ml-get-all-properties` public
+- numerous bug fixes and performance enhancments
+
 ## 5.2.0
 
 - add benchmark framework

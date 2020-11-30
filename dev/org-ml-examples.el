@@ -1723,18 +1723,6 @@
            (org-ml-to-trimmed-string))
       !!> arg-type-error)
 
-    (defexamples-content org-ml-set-properties
-      nil
-      
-      (:buffer "- thing")
-      (->> (org-ml-parse-this-item)
-           (org-ml-set-properties (list :bullet 1
-                                        :checkbox 'on
-                                        :counter 2
-                                        :tag '("tmsu")))
-           (org-ml-to-trimmed-string))
-      => "1. [@2] [X] tmsu :: thing")
-
     (defexamples-content org-ml-get-property
       nil
 
@@ -2361,25 +2349,6 @@
       => "=I AM NOT A CROOK="
       :end-hidden)
 
-    (defexamples-content org-ml-map-properties
-      nil
-
-      (:buffer "#+KEY: VAL")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-properties
-            (list :key (-partial #'s-prepend "OM_")
-                  :value (-partial #'s-prepend "OM_")))
-           (org-ml-to-trimmed-string))
-      => "#+om_key: OM_VAL"
-      ;; TODO this makes the document parser puke
-      ;; (:comment "Throw error if any of the properties are invalid")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-map-properties*
-      ;;       (:title (s-prepend "OM_" it) :value (s-prepend "OM_" it)))
-      ;;      (org-ml-to-trimmed-string))
-      ;; !!> error
-      )
-
     (defexamples-content org-ml-toggle-property
       nil
 
@@ -2808,6 +2777,63 @@
     ;;         :title (s-contains? "dummy" (car it))))
     ;;   => t)
 
+    (defexamples-content org-ml-get-properties
+      nil
+
+      (:buffer "call_ktulu[:cache no](x=4)[:exports results]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-get-properties '(:call :inside-header :arguments :end-header)))
+      => '("ktulu" (:cache no) ("x=4") (:exports results)))
+
+    (defexamples-content org-ml-get-all-properties
+      nil
+
+      (:buffer "*bold*")
+      (--> (org-ml-parse-this-object)
+           (org-ml-get-all-properties it)
+           (plist-put it :parent nil))
+      => '(:begin 1 :end 7 :contents-begin 2 :contents-end 6 :post-blank 0 :parent nil))
+
+    (defexamples-content org-ml-set-properties
+      nil
+      
+      (:buffer "- thing")
+      (->> (org-ml-parse-this-item)
+           (org-ml-set-properties (list :bullet 1
+                                        :checkbox 'on
+                                        :counter 2
+                                        :tag '("tmsu")))
+           (org-ml-to-trimmed-string))
+      => "1. [@2] [X] tmsu :: thing"
+
+      (:buffer "- plain")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-properties (list :name "plain name"
+                                        :attr_XXX '("tmsu")))
+           (org-ml-to-trimmed-string))
+      => (:result "#+name: plain name"
+                  "#+attr_xxx: tmsu"
+                  "- plain"))
+
+    (defexamples-content org-ml-map-properties
+      nil
+
+      (:buffer "#+KEY: VAL")
+      (->> (org-ml-parse-this-element)
+           (org-ml-map-properties
+            (list :key (-partial #'s-prepend "OM_")
+                  :value (-partial #'s-prepend "OM_")))
+           (org-ml-to-trimmed-string))
+      => "#+om_key: OM_VAL"
+      ;; TODO this makes the document parser puke
+      ;; (:comment "Throw error if any of the properties are invalid")
+      ;; (->> (org-ml-parse-this-element)
+      ;;      (org-ml-map-properties*
+      ;;       (:title (s-prepend "OM_" it) :value (s-prepend "OM_" it)))
+      ;;      (org-ml-to-trimmed-string))
+      ;; !!> error
+      )
+
     (defexamples-content org-ml-get-parents
       nil
       (:buffer "* one"
@@ -2921,7 +2947,7 @@
     nil
 
     ;; TODO add shortcut tag setter
-    
+
     (defexamples-content org-ml-item-toggle-checkbox
       nil
       (:buffer "- [ ] one")
@@ -2991,8 +3017,12 @@
            (org-ml-statistics-cookie-is-complete))
       => nil))
 
+  ;; TODO add these
   (def-example-subgroup "Timestamp (Auxiliary)"
     "Functions to work with timestamp data"
+    
+    (defexamples-content org-ml-time-is-long
+      nil)
 
     (defexamples-content org-ml-time-to-unixtime
       nil)
@@ -3804,6 +3834,41 @@
            (org-ml-map-children #'org-ml-flatten-deep)
            (org-ml-to-trimmed-string))
       => "This (1 2 3 4 5 6) is randomly formatted"))
+
+  (def-example-subgroup "Item"
+    nil
+
+    (defexamples-content org-ml-item-get-paragraph
+      nil
+      (:buffer "- one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-get-paragraph))
+      => '("one")
+      (:buffer "- ")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-get-paragraph))
+      => nil)
+
+    (defexamples-content org-ml-item-set-paragraph
+      nil
+      (:buffer "- one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-set-paragraph '("two"))
+           (org-ml-to-string))
+      => "- two\n"
+      (:buffer "- one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-set-paragraph nil)
+           (org-ml-to-string))
+      => "- \n")
+
+    (defexamples-content org-ml-item-map-paragraph
+      nil
+      (:buffer "- one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-map-paragraph* (-map #'upcase it))
+           (org-ml-to-string))
+      => "- ONE\n"))
 
   (def-example-subgroup "Headline"
     nil
