@@ -61,6 +61,22 @@
     (org-ml-do-headlines*
       (org-ml-headline-set-planning pl it))))
 
+(org-ml-defbench "reschedule headline" "* headline\nSCHEDULED: <2020-01-01 Wed>\n" 1000
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (->> (org-get-scheduled-time (point))
+           (float-time)
+           ;; shift up one day
+           (+ (* 24 60 60))
+           (format-time-string "%Y-%m-%d")
+           (org-schedule nil))
+      (setq next (outline-next-heading))))
+
+  (org-ml-do-headlines*
+    (org-ml-headline-map-planning*
+      (org-ml-map-property* :scheduled (org-ml-timestamp-shift 1 'day it) it) it)))
+
 (org-ml-defbench "set headline effort" "* headline\n" 1000
   (let ((org-adapt-indentation nil))
     (org-set-property "Effort" "0:05")
