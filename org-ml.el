@@ -1565,43 +1565,29 @@ The list will be formatted like (YEAR MONTH DAY nil nil)."
 
 UNIT is one of `day', `week', `month', `year', `minute', or `hour'.
 N is an integer."
-  (cl-flet*
-      ((get-shifts-short
-        (n unit)
-        (cl-case unit
-          (day `(0 0 ,n 0 0))
-          (week `(0 0 ,(* 7 n) 0 0))
-          (month `(0 ,n 0 0 0))
-          (year `(,n 0 0 0 0))
-          ((minute hour)
-           (org-ml--arg-error "Invalid unit for short timestamps: %S" unit))
-          (t (org-ml--arg-error "Invalid time unit: %S" unit))))
-       (get-shifts-long
-        (n unit)
-        (cl-case unit
-          (minute `(0 0 0 0 ,n))
-          (hour `(0 0 0 ,n 0))
-          (t (get-shifts-short n unit))))
-       (apply-shifts
-        (shifts time)
-        (->> (-zip-with #'+ time shifts)
-             (reverse)
-             (apply #'encode-time 0)
-             (decode-time))))
-    (if (org-ml-time-is-long time)
-        (let ((shifts (get-shifts-long n unit)))
-          (reverse (-slice (apply-shifts shifts time) 1 6)))
-      (let ((shifts (get-shifts-short n unit))
-            (time* (-replace nil 0 time)))
-        (->> (-slice (apply-shifts shifts time*) 3 6)
-             (append '(nil nil))
-             (reverse))))))
+  (-let (((i s) (cond
+                 ((eq unit 'year) (list 0 n))
+                 ((eq unit 'month) (list 1 n))
+                 ((eq unit 'week) (list 2 (* 7 n)))
+                 ((eq unit 'day) (list 2 n))
+                 ((and (eq unit 'hour) (org-ml-time-is-long time)) (list 3 n))
+                 ((and (eq unit 'minute) (org-ml-time-is-long time)) (list 4 n))
+                 (t (org-ml--arg-error "Invalid time unit: %S" unit)))))
+    (org-ml--map-at* i (+ s it) time)))
 
-(defun org-ml--time-format-props (time suffix)
+(defconst org-ml--time-start-keys
+  '(:year-start :month-start :day-start :hour-start :minute-start)
+  "Properties for the starting time values of a timestamp node.")
+
+(defconst org-ml--time-end-keys
+  '(:year-end :month-end :day-end :hour-end :minute-end)
+  "Properties for the ending time values of a timestamp node.")
+
+(defun org-ml--time-format-props (time start?)
   "Return plist representation of time list TIME.
-SUFFIX is either `start' or `end'."
-  (let* ((props (->> '(year month day hour minute)
-                     (--map (intern (format ":%s-%s" it suffix)))))
+If START? is t, the plist will represent a start time, else and
+end time."
+  (let* ((props (if start? org-ml--time-start-keys org-ml--time-end-keys))
          (time* (pcase time
                   (`(,(pred integerp)
                      ,(pred integerp)
@@ -1622,23 +1608,30 @@ SUFFIX is either `start' or `end'."
                   (_ (org-ml--arg-error "Invalid time given: %s" time)))))
     (-interleave props time*)))
 
-(defun org-ml--decorator-format (dec dtype valid-types)
+(defconst org-ml--warning-keys
+  '(:warning-type :warning-value :warning-unit)
+  "Properties for timestamp warning.")
+
+(defconst org-ml--repeater-keys
+  '(:repeater-type :repeater-value :repeater-unit)
+  "Properties for timestamp repeater.")
+
+(defun org-ml--decorator-format (dec warning? valid-types)
   "Return plist representing a timestamp warning or repeater (decorators).
 
-DEC is a list like (TYPE VALUE UNIT) of the decorator, DTYPE is either
-`warning' or `repeater', and VALID-TYPES are the allowed values for
-TYPE given in DEC."
-  (let ((props (->> '(type value unit)
-                    (--map (intern (format ":%s-%s" dtype it))))))
+DEC is a list like (TYPE VALUE UNIT) of the decorator, WARNING?
+is t if the decorator is a warning or nil if it is a repeater,
+and VALID-TYPES are the allowed values for TYPE given in DEC."
+  (let ((props (if warning? org-ml--warning-keys org-ml--repeater-keys)))
     (if (not dec) (org-ml--init-properties props)
       (-let (((type value unit) dec))
         (unless (memq type valid-types)
-          (org-ml--arg-error "Invalid %s type: %s" dtype type))
+          (org-ml--arg-error "Invalid decorator type: %s" type))
         (unless (integerp value)
-          (org-ml--arg-error "Invalid %s value: %s" dtype value))
+          (org-ml--arg-error "Invalid decorator value: %s" value))
         (unless (memq unit '(year month week day hour))
-          (org-ml--arg-error "Invalid %s unit: %s" dtype value))
-        (-interleave props (list type value unit))))))
+          (org-ml--arg-error "Invalid decorator unit: %s" unit))
+        (-interleave props dec)))))
 
 ;; timestamp (regular)
 
@@ -1696,7 +1689,7 @@ TYPE given in DEC."
 
 (defun org-ml--timestamp-set-start-time-nocheck (time timestamp)
   "Set the start TIME of TIMESTAMP. Does not set type."
-  (let ((time* (org-ml--time-format-props time 'start)))
+  (let ((time* (org-ml--time-format-props time t)))
       (org-ml--set-properties-nocheck time* timestamp)))
 
 (defun org-ml--timestamp-set-start-time (time timestamp)
@@ -1707,10 +1700,10 @@ TYPE given in DEC."
 (defun org-ml--timestamp-set-end-time-nocheck (time timestamp)
   "Set the end TIME of TIMESTAMP. Does not set type."
   (if time
-      (-> (org-ml--time-format-props time 'end)
+      (-> (org-ml--time-format-props time nil)
           (org-ml--set-properties-nocheck timestamp))
     (-> (org-ml--timestamp-get-start-time timestamp)
-        (org-ml--time-format-props 'end)
+        (org-ml--time-format-props nil)
         (org-ml--set-properties-nocheck timestamp))))
 
 (defun org-ml--timestamp-set-end-time (time timestamp)
@@ -1769,13 +1762,13 @@ TYPE given in DEC."
 (defun org-ml--timestamp-set-warning (warning timestamp)
   "Return TIMESTAMP with warning properties set to WARNING list."
   (let ((types '(all first)))
-    (-> (org-ml--decorator-format warning 'warning types)
+    (-> (org-ml--decorator-format warning t types)
         (org-ml--set-properties-nocheck timestamp))))
 
 (defun org-ml--timestamp-set-repeater (repeater timestamp)
   "Return TIMESTAMP with warning properties set to REPEATER list."
   (let ((types '(catch-up restart cumulate)))
-    (-> (org-ml--decorator-format repeater 'repeater types)
+    (-> (org-ml--decorator-format repeater nil types)
         (org-ml--set-properties-nocheck timestamp))))
 
 (defun org-ml--timestamp-shift-start (n unit timestamp)
