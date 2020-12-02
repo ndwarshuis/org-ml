@@ -3342,10 +3342,10 @@ first paragraph and returns modified secondary-string."
 If CHILDREN is nil, return HEADLINE with no section node."
   (org-ml--map-children-nocheck
     (lambda (cur-children)
-      (let ((subheadlines (--filter (org-ml-is-type 'headline it) cur-children)))
-        (if children
-            (cons (apply #'org-ml-build-section children) subheadlines)
-          subheadlines)))
+      (-let (((first . rest) cur-children))
+        (if (org-ml-is-type 'section first)
+            (cons (org-ml-set-children children first) rest)
+          (cons (apply #'org-ml-build-section children) cur-children))))
     headline))
 
 (org-ml--defun* org-ml-headline-map-section (fun headline)
