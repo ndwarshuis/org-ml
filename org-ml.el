@@ -537,9 +537,7 @@ bound to the property value."
     "Return t if FUN applied to the value of PROP in NODE results not nil.
 FORM is a predicate form that takes one with `it' bound to the
 property value."
-    `(and
-      (funcall (lambda (it) ,form) (org-ml--get-property-nocheck ,prop ,node))
-      t)))
+    `(let ((it (org-ml--get-property-nocheck ,prop ,node))) (and ,form t))))
 
 ;;; NODE PROPERTY TRANSLATION AND CHECKING FRAMEWORK
 
