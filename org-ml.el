@@ -3423,13 +3423,11 @@ modified planning node."
 
 (defun org-ml-headline-get-node-properties (headline)
   "Return a list of node-properties nodes in HEADLINE or nil if none."
+  ;; assume the property drawer is the first or second child of section
   (-some--> (org-ml-headline-get-section headline)
-            ;; assume the property drawer is the first or second
-            ;; child of section
-            (if (org-ml-is-type 'planning (car it)) (cdr it) it)
-            (car it)
-            (when (org-ml-is-type 'property-drawer it)
-              (org-ml-get-children it))))
+    (if (org-ml-is-type 'property-drawer (car it)) (car it)
+      (when (org-ml-is-type 'property-drawer (cadr it)) (cadr it)))
+    (org-ml-get-children it)))
 
 (defun org-ml-headline-set-node-properties (node-properties headline)
   "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
@@ -3491,13 +3489,9 @@ If a property matching KEY is present, set it to VALUE. If multiple
 properties matching KEY are present, only set the first."
   (org-ml-headline-map-node-properties*
     (-if-let (np (-some->> value (org-ml-build-node-property key)))
-        (if (not it) (list np)
-          ;; replace first np matching `KEY' or add to the front of
-          ;; np's if not found
-          (-if-let (i (--find-index (equal key (org-ml-get-property :key it)) it))
-              (-replace-at i np it)
-            (cons np it)))
-      ;; remove first property matching `KEY' if `VALUE' is nil
+        (-if-let (i (--find-index (equal key (org-ml-get-property :key it)) it))
+            (-replace-at i np it)
+          (cons np it))
       (--remove-first (equal key (org-ml-get-property :value it)) it))
     headline))
 
