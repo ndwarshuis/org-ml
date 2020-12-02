@@ -3333,9 +3333,9 @@ first paragraph and returns modified secondary-string."
 
 (defun org-ml-headline-get-section (headline)
   "Return children of section node in HEADLINE node or nil if none."
-  (-some->> (org-ml-get-children headline)
-            (assoc 'section)
-            (org-ml-get-children)))
+  (-some--> (org-ml-get-children headline)
+    (car it)
+    (when (org-ml-is-type 'section it) (org-ml-get-children it))))
 
 (defun org-ml-headline-set-section (children headline)
   "Return HEADLINE with section node containing CHILDREN.
