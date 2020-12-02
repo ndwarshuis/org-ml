@@ -6238,20 +6238,24 @@ the following:
                                :props (overlay-properties it)))
                   (list 'apply 'org-ml--apply-overlays)))
          ;; do all computation before modifying buffer
-         (node0 (org-ml-clone-node node))
+         ;;
+         ;; TODO it might be useful to add this as a switch for cases where
+         ;; `FUN' almost never changes anything, in which case it would be
+         ;; much cheaper to check if the node is equal before inserting it.
+         ;; In 99.9999% of cases, this is probably false, so just assume
+         ;; the node has changed and update it
+         ;;
+         ;; (node0 (org-ml-clone-node node))
          (node* (funcall fun node)))
-    ;; TODO taking out this test for equality can increase speed by ~25%
-    ;; ...most of the time we can probably assume that the node will be changed
-    ;; and therefore this is useless
-    (unless (org-ml--equal node0 node*)
-      ;; hacky way to add overlays to undo tree
-      (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
-      (if diff-mode
-          (org-ml--diff-region begin end (org-ml-to-string node*))
-        (progn
-          (delete-region begin end)
-          (org-ml-insert begin node*)))
-      nil)))
+    ;; (unless (org-ml--equal node0 node*)
+    ;; hacky way to add overlays to undo tree
+    (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
+    (if diff-mode
+        (org-ml--diff-region begin end (org-ml-to-string node*))
+      (progn
+        (delete-region begin end)
+        (org-ml-insert begin node*)))
+    nil))
 
 (org-ml--defun* org-ml-update (fun node)
   "Replace NODE in the current buffer with a new one.
