@@ -487,22 +487,19 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
       (if (eq prop :post-blank)
           (->> (s-trim-right node) (s-append (s-repeat value " ")))
         (org-add-props node nil prop value))
-    (org-ml--construct
-     (org-ml-get-type node)
-     (plist-put (org-ml-get-all-properties node) prop value)
-     (org-ml-get-children node))))
+    (-let (((type . (props . children)) node))
+      (org-ml--construct type (plist-put props prop value) children))))
 
 (defun org-ml--set-properties-nocheck (plist node)
   "Set all properties in NODE to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that correspond to the
 property list in NODE."
+  ;; TODO this currently doesn't work with plain-text
   (if (org-ml--is-plist plist)
-      (let ((props (org-ml-get-all-properties node)))
-        (org-ml--construct
-         (org-ml-get-type node)
-         (->> (-partition 2 plist)
-              (--reduce-from (apply #'plist-put acc it) props))
-         (org-ml-get-children node)))
+      (-let (((type . (props . children)) node))
+         (--> (-partition 2 plist)
+              (--reduce-from (apply #'plist-put acc it) props it)
+              (org-ml--construct type it children)))
     (org-ml--arg-error "Not a plist: %S" plist)))
 
 (defun org-ml--set-property-nocheck-nil (prop node)
