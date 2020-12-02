@@ -6230,13 +6230,12 @@ the following:
   ;; if node is of type 'org-data' it will have no props
   (let* ((begin (org-ml--get-property-nocheck :begin node))
          (end (org-ml--get-property-nocheck :end node))
-         (ov-cmd (->>
-                  (overlays-in begin end)
-                  (--filter (eq 'outline (overlay-get it 'invisible)))
-                  (--map (list :start (overlay-start it)
-                               :end (overlay-end it)
-                               :props (overlay-properties it)))
-                  (list 'apply 'org-ml--apply-overlays)))
+         (ov-cmd (-some->> (overlays-in begin end)
+                   (--filter (eq 'outline (overlay-get it 'invisible)))
+                   (--map (list :start (overlay-start it)
+                                :end (overlay-end it)
+                                :props (overlay-properties it)))
+                   (list 'apply 'org-ml--apply-overlays)))
          ;; do all computation before modifying buffer
          ;;
          ;; TODO it might be useful to add this as a switch for cases where
@@ -6249,7 +6248,8 @@ the following:
          (node* (funcall fun node)))
     ;; (unless (org-ml--equal node0 node*)
     ;; hacky way to add overlays to undo tree
-    (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list))
+    (when ov-cmd
+      (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list)))
     (if diff-mode
         (org-ml--diff-region begin end (org-ml-to-string node*))
       (progn
