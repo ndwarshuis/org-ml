@@ -6485,38 +6485,13 @@ FOLD-STATE may be one of:
 
 ;;; headline iteration
 
-;; (defun org-ml--do-headlines-where (where fun-forward fun-backward
-;;                                      fun-region)
-;;   "Call functions depending on WHERE.
-;; FUN-FORWARD is a function to be applied for indices in the forward
-;; direction, FUN-BACKWARD is a function to be applied for indices in the
-;; backward direction, and FUN-REGION is a function to be applied between
-;; regions. All take two arguments (the bounds of the application)."
-;;   (declare (indent 1))
-;;   (cl-flet
-;;       ((int-or-nil-p
-;;         (x)
-;;         (or (null x) (integerp x))))
-;;     (pcase where
-;;       ;; parse N
-;;       ((and (pred integerp) n)
-;;        (if (<= 0 n) (funcall fun-forward 0 n)
-;;          (funcall fun-backward 0 (1- (- n)))))
-;;       ;; parse M-N
-;;       (`(,(and (pred integerp) m) ,(and (pred integerp) n))
-;;        (cond
-;;         ((<= 0 m n) (funcall fun-forward m n))
-;;         ((<= m n -1) (funcall fun-backward (1- (- n)) (1- (- m))))
-;;         ((< n m) (org-ml--arg-error "M must be less than or equal to N"))
-;;         (t (org-ml--arg-error "M and N must be the same sign"))))
-;;       ;; parse region between A and B
-;;       (`[,(and (pred int-or-nil-p) a) ,(and (pred int-or-nil-p) b)]
-;;        (let ((a (or a (point-min)))
-;;              (b (or b (point-max))))
-;;          (funcall fun-region a b)))
-;;       (e (org-ml--arg-error "Invalid 'where' specification: Got %S" e)))))
-
 (defun org-ml--get-forward-bounds (m n re)
+  "Return the boundaries of headlines to parse.
+M is the minimum number of headlines and N is the maximum number
+of headlines. RE is a regular expression that will be used to
+search for a headline. The return value will be a list
+like (BEGIN END) where BEGIN is the start of the Mth headline and
+END is the end of the Nth headline."
   (save-excursion
     (save-match-data
       (goto-char (point-min))
@@ -6533,6 +6508,13 @@ FOLD-STATE may be one of:
         (list begin end)))))
 
 (defun org-ml--get-backward-bounds (m n re)
+  "Return the boundaries of headlines to parse.
+This is like `org-ml--get-forward-bounds' except it searches
+backwards. M is the minimum number of headlines and N is the
+maximum number of headlines. RE is a regular expression that will
+be used to search for a headline. The return value will be a list
+like (BEGIN END) where BEGIN is the start of the Nth headline and
+END is the end of the Mth headline."
   (save-excursion
     (save-match-data
       (goto-char (point-max))
@@ -6549,6 +6531,11 @@ FOLD-STATE may be one of:
         (list begin end)))))
 
 (defun org-ml--get-region-bounds (begin end re)
+  "Return the boundaries of headlines to parse.
+RE is a regular expression that will be used to search for a
+headline. The return value will be a list like (PBEGIN PEND)
+where PBEGIN is the start of the headline immediately after BEGIN
+and PEND is the end of the headline immediately before END."
   (save-match-data
     (save-excursion
       (let ((b (progn
@@ -6564,81 +6551,36 @@ FOLD-STATE may be one of:
                    (point-max))))
         (list b e)))))
 
-(defun org-ml--do-headlines-where0 (where re)
+(defun org-ml--parse-patterns-where (where re)
+  "Return the parse boundaries of a headline based on WHERE.
+See `org-ml-get-some-headlines' for the meaning of WHERE. RE is a
+regular expression used to search for the next headline."
   (declare (indent 1))
   (cl-flet
       ((int-or-nil-p
         (x)
         (or (null x) (integerp x))))
-    (pcase where
-      ;; parse N
-      ((and (pred integerp) n)
-       (if (<= 0 n) ;; (funcall fun-forward 0 n)
-           (org-ml--get-forward-bounds 0 n re)
-         (org-ml--get-backward-bounds 0 n re)))
-         ;; (funcall fun-backward 0 (1- (- n)))))
-      ;; parse M-N
-      (`(,(and (pred integerp) m) ,(and (pred integerp) n))
-       (cond
-        ((<= 0 m n) ;;(funcall fun-forward m n))
-         (org-ml--get-forward-bounds m n re))
-        ((<= m n -1) ;;(funcall fun-backward (1- (- n)) (1- (- m))))
-         (org-ml--get-backward-bounds (1- (- n)) (1- (- m)) re))
-        ((< n m) (org-ml--arg-error "M must be less than or equal to N"))
-        (t (org-ml--arg-error "M and N must be the same sign"))))
-      ;; parse region between A and B
-      (`[,(and (pred int-or-nil-p) a) ,(and (pred int-or-nil-p) b)]
-       (let ((a (or a (point-min)))
-             (b (or b (point-max))))
-         (org-ml--get-region-bounds a b re)))
-      (e (org-ml--arg-error "Invalid 'where' specification: Got %S" e)))))
-
-;; (eval-when-compile
-;;   (defmacro org-ml--apply-n (m n re backward? form)
-;;     "Apply FORM to matching strings a buffer.
-;; RE is a regular expression string, and FORM will be executed when
-;; the point is over the M to N matches (inclusive). If BACKWARD? is
-;; t, start searching backward from the end of the buffer. Note that
-;; RE is assumed to match lines, and thus should begin with a
-;; \"^\"."
-;;     (declare (indent 4))
-;;     (let ((start (if backward? '(point-max) '(point-min)))
-;;           (iterate-form
-;;            (if backward?
-;;                `(save-match-data
-;;                   (re-search-backward ,re nil t))
-;;              `(save-match-data
-;;                 ;; avoid matching the current match already on one
-;;                 ;; NOTE this assumes that `RE' contains the beginning of the line
-;;                 (when (and (bolp) (not (eobp))) (forward-char 1))
-;;                 (when (re-search-forward ,re nil t)
-;;                   (goto-char (match-beginning 0)))))))
-;;       `(save-excursion
-;;          (goto-char ,start)
-;;          ;; iterate match(es) if we start on a match or can move to a match
-;;          (when (or (looking-at ,re) ,iterate-form)
-;;            (let ((i 0))
-;;              ;; apply form to the first if we want it
-;;              (when (= 0 ,m) ,form)
-;;              (setq i (1+ i))
-;;              ;; loop through the rest and apply form when appropriate
-;;              (while (and ,iterate-form (<= i ,n))
-;;                (when (<= ,m i) ,form)
-;;                (setq i (1+ i))))))))
-
-;;   (defmacro org-ml--apply-region (begin end re form)
-;;     "Apply FORM to a region in a buffer.
-;; RE is a regular expression string, and FORM will be execrated when the
-;; point on any match between BEGIN and END points in the buffer."
-;;     (declare (indent 3))
-;;     (let ((iterate-form `(re-search-backward ,re nil t)))
-;;       `(save-excursion
-;;          (goto-char ,end)
-;;          (when ,iterate-form
-;;            ,form
-;;            ;; loop through the rest
-;;            (while (and ,iterate-form (<= ,begin (point)))
-;;              ,form))))))
+    (-let (((b e)
+            (pcase where
+              ;; parse N
+              ((and (pred integerp) n)
+               (if (<= 0 n) (org-ml--get-forward-bounds 0 n re)
+                 (org-ml--get-backward-bounds 0 n re)))
+              ;; parse M-N
+              (`(,(and (pred integerp) m) ,(and (pred integerp) n))
+               (cond
+                ((<= 0 m n) (org-ml--get-forward-bounds m n re))
+                ((<= m n -1) (org-ml--get-backward-bounds (1- (- n)) (1- (- m)) re))
+                ((< n m) (org-ml--arg-error "M must be less than or equal to N"))
+                (t (org-ml--arg-error "M and N must be the same sign"))))
+              ;; parse region between A and B
+              (`[,(and (pred int-or-nil-p) a) ,(and (pred int-or-nil-p) b)]
+               (let ((a (or a (point-min)))
+                     (b (or b (point-max))))
+                 (org-ml--get-region-bounds a b re)))
+              (e (org-ml--arg-error "Invalid 'where' specification: Got %S" e)))))
+      (when (and b e)
+        (org-element--parse-elements b e 'first-section nil nil nil nil)))))
 
 (defun org-ml-get-some-headlines (where)
   "Return list of headline nodes from current buffer.
@@ -6654,29 +6596,12 @@ of the following:
   `point-max' respectively.
 
 Each headline is obtained with `org-ml-parse-headline-at'."
-  (-let (((b e) (org-ml--do-headlines-where0 where "^\\*")))
-    (when b
-      (org-element--parse-elements b e 'first-section nil nil nil nil))))
-  ;; (cl-flet
-  ;;     ((apply-n-forward
-  ;;       (m n)
-  ;;       (-let (((b e) (org-ml--get-forward-bounds m n "^\\*")))
-  ;;         (when b
-  ;;           (org-element--parse-elements b e 'first-section nil nil nil nil))))
-  ;;      (apply-n-backward
-  ;;       (m n)
-  ;;       (-let (((b e) (org-ml--get-backward-bounds m n "^\\*")))
-  ;;         (when b
-  ;;           (org-element--parse-elements b e 'first-section nil nil nil nil))))
-  ;;      (apply-region
-  ;;       (begin end)
-  ;;       (-let (((b e) (org-ml--get-region-bounds begin end "^\\*")))
-  ;;         (when b
-  ;;           (org-element--parse-elements b e 'first-section nil nil nil nil)))))
-  ;;   (org-ml--do-headlines-where where
-  ;;     #'apply-n-forward
-  ;;     #'apply-n-backward
-  ;;     #'apply-region)))
+  (cl-flet
+      ((get-subheadlines
+        (headline)
+        (cons headline (org-ml-headline-get-subheadlines headline))))
+    (->> (org-ml--parse-patterns-where where "^\\*")
+         (-mapcat #'get-subheadlines))))
 
 (defun org-ml-get-headlines ()
   "Return list of all headline nodes from current buffer.
@@ -6689,41 +6614,7 @@ Each headline is obtained with `org-ml-parse-headline-at'."
 See `org-ml-get-some-headlines' for the meaning of WHERE.
 
 Each subtree is obtained with `org-ml-parse-subtree-at'."
-  (-let (((b e) (org-ml--do-headlines-where0 where "^\\* ")))
-    (when b
-      (org-element--parse-elements b e 'first-section nil nil nil nil))))
-  ;; (cl-flet
-  ;;     ((apply-n-forward
-  ;;       (m n)
-  ;;       (-let (((b e) (org-ml--get-forward-bounds m n "^\\* ")))
-  ;;         (when b
-  ;;           (org-element--parse-elements b e 'first-section nil nil nil nil))))
-  ;;       ;; (let ((acc))
-  ;;       ;;   (org-ml--apply-n m n "^\\* " nil
-  ;;       ;;     (setq acc (cons (org-ml-parse-this-subtree) acc)))
-  ;;       ;;   (nreverse acc)))
-  ;;      (apply-n-backward
-  ;;       (m n)
-  ;;       (-let (((b e) (org-ml--get-backward-bounds m n "^\\* ")))
-  ;;         (when b
-  ;;           (org-element--parse-elements b e 'first-section nil nil nil nil))))
-  ;;       ;; (let ((acc))
-  ;;       ;;   (org-ml--apply-n m n "^\\* " t
-  ;;       ;;     (setq acc (cons (org-ml-parse-this-subtree) acc)))
-  ;;       ;;   acc))
-  ;;      (apply-region
-  ;;       (begin end)
-  ;;       (-let (((b e) (org-ml--get-region-bounds begin end "^\\* ")))
-  ;;         (when b
-  ;;           (org-element--parse-elements b e 'first-section nil nil nil nil)))))
-  ;;       ;; (let ((acc))
-  ;;       ;;   (org-ml--apply-region begin end "^\\* "
-  ;;       ;;     (setq acc (cons (org-ml-parse-this-subtree) acc)))
-  ;;       ;;   acc)))
-  ;;   (org-ml--do-headlines-where where
-  ;;     #'apply-n-forward
-  ;;     #'apply-n-backward
-  ;;     #'apply-region)))
+  (org-ml--parse-patterns-where where "^\\* "))
 
 (defun org-ml-get-subtrees ()
   "Return list of all subtree nodes from current buffer.
@@ -6740,51 +6631,15 @@ Headlines are updated using `org-ml~update-this-headline' with
 DIFF-ARG set to nil (see this for use and meaning of FUN)."
   ;; don't use the myers diff algorithm here, since these functions are meant
   ;; for batch processing.
-  (-let (((b e) (org-ml--do-headlines-where0 where "^\\*")))
-    (when b
-      (->
-       (org-element--parse-elements b e 'first-section nil nil nil nil)
-       (nreverse)
-       (--each (org-ml~update nil fun it))))))
-  ;; (cl-flet
-  ;;     ((apply-n-forward
-  ;;       (m n)
-  ;;       (-let (((b e) (org-ml--get-forward-bounds m n "^\\*")))
-  ;;         (when b
-  ;;            (org-element--parse-elements b e 'first-section nil nil nil nil))))
-  ;;           ;; (->
-  ;;           ;;  (org-element--parse-elements b e 'first-section nil nil nil nil)
-  ;;           ;;  (nreverse)
-  ;;           ;;  (--each (org-ml~update nil fun it))))))
-  ;;       ;; (org-ml--apply-n m n "^\\*" nil
-  ;;       ;;   (org-ml~update-this-headline nil fun)))
-  ;;      (apply-n-backward
-  ;;       (m n)
-  ;;       (-let (((b e) (org-ml--get-backward-bounds m n "^\\*")))
-  ;;         (when b
-  ;;            (org-element--parse-elements b e 'first-section nil nil nil nil))))
-  ;;           ;; (->
-  ;;           ;;  (org-element--parse-elements b e 'first-section nil nil nil nil)
-  ;;           ;;  (nreverse)
-  ;;           ;;  (--each (org-ml~update nil fun it))))))
-  ;;       ;; (org-ml--apply-n m n "^\\*" t
-  ;;       ;;   (org-ml~update-this-headline nil fun)))
-  ;;      (apply-region
-  ;;       (begin end)
-  ;;       (-let (((b e) (org-ml--get-region-bounds begin end "^\\*")))
-  ;;         (when b
-  ;;            (org-element--parse-elements b e 'first-section nil nil nil nil)))))
-  ;;           ;; (-> (org-element--parse-elements b e 'first-section nil nil nil nil)
-  ;;           ;;     (nreverse)
-  ;;           ;;     (--each (org-ml~update nil fun it)))))))
-  ;;       ;; (org-ml--apply-region begin end "^\\*"
-  ;;       ;;   (org-ml~update-this-headline nil fun))))
-  ;;   (-> (org-ml--do-headlines-where where
-  ;;         #'apply-n-forward
-  ;;         #'apply-n-backward
-  ;;         #'apply-region)
-  ;;        (nreverse)
-  ;;        (--each (org-ml~update nil fun it)))))
+  (cl-labels
+      ((map-to-subheadlines
+        (headline)
+        (org-ml-headline-map-subheadlines*
+          (-map #'map-to-subheadlines it)
+          (funcall fun headline))))
+    (--> (org-ml--parse-patterns-where where "^\\*")
+         (nreverse it)
+         (--each it (org-ml~update nil #'map-to-subheadlines it)))))
 
 (org-ml--defun* org-ml-do-headlines (fun)
   "Update all headlines in the current buffer using FUN.
@@ -6800,47 +6655,9 @@ See `org-ml-get-some-headlines' for the meaning of WHERE.
 
 Subtrees are updated using `org-ml-update-this-subtree' (see this for use
 and meaning of FUN)."
-  (-let (((b e) (org-ml--do-headlines-where0 where "^\\* ")))
-    (when b
-      (->
-       (org-element--parse-elements b e 'first-section nil nil nil nil)
-       (nreverse)
-       (--each (org-ml~update nil fun it))))))
-  ;; (cl-flet
-  ;;     ((apply-n-forward
-  ;;       (m n)
-  ;;       (-let (((b e) (org-ml--get-forward-bounds m n "^\\* ")))
-  ;;         (when b
-  ;;            (org-element--parse-elements b e 'first-section nil nil nil nil))))
-  ;;       ;; (org-ml--apply-n m n "^\\* " nil
-  ;;       ;;   ;; (re-search-forward "^\\* " nil t)
-  ;;       ;;   (org-ml~update-this-subtree nil fun)))
-  ;;      (apply-n-backward
-  ;;       (m n)
-  ;;       (-let (((b e) (org-ml--get-backward-bounds m n "^\\* ")))
-  ;;         (when b
-  ;;            (org-element--parse-elements b e 'first-section nil nil nil nil))))
-  ;;       ;; (org-ml--apply-n m n "^\\* " t
-  ;;       ;;   ;; (re-search-backward "^\\* " nil t)
-  ;;       ;;   (org-ml~update-this-subtree nil fun)))
-  ;;      (apply-region
-  ;;       (begin end)
-  ;;       (-let (((b e) (org-ml--get-region-bounds begin end "^\\* ")))
-  ;;         (when b
-  ;;            (org-element--parse-elements b e 'first-section nil nil nil nil)))))
-  ;;       ;; (org-ml--apply-region begin end "^\\* "
-  ;;       ;;   ;; (re-search-backward "^\\* " nil t)
-  ;;       ;;   (org-ml~update-this-subtree nil fun))))
-  ;;   (-> (org-ml--do-headlines-where where
-  ;;         #'apply-n-forward
-  ;;         #'apply-n-backward
-  ;;         #'apply-region)
-  ;;        (nreverse)
-  ;;        (--each (org-ml~update nil fun it)))))
-  ;;   ;; (org-ml--do-headlines-where where
-  ;;   ;;   #'apply-n-forward
-  ;;   ;;   #'apply-n-backward
-  ;;   ;;   #'apply-region)))
+  (-> (org-ml--parse-patterns-where where "^\\* ")
+      (nreverse)
+      (--each (org-ml~update nil fun it))))
 
 (org-ml--defun* org-ml-do-subtrees (fun)
   "Update all toplevel subtrees in the current buffer using FUN.

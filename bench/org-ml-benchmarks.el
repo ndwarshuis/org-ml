@@ -25,8 +25,7 @@
   (while (outline-next-heading)
     (org-get-todo-state))
   
-  (->> (org-ml-parse-this-buffer)
-       (--drop-while (not (org-ml-is-type 'headline it)))
+  (->> (org-ml-get-headlines)
        (--map (org-ml-get-property :todo-keyword it))))
 
 (org-ml-defbench "TODO -> DONE" "\n* TODO headline" 1000
