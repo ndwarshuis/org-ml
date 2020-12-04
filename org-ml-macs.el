@@ -167,8 +167,12 @@ call)."
 The keyword list is determined by partitioning all keyword-value
 pairs until this pattern is broken. Whatever is left is put into the
 rest list. Return a list like (KEYARGS RESTARGS)."
-  `(->> (-partition-all 2 ,args)
-        (--split-with (keywordp (car it)))))
+  `(let ((rest ,args) acc-plist acc-keys)
+     (while (and rest (keywordp (car rest)))
+       (setq acc-plist `(,(cadr rest) ,(car rest) ,@acc-plist)
+             acc-keys (cons (car rest) acc-keys)
+             rest (cddr rest)))
+     (list (nreverse acc-keys) (nreverse acc-plist) rest)))
 
 (defmacro org-ml--make-rest-partition-form (argsym kws use-rest?)
   "Return a form that will partition the args in ARGSYM.
@@ -178,8 +182,7 @@ which in the argument values is a keyword-value pair, and USE-REST?
 is a boolean that determines if rest arguments are to be considered."
   ;; these `make-symbol' calls probably aren't necessary but they
   ;; ensure the let bindings are leak-proof
-  (let* ((p (make-symbol "--part"))
-         (k (make-symbol "--kpart"))
+  (let* ((k (make-symbol "--kpart"))
          (y (make-symbol "--keys"))
          (r (make-symbol "--rpart"))
          (inv-msg "Invalid keyword(s) found")
@@ -209,13 +212,8 @@ is a boolean that determines if rest arguments are to be considered."
                       (error "Too many arguments supplied")))))
          ;; return a cons cell of (KEY REST) argument values or
          ;; just KEY if rest is not used in the function call
-         (return (if (not use-rest?) `(apply #'append ,k)
-                   `(cons (apply #'append ,k)
-                          (apply #'append ,r)))))
-    `(let* ((,p (org-ml--partition-rest-args ,argsym))
-            (,k (car ,p))
-            (,y (-map #'car ,k))
-            (,r (cadr ,p)))
+         (return (if (not use-rest?) k `(cons ,k ,r))))
+    `(-let (((,y ,k ,r) (org-ml--partition-rest-args ,argsym)))
        ,@tests
        ,return)))
 
