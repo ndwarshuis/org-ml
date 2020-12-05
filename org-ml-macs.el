@@ -383,8 +383,7 @@ NEW-ALIAS, BASE-VARIABLE, and DOCSTRING have the same meaning as `defconst'."
   "Return LIST with FORM applied to the first member.
 The first element is `it' in FORM which returns the modified member."
   `(when ,list
-    (cons (funcall (lambda (it) ,form) (car ,list)) (cdr ,list))))
-    ;; (cons (let ((it (car ,list))) ,form) (cdr ,list))))
+     (cons (let ((it (car ,list))) ,form) (cdr ,list))))
 
 (defmacro org-ml--map-last* (form list)
     "Return LIST with FORM applied to the last member.
@@ -395,7 +394,23 @@ The last element is `it' in FORM which returns the modified member."
   "Return LIST with FORM applied to the member at index N.
 The nth element is `it' in FORM which returns the modified member."
   (declare (indent 1))
-  `(--> (nth ,n ,list) (funcall (lambda (it) ,form) it) (-replace-at ,n it ,list)))
+  `(-replace-at ,n (let ((it (nth ,n ,list))) ,form) ,list))
+
+;; LIST OPERATIONS
+
+(defmacro org-ml--reduce2-from* (form init list)
+  "Like `--reduce-from' but iterate over every pair of items in LIST.
+In FORM, the first of the pair is bound to 'it-key' and the second is
+bound to 'it'. INIT has the same meaning."
+  (let ((l (make-symbol "list")))
+    `(let ((acc ,init)
+           (,l ,list))
+       (while ,l
+         (let ((it (cadr ,l))
+               (it-key (car ,l)))
+           (setq acc ,form
+                 ,l (cdr (cdr ,l)))))
+       acc)))
 
 (provide 'org-ml-macs)
 ;;; org-ml-macs.el ends here

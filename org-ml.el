@@ -497,9 +497,8 @@ property list in NODE."
   ;; TODO this currently doesn't work with plain-text
   (if (org-ml--is-plist plist)
       (-let (((type . (props . children)) node))
-         (--> (-partition 2 plist)
-              (--reduce-from (apply #'plist-put acc it) props it)
-              (org-ml--construct type it children)))
+        (--> (org-ml--reduce2-from* (plist-put acc it-key it) props plist)
+             (org-ml--construct type it children)))
     (org-ml--arg-error "Not a plist: %S" plist)))
 
 (defun org-ml--set-property-nocheck-nil (prop node)
@@ -508,8 +507,10 @@ property list in NODE."
 
 (defun org-ml--set-properties-nocheck-nil (props node)
   "Set all PROPS to new in NODE."
-  (let ((plist (--mapcat (list it nil) props)))
-    (org-ml--set-properties-nocheck plist node)))
+  ;; TODO this currently doesn't work with plain-text
+  (-let (((type . (nprops . children)) node))
+    (--> (--reduce-from (plist-put acc it nil) nprops props)
+         (org-ml--construct type it children))))
 
 (eval-when-compile
   (defmacro org-ml--map-property-nocheck* (prop form node)
