@@ -5516,13 +5516,14 @@ FORM returns a list of element or object nodes as the new children,
 and the variable `it' is bound to the original children."
     (declare (debug (form def-form)))
     (declare (indent 1))
+    ;; TODO this makes a closure
     `(cl-labels
          ((rec
            (node)
            (if (not (org-ml-is-branch-node node)) node
              (org-ml-map-children*
-               (->> (-map #'rec it)
-                    (funcall (lambda (it) ,form)))
+               (let ((it (-map #'rec it)))
+                 ,form)
                node))))
        (rec ,node))))
 
