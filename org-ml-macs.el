@@ -104,6 +104,83 @@ wrapped in a lambda call binding the unary argument to the symbol
          ,dec
          ,@body))))
 
+(defun org-ml--replace-funcall (sym form)
+  "Replace all instances of (funcall fun X) with SYM in FORM."
+  (pcase form
+    (`(funcall fun it) (list '\, sym))
+    (`(funcall fun ,f) (list 'let `((it ,f)) (list '\, sym)))
+    ((pred consp) (--map (org-ml--replace-funcall sym it) form))
+    (f f)))
+
+(defun org-ml--get-let-symbols (let-syms form)
+  "Return the symbols that should be bound in let forms from FORM.
+The symbols to search for a LET-SYMS, and the returned list will
+contain all symbols in LET-SYMS that appear more than once in
+FORM."
+  (->> (-tree-seq #'consp #'identity form)
+       (-filter #'symbolp)
+       (-remove #'keywordp)
+       (-remove #'fboundp)
+       (--filter (memq it let-syms))
+       (-group-by #'identity)
+       (--filter (< 1 (length (cdr it))))
+       (-map #'car)))
+
+(defun org-ml--replace-syms (let-syms form)
+  "Replace symbols in FORM.
+The symbols to replace are in LET-SYMS, and the value
+to replace the symbol will with be (\\, SYM)."
+  (pcase form
+    ((pred consp) (--map (org-ml--replace-syms let-syms it) form))
+    ((pred symbolp) (if (memq form let-syms) (list '\, form) form))
+    (f f)))
+
+(defun org-ml--make-anaphoric-form (arglist body)
+  "Make an anaphoric from from BODY.
+ARGLIST is the argument list from the non-anaphoric form."
+  (let* ((body* (->> (-map #'macroexpand-all body)
+                     (org-ml--replace-funcall 'form)))
+                     ;; (-flatten-n 1)))
+         (arglist* (-remove-item 'fun arglist))
+         (let-syms (org-ml--get-let-symbols arglist* body*))
+         (nonlet-syms (-difference arglist* let-syms))
+         (body** (org-ml--replace-syms nonlet-syms body*)))
+    (if let-syms
+        `(let ,(--map (list it (list '\, it)) let-syms)
+           ,@body**)
+      body**)))
+
+(defmacro org-ml--defun-anaphoric* (name arglist &rest args)
+  "Return a function definition for NAME, ARGLIST, and ARGS.
+This will also make a mirrored anaphoric form macro definition. This
+assumes that `fun' represents a unary function which will be used
+somewhere in the definition's body. When making the anaphoric form,
+`fun' will be replaced by the symbol `form', and `form' will be
+wrapped in a lambda call binding the unary argument to the symbol
+`it'."
+  (declare (doc-string 3) (indent 2))
+  (-let* (((docstring decls body) (org-ml--defun-partition-body args))
+          (dec (org-ml--defun-make-indent-declare
+                decls (-elem-index 'fun arglist)))
+          (name* (intern (format "%s*" name)))
+          (arglist* (-replace 'fun 'form arglist))
+          (docstring* (org-ml--defun-make-anaphoric-docstring name docstring))
+          (debug* (->> arglist
+                       (--map (if (eq it 'fun) 'def-form 'form))
+                       (list 'debug)))
+          (dec* (org-ml--defun-make-indent-declare
+                 (cons debug* decls) (-elem-index 'fun arglist)))
+          (body* (org-ml--make-anaphoric-form arglist body)))
+    `(progn
+       (defmacro ,name* ,arglist*
+         ,docstring*
+         ,dec*
+         (backquote ,body*))
+       (defun ,name ,arglist
+         ,docstring
+         ,dec
+         ,@body))))
+
 ;;; BETTER CL-DEFUN
 
 ;; Some functions here require a clean way to use &rest and &key at the same

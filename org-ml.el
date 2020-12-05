@@ -1863,7 +1863,7 @@ If CHILDREN is nil, return HEADLINE with no section node."
         (cons (apply #'org-ml-build-section children) it)))
     headline))
 
-(org-ml--defun* org-ml-headline-map-section (fun headline)
+(org-ml--defun-anaphoric* org-ml-headline-map-section (fun headline)
   "Return HEADLINE node with child section node modified by FUN.
 
 FUN is a unary function that takes a section node's children as a list
@@ -1885,7 +1885,7 @@ returns a modified child list."
       subheadlines)
     headline))
 
-(org-ml--defun* org-ml-headline-map-subheadlines (fun headline)
+(org-ml--defun-anaphoric* org-ml-headline-map-subheadlines (fun headline)
   "Return HEADLINE node with child headline nodes modified by FUN.
 
 FUN is a unary function that takes a list of headlines and returns
@@ -2664,7 +2664,7 @@ requested. To get the raw plist of NODE, use
 `org-ml--get-all-properties'."
   (--map (org-ml-get-property it node) props))
 
-(org-ml--defun* org-ml-map-property (prop fun node)
+(org-ml--defun-anaphoric* org-ml-map-property (prop fun node)
   "Return NODE with FUN applied to the value of PROP.
 
 FUN is a unary function which takes the current value of PROP and
@@ -3165,7 +3165,7 @@ future major revision. Its functionality has been merged with
            (org-ml--plist-remove key (org-ml-get-all-properties node)))))
     (org-ml--construct (org-ml-get-type node) props (org-ml-get-children node))))
 
-(org-ml--defun* org-ml-map-affiliated-keyword (key fun node)
+(org-ml--defun-anaphoric* org-ml-map-affiliated-keyword (key fun node)
   "Apply FUN to value of affiliated keyword KEY in NODE.
 
 See `org-ml-set-affiliated-keyword' for the meaning of KEY.
@@ -3239,7 +3239,7 @@ on the type of NODE."
       ;; this should not happen
       (error "Child type restrictions not found for %s" type))))
 
-(org-ml--defun* org-ml-map-children (fun branch-node)
+(org-ml--defun-anaphoric* org-ml-map-children (fun branch-node)
   "Return BRANCH-NODE with FUN applied to its children.
 FUN is a unary function that takes the current list of children and
 returns a modified list of children."
@@ -3363,7 +3363,7 @@ plain-lists, join the two lists together."
       (cons (apply #'org-ml-build-paragraph secondary-string) it))
     item))
 
-(org-ml--defun* org-ml-item-map-paragraph (fun item)
+(org-ml--defun-anaphoric* org-ml-item-map-paragraph (fun item)
   "Apply FUN to the first paragraph's children in ITEM.
 FUN is a UNARY function that takes the secondary-string of the
 first paragraph and returns modified secondary-string."
@@ -3401,7 +3401,7 @@ first paragraph and returns modified secondary-string."
      (t
       headline))))
 
-(org-ml--defun* org-ml-headline-map-planning (fun headline)
+(org-ml--defun-anaphoric* org-ml-headline-map-planning (fun headline)
   "Return HEADLINE node with planning node modified by FUN.
 
 FUN is a unary function that takes a planning node and returns a
@@ -3456,7 +3456,7 @@ NODE-PROPERTIES is a list of node-property nodes."
      (t
       headline))))
 
-(org-ml--defun* org-ml-headline-map-node-properties (fun headline)
+(org-ml--defun-anaphoric* org-ml-headline-map-node-properties (fun headline)
   "Return HEADLINE node with property-drawer node modified by FUN.
 
 FUN is a unary function that takes a property-drawer node and returns
@@ -3486,7 +3486,7 @@ properties matching KEY are present, only set the first."
       (--remove-first (equal key (org-ml-get-property :value it)) it))
     headline))
 
-(org-ml--defun* org-ml-headline-map-node-property (key fun headline)
+(org-ml--defun-anaphoric* org-ml-headline-map-node-property (key fun headline)
   "Return HEADLINE node with property value matching KEY modified by FUN.
 
 FUN is a unary function that takes a node-property value and returns
@@ -3611,7 +3611,7 @@ between the logbook and the contents."
   (-let (((&alist :items :clocks :unknown) logbook))
     (org-ml--logbook-init items clocks unknown post-blank)))
 
-(org-ml--defun* org-ml-logbook-map-items (fun logbook)
+(org-ml--defun-anaphoric* org-ml-logbook-map-items (fun logbook)
   "Apply function to :item slot in LOGBOOK.
 FUN is a unary function that takes a list of items and returns a
 new list of items."
@@ -3619,7 +3619,7 @@ new list of items."
        (funcall fun it)
        (org-ml-logbook-set-items it logbook)))
 
-(org-ml--defun* org-ml-logbook-map-clocks (fun logbook)
+(org-ml--defun-anaphoric* org-ml-logbook-map-clocks (fun logbook)
   "Apply function to :clocks slot in LOGBOOK.
 FUN is a unary function that takes a list of clocks and returns a
 new list of clocks."
@@ -3658,7 +3658,7 @@ meaning as `org-ml--supercontents-init-from-lb'."
   (-let (((&alist :logbook) supercontents))
     (org-ml--supercontents-init-from-lb logbook contents)))
 
-(org-ml--defun* org-ml-supercontents-map-contents (fun supercontents)
+(org-ml--defun-anaphoric* org-ml-supercontents-map-contents (fun supercontents)
   "Apply function to :contents slot in SUPERCONTENTS.
 FUN is a unary function that takes a list of nodes and returns a
 new list of nodes."
@@ -3675,7 +3675,7 @@ new list of nodes."
   (-let (((&alist :contents) supercontents))
     (org-ml--supercontents-init-from-lb logbook contents)))
 
-(org-ml--defun* org-ml-supercontents-map-logbook (fun supercontents)
+(org-ml--defun-anaphoric* org-ml-supercontents-map-logbook (fun supercontents)
   "Apply function to :logbook slot in SUPERCONTENTS.
 FUN is a unary function that takes a logbook and returns a new
 logbook."
@@ -4410,7 +4410,7 @@ and the structure of the SUPERCONTENTS list."
         (->> (set-blank new-logbook? config headline :pre-blank headline)
              (org-ml-headline-set-section nodes)))))))
 
-(org-ml--defun* org-ml-headline-map-supercontents (config fun headline)
+(org-ml--defun-anaphoric* org-ml-headline-map-supercontents (config fun headline)
   "Map a function over the supercontents of HEADLINE.
 FUN is a unary function that takes a supercontents list and
 returns a modified supercontents list. See
@@ -4440,7 +4440,7 @@ item nodes, not as a plain-list node."
     (org-ml-supercontents-map-logbook* (org-ml-logbook-set-items items it) it)
     headline))
 
-(org-ml--defun* org-ml-headline-map-logbook-items (config fun headline)
+(org-ml--defun-anaphoric* org-ml-headline-map-logbook-items (config fun headline)
   "Map a function over the logbook items of HEADLINE.
 FUN is a unary function that takes a list of item nodes and
 returns a modified list of item nodes. See
@@ -4468,7 +4468,7 @@ CONFIG."
     (org-ml-supercontents-map-logbook* (org-ml-logbook-set-clocks clocks it) it)
     headline))
 
-(org-ml--defun* org-ml-headline-map-logbook-clocks (config fun headline)
+(org-ml--defun-anaphoric* org-ml-headline-map-logbook-clocks (config fun headline)
   "Map a function over the logbook clocks of HEADLINE.
 FUN is a unary function that takes a list of clock nodes and
 optionally item nodes to represent the clock notes and returns a
@@ -4495,7 +4495,7 @@ CONTENTS must be a flat list of nodes. See
     (org-ml-supercontents-set-contents contents it)
     headline))
 
-(org-ml--defun* org-ml-headline-map-contents (config fun headline)
+(org-ml--defun-anaphoric* org-ml-headline-map-contents (config fun headline)
   "Map a function over the contents of HEADLINE.
 Contents is everything in the headline after the logbook. FUN is
 a unary function that takes a list of nodes representing the
@@ -5583,7 +5583,7 @@ PATTERN follows the same rules as `org-ml-match'."
 
 ;;; map
 
-(org-ml--defun* org-ml-match-map (pattern fun node)
+(org-ml--defun-anaphoric* org-ml-match-map (pattern fun node)
   "Return NODE with FUN applied to children matching PATTERN.
 FUN is a unary function that takes a node and returns a new node
 which will replace the original.
@@ -5596,7 +5596,7 @@ PATTERN follows the same rules as `org-ml-match'."
 
 ;;; mapcat
 
-(org-ml--defun* org-ml-match-mapcat (pattern fun node)
+(org-ml--defun-anaphoric* org-ml-match-mapcat (pattern fun node)
   "Return NODE with FUN applied to children matching PATTERN.
 FUN is a unary function that takes a node and returns a list of new
 nodes which will be spliced in place of the original node.
@@ -5730,7 +5730,7 @@ in the immediate, top level children of NODE."
 
 ;;; side-effects
 
-(org-ml--defun* org-ml-match-do (pattern fun node)
+(org-ml--defun-anaphoric* org-ml-match-do (pattern fun node)
   "Like `org-ml-match-map' but for side effects only.
 FUN is a unary function that has side effects and is applied to the
 matches from NODE using PATTERN. This function itself returns nil.
@@ -6170,7 +6170,7 @@ applied to the buffer."
 ;;                        p2 (cdr (cdr p2))))
 ;;                (and (not p2) plist-matches))))))))
 
-(org-ml--defun* org-ml~update (diff-mode fun node)
+(org-ml--defun-anaphoric* org-ml~update (diff-mode fun node)
   "Replace NODE in the current buffer with a new one.
 FUN is a unary function that takes NODE and returns a modified node
 or list of nodes.
