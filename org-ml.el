@@ -2148,14 +2148,11 @@ automatically be adjusted to LEVEL + 1.
 All arguments not mentioned here follow the same rules as
 `org-ml-build-headline'"
   (let* ((planning (-some->> planning (apply #'org-ml-build-planning!)))
-         (section (-some->>
-                   (append `(,planning) section-children)
-                   (-non-nil)
-                   (apply #'org-ml-build-section)))
-         (nodes (->> subheadlines
-                     (--map (org-ml--headline-set-level (1+ level) it))
-                     (append (list section))
-                     (-non-nil))))
+         (section (-some->>  (if planning (cons planning section-children)
+                               section-children)
+                    (apply #'org-ml-build-section)))
+         (shls (--map (org-ml--headline-set-level (1+ level) it) subheadlines))
+         (nodes (--> shls (if section (cons section it) it))))
     (->> (apply #'org-ml-build-headline
                 :todo-keyword todo-keyword
                 :level level
