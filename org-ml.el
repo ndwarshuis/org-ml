@@ -777,7 +777,7 @@ property value."
 
 (defun org-ml--encode-plist (plist)
   "Return PLIST as string joined by spaces."
-  (-some->> (--map (format "%S" it) plist) (s-join " ")))
+  (-some->> (org-ml--map* (format "%S" it) plist) (s-join " ")))
 
 (defun org-ml--decode-plist (string)
   "Return STRING as plist split by spaces."
@@ -877,16 +877,18 @@ Return value will conform to `org-ml--is-valid-diary-sexp-value'."
 (defun org-ml--encode-header (plists)
   "Return PLISTS as a list of strings."
   (->> (reverse plists)
-       (--map (-some->> it
-                (-partition 2)
-                (--map (format "%S %s" (car it) (cadr it)))
-                (s-join " ")))))
+       (org-ml--map*
+        (-some->> it
+          (-partition 2)
+          (org-ml--map* (format "%S %s" (car it) (cadr it)))
+          (s-join " ")))))
 
 (defun org-ml--decode-header (headers)
   "Return HEADERS (a list of strings) as a list of plists."
   (->> (reverse headers)
-       (--map (->> (org-ml--decode-string-list-space-delim it)
-                   (--map-indexed (if (cl-evenp it-index) (intern it) it))))))
+       (org-ml--map*
+        (->> (org-ml--decode-string-list-space-delim it)
+             (--map-indexed (if (cl-evenp it-index) (intern it) it))))))
 
 (defun org-ml--encode-results (results)
   "Return a encoded results affiliated keyword value.
@@ -904,22 +906,28 @@ INTERNAL-RESULTS stored in a node."
 (defun org-ml--encode-caption (caption)
   "Return a encoded caption affiliated keyword value.
 CAPTION should conform to `org-ml--is-valid-caption'."
-  (->> (reverse caption)
-       (--map (pcase it
-                ((and (pred stringp) long) `((,long)))
-                (`(,short ,long) (when long
-                                   (if short `((,long) ,short) `((,long)))))))
+  (->> caption
+       (--reduce-from
+        (pcase it
+          ((and (pred stringp) long)
+           (cons `((,long)) acc))
+          (`(,short ,long)
+           (when long
+             (cons (if short `((,long) ,short) `((,long))) acc))))
+        nil)
        (-non-nil)))
 
 (defun org-ml--decode-caption (internal-caption)
   "Return a decoded caption affiliated keyword value.
 The returned list will conform to `org-ml--is-valid-caption' given
 INTERNAL-CAPTION stored in a node."
-  (->> (reverse internal-caption)
-       (--map (-let ((((long) short) it))
-                (if short (list (substring-no-properties short)
-                                (substring-no-properties long))
-                  (substring-no-properties long))))))
+  (--reduce-from
+   (-let ((((long) short) it))
+     (-> (if short (list (substring-no-properties short)
+                         (substring-no-properties long))
+           (substring-no-properties long))
+         (cons acc)))
+   nil internal-caption))
 
 ;;; cis functions
 
@@ -1357,7 +1365,7 @@ and ILLEGAL types were attempted to be set."
 
 (defun org-ml--init-properties (props)
   "Return a plist where the keys are PROPS and all values are nil."
-  (--mapcat (list it nil) props))
+  (apply #'append (org-ml--map* (list it nil) props)))
 
 (defun org-ml--build-bare-node (type post-blank)
   "Return a new node assembled from TYPE with POST-BLANK.
@@ -1897,7 +1905,7 @@ If the final shifted level is less one, set level to one (for parent
 and child nodes)."
   (->> (org-ml--headline-shift-level n headline)
        (org-ml-headline-map-subheadlines*
-         (--map (org-ml--headline-subtree-shift-level n it) it))))
+         (org-ml--map* (org-ml--headline-subtree-shift-level n it) it))))
 
 (defun org-ml--headline-set-level (level headline)
   "Return HEADLINE node with its level set to LEVEL.
@@ -1905,7 +1913,7 @@ Additionally set all child headline nodes to be (+ 1 level) for
 first layer, (+ 2 level) for second, and so on."
   (->> (org-ml-set-property :level level headline)
        (org-ml-headline-map-subheadlines*
-           (--map (org-ml--headline-set-level (1+ level) it) it))))
+         (org-ml--map* (org-ml--headline-set-level (1+ level) it) it))))
 
 ;;; table
 
@@ -1913,7 +1921,7 @@ first layer, (+ 2 level) for second, and so on."
   "Return the width of TABLE as an integer.
 This effectively is the maximum of all table-row lengths."
   (->> (org-ml-get-children table)
-       (--map (length (org-ml-get-children it)))
+       (org-ml--map* (length (org-ml-get-children it)))
        (-max)))
 
 (defun org-ml--table-pad-or-truncate (length list)
@@ -2112,9 +2120,9 @@ Each member in KEYVALS is a list like (KEY VAL) where KEY and VAL
 are both strings, where each list will generate a node-property
 node in the property-drawer node like \":key: val\"."
   (->> keyvals
-       (--map (let ((key (symbol-name (car it)))
-                    (val (symbol-name (cadr it))))
-                (org-ml-build-node-property key val)))
+       (org-ml--map* (let ((key (symbol-name (car it)))
+                           (val (symbol-name (cadr it))))
+                       (org-ml-build-node-property key val)))
        (apply #'org-ml-build-property-drawer :post-blank post-blank)))
 
 (org-ml--defun-kw org-ml-build-headline! (&key (level 1) title-text
@@ -2150,7 +2158,8 @@ All arguments not mentioned here follow the same rules as
          (section (-some->>  (if planning (cons planning section-children)
                                section-children)
                     (apply #'org-ml-build-section)))
-         (shls (--map (org-ml--headline-set-level (1+ level) it) subheadlines))
+         (shls (org-ml--map* (org-ml--headline-set-level (1+ level) it)
+                             subheadlines))
          (nodes (--> shls (if section (cons section it) it))))
     (->> (apply #'org-ml-build-headline
                 :todo-keyword todo-keyword
@@ -2226,7 +2235,7 @@ to a table-row node via `org-ml-build-table-row!' (see that function for
 restrictions).
 
 All other arguments follow the same rules as `org-ml-build-table'."
-  (->> (--map (org-ml-build-table-row! it) row-lists)
+  (->> (org-ml--map* (org-ml-build-table-row! it) row-lists)
        (apply #'org-ml-build-table :tblfm tblfm :post-blank post-blank)))
 
 ;;; logbook items
@@ -2654,7 +2663,7 @@ PROPS is a list of all the properties desired, and the returned
 list will be the values of these properties in the order
 requested. To get the raw plist of NODE, use
 `org-ml--get-all-properties'."
-  (--map (org-ml-get-property it node) props))
+  (org-ml--map* (org-ml-get-property it node) props))
 
 (org-ml--defun-anaphoric* org-ml-map-property (prop fun node)
   "Return NODE with FUN applied to the value of PROP.
@@ -3259,7 +3268,8 @@ returns a modified list of children."
     "Return mapped, concatenated, and normalized SECONDARY-STRING.
 FORM is a form supplied to `--mapcat'."
     (declare (debug (def-form form)))
-    `(->> (--mapcat ,form ,secondary-string)
+    `(->> (org-ml--map* ,form ,secondary-string)
+          (apply #'append)
           (org-ml--normalize-secondary-string))))
 
 (defun org-ml-unwrap (object-node)
@@ -3371,20 +3381,19 @@ first paragraph and returns modified secondary-string."
 (defun org-ml-headline-set-planning (planning headline)
   "Return HEADLINE node with planning components set to PLANNING node."
   (-let* ((children (org-ml-headline-get-section headline))
-          ((first . rest) children)
-          (first-type (org-ml-get-type first)))
+          (first-type (org-ml-get-type (car children))))
     (cond
      ((and planning (eq first-type 'planning))
-      (org-ml-headline-set-section (cons planning rest) headline))
+      (org-ml-headline-set-section (cons planning (cdr children)) headline))
      (planning
-      (--> (org-ml-get-property :pre-blank headline)
-           (org-ml-map-property :post-blank (lambda (pb) (+ pb it)) planning)
-           (org-ml-headline-set-section (cons it children) headline)
-           (org-ml-set-property :pre-blank 0 it)))
+      (let ((pb (org-ml-get-property :pre-blank headline)))
+        (--> (org-ml-map-property* :post-blank (+ pb it) planning)
+             (org-ml-headline-set-section (cons it children) headline)
+             (org-ml-set-property :pre-blank 0 it))))
      ((eq first-type 'planning)
-      (--> (org-ml-get-property :post-blank first)
+      (--> (org-ml-get-property :post-blank (car children))
            (org-ml-set-property :pre-blank it headline)
-           (org-ml-headline-set-section rest it)))
+           (org-ml-headline-set-section (cdr children) it)))
      (t
       headline))))
 
@@ -4541,7 +4550,7 @@ for the structure of both config lists."
 The return value is a list of headline titles (including that from
 HEADLINE) leading to the root node."
   (->> (org-ml-get-parents headline)
-       (--map (org-ml-get-property :raw-value it))))
+       (org-ml--map* (org-ml-get-property :raw-value it))))
 
 (defun org-ml-headline-update-item-statistics (headline)
   "Return HEADLINE node with updated statistics cookie via items.
@@ -4582,13 +4591,13 @@ TYPE is one of the symbols `unordered' or `ordered'."
   (cond
    ((eq type 'unordered)
     (org-ml--map-children-nocheck*
-      (--map (org-ml-set-property :bullet '- it) it)
+      (org-ml--map* (org-ml-set-property :bullet '- it) it)
       plain-list))
    ((eq type 'ordered)
     ;; NOTE the org-interpreter seems to use the correct, ordered numbers if any
     ;; number is set here. This behavior may not be reliable.
     (org-ml--map-children-nocheck*
-      (--map (org-ml-set-property :bullet 1 it) it)
+      (org-ml--map* (org-ml-set-property :bullet 1 it) it)
       plain-list))
    (t (org-ml--arg-error "Invalid type: %s" type))))
 
@@ -4857,7 +4866,7 @@ will be spliced after INDEX."
        (extract
         (parent)
         (->> (org-ml-get-children parent)
-             (--map (org-ml--headline-subtree-shift-level -1 it)))))
+             (org-ml--map* (org-ml--headline-subtree-shift-level -1 it)))))
     (org-ml-headline-map-subheadlines*
       (org-ml--outdent-members index #'trim #'extract it)
       headline)))
@@ -4925,7 +4934,7 @@ The specific child headline to promote is selected by CHILD-INDEX."
                                     child-index parent)
              (org-ml-get-children)
              (-drop child-index)
-             (--map (org-ml--headline-subtree-shift-level -1 it)))))
+             (org-ml--map* (org-ml--headline-subtree-shift-level -1 it)))))
     (org-ml-headline-map-subheadlines*
       (org-ml--outdent-members index #'trim #'extract it)
       headline)))
@@ -5274,8 +5283,8 @@ be deduplicated."
                        (-split-on '| p)
                        (-replace '(nil) nil)
                        (-mapcat #'org-ml--match-pattern-expand-alternations))))
-              (-mapcat (lambda (a) (--map (append a it) p*)) acc))
-          (--map (append it (list p)) acc))))
+              (-mapcat (lambda (a) (org-ml--map* (append a it) p*)) acc))
+          (org-ml--map* (append it (list p)) acc))))
     (-uniq (-reduce-from #'add-subpattern '(()) pattern))))
 
 (defun org-ml--match-pattern-process-alternations (end? limit alt-patterns)
@@ -5286,7 +5295,7 @@ alternations in the original pattern.
 See `org-ml--match-pattern-make-inner-form' for the meaning of
 END? and LIMIT."
   (->> (if end? alt-patterns (reverse alt-patterns))
-       (--map (org-ml--match-pattern-make-inner-form end? limit it))
+       (org-ml--map* (org-ml--match-pattern-make-inner-form end? limit it))
        ;; use nested let statements to keep track of accumulator
        ;; note the comma usage to make this extra confusing :)
        (--reduce `(let ((acc ,it)) ,acc))))
@@ -5521,7 +5530,7 @@ and the variable `it' is bound to the original children."
            (node)
            (if (not (org-ml-is-branch-node node)) node
              (org-ml-map-children*
-               (let ((it (-map #'rec it)))
+               (let ((it (org-ml--map* (rec it) it)))
                  ,form)
                node))))
        (rec ,node))))
