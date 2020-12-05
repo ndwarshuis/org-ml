@@ -1326,14 +1326,15 @@ nested element to return."
    (let ((head (org-ml--get-head node)))
      (if children (append head children) head)))
 
-(defun org-ml--map-children-nocheck (fun node)
-  "Return NODE with FUN applied to its children.
+(eval-when-compile
+  (defmacro org-ml--map-children-nocheck* (form node)
+    "Return NODE with FORM applied to its children.
 
-FUN is a unary function that takes a list of children and returns
-a modified list of children."
-  (--> (org-ml-get-children node)
-       (funcall fun it)
-       (org-ml--set-children-nocheck it node)))
+FORM is a form with `it' bound to the list of children and
+returns a modified list of children."
+    `(let* ((node ,node)
+            (it (org-ml-get-children node)))
+       (org-ml--set-children-nocheck ,form node))))
 
 (defun org-ml--set-childen-throw-error (type child-types illegal)
   "Throw an `arg-type-error' for TYPE.
@@ -1847,25 +1848,70 @@ ACTIVE is a flag denoting if the timestamp is to be active."
 
 ;;; headline
 
+(defun org-ml-headline-get-section (headline)
+  "Return children of section node in HEADLINE node or nil if none."
+  (-some--> (org-ml-get-children headline)
+    (car it)
+    (when (org-ml-is-type 'section it) (org-ml-get-children it))))
+
+(defun org-ml-headline-set-section (children headline)
+  "Return HEADLINE with section node containing CHILDREN.
+If CHILDREN is nil, return HEADLINE with no section node."
+  (org-ml--map-children-nocheck*
+    (-let (((first . rest) it))
+      (if (org-ml-is-type 'section first)
+          (cons (org-ml-set-children children first) rest)
+        (cons (apply #'org-ml-build-section children) it)))
+    headline))
+
+(org-ml--defun* org-ml-headline-map-section (fun headline)
+  "Return HEADLINE node with child section node modified by FUN.
+
+FUN is a unary function that takes a section node's children as a list
+returns a modified child list."
+  (--> (org-ml-headline-get-section headline)
+       (funcall fun it)
+       (org-ml-headline-set-section it headline)))
+
+(defun org-ml-headline-get-subheadlines (headline)
+  "Return list of child headline nodes in HEADLINE node or nil if none."
+  (let ((children (org-ml-get-children headline)))
+    (if (org-ml-is-type 'section (car children)) (cdr children) children)))
+
+(defun org-ml-headline-set-subheadlines (subheadlines headline)
+  "Return HEADLINE node with SUBHEADLINES set to child subheadlines."
+  (org-ml--map-children-nocheck*
+    (-if-let (section (assoc 'section it))
+        (cons section subheadlines)
+      subheadlines)
+    headline))
+
+(org-ml--defun* org-ml-headline-map-subheadlines (fun headline)
+  "Return HEADLINE node with child headline nodes modified by FUN.
+
+FUN is a unary function that takes a list of headlines and returns
+a modified list of headlines."
+  (--> (org-ml-headline-get-subheadlines headline)
+       (funcall fun it)
+       (org-ml-headline-set-subheadlines it headline)))
+
+
 (defun org-ml--headline-subtree-shift-level (n headline)
   "Return HEADLINE node with its level shifted by N.
 Also shift all HEADLINE node's child headline nodes by N.
 If the final shifted level is less one, set level to one (for parent
 and child nodes)."
   (->> (org-ml--headline-shift-level n headline)
-       (org-ml-headline-map-subheadlines
-        (lambda (headlines)
-          (--map (org-ml--headline-subtree-shift-level n it)
-                 headlines)))))
+       (org-ml-headline-map-subheadlines*
+         (--map (org-ml--headline-subtree-shift-level n it) it))))
 
 (defun org-ml--headline-set-level (level headline)
   "Return HEADLINE node with its level set to LEVEL.
 Additionally set all child headline nodes to be (+ 1 level) for
 first layer, (+ 2 level) for second, and so on."
   (->> (org-ml-set-property :level level headline)
-       (org-ml-headline-map-subheadlines
-         (lambda (subheadlines)
-           (--map (org-ml--headline-set-level (1+ level) it) subheadlines)))))
+       (org-ml-headline-map-subheadlines*
+           (--map (org-ml--headline-set-level (1+ level) it) it))))
 
 ;;; table
 
@@ -1892,9 +1938,7 @@ a modified table-cell node."
       ((zip-into-rows
         (row new-cell)
         (if (org-ml--property-is-eq :type 'rule row) row
-          (org-ml--map-children-nocheck
-           (lambda (cells) (funcall fun new-cell cells))
-           row)))
+          (org-ml--map-children-nocheck* (funcall fun new-cell it) row)))
        (map-rows
         (rows)
         (->> rows
@@ -1902,7 +1946,7 @@ a modified table-cell node."
              (--reduce-from (-insert-at it nil acc) column-index)
              (org-ml--table-pad-or-truncate (length rows))
              (-zip-with #'zip-into-rows rows))))
-    (org-ml--map-children-nocheck #'map-rows table)))
+    (org-ml--map-children-nocheck* (map-rows it) table)))
 
 (defun org-ml--table-get-row (row-index table)
   "Return the table-row node at ROW-INDEX within TABLE.
@@ -1924,16 +1968,16 @@ See `org-ml--table-pad-or-truncate' for how padding and truncation is
 performed. TABLE is used to get the table width."
   (if (org-ml--property-is-eq :type 'rule table-row) table-row
     (let ((width (org-ml--table-get-width table)))
-      (org-ml--map-children-nocheck
-        (lambda (cells) (org-ml--table-pad-or-truncate width cells))
-        table-row))))
+      (org-ml--map-children-nocheck*
+       (org-ml--table-pad-or-truncate width it)
+       table-row))))
 
 (defun org-ml--table-replace-row (row-index table-row table)
   "Return TABLE node with row at ROW-INDEX replaced by TABLE-ROW."
   (let ((table-row (org-ml--table-row-pad-maybe table table-row)))
-    (org-ml--map-children-nocheck
-      (lambda (rows) (org-ml--replace-at row-index table-row rows))
-      table)))
+    (org-ml--map-children-nocheck*
+     (org-ml--replace-at row-index table-row it)
+     table)))
 
 (defun org-ml--table-clear-row (row-index table)
   "Return TABLE with table-cells in row at ROW-INDEX filled with blanks."
@@ -2538,8 +2582,9 @@ elements may have other elements as children."
   "Given TYPE and PROP, return encoded VALUE."
   (-if-let (pred (org-ml--get-property-attribute :pred type prop))
       (if (funcall pred value)
-          (let ((encode-fun (org-ml--get-property-encoder type prop)))
-            (if encode-fun (funcall encode-fun value) value))
+          (-if-let (encode-fun (org-ml--get-property-encoder type prop))
+              (funcall encode-fun value)
+            value)
         (org-ml--property-error-wrong-type prop type value))
     (org-ml--property-error-unsettable prop type)))
 
@@ -3326,57 +3371,6 @@ first paragraph and returns modified secondary-string."
   (--> (org-ml-item-get-paragraph item)
        (funcall fun it)
        (org-ml-item-set-paragraph it item)))
-
-;;; headline
-
-(defun org-ml-headline-get-section (headline)
-  "Return children of section node in HEADLINE node or nil if none."
-  (-some--> (org-ml-get-children headline)
-    (car it)
-    (when (org-ml-is-type 'section it) (org-ml-get-children it))))
-
-(defun org-ml-headline-set-section (children headline)
-  "Return HEADLINE with section node containing CHILDREN.
-If CHILDREN is nil, return HEADLINE with no section node."
-  (org-ml--map-children-nocheck
-    (lambda (cur-children)
-      (-let (((first . rest) cur-children))
-        (if (org-ml-is-type 'section first)
-            (cons (org-ml-set-children children first) rest)
-          (cons (apply #'org-ml-build-section children) cur-children))))
-    headline))
-
-(org-ml--defun* org-ml-headline-map-section (fun headline)
-  "Return HEADLINE node with child section node modified by FUN.
-
-FUN is a unary function that takes a section node's children as a list
-returns a modified child list."
-  (--> (org-ml-headline-get-section headline)
-       (funcall fun it)
-       (org-ml-headline-set-section it headline)))
-
-(defun org-ml-headline-get-subheadlines (headline)
-  "Return list of child headline nodes in HEADLINE node or nil if none."
-  (let ((children (org-ml-get-children headline)))
-    (if (org-ml-is-type 'section (car children)) (cdr children) children)))
-
-(defun org-ml-headline-set-subheadlines (subheadlines headline)
-  "Return HEADLINE node with SUBHEADLINES set to child subheadlines."
-  (org-ml--map-children-nocheck
-    (lambda (hl-children)
-      (-if-let (section (assoc 'section hl-children))
-          (cons section subheadlines)
-        subheadlines))
-    headline))
-
-(org-ml--defun* org-ml-headline-map-subheadlines (fun headline)
-  "Return HEADLINE node with child headline nodes modified by FUN.
-
-FUN is a unary function that takes a list of headlines and returns
-a modified list of headlines."
-  (--> (org-ml-headline-get-subheadlines headline)
-       (funcall fun it)
-       (org-ml-headline-set-subheadlines it headline)))
 
 ;;; headline (metadata)
 
@@ -4617,16 +4611,14 @@ subheadlines will not be counted)."
 TYPE is one of the symbols `unordered' or `ordered'."
   (cond
    ((eq type 'unordered)
-    (org-ml--map-children-nocheck
-      (lambda (items)
-        (--map (org-ml-set-property :bullet '- it) items))
+    (org-ml--map-children-nocheck*
+      (--map (org-ml-set-property :bullet '- it) it)
       plain-list))
    ((eq type 'ordered)
     ;; NOTE the org-interpreter seems to use the correct, ordered numbers if any
     ;; number is set here. This behavior may not be reliable.
-    (org-ml--map-children-nocheck
-      (lambda (items)
-        (--map (org-ml-set-property :bullet 1 it) items))
+    (org-ml--map-children-nocheck*
+      (--map (org-ml-set-property :bullet 1 it) it)
       plain-list))
    (t (org-ml--arg-error "Invalid type: %s" type))))
 
@@ -4641,9 +4633,7 @@ Rule-type rows do not count toward row indices."
 
 (defun org-ml-table-delete-row (row-index table)
   "Return TABLE node with row at ROW-INDEX deleted."
-  (org-ml--map-children-nocheck
-    (lambda (rows) (org-ml--remove-at row-index rows))
-    table))
+  (org-ml--map-children-nocheck* (org-ml--remove-at row-index it) table))
 
 (defun org-ml-table-delete-column (column-index table)
   "Return TABLE node with column at COLUMN-INDEX deleted."
@@ -4654,8 +4644,8 @@ Rule-type rows do not count toward row indices."
        (map-row
         (row)
         (if (org-ml--property-is-eq :type 'rule row) row
-          (org-ml--map-children-nocheck #'delete-cell row))))
-    (org-ml--map-children-nocheck (lambda (rows) (-map #'map-row rows)) table)))
+          (org-ml--map-children-nocheck* (delete-cell it) row))))
+    (org-ml--map-children-nocheck* (-map #'map-row it) table)))
 
 (defun org-ml-table-insert-column! (column-index column-text table)
   "Return TABLE node with COLUMN-TEXT inserted at COLUMN-INDEX.
@@ -4678,8 +4668,8 @@ as `org-ml-build-table-row!'."
   (if (not row-text) (org-ml--table-clear-row row-index table)
     (let ((row (->> (org-ml-build-table-row! row-text)
                     (org-ml--table-row-pad-maybe table))))
-      (org-ml--map-children-nocheck
-        (lambda (rows) (org-ml--insert-at row-index row rows))
+      (org-ml--map-children-nocheck*
+        (org-ml--insert-at row-index row it)
         table))))
 
 (defun org-ml-table-replace-cell! (row-index column-index cell-text table)
@@ -4693,9 +4683,8 @@ If CELL-TEXT is nil, it will set the cell to an empty string."
   (let* ((cell (if cell-text (org-ml-build-table-cell! cell-text)
                  (org-ml-build-table-cell "")))
          (row (->> (org-ml--table-get-row row-index table)
-                   (org-ml--map-children-nocheck
-                     (lambda (cells)
-                       (org-ml--replace-at column-index cell cells))))))
+                   (org-ml--map-children-nocheck*
+                     (org-ml--replace-at column-index cell it)))))
     (org-ml--table-replace-row row-index row table)))
 
 (defun org-ml-table-replace-column! (column-index column-text table)
@@ -4778,14 +4767,12 @@ demoted headline node's children."
         (target-headline parent-headline)
         (let ((target-headline*
                (org-ml--headline-subtree-shift-level 1 target-headline)))
-          (org-ml--map-children-nocheck
-           (lambda (headline-children)
-             (append headline-children (list target-headline*)))
-           parent-headline))))
-    (org-ml-headline-map-subheadlines
-     (lambda (subheadlines)
-       (org-ml--indent-members #'append-demoted index subheadlines))
-     headline)))
+          (org-ml--map-children-nocheck*
+            (append it (list target-headline*))
+            parent-headline))))
+    (org-ml-headline-map-subheadlines*
+      (org-ml--indent-members #'append-demoted index it)
+      headline)))
 
 (defun org-ml-headline-demote-subheadline (index headline)
   "Return HEADLINE node with child headline at INDEX demoted.
@@ -4800,14 +4787,12 @@ demoted headline node's children."
                     (org-ml--headline-shift-level 1)))
               (headlines-in-target
                (org-ml-headline-get-subheadlines target-headline)))
-          (org-ml--map-children-nocheck
-           (lambda (children)
-             (append children (list target-headline*) headlines-in-target))
-           parent-headline))))
-    (org-ml-headline-map-subheadlines
-     (lambda (subheadlines)
-       (org-ml--indent-members #'append-demoted index subheadlines))
-     headline)))
+          (org-ml--map-children-nocheck*
+            (append it (list target-headline*) headlines-in-target)
+            parent-headline))))
+    (org-ml-headline-map-subheadlines*
+      (org-ml--indent-members #'append-demoted index it)
+      headline)))
 
 ;; plain-list
 
@@ -4819,13 +4804,12 @@ node's children."
       ((append-indented
         (target-item parent-item)
         (let ((target-item* (org-ml-build-plain-list target-item)))
-          (org-ml--map-children-nocheck
-           (lambda (item-children) (append item-children (list target-item*)))
-           parent-item))))
-    (org-ml--map-children-nocheck
-     (lambda (items)
-       (org-ml--indent-members #'append-indented index items))
-     plain-list)))
+          (org-ml--map-children-nocheck*
+            (append it (list target-item*))
+            parent-item))))
+    (org-ml--map-children-nocheck*
+      (org-ml--indent-members #'append-indented index it)
+      plain-list)))
 
 (defun org-ml-plain-list-indent-item (index plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
@@ -4838,29 +4822,25 @@ item node's children."
         (target-item parent-item)
         (let ((target-item*
                (->> target-item
-                    (org-ml--map-children-nocheck
-                      (lambda (items)
-                        (--remove (org-ml-is-type 'plain-list it) items)))))
+                    (org-ml--map-children-nocheck*
+                      (--remove (org-ml-is-type 'plain-list it) it))))
               (plain-lists-in-target
                (->> (org-ml-get-children target-item)
                     (--filter (org-ml-is-type 'plain-list it)))))
-          (org-ml--map-children-nocheck
-           (lambda (item-children)
-             (let ((plain-lists*
-                    (if plain-lists-in-target
-                        (org-ml--map-first*
-                         (org-ml--map-children-nocheck
-                          (lambda (items)
-                            (cons target-item* items))
+          (org-ml--map-children-nocheck*
+            (let ((plain-lists*
+                   (if plain-lists-in-target
+                       (org-ml--map-first*
+                        (org-ml--map-children-nocheck*
+                          (cons target-item* it)
                           it)
-                         plain-lists-in-target)
-                      (list (org-ml-build-plain-list target-item*)))))
-               (org-ml--append-join-plain-lists item-children plain-lists*)))
-           parent-item))))
-    (org-ml--map-children-nocheck
-     (lambda (items)
-       (org-ml--indent-members #'append-indented index items))
-     plain-list)))
+                        plain-lists-in-target)
+                     (list (org-ml-build-plain-list target-item*)))))
+              (org-ml--append-join-plain-lists it plain-lists*))
+            parent-item))))
+    (org-ml--map-children-nocheck*
+      (org-ml--indent-members #'append-indented index it)
+      plain-list)))
 
 ;;; unindentation (tree)
 
@@ -4908,10 +4888,9 @@ will be spliced after INDEX."
         (parent)
         (->> (org-ml-get-children parent)
              (--map (org-ml--headline-subtree-shift-level -1 it)))))
-    (org-ml-headline-map-subheadlines
-     (lambda (subheadlines)
-       (org-ml--outdent-members index #'trim #'extract subheadlines))
-     headline)))
+    (org-ml-headline-map-subheadlines*
+      (org-ml--outdent-members index #'trim #'extract it)
+      headline)))
 
 ;; plain-list
 
@@ -4920,19 +4899,17 @@ will be spliced after INDEX."
   (cl-flet
       ((trim
         (parent)
-        (org-ml--map-children-nocheck
-         (lambda (children)
-           (--remove-first (org-ml-is-type 'plain-list it) children))
-         parent))
+        (org-ml--map-children-nocheck*
+          (--remove-first (org-ml-is-type 'plain-list it) it)
+          parent))
        (extract
         (parent)
         (->> (org-ml-get-children parent)
              (--first (org-ml-is-type 'plain-list it))
              (org-ml-get-children))))
-    (org-ml--map-children-nocheck
-     (lambda (items)
-       (org-ml--outdent-members index #'trim #'extract items))
-     plain-list)))
+    (org-ml--map-children-nocheck*
+      (org-ml--outdent-members index #'trim #'extract it)
+      plain-list)))
 
 ;;; unindentation (single target)
 
@@ -4971,9 +4948,7 @@ The specific child headline to promote is selected by CHILD-INDEX."
   (cl-flet
       ((trim
         (parent)
-        (org-ml-headline-map-subheadlines
-         (lambda (subheadlines) (-take child-index subheadlines))
-         parent))
+        (org-ml-headline-map-subheadlines* (-take child-index it) parent))
        (extract
         (parent)
         (->> (org-ml--indent-after #'org-ml-headline-demote-subtree
@@ -4981,10 +4956,9 @@ The specific child headline to promote is selected by CHILD-INDEX."
              (org-ml-get-children)
              (-drop child-index)
              (--map (org-ml--headline-subtree-shift-level -1 it)))))
-    (org-ml-headline-map-subheadlines
-     (lambda (subheadlines)
-       (org-ml--outdent-members index #'trim #'extract subheadlines))
-     headline)))
+    (org-ml-headline-map-subheadlines*
+      (org-ml--outdent-members index #'trim #'extract it)
+      headline)))
 
 ;; plain-list
 
@@ -4994,28 +4968,26 @@ The specific child item to outdent is selected by CHILD-INDEX."
   (cl-flet
       ((trim
         (parent)
-        (org-ml--map-children-nocheck
-         (lambda (children)
-           (if (= 0 index)
-               (--remove-first (org-ml-is-type 'plain-list it) children)
-             (--map-first (org-ml-is-type 'plain-list it)
-                          (org-ml--map-children-nocheck
-                           (lambda (items) (-take child-index items)) it)
-                          children)))
-         parent))
+        (org-ml--map-children-nocheck*
+          (if (= 0 index)
+              (--remove-first (org-ml-is-type 'plain-list it) it)
+            (--map-first (org-ml-is-type 'plain-list it)
+                         (org-ml--map-children-nocheck*
+                           (-take child-index it) it)
+                         it))
+          parent))
        (extract
         (parent)
         (->>
          (org-ml-get-children parent)
          (--first (org-ml-is-type 'plain-list it))
          (org-ml--indent-after #'org-ml-plain-list-indent-item-tree
-                                child-index)
+                               child-index)
          (org-ml-get-children)
          (-drop child-index))))
-    (org-ml--map-children-nocheck
-     (lambda (items)
-       (org-ml--outdent-members index #'trim #'extract items))
-     plain-list)))
+    (org-ml--map-children-nocheck*
+      (org-ml--outdent-members index #'trim #'extract it)
+      plain-list)))
 
 ;;; PRINTING FUNCTIONS
 
@@ -5055,10 +5027,7 @@ empty."
 
 (defun org-ml--clean (node)
   "Return NODE with empty child nodes from `org-ml--rm-if-empty' removed."
-  (->> (org-ml--map-children-nocheck
-         (lambda (children)
-           (-non-nil (-map #'org-ml--clean children)))
-         node)
+  (->> (org-ml--map-children-nocheck* (-non-nil (-map #'org-ml--clean it)) node)
        (org-ml--filter-non-zero-length)))
 
 (defun org-ml--blank (node)
@@ -5067,10 +5036,7 @@ empty."
       (if (org-ml-is-any-type org-ml--blank-if-empty node)
           (org-ml--set-blank-children node)
         node)
-    (org-ml--map-children-nocheck
-      (lambda (children)
-        (-map #'org-ml--blank children))
-      node)))
+    (org-ml--map-children-nocheck* (-map #'org-ml--blank it) node)))
 
 ;;; print functions
 
@@ -5639,9 +5605,7 @@ nodes which will be spliced in place of the original node.
 PATTERN follows the same rules as `org-ml-match'."
   (-if-let (targets (org-ml-match pattern node))
       (org-ml--modify-children node
-        (--mapcat (if (member it targets)
-                      (funcall fun it) (list it))
-                  it))
+        (--mapcat (if (member it targets) (funcall fun it) (list it)) it))
     node))
 
 ;;; replace
