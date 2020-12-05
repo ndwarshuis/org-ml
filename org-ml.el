@@ -1286,11 +1286,10 @@ bounds."
   "Return ATTRIBUTE for PROP of node TYPE.
 Signal an error if PROP in TYPE does not have ATTRIBUTE."
   (-if-let (type-list (alist-get type org-ml--property-alist))
-      (if (assoc prop type-list)
+      (if (assq prop type-list)
           (-when-let (plist (alist-get prop type-list))
             (plist-get plist attribute))
-        (org-ml--arg-error "Type '%s' does not have property '%s'"
-                       type prop))
+        (org-ml--arg-error "Type '%s' does not have property '%s'" type prop))
     (org-ml--arg-error "Tried to query property '%s' for non-existent type '%s'" prop type)))
 
 (defun org-ml--get-property-encoder (type prop)
