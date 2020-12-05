@@ -401,8 +401,8 @@ The nth element is `it' in FORM which returns the modified member."
 
 (defmacro org-ml--reduce2-from* (form init list)
   "Like `--reduce-from' but iterate over every pair of items in LIST.
-In FORM, the first of the pair is bound to 'it-key' and the second is
-bound to 'it'. INIT has the same meaning."
+In FORM, the first of the pair is bound to 'it-key' and the
+second is bound to 'it'. INIT has the same meaning."
   (let ((l (make-symbol "list")))
     `(let ((acc ,init)
            (,l ,list))
