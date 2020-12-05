@@ -3433,13 +3433,13 @@ NODE-PROPERTIES is a list of node-property nodes."
            (org-ml-headline-set-section (cons it children) headline)
            (org-ml-set-property :pre-blank 0 it)))
      ((eq t2 'property-drawer)
-      (--> (org-ml-get-property :post-blank second)
-           (org-ml-map-property :post-blank (lambda (pb) (+ pb it)) first)
-           (org-ml-headline-set-section (cons it r2) headline)))
+      (let ((pb (org-ml-get-property :post-blank second)))
+        (--> (org-ml-map-property* :post-blank (+ pb it) first)
+             (org-ml-headline-set-section (cons it r2) headline))))
      ((eq t1 'property-drawer)
-      (--> (org-ml-get-property :post-blank first)
-           (org-ml-map-property :pre-blank (lambda (pb) (+ pb it)) headline)
-           (org-ml-headline-set-section r1 it)))
+      (let ((pb (org-ml-get-property :post-blank first)))
+        (--> (org-ml-map-property* :pre-blank (+ pb it) headline)
+             (org-ml-headline-set-section r1 it))))
      (t
       headline))))
 
@@ -4511,23 +4511,18 @@ will do nothing. NOTE is a string representing the clock-out
 note (or nil if not desired). Note that supplying a non-nil
 clock-note when it is not allowed by CONFIG will trigger an
 error."
-  (cl-flet*
-      ((close-clock
-        (clock)
-        (let ((time (org-ml-unixtime-to-time-long unixtime)))
-          (org-ml-map-property* :value
-            (org-ml-timestamp-set-end-time time it)
-            clock)))
-       (close-first
-        (clocks)
-        (-let (((first . rest) clocks))
-          (if (not (org-ml-clock-is-running first)) clocks
-            (let ((closed (close-clock first))
-                  (note* (-some->> note
-                           (org-ml-build-paragraph)
-                           (org-ml-build-item))))
-              (if note* `(,closed ,note* ,@rest) (cons closed rest)))))))
-    (org-ml-headline-map-logbook-clocks config #'close-first headline)))
+  (org-ml-headline-map-logbook-clocks* config
+    (-let (((first . rest) it))
+      (if (not (org-ml-clock-is-running first)) it
+        (let* ((time (org-ml-unixtime-to-time-long unixtime))
+               (closed (org-ml-map-property* :value
+                         (org-ml-timestamp-set-end-time time it)
+                         first))
+               (note* (-some->> note
+                        (org-ml-build-paragraph)
+                        (org-ml-build-item))))
+          (if note* `(,closed ,note* ,@rest) (cons closed rest)))))
+    headline))
 
 (defun org-ml-headline-logbook-convert-config (config1 config2 headline)
   "Convert the logbook of HEADLINE to a new configuration.
