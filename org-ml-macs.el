@@ -66,8 +66,9 @@ DECL is a list of declarations."
   "Return DOCSTRING adapted for anaphoric version of definition NAME.
 This includes adding a short string to the front indicating it is an
 anaphoric version and replacing all instances of \"FUN\" with \"FORM\"."
-  (->> (s-replace "FUN" "FORM" docstring)
-       (format "Anaphoric form of `%s'.\n\n%s" name)))
+  (let ((case-fold-search nil))
+    (->> (s-replace "FUN" "FORM" docstring)
+         (format "Anaphoric form of `%s'.\n\n%s" name))))
 
 (defmacro org-ml--defun* (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
