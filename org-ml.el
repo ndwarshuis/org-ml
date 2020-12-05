@@ -1849,8 +1849,7 @@ ACTIVE is a flag denoting if the timestamp is to be active."
 
 (defun org-ml-headline-get-section (headline)
   "Return children of section node in HEADLINE node or nil if none."
-  (-some--> (org-ml-get-children headline)
-    (car it)
+  (-some--> (car (org-ml-get-children headline))
     (when (org-ml-is-type 'section it) (org-ml-get-children it))))
 
 (defun org-ml-headline-set-section (children headline)
@@ -1869,8 +1868,7 @@ If CHILDREN is nil, return HEADLINE with no section node."
 FUN is a unary function that takes a section node's children as a list
 returns a modified child list."
   (--> (org-ml-headline-get-section headline)
-       (funcall fun it)
-       (org-ml-headline-set-section it headline)))
+       (org-ml-headline-set-section (funcall fun it) headline)))
 
 (defun org-ml-headline-get-subheadlines (headline)
   "Return list of child headline nodes in HEADLINE node or nil if none."
@@ -1891,9 +1889,7 @@ returns a modified child list."
 FUN is a unary function that takes a list of headlines and returns
 a modified list of headlines."
   (--> (org-ml-headline-get-subheadlines headline)
-       (funcall fun it)
-       (org-ml-headline-set-subheadlines it headline)))
-
+       (org-ml-headline-set-subheadlines (funcall fun it) headline)))
 
 (defun org-ml--headline-subtree-shift-level (n headline)
   "Return HEADLINE node with its level shifted by N.
@@ -2673,8 +2669,7 @@ returns a new value to which PROP will be set.
 See builder functions for a list of properties and their rules for
 each type."
   (--> (org-ml-get-property prop node)
-       (funcall fun it)
-       (org-ml-set-property prop it node)))
+       (org-ml-set-property prop (funcall fun it) node)))
 
 (defun org-ml-map-properties (plist node)
   "Return NODE with functions applied to the values of properties.
@@ -3174,8 +3169,7 @@ WARNING: This function is depreciated and will be removed in a
 future major revision. Its functionality has been merged with
 `org-ml-map-property'."
   (-some--> (org-ml-get-affiliated-keyword key node)
-            (funcall fun it)
-            (org-ml-set-affiliated-keyword key it node)))
+    (org-ml-set-affiliated-keyword key (funcall fun it) node)))
 
 (defun org-ml-set-caption! (caption node)
   "Set the caption affiliated keyword of NODE.
@@ -3244,8 +3238,7 @@ on the type of NODE."
 FUN is a unary function that takes the current list of children and
 returns a modified list of children."
   (--> (org-ml-get-children branch-node)
-       (funcall fun it)
-       (org-ml-set-children it branch-node)))
+       (org-ml-set-children (funcall fun it) branch-node)))
 
 (defun org-ml-is-childless (branch-node)
   "Return t if BRANCH-NODE has no children."
@@ -3368,8 +3361,7 @@ plain-lists, join the two lists together."
 FUN is a UNARY function that takes the secondary-string of the
 first paragraph and returns modified secondary-string."
   (--> (org-ml-item-get-paragraph item)
-       (funcall fun it)
-       (org-ml-item-set-paragraph it item)))
+       (org-ml-item-set-paragraph (funcall fun it) item)))
 
 ;;; headline (metadata)
 
@@ -3377,8 +3369,7 @@ first paragraph and returns modified secondary-string."
 
 (defun org-ml-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
-  (-some--> (org-ml-headline-get-section headline)
-    (car it)
+  (-some--> (car (org-ml-headline-get-section headline))
     (when (org-ml-is-type 'planning it) it)))
 
 (defun org-ml-headline-set-planning (planning headline)
@@ -3407,8 +3398,7 @@ first paragraph and returns modified secondary-string."
 FUN is a unary function that takes a planning node and returns a
 modified planning node."
    (--> (org-ml-headline-get-planning headline)
-        (funcall fun it)
-        (org-ml-headline-set-planning it headline)))
+        (org-ml-headline-set-planning (funcall fun it) headline)))
 
 ;; node-properties (eg the entire property drawer)
 
@@ -3462,8 +3452,7 @@ NODE-PROPERTIES is a list of node-property nodes."
 FUN is a unary function that takes a property-drawer node and returns
 a modified property-drawer node."
    (--> (org-ml-headline-get-node-properties headline)
-        (funcall fun it)
-        (org-ml-headline-set-node-properties it headline)))
+        (org-ml-headline-set-node-properties (funcall fun it) headline)))
 
 ;; node-property
 
@@ -3492,8 +3481,7 @@ properties matching KEY are present, only set the first."
 FUN is a unary function that takes a node-property value and returns
 a modified node-property value."
    (--> (org-ml-headline-get-node-property key headline)
-        (funcall fun it)
-        (org-ml-headline-set-node-property key it headline)))
+        (org-ml-headline-set-node-property key (funcall fun it) headline)))
 
 ;;; headline (logbook/contents)
 
@@ -3616,16 +3604,14 @@ between the logbook and the contents."
 FUN is a unary function that takes a list of items and returns a
 new list of items."
   (--> (alist-get :items logbook)
-       (funcall fun it)
-       (org-ml-logbook-set-items it logbook)))
+       (org-ml-logbook-set-items (funcall fun it) logbook)))
 
 (org-ml--defun-anaphoric* org-ml-logbook-map-clocks (fun logbook)
   "Apply function to :clocks slot in LOGBOOK.
 FUN is a unary function that takes a list of clocks and returns a
 new list of clocks."
   (--> (alist-get :clocks logbook)
-       (funcall fun it)
-       (org-ml-logbook-set-clocks it logbook)))
+       (org-ml-logbook-set-clocks (funcall fun it) logbook)))
 
 ;; supercontents data structure
 
@@ -3663,8 +3649,7 @@ meaning as `org-ml--supercontents-init-from-lb'."
 FUN is a unary function that takes a list of nodes and returns a
 new list of nodes."
   (--> (org-ml-supercontents-get-contents supercontents)
-       (funcall fun it)
-       (org-ml-supercontents-set-contents it supercontents)))
+       (org-ml-supercontents-set-contents (funcall fun it) supercontents)))
 
 (defun org-ml-supercontents-get-logbook (supercontents)
   "Return the :logbook slot of SUPERCONTENTS."
@@ -3680,8 +3665,7 @@ new list of nodes."
 FUN is a unary function that takes a logbook and returns a new
 logbook."
   (--> (org-ml-supercontents-get-logbook supercontents)
-       (funcall fun it)
-       (org-ml-supercontents-set-logbook it supercontents)))
+       (org-ml-supercontents-set-logbook (funcall fun it) supercontents)))
 
 ;; supercontents config (scc) data structure
 
@@ -4417,8 +4401,7 @@ returns a modified supercontents list. See
 `org-ml-headline-get-supercontents' for the meaning of CONFIG and
 the structure of the supercontents list."
   (--> (org-ml-headline-get-supercontents config headline)
-       (funcall fun it)
-       (org-ml-headline-set-supercontents config it headline)))
+       (org-ml-headline-set-supercontents config (funcall fun it) headline)))
 
 ;; public logbook/contents getters/setters/mappers
 
@@ -4446,8 +4429,7 @@ FUN is a unary function that takes a list of item nodes and
 returns a modified list of item nodes. See
 `org-ml-headline-get-supercontents' for the meaning of CONFIG."
   (--> (org-ml-headline-get-logbook-items config headline)
-       (funcall fun it)
-       (org-ml-headline-set-logbook-items config it headline)))
+       (org-ml-headline-set-logbook-items config (funcall fun it) headline)))
 
 (defun org-ml-headline-get-logbook-clocks (config headline)
   "Return the logbook clocks of HEADLINE.
@@ -4475,8 +4457,7 @@ optionally item nodes to represent the clock notes and returns a
 modified list of said nodes. `org-ml-headline-get-supercontents'
 for the meaning of CONFIG."
   (--> (org-ml-headline-get-logbook-clocks config headline)
-       (funcall fun it)
-       (org-ml-headline-set-logbook-clocks config it headline)))
+       (org-ml-headline-set-logbook-clocks config (funcall fun it) headline)))
 
 (defun org-ml-headline-get-contents (config headline)
   "Return the contents of HEADLINE.
@@ -4502,8 +4483,7 @@ a unary function that takes a list of nodes representing the
 contents and returns a modified list of nodes. See
 `org-ml-headline-get-supercontents' for the meaning of CONFIG."
   (--> (org-ml-headline-get-contents config headline)
-       (funcall fun it)
-       (org-ml-headline-set-contents config it headline)))
+       (org-ml-headline-set-contents config (funcall fun it) headline)))
 
 ;; public high-level logbook operations
 
