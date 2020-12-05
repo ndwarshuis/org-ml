@@ -1880,7 +1880,7 @@ returns a modified child list."
 (defun org-ml-headline-set-subheadlines (subheadlines headline)
   "Return HEADLINE node with SUBHEADLINES set to child subheadlines."
   (org-ml--map-children-nocheck*
-    (-if-let (section (assoc 'section it))
+    (-if-let (section (assq 'section it))
         (cons section subheadlines)
       subheadlines)
     headline))
