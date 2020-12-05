@@ -55,6 +55,21 @@
 (eval-when-compile
   (require 'org-ml-macs))
 
+;;; CUSTOM
+
+(defcustom org-ml-memoize-match-patterns nil
+  "Memoize patterns in `org-ml-match' and friends.
+When set to t, calls to these functions will compare the value of
+PATTERN to those stored in a cache, and will save PATTERN for
+reuse if it is not in the cache. As each pattern is converted to
+a lambda form, memoization could significantly increase
+performance if calls these functions with relatively few
+different patterns. On the other hand, the overhead of searching
+the cache could decrease performance if many different patterns
+are used."
+  :type 'boolean
+  :group 'org-ml)
+
 ;;; NODE TYPE SETS
 
 ;; When only considering types, nodes can be arranged in the following
@@ -5416,11 +5431,30 @@ NODE is the node to be matched."
     ;; no slicer - search without limit and return all
     (ps (org-ml--match-make-pattern-form nil nil ps))))
 
-(defun org-ml--match-make-lambda-form (pattern)
+(defconst org-ml--match-form-cache (make-hash-table :test #'equal)
+  "Cache of previously generated lambda forms.")
+
+(defun org-ml-clear-match-cache ()
+  "Clear the pattern cache for `org-ml-match' and friends.
+See `org-ml-memoize-match-patterns' for details."
+  (interactive)
+  (clrhash org-ml--match-form-cache))
+
+(defun org-ml--match-make-lambda-form-nocache (pattern)
   "Return callable lambda form for PATTERN.
 NODE is the node to be matched."
   (let ((body (org-ml--match-make-slicer-form pattern)))
     `(lambda (it) (let ((it (cons nil it)) (acc)) ,body))))
+
+(defun org-ml--match-make-lambda-form (pattern)
+  "Run memoized version of `org-ml--match-make-lambda-form-nocache'.
+PATTERN has the same meaning."
+  (if org-ml-memoize-match-patterns
+      (or (gethash pattern org-ml--match-form-cache)
+          (let ((form (org-ml--match-make-lambda-form-nocache pattern)))
+            (puthash pattern form org-ml--match-form-cache)
+            form))
+    (org-ml--match-make-lambda-form-nocache pattern)))
 
 ;;; match
 

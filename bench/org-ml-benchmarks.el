@@ -98,9 +98,10 @@
       (org-toggle-checkbox)
       (setq next (outline-next-heading))))
 
-  (org-ml-do-headlines*
-    (->> (org-ml-match-map '(section plain-list item) #'org-ml-item-toggle-checkbox it)
-         (org-ml-headline-update-item-statistics))))
+  (let ((org-ml-memoize-match-patterns t))
+    (org-ml-do-headlines*
+      (->> (org-ml-match-map '(section plain-list item) #'org-ml-item-toggle-checkbox it)
+           (org-ml-headline-update-item-statistics)))))
 
 (org-ml-defbench "insert headline text" "* headline\n" 2500
   (let ((org-adapt-indentation nil)
