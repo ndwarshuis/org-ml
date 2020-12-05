@@ -255,22 +255,24 @@ length of LIST is equal to LENGTH initially."
 (defun org-ml--plist-map-values (fun plist)
   "Map FUN over the values in PLIST.
 FUN is a unary function that returns a modified value."
-  (let ((keys (org-ml--plist-get-keys plist)))
-    (->> (org-ml--plist-get-vals plist)
-         ;; (--map (funcall fun it))
-         (-map fun)
-         (-interleave keys))))
+  (nreverse
+   (org-ml--reduce2-from* (cons (funcall fun it) (cons it-key acc))
+     nil plist)))
 
-(defun org-ml--is-plist (list)
-  "Return t if LIST is a plist."
-  (and
-   (listp list)
-   (cl-evenp (length list))
-   (-all? #'keywordp (-slice list 0 nil 2))))
+(defun org-ml--is-plist (x)
+  "Return t if X is a plist."
+  (when (listp x)
+    (let ((is-plist t))
+      (while (and is-plist (cdr x))
+        (setq is-plist (keywordp (car x))
+              x (cdr (cdr x))))
+      (and (not x) is-plist))))
 
 (defun org-ml--plist-remove (key plist)
   "Return PLIST with KEY and its value removed."
-  (->> (-partition 2 plist) (--remove (eq (car it) key)) (-flatten-n 1)))
+  (nreverse
+   (org-ml--reduce2-from* (if (eq key it-key) acc (cons it (cons it-key acc)))
+     nil plist)))
 
 ;;; inter-index operations
 
