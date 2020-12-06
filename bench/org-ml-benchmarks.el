@@ -98,7 +98,7 @@
       (org-toggle-checkbox)
       (setq next (outline-next-heading))))
 
-  (let ((org-ml-memoize-match-patterns t))
+  (let ((org-ml-memoize-match-patterns 'compiled))
     (org-ml-do-headlines*
       (->> (org-ml-match-map '(section plain-list item) #'org-ml-item-toggle-checkbox it)
            (org-ml-headline-update-item-statistics)))))

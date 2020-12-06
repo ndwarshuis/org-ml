@@ -7034,6 +7034,15 @@ patterns match the nil pattern, also return **`node`** along with
 anything else the wildcard matches. Examples of this would
 be `(sub *)`, `(sub ?)`, and `((nil | sub))`.
 
+For increased performance, this function (and all others that
+consume a **`pattern`** parameter) can be memoized using
+`org-ml-memoize-match-patterns`. If nil, **`pattern`** is processed
+into a lambda form for every function call. If t, the resulting
+lambda forms are cached for each unique **`pattern`**, running
+generation step only once if multiple instances of the same
+**`pattern`** are used. Note that `org-ml-memoize-match-patterns` is
+shared between all functions that consume a **`pattern`** parameter.
+
 ```el
 ;; Given the following contents:
 ; * headline 1

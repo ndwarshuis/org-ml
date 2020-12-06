@@ -59,14 +59,23 @@
 
 (defcustom org-ml-memoize-match-patterns nil
   "Memoize patterns in `org-ml-match' and friends.
-When set to t, calls to these functions will compare the value of
-PATTERN to those stored in a cache, and will save PATTERN for
-reuse if it is not in the cache. As each pattern is converted to
-a lambda form, memoization could significantly increase
-performance if calls these functions with relatively few
-different patterns. On the other hand, the overhead of searching
-the cache could decrease performance if many different patterns
-are used."
+
+These functions all take a PATTERN parameter that is used to
+generate a lambda function, which is then used to computationally
+search for the desired matches. Generating these lambda forms has
+some overhead (and will increase with increasing pattern
+complexity). Therefore, this value can be used to memoize (cache)
+each unique lambda form for each pattern. When enabled, calls to
+any of the match function using a unique pattern will generate
+the corresponding lambda form only once, and then subsequent
+calls will retrieve the form from the cache. This can increase
+performance if relatively few patterns are used relative to the
+calls made to pattern-consuming functions.
+
+The following values are understood:
+- nil: don't memoize anything
+- 'compiled': memoize byte-compiled lambda forms
+- any other non-nil: memoize non-compiled lambda forms"
   :type 'boolean
   :group 'org-ml)
 
@@ -5451,7 +5460,10 @@ NODE is the node to be matched."
 PATTERN has the same meaning."
   (if org-ml-memoize-match-patterns
       (or (gethash pattern org-ml--match-form-cache)
-          (let ((form (org-ml--match-make-lambda-form-nocache pattern)))
+          (let ((form (--> (org-ml--match-make-lambda-form-nocache pattern)
+                           (if (eq 'compiled org-ml-memoize-match-patterns)
+                               (byte-compile it)
+                             it))))
             (puthash pattern form org-ml--match-form-cache)
             form))
     (org-ml--match-make-lambda-form-nocache pattern)))
@@ -5541,7 +5553,16 @@ function and POSIX extended regular expressions.:
 If PATTERN is nil, return NODE. Likewise, if any wildcard
 patterns match the nil pattern, also return NODE along with
 anything else the wildcard matches. Examples of this would
-be (SUB *), (SUB ?), and ((nil | SUB))."
+be (SUB *), (SUB ?), and ((nil | SUB)).
+
+For increased performance, this function (and all others that
+consume a PATTERN parameter) can be memoized using
+`org-ml-memoize-match-patterns'. If nil, PATTERN is processed
+into a lambda form for every function call. If t, the resulting
+lambda forms are cached for each unique PATTERN, running
+generation step only once if multiple instances of the same
+PATTERN are used. Note that `org-ml-memoize-match-patterns' is
+shared between all functions that consume a PATTERN parameter."
   (let ((match-fun (org-ml--match-make-lambda-form pattern)))
     (funcall match-fun node)))
 
