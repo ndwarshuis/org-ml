@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.4.0
+;; Version: 5.4.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -441,8 +441,7 @@ STRING and ARGS are analogous to `error'."
 
 (defun org-ml--get-head (node)
   "Return the type and properties cells of NODE."
-  (if (stringp node) node
-    (-take 2 node)))
+  (if (stringp node) node (list (car node) (cadr node))))
 
 (defun org-ml--construct (type props children)
   "Make a new node list structure of TYPE, PROPS, and CHILDREN.
@@ -546,10 +545,8 @@ bound to the property value."
     (declare (indent 1))
     (let ((node* (make-symbol "node")))
       `(let ((,node* ,node))
-         (--> (org-ml--get-property-nocheck ,prop ,node*)
-              ;; (funcall (lambda (it) ,form) it)
-              ,form
-              (org-ml--set-property-nocheck ,prop it ,node*))))))
+         (let ((it (org-ml--get-property-nocheck ,prop ,node*)))
+           (org-ml--set-property-nocheck ,prop ,form ,node*))))))
 
 (defun org-ml--property-is-nil (prop node)
   "Return t if PROP in NODE is nil."
@@ -1021,10 +1018,10 @@ bounds."
   (when priority
     (let ((diff (1+ (- org-lowest-priority org-highest-priority)))
           (offset (- priority org-highest-priority)))
-      (--> (- offset n)
-           (mod it diff)
-           (- it offset)
-           (+ priority it)))))
+      (-> (- offset n)
+          (mod diff)
+          (- offset)
+          (+ priority)))))
 
 ;;; property alist
 
@@ -1367,7 +1364,7 @@ returns a modified list of children."
             (it (org-ml-get-children node)))
        (org-ml--set-children-nocheck ,form node))))
 
-(defun org-ml--set-childen-throw-error (type child-types illegal)
+(defun org-ml--set-children-throw-error (type child-types illegal)
   "Throw an `arg-type-error' for TYPE.
 In the message specify that allowed child types are CHILD-TYPES
 and ILLEGAL types were attempted to be set."
@@ -1583,8 +1580,7 @@ The list will be formatted like (YEAR MONTH DAY HOUR MIN)."
 (defun org-ml-unixtime-to-time-short (unixtime)
   "Return the short time list of UNIXTIME.
 The list will be formatted like (YEAR MONTH DAY nil nil)."
-  (append (-take 3 (org-ml-unixtime-to-time-long unixtime))
-          '(nil nil)))
+  (append (-take 3 (org-ml-unixtime-to-time-long unixtime)) '(nil nil)))
 
 (defun org-ml--time-truncate (time)
   "Return the short time format of TIME regardless of input format."
@@ -1774,12 +1770,12 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
 (defun org-ml--timestamp-set-type-ranged (ranged? timestamp)
   "Return TIMESTAMP with type set according to RANGED?."
   (org-ml--map-property-nocheck* :type
-    (cl-case it
-      ((active active-range)
+    (pcase it
+      ((or `active `active-range)
        (if ranged? 'active-range 'active))
-      ((inactive inactive-range)
+      ((or `inactive `inactive-range)
        (if ranged? 'inactive-range 'inactive))
-      (t (org-ml--arg-error "Invalid timestamp type: %s" it)))
+      (e (org-ml--arg-error "Invalid timestamp type: %s" e)))
     timestamp))
 
 (defun org-ml--timestamp-set-active (flag timestamp)
@@ -1960,19 +1956,17 @@ is a blank table-cell node."
 
 FUN is a unary function that takes a table-cell node and returns
 a modified table-cell node."
-  (cl-flet*
+  (cl-flet
       ((zip-into-rows
         (row new-cell)
         (if (org-ml--property-is-eq :type 'rule row) row
-          (org-ml--map-children-nocheck* (funcall fun new-cell it) row)))
-       (map-rows
-        (rows)
-        (->> rows
-             (--find-indices (org-ml--property-is-eq :type 'rule it))
-             (--reduce-from (-insert-at it nil acc) column-index)
-             (org-ml--table-pad-or-truncate (length rows))
-             (-zip-with #'zip-into-rows rows))))
-    (org-ml--map-children-nocheck* (map-rows it) table)))
+          (org-ml--map-children-nocheck* (funcall fun new-cell it) row))))
+    (org-ml--map-children-nocheck*
+     (->> (--find-indices (org-ml--property-is-eq :type 'rule it) it)
+          (--reduce-from (-insert-at it nil acc) column-index)
+          (org-ml--table-pad-or-truncate (length it))
+          (-zip-with #'zip-into-rows it))
+     table)))
 
 (defun org-ml--table-get-row (row-index table)
   "Return the table-row node at ROW-INDEX within TABLE.
@@ -2259,7 +2253,7 @@ to a table-row node via `org-ml-build-table-row!' (see that function for
 restrictions).
 
 All other arguments follow the same rules as `org-ml-build-table'."
-  (->> (org-ml--map* (org-ml-build-table-row! it) row-lists)
+  (->> (-map #'org-ml-build-table-row! row-lists)
        (apply #'org-ml-build-table :tblfm tblfm :post-blank post-blank)))
 
 ;;; logbook items
@@ -2481,7 +2475,7 @@ If string NOTE is supplied, append a note to the log entry."
        (org-ml--build-log-item note)))
 
 (org-ml--defun-kw org-ml-build-log-type (type &key old new unixtime username
-                                      full-username note)
+                                              full-username note)
   "Return an item for an arbitrary log entry.
 
 TYPE is a symbol corresponding to the car of one of the cells in
@@ -2506,6 +2500,7 @@ are present in the heading determined by TYPE, the placeholders will
 not be substituted.
 
 If string NOTE is supplied, append a note to the log entry."
+  ;; TODO refactor this...
   (cl-flet
       ((replace-note
         (old-p rep note)
@@ -2749,16 +2744,13 @@ This only applies the properties that are represented as integers."
 
 This only applies to properties that are represented as lists of
 strings."
-  (cl-flet
-      ((insert-at-maybe
-        (string-list)
-        (if (member string string-list) string-list
-          (org-ml--insert-at index string string-list))))
-    (let ((type (org-ml-get-type node)))
-      (if (org-ml--get-property-attribute :string-list type prop)
-          (org-ml-map-property prop #'insert-at-maybe node)
-        (org-ml--arg-error "Property '%s' in node of type '%s' is not a string-list"
-                       prop type)))))
+  (let ((type (org-ml-get-type node)))
+    (if (org-ml--get-property-attribute :string-list type prop)
+        (org-ml-map-property* prop
+          (if (member string it) it (org-ml--insert-at index string it))
+          node)
+      (org-ml--arg-error "Property '%s' in node of type '%s' is not a string-list"
+                         prop type))))
 
 (defun org-ml-remove-from-property (prop string node)
   "Return NODE with STRING removed from PROP if present.
@@ -2779,10 +2771,9 @@ and properties that may be used with this function."
 
 KEY is a keyword and VALUE is a symbol. This only applies to
 properties that are represented as plists."
-  (let ((type (org-ml-get-type node)))
-    (if (org-ml--get-property-attribute :plist type prop)
-        (org-ml-map-property* prop (plist-put it key value) node)
-      (org-ml--arg-error "Not a plist property"))))
+  (if (org-ml--get-property-attribute :plist (org-ml-get-type node) prop)
+      (org-ml-map-property* prop (plist-put it key value) node)
+    (org-ml--arg-error "Not a plist property")))
 
 (defun org-ml-plist-remove-property (prop key node)
   "Return NODE with KEY and its corresponding value removed from PROP.
@@ -2792,10 +2783,9 @@ represented as plists.
 
 See `org-ml-plist-put-property' for a list of supported elements
 and properties that may be used with this function."
-  (let ((type (org-ml-get-type node)))
-    (if (org-ml--get-property-attribute :plist type prop)
-        (org-ml-map-property* prop (org-ml--plist-remove key it) node)
-      (org-ml--arg-error "Not a plist property"))))
+  (if (org-ml--get-property-attribute :plist (org-ml-get-type node) prop)
+      (org-ml-map-property* prop (org-ml--plist-remove key it) node)
+    (org-ml--arg-error "Not a plist property")))
 
 ;; update polymorphic property function documentation:
 ;;
@@ -2899,7 +2889,7 @@ Any other keys will trigger an error."
          (= 100))
         (-some->>
          (s-match "\\([[:digit:]]+\\)/\\([[:digit:]]+\\)" val)
-         (-drop 1)
+         (cdr)
          (-map #'string-to-number)
          (apply #'=)))))
 
@@ -3026,9 +3016,9 @@ behavior is not desired, use `org-ml-timestamp-shift'."
 (defun org-ml-timestamp-truncate (timestamp)
   "Return TIMESTAMP node with start/end times forced to short format."
   (let ((t1 (->> (org-ml--timestamp-get-start-time timestamp)
-                    (org-ml--time-truncate)))
+                 (org-ml--time-truncate)))
         (t2 (->> (org-ml--timestamp-get-end-time timestamp)
-                  (org-ml--time-truncate))))
+                 (org-ml--time-truncate))))
     (org-ml--timestamp-set-double-time t1 t2 timestamp)))
 
 (defun org-ml-timestamp-truncate-start (timestamp)
@@ -3066,9 +3056,8 @@ collapsed format."
 The node must have a type `eq' to `diary'. FORM is a quoted list."
   (if (listp form)
       (org-ml--set-property-nocheck :raw-value (format "<%%%%%S>" form)
-                                timestamp-diary)
-    (org-ml--arg-error "Timestamp-diary node value must be a form: Got %S"
-                   form)))
+                                    timestamp-diary)
+    (org-ml--arg-error "Timestamp-diary node value must be a form: Got %S" form)))
 
 ;;; element nodes
 ;;
@@ -3118,11 +3107,11 @@ and STATS-COOKIE-VALUE is a list described in
 This only affects item nodes with checkboxes in the `on' or `off'
 states; return ITEM node unchanged if the checkbox property is `trans'
 or nil."
-  (cl-case (org-ml-get-property :checkbox item)
-    ((or trans nil) item)
+  (pcase (org-ml-get-property :checkbox item)
     ('on (org-ml-set-property :checkbox 'off item))
     ('off (org-ml-set-property :checkbox 'on item))
-    (t (error "This should not happen"))))
+    ((or `trans `nil) item)
+    (_ (error "This should not happen"))))
 
 ;; planning
 
@@ -3133,8 +3122,8 @@ PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
 is the same as that described in `org-ml-build-planning!'."
   (unless (memq prop '(:closed :deadline :scheduled))
     (org-ml--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
-  (let*((active (if (eq prop :closed) nil t))
-        (ts (org-ml--planning-list-to-timestamp active planning-list)))
+  (let* ((active (if (eq prop :closed) nil t))
+         (ts (org-ml--planning-list-to-timestamp active planning-list)))
     (org-ml-set-property prop ts planning)))
 
 ;; affiliated keywords
@@ -3232,7 +3221,6 @@ future major revision. Its functionality has been merged with
              (e (org-ml--arg-error "Invalid caption given: %s" e)))))
       (org-ml-set-affiliated-keyword :caption caption node))))
 
-
 ;;; PUBLIC BRANCH/CHILD FUNCTIONS
 
 ;;; polymorphic
@@ -3257,7 +3245,7 @@ on the type of NODE."
     (-if-let (child-types (alist-get type org-ml--node-restrictions))
         (-if-let (illegal (-difference (-map #'org-ml-get-type children)
                                        child-types))
-            (org-ml--set-childen-throw-error type child-types illegal)
+            (org-ml--set-children-throw-error type child-types illegal)
           (org-ml--set-children-nocheck children branch-node))
       ;; this should not happen
       (error "Child type restrictions not found for %s" type))))
@@ -3303,11 +3291,9 @@ Else add the post-blank property of OBJECT-NODE to the last member
 of its children and return children as a secondary string."
   (if (org-ml-is-type 'plain-text object-node)
       (list object-node)
-    (let ((children (org-ml-get-children object-node))
-          (post-blank (org-ml--get-property-nocheck :post-blank object-node)))
-      (org-ml--map-last* (org-ml-map-property* :post-blank
-                       (+ it post-blank) it)
-        children))))
+    (let ((post-blank (org-ml--get-property-nocheck :post-blank object-node)))
+      (org-ml--map-last* (org-ml-map-property* :post-blank (+ it post-blank) it)
+        (org-ml-get-children object-node)))))
 
 (defun org-ml-unwrap-types-deep (types object-node)
   "Return the children of OBJECT-NODE as a secondary string.
@@ -3319,9 +3305,8 @@ return the result as a secondary string."
    ((org-ml-is-type 'plain-text object-node)
     (list object-node))
    ((org-ml-is-any-type types object-node)
-    (let* ((children (org-ml-get-children object-node))
-           (post-blank (org-ml--get-property-nocheck :post-blank object-node)))
-      (->> children
+    (let ((post-blank (org-ml--get-property-nocheck :post-blank object-node)))
+      (->> (org-ml-get-children object-node)
            (org-ml--mapcat-normalize (org-ml-unwrap-types-deep types it))
            (org-ml--map-last* (org-ml-map-property* :post-blank
                             (+ it post-blank) it)))))
@@ -3358,15 +3343,15 @@ The unwrap operation will be done with `org-ml-unwrap-deep'."
   "Append NODES1 and NODES2 into one list.
 If the last node in NODES1 and the first node in NODES2 are
 plain-lists, join the two lists together."
-  (let* ((last (-last-item nodes1))
-         (first (car nodes2)))
+  (let ((last (-last-item nodes1))
+        (first (car nodes2)))
     (if (and (org-ml-is-type 'plain-list last)
              (org-ml-is-type 'plain-list first))
         (let ((pb (org-ml-get-property :post-blank last)))
           (--> (org-ml-get-children last)
                (org-ml--map-last* (org-ml-set-property :post-blank pb it) it)
                (append it (org-ml-get-children first))
-               (org-ml-set-children it last)
+               (org-ml--set-children-nocheck it last)
                (cons it (cdr nodes2))
                (append (-drop-last 1 nodes1) it)))
       (append nodes1 nodes2))))
@@ -4640,15 +4625,12 @@ Rule-type rows do not count toward row indices."
 
 (defun org-ml-table-delete-column (column-index table)
   "Return TABLE node with column at COLUMN-INDEX deleted."
-  (cl-flet*
-      ((delete-cell
-        (cells)
-        (org-ml--remove-at column-index cells))
-       (map-row
-        (row)
-        (if (org-ml--property-is-eq :type 'rule row) row
-          (org-ml--map-children-nocheck* (delete-cell it) row))))
-    (org-ml--map-children-nocheck* (-map #'map-row it) table)))
+  (org-ml--map-children-nocheck*
+   (org-ml--map*
+    (if (org-ml--property-is-eq :type 'rule it) it
+      (org-ml--map-children-nocheck* (org-ml--remove-at column-index it) it))
+    it)
+   table))
 
 (defun org-ml-table-insert-column! (column-index column-text table)
   "Return TABLE node with COLUMN-TEXT inserted at COLUMN-INDEX.
@@ -4744,6 +4726,7 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
 ;; parameters for indenting:
 ;; - index of target to indent (1 in above example)
 
+;; TODO refactor all of these...
 (defun org-ml--indent-members (fun index tree)
   "Return TREE with member at INDEX indented.
 FUN is a binary function that takes the members of TREE immediately
@@ -5007,57 +4990,48 @@ The specific child item to outdent is selected by CHILD-INDEX."
   "Set the children of NODE to a blank string (\"\")."
   (org-ml--set-children-nocheck '("") node))
 
+;; Some objects and greater elements should be removed if blank. Table and plain
+;; list will error, and the others make no sense if they are empty.
 (defconst org-ml--rm-if-empty
   '(table plain-list bold italic radio-target strike-through
           superscript subscript table-cell underline)
   "Nodes that will be blank if printed and empty.
 This is a workaround for a bug")
 
+;; Some greater elements will print "nil" in their children if they are empty.
+;; The workaround for this is to set the children to a single blank string if
+;; empty
 (defconst org-ml--blank-if-empty
   '(center-block drawer dynamic-block property-drawer quote-block
                  special-block verse-block)
   "Branch element nodes that require \"\" to correctly print empty.
 This is a workaround for a bug.")
 
-(defun org-ml--filter-non-zero-length (node)
-  "Return NODE if it is not an empty node type from `org-ml--rm-if-empty'.
-The exception is rule-typed table-row nodes which are supposed to be
-empty."
-  (unless (and (org-ml-is-childless node)
-               (or (org-ml-is-any-type org-ml--rm-if-empty node)
-                   (org-ml--is-table-row node)))
-    node))
-
-(defun org-ml--clean (node)
-  "Return NODE with empty child nodes from `org-ml--rm-if-empty' removed."
-  (->> (org-ml--map-children-nocheck* (-non-nil (-map #'org-ml--clean it)) node)
-       (org-ml--filter-non-zero-length)))
-
 (defun org-ml--blank (node)
   "Return NODE with empty child nodes `org-ml--blank-if-empty' set to contain \"\"."
   (if (org-ml-is-childless node)
       (if (org-ml-is-any-type org-ml--blank-if-empty node)
           (org-ml--set-blank-children node)
-        node)
-    (org-ml--map-children-nocheck* (-map #'org-ml--blank it) node)))
+        (unless (or (org-ml-is-any-type org-ml--rm-if-empty node)
+                    (org-ml--is-table-row node))
+          node))
+    (org-ml--map-children-nocheck*
+     (remove nil (-map #'org-ml--blank it))
+     node)))
 
 ;;; print functions
 
 (defun org-ml-to-string (node)
   "Return NODE as an interpreted string without text properties."
-  (unless (or (null node) (org-ml--is-node node))
-    (org-ml--arg-error "Can only stringify node or nil, got %s" node))
-  (->> node
-       ;; Some objects and greater elements should be removed if blank. Table
-       ;; and plain list will error, and the others make no sense if they are
-       ;; empty.
-       (org-ml--clean)
-       ;; Some greater elements will print "nil" in their children if they are
-       ;; empty. The workaround for this is to set the children to a single
-       ;; blank string if empty
-       (org-ml--blank)
-       (org-element-interpret-data)
-       (substring-no-properties)))
+  (cond
+   ((null node)
+    "")
+   ((org-ml--is-node node)
+    (->> (org-ml--blank node)
+         (org-element-interpret-data)
+         (substring-no-properties)))
+   (t
+    (org-ml--arg-error "Can only stringify node or nil, got %s" node))))
 
 (defun org-ml-to-trimmed-string (node)
   "Like `org-ml-to-string' but strip whitespace when returning NODE."
@@ -5810,10 +5784,10 @@ TYPE is the type of the node to be parsed."
     (goto-char point)
     (-let* ((context (org-element-context))
             (type (org-ml-get-type context))
-            ((offset nesting) (cl-case type
-                                ((superscript subscript) '(-1 (0 1)))
-                                (table-cell '(-1 (0 0 0)))
-                                (t '(0 (0 0)))))
+            ((offset nesting) (pcase type
+                                ((or `superscript `subscript) '(-1 (0 1)))
+                                (`table-cell '(-1 (0 0 0)))
+                                (_ '(0 (0 0)))))
             ((&plist :begin :end) (org-ml-get-all-properties context))
             (tree (org-ml--parse-objects type (+ begin offset) end)))
       (->> (car tree)
@@ -5845,15 +5819,15 @@ elements vs item elements."
                  (org-ml-get-all-properties node))
                 (tree (car (org-element--parse-elements
                             begin end 'first-section nil nil nil nil)))
-                (nesting (cl-case node-type
-                           (headline nil)
+                (nesting (pcase node-type
+                           (`headline nil)
                            ;; `org-element-at-point' will return a table if on
                            ;; the first row of a table, and a table-row
                            ;; otherwise
-                           (table-row '(0 0))
-                           (table (if (eq type 'table-row) '(0 0) '(0)))
-                           (plain-list (if (eq type 'item) '(0 0) '(0)))
-                           (t '(0)))))
+                           (`table-row '(0 0))
+                           (`table (if (eq type 'table-row) '(0 0) '(0)))
+                           (`plain-list (if (eq type 'item) '(0 0) '(0)))
+                           (_ '(0)))))
           (--> (org-ml--get-descendent nesting tree)
                ;; set ending boundaries according to what we get from
                ;; `org-element-at-point'
@@ -5991,16 +5965,22 @@ returned from this function will have :begin and :end properties."
 (defun org-ml--nodes-to-string-maybe (nodes)
   "Return NODES as a string.
 NODES may either be a single node or a list of nodes."
-  (if (and (listp nodes) (-all? #'org-ml--is-node nodes))
-      (s-join "" (-map #'org-ml-to-string nodes))
-    (org-ml-to-string nodes)))
+  (cond
+   ((org-ml--is-node nodes) (org-ml-to-string nodes))
+   ((listp nodes) (mapconcat #'org-ml-to-string nodes ""))
+   (t (error "Must a node or a list of nodes"))))
+
+(defun org-ml--insert (point node)
+  "Convert NODE to a string and insert at POINT in the current buffer.
+NODE may be a node or a list of nodes. Return NODE.
+Does not save point."
+  (goto-char point)
+  (insert (org-ml--nodes-to-string-maybe node)))
 
 (defun org-ml-insert (point node)
   "Convert NODE to a string and insert at POINT in the current buffer.
 NODE may be a node or a list of nodes. Return NODE."
-  (save-excursion
-    (goto-char point)
-    (insert (org-ml--nodes-to-string-maybe node)))
+  (save-excursion (org-ml--insert point node))
   node)
 
 (defun org-ml-insert-tail (point node)
@@ -6091,50 +6071,47 @@ See `org-ml--diff-find-ses' for the meaning of D, K, VD, and DMAX."
   ;; stored as 'start-x' and 'start-y') and then traverse up/left until we hit a
   ;; new diagonal, in which case we use the previous x and y as the end of the
   ;; edit.
-  (let (path prev-x prev-y start-x start-y start-vert?)
+  (let (path prev-x prev-y start-x start-y start-vert? V x y vert? x*)
     (while (<= 0 D)
       ;; for the given set of endpoints at D, find the current x and y given k
-      (let* ((V (car Vd))
-             (x (elt (car Vd) (+ Dmax k)))
-             (y (- x k)))
-        ;; determine direction of the next endpoint and it's x value
-        (let* ((vert? (or (= k (- D))
-                          (and (/= k D) (< (elt V (+ (1- k) Dmax))
-                                           (elt V (+ (1+ k) Dmax))))))
-               (x* (if vert? (elt V (+ (1+ k) Dmax)) (1+ (elt V (+ (1- k) Dmax))))))
-          ;; if current x = next x we must not be on a diagonal
-          (if (and (= x* x) (< 0 x*) (eq start-vert? vert?))
-              (progn
-                (unless start-x
-                  (setq start-x x
-                        start-y y
-                        start-vert? vert?))
-                (setq prev-x x
-                      prev-y y))
-            ;; if we are on a diagonal, close off the previously held point
-            ;; and add it to the edit path as either an insert of a delete
-            ;; depending on if we are traversing up or left
-            (when start-x
-              (setq path (cons (if start-vert?
-                                   `(ins ,(1- start-x)
-                                         ,(1- prev-y)
-                                         ,(1- start-y))
-                                 `(del ,(1- prev-x)
-                                       ,(1- start-x)))
-                               path)))
-            ;; then walk up the diagonal to get to the next horizontal/vertical
-            ;; sequence
-            (while (< x* x)
-              (setq x (1- x)
-                    y (1- y)))
-            (setq start-x x
-                  start-y y
-                  start-vert? vert?
-                  prev-x x
+      (setq V (car Vd)
+            x (elt (car Vd) (+ Dmax k))
+            y (- x k)
+            ;; determine direction of the next endpoint and it's x value
+            vert? (or (= k (- D))
+                      (and (/= k D) (< (elt V (+ (1- k) Dmax))
+                                       (elt V (+ (1+ k) Dmax)))))
+            x* (if vert? (elt V (+ (1+ k) Dmax)) (1+ (elt V (+ (1- k) Dmax)))))
+      ;; if current x = next x we must not be on a diagonal
+      (if (and (= x* x) (< 0 x*) (eq start-vert? vert?))
+          (progn
+            (unless start-x
+              (setq start-x x
+                    start-y y
+                    start-vert? vert?))
+            (setq prev-x x
                   prev-y y))
-          (setq k (if vert? (1+ k) (1- k))
-                D (1- D)
-                Vd (cdr Vd)))))
+        ;; if we are on a diagonal, close off the previously held point
+        ;; and add it to the edit path as either an insert of a delete
+        ;; depending on if we are traversing up or left
+        (when start-x
+          (setq path (cons (if start-vert?
+                               `(ins ,(1- start-x) ,(1- prev-y) ,(1- start-y))
+                             `(del ,(1- prev-x) ,(1- start-x)))
+                           path)))
+        ;; then walk up the diagonal to get to the next horizontal/vertical
+        ;; sequence
+        (while (< x* x)
+          (setq x (1- x)
+                y (1- y)))
+        (setq start-x x
+              start-y y
+              start-vert? vert?
+              prev-x x
+              prev-y y))
+      (setq k (if vert? (1+ k) (1- k))
+            D (1- D)
+            Vd (cdr Vd)))
     (nreverse path)))
 
 (defun org-ml--diff-region (start end new-str)
@@ -6148,14 +6125,13 @@ applied to the buffer."
           (cmds (org-ml--diff-ses-to-edits D k Vd MAX)))
     (save-excursion
       (while cmds
-        (-let (((first . rest) cmds))
-          (pcase first
-            (`(ins ,i ,m ,n)
-             (goto-char (+ 1 start i))
-             (insert (substring new-str m (1+ n))))
-            (`(del ,i ,j)
-             (delete-region (+ start i) (+ 1 start j))))
-          (setq cmds rest))))))
+        (pcase (car cmds)
+          (`(ins ,i ,m ,n)
+           (goto-char (+ 1 start i))
+           (insert (substring new-str m (1+ n))))
+          (`(del ,i ,j)
+           (delete-region (+ start i) (+ 1 start j))))
+        (setq cmds (cdr cmds))))))
 
 ;; (defun org-ml--properties-equal (type prop value1 value2)
 ;;   "Return t if VALUE1 and VALUE2 are 'the same'.
@@ -6218,26 +6194,18 @@ applied to the buffer."
 ;;                        p2 (cdr (cdr p2))))
 ;;                (and (not p2) plist-matches))))))))
 
-(org-ml--defun-anaphoric* org-ml~update (diff-mode fun node)
-  "Replace NODE in the current buffer with a new one.
-FUN is a unary function that takes NODE and returns a modified node
-or list of nodes.
-
-DIFF-MODE describes how the buffer will be updated and can be one of
-the following:
-- t: use the Myers diff algorithm to compare the old buffer
-  string with the new string from the modified NODE, and only
-  edit the the regions that are different
-- nil: use no diff algorithm; just replace the old buffer string
-  entirely with the new one."
+(org-ml--defun-anaphoric* org-ml--update (diff-mode fun node)
+  "Internal version of `org-ml~update'.
+DIFF-MODE, FUN, and NODE have the same meaning. The only
+difference is this function does not save the point's position"
   ;; if node is of type 'org-data' it will have no props
   (let* ((begin (org-ml--get-property-nocheck :begin node))
          (end (org-ml--get-property-nocheck :end node))
          (ov-cmd (-some->> (overlays-in begin end)
                    (--filter (eq 'outline (overlay-get it 'invisible)))
-                   (--map (list :start (overlay-start it)
-                                :end (overlay-end it)
-                                :props (overlay-properties it)))
+                   (org-ml--map* (list :start (overlay-start it)
+                                       :end (overlay-end it)
+                                       :props (overlay-properties it)))
                    (list 'apply 'org-ml--apply-overlays)))
          ;; do all computation before modifying buffer
          ;;
@@ -6257,8 +6225,23 @@ the following:
         (org-ml--diff-region begin end (org-ml-to-string node*))
       (progn
         (delete-region begin end)
-        (org-ml-insert begin node*)))
+        (org-ml--insert begin node*)))
     nil))
+
+(org-ml--defun* org-ml~update (diff-mode fun node)
+  "Replace NODE in the current buffer with a new one.
+FUN is a unary function that takes NODE and returns a modified node
+or list of nodes.
+
+DIFF-MODE describes how the buffer will be updated and can be one of
+the following:
+- t: use the Myers diff algorithm to compare the old buffer
+  string with the new string from the modified NODE, and only
+  edit the the regions that are different
+- nil: use no diff algorithm; just replace the old buffer string
+  entirely with the new one."
+  (save-excursion
+    (org-ml--update diff-mode fun node)))
 
 (org-ml--defun* org-ml-update (fun node)
   "Replace NODE in the current buffer with a new one.
@@ -6634,19 +6617,20 @@ Each subtree is obtained with `org-ml-parse-subtree-at'."
 
 See `org-ml-get-some-headlines' for the meaning of WHERE.
 
-Headlines are updated using `org-ml~update-this-headline' with
+Headlines are updated using `org-ml~update' with
 DIFF-ARG set to nil (see this for use and meaning of FUN)."
   ;; don't use the myers diff algorithm here, since these functions are meant
   ;; for batch processing.
-  (cl-labels
-      ((map-to-subheadlines
-        (headline)
-        (org-ml-headline-map-subheadlines*
-          (-map #'map-to-subheadlines it)
-          (funcall fun headline))))
-    (--> (org-ml--parse-patterns-where where "^\\*")
-         (nreverse it)
-         (--each it (org-ml~update nil #'map-to-subheadlines it)))))
+  (save-excursion
+    (cl-labels
+        ((map-to-subheadlines
+          (headline)
+          (org-ml-headline-map-subheadlines*
+            (-map #'map-to-subheadlines it)
+            (funcall fun headline))))
+      (--> (org-ml--parse-patterns-where where "^\\*")
+           (nreverse it)
+           (--each it (org-ml--update nil #'map-to-subheadlines it))))))
 
 (org-ml--defun* org-ml-do-headlines (fun)
   "Update all headlines in the current buffer using FUN.
@@ -6662,9 +6646,10 @@ See `org-ml-get-some-headlines' for the meaning of WHERE.
 
 Subtrees are updated using `org-ml-update-this-subtree' (see this for use
 and meaning of FUN)."
-  (-> (org-ml--parse-patterns-where where "^\\* ")
-      (nreverse)
-      (--each (org-ml~update nil fun it))))
+  (save-excursion
+    (--> (org-ml--parse-patterns-where where "^\\* ")
+         (nreverse it)
+         (--each it (org-ml--update nil fun it)))))
 
 (org-ml--defun* org-ml-do-subtrees (fun)
   "Update all toplevel subtrees in the current buffer using FUN.
