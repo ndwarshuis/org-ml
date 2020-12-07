@@ -441,8 +441,7 @@ STRING and ARGS are analogous to `error'."
 
 (defun org-ml--get-head (node)
   "Return the type and properties cells of NODE."
-  (if (stringp node) node
-    (-take 2 node)))
+  (if (stringp node) node (list (car node) (cadr node))))
 
 (defun org-ml--construct (type props children)
   "Make a new node list structure of TYPE, PROPS, and CHILDREN.
@@ -546,10 +545,8 @@ bound to the property value."
     (declare (indent 1))
     (let ((node* (make-symbol "node")))
       `(let ((,node* ,node))
-         (--> (org-ml--get-property-nocheck ,prop ,node*)
-              ;; (funcall (lambda (it) ,form) it)
-              ,form
-              (org-ml--set-property-nocheck ,prop it ,node*))))))
+         (let ((it (org-ml--get-property-nocheck ,prop ,node*)))
+           (org-ml--set-property-nocheck ,prop ,form ,node*))))))
 
 (defun org-ml--property-is-nil (prop node)
   "Return t if PROP in NODE is nil."
@@ -1021,10 +1018,10 @@ bounds."
   (when priority
     (let ((diff (1+ (- org-lowest-priority org-highest-priority)))
           (offset (- priority org-highest-priority)))
-      (--> (- offset n)
-           (mod it diff)
-           (- it offset)
-           (+ priority it)))))
+      (-> (- offset n)
+          (mod diff)
+          (- offset)
+          (+ priority)))))
 
 ;;; property alist
 
