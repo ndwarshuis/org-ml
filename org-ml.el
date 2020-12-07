@@ -6082,50 +6082,47 @@ See `org-ml--diff-find-ses' for the meaning of D, K, VD, and DMAX."
   ;; stored as 'start-x' and 'start-y') and then traverse up/left until we hit a
   ;; new diagonal, in which case we use the previous x and y as the end of the
   ;; edit.
-  (let (path prev-x prev-y start-x start-y start-vert?)
+  (let (path prev-x prev-y start-x start-y start-vert? V x y vert? x*)
     (while (<= 0 D)
       ;; for the given set of endpoints at D, find the current x and y given k
-      (let* ((V (car Vd))
-             (x (elt (car Vd) (+ Dmax k)))
-             (y (- x k)))
-        ;; determine direction of the next endpoint and it's x value
-        (let* ((vert? (or (= k (- D))
-                          (and (/= k D) (< (elt V (+ (1- k) Dmax))
-                                           (elt V (+ (1+ k) Dmax))))))
-               (x* (if vert? (elt V (+ (1+ k) Dmax)) (1+ (elt V (+ (1- k) Dmax))))))
-          ;; if current x = next x we must not be on a diagonal
-          (if (and (= x* x) (< 0 x*) (eq start-vert? vert?))
-              (progn
-                (unless start-x
-                  (setq start-x x
-                        start-y y
-                        start-vert? vert?))
-                (setq prev-x x
-                      prev-y y))
-            ;; if we are on a diagonal, close off the previously held point
-            ;; and add it to the edit path as either an insert of a delete
-            ;; depending on if we are traversing up or left
-            (when start-x
-              (setq path (cons (if start-vert?
-                                   `(ins ,(1- start-x)
-                                         ,(1- prev-y)
-                                         ,(1- start-y))
-                                 `(del ,(1- prev-x)
-                                       ,(1- start-x)))
-                               path)))
-            ;; then walk up the diagonal to get to the next horizontal/vertical
-            ;; sequence
-            (while (< x* x)
-              (setq x (1- x)
-                    y (1- y)))
-            (setq start-x x
-                  start-y y
-                  start-vert? vert?
-                  prev-x x
+      (setq V (car Vd)
+            x (elt (car Vd) (+ Dmax k))
+            y (- x k)
+            ;; determine direction of the next endpoint and it's x value
+            vert? (or (= k (- D))
+                      (and (/= k D) (< (elt V (+ (1- k) Dmax))
+                                       (elt V (+ (1+ k) Dmax)))))
+            x* (if vert? (elt V (+ (1+ k) Dmax)) (1+ (elt V (+ (1- k) Dmax)))))
+      ;; if current x = next x we must not be on a diagonal
+      (if (and (= x* x) (< 0 x*) (eq start-vert? vert?))
+          (progn
+            (unless start-x
+              (setq start-x x
+                    start-y y
+                    start-vert? vert?))
+            (setq prev-x x
                   prev-y y))
-          (setq k (if vert? (1+ k) (1- k))
-                D (1- D)
-                Vd (cdr Vd)))))
+        ;; if we are on a diagonal, close off the previously held point
+        ;; and add it to the edit path as either an insert of a delete
+        ;; depending on if we are traversing up or left
+        (when start-x
+          (setq path (cons (if start-vert?
+                               `(ins ,(1- start-x) ,(1- prev-y) ,(1- start-y))
+                             `(del ,(1- prev-x) ,(1- start-x)))
+                           path)))
+        ;; then walk up the diagonal to get to the next horizontal/vertical
+        ;; sequence
+        (while (< x* x)
+          (setq x (1- x)
+                y (1- y)))
+        (setq start-x x
+              start-y y
+              start-vert? vert?
+              prev-x x
+              prev-y y))
+      (setq k (if vert? (1+ k) (1- k))
+            D (1- D)
+            Vd (cdr Vd)))
     (nreverse path)))
 
 (defun org-ml--diff-region (start end new-str)
@@ -6139,14 +6136,13 @@ applied to the buffer."
           (cmds (org-ml--diff-ses-to-edits D k Vd MAX)))
     (save-excursion
       (while cmds
-        (-let (((first . rest) cmds))
-          (pcase first
-            (`(ins ,i ,m ,n)
-             (goto-char (+ 1 start i))
-             (insert (substring new-str m (1+ n))))
-            (`(del ,i ,j)
-             (delete-region (+ start i) (+ 1 start j))))
-          (setq cmds rest))))))
+        (pcase (car cmds)
+          (`(ins ,i ,m ,n)
+           (goto-char (+ 1 start i))
+           (insert (substring new-str m (1+ n))))
+          (`(del ,i ,j)
+           (delete-region (+ start i) (+ 1 start j))))
+        (setq cmds (cdr cmds))))))
 
 ;; (defun org-ml--properties-equal (type prop value1 value2)
 ;;   "Return t if VALUE1 and VALUE2 are 'the same'.
