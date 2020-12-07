@@ -62,6 +62,7 @@
        (org-mode)
        (insert (s-repeat ,n ,repeated-pattern))
        (goto-char (point-min))
+       (garbage-collect)
        (let ((time (org-ml-bench-time-call ,@body))
              (res (buffer-string)))
          (list res time)))))
