@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.4.1
+
+- improve performance of string insertion and headline batch uptating
+
 ## 5.4.0
 
 - add pattern memoization to match function family

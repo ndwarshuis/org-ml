@@ -7737,7 +7737,7 @@ Update some headlines in the current using **`fun`**.
 
 See [`org-ml-get-some-headlines`](#org-ml-get-some-headlines-where) for the meaning of **`where`**.
 
-Headlines are updated using `org-ml~update-this-headline` with
+Headlines are updated using `org-ml~update` with
 `diff-arg` set to nil (see this for use and meaning of **`fun`**).
 
 ```el
@@ -7897,4 +7897,4 @@ Unfold the children of **`node`** if they exist.
 ```el
 no examples :(
 ```
-Version: 5.4.0
+Version: 5.4.1
