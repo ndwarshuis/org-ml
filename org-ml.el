@@ -6222,9 +6222,9 @@ the following:
          (end (org-ml--get-property-nocheck :end node))
          (ov-cmd (-some->> (overlays-in begin end)
                    (--filter (eq 'outline (overlay-get it 'invisible)))
-                   (--map (list :start (overlay-start it)
-                                :end (overlay-end it)
-                                :props (overlay-properties it)))
+                   (org-ml--map* (list :start (overlay-start it)
+                                       :end (overlay-end it)
+                                       :props (overlay-properties it)))
                    (list 'apply 'org-ml--apply-overlays)))
          ;; do all computation before modifying buffer
          ;;
