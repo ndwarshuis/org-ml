@@ -5130,11 +5130,21 @@ parsed into TYPE this function will return nil."
 ;; reversed, and ensures that matching can be made on one child node at a time,
 ;; which guarantees the limit will never be overshot.
 
-(defun org-ml--get-children-indexed (node)
+(defmacro org-ml--map-indexed (reverse? form list)
+  "Like `--map-indexed' but can be told to not reverse the result."
+  (declare (indent 1))
+  (let* ((r (make-symbol "result"))
+         (return (if reverse? r `(nreverse ,r))))
+    `(let (,r)
+       (--each ,list (!cons ,form ,r))
+       ,return)))
+
+(defmacro org-ml--get-children-indexed (reverse? node)
   "Return list of children from NODE (if any) with index annotations."
-  (let* ((children (org-ml-get-children node))
-         (len (- (length children))))
-    (--map-indexed (cons `(,it-index . ,(+ len it-index)) it) children)))
+  `(let* ((children (org-ml-get-children ,node))
+          (len (- (length children))))
+     (org-ml--map-indexed ,reverse?
+       (cons `(,it-index . ,(+ len it-index)) it) children)))
 
 (defmacro org-ml--reduce-from-while (pred form initial-value list)
   "Like `--reduce-from' but only reduce LIST while PRED is t.
@@ -5220,9 +5230,7 @@ is an integer or nil describing the number of matches at which the
 search should terminate. If nil, don't perform any checks and
 terminate only when the entire tree is searched within PATTERN."
   (let* ((accum '(cons (cdr it) acc))
-         (get-children
-          (if (not end?) '(org-ml--get-children-indexed (cdr it))
-            '(reverse (org-ml--get-children-indexed (cdr it)))))
+         (get-children `(org-ml--get-children-indexed ,end? (cdr it)))
          (reduce (if (not limit) '(--reduce-from)
                    `(org-ml--reduce-from-while (< (length acc) ,limit)))))
     (pcase pattern
