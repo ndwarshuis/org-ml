@@ -5398,7 +5398,7 @@ is the target node to be matched"
     ;; reversed here if `END?' is nil (which means we want the list in
     ;; forward-order) and left in reverse order if `END?' is t (meaning backward
     ;; order)
-    (if end? body `(reverse ,body))))
+    (if end? body `(nreverse ,body))))
 
 (defun org-ml--match-make-slicer-form (pattern)
   "Return matching form with slicer operations for PATTERN.
