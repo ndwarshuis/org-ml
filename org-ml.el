@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.4.0
+;; Version: 5.4.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -4990,65 +4990,48 @@ The specific child item to outdent is selected by CHILD-INDEX."
   "Set the children of NODE to a blank string (\"\")."
   (org-ml--set-children-nocheck '("") node))
 
+;; Some objects and greater elements should be removed if blank. Table and plain
+;; list will error, and the others make no sense if they are empty.
 (defconst org-ml--rm-if-empty
   '(table plain-list bold italic radio-target strike-through
           superscript subscript table-cell underline)
   "Nodes that will be blank if printed and empty.
 This is a workaround for a bug")
 
+;; Some greater elements will print "nil" in their children if they are empty.
+;; The workaround for this is to set the children to a single blank string if
+;; empty
 (defconst org-ml--blank-if-empty
   '(center-block drawer dynamic-block property-drawer quote-block
                  special-block verse-block)
   "Branch element nodes that require \"\" to correctly print empty.
 This is a workaround for a bug.")
 
-(defun org-ml--is-zero-length (node)
-  "Return NODE if it is not an empty node type from `org-ml--rm-if-empty'.
-The exception is rule-typed table-row nodes which are supposed to be
-empty."
-  (and (org-ml-is-childless node)
-       (or (org-ml-is-any-type org-ml--rm-if-empty node)
-           (org-ml--is-table-row node))))
-
-(defun org-ml--clean-inner (node)
-  "Return NODE with empty child nodes from `org-ml--rm-if-empty' removed."
-  (org-ml--map-children-nocheck*
-   (->> (-remove #'org-ml--is-zero-length it)
-        (-map #'org-ml--clean))
-   node))
-
-(defun org-ml--clean (node)
-  "Return NODE with empty child nodes from `org-ml--rm-if-empty' removed.
-Also return nil if NODE itself is empty."
-  (unless (org-ml--is-zero-length node)
-    (org-ml--clean-inner node)))
-
-;; TODO combine this with the above
 (defun org-ml--blank (node)
   "Return NODE with empty child nodes `org-ml--blank-if-empty' set to contain \"\"."
   (if (org-ml-is-childless node)
       (if (org-ml-is-any-type org-ml--blank-if-empty node)
           (org-ml--set-blank-children node)
-        node)
-    (org-ml--map-children-nocheck* (-map #'org-ml--blank it) node)))
+        (unless (or (org-ml-is-any-type org-ml--rm-if-empty node)
+                    (org-ml--is-table-row node))
+          node))
+    (org-ml--map-children-nocheck*
+     (remove nil (-map #'org-ml--blank it))
+     node)))
 
 ;;; print functions
 
 (defun org-ml-to-string (node)
   "Return NODE as an interpreted string without text properties."
-  (unless (or (null node) (org-ml--is-node node))
-    (org-ml--arg-error "Can only stringify node or nil, got %s" node))
-  (->> node
-       ;; Some objects and greater elements should be removed if blank. Table
-       ;; and plain list will error, and the others make no sense if they are
-       ;; empty.
-       (org-ml--clean)
-       ;; Some greater elements will print "nil" in their children if they are
-       ;; empty. The workaround for this is to set the children to a single
-       ;; blank string if empty
-       (org-ml--blank)
-       (org-element-interpret-data)
-       (substring-no-properties)))
+  (cond
+   ((null node)
+    "")
+   ((org-ml--is-node node)
+    (->> (org-ml--blank node)
+         (org-element-interpret-data)
+         (substring-no-properties)))
+   (t
+    (org-ml--arg-error "Can only stringify node or nil, got %s" node))))
 
 (defun org-ml-to-trimmed-string (node)
   "Like `org-ml-to-string' but strip whitespace when returning NODE."
@@ -5982,16 +5965,22 @@ returned from this function will have :begin and :end properties."
 (defun org-ml--nodes-to-string-maybe (nodes)
   "Return NODES as a string.
 NODES may either be a single node or a list of nodes."
-  (if (and (listp nodes) (-all? #'org-ml--is-node nodes))
-      (s-join "" (-map #'org-ml-to-string nodes))
-    (org-ml-to-string nodes)))
+  (cond
+   ((org-ml--is-node nodes) (org-ml-to-string nodes))
+   ((listp nodes) (mapconcat #'org-ml-to-string nodes ""))
+   (t (error "Must a node or a list of nodes"))))
+
+(defun org-ml--insert (point node)
+  "Convert NODE to a string and insert at POINT in the current buffer.
+NODE may be a node or a list of nodes. Return NODE.
+Does not save point."
+  (goto-char point)
+  (insert (org-ml--nodes-to-string-maybe node)))
 
 (defun org-ml-insert (point node)
   "Convert NODE to a string and insert at POINT in the current buffer.
 NODE may be a node or a list of nodes. Return NODE."
-  (save-excursion
-    (goto-char point)
-    (insert (org-ml--nodes-to-string-maybe node)))
+  (save-excursion (org-ml--insert point node))
   node)
 
 (defun org-ml-insert-tail (point node)
@@ -6205,18 +6194,10 @@ applied to the buffer."
 ;;                        p2 (cdr (cdr p2))))
 ;;                (and (not p2) plist-matches))))))))
 
-(org-ml--defun-anaphoric* org-ml~update (diff-mode fun node)
-  "Replace NODE in the current buffer with a new one.
-FUN is a unary function that takes NODE and returns a modified node
-or list of nodes.
-
-DIFF-MODE describes how the buffer will be updated and can be one of
-the following:
-- t: use the Myers diff algorithm to compare the old buffer
-  string with the new string from the modified NODE, and only
-  edit the the regions that are different
-- nil: use no diff algorithm; just replace the old buffer string
-  entirely with the new one."
+(org-ml--defun-anaphoric* org-ml--update (diff-mode fun node)
+  "Internal version of `org-ml~update'.
+DIFF-MODE, FUN, and NODE have the same meaning. The only
+difference is this function does not save the point's position"
   ;; if node is of type 'org-data' it will have no props
   (let* ((begin (org-ml--get-property-nocheck :begin node))
          (end (org-ml--get-property-nocheck :end node))
@@ -6244,8 +6225,23 @@ the following:
         (org-ml--diff-region begin end (org-ml-to-string node*))
       (progn
         (delete-region begin end)
-        (org-ml-insert begin node*)))
+        (org-ml--insert begin node*)))
     nil))
+
+(org-ml--defun* org-ml~update (diff-mode fun node)
+  "Replace NODE in the current buffer with a new one.
+FUN is a unary function that takes NODE and returns a modified node
+or list of nodes.
+
+DIFF-MODE describes how the buffer will be updated and can be one of
+the following:
+- t: use the Myers diff algorithm to compare the old buffer
+  string with the new string from the modified NODE, and only
+  edit the the regions that are different
+- nil: use no diff algorithm; just replace the old buffer string
+  entirely with the new one."
+  (save-excursion
+    (org-ml--update diff-mode fun node)))
 
 (org-ml--defun* org-ml-update (fun node)
   "Replace NODE in the current buffer with a new one.
@@ -6621,19 +6617,20 @@ Each subtree is obtained with `org-ml-parse-subtree-at'."
 
 See `org-ml-get-some-headlines' for the meaning of WHERE.
 
-Headlines are updated using `org-ml~update-this-headline' with
+Headlines are updated using `org-ml~update' with
 DIFF-ARG set to nil (see this for use and meaning of FUN)."
   ;; don't use the myers diff algorithm here, since these functions are meant
   ;; for batch processing.
-  (cl-labels
-      ((map-to-subheadlines
-        (headline)
-        (org-ml-headline-map-subheadlines*
-          (-map #'map-to-subheadlines it)
-          (funcall fun headline))))
-    (--> (org-ml--parse-patterns-where where "^\\*")
-         (nreverse it)
-         (--each it (org-ml~update nil #'map-to-subheadlines it)))))
+  (save-excursion
+    (cl-labels
+        ((map-to-subheadlines
+          (headline)
+          (org-ml-headline-map-subheadlines*
+            (-map #'map-to-subheadlines it)
+            (funcall fun headline))))
+      (--> (org-ml--parse-patterns-where where "^\\*")
+           (nreverse it)
+           (--each it (org-ml--update nil #'map-to-subheadlines it))))))
 
 (org-ml--defun* org-ml-do-headlines (fun)
   "Update all headlines in the current buffer using FUN.
@@ -6649,9 +6646,10 @@ See `org-ml-get-some-headlines' for the meaning of WHERE.
 
 Subtrees are updated using `org-ml-update-this-subtree' (see this for use
 and meaning of FUN)."
-  (-> (org-ml--parse-patterns-where where "^\\* ")
-      (nreverse)
-      (--each (org-ml~update nil fun it))))
+  (save-excursion
+    (--> (org-ml--parse-patterns-where where "^\\* ")
+         (nreverse it)
+         (--each it (org-ml--update nil fun it)))))
 
 (org-ml--defun* org-ml-do-subtrees (fun)
   "Update all toplevel subtrees in the current buffer using FUN.
