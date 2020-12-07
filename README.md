@@ -212,6 +212,14 @@ To run the benchmark suite:
 make benchmark
 ```
 
+## Memoization
+
+For all pattern-matching functions (eg `org-ml-match` and `org-ml-match-X`), the
+`PATTERN` parameter is processed into a lambda function which computationally
+carries out the pattern matching. If there are many calls using the same or a
+few unique patterns, this lambda-generation overhead may be memoized by setting
+`org-ml-memoize-match-patterns`. See this varible's documentation for details.
+
 # Version History
 
 See [changelog](CHANGELOG.md).
