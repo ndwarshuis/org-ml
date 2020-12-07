@@ -1364,7 +1364,7 @@ returns a modified list of children."
             (it (org-ml-get-children node)))
        (org-ml--set-children-nocheck ,form node))))
 
-(defun org-ml--set-childen-throw-error (type child-types illegal)
+(defun org-ml--set-children-throw-error (type child-types illegal)
   "Throw an `arg-type-error' for TYPE.
 In the message specify that allowed child types are CHILD-TYPES
 and ILLEGAL types were attempted to be set."
@@ -3254,7 +3254,7 @@ on the type of NODE."
     (-if-let (child-types (alist-get type org-ml--node-restrictions))
         (-if-let (illegal (-difference (-map #'org-ml-get-type children)
                                        child-types))
-            (org-ml--set-childen-throw-error type child-types illegal)
+            (org-ml--set-children-throw-error type child-types illegal)
           (org-ml--set-children-nocheck children branch-node))
       ;; this should not happen
       (error "Child type restrictions not found for %s" type))))
