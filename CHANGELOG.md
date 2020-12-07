@@ -2,7 +2,7 @@
 
 ## 5.4.1
 
-- improve performance of string insertion and headline batch uptating
+- improve performance of string insertion and headline batch updating
 
 ## 5.4.0
 
