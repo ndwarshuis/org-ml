@@ -5131,7 +5131,10 @@ parsed into TYPE this function will return nil."
 ;; which guarantees the limit will never be overshot.
 
 (defmacro org-ml--map-indexed (reverse? form list)
-  "Like `--map-indexed' but can be told to not reverse the result."
+  "Like `--map-indexed' but can be told to reverse the result.
+If REVERSE? is t, the final results are reversed (which actually
+means not reversed since the results are made in reverse order).
+FORM and LIST carry the same meaning."
   (declare (indent 1))
   (let* ((r (make-symbol "result"))
          (return (if reverse? r `(nreverse ,r))))
@@ -5140,7 +5143,8 @@ parsed into TYPE this function will return nil."
        ,return)))
 
 (defmacro org-ml--get-children-indexed (reverse? node)
-  "Return list of children from NODE (if any) with index annotations."
+  "Return list of children from NODE (if any) with index annotations.
+If REVERSE is t, reverse the final result."
   `(let* ((children (org-ml-get-children ,node))
           (len (- (length children))))
      (org-ml--map-indexed ,reverse?
