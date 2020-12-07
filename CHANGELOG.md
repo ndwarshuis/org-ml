@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.4.0
+
+- add pattern memoization to match function family
+- numerous performance enhancements including:
+  - remove majority of closures in anaphoric forms (eg `make-byte-code`)
+  - implement faster macros for plists
+  - improve timestamp processing
+  - remove equality checking from `org-ml~update`
+  - streamline headline batch functions (eg `org-ml-do-headlines` et al)
+
 ## 5.3.0
 
 - add `org-ml-get-properties`
