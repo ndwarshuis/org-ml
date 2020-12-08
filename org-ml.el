@@ -2500,20 +2500,23 @@ are present in the heading determined by TYPE, the placeholders will
 not be substituted.
 
 If string NOTE is supplied, append a note to the log entry."
-  ;; TODO refactor this...
+  ;; TODO this can likely be made faster (if desired) by not relying on the
+  ;; individual replacement functions; doing it this way will call
+  ;; `org-replace-escapes' multiple times, which is likely not as fast
   (cl-flet
       ((replace-note
         (old-p rep note)
         (if (not rep) note
-          (let* ((type (if old-p "old" "new"))
-                 (fun
-                  (cond
-                   ((org-ml-is-type 'timestamp rep)
-                    (intern (format "org-ml--log-replace-%s-timestamp" type)))
-                   ((stringp rep)
-                    (intern (format "org-ml--log-replace-%s-state" type)))
-                   (t
-                    (org-ml--arg-error "Must be string or timestamp: Got %S" rep)))))
+          (let ((fun
+                 (cond
+                  ((org-ml-is-type 'timestamp rep)
+                   (if old-p #'org-ml--log-replace-old-timestamp
+                     #'org-ml--log-replace-new-timestamp))
+                  ((stringp rep)
+                   (if old-p #'org-ml--log-replace-old-state
+                     #'org-ml--log-replace-new-state))
+                  (t
+                   (org-ml--arg-error "Must be string or timestamp: Got %S" rep)))))
             (funcall fun rep note))))
        (replace-timestamps
         (heading)
