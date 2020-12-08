@@ -1563,14 +1563,14 @@ If fractional cookie, return `fraction'; if percentage cookie return
   "Return the unix time (integer seconds) of time list TIME.
 The returned value is dependent on the time zone of the operating
 system."
-  (let* ((zone (list (current-time-zone)))
-         (encode-args
-          (if (org-ml-time-is-long time)
-              (append '(0) (reverse time) zone)
-            (append '(0 0 0) (reverse (-take 3 time)) zone))))
-    (->> (apply #'encode-time encode-args)
-         (float-time)
-         (round))))
+  (->> (if (org-ml-time-is-long time)
+           (-let (((y m d H M) time))
+             (list 0 M H d m y nil -1 (current-time-zone)))
+         (-let (((y m d) time))
+           (list 0 0 0 d m y nil -1 (current-time-zone))))
+       (encode-time)
+       (float-time)
+       (round)))
 
 (defun org-ml-unixtime-to-time-long (unixtime)
   "Return the long time list of UNIXTIME.
