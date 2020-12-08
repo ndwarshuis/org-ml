@@ -5813,6 +5813,7 @@ elements vs item elements."
                            (`table-row '(0 0))
                            (`table (if (eq type 'table-row) '(0 0) '(0)))
                            (`plain-list (if (eq type 'item) '(0 0) '(0)))
+                           (`item '(0 0))
                            (_ '(0)))))
           (--> (org-ml--get-descendent nesting tree)
                ;; set ending boundaries according to what we get from
