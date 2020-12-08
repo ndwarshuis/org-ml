@@ -4074,15 +4074,13 @@ to the current state. FORM must return a list like
 and accumulator on the next iteration. INITIAL-STATE is bound to
 `it-state' on the first iteration."
   (declare (indent 1))
-  `(let ((next-state ,initial-state)
-         (acc nil)
-         (rest ,list))
-     (while (and next-state rest)
-       (-setq (next-state acc)
-         (let ((it-state next-state)
-               (it (car rest)))
-           ,form))
-       (when next-state
+  `(let ((it-state ,initial-state)
+         (rest ,list)
+         acc it)
+     (while (and it-state rest)
+       (setq it (car rest))
+       (-setq (it-state acc) ,form)
+       (when it-state
          (setq rest (cdr rest))))
      (list acc rest)))
 
