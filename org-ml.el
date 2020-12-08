@@ -3723,7 +3723,6 @@ logbook."
         (or (org-ml-is-type 'line-break node)
             (and (org-ml-is-type 'plain-text node)
                  (equal "\n" node))))
-       ;; TODO this should be a public function
        (get-paragraph-children
         (item)
         (-when-let (first-child (car (org-ml-get-children item)))
@@ -4712,7 +4711,7 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
 ;;
 ;; We wish to indent 1. There are two cases:
 ;; 1. indent only 1.
-;; 2. indent 1. and 1.1 along with it
+;; 2. indent 1. and 1.0 along with it
 ;;
 ;; In both cases, make 1.0 a child of 0. Remove 1.0 from the
 ;; top-level list and leave 1.0 and 2. untouched
@@ -4727,21 +4726,21 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
 ;; parameters for indenting:
 ;; - index of target to indent (1 in above example)
 
-;; TODO refactor all of these...
-(defun org-ml--indent-members (fun index tree)
-  "Return TREE with member at INDEX indented.
-FUN is a binary function that takes the members of TREE immediately
-before INDEX (called 'head') and the item at INDEX to be indented
-\(called 'target'). It maps over the last item of 'head' and sets the
-target as its child, or appends it to the end of its children if they
-exist."
-  (unless (and (integerp index) (< 0 index))
-    (error "Cannot indent topmost item at this level"))
-  (-let (((head tail) (-split-at index tree)))
-    (if (not tail) (error "Index over range: %s" index)
-      (let* ((target (-first-item tail))
-             (head* (org-ml--map-last* (funcall fun target it) head)))
-        (append head* (-drop 1 tail))))))
+(defmacro org-ml--tree-set-child* (index tree form)
+  "Return TREE with node at INDEX set as child of the node before it.
+FORM is a Lisp form that takes the last member of TREE
+immediately before INDEX (called \"parent\", bound to 'it') and
+the item at INDEX to be set as its child (bound to 'it-target')
+and returns a new \"parent\" node."
+  (declare (indent 2))
+  (let ((i (make-symbol "index")))
+    `(let ((,i ,index))
+       (unless (and (integerp ,i) (< 0 ,index))
+         (error "Cannot indent topmost item at this level"))
+       (-let (((head tail) (-split-at ,i ,tree)))
+         (if (not tail) (error "Index over range: %s" ,i)
+           (let ((it-target (car tail)))
+             (append (org-ml--map-last* ,form head) (cdr tail))))))))
 
 ;; headline
 
@@ -4749,37 +4748,27 @@ exist."
   "Return HEADLINE node with child headline at INDEX demoted.
 Unlike `org-ml-headline-demote-subheadline' this will also demote the
 demoted headline node's children."
-  (cl-flet
-      ((append-demoted
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (org-ml--headline-subtree-shift-level 1 target-headline)))
-          (org-ml--map-children-nocheck*
-            (append it (list target-headline*))
-            parent-headline))))
-    (org-ml-headline-map-subheadlines*
-      (org-ml--indent-members #'append-demoted index it)
-      headline)))
+  (org-ml-headline-map-subheadlines*
+    (org-ml--tree-set-child* index it
+      (org-ml--map-children-nocheck*
+       (-snoc it (org-ml--headline-subtree-shift-level 1 it-target))
+       it))
+    headline))
 
 (defun org-ml-headline-demote-subheadline (index headline)
   "Return HEADLINE node with child headline at INDEX demoted.
 Unlike `org-ml-headline-demote-subtree' this will not demote the
 demoted headline node's children."
-  (cl-flet
-      ((append-demoted
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (->> target-headline
-                    (org-ml-headline-map-subheadlines #'ignore)
-                    (org-ml--headline-shift-level 1)))
-              (headlines-in-target
-               (org-ml-headline-get-subheadlines target-headline)))
-          (org-ml--map-children-nocheck*
-            (append it (list target-headline*) headlines-in-target)
-            parent-headline))))
-    (org-ml-headline-map-subheadlines*
-      (org-ml--indent-members #'append-demoted index it)
-      headline)))
+  (org-ml-headline-map-subheadlines*
+    (org-ml--tree-set-child* index it
+      (let ((headlines-in-target (org-ml-headline-get-subheadlines it-target))
+            (target-headline* (->> it-target
+                                   (org-ml-headline-set-subheadlines nil)
+                                   (org-ml--headline-shift-level 1))))
+        (org-ml--map-children-nocheck*
+         (append it (list target-headline*) headlines-in-target)
+         it)))
+    headline))
 
 ;; plain-list
 
@@ -4787,16 +4776,12 @@ demoted headline node's children."
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `org-ml-item-indent-item' this will also indent the indented item
 node's children."
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item* (org-ml-build-plain-list target-item)))
-          (org-ml--map-children-nocheck*
-            (append it (list target-item*))
-            parent-item))))
-    (org-ml--map-children-nocheck*
-      (org-ml--indent-members #'append-indented index it)
-      plain-list)))
+  (org-ml--map-children-nocheck*
+   (org-ml--tree-set-child* index it
+     (org-ml--map-children-nocheck*
+      (-snoc it (org-ml-build-plain-list it-target))
+      it))
+   plain-list))
 
 (defun org-ml-plain-list-indent-item (index plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
@@ -4804,30 +4789,29 @@ Unlike `org-ml-item-indent-item-tree' this will not indent the indented
 item node's children."
   ;; TODO use remove/filter here might not be precise enough if the plain-list
   ;; contains more than just items
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item*
-               (->> target-item
-                    (org-ml--map-children-nocheck*
-                      (--remove (org-ml-is-type 'plain-list it) it))))
-              (plain-lists-in-target
-               (->> (org-ml-get-children target-item)
-                    (--filter (org-ml-is-type 'plain-list it)))))
-          (org-ml--map-children-nocheck*
-            (let ((plain-lists*
-                   (if plain-lists-in-target
-                       (org-ml--map-first*
-                        (org-ml--map-children-nocheck*
-                          (cons target-item* it)
-                          it)
-                        plain-lists-in-target)
-                     (list (org-ml-build-plain-list target-item*)))))
-              (org-ml--append-join-plain-lists it plain-lists*))
-            parent-item))))
-    (org-ml--map-children-nocheck*
-      (org-ml--indent-members #'append-indented index it)
-      plain-list)))
+  (org-ml--map-children-nocheck*
+   (org-ml--tree-set-child* index it
+     (let ((target-item* (org-ml--map-children-nocheck*
+                          (--remove (org-ml-is-type 'plain-list it) it)
+                          it-target))
+           (plain-lists-in-target
+            (->> (org-ml-get-children it-target)
+                 (--filter (org-ml-is-type 'plain-list it)))))
+       ;; this is more complicated than the other three functions above because
+       ;; if the children of the target is also a plain list and it is to be
+       ;; combined with the plain-list immediately above the target, need to
+       ;; unwrap the items from the child plain-list of the target and combine
+       ;; with the target's now-parent
+       (org-ml--map-children-nocheck*
+        (let ((plain-lists*
+               (if plain-lists-in-target
+                   (org-ml--map-first*
+                    (org-ml--map-children-nocheck* (cons target-item* it) it)
+                    plain-lists-in-target)
+                 (list (org-ml-build-plain-list target-item*)))))
+          (org-ml--append-join-plain-lists it plain-lists*))
+        it)))
+   plain-list))
 
 ;;; unindentation (tree)
 
@@ -4850,6 +4834,7 @@ item node's children."
 ;; parameters for unindenting a tree:
 ;; - the index whose children are to be unindented
 
+;; TODO refactor all of these...
 (defun org-ml--outdent-members (index trim-fun extract-fun tree)
   "Return TREE with children under INDEX unindented.
 TRIM-FUN is a unary function that is applied to the child list
