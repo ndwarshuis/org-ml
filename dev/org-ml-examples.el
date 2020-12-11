@@ -5066,7 +5066,55 @@
       => (:result "* one"
                   "** two"
                   "*** three"
-                  "*** four"))
+                  "*** four")
+
+      :begin-hidden
+
+      ;; make sure this works with whitespace
+
+      ;; (:buffer "* one"
+      ;;          ""
+      ;;          "** two"
+      ;;          ""
+      ;;          "** three"
+      ;;          ""
+      ;;          "*** four")
+      ;; (->> (org-ml-parse-element-at 1)
+      ;;      (org-ml-headline-demote-subheadline 1)
+      ;;      (org-ml-to-trimmed-string))
+      ;; => (:result "* one"
+      ;;             ""
+      ;;             "** two"
+      ;;             ""
+      ;;             "*** three"
+      ;;             ""
+      ;;             "*** four")
+
+      (:buffer "* one"
+               "something"
+               ""
+               "** two"
+               "something"
+               ""
+               "** three"
+               "something"
+               ""
+               "*** four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-headline-demote-subheadline 1)
+           (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  "something"
+                  ""
+                  "** two"
+                  "something"
+                  ""
+                  "*** three"
+                  "something"
+                  ""
+                  "*** four")
+
+      :end-hidden)
 
     (defexamples-content org-ml-headline-demote-subtree
       nil

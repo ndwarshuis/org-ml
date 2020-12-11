@@ -62,6 +62,7 @@
        (org-mode)
        (insert (s-repeat ,n ,repeated-pattern))
        (goto-char (point-min))
+       (garbage-collect)
        (let ((time (org-ml-bench-time-call ,@body))
              (res (buffer-string)))
          (list res time)))))
@@ -80,7 +81,7 @@
   (format "| %-40s | %6s | %10.5f | %10.5f | %10.2f |" title n time1 time2
           (/ time2 time1)))
 
-(defmacro org-ml-defbench (title pattern n form1 form2)
+(defmacro org-ml-defbench (title n pattern form1 form2)
   "Define a benchmark.
 
 TITLE is a short string that will be used to identify the
@@ -94,13 +95,16 @@ iterating across PATTERN as desired.
 
 Calling `org-ml-bench-run' will execute all benchmarks in the
 order they are defined with this macro."
-  (declare (indent 3))
-  `(add-to-list 'org-ml-benchmarks
-                (lambda ()
-                  (print (format "Starting benchmark: %s" ,title))
-                  (-let (((time1 time2)
-                           ,(org-ml-bench-compare pattern n form1 form2)))
-                    (org-ml-bench-format-result-row ,title ,n time1 time2)))))
+  (declare (indent 2))
+  (let ((p (format "%s\n" (if (listp pattern)
+                              (s-join "\n" (eval pattern))
+                            pattern))))
+    `(add-to-list 'org-ml-benchmarks
+                  (lambda ()
+                    (print (format "Starting benchmark: %s" ,title))
+                    (-let (((time1 time2)
+                            ,(org-ml-bench-compare p n form1 form2)))
+                      (org-ml-bench-format-result-row ,title ,n time1 time2))))))
 
 (defun org-ml-bench-run ()
   "Run and print all defined benchmarks."

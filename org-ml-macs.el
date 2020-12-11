@@ -494,12 +494,13 @@ In FORM, the first of the pair is bound to 'it-key' and the
 second is bound to 'it'. INIT has the same meaning."
   (let ((l (make-symbol "list")))
     `(let ((acc ,init)
-           (,l ,list))
+           (,l ,list)
+           it it-key)
        (while ,l
-         (let ((it (cadr ,l))
-               (it-key (car ,l)))
-           (setq acc ,form
-                 ,l (cdr (cdr ,l)))))
+         (setq it (cadr ,l)
+               it-key (car ,l)
+               acc ,form
+               ,l (cdr (cdr ,l))))
        acc)))
 
 (provide 'org-ml-macs)

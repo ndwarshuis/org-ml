@@ -21,7 +21,8 @@
 
 (require 'org-ml-bench-fw)
 
-(org-ml-defbench "read TODO" "* TODO headline\n" 10000
+(org-ml-defbench "read TODO" 10000
+  "* TODO headline"
   (let ((next t))
     (while next
       (org-get-todo-state)
@@ -30,7 +31,22 @@
   (->> (org-ml-get-headlines)
        (--map (org-ml-get-property :todo-keyword it))))
 
-(org-ml-defbench "TODO -> DONE" "* TODO headline\n" 1000
+(org-ml-defbench "read SCHEDULED epoch time" 2500
+  (list "* TODO headline"
+        "SCHEDULED: <2020-01-01 Tue>")
+  (let ((next t))
+    (while next
+      (org-2ft (org-entry-get (point) "SCHEDULED"))
+      (setq next (outline-next-heading))))
+  
+  (->> (org-ml-get-headlines)
+       (--map (->> (org-ml-headline-get-planning it)
+                   (org-ml-get-property :scheduled)
+                   (org-ml-timestamp-get-start-time)
+                   (org-ml-time-to-unixtime)))))
+
+(org-ml-defbench "TODO -> DONE" 1000
+  "* TODO headline"
   (let ((org-log-done 'time)
         (org-todo-keywords '((sequence "TODO" "|" "DONE")))
         (org-adapt-indentation nil)
@@ -45,7 +61,31 @@
       (->> (org-ml-set-property :todo-keyword "DONE" it)
            (org-ml-headline-set-planning planning)))))
 
-(org-ml-defbench "tag headline" "* headline\n" 1000
+(org-ml-defbench "demote headlines" 2500
+  "* headline"
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (org-do-demote)
+      (setq next (outline-next-heading))))
+
+  (org-ml-do-headlines*
+    (org-ml-shift-property :level 1 it)))
+
+(org-ml-defbench "demote subtrees" 2500
+  (list "* headline"
+        "** subheadline")
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (org-demote)
+      (setq next (outline-next-heading))))
+
+  (org-ml-do-subtrees*
+    (org-ml--headline-subtree-shift-level 1 it)))
+
+(org-ml-defbench "tag headline" 1000
+  "* headline"
   (let ((next t))
     (while next
       (org-set-tags '("A" "B" "C"))
@@ -54,7 +94,8 @@
   (org-ml-do-headlines*
     (org-ml-set-property :tags '("A" "B" "C") it)))
 
-(org-ml-defbench "schedule headline" "* headline\n" 1000
+(org-ml-defbench "schedule headline" 1000
+  "* headline"
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
@@ -65,7 +106,9 @@
     (org-ml-do-headlines*
       (org-ml-headline-set-planning pl it))))
 
-(org-ml-defbench "reschedule headline" "* headline\nSCHEDULED: <2020-01-01 Wed>\n" 1000
+(org-ml-defbench "reschedule headline" 1000
+  (list "* headline"
+        "SCHEDULED: <2020-01-01 Wed>")
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
@@ -81,7 +124,8 @@
     (org-ml-headline-map-planning*
       (org-ml-map-property* :scheduled (org-ml-timestamp-shift 1 'day it) it) it)))
 
-(org-ml-defbench "set headline effort" "* headline\n" 1000
+(org-ml-defbench "set headline effort" 1000
+  "* headline"
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
@@ -91,7 +135,10 @@
   (org-ml-do-headlines*
     (org-ml-headline-set-node-property "Effort" "0:05" it)))
 
-(org-ml-defbench "set checkboxes" "* headline [0/0]\n- [ ] one\n- [ ] two\n" 1000
+(org-ml-defbench "set checkboxes" 1000
+  (list "* headline [0/0]"
+        "- [ ] one"
+        "- [ ] two")
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
@@ -103,7 +150,8 @@
       (->> (org-ml-match-map '(section plain-list item) #'org-ml-item-toggle-checkbox it)
            (org-ml-headline-update-item-statistics)))))
 
-(org-ml-defbench "insert headline text" "* headline\n" 2500
+(org-ml-defbench "insert headline text" 2500
+  "* headline"
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
@@ -116,7 +164,8 @@
     (org-ml-do-headlines*
       (org-ml-headline-set-section (list para) it))))
 
-(org-ml-defbench "set headline effort/TODO/scheduled" "* headline\n" 1000
+(org-ml-defbench "set headline effort/TODO/scheduled" 1000
+  "* headline"
   (let ((org-log-done 'time)
         (org-todo-keywords '((sequence "TODO" "|" "DONE")))
         (org-adapt-indentation nil)

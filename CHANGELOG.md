@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.4.2
+
+- make indent/outdent/promote/demote functions more accurate/faster
+- further optimizations and additional benchmarks
+
 ## 5.4.1
 
 - improve performance of string insertion and headline batch updating

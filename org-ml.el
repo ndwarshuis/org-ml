@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.4.1
+;; Version: 5.4.2
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -1360,6 +1360,7 @@ nested element to return."
 
 FORM is a form with `it' bound to the list of children and
 returns a modified list of children."
+    (declare (debug (form form)))
     `(let* ((node ,node)
             (it (org-ml-get-children node)))
        (org-ml--set-children-nocheck ,form node))))
@@ -1563,14 +1564,14 @@ If fractional cookie, return `fraction'; if percentage cookie return
   "Return the unix time (integer seconds) of time list TIME.
 The returned value is dependent on the time zone of the operating
 system."
-  (let* ((zone (list (current-time-zone)))
-         (encode-args
-          (if (org-ml-time-is-long time)
-              (append '(0) (reverse time) zone)
-            (append '(0 0 0) (reverse (-take 3 time)) zone))))
-    (->> (apply #'encode-time encode-args)
-         (float-time)
-         (round))))
+  (->> (if (org-ml-time-is-long time)
+           (-let (((y m d H M) time))
+             (list 0 M H d m y nil -1 (current-time-zone)))
+         (-let (((y m d) time))
+           (list 0 0 0 d m y nil -1 (current-time-zone))))
+       (encode-time)
+       (float-time)
+       (round)))
 
 (defun org-ml-unixtime-to-time-long (unixtime)
   "Return the long time list of UNIXTIME.
@@ -1815,6 +1816,83 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
 
 ;;; element nodes
 ;;
+;; item
+
+(defun org-ml--item-get-subcomponents (item)
+  "Return the children of ITEM broken down into subcomponents.
+The returned list will be of the form (HEAD SUBITEMS POST-BLANK
+REST) where HEAD consists of all nodes before the first nested
+plain-list, SUBITEMS will be all items in the nested plain-list,
+POST-BLANK will be the post-blank of the nested plain-list, and
+REST will be everything after the plain-list (which should be nil
+for all sensible items)."
+  (-let* (((h (s . r)) (->> (org-ml-get-children item)
+                            (--split-with (not (org-ml-is-type 'plain-list it)))))
+          (pb (if s (org-ml--get-property-nocheck :post-blank s) 0))
+          (i (org-ml-get-children s)))
+    (list h i pb r)))
+
+(defun org-ml--item-set-subcomponents (subcomponents item)
+  "Return the child subcomponents of ITEM.
+SUBCOMPONENTS is a list like that returned by
+`org-ml--item-get-subcomponents'."
+  (-let* (((head subitems sub-pb rest) subcomponents))
+    (-when-let (pb (cond
+                    (rest (-some->> (-last-item rest)
+                            (org-ml--get-property-nocheck :post-blank)))
+                    (subitems sub-pb)
+                    (head (-some->> (-last-item head)
+                            (org-ml--get-property-nocheck :post-blank)))))
+      (let ((rest* (-some->> rest
+                     (org-ml--map-last*
+                      (org-ml--set-property-nocheck :post-blank 0 it))))
+            (sublist (-some->> subitems
+                       (apply #'org-ml-build-plain-list
+                              :post-blank (if rest sub-pb 0))
+                       (list)))
+            (head* (-some->> head
+                     (org-ml--map-last*
+                      (org-ml--set-property-nocheck :post-blank 0 it)))))
+        (->> (org-ml--set-children-nocheck (append head* sublist rest*) item)
+             (org-ml--map-property-nocheck* :post-blank (+ pb it)))))))
+
+(defmacro org-ml--item-map-subcomponents* (form item)
+  "Return ITEM with subcomponents modified.
+FORM is a form where the subcomponents of item are bound to the
+symbol 'it' and returns modified subcomponents. The subcomponents
+will conform to those given in `org-ml--item-get-subcomponents'."
+  (declare (debug (form form)))
+  (let ((i (make-symbol "item")))
+    `(let ((,i ,item))
+       (let ((it (org-ml--item-get-subcomponents ,i)))
+         (org-ml--item-set-subcomponents ,form ,i)))))
+
+(defun org-ml--item-get-subitems (item)
+  "Return the subitems of ITEM."
+  (-let (((_ s _ _) (org-ml--item-get-subcomponents item)))
+    s))
+
+(defun org-ml--item-set-subitems (subitems item)
+  "Return ITEM with subitems set to SUBITEMS."
+  (org-ml--item-map-subcomponents*
+   (-let (((h _ p r) it))
+     (list h subitems p r))
+   item))
+
+(defmacro org-ml--item-map-subitems* (form item)
+  "Return a ITEM with FORM applied to its sublist if present.
+FORM is a Lisp form in which the symbol 'it' is bound to the
+items in the sub plain-list, and returns a modified list of
+items."
+  (declare (debug (form form)))
+  (let ((h (make-symbol "h"))
+        (p (make-symbol "p"))
+        (r (make-symbol "r")))
+    `(org-ml--item-map-subcomponents*
+      (-let (((,h it ,p ,r) it))
+        (list ,h ,form ,p ,r))
+      ,item)))
+
 ;; headline
 
 (defun org-ml--headline-shift-level (n headline)
@@ -2500,20 +2578,23 @@ are present in the heading determined by TYPE, the placeholders will
 not be substituted.
 
 If string NOTE is supplied, append a note to the log entry."
-  ;; TODO refactor this...
+  ;; TODO this can likely be made faster (if desired) by not relying on the
+  ;; individual replacement functions; doing it this way will call
+  ;; `org-replace-escapes' multiple times, which is likely not as fast
   (cl-flet
       ((replace-note
         (old-p rep note)
         (if (not rep) note
-          (let* ((type (if old-p "old" "new"))
-                 (fun
-                  (cond
-                   ((org-ml-is-type 'timestamp rep)
-                    (intern (format "org-ml--log-replace-%s-timestamp" type)))
-                   ((stringp rep)
-                    (intern (format "org-ml--log-replace-%s-state" type)))
-                   (t
-                    (org-ml--arg-error "Must be string or timestamp: Got %S" rep)))))
+          (let ((fun
+                 (cond
+                  ((org-ml-is-type 'timestamp rep)
+                   (if old-p #'org-ml--log-replace-old-timestamp
+                     #'org-ml--log-replace-new-timestamp))
+                  ((stringp rep)
+                   (if old-p #'org-ml--log-replace-old-state
+                     #'org-ml--log-replace-new-state))
+                  (t
+                   (org-ml--arg-error "Must be string or timestamp: Got %S" rep)))))
             (funcall fun rep note))))
        (replace-timestamps
         (heading)
@@ -3720,7 +3801,6 @@ logbook."
         (or (org-ml-is-type 'line-break node)
             (and (org-ml-is-type 'plain-text node)
                  (equal "\n" node))))
-       ;; TODO this should be a public function
        (get-paragraph-children
         (item)
         (-when-let (first-child (car (org-ml-get-children item)))
@@ -4074,15 +4154,13 @@ to the current state. FORM must return a list like
 and accumulator on the next iteration. INITIAL-STATE is bound to
 `it-state' on the first iteration."
   (declare (indent 1))
-  `(let ((next-state ,initial-state)
-         (acc nil)
-         (rest ,list))
-     (while (and next-state rest)
-       (-setq (next-state acc)
-         (let ((it-state next-state)
-               (it (car rest)))
-           ,form))
-       (when next-state
+  `(let ((it-state ,initial-state)
+         (rest ,list)
+         acc it)
+     (while (and it-state rest)
+       (setq it (car rest))
+       (-setq (it-state acc) ,form)
+       (when it-state
          (setq rest (cdr rest))))
      (list acc rest)))
 
@@ -4711,7 +4789,7 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
 ;;
 ;; We wish to indent 1. There are two cases:
 ;; 1. indent only 1.
-;; 2. indent 1. and 1.1 along with it
+;; 2. indent 1. and 1.0 along with it
 ;;
 ;; In both cases, make 1.0 a child of 0. Remove 1.0 from the
 ;; top-level list and leave 1.0 and 2. untouched
@@ -4726,21 +4804,26 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
 ;; parameters for indenting:
 ;; - index of target to indent (1 in above example)
 
-;; TODO refactor all of these...
-(defun org-ml--indent-members (fun index tree)
-  "Return TREE with member at INDEX indented.
-FUN is a binary function that takes the members of TREE immediately
-before INDEX (called 'head') and the item at INDEX to be indented
-\(called 'target'). It maps over the last item of 'head' and sets the
-target as its child, or appends it to the end of its children if they
-exist."
-  (unless (and (integerp index) (< 0 index))
-    (error "Cannot indent topmost item at this level"))
-  (-let (((head tail) (-split-at index tree)))
-    (if (not tail) (error "Index over range: %s" index)
-      (let* ((target (-first-item tail))
-             (head* (org-ml--map-last* (funcall fun target it) head)))
-        (append head* (-drop 1 tail))))))
+;; TODO these mostly work except for whitespace edgecases, and those are really
+;; ugly to work around
+
+(defmacro org-ml--tree-set-child* (index form tree)
+  "Return TREE with node at INDEX set as child of the node before it.
+FORM is a Lisp form that takes the last member of TREE
+immediately before INDEX (called \"parent\", bound to 'it') and
+the item at INDEX to be set as its child (bound to 'it-target')
+and returns a new \"parent\" node."
+  (declare (indent 1) (debug (form form form)))
+  (let ((i (make-symbol "index"))
+        (h (make-symbol "head"))
+        (T (make-symbol "tail")))
+    `(let ((,i ,index))
+       (unless (and (integerp ,i) (< 0 ,index))
+         (error "Cannot indent topmost item at this level"))
+       (-let (((,h ,T) (-split-at ,i ,tree)))
+         (if (not ,T) (error "Index over range: %s" ,i)
+           (let ((it-target (car ,T)))
+             (append (org-ml--map-last* ,form ,h) (cdr ,T))))))))
 
 ;; headline
 
@@ -4748,37 +4831,34 @@ exist."
   "Return HEADLINE node with child headline at INDEX demoted.
 Unlike `org-ml-headline-demote-subheadline' this will also demote the
 demoted headline node's children."
-  (cl-flet
-      ((append-demoted
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (org-ml--headline-subtree-shift-level 1 target-headline)))
-          (org-ml--map-children-nocheck*
-            (append it (list target-headline*))
-            parent-headline))))
-    (org-ml-headline-map-subheadlines*
-      (org-ml--indent-members #'append-demoted index it)
-      headline)))
+  (org-ml-headline-map-subheadlines*
+    (org-ml--tree-set-child* index
+      (org-ml--map-children-nocheck*
+       (-snoc it (org-ml--headline-subtree-shift-level 1 it-target))
+       it)
+      it)
+    headline))
 
 (defun org-ml-headline-demote-subheadline (index headline)
   "Return HEADLINE node with child headline at INDEX demoted.
 Unlike `org-ml-headline-demote-subtree' this will not demote the
 demoted headline node's children."
-  (cl-flet
-      ((append-demoted
-        (target-headline parent-headline)
-        (let ((target-headline*
-               (->> target-headline
-                    (org-ml-headline-map-subheadlines #'ignore)
-                    (org-ml--headline-shift-level 1)))
-              (headlines-in-target
-               (org-ml-headline-get-subheadlines target-headline)))
-          (org-ml--map-children-nocheck*
-            (append it (list target-headline*) headlines-in-target)
-            parent-headline))))
-    (org-ml-headline-map-subheadlines*
-      (org-ml--indent-members #'append-demoted index it)
-      headline)))
+  (org-ml-headline-map-subheadlines*
+    (org-ml--tree-set-child* index
+      (let* ((headlines-in-target (org-ml-headline-get-subheadlines it-target))
+             (tgt-children (org-ml-get-children it-target))
+             (tgt-pb (if (org-ml-is-type 'section (car tgt-children))
+                            (org-ml--get-property-nocheck :post-blank (car tgt-children))
+                          (org-ml--get-property-nocheck :pre-blank it-target)))
+             (tgt-headline* (->> it-target
+                                 (org-ml-headline-set-subheadlines nil)
+                                 (org-ml--headline-shift-level 1)
+                                 (org-ml--set-property-nocheck :post-blank tgt-pb))))
+        (org-ml--map-children-nocheck*
+         (append it (list tgt-headline*) headlines-in-target)
+         it))
+      it)
+    headline))
 
 ;; plain-list
 
@@ -4786,47 +4866,34 @@ demoted headline node's children."
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `org-ml-item-indent-item' this will also indent the indented item
 node's children."
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item* (org-ml-build-plain-list target-item)))
-          (org-ml--map-children-nocheck*
-            (append it (list target-item*))
-            parent-item))))
-    (org-ml--map-children-nocheck*
-      (org-ml--indent-members #'append-indented index it)
-      plain-list)))
+  (org-ml--map-children-nocheck*
+   (org-ml--tree-set-child* index
+     (org-ml--item-map-subitems* (-snoc it it-target) it)
+     it)
+   plain-list))
 
 (defun org-ml-plain-list-indent-item (index plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `org-ml-item-indent-item-tree' this will not indent the indented
 item node's children."
-  ;; TODO use remove/filter here might not be precise enough if the plain-list
-  ;; contains more than just items
-  (cl-flet
-      ((append-indented
-        (target-item parent-item)
-        (let ((target-item*
-               (->> target-item
-                    (org-ml--map-children-nocheck*
-                      (--remove (org-ml-is-type 'plain-list it) it))))
-              (plain-lists-in-target
-               (->> (org-ml-get-children target-item)
-                    (--filter (org-ml-is-type 'plain-list it)))))
-          (org-ml--map-children-nocheck*
-            (let ((plain-lists*
-                   (if plain-lists-in-target
-                       (org-ml--map-first*
-                        (org-ml--map-children-nocheck*
-                          (cons target-item* it)
-                          it)
-                        plain-lists-in-target)
-                     (list (org-ml-build-plain-list target-item*)))))
-              (org-ml--append-join-plain-lists it plain-lists*))
-            parent-item))))
-    (org-ml--map-children-nocheck*
-      (org-ml--indent-members #'append-indented index it)
-      plain-list)))
+  (org-ml--map-children-nocheck*
+   (org-ml--tree-set-child* index
+     (-let* (((h i pb r) (org-ml--item-get-subcomponents it-target))
+             (tgt-item* (org-ml--item-set-subcomponents `(,h nil nil nil) it-target)))
+       (org-ml--item-map-subcomponents*
+        (-let (((h* i* pb* r*) it))
+          (if r*
+              (let ((pl (-some->> (cons tgt-item* i)
+                          (apply #'org-ml-build-plain-list :post-blank pb)
+                          (list))))
+                (list h* i* pb* (append r* pl r)))
+            (--> (org-ml--map-last*
+                  (org-ml--map-property-nocheck* :post-blank (+ it pb*) it)
+                  i*)
+                 (list h* (append it (list tgt-item*) i) pb r))))
+        it))
+     it)
+   plain-list))
 
 ;;; unindentation (tree)
 
@@ -4849,53 +4916,49 @@ item node's children."
 ;; parameters for unindenting a tree:
 ;; - the index whose children are to be unindented
 
-(defun org-ml--outdent-members (index trim-fun extract-fun tree)
-  "Return TREE with children under INDEX unindented.
-TRIM-FUN is a unary function that is applied to the child list
-under INDEX and returns a modified child list with the unindented
-members removed. EXTRACT-FUN is a unary function that is applied to
-the child list under INDEX and returns the unindented children that
-will be spliced after INDEX."
-  (-let* (((head tail) (-split-at index tree))
-          (parent (-first-item tail))
-          (parent* (funcall trim-fun parent))
-          (unindented (funcall extract-fun parent)))
-    (append head (list parent*) unindented (-drop 1 tail))))
+(defmacro org-ml--split-children-at-index* (index form tree)
+  "Return TREE with node at INDEX split according to FORM.
+The node at INDEX will be bound to the symbol 'it' which is to be
+referenced in FORM, and FORM is to return a list like (PARENT
+CHILDREN) where PARENT is the modified node at INDEX and CHILDREN
+is a list of nodes that were children under PARENT but are to be
+spliced after parent. The new TREE will effectively splice the
+CHILDREN nodes after PARENT at the same level as PARENT."
+  (declare (indent 1) (debug (form form form)))
+  (let ((head (make-symbol "head"))
+        (tail (make-symbol "tail")))
+    `(-let* (((,head ,tail) (-split-at ,index ,tree))
+             (it (car ,tail))
+             ((parent children) ,form))
+       `(,@,head ,parent ,@children ,@(cdr ,tail)))))
 
 ;; headline
 
 (defun org-ml-headline-promote-all-subheadlines (index headline)
   "Return HEADLINE node with all child headlines under INDEX promoted."
-  (cl-flet
-      ((trim
-        (parent)
-        (org-ml-headline-map-subheadlines #'ignore parent))
-       (extract
-        (parent)
-        (->> (org-ml-get-children parent)
-             (org-ml--map* (org-ml--headline-subtree-shift-level -1 it)))))
-    (org-ml-headline-map-subheadlines*
-      (org-ml--outdent-members index #'trim #'extract it)
-      headline)))
+  (org-ml-headline-map-subheadlines*
+    (org-ml--split-children-at-index* index
+      (let ((children (->> (org-ml-get-children it)
+                           (org-ml--map* (org-ml--headline-subtree-shift-level -1 it))))
+            (parent (org-ml--set-children-nocheck nil it)))
+        (list parent children))
+      it)
+    headline))
 
 ;; plain-list
 
 (defun org-ml-plain-list-outdent-all-items (index plain-list)
   "Return PLAIN-LIST node with all child items under INDEX outdented."
-  (cl-flet
-      ((trim
-        (parent)
-        (org-ml--map-children-nocheck*
-          (--remove-first (org-ml-is-type 'plain-list it) it)
-          parent))
-       (extract
-        (parent)
-        (->> (org-ml-get-children parent)
-             (--first (org-ml-is-type 'plain-list it))
-             (org-ml-get-children))))
-    (org-ml--map-children-nocheck*
-      (org-ml--outdent-members index #'trim #'extract it)
-      plain-list)))
+  (org-ml--map-children-nocheck*
+   (org-ml--split-children-at-index* index
+     (-let* (((h i pb r) (org-ml--item-get-subcomponents it))
+             (parent (org-ml--item-set-subcomponents `(,h nil nil nil) it))
+             (i* (org-ml--map-last*
+                  (org-ml--map-property-nocheck* :post-blank (+ pb it) it)
+                  i)))
+       (list parent (append i* r)))
+     it)
+   plain-list))
 
 ;;; unindentation (single target)
 
@@ -4918,62 +4981,56 @@ will be spliced after INDEX."
 ;; - parent index (in this case 1 for 1.)
 ;; - child index (in this case 1 for 1.1)
 
-;; TODO these algorithms smell slow...and they are pretty confusing to read
-(defun org-ml--indent-after (indent-fun index node)
-  "Return NODE with INDENT-FUN applied to all child nodes after INDEX."
-  (if (< index (1- (length (org-ml-get-children node))))
-      (->> (funcall indent-fun (1+ index) node)
-           (org-ml--indent-after indent-fun index))
-    node))
-
 ;; headline
+
+;; TODO trigger error when child-index is out of range
 
 (defun org-ml-headline-promote-subheadline (index child-index headline)
   "Return HEADLINE node with a child headline under INDEX promoted.
 The specific child headline to promote is selected by CHILD-INDEX."
-  (cl-flet
-      ((trim
-        (parent)
-        (org-ml-headline-map-subheadlines* (-take child-index it) parent))
-       (extract
-        (parent)
-        (->> (org-ml--indent-after #'org-ml-headline-demote-subtree
-                                    child-index parent)
-             (org-ml-get-children)
-             (-drop child-index)
-             (org-ml--map* (org-ml--headline-subtree-shift-level -1 it)))))
-    (org-ml-headline-map-subheadlines*
-      (org-ml--outdent-members index #'trim #'extract it)
-      headline)))
+  (org-ml-headline-map-subheadlines*
+    (org-ml--split-children-at-index* index
+      (-let* (((head tail) (-split-at child-index (org-ml-get-children it)))
+              (target (->> (car tail)
+                           (org-ml--headline-shift-level -1)
+                           (org-ml-headline-map-subheadlines*
+                             (append it (cdr tail)))))
+              (parent (org-ml--set-children-nocheck head it)))
+        (list parent (list target)))
+      it)
+    headline))
 
 ;; plain-list
 
 (defun org-ml-plain-list-outdent-item (index child-index plain-list)
   "Return PLAIN-LIST node with a child item under INDEX outdented.
 The specific child item to outdent is selected by CHILD-INDEX."
-  (cl-flet
-      ((trim
-        (parent)
-        (org-ml--map-children-nocheck*
-          (if (= 0 index)
-              (--remove-first (org-ml-is-type 'plain-list it) it)
-            (--map-first (org-ml-is-type 'plain-list it)
-                         (org-ml--map-children-nocheck*
-                           (-take child-index it) it)
-                         it))
-          parent))
-       (extract
-        (parent)
-        (->>
-         (org-ml-get-children parent)
-         (--first (org-ml-is-type 'plain-list it))
-         (org-ml--indent-after #'org-ml-plain-list-indent-item-tree
-                               child-index)
-         (org-ml-get-children)
-         (-drop child-index))))
-    (org-ml--map-children-nocheck*
-      (org-ml--outdent-members index #'trim #'extract it)
-      plain-list)))
+  (org-ml--map-children-nocheck*
+   (org-ml--split-children-at-index* index
+     (-let* (((h i pb r) (org-ml--item-get-subcomponents it))
+             ((parent-i (tgt . tgt-i)) (-split-at child-index i))
+             (parent-pb (-some->> (-last-item parent-i)
+                          (org-ml-get-property :post-blank)))
+             (parent (->> (org-ml-set-property :post-blank 0 it)
+                          (org-ml--item-set-subcomponents
+                           `(,h ,parent-i ,parent-pb nil))))
+             (tgt-pb (-some->> tgt (org-ml-get-property :post-blank)))
+             (tgt* (-some->> tgt
+                     (org-ml--item-map-subcomponents*
+                      (-let* (((h* i* pb* r*) it)
+                              (h** (org-ml--map-last*
+                                    (org-ml-set-property :post-blank tgt-pb it)
+                                    h*)))
+                        (if (not r*) (list h** (append i* tgt-i) pb* r)
+                          (--> (apply #'org-ml-build-plain-list tgt-i)
+                               (list it)
+                               (append r* it r)
+                               (list h** i* pb* it)))))
+                     (org-ml-set-property :post-blank pb)
+                     (list))))
+       (list parent tgt*))
+     it)
+   plain-list))
 
 ;;; PRINTING FUNCTIONS
 
@@ -5827,6 +5884,7 @@ elements vs item elements."
                            (`table-row '(0 0))
                            (`table (if (eq type 'table-row) '(0 0) '(0)))
                            (`plain-list (if (eq type 'item) '(0 0) '(0)))
+                           (`item '(0 0))
                            (_ '(0)))))
           (--> (org-ml--get-descendent nesting tree)
                ;; set ending boundaries according to what we get from
@@ -5857,6 +5915,7 @@ specifically parse these, use the functions `org-ml-parse-section-at',
   "Return item node under POINT or nil if not on an item.
 This will return the item node even if POINT is not at the beginning
 of the line."
+  ;; TODO this doesn't work if not on the first item
   (save-excursion
     (goto-char point)
     (beginning-of-line)
