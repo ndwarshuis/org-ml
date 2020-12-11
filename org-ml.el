@@ -1816,6 +1816,83 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
 
 ;;; element nodes
 ;;
+;; item
+
+(defun org-ml--item-get-subcomponents (item)
+  "Return the children of ITEM broken down into subcomponents.
+The returned list will be of the form (HEAD SUBITEMS POST-BLANK
+REST) where HEAD consists of all nodes before the first nested
+plain-list, SUBITEMS will be all items in the nested plain-list,
+POST-BLANK will be the post-blank of the nested plain-list, and
+REST will be everything after the plain-list (which should be nil
+for all sensible items)."
+  (-let* (((h (s . r)) (->> (org-ml-get-children item)
+                            (--split-with (not (org-ml-is-type 'plain-list it)))))
+          (pb (if s (org-ml--get-property-nocheck :post-blank s) 0))
+          (i (org-ml-get-children s)))
+    (list h i pb r)))
+
+(defun org-ml--item-set-subcomponents (subcomponents item)
+  "Return the child subcomponents of ITEM.
+SUBCOMPONENTS is a list like that returned by
+`org-ml--item-get-subcomponents'."
+  (-let* (((head subitems sub-pb rest) subcomponents))
+    (-when-let (pb (cond
+                    (rest (-some->> (-last-item rest)
+                            (org-ml--get-property-nocheck :post-blank)))
+                    (subitems sub-pb)
+                    (head (-some->> (-last-item head)
+                            (org-ml--get-property-nocheck :post-blank)))))
+      (let ((rest* (-some->> rest
+                     (org-ml--map-last*
+                      (org-ml--set-property-nocheck :post-blank 0 it))))
+            (sublist (-some->> subitems
+                       (apply #'org-ml-build-plain-list
+                              :post-blank (if rest sub-pb 0))
+                       (list)))
+            (head* (-some->> head
+                     (org-ml--map-last*
+                      (org-ml--set-property-nocheck :post-blank 0 it)))))
+        (->> (org-ml--set-children-nocheck (append head* sublist rest*) item)
+             (org-ml--map-property-nocheck* :post-blank (+ pb it)))))))
+
+(defmacro org-ml--item-map-subcomponents* (form item)
+  "Return ITEM with subcomponents modified.
+FORM is a form where the subcomponents of item are bound to the
+symbol 'it' and returns modified subcomponents. The subcomponents
+will conform to those given in `org-ml--item-get-subcomponents'."
+  (declare (debug (form form)))
+  (let ((i (make-symbol "item")))
+    `(let ((,i ,item))
+       (let ((it (org-ml--item-get-subcomponents ,i)))
+         (org-ml--item-set-subcomponents ,form ,i)))))
+
+(defun org-ml--item-get-subitems (item)
+  "Return the subitems of ITEM."
+  (-let (((_ s _ _) (org-ml--item-get-subcomponents item)))
+    s))
+
+(defun org-ml--item-set-subitems (subitems item)
+  "Return ITEM with subitems set to SUBITEMS."
+  (org-ml--item-map-subcomponents*
+   (-let (((h _ p r) it))
+     (list h subitems p r))
+   item))
+
+(defmacro org-ml--item-map-subitems* (form item)
+  "Return a ITEM with FORM applied to its sublist if present.
+FORM is a Lisp form in which the symbol 'it' is bound to the
+items in the sub plain-list, and returns a modified list of
+items."
+  (declare (debug (form form)))
+  (let ((h (make-symbol "h"))
+        (p (make-symbol "p"))
+        (r (make-symbol "r")))
+    `(org-ml--item-map-subcomponents*
+      (-let (((,h it ,p ,r) it))
+        (list ,h ,form ,p ,r))
+      ,item)))
+
 ;; headline
 
 (defun org-ml--headline-shift-level (n headline)
@@ -4727,6 +4804,9 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
 ;; parameters for indenting:
 ;; - index of target to indent (1 in above example)
 
+;; TODO these mostly work except for whitespace edgecases, and those are really
+;; ugly to work around
+
 (defmacro org-ml--tree-set-child* (index form tree)
   "Return TREE with node at INDEX set as child of the node before it.
 FORM is a Lisp form that takes the last member of TREE
@@ -4734,14 +4814,16 @@ immediately before INDEX (called \"parent\", bound to 'it') and
 the item at INDEX to be set as its child (bound to 'it-target')
 and returns a new \"parent\" node."
   (declare (indent 1) (debug (form form form)))
-  (let ((i (make-symbol "index")))
+  (let ((i (make-symbol "index"))
+        (h (make-symbol "head"))
+        (T (make-symbol "tail")))
     `(let ((,i ,index))
        (unless (and (integerp ,i) (< 0 ,index))
          (error "Cannot indent topmost item at this level"))
-       (-let (((head tail) (-split-at ,i ,tree)))
-         (if (not tail) (error "Index over range: %s" ,i)
-           (let ((it-target (car tail)))
-             (append (org-ml--map-last* ,form head) (cdr tail))))))))
+       (-let (((,h ,T) (-split-at ,i ,tree)))
+         (if (not ,T) (error "Index over range: %s" ,i)
+           (let ((it-target (car ,T)))
+             (append (org-ml--map-last* ,form ,h) (cdr ,T))))))))
 
 ;; headline
 
@@ -4763,96 +4845,22 @@ Unlike `org-ml-headline-demote-subtree' this will not demote the
 demoted headline node's children."
   (org-ml-headline-map-subheadlines*
     (org-ml--tree-set-child* index
-      (let ((headlines-in-target (org-ml-headline-get-subheadlines it-target))
-            (target-headline* (->> it-target
-                                   (org-ml-headline-set-subheadlines nil)
-                                   (org-ml--headline-shift-level 1))))
+      (let* ((headlines-in-target (org-ml-headline-get-subheadlines it-target))
+             (tgt-children (org-ml-get-children it-target))
+             (tgt-pb (if (org-ml-is-type 'section (car tgt-children))
+                            (org-ml--get-property-nocheck :post-blank (car tgt-children))
+                          (org-ml--get-property-nocheck :pre-blank it-target)))
+             (tgt-headline* (->> it-target
+                                 (org-ml-headline-set-subheadlines nil)
+                                 (org-ml--headline-shift-level 1)
+                                 (org-ml--set-property-nocheck :post-blank tgt-pb))))
         (org-ml--map-children-nocheck*
-         (append it (list target-headline*) headlines-in-target)
+         (append it (list tgt-headline*) headlines-in-target)
          it))
       it)
     headline))
 
 ;; plain-list
-
-(defun org-ml--item-get-subcomponents (item)
-  (-let* (((h (s . r)) (->> (org-ml-get-children item)
-                            (--split-with (not (org-ml-is-type 'plain-list it)))))
-          (pb (if s (org-ml-get-property :post-blank s) 0))
-          (i (org-ml-get-children s)))
-    (list h i pb r)))
-
-(defun org-ml--item-set-subcomponents (subcomponents item)
-  (-let (((head subitems sub-pb rest) subcomponents))
-    (cond
-     ((and subitems rest)
-      (let ((pb (org-ml-get-property :post-blank (-last-item rest)))
-            (sublist (apply #'org-ml-build-plain-list :post-blank sub-pb subitems)))
-        (--> (org-ml--map-last*
-              (org-ml--set-property-nocheck :post-blank 0 it)
-              rest)
-             (append head (list sublist) it)
-             (org-ml-set-children it item)
-             (org-ml-map-property* :post-blank (+ pb it) it))))
-     (rest
-      (let ((pb (org-ml-get-property :post-blank (-last-item rest))))
-        (--> (org-ml--map-last*
-              (org-ml--set-property-nocheck :post-blank 0 it)
-              rest)
-             (append head it)
-             (org-ml-set-children it item)
-             (org-ml-map-property* :post-blank (+ pb it) it))))
-     (subitems
-      (--> (apply #'org-ml-build-plain-list subitems)
-           (org-ml--set-property-nocheck :post-blank 0 it)
-           (append head (list it))
-           (org-ml-set-children it item)
-           (org-ml-map-property* :post-blank (+ sub-pb it) it)))
-     (head
-      (let ((pb (org-ml-get-property :post-blank (-last-item head))))
-        (--> (org-ml--map-last*
-              (org-ml--set-property-nocheck :post-blank 0 it)
-              head)
-             (org-ml-set-children it item)
-             (org-ml-map-property* :post-blank (+ pb it) it))))
-     ;; if there is nothing to set, return nil instead of an empty list node
-     (t nil))))
-
-(defmacro org-ml--item-map-subcomponents* (form item)
-  (declare (debug (form form)))
-  (let ((i (make-symbol "item")))
-    `(let ((,i ,item))
-       (let ((it (org-ml--item-get-subcomponents ,i)))
-         (org-ml--item-set-subcomponents ,form ,i)))))
-
-(defun org-ml--item-get-head-sublist (item)
-  "Return the head and sublist of ITEM.
-The returned list will be like (HEAD SUBLIST) where SUBLIST is
-the first plain-list containing subitems and HEAD is everything
-before SUBLIST."
-  (->> (org-ml-get-children item)
-       (--split-with (not (org-ml-is-type 'plain-list it)))))
-
-(defun org-ml--item-get-subitems (item)
-  (-let (((_ s _ _) (org-ml--item-get-subcomponents item)))
-    s))
-
-(defun org-ml--item-set-subitems (subitems item)
-  (org-ml--item-map-subcomponents*
-   (-let (((h _ p r) it))
-     (list h subitems p r))
-   item))
-
-(defmacro org-ml--item-map-subitems* (form item)
-  "Return a ITEM with FORM applied to its sublist if present.
-FORM is a Lisp form in which the symbol 'it' is bound to the
-items in the sub plain-list, and returns a modified list of
-items."
-  (declare (debug (form form)))
-  `(org-ml--item-map-subcomponents*
-    (-let (((h it p r) it))
-      (list h ,form p r))
-    ,item))
 
 (defun org-ml-plain-list-indent-item-tree (index plain-list)
   "Return PLAIN-LIST node with child item at INDEX indented.
