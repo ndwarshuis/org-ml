@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.4.2
+;; Version: 5.4.3
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -6645,10 +6645,12 @@ of the following:
   `point-max' respectively.
 
 Each headline is obtained with `org-ml-parse-headline-at'."
-  (cl-flet
+  (cl-labels
       ((get-subheadlines
         (headline)
-        (cons headline (org-ml-headline-get-subheadlines headline))))
+        (->> (org-ml-headline-get-subheadlines headline)
+             (-mapcat #'get-subheadlines)
+             (cons headline))))
     (->> (org-ml--parse-patterns-where where "^\\*")
          (-mapcat #'get-subheadlines))))
 

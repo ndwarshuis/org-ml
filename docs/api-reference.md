@@ -825,6 +825,19 @@ Each headline is obtained with [`org-ml-parse-headline-at`](#org-ml-parse-headli
      (s-join ""))
  ;; => ""
 
+;; Given the following contents:
+; not headline
+; * one
+; ** two
+; *** three
+
+(->> (org-ml-get-headlines)
+     (-map #'org-ml-to-trimmed-string))
+ ;; => '("* one
+ ;     ** two
+ ;     *** three" "** two
+ ;     *** three" "*** three")
+
 ```
 
 #### org-ml-get-some-headlines `(where)`
@@ -7897,4 +7910,4 @@ Unfold the children of **`node`** if they exist.
 ```el
 no examples :(
 ```
-Version: 5.4.2
+Version: 5.4.3
