@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.4.3
+
+- fixed nested headline parsing for `org-ml-get-headlines` et al
+
 ## 5.4.2
 
 - make indent/outdent/promote/demote functions more accurate/faster

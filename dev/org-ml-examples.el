@@ -287,7 +287,14 @@
     (->> (org-ml-get-headlines)
          (-map #'org-ml-to-string)
          (s-join ""))
-    => "")
+    => ""
+    (:buffer "not headline"
+             "* one"
+             "** two"
+             "*** three")
+    (->> (org-ml-get-headlines)
+         (-map #'org-ml-to-trimmed-string))
+    => '("* one\n** two\n*** three" "** two\n*** three" "*** three"))
 
   (defexamples-content org-ml-get-some-headlines
     nil
