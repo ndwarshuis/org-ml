@@ -3207,101 +3207,6 @@ is the same as that described in `org-ml-build-planning!'."
          (ts (org-ml--planning-list-to-timestamp active planning-list)))
     (org-ml-set-property prop ts planning)))
 
-;; affiliated keywords
-
-(defun org-ml-get-affiliated-keyword (key node)
-  "Get the value of affiliated keyword KEY in NODE.
-
-See `org-ml-set-affiliated-keyword' for the meaning of KEY.
-
-WARNING: This function is depreciated and will be removed in a
-future major revision. Its functionality has been merged with
-`org-ml-get-property'."
-  (unless (or (memq key '(:caption :header :name :plot :results))
-              (s-starts-with? ":attr_" (symbol-name key)))
-    (org-ml--arg-error "Invalid affiliated keyword requested: %s" key))
-  (org-ml--get-property-nocheck key node))
-
-(defun org-ml-set-affiliated-keyword (key value node)
-  "Set affiliated keyword KEY in NODE to VALUE.
-This is just like `org-ml--set-property-nocheck' except it will
-delete KEY from the plist if VALUE is nil.
-
-NOTE that VALUE should reflect the required value of affiliated
-keyword given by KEY. The format for each keyword is given below:
-- NAME `STRING': `STRING'
-- PLOT `STRING': `STRING'
-- RESULTS[`STRING1'] `STRING2': (STRING2 . STRING1)
-  where `STRING1' may be nil
-- CAPTION[`STRING1'] `STRING2': ((STRING2 . STRING1) ...)
-  where `STRING1' may be nil and multiple list members
-  correspond to multiple caption entries
-- HEADERS `STRING': (STRING ...) where multiple list members
-  correspond to multiple headers entries
-- CAPTION[`STRING'] `SECSTRING': ((STRING . SECSTRING) ...)
-  where `STRING' may be nil and multiple list members
-  correspond to multiple caption entries
-
-In the case of ATTR_BACKEND, KEY is like `:attr_x' where `x'
-corresponds to BACKEND and VALUE is a list of strings
-corresponding to multiple entries of the attribute.
-
-WARNING: This function is depreciated and will be removed in a
-future major revision. Its functionality has been merged with
-`org-ml-set-property'"
-  (unless (org-ml-is-any-type org-ml--element-nodes-with-affiliated node)
-    (org-ml--arg-error
-     "Node type '%s' does not allow affiliated keywords"
-     (org-ml-get-type node)))
-  (let ((props
-         (if value
-             (plist-put (org-ml-get-all-properties node) key value)
-           (org-ml--plist-remove key (org-ml-get-all-properties node)))))
-    (org-ml--construct (org-ml-get-type node) props (org-ml-get-children node))))
-
-(org-ml--defun-anaphoric* org-ml-map-affiliated-keyword (key fun node)
-  "Apply FUN to value of affiliated keyword KEY in NODE.
-
-See `org-ml-set-affiliated-keyword' for the meaning of KEY.
-
-WARNING: This function is depreciated and will be removed in a
-future major revision. Its functionality has been merged with
-`org-ml-map-property'."
-  (-some--> (org-ml-get-affiliated-keyword key node)
-    (org-ml-set-affiliated-keyword key (funcall fun it) node)))
-
-(defun org-ml-set-caption! (caption node)
-  "Set the caption affiliated keyword of NODE.
-
-CAPTION can be one of the following:
-- STRING: produces #+CAPTION: `STRING'
-- (STRING1 STRING2): produces #+CAPTION[`STRING2']: `STRING1'
-- ((STRING1 STRING2) ...): like above but makes multiple
-  caption entries
-- nil: removes all captions
-
-WARNING: This function is depreciated and will be removed in a
-future major revision. Its functionality has been merged with
-`org-ml-set-property'."
-  (cl-flet
-      ((is-metacell
-        (cell)
-        (pcase cell (`(,(pred stringp) ,(pred stringp)) t)))
-       (convert-metacell
-        (cell)
-        (cons (org-ml-build-secondary-string! (cadr cell)) (car cell))))
-    (let ((caption
-           (pcase caption
-             ((pred stringp)
-              (list (list (org-ml-build-secondary-string! caption))))
-             ((pred is-metacell)
-              (list (convert-metacell caption)))
-             ((pred (lambda (x) (-all? #'is-metacell x)))
-              (-map #'convert-metacell caption))
-             (`nil nil)
-             (e (org-ml--arg-error "Invalid caption given: %s" e)))))
-      (org-ml-set-affiliated-keyword :caption caption node))))
-
 ;;; PUBLIC BRANCH/CHILD FUNCTIONS
 
 ;;; polymorphic
@@ -6707,7 +6612,104 @@ nil (see this for use and meaning of FUN)."
          (nreverse it)
          (--each it (org-ml~update nil fun it)))))
 
-;; depreciated functions
+;;; depreciated functions
+
+;; affiliated keywords
+
+(defun org-ml-get-affiliated-keyword (key node)
+  "Get the value of affiliated keyword KEY in NODE.
+
+See `org-ml-set-affiliated-keyword' for the meaning of KEY.
+
+WARNING: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+`org-ml-get-property'."
+  (unless (or (memq key '(:caption :header :name :plot :results))
+              (s-starts-with? ":attr_" (symbol-name key)))
+    (org-ml--arg-error "Invalid affiliated keyword requested: %s" key))
+  (org-ml--get-property-nocheck key node))
+
+(defun org-ml-set-affiliated-keyword (key value node)
+  "Set affiliated keyword KEY in NODE to VALUE.
+This is just like `org-ml--set-property-nocheck' except it will
+delete KEY from the plist if VALUE is nil.
+
+NOTE that VALUE should reflect the required value of affiliated
+keyword given by KEY. The format for each keyword is given below:
+- NAME `STRING': `STRING'
+- PLOT `STRING': `STRING'
+- RESULTS[`STRING1'] `STRING2': (STRING2 . STRING1)
+  where `STRING1' may be nil
+- CAPTION[`STRING1'] `STRING2': ((STRING2 . STRING1) ...)
+  where `STRING1' may be nil and multiple list members
+  correspond to multiple caption entries
+- HEADERS `STRING': (STRING ...) where multiple list members
+  correspond to multiple headers entries
+- CAPTION[`STRING'] `SECSTRING': ((STRING . SECSTRING) ...)
+  where `STRING' may be nil and multiple list members
+  correspond to multiple caption entries
+
+In the case of ATTR_BACKEND, KEY is like `:attr_x' where `x'
+corresponds to BACKEND and VALUE is a list of strings
+corresponding to multiple entries of the attribute.
+
+WARNING: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+`org-ml-set-property'"
+  (unless (org-ml-is-any-type org-ml--element-nodes-with-affiliated node)
+    (org-ml--arg-error
+     "Node type '%s' does not allow affiliated keywords"
+     (org-ml-get-type node)))
+  (let ((props
+         (if value
+             (plist-put (org-ml-get-all-properties node) key value)
+           (org-ml--plist-remove key (org-ml-get-all-properties node)))))
+    (org-ml--construct (org-ml-get-type node) props (org-ml-get-children node))))
+
+(org-ml--defun-anaphoric* org-ml-map-affiliated-keyword (key fun node)
+  "Apply FUN to value of affiliated keyword KEY in NODE.
+
+See `org-ml-set-affiliated-keyword' for the meaning of KEY.
+
+WARNING: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+`org-ml-map-property'."
+  (-some--> (org-ml-get-affiliated-keyword key node)
+    (org-ml-set-affiliated-keyword key (funcall fun it) node)))
+
+(defun org-ml-set-caption! (caption node)
+  "Set the caption affiliated keyword of NODE.
+
+CAPTION can be one of the following:
+- STRING: produces #+CAPTION: `STRING'
+- (STRING1 STRING2): produces #+CAPTION[`STRING2']: `STRING1'
+- ((STRING1 STRING2) ...): like above but makes multiple
+  caption entries
+- nil: removes all captions
+
+WARNING: This function is depreciated and will be removed in a
+future major revision. Its functionality has been merged with
+`org-ml-set-property'."
+  (cl-flet
+      ((is-metacell
+        (cell)
+        (pcase cell (`(,(pred stringp) ,(pred stringp)) t)))
+       (convert-metacell
+        (cell)
+        (cons (org-ml-build-secondary-string! (cadr cell)) (car cell))))
+    (let ((caption
+           (pcase caption
+             ((pred stringp)
+              (list (list (org-ml-build-secondary-string! caption))))
+             ((pred is-metacell)
+              (list (convert-metacell caption)))
+             ((pred (lambda (x) (-all? #'is-metacell x)))
+              (-map #'convert-metacell caption))
+             (`nil nil)
+             (e (org-ml--arg-error "Invalid caption given: %s" e)))))
+      (org-ml-set-affiliated-keyword :caption caption node))))
+
+;; headline batch processing
 
 (defalias 'org-ml-get-some-headlines 'org-ml-parse-headlines)
 
