@@ -23,10 +23,8 @@ Parse buffers to trees.
 * [org-ml-parse-section-at](#org-ml-parse-section-at-point) `(point)`
 * [org-ml-parse-this-toplevel-section](#org-ml-parse-this-toplevel-section-nil) `nil`
 * [org-ml-this-buffer-has-headlines](#org-ml-this-buffer-has-headlines-nil) `nil`
-* [org-ml-get-headlines](#org-ml-get-headlines-nil) `nil`
-* [org-ml-get-some-headlines](#org-ml-get-some-headlines-where) `(where)`
-* [org-ml-get-subtrees](#org-ml-get-subtrees-nil) `nil`
-* [org-ml-get-some-subtrees](#org-ml-get-some-subtrees-where) `(where)`
+* [org-ml-parse-headlines](#org-ml-parse-headlines-which) `(which)`
+* [org-ml-parse-subtrees](#org-ml-parse-subtrees-which) `(which)`
 
 ## Building
 
@@ -389,10 +387,8 @@ Map node manipulations into buffers.
 * [org-ml-update-headline-at](#org-ml-update-headline-at-point-fun) `(point fun)`
 * [org-ml-update-subtree-at](#org-ml-update-subtree-at-point-fun) `(point fun)`
 * [org-ml-update-section-at](#org-ml-update-section-at-point-fun) `(point fun)`
-* [org-ml-do-some-headlines](#org-ml-do-some-headlines-where-fun) `(where fun)`
-* [org-ml-do-headlines](#org-ml-do-headlines-fun) `(fun)`
-* [org-ml-do-some-subtrees](#org-ml-do-some-subtrees-where-fun) `(where fun)`
-* [org-ml-do-subtrees](#org-ml-do-subtrees-fun) `(fun)`
+* [org-ml-update-headlines](#org-ml-update-headlines-which-fun) `(which fun)`
+* [org-ml-update-subtrees](#org-ml-update-subtrees-which-fun) `(which fun)`
 
 ### Misc
 
@@ -797,9 +793,21 @@ Return t if the current buffer has headlines, else return nil.
 
 ```
 
-#### org-ml-get-headlines `nil`
+#### org-ml-parse-headlines `(which)`
 
-Return list of all headline nodes from current buffer.
+Return list of headline nodes from current buffer.
+
+**`which`** describes the location of headlines to be parsed and is one
+of the following:
+- `n`: parse up to index `n` headlines (which 0 is the first); if negative
+    start counting from the last headline (which -1 refers to the last)
+- `(m n)`: like `n` but parse after index `m` headlines; `m` and `n` may both
+    be similarly negative
+- [`a` `b`]: parse all headlines whose first point falls between points
+    `a` and `b` in the buffer; if `a` and `b` are nil, use `point-min` and
+    `point-max` respectively.
+- 'all': parse all headlines (equivalent to [nil nil])
+
 Each headline is obtained with [`org-ml-parse-headline-at`](#org-ml-parse-headline-at-point).
 
 ```el
@@ -809,7 +817,7 @@ Each headline is obtained with [`org-ml-parse-headline-at`](#org-ml-parse-headli
 ; * two
 ; * three
 
-(->> (org-ml-get-headlines)
+(->> (org-ml-parse-headlines 'all)
      (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
@@ -820,7 +828,7 @@ Each headline is obtained with [`org-ml-parse-headline-at`](#org-ml-parse-headli
 ;; Given the following contents:
 ; not headline
 
-(->> (org-ml-get-headlines)
+(->> (org-ml-parse-headlines 'all)
      (-map #'org-ml-to-string)
      (s-join ""))
  ;; => ""
@@ -831,52 +839,33 @@ Each headline is obtained with [`org-ml-parse-headline-at`](#org-ml-parse-headli
 ; ** two
 ; *** three
 
-(->> (org-ml-get-headlines)
+(->> (org-ml-parse-headlines 'all)
      (-map #'org-ml-to-trimmed-string))
  ;; => '("* one
  ;     ** two
  ;     *** three" "** two
  ;     *** three" "*** three")
 
-```
-
-#### org-ml-get-some-headlines `(where)`
-
-Return list of headline nodes from current buffer.
-
-**`where`** describes the location of headlines to be parsed and is one
-of the following:
-- `n`: parse up to index `n` headlines (where 0 is the first); if negative
-    start counting from the last headline (where -1 refers to the last)
-- `(m n)`: like `n` but parse after index `m` headlines; `m` and `n` may both
-    be similarly negative
-- [`a` `b`]: parse all headlines whose first point falls between points
-    `a` and `b` in the buffer; if `a` and `b` are nil, use `point-min` and
-    `point-max` respectively.
-
-Each headline is obtained with [`org-ml-parse-headline-at`](#org-ml-parse-headline-at-point).
-
-```el
 ;; Given the following contents:
 ; not headline
 ; * one
 ; * two
 ; * three
 
-(->> (org-ml-get-some-headlines 0)
+(->> (org-ml-parse-headlines 0)
      (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
  ;      "
 
-(->> (org-ml-get-some-headlines '(0 1))
+(->> (org-ml-parse-headlines '(0 1))
      (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
  ;      * two
  ;      "
 
-(->> (org-ml-get-some-headlines [10 25])
+(->> (org-ml-parse-headlines [10 25])
      (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
@@ -885,11 +874,12 @@ Each headline is obtained with [`org-ml-parse-headline-at`](#org-ml-parse-headli
 
 ```
 
-#### org-ml-get-subtrees `nil`
+#### org-ml-parse-subtrees `(which)`
 
-Return list of all subtree nodes from current buffer.
+Return list of subtree nodes from current buffer.
 
-Each subtree is obtained with [`org-ml-parse-subtree-at`](#org-ml-parse-subtree-at-point).
+**`which`** has analogous meaning to that in [`org-ml-parse-headlines`](#org-ml-parse-headlines-which)
+except applied to subtrees not individual headlines.
 
 ```el
 ;; Given the following contents:
@@ -901,7 +891,7 @@ Each subtree is obtained with [`org-ml-parse-subtree-at`](#org-ml-parse-subtree-
 ; * three
 ; ** _three
 
-(->> (org-ml-get-subtrees)
+(->> (org-ml-parse-subtrees 'all)
      (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
@@ -915,22 +905,11 @@ Each subtree is obtained with [`org-ml-parse-subtree-at`](#org-ml-parse-subtree-
 ;; Given the following contents:
 ; not headline
 
-(->> (org-ml-get-subtrees)
+(->> (org-ml-parse-subtrees 'all)
      (-map #'org-ml-to-string)
      (s-join ""))
  ;; => ""
 
-```
-
-#### org-ml-get-some-subtrees `(where)`
-
-Return list of subtree nodes from current buffer.
-
-See [`org-ml-get-some-headlines`](#org-ml-get-some-headlines-where) for the meaning of **`where`**.
-
-Each subtree is obtained with [`org-ml-parse-subtree-at`](#org-ml-parse-subtree-at-point).
-
-```el
 ;; Given the following contents:
 ; not headline
 ; * one
@@ -940,14 +919,14 @@ Each subtree is obtained with [`org-ml-parse-subtree-at`](#org-ml-parse-subtree-
 ; * three
 ; ** _three
 
-(->> (org-ml-get-some-subtrees 0)
+(->> (org-ml-parse-subtrees 0)
      (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
  ;      ** _one
  ;      "
 
-(->> (org-ml-get-some-subtrees '(0 1))
+(->> (org-ml-parse-subtrees '(0 1))
      (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
@@ -956,7 +935,7 @@ Each subtree is obtained with [`org-ml-parse-subtree-at`](#org-ml-parse-subtree-
  ;      ** _two
  ;      "
 
-(->> (org-ml-get-some-subtrees [10 30])
+(->> (org-ml-parse-subtrees [10 30])
      (-map #'org-ml-to-string)
      (s-join ""))
  ;; => "* one
@@ -7744,14 +7723,14 @@ See [`org-ml-update`](#org-ml-update-fun-node) for what this means.
 
 ```
 
-#### org-ml-do-some-headlines `(where fun)`
+#### org-ml-update-headlines `(which fun)`
 
 Update some headlines in the current using **`fun`**.
 
-See [`org-ml-get-some-headlines`](#org-ml-get-some-headlines-where) for the meaning of **`where`**.
+See [`org-ml-parse-headlines`](#org-ml-parse-headlines-which) for the meaning of **`which`**.
 
-Headlines are updated using `org-ml~update` with
-`diff-arg` set to nil (see this for use and meaning of **`fun`**).
+Headlines are updated using `org-ml~update` with `diff-arg` set to
+nil (see this for use and meaning of **`fun`**).
 
 ```el
 ;; Given the following contents:
@@ -7759,49 +7738,39 @@ Headlines are updated using `org-ml~update` with
 ; * two
 ; * three
 
-(org-ml-do-some-headlines* 0 (org-ml-set-property :todo-keyword "DONE" it))
+(org-ml-update-headlines* 0 (org-ml-set-property :todo-keyword "DONE" it))
  ;; Output these buffer contents
  ;; $> "* DONE one
  ;      * two
  ;      * three"
 
-(org-ml-do-some-headlines* '(0 1)
+(org-ml-update-headlines* '(0 1)
   (org-ml-set-property :todo-keyword "DONE" it))
  ;; Output these buffer contents
  ;; $> "* DONE one
  ;      * DONE two
  ;      * three"
 
-(org-ml-do-some-headlines* [2 nil]
+(org-ml-update-headlines* [2 nil]
   (org-ml-set-property :todo-keyword "DONE" it))
  ;; Output these buffer contents
  ;; $> "* one
  ;      * DONE two
  ;      * DONE three"
 
-(org-ml-do-some-headlines* [2 10]
+(org-ml-update-headlines* [2 10]
   (org-ml-set-property :todo-keyword "DONE" it))
  ;; Output these buffer contents
  ;; $> "* one
  ;      * DONE two
  ;      * three"
 
-```
-
-#### org-ml-do-headlines `(fun)`
-
-Update all headlines in the current buffer using **`fun`**.
-
-Headlines are updated using `org-ml-update-this-headline` (see this for
-use and meaning of **`fun`**).
-
-```el
 ;; Given the following contents:
 ; * one
 ; * two
 ; * three
 
-(org-ml-do-headlines* (org-ml-set-property :todo-keyword "DONE" it))
+(org-ml-update-headlines* 'all (org-ml-set-property :todo-keyword "DONE" it))
  ;; Output these buffer contents
  ;; $> "* DONE one
  ;      * DONE two
@@ -7809,14 +7778,14 @@ use and meaning of **`fun`**).
 
 ```
 
-#### org-ml-do-some-subtrees `(where fun)`
+#### org-ml-update-subtrees `(which fun)`
 
 Update some toplevel subtrees in the current buffer using **`fun`**.
 
-See [`org-ml-get-some-headlines`](#org-ml-get-some-headlines-where) for the meaning of **`where`**.
+See [`org-ml-parse-subtrees`](#org-ml-parse-subtrees-which) for the meaning of **`which`**.
 
-Subtrees are updated using `org-ml-update-this-subtree` (see this for use
-and meaning of **`fun`**).
+Subtrees are updated using `org-ml~update` with `diff-arg` set to
+nil (see this for use and meaning of **`fun`**).
 
 ```el
 ;; Given the following contents:
@@ -7862,24 +7831,6 @@ and meaning of **`fun`**).
 ; ** DONE _one
 ; * three [/]
 ; ** DONE _one
-
-```
-
-#### org-ml-do-subtrees `(fun)`
-
-Update all toplevel subtrees in the current buffer using **`fun`**.
-
-Subtrees are updated using `org-ml-update-this-subtree` (see this for use
-and meaning of **`fun`**).
-
-```el
-;; Given the following contents:
-; * one [/]
-; ** DONE _one
-; ** DONE _two
-; * two [/]
-; ** DONE _one
-; ** DONE _two
 
 
 ;; Given the following contents:

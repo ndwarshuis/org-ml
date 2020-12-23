@@ -10,6 +10,10 @@ A functional API for org-mode inspired by
 - `org-ml-get/set/map-affiliated-keyword` and `org-ml-set-caption!` have been
   merged with `org-ml-get/set/map-property` and will be removed in a later
   revision
+- `org-ml-do-(some-)headlines`, `org-ml-do-(some-)subtrees`,
+  `org-ml-get-(some-)headlines`, and `org-ml-get-(some-)subtrees` are now
+  depreciated. Use `org-ml-parse-headlines`, `org-ml-parse-subtrees`,
+  `org-ml-update-headlines`, and `org-ml-update-subtres` instead.
 
 # Installation
 

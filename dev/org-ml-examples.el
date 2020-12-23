@@ -270,13 +270,13 @@
     (org-ml-this-buffer-has-headlines)
     => nil)
 
-  (defexamples-content org-ml-get-headlines
+  (defexamples-content org-ml-parse-headlines
     nil
     (:buffer "not headline"
              "* one"
              "* two"
              "* three")
-    (->> (org-ml-get-headlines)
+    (->> (org-ml-parse-headlines 'all)
          (-map #'org-ml-to-string)
          (s-join ""))
     => (:result "* one"
@@ -284,7 +284,7 @@
                 "* three"
                 "")
     (:buffer "not headline")
-    (->> (org-ml-get-headlines)
+    (->> (org-ml-parse-headlines 'all)
          (-map #'org-ml-to-string)
          (s-join ""))
     => ""
@@ -292,32 +292,30 @@
              "* one"
              "** two"
              "*** three")
-    (->> (org-ml-get-headlines)
+    (->> (org-ml-parse-headlines 'all)
          (-map #'org-ml-to-trimmed-string))
-    => '("* one\n** two\n*** three" "** two\n*** three" "*** three"))
+    => '("* one\n** two\n*** three" "** two\n*** three" "*** three")
 
-  (defexamples-content org-ml-get-some-headlines
-    nil
     (:buffer "not headline"
              "* one"
              "* two"
              "* three")
-    (->> (org-ml-get-some-headlines 0)
+    (->> (org-ml-parse-headlines 0)
          (-map #'org-ml-to-string)
          (s-join ""))
     => "* one\n"
-    (->> (org-ml-get-some-headlines '(0 1))
+    (->> (org-ml-parse-headlines '(0 1))
          (-map #'org-ml-to-string)
          (s-join ""))
     => (:result "* one"
                 "* two\n")
-    (->> (org-ml-get-some-headlines [10 25])
+    (->> (org-ml-parse-headlines [10 25])
          (-map #'org-ml-to-string)
          (s-join ""))
     => (:result "* one"
                 "* two\n"))
 
-  (defexamples-content org-ml-get-subtrees
+  (defexamples-content org-ml-parse-subtrees
     nil
     (:buffer "not headline"
              "* one"
@@ -326,7 +324,7 @@
              "** _two"
              "* three"
              "** _three")
-    (->> (org-ml-get-subtrees)
+    (->> (org-ml-parse-subtrees 'all)
          (-map #'org-ml-to-string)
          (s-join ""))
     => (:result "* one"
@@ -336,13 +334,11 @@
                 "* three"
                 "** _three\n")
     (:buffer "not headline")
-    (->> (org-ml-get-subtrees)
+    (->> (org-ml-parse-subtrees 'all)
          (-map #'org-ml-to-string)
          (s-join ""))
-    => "")
+    => ""
 
-  (defexamples-content org-ml-get-some-subtrees
-    nil
     (:buffer "not headline"
              "* one"
              "** _one"
@@ -350,19 +346,19 @@
              "** _two"
              "* three"
              "** _three")
-    (->> (org-ml-get-some-subtrees 0)
+    (->> (org-ml-parse-subtrees 0)
          (-map #'org-ml-to-string)
          (s-join ""))
     => (:result "* one"
                 "** _one\n")
-    (->> (org-ml-get-some-subtrees '(0 1))
+    (->> (org-ml-parse-subtrees '(0 1))
          (-map #'org-ml-to-string)
          (s-join ""))
     => (:result "* one"
                 "** _one"
                 "* two"
                 "** _two\n")
-    (->> (org-ml-get-some-subtrees [10 30])
+    (->> (org-ml-parse-subtrees [10 30])
          (-map #'org-ml-to-string)
          (s-join ""))
     => (:result "* one"
@@ -6230,44 +6226,42 @@
                   "#+key2: val2"
                   "* irrelevant headline"))
 
-    (defexamples-content org-ml-do-some-headlines
+    (defexamples-content org-ml-update-headlines
       nil
       (:buffer "* one"
                "* two"
                "* three")
-      (org-ml-do-some-headlines* 0
+      (org-ml-update-headlines* 0
         (org-ml-set-property :todo-keyword "DONE" it))
       $> (:result "* DONE one"
                   "* two"
                   "* three")
-      (org-ml-do-some-headlines* '(0 1)
+      (org-ml-update-headlines* '(0 1)
         (org-ml-set-property :todo-keyword "DONE" it))
       $> (:result "* DONE one"
                   "* DONE two"
                   "* three")
-      (org-ml-do-some-headlines* [2 nil]
+      (org-ml-update-headlines* [2 nil]
         (org-ml-set-property :todo-keyword "DONE" it))
       $> (:result "* one"
                   "* DONE two"
                   "* DONE three")
-      (org-ml-do-some-headlines* [2 10]
+      (org-ml-update-headlines* [2 10]
         (org-ml-set-property :todo-keyword "DONE" it))
       $> (:result "* one"
                   "* DONE two"
-                  "* three"))
+                  "* three")
 
-    (defexamples-content org-ml-do-headlines
-      nil
       (:buffer "* one"
                "* two"
                "* three")
-      (org-ml-do-headlines*
+      (org-ml-update-headlines* 'all
         (org-ml-set-property :todo-keyword "DONE" it))
       $> (:result "* DONE one"
                   "* DONE two"
                   "* DONE three"))
 
-    (defexamples-content org-ml-do-some-subtrees
+    (defexamples-content org-ml-update-subtrees
       nil
       (:buffer "* one [/]"
                "** DONE _one"
@@ -6275,7 +6269,7 @@
                "** DONE _one"
                "* three [/]"
                "** DONE _one")
-      (org-ml-do-some-subtrees* 0
+      (org-ml-update-subtrees* 0
         (org-ml-headline-update-todo-statistics))
       $> (:buffer "* one [1/1]"
                   "** DONE _one"
@@ -6283,7 +6277,7 @@
                   "** DONE _one"
                   "* three [/]"
                   "** DONE _one")
-      (org-ml-do-some-subtrees* '(0 1)
+      (org-ml-update-subtrees* '(0 1)
         (org-ml-headline-update-todo-statistics))
       $> (:buffer "* one [1/1]"
                   "** DONE _one"
@@ -6291,7 +6285,7 @@
                   "** DONE _one"
                   "* three [/]"
                   "** DONE _one")
-      (org-ml-do-some-subtrees* [2 nil]
+      (org-ml-update-subtrees* [2 nil]
         (org-ml-headline-update-todo-statistics))
       $> (:buffer "* one [/]"
                   "** DONE _one"
@@ -6299,24 +6293,22 @@
                   "** DONE _one"
                   "* three [1/1]"
                   "** DONE _one")
-      (org-ml-do-some-subtrees* [nil 5]
+      (org-ml-update-subtrees* [nil 5]
         (org-ml-headline-update-todo-statistics))
       $> (:buffer "* one [1/1]"
                   "** DONE _one"
                   "* two [/]"
                   "** DONE _one"
                   "* three [/]"
-                  "** DONE _one"))
+                  "** DONE _one")
 
-    (defexamples-content org-ml-do-subtrees
-      nil
       (:buffer "* one [/]"
                "** DONE _one"
                "** DONE _two"
                "* two [/]"
                "** DONE _one"
                "** DONE _two")
-      (org-ml-do-subtrees*
+      (org-ml-do-subtrees* 'all
         (org-ml-headline-update-todo-statistics))
       $> (:buffer "* one [2/2]"
                   "** DONE _one"
