@@ -6532,7 +6532,7 @@ FOLD-STATE may be one of:
       (all
        (org-ml-unfold headline)))))
 
-;;; headline iteration
+;;; headline batch processing
 
 (defun org-ml--get-forward-bounds (m n re)
   "Return the boundaries of headlines to parse.
@@ -6600,9 +6600,9 @@ and PEND is the end of the headline immediately before END."
                    (point-max))))
         (list b e)))))
 
-(defun org-ml--parse-patterns-where (where re)
-  "Return the parse boundaries of a headline based on WHERE.
-See `org-ml-get-some-headlines' for the meaning of WHERE. RE is a
+(defun org-ml--parse-patterns-where (which re)
+  "Return the parse boundaries of a headline based on WHICH.
+See `org-ml-get-some-headlines' for the meaning of WHICH. RE is a
 regular expression used to search for the next headline."
   (declare (indent 1))
   (cl-flet
@@ -6610,8 +6610,10 @@ regular expression used to search for the next headline."
         (x)
         (or (null x) (integerp x))))
     (-let (((b e)
-            (pcase where
+            (pcase which
               ;; parse N
+              (`all
+               (org-ml--get-region-bounds (point-min) (point-max) re))
               ((and (pred integerp) n)
                (if (<= 0 n) (org-ml--get-forward-bounds 0 n re)
                  (org-ml--get-backward-bounds 0 n re)))
@@ -6627,22 +6629,23 @@ regular expression used to search for the next headline."
                (let ((a (or a (point-min)))
                      (b (or b (point-max))))
                  (org-ml--get-region-bounds a b re)))
-              (e (org-ml--arg-error "Invalid 'where' specification: Got %S" e)))))
+              (e (org-ml--arg-error "Invalid 'which' specification: Got %S" e)))))
       (when (and b e)
         (org-element--parse-elements b e 'first-section nil nil nil nil)))))
 
-(defun org-ml-get-some-headlines (where)
+(defun org-ml-parse-headlines (which)
   "Return list of headline nodes from current buffer.
 
-WHERE describes the location of headlines to be parsed and is one
+WHICH describes the location of headlines to be parsed and is one
 of the following:
-- N: parse up to index N headlines (where 0 is the first); if negative
-  start counting from the last headline (where -1 refers to the last)
+- N: parse up to index N headlines (which 0 is the first); if negative
+  start counting from the last headline (which -1 refers to the last)
 - (M N): like N but parse after index M headlines; M and N may both
   be similarly negative
 - [A B]: parse all headlines whose first point falls between points
   A and B in the buffer; if A and B are nil, use `point-min' and
   `point-max' respectively.
+- 'all': parse all headlines (equivalent to [nil nil])
 
 Each headline is obtained with `org-ml-parse-headline-at'."
   (cl-labels
@@ -6651,35 +6654,23 @@ Each headline is obtained with `org-ml-parse-headline-at'."
         (->> (org-ml-headline-get-subheadlines headline)
              (-mapcat #'get-subheadlines)
              (cons headline))))
-    (->> (org-ml--parse-patterns-where where "^\\*")
+    (->> (org-ml--parse-patterns-where which "^\\*")
          (-mapcat #'get-subheadlines))))
 
-(defun org-ml-get-headlines ()
-  "Return list of all headline nodes from current buffer.
-Each headline is obtained with `org-ml-parse-headline-at'."
-  (org-ml-get-some-headlines [nil nil]))
-
-(defun org-ml-get-some-subtrees (where)
+(defun org-ml-parse-subtrees (which)
   "Return list of subtree nodes from current buffer.
 
-See `org-ml-get-some-headlines' for the meaning of WHERE.
+WHICH has analogous meaning to that in `org-ml-parse-headlines'
+except applied to subtrees not individual headlines."
+  (org-ml--parse-patterns-where which "^\\* "))
 
-Each subtree is obtained with `org-ml-parse-subtree-at'."
-  (org-ml--parse-patterns-where where "^\\* "))
-
-(defun org-ml-get-subtrees ()
-  "Return list of all subtree nodes from current buffer.
-
-Each subtree is obtained with `org-ml-parse-subtree-at'."
-  (org-ml-get-some-subtrees [nil nil]))
-
-(org-ml--defun* org-ml-do-some-headlines (where fun)
+(org-ml--defun* org-ml-update-headlines (which fun)
   "Update some headlines in the current using FUN.
 
-See `org-ml-get-some-headlines' for the meaning of WHERE.
+See `org-ml-parse-headlines' for the meaning of WHICH.
 
-Headlines are updated using `org-ml~update' with
-DIFF-ARG set to nil (see this for use and meaning of FUN)."
+Headlines are updated using `org-ml~update' with DIFF-ARG set to
+nil (see this for use and meaning of FUN)."
   ;; don't use the myers diff algorithm here, since these functions are meant
   ;; for batch processing.
   (save-excursion
@@ -6689,35 +6680,78 @@ DIFF-ARG set to nil (see this for use and meaning of FUN)."
           (org-ml-headline-map-subheadlines*
             (-map #'map-to-subheadlines it)
             (funcall fun headline))))
-      (--> (org-ml--parse-patterns-where where "^\\*")
+      ;; NOTE there two main ways to do this. We can either flatten the output
+      ;; of `org-ml--parse-patterns-where' into individual headlines (eg no
+      ;; headline would have a subheadline and all subheadlines would be in the
+      ;; top level of the list) and update each of them in the buffer
+      ;; individually using `FUN'. Or we can do we we do here, which is to apply
+      ;; `FUN' recursively to each subtree and then update the entire subtree in
+      ;; place in the buffer. This has the advantage of not requiring the
+      ;; subtrees to be broken apart which could introduce whitespace errors
+      ;; between headlines, section, etc. It has the disadvantage of requiring
+      ;; more text to be modified in the buffer at once, which could be
+      ;; disruptive.
+      (--> (org-ml--parse-patterns-where which "^\\*")
            (nreverse it)
-           (--each it (org-ml--update nil #'map-to-subheadlines it))))))
+           (--each it (org-ml~update nil #'map-to-subheadlines it))))))
+
+(org-ml--defun* org-ml-update-subtrees (which fun)
+  "Update some toplevel subtrees in the current buffer using FUN.
+
+See `org-ml-parse-subtrees' for the meaning of WHICH.
+
+Subtrees are updated using `org-ml~update' with DIFF-ARG set to
+nil (see this for use and meaning of FUN)."
+  (save-excursion
+    (--> (org-ml--parse-patterns-where which "^\\* ")
+         (nreverse it)
+         (--each it (org-ml~update nil fun it)))))
+
+;; depreciated functions
+
+(defalias 'org-ml-get-some-headlines 'org-ml-parse-headlines)
+
+(defun org-ml-get-headlines ()
+  "Return list of all headline nodes from current buffer.
+
+This function is depreciated and will be removed in a later release.
+Use `org-ml-parse-headlines' instead."
+  (org-ml-parse-headlines 'all))
+
+(defalias 'org-ml-get-some-subtrees 'org-ml-parse-subtrees)
+
+(defun org-ml-get-subtrees ()
+  "Return list of all subtree nodes from current buffer.
+
+This function is depreciated and will be removed in a later release.
+Use `org-ml-parse-subtrees' instead."
+  (org-ml-parse-subtrees 'all))
+
+(defalias 'org-ml-do-some-headlines 'org-ml-update-headlines)
+(defalias 'org-ml-do-some-headlines* 'org-ml-update-headlines*)
 
 (org-ml--defun* org-ml-do-headlines (fun)
   "Update all headlines in the current buffer using FUN.
 
 Headlines are updated using `org-ml-update-this-headline' (see this for
-use and meaning of FUN)."
-  (org-ml-do-some-headlines [nil nil] fun))
+use and meaning of FUN).
 
-(org-ml--defun* org-ml-do-some-subtrees (where fun)
-  "Update some toplevel subtrees in the current buffer using FUN.
+This function is depreciated and will be removed in a later release.
+Use `org-ml-parse-headlines' instead."
+  (org-ml-update-headlines 'all fun))
 
-See `org-ml-get-some-headlines' for the meaning of WHERE.
-
-Subtrees are updated using `org-ml-update-this-subtree' (see this for use
-and meaning of FUN)."
-  (save-excursion
-    (--> (org-ml--parse-patterns-where where "^\\* ")
-         (nreverse it)
-         (--each it (org-ml--update nil fun it)))))
+(defalias 'org-ml-do-some-subtrees 'org-ml-update-subtrees)
+(defalias 'org-ml-do-some-subtrees* 'org-ml-update-subtrees*)
 
 (org-ml--defun* org-ml-do-subtrees (fun)
   "Update all toplevel subtrees in the current buffer using FUN.
 
 Subtrees are updated using `org-ml-update-this-subtree' (see this for use
-and meaning of FUN)."
-  (org-ml-do-some-subtrees [nil nil] fun))
+and meaning of FUN).
+
+This function is depreciated and will be removed in a later release.
+Use `org-ml-update-subtrees' instead."
+  (org-ml-update-subtrees 'all fun))
 
 (provide 'org-ml)
 ;;; org-ml.el ends here

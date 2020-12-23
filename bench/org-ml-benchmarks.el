@@ -28,7 +28,7 @@
       (org-get-todo-state)
       (setq next (outline-next-heading))))
   
-  (->> (org-ml-get-headlines)
+  (->> (org-ml-parse-headlines 'all)
        (--map (org-ml-get-property :todo-keyword it))))
 
 (org-ml-defbench "read SCHEDULED epoch time" 2500
@@ -39,7 +39,7 @@
       (org-2ft (org-entry-get (point) "SCHEDULED"))
       (setq next (outline-next-heading))))
   
-  (->> (org-ml-get-headlines)
+  (->> (org-ml-parse-headlines 'all)
        (--map (->> (org-ml-headline-get-planning it)
                    (org-ml-get-property :scheduled)
                    (org-ml-timestamp-get-start-time)
@@ -57,7 +57,7 @@
 
   (let ((planning (->> (org-ml-unixtime-to-time-long (float-time))
                        (org-ml-build-planning! :closed))))
-    (org-ml-do-headlines*
+    (org-ml-update-headlines* 'all
       (->> (org-ml-set-property :todo-keyword "DONE" it)
            (org-ml-headline-set-planning planning)))))
 
@@ -69,7 +69,7 @@
       (org-do-demote)
       (setq next (outline-next-heading))))
 
-  (org-ml-do-headlines*
+  (org-ml-update-headlines* 'all
     (org-ml-shift-property :level 1 it)))
 
 (org-ml-defbench "demote subtrees" 2500
@@ -91,7 +91,7 @@
       (org-set-tags '("A" "B" "C"))
       (setq next (outline-next-heading))))
 
-  (org-ml-do-headlines*
+  (org-ml-update-headlines* 'all
     (org-ml-set-property :tags '("A" "B" "C") it)))
 
 (org-ml-defbench "schedule headline" 1000
@@ -103,7 +103,7 @@
       (setq next (outline-next-heading))))
 
   (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-    (org-ml-do-headlines*
+    (org-ml-update-headlines* 'all
       (org-ml-headline-set-planning pl it))))
 
 (org-ml-defbench "reschedule headline" 1000
@@ -120,7 +120,7 @@
            (org-schedule nil))
       (setq next (outline-next-heading))))
 
-  (org-ml-do-headlines*
+  (org-ml-update-headlines* 'all
     (org-ml-headline-map-planning*
       (org-ml-map-property* :scheduled (org-ml-timestamp-shift 1 'day it) it) it)))
 
@@ -132,7 +132,7 @@
       (org-set-property "Effort" "0:05")
       (setq next (outline-next-heading))))
 
-  (org-ml-do-headlines*
+  (org-ml-update-headlines* 'all
     (org-ml-headline-set-node-property "Effort" "0:05" it)))
 
 (org-ml-defbench "set checkboxes" 1000
@@ -146,7 +146,7 @@
       (setq next (outline-next-heading))))
 
   (let ((org-ml-memoize-match-patterns 'compiled))
-    (org-ml-do-headlines*
+    (org-ml-update-headlines* 'all
       (->> (org-ml-match-map '(section plain-list item) #'org-ml-item-toggle-checkbox it)
            (org-ml-headline-update-item-statistics)))))
 
@@ -161,7 +161,7 @@
       (setq next (outline-next-heading))))
 
   (let ((para (org-ml-build-paragraph! "some text")))
-    (org-ml-do-headlines*
+    (org-ml-update-headlines* 'all
       (org-ml-headline-set-section (list para) it))))
 
 (org-ml-defbench "set headline effort/TODO/scheduled" 1000
@@ -177,7 +177,7 @@
       (setq next (outline-next-heading))))
 
   (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-    (org-ml-do-headlines*
+    (org-ml-update-headlines* 'all
       (->> (org-ml-set-property :todo-keyword "TODO" it)
            (org-ml-headline-set-node-property "Effort" "0:05")
            (org-ml-headline-set-planning pl)))))

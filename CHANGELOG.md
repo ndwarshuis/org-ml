@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.5.0
+
+- reorganized headline/subtree batch functions (and depreciated old names)
+
 ## 5.4.3
 
 - fixed nested headline parsing for `org-ml-get-headlines` et al
