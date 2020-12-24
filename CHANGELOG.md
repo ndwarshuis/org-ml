@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.5.1
+
+- fix potential merge sort stack overflow
+
 ## 5.5.0
 
 - reorganized headline/subtree batch functions (and depreciated old names)

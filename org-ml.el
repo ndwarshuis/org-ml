@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.5.0
+;; Version: 5.5.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -4160,26 +4160,36 @@ or :clocks depending on what is intended to be sorted."
                         (t
                          "Not a valid clock or item: %s"))))
               (error msg node)))))
+         ;; this should be imperative because the recursive version has O(n)
+         ;; calls to itself...byebye stack :(
          (merge
           (nodes-a nodes-b)
-          (pcase (cons nodes-a nodes-b)
-            (`(nil . nil) nil)
-            (`(,as . nil) as)
-            (`(nil . ,bs) bs)
-            (`((,a . ,as) . (,b . ,bs))
-             (let ((ts-a (get-ts (car a)))
-                   (ts-b (get-ts (car b))))
-               (cond
-                ((not ts-a)
-                 (error "Could not get timestamp for logbook node: %s" a))
-                ((not ts-b)
-                 (error "Could not get timestamp for logbook node: %s" b))
-                ((<= ts-b ts-a)
-                 (cons a (merge as nodes-b)))
-                ((< ts-a ts-b)
-                 (cons b (merge nodes-a bs)))
-                (t
-                 (error "Unknown merge error")))))))
+          (let (merged)
+            (while (or nodes-a nodes-b)
+              (pcase (cons nodes-a nodes-b)
+                (`(,as . nil)
+                 (setq merged (append (nreverse as) merged)
+                       nodes-a nil))
+                (`(nil . ,bs)
+                 (setq merged (append (nreverse bs) merged)
+                       nodes-b nil))
+                (`((,a . ,as) . (,b . ,bs))
+                 (let ((ts-a (get-ts (car a)))
+                       (ts-b (get-ts (car b))))
+                   (cond
+                    ((not ts-a)
+                     (error "Could not get timestamp for logbook node: %s" a))
+                    ((not ts-b)
+                     (error "Could not get timestamp for logbook node: %s" b))
+                    ((<= ts-b ts-a)
+                     (setq merged (cons a merged)
+                           nodes-a as))
+                    ((< ts-a ts-b)
+                     (setq merged (cons b merged)
+                           nodes-b bs))
+                    (t
+                     (error "Unknown merge error")))))))
+            (nreverse merged)))
          (merge-and-sort
           (nodes)
           (let ((L (length nodes)))

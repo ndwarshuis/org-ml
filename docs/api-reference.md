@@ -7861,4 +7861,4 @@ Unfold the children of **`node`** if they exist.
 ```el
 no examples :(
 ```
-Version: 5.4.3
+Version: 5.5.1
