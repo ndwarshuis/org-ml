@@ -30,6 +30,9 @@
 (require 'dash)
 (require 's)
 
+(eval-when-compile
+  (require 'cl-lib))
+
 ;;; ANAPHORIC FUNCTIONS
 
 (defun org-ml--defun-partition-body (body)
