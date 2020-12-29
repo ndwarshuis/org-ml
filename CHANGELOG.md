@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.5.3
+
+- fix missing zero-length ending timestamps
+
 ## 5.5.2
 
 - fix compile warnings for `org-ml-macs.el`

@@ -3897,6 +3897,13 @@ The return value will be a list as specified by the `time` argument in
  ;; => '(2019 1 2 nil nil)
 
 ;; Given the following contents:
+; [2019-01-01 Tue]--[2019-01-01 Tue]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-get-end-time))
+ ;; => '(2019 1 1 nil nil)
+
+;; Given the following contents:
 ; [2019-01-01 Tue 00:00-12:00]
 
 (->> (org-ml-parse-this-object)
@@ -7861,4 +7868,4 @@ Unfold the children of **`node`** if they exist.
 ```el
 no examples :(
 ```
-Version: 5.5.2
+Version: 5.5.3
