@@ -2986,7 +2986,7 @@ The return value will be a list as specified by the TIME argument in
   "Return the end time list for end time of TIMESTAMP or nil if not a range.
 The return value will be a list as specified by the TIME argument in
 `org-ml-build-timestamp!'."
-  (and (org-ml--timestamp-is-ranged timestamp)
+  (and (org-ml--timestamp-is-range-type timestamp)
        (org-ml--timestamp-get-end-time timestamp)))
 
 ;; TODO this should be ""-get-length
