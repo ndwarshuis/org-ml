@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.5.1
+;; Version: 5.5.3
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -2986,7 +2986,7 @@ The return value will be a list as specified by the TIME argument in
   "Return the end time list for end time of TIMESTAMP or nil if not a range.
 The return value will be a list as specified by the TIME argument in
 `org-ml-build-timestamp!'."
-  (and (org-ml--timestamp-is-ranged timestamp)
+  (and (org-ml--timestamp-is-range-type timestamp)
        (org-ml--timestamp-get-end-time timestamp)))
 
 ;; TODO this should be ""-get-length
