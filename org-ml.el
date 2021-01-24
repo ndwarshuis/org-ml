@@ -3472,7 +3472,7 @@ properties matching KEY are present, only set the first."
         (-if-let (i (--find-index (equal key (org-ml-get-property :key it)) it))
             (-replace-at i np it)
           (cons np it))
-      (--remove-first (equal key (org-ml-get-property :value it)) it))
+      (--remove-first (equal key (org-ml-get-property :key it)) it))
     headline))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-node-property (key fun headline)
