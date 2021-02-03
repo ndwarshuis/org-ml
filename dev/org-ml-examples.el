@@ -4231,6 +4231,14 @@
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-set-node-property "ID" nil)
            (org-ml-to-trimmed-string))
+      => "* headline"
+     (:buffer "* headline"
+              ":PROPERTIES:"
+              ":ID:       real"
+              ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-property "ID" nil)
+           (org-ml-to-trimmed-string))
       => "* headline")
 
     (defexamples-content org-ml-headline-map-node-property

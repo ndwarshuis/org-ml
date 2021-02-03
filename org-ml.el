@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.5.3
+;; Version: 5.5.4
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -3472,7 +3472,7 @@ properties matching KEY are present, only set the first."
         (-if-let (i (--find-index (equal key (org-ml-get-property :key it)) it))
             (-replace-at i np it)
           (cons np it))
-      (--remove-first (equal key (org-ml-get-property :value it)) it))
+      (--remove-first (equal key (org-ml-get-property :key it)) it))
     headline))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-node-property (key fun headline)

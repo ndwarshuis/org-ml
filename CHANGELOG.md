@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.5.4
+
+- fix `org-ml-headline-set-node-property` nil property bug
+
 ## 5.5.3
 
 - fix missing zero-length ending timestamps
