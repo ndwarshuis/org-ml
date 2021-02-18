@@ -79,6 +79,11 @@ The following values are understood:
   :type 'boolean
   :group 'org-ml)
 
+(defcustom org-ml-parse-habits nil
+  "Parse habits if set to t."
+  :type 'boolean
+  :group 'org-ml)
+
 ;;; NODE TYPE SETS
 
 ;; When only considering types, nodes can be arranged in the following
@@ -4982,11 +4987,20 @@ This is a workaround for a bug.")
 (defun org-ml--blank (node)
   "Return NODE with empty child nodes `org-ml--blank-if-empty' set to contain \"\"."
   (if (org-ml-is-childless node)
-      (if (org-ml-is-any-type org-ml--blank-if-empty node)
-          (org-ml--set-blank-children node)
+      (cond
+       ((and org-ml-parse-habits (org-ml-is-type 'timestamp node))
+        (let ((s (org-element-interpret-data node)))
+          (-if-let (h (-some->> (org-ml-get-property :raw-value node)
+                        (s-match "+[[:digit:]]+[ymwd]/\\([[:digit:]]+[ymwd]\\)")
+                        (cadr)))
+              (concat (substring s 0 -1) "/" h (s-right 1 s))
+            s)))
+       ((org-ml-is-any-type org-ml--blank-if-empty node)
+        (org-ml--set-blank-children node))
+       (t
         (unless (or (org-ml-is-any-type org-ml--rm-if-empty node)
                     (org-ml--is-table-row node))
-          node))
+          node)))
     (org-ml--map-children-nocheck*
      (remove nil (-map #'org-ml--blank it))
      node)))

@@ -3173,7 +3173,27 @@
       (->> (org-ml-parse-this-object)
            (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
            (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 00:00-12:00]")
+      => "[2019-01-01 Tue 00:00-12:00]"
+      :begin-hidden
+      (:buffer "[2019-01-02 Wed 12:00 +1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 00:00-12:00 +1d]"
+      ;; disabling habit parser will obliterate the habit bit
+      (:buffer "[2019-01-02 Wed 12:00 +1d/3d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 00:00-12:00 +1d]"
+      ;; and enabling will preserve it
+      (:buffer "[2019-01-02 Wed 12:00 +1d/3d]")
+      (let ((org-ml-parse-habits t))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
+             (org-ml-to-trimmed-string)))
+      => "[2019-01-01 Tue 00:00-12:00 +1d/3d]"
+      :end-hidden)
 
     (defexamples-content org-ml-timestamp-set-end-time
       nil
