@@ -124,6 +124,26 @@
     (org-ml-headline-map-planning*
       (org-ml-map-property* :scheduled (org-ml-timestamp-shift 1 'day it) it) it)))
 
+;; TODO not DRY
+(org-ml-defbench "reschedule headline (with habit parsing)" 1000
+  (list "* headline"
+        "SCHEDULED: <2020-01-01 Wed>")
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (->> (org-get-scheduled-time (point))
+           (float-time)
+           ;; shift up one day
+           (+ (* 24 60 60))
+           (format-time-string "%Y-%m-%d")
+           (org-schedule nil))
+      (setq next (outline-next-heading))))
+
+  (let ((org-ml-parse-habits t))
+    (org-ml-update-headlines* 'all
+      (org-ml-headline-map-planning*
+        (org-ml-map-property* :scheduled (org-ml-timestamp-shift 1 'day it) it) it))))
+
 (org-ml-defbench "set headline effort" 1000
   "* headline"
   (let ((org-adapt-indentation nil)
