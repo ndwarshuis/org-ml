@@ -220,6 +220,9 @@ Functions to work with timestamp data
 * [org-ml-timestamp-is-ranged](#org-ml-timestamp-is-ranged-timestamp) `(timestamp)`
 * [org-ml-timestamp-range-contains-p](#org-ml-timestamp-range-contains-p-unixtime-timestamp) `(unixtime timestamp)`
 * [org-ml-timestamp-set-collapsed](#org-ml-timestamp-set-collapsed-flag-timestamp) `(flag timestamp)`
+* [org-ml-timestamp-get-habit](#org-ml-timestamp-get-habit-timestamp) `(timestamp)`
+* [org-ml-timestamp-set-habit](#org-ml-timestamp-set-habit-habit-timestamp) `(habit timestamp)`
+* [org-ml-timestamp-map-habit](#org-ml-timestamp-map-habit-fun-timestamp) `(fun timestamp)`
 * [org-ml-timestamp-set-start-time](#org-ml-timestamp-set-start-time-time-timestamp) `(time timestamp)`
 * [org-ml-timestamp-set-end-time](#org-ml-timestamp-set-end-time-time-timestamp) `(time timestamp)`
 * [org-ml-timestamp-set-single-time](#org-ml-timestamp-set-single-time-time-timestamp) `(time timestamp)`
@@ -3441,8 +3444,8 @@ Return the properties list of **`node`**.
 ; *bold*
 
 (--> (org-ml-parse-this-object)
-     (org-ml-get-all-properties it)
-     (plist-put it :parent nil))
+  (org-ml-get-all-properties it)
+  (plist-put it :parent nil))
  ;; => '(:begin 1 :end 7 :contents-begin 2 :contents-end 6 :post-blank 0 :parent nil)
 
 ```
@@ -4069,6 +4072,110 @@ collapsed format.
      (org-ml-timestamp-set-collapsed nil)
      (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+```
+
+#### org-ml-timestamp-get-habit `(timestamp)`
+
+Return the habit component of **`timestamp`**.
+Returned list will be like `(value unit)`.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-get-habit))
+ ;; => nil
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 +1d]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-get-habit))
+ ;; => nil
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 +1d/3d]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-get-habit))
+ ;; => '(3 day)
+
+```
+
+#### org-ml-timestamp-set-habit `(habit timestamp)`
+
+Set the habit of **`timestamp`** to **`habit`**.
+**`habit`** is a list like `(value unit)` where `value` is an integer and
+`unit` is one of 'year', 'month', 'week', or 'day'.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(let ((org-ml-parse-habits t))
+  (->> (org-ml-parse-this-object)
+       (org-ml-timestamp-set-habit '(1 year))
+       (org-ml-to-string)))
+ ;; => "[2019-01-01 Tue 12:00]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 +1d]
+
+(let ((org-ml-parse-habits t))
+  (->> (org-ml-parse-this-object)
+       (org-ml-timestamp-set-habit '(1 year))
+       (org-ml-to-string)))
+ ;; => "[2019-01-01 Tue 12:00 +1d/1y]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 +1d/3d]
+
+(let ((org-ml-parse-habits t))
+  (->> (org-ml-parse-this-object)
+       (org-ml-timestamp-set-habit nil)
+       (org-ml-to-string)))
+ ;; => "[2019-01-01 Tue 12:00 +1d]"
+
+```
+
+#### org-ml-timestamp-map-habit `(fun timestamp)`
+
+Apply **`fun`** to the habit of **`timestamp`**.
+**`fun`** is a function that takes a habit list like `(value unit)` and
+returns a new habit list (or nil).
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(let ((org-ml-parse-habits t))
+  (->> (org-ml-parse-this-object)
+       (org-ml-timestamp-map-habit* (when it `(,(1+ (car it))
+						,(cadr it))))
+       (org-ml-to-string)))
+ ;; => "[2019-01-01 Tue 12:00]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 +1d]
+
+(let ((org-ml-parse-habits t))
+  (->> (org-ml-parse-this-object)
+       (org-ml-timestamp-map-habit* (when it `(,(1+ (car it))
+						,(cadr it))))
+       (org-ml-to-string)))
+ ;; => "[2019-01-01 Tue 12:00 +1d]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 +1d/3d]
+
+(let ((org-ml-parse-habits t))
+  (->> (org-ml-parse-this-object)
+       (org-ml-timestamp-map-habit* (when it `(,(1+ (car it))
+						,(cadr it))))
+       (org-ml-to-string)))
+ ;; => "[2019-01-01 Tue 12:00 +1d/4d]"
 
 ```
 
@@ -5414,6 +5521,17 @@ properties matching **`key`** are present, only set the first.
  ;      :PROPERTIES:
  ;      :ID:       real
  ;      :END:"
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-set-node-property "ID" nil)
+     (org-ml-to-trimmed-string))
+ ;; => "* headline"
+
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :ID:       real
+; :END:
 
 (->> (org-ml-parse-this-headline)
      (org-ml-headline-set-node-property "ID" nil)
@@ -7152,10 +7270,10 @@ the cdr is the modified **`node`**.
 ; pull me /under/
 
 (--> (org-ml-parse-this-element)
-     (org-ml-match-extract '(:any * italic)
-			    it)
-     (cons (-map #'org-ml-to-trimmed-string (car it))
-	   (org-ml-to-trimmed-string (cdr it))))
+  (org-ml-match-extract '(:any * italic)
+			 it)
+  (cons (-map #'org-ml-to-trimmed-string (car it))
+	(org-ml-to-trimmed-string (cdr it))))
  ;; => '(("/under/") . "pull me")
 
 ```
@@ -7868,4 +7986,4 @@ Unfold the children of **`node`** if they exist.
 ```el
 no examples :(
 ```
-Version: 5.5.3
+Version: 5.5.4

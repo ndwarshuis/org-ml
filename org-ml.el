@@ -3135,6 +3135,78 @@ collapsed format."
       (org-ml--timestamp-set-type-ranged (not flag) timestamp)
     timestamp))
 
+(defun org-ml-timestamp-get-habit (timestamp)
+  "Return the habit component of TIMESTAMP.
+Returned list will be like (VALUE UNIT)."
+  (-let (((v u) (-some->> (org-ml--get-property-nocheck :raw-value timestamp)
+                  (s-match "+[0-9]+[ymwd]/\\([0-9]+\\)\\([ymwd]\\)")
+                  (cdr))))
+    (when v
+      (list (string-to-number v)
+            (pcase u
+              ("y" 'year)
+              ("m" 'month)
+              ("w" 'week)
+              ("d" 'day)
+              (_ (error "Unknown unit (this shouldn't happen)")))))))
+
+(defun org-ml--timestamp-unit-to-string (unit)
+  (pcase unit
+    (`year "y")
+    (`month "m")
+    (`week "w")
+    (`day "d")
+    (e (error "Invalid unit: %s" e))))
+
+(defun org-ml-timestamp-set-habit (habit timestamp)
+  "Set the habit of TIMESTAMP to HABIT.
+HABIT is a list like (VALUE UNIT) where VALUE is an integer and
+UNIT is one of 'year', 'month', 'week', or 'day'."
+  ;; This is a bit awkward since the only place that habits are stored is in the
+  ;; :raw-value property. First check :raw-value to see if a repeater is in it.
+  ;; If so, append the habit behind the repeater. If there is no repeater, that
+  ;; means the user changed the :repeater- keys elsewhere in the plist. In that
+  ;; case, see if those keys are non-nil, and if so, append the repeater and the
+  ;; habit to the end of the :raw-value. The key to understand is that the only
+  ;; thing that really matters in the raw-value string is the repeater since I
+  ;; parse this later in `org-ml-to-string'. The rest of the :raw-value can be
+  ;; out of sync with the rest of the plist since the built-in org-element
+  ;; interpreter doesn't look at :raw-value normally.
+  (org-ml--map-property-nocheck* :raw-value
+    (let ((r (if (not habit) ""
+               (-let (((value unit) habit))
+                 (->> (org-ml--timestamp-unit-to-string unit)
+                      (format "/%s%s" value))))))
+      (save-match-data
+        (-if-let (m (string-match "\\(+[0-9]+[ymwd]\\)\\(/[0-9]+[ymwd]\\)?" it))
+            (-let (((b1 e1 b2 e2) (-if-let (b (match-beginning 2))
+                                      `(0 ,b ,(match-end 2) nil)
+                                    (let ((i (match-end 1)))
+                                      `(0 ,i ,i -1)))))
+              (concat (substring it b1 e1) r (substring it b2 e2)))
+          (-let (((&plist :repeater-type y
+                          :repeater-unit u
+                          :repeater-value v)
+                  (org-ml-get-all-properties timestamp)))
+            (if (and y u v)
+                (let* ((y* (pcase y
+                             (`cumulate "+")
+                             (`catch-up "++")
+                             (`restart ".+")
+                             (e (error "Unknown repeater type: %s" e))))
+                       (rep (->> (org-ml--timestamp-unit-to-string u)
+                                 (concat y* (number-to-string v)))))
+                  (concat (substring it 0 -1) rep r (substring it -1)))
+              it)))))
+    timestamp))
+
+(org-ml--defun-anaphoric* org-ml-timestamp-map-habit (fun timestamp)
+  "Apply FUN to the habit of TIMESTAMP.
+FUN is a function that takes a habit list like (VALUE UNIT) and
+returns a new habit list (or nil)."
+  (--> (org-ml-timestamp-get-habit timestamp)
+    (org-ml-timestamp-set-habit (funcall fun it) timestamp)))
+
 ;; timestamp (diary)
 
 (defun org-ml-timestamp-diary-set-value (form timestamp-diary)
