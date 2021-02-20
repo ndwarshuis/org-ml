@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.6.0
+
+- add get/set/map functions for timestamp repeaters and warnings
+- add optional switch for habit parsing
+
 ## 5.5.4
 
 - fix `org-ml-headline-set-node-property` nil property bug

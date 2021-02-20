@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.5.4
+;; Version: 5.6.0
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -76,6 +76,11 @@ The following values are understood:
 - nil: don't memoize anything
 - 'compiled': memoize byte-compiled lambda forms
 - any other non-nil: memoize non-compiled lambda forms"
+  :type 'boolean
+  :group 'org-ml)
+
+(defcustom org-ml-parse-habits nil
+  "Parse habits if set to t."
   :type 'boolean
   :group 'org-ml)
 
@@ -1652,11 +1657,11 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
   (let ((props (if warning? org-ml--warning-keys org-ml--repeater-keys)))
     (if (not dec) (org-ml--init-properties props)
       (-let (((type value unit) dec))
-        (unless (memq type valid-types)
+        (unless (or (not type) (memq type valid-types))
           (org-ml--arg-error "Invalid decorator type: %s" type))
-        (unless (integerp value)
+        (unless (or (not value) (integerp value))
           (org-ml--arg-error "Invalid decorator value: %s" value))
-        (unless (memq unit '(year month week day hour))
+        (unless (or (not unit) (memq unit '(year month week day hour)))
           (org-ml--arg-error "Invalid decorator unit: %s" unit))
         (-interleave props dec)))))
 
@@ -1788,15 +1793,13 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
 
 (defun org-ml--timestamp-set-warning (warning timestamp)
   "Return TIMESTAMP with warning properties set to WARNING list."
-  (let ((types '(all first)))
-    (-> (org-ml--decorator-format warning t types)
-        (org-ml--set-properties-nocheck timestamp))))
+  (-> (org-ml--decorator-format warning t '(all first))
+      (org-ml--set-properties-nocheck timestamp)))
 
 (defun org-ml--timestamp-set-repeater (repeater timestamp)
   "Return TIMESTAMP with warning properties set to REPEATER list."
-  (let ((types '(catch-up restart cumulate)))
-    (-> (org-ml--decorator-format repeater nil types)
-        (org-ml--set-properties-nocheck timestamp))))
+  (-> (org-ml--decorator-format repeater nil '(catch-up restart cumulate))
+      (org-ml--set-properties-nocheck timestamp)))
 
 (defun org-ml--timestamp-shift-start (n unit timestamp)
   "Return TIMESTAMP with start time shifted N UNIT's."
@@ -2166,9 +2169,9 @@ ACTIVE is a boolean where t signifies the type is `active', else
 `inactive' (the range suffix will be added if an end time is
 supplied).
 
-REPEATER and WARNING are lists formatted as (TYPE VALUE UNIT) where
-the three members correspond to the :repeater/warning-type, -value,
-and -unit properties in `org-ml-build-timestamp'.
+REPEATER and WARNING are lists corresponding to those required
+for `org-ml-timestamp-set-repeater' and
+`org-ml-timestamp-set-warning' respectively.
 
 Building a diary sexp timestamp is not possible with this function."
   (->> (org-ml--build-blank-node 'timestamp)
@@ -2176,8 +2179,8 @@ Building a diary sexp timestamp is not possible with this function."
        (org-ml--timestamp-set-start-time-nocheck start)
        (org-ml--timestamp-set-end-time-nocheck end)
        (org-ml--timestamp-set-active active)
-       (org-ml--timestamp-set-warning warning)
-       (org-ml--timestamp-set-repeater repeater)))
+       (org-ml-timestamp-set-warning warning)
+       (org-ml-timestamp-set-repeater repeater)))
 
 (org-ml--defun-kw org-ml-build-clock! (start &key end post-blank)
   "Return a new clock node.
@@ -3129,6 +3132,126 @@ collapsed format."
            (org-ml--timestamp-is-ranged timestamp))
       (org-ml--timestamp-set-type-ranged (not flag) timestamp)
     timestamp))
+
+(defun org-ml-timestamp-get-warning (timestamp)
+  "Return the warning component of TIMESTAMP.
+Return a list like (TYPE VALUE UNIT)."
+  (-let (((&plist :warning-type y
+                  :warning-value v
+                  :warning-unit u)
+          (org-ml-get-all-properties timestamp)))
+    `(,y ,v ,u)))
+
+(defun org-ml-timestamp-set-warning (warning timestamp)
+  "Set the warning of TIMESTAMP to WARNING.
+
+WARNING is a list like (TYPE VALUE UNIT). TYPE is one of 'year',
+'month', 'week', or 'day'. VALUE and is an integer. UNIT is one
+of 'year', 'month', 'week', or 'day'."
+  (org-ml--timestamp-set-warning warning timestamp))
+
+(org-ml--defun-anaphoric* org-ml-timestamp-map-warning (fun timestamp)
+  "Apply FUN to the warning of TIMESTAMP.
+FUN is a function that takes a warning list like and returns a
+new warning list. The same rules that apply to
+`org-ml-timestamp-set-warning' and `org-ml-timestamp-get-warning'
+apply here."
+  (--> (org-ml-timestamp-get-warning timestamp)
+    (org-ml-timestamp-set-warning (funcall fun it) timestamp)))
+
+(defun org-ml-timestamp-get-repeater (timestamp)
+  "Return the repeater component of TIMESTAMP.
+Return a list like (TYPE VALUE UNIT). If `org-ml-parse-habits' is
+t, return a list like (TYPE VALUE UNIT HABIT-VALUE HABIT-UNIT)."
+  (-let* (((&plist :repeater-type y
+                   :repeater-value v
+                   :repeater-unit u
+                   :raw-value r)
+           (org-ml-get-all-properties timestamp))
+          (rep `(,y ,v ,u)))
+    (if (not org-ml-parse-habits) rep
+      (-let* (((v u) (-some->> r
+                       (s-match "+[0-9]+[ymwd]/\\([0-9]+\\)\\([ymwd]\\)")
+                       (cdr)))
+              (v* (-some-> v (string-to-number)))
+              (u* (-some--> u
+                    (pcase it
+                      ("y" 'year)
+                      ("m" 'month)
+                      ("w" 'week)
+                      ("d" 'day)
+                      (_ (error "Unknown unit (this shouldn't happen)"))))))
+            `(,@rep ,v* ,u*)))))
+
+(defun org-ml--timestamp-unit-to-string (unit)
+  (pcase unit
+    (`year "y")
+    (`month "m")
+    (`week "w")
+    (`day "d")
+    (e (error "Invalid unit: %s" e))))
+
+(defun org-ml-timestamp-set-repeater (repeater timestamp)
+  "Set the repeater of TIMESTAMP to REPEATER.
+
+REPEATER is a list like (TYPE VALUE UNIT) or (TYPE VALUE UNIT
+HABIT-VALUE HABIT-UNIT); if `org-ml-parse-habits' is nil, only
+accept the former and error on the latter (and vice versa). TYPE
+is one of 'year', 'month', 'week', or 'day'. VALUE and
+HABIT-VALUE are integers. UNIT and HABIT-UNIT are one of 'year',
+'month', 'week', or 'day'.
+
+In order to remove the repeater entirely, set REPEATER to nil
+or (nil nil nil). To delete just the habit (if it exists and
+`org-ml-parse-habits' is t) set REPEATER to (TYPE VALUE UNIT nil
+nil)."
+  (pcase repeater
+    (`nil
+     (->> (if org-ml-parse-habits
+              (org-ml--map-property-nocheck* :raw-value
+                (replace-regexp-in-string " [.+]?+[0-9]+[ymwd]\\(/[0-9]+[ymwd]\\)?" "" it)
+                timestamp)
+            timestamp)
+          (org-ml--timestamp-set-repeater nil)))
+    (`(,_ ,_ ,_)
+     (if org-ml-parse-habits
+         (error "Habit parsing is enabled; use a 5-membered list")
+       (org-ml--timestamp-set-repeater repeater timestamp)))
+    (`(,rt ,rv ,ru ,hv ,hu)
+     (if (not org-ml-parse-habits)
+         (error "Habit parsing is disabled; use a 3-membered list")
+       (->> (org-ml--timestamp-set-repeater (list rt rv ru) timestamp)
+            (org-ml--map-property-nocheck* :raw-value
+              (let ((r (if (not (and hv hu)) ""
+                         (->> (org-ml--timestamp-unit-to-string hu)
+                              (format "/%s%s" hv)))))
+                (save-match-data
+                  (-if-let (m (string-match "\\(+[0-9]+[ymwd]\\)\\(/[0-9]+[ymwd]\\)?" it))
+                      (-let (((b1 e1 b2 e2) (-if-let (b (match-beginning 2))
+                                                `(0 ,b ,(match-end 2) nil)
+                                              (let ((i (match-end 1)))
+                                                `(0 ,i ,i -1)))))
+                        (concat (substring it b1 e1) r (substring it b2 e2)))
+                    (if (and rt rv ru)
+                        (let* ((y* (pcase rt
+                                     (`cumulate "+")
+                                     (`catch-up "++")
+                                     (`restart ".+")
+                                     (e (error "Unknown repeater type: %s" e))))
+                               (rep (->> (org-ml--timestamp-unit-to-string ru)
+                                         (format " %s%s%s" y* rv))))
+                          (concat (substring it 0 -1) rep r (substring it -1)))
+                      it))))))))
+    (e (error "Invalid repeater definition: %s" e))))
+
+(org-ml--defun-anaphoric* org-ml-timestamp-map-repeater (fun timestamp)
+  "Apply FUN to the warning of TIMESTAMP.
+FUN is a function that takes a repeater list like and returns a
+new repeater list. The same rules that apply to
+`org-ml-timestamp-set-repeater' and
+`org-ml-timestamp-get-repeater' apply here."
+  (--> (org-ml-timestamp-get-repeater timestamp)
+    (org-ml-timestamp-set-repeater (funcall fun it) timestamp)))
 
 ;; timestamp (diary)
 
@@ -4982,11 +5105,20 @@ This is a workaround for a bug.")
 (defun org-ml--blank (node)
   "Return NODE with empty child nodes `org-ml--blank-if-empty' set to contain \"\"."
   (if (org-ml-is-childless node)
-      (if (org-ml-is-any-type org-ml--blank-if-empty node)
-          (org-ml--set-blank-children node)
+      (cond
+       ((and org-ml-parse-habits (org-ml-is-type 'timestamp node))
+        (let ((s (org-element-interpret-data node)))
+          (-if-let (h (-some->> (org-ml-get-property :raw-value node)
+                        (s-match "+[[:digit:]]+[ymwd]/\\([[:digit:]]+[ymwd]\\)")
+                        (cadr)))
+              (concat (substring s 0 -1) "/" h (s-right 1 s))
+            s)))
+       ((org-ml-is-any-type org-ml--blank-if-empty node)
+        (org-ml--set-blank-children node))
+       (t
         (unless (or (org-ml-is-any-type org-ml--rm-if-empty node)
                     (org-ml--is-table-row node))
-          node))
+          node)))
     (org-ml--map-children-nocheck*
      (remove nil (-map #'org-ml--blank it))
      node)))

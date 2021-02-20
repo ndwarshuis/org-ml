@@ -220,6 +220,12 @@ Functions to work with timestamp data
 * [org-ml-timestamp-is-ranged](#org-ml-timestamp-is-ranged-timestamp) `(timestamp)`
 * [org-ml-timestamp-range-contains-p](#org-ml-timestamp-range-contains-p-unixtime-timestamp) `(unixtime timestamp)`
 * [org-ml-timestamp-set-collapsed](#org-ml-timestamp-set-collapsed-flag-timestamp) `(flag timestamp)`
+* [org-ml-timestamp-get-warning](#org-ml-timestamp-get-warning-timestamp) `(timestamp)`
+* [org-ml-timestamp-set-warning](#org-ml-timestamp-set-warning-warning-timestamp) `(warning timestamp)`
+* [org-ml-timestamp-map-warning](#org-ml-timestamp-map-warning-fun-timestamp) `(fun timestamp)`
+* [org-ml-timestamp-get-repeater](#org-ml-timestamp-get-repeater-timestamp) `(timestamp)`
+* [org-ml-timestamp-set-repeater](#org-ml-timestamp-set-repeater-repeater-timestamp) `(repeater timestamp)`
+* [org-ml-timestamp-map-repeater](#org-ml-timestamp-map-repeater-fun-timestamp) `(fun timestamp)`
 * [org-ml-timestamp-set-start-time](#org-ml-timestamp-set-start-time-time-timestamp) `(time timestamp)`
 * [org-ml-timestamp-set-end-time](#org-ml-timestamp-set-end-time-time-timestamp) `(time timestamp)`
 * [org-ml-timestamp-set-single-time](#org-ml-timestamp-set-single-time-time-timestamp) `(time timestamp)`
@@ -2242,9 +2248,9 @@ formatting rules as **`start`**.
 `inactive` (the range suffix will be added if an end time is
 supplied).
 
-**`repeater`** and **`warning`** are lists formatted as `(type value unit)` where
-the three members correspond to the :repeater/warning-type, -value,
-and -unit properties in [`org-ml-build-timestamp`](#org-ml-build-timestamp-type-year-start-month-start-day-start-year-end-month-end-day-end-key-hour-start-minute-start-hour-end-minute-end-repeater-type-repeater-unit-repeater-value-warning-type-warning-unit-warning-value-post-blank).
+**`repeater`** and **`warning`** are lists corresponding to those required
+for [`org-ml-timestamp-set-repeater`](#org-ml-timestamp-set-repeater-repeater-timestamp) and
+[`org-ml-timestamp-set-warning`](#org-ml-timestamp-set-warning-warning-timestamp) respectively.
 
 Building a diary sexp timestamp is not possible with this function.
 
@@ -3441,8 +3447,8 @@ Return the properties list of **`node`**.
 ; *bold*
 
 (--> (org-ml-parse-this-object)
-     (org-ml-get-all-properties it)
-     (plist-put it :parent nil))
+  (org-ml-get-all-properties it)
+  (plist-put it :parent nil))
  ;; => '(:begin 1 :end 7 :contents-begin 2 :contents-end 6 :post-blank 0 :parent nil)
 
 ```
@@ -4069,6 +4075,191 @@ collapsed format.
      (org-ml-timestamp-set-collapsed nil)
      (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+
+```
+
+#### org-ml-timestamp-get-warning `(timestamp)`
+
+Return the warning component of **`timestamp`**.
+Return a list like `(type value unit)`.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-get-warning))
+ ;; => '(nil nil nil)
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 -1d]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-get-warning))
+ ;; => '(all 1 day)
+
+```
+
+#### org-ml-timestamp-set-warning `(warning timestamp)`
+
+Set the warning of **`timestamp`** to **`warning`**.
+
+**`warning`** is a list like `(type value unit)`. `type` is one of 'year',
+'month', 'week', or 'day'. `value` and is an integer. `unit` is one
+of 'year', 'month', 'week', or 'day'.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-set-warning '(nil nil nil))
+     (org-ml-to-string))
+ ;; => "[2019-01-01 Tue 12:00]"
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-set-warning '(all 1 day))
+     (org-ml-to-string))
+ ;; => "[2019-01-01 Tue 12:00 -1d]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-set-warning nil)
+     (org-ml-to-string))
+ ;; => "[2019-01-01 Tue 12:00]"
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-set-warning '(all 1 year))
+     (org-ml-to-string))
+ ;; => "[2019-01-01 Tue 12:00 -1y]"
+
+```
+
+#### org-ml-timestamp-map-warning `(fun timestamp)`
+
+Apply **`fun`** to the warning of **`timestamp`**.
+**`fun`** is a function that takes a warning list like and returns a
+new warning list. The same rules that apply to
+[`org-ml-timestamp-set-warning`](#org-ml-timestamp-set-warning-warning-timestamp) and [`org-ml-timestamp-get-warning`](#org-ml-timestamp-get-warning-timestamp)
+apply here.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 -1d]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-map-warning* (-let (((y v u)
+					    it))
+				      `(,y ,(1+ v)
+					    ,u)))
+     (org-ml-to-string))
+ ;; => "[2019-01-01 Tue 12:00 -2d]"
+
+```
+
+#### org-ml-timestamp-get-repeater `(timestamp)`
+
+Return the repeater component of **`timestamp`**.
+Return a list like `(type value unit)`. If `org-ml-parse-habits` is
+t, return a list like `(type value unit habit-value habit-unit)`.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-get-repeater))
+ ;; => '(nil nil nil)
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 +1d]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-get-repeater))
+ ;; => '(cumulate 1 day)
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 +1d/3d]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-get-repeater))
+ ;; => '(cumulate 1 day)
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 +1d/3d]
+
+(let ((org-ml-parse-habits t))
+  (->> (org-ml-parse-this-object)
+       (org-ml-timestamp-get-repeater)))
+ ;; => '(cumulate 1 day 3 day)
+
+```
+
+#### org-ml-timestamp-set-repeater `(repeater timestamp)`
+
+Set the repeater of **`timestamp`** to **`repeater`**.
+
+**`repeater`** is a list like `(type value unit)` or `(type value unit
+habit-value habit-unit)`; if `org-ml-parse-habits` is nil, only
+accept the former and error on the latter (and vice versa). `type`
+is one of 'year', 'month', 'week', or 'day'. `value` and
+`habit-value` are integers. `unit` and `habit-unit` are one of 'year',
+'month', 'week', or 'day'.
+
+In order to remove the repeater entirely, set **`repeater`** to nil
+or `(nil nil nil)`. To delete just the habit (if it exists and
+`org-ml-parse-habits` is t) set **`repeater`** to (`type` `value` `unit` nil
+nil).
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-set-repeater nil)
+     (org-ml-to-string))
+ ;; => "[2019-01-01 Tue 12:00]"
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-set-repeater '(restart 1 day))
+     (org-ml-to-string))
+ ;; => "[2019-01-01 Tue 12:00 .+1d]"
+
+(let ((org-ml-parse-habits t))
+  (->> (org-ml-parse-this-object)
+       (org-ml-timestamp-set-repeater '(restart 1 day nil nil))
+       (org-ml-to-string)))
+ ;; => "[2019-01-01 Tue 12:00 .+1d]"
+
+(let ((org-ml-parse-habits t))
+  (->> (org-ml-parse-this-object)
+       (org-ml-timestamp-set-repeater '(restart 1 day 3 day))
+       (org-ml-to-string)))
+ ;; => "[2019-01-01 Tue 12:00 .+1d/3d]"
+
+```
+
+#### org-ml-timestamp-map-repeater `(fun timestamp)`
+
+Apply **`fun`** to the warning of **`timestamp`**.
+**`fun`** is a function that takes a repeater list like and returns a
+new repeater list. The same rules that apply to
+[`org-ml-timestamp-set-repeater`](#org-ml-timestamp-set-repeater-repeater-timestamp) and
+[`org-ml-timestamp-get-repeater`](#org-ml-timestamp-get-repeater-timestamp) apply here.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 +1d]
+
+(->> (org-ml-parse-this-object)
+     (org-ml-timestamp-map-repeater* (-let (((y v u)
+					     it))
+				       `(,y ,(1+ v)
+					     ,u)))
+     (org-ml-to-string))
+ ;; => "[2019-01-01 Tue 12:00 +2d]"
 
 ```
 
@@ -5414,6 +5605,17 @@ properties matching **`key`** are present, only set the first.
  ;      :PROPERTIES:
  ;      :ID:       real
  ;      :END:"
+
+(->> (org-ml-parse-this-headline)
+     (org-ml-headline-set-node-property "ID" nil)
+     (org-ml-to-trimmed-string))
+ ;; => "* headline"
+
+;; Given the following contents:
+; * headline
+; :PROPERTIES:
+; :ID:       real
+; :END:
 
 (->> (org-ml-parse-this-headline)
      (org-ml-headline-set-node-property "ID" nil)
@@ -7152,10 +7354,10 @@ the cdr is the modified **`node`**.
 ; pull me /under/
 
 (--> (org-ml-parse-this-element)
-     (org-ml-match-extract '(:any * italic)
-			    it)
-     (cons (-map #'org-ml-to-trimmed-string (car it))
-	   (org-ml-to-trimmed-string (cdr it))))
+  (org-ml-match-extract '(:any * italic)
+			 it)
+  (cons (-map #'org-ml-to-trimmed-string (car it))
+	(org-ml-to-trimmed-string (cdr it))))
  ;; => '(("/under/") . "pull me")
 
 ```
@@ -7868,4 +8070,4 @@ Unfold the children of **`node`** if they exist.
 ```el
 no examples :(
 ```
-Version: 5.5.3
+Version: 5.5.4

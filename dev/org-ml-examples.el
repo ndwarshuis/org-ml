@@ -3155,6 +3155,145 @@
            (org-ml-to-trimmed-string))
       => "[2019-01-01 Tue]--[2019-01-02 Wed]")
 
+    (defexamples-content org-ml-timestamp-get-warning
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-warning))
+      => '(nil nil nil)
+      (:buffer "[2019-01-01 Tue 12:00 -1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-warning))
+      => '(all 1 day))
+
+    (defexamples-content org-ml-timestamp-set-warning
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-warning '(nil nil nil))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-warning '(all 1 day))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 -1d]"
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-warning nil)
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-warning '(all 1 year))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 -1y]")
+
+    (defexamples-content org-ml-timestamp-map-warning
+      nil
+      (:buffer "[2019-01-01 Tue 12:00 -1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-map-warning* (-let (((y v u) it)) `(,y ,(1+ v) ,u)))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 -2d]")
+
+    (defexamples-content org-ml-timestamp-get-repeater
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-repeater))
+      => '(nil nil nil)
+      (:buffer "[2019-01-01 Tue 12:00 +1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-repeater))
+      => '(cumulate 1 day)
+      (:buffer "[2019-01-01 Tue 12:00 +1d/3d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-repeater))
+      => '(cumulate 1 day)
+      (:buffer "[2019-01-01 Tue 12:00 +1d/3d]")
+      (let ((org-ml-parse-habits t))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-get-repeater)))
+      => '(cumulate 1 day 3 day))
+
+    (defexamples-content org-ml-timestamp-set-repeater
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater nil)
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater '(restart 1 day))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 .+1d]"
+      (let ((org-ml-parse-habits t))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-set-repeater '(restart 1 day nil nil))
+             (org-ml-to-string)))
+      => "[2019-01-01 Tue 12:00 .+1d]"
+      (let ((org-ml-parse-habits t))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-set-repeater '(restart 1 day 3 day))
+             (org-ml-to-string)))
+      => "[2019-01-01 Tue 12:00 .+1d/3d]"
+      :begin-hidden
+      (:buffer "[2019-01-01 Tue 12:00 .+1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater nil)
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater '(cumulate 1 day))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 +1d]"
+      (let ((org-ml-parse-habits t))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-set-repeater '(cumulate 1 day nil nil))
+             (org-ml-to-string)))
+      => "[2019-01-01 Tue 12:00 +1d]"
+      (let ((org-ml-parse-habits t))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-set-repeater '(cumulate 1 day 3 day))
+             (org-ml-to-string)))
+      => "[2019-01-01 Tue 12:00 +1d/3d]"
+      (:buffer "[2019-01-01 Tue 12:00 .+1d/3d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater nil)
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater '(cumulate 1 day))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 +1d]"
+      (let ((org-ml-parse-habits t))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-set-repeater '(cumulate 1 day nil nil))
+             (org-ml-to-string)))
+      => "[2019-01-01 Tue 12:00 +1d]"
+      (let ((org-ml-parse-habits t))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-set-repeater '(cumulate 1 day 2 day))
+             (org-ml-to-string)))
+      => "[2019-01-01 Tue 12:00 +1d/2d]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater '(cumulate 1 day nil nil))
+           (org-ml-to-string))
+      !!> error
+      (let ((org-ml-parse-habits t))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-set-repeater '(cumulate 1 day))
+             (org-ml-to-string)))
+      !!> error
+      :end-hidden)
+
+    (defexamples-content org-ml-timestamp-map-repeater
+      nil
+      (:buffer "[2019-01-01 Tue 12:00 +1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-map-repeater* (-let (((y v u) it)) `(,y ,(1+ v) ,u)))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 +2d]")
+
     (defexamples-content org-ml-timestamp-set-start-time
       nil
       (:buffer "[2019-01-02 Wed]")
@@ -3173,7 +3312,27 @@
       (->> (org-ml-parse-this-object)
            (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
            (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 00:00-12:00]")
+      => "[2019-01-01 Tue 00:00-12:00]"
+      :begin-hidden
+      (:buffer "[2019-01-02 Wed 12:00 +1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 00:00-12:00 +1d]"
+      ;; disabling habit parser will obliterate the habit bit
+      (:buffer "[2019-01-02 Wed 12:00 +1d/3d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 00:00-12:00 +1d]"
+      ;; and enabling will preserve it
+      (:buffer "[2019-01-02 Wed 12:00 +1d/3d]")
+      (let ((org-ml-parse-habits t))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
+             (org-ml-to-trimmed-string)))
+      => "[2019-01-01 Tue 00:00-12:00 +1d/3d]"
+      :end-hidden)
 
     (defexamples-content org-ml-timestamp-set-end-time
       nil

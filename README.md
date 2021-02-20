@@ -180,6 +180,16 @@ the [API reference](docs/api-reference.md).
 For comprehensive documentation of all available functions see the [API
 reference](docs/api-reference.md).
 
+## Habits
+
+By default, the org-element API does not parse timestamp habits. This means that
+if you parse an org-mode buffer with timestamp habits and try to convert it back
+to a string, the habits will be lost. `org-ml` has a wrapper function to add
+this functionality; enable it by setting `org-ml-parse-habits` to t. Since
+habits are an extension of timestamp repeaters, this option will also impact the
+behavior of `org-ml-timestamp-get-repeater`, `org-ml-timestamp-set-repeater`,
+and `org-ml-timestamp-map-repeater` (see their docstrings for details).
+
 # Performance
 
 Benchmarking this library is still in the early stages.
