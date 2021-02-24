@@ -8070,4 +8070,4 @@ Unfold the children of **`node`** if they exist.
 ```el
 no examples :(
 ```
-Version: 5.6.0
+Version: 5.6.1
