@@ -5154,27 +5154,49 @@ parsed into TYPE this function will return nil."
           (if (not (and b e)) 0
             (let ((d (- e b)))
               (if (= 1 d) 0 d)))))
+       ;; TODO these all smell like something that should just be in the
+       ;; public API...except that I don't really mess around with the bounds
+       ;; anywhere except here (mostly because they already exist when the
+       ;; string is parsed
+       (shift-property
+        (prop n node)
+        (org-ml--map-property-nocheck* prop (+ n it) node))
+       (shift-property-maybe
+        (prop n node)
+        (org-ml--map-property-nocheck* prop (when it (+ n it)) node))
+       (shift-object-node
+        (n node)
+        (->> (shift-property :begin n node)
+             (shift-property :end n)))
+       (shift-branch-object-node
+        (n node)
+        (->> (shift-object-node n node)
+             (shift-property-maybe :contents-begin n)
+             (shift-property-maybe :contents-end n)))
+       (shift-element-node
+        (n node)
+        (->> (shift-object-node n node)
+             (shift-property :post-affiliated n)))
+       (shift-branch-element-node
+        (n node)
+        (->> (shift-element-node n node)
+             (shift-property-maybe :contents-begin n)
+             (shift-property-maybe :contents-end n)))
+       (shift-property-node
+        (prop n node)
+        (org-ml--map-property-nocheck* prop
+          (-some->> it (shift-object-node n))
+          node))
+       (decrement-object-node
+        (node)
+        (if (org-ml-is-branch-node node) (shift-branch-object-node -1 node)
+          (shift-object-node -1 node)))
        (decrement-node
         (node)
-        (->> (if (not (org-ml-is-branch-node node)) node
-               (->> (org-ml--map-property-nocheck* :contents-begin (1- it) node)
-                    (org-ml--map-property-nocheck* :contents-end (1- it))))
-             (org-ml--map-property-nocheck* :begin (1- it))
-             (org-ml--map-property-nocheck* :end (1- it))))
-       (decrement-node-end
-        (node)
-        (->> (if (not (org-ml-is-branch-node node)) node
-               (org-ml--map-property-nocheck* :contents-end (1- it) node))
-             (org-ml--map-property-nocheck* :end (1- it))))
-       (decrement-node-end*
-        (node)
-        (->> (org-ml--map-property-nocheck* :end (1- it) node)
-             (org-ml--map-property-nocheck* :contents-end (1- it))))
-       (decrement-node*
-        (node)
-        (->> (decrement-node-end* node)
-             (org-ml--map-property-nocheck* :begin (1- it))
-             (org-ml--map-property-nocheck* :contents-begin (1- it))))
+        (if (org-ml-is-element node)
+            (if (org-ml-is-branch-node node) (shift-branch-element-node -1 node)
+              (shift-element-node -1 node))
+          (decrement-object-node node)))
        (remove-leading-space-maybe
         (node)
         (org-ml--map-children-nocheck*
@@ -5187,82 +5209,77 @@ parsed into TYPE this function will return nil."
                   it))
                it))
           it)
-         node)))
-    (-some->>
-        (cond
-         ((eq type 'paragraph)
-          (let* ((pb (string-to-post-blank string))
-                 (e (1+ (length string)))
-                 (ce (- e pb)))
-            (-some->> (org-ml-build-paragraph! string :post-blank pb)
-              (org-ml--set-properties-nocheck (list :begin 1
-                                                    :contents-begin 1
-                                                    :end e
-                                                    :contents-end ce)))))
-         ((and (eq type 'section) (s-matches-p "^\\*" string))
-          (-some->> (concat " " string)
-            (org-ml--from-string)
-            (remove-leading-space-maybe)
-            (decrement-node-end*)
-            (org-ml-match-map '((:and 0 (:not plain-text)) *) #'decrement-node-end)
-            (org-ml-match-map '((:and (> 0) (:not plain-text)) *) #'decrement-node)))
-         ((eq type 'bold)
-          (-some->> (concat " " string)
-            (org-ml--from-string)
-            (org-ml--get-descendent '(0 1))
-            (decrement-node*)
-            (org-ml-match-map '((:not plain-text) *) #'decrement-node)))
-         ((memq type '(superscript subscript))
-          (-some->> (concat "s" string)
-            (org-ml--from-string)
-            (org-ml--get-descendent '(0 1))
-            (decrement-node*)
-            (org-ml-match-map '((:not plain-text) *) #'decrement-node)))
-         ((eq type 'table-cell)
-          (-some->> (concat "|" string)
-            (org-ml--from-string)
-            (org-ml--get-descendent '(0 0 0))
-            (decrement-node*)
-            (org-ml-match-map '((:not plain-text) *) #'decrement-node)))
-         ((eq type 'node-property)
-          (let* ((pb (string-to-post-blank string))
-                 (e (1+ (- (length string) pb))))
-            (-some->> (format "* dummy\n:PROPERTIES:\n%s\n:END:" string)
-              (org-ml--from-string)
-              (org-ml--get-descendent '(0 0 0))
-              (org-ml--set-properties-nocheck (list :post-affiliated 1
-                                                    :begin 1
-                                                    :post-blank pb
-                                                    :end e)))))
-         ((eq type 'planning)
-          (-some->> (concat "* dummy\n" string)
-            (org-ml--from-string)
-            (org-ml--get-descendent '(0 0))
-            (org-ml--map-property-nocheck* :begin (- it 8))
-            (org-ml--map-property-nocheck* :post-affiliated (- it 8))
-            (org-ml--map-property-nocheck* :end (- it 8))
-            ;; TODO not DRY (but I'm lazy apparently)
-            (org-ml--map-property-nocheck* :scheduled
-              (-some->> it
-                (org-ml--map-property-nocheck* :begin (- it 8))
-                (org-ml--map-property-nocheck* :end (- it 8))))
-            (org-ml--map-property-nocheck* :deadline
-              (-some->> it
-                (org-ml--map-property-nocheck* :begin (- it 8))
-                (org-ml--map-property-nocheck* :end (- it 8))))
-            (org-ml--map-property-nocheck* :closed
-              (-some->> it
-                (org-ml--map-property-nocheck* :begin (- it 8))
-                (org-ml--map-property-nocheck* :end (- it 8))))))
-         (t (let ((level (cond
-                          ((eq type 'headline) nil)
-                          ((eq type 'section) nil)
-                          ((eq type 'item) '(0 0))
-                          ((eq type 'table-row) '(0 0))
-                          ((memq type org-ml-objects) '(0 0))
-                          (t '(0)))))
-              (-some->> (org-ml--from-string string)
-                (org-ml--get-descendent level)))))
+         node))
+       (from-prefixed-string
+        (prefix level string)
+        (-some->> (concat prefix string)
+          (org-ml--from-string)
+          (org-ml--get-descendent level)
+          (shift-branch-object-node -1)
+          (org-ml-match-map '((:not plain-text) *) #'decrement-object-node))))
+    (-some->> (cond
+               ((eq type 'paragraph)
+                (let* ((pb (string-to-post-blank string))
+                       (e (1+ (length string)))
+                       (ce (- e pb)))
+                  (-some->> (org-ml-build-paragraph! string :post-blank pb)
+                    (org-ml--set-properties-nocheck (list :begin 1
+                                                          :contents-begin 1
+                                                          :end e
+                                                          :contents-end ce)))))
+               ((and (eq type 'section) (s-matches-p "^\\*" string))
+                (-some->> (concat " " string)
+                  (org-ml--from-string)
+                  (remove-leading-space-maybe)
+                  (shift-property :end -1)
+                  (shift-property-maybe :contents-end -1)
+                  (org-ml-match-map '((:and 0 (:not plain-text)) *)
+                    (lambda (node)
+                      (->> (if (not (org-ml-is-branch-node node)) node
+                             (shift-property :contents-end -1 node))
+                           (shift-property :end -1))))
+                  (org-ml-match-map '((:and (> 0) (:not plain-text)) *)
+                    #'decrement-node)))
+               ((eq type 'node-property)
+                (let* ((pb (string-to-post-blank string))
+                       (e (1+ (- (length string) pb))))
+                  (-some->> (format "* dummy\n:PROPERTIES:\n%s\n:END:" string)
+                    (org-ml--from-string)
+                    (org-ml--get-descendent '(0 0 0))
+                    (org-ml--set-properties-nocheck (list :post-affiliated 1
+                                                          :begin 1
+                                                          :post-blank pb
+                                                          :end e)))))
+               ((eq type 'property-drawer)
+                (-some->> (concat "* dummy\n" string)
+                  (org-ml--from-string)
+                  (org-ml--get-descendent '(0 0))
+                  (shift-branch-element-node -8)
+                  (org-ml--map-children-nocheck*
+                   (--map (shift-element-node -8 it) it))))
+               ((eq type 'planning)
+                (-some->> (concat "* dummy\n" string)
+                  (org-ml--from-string)
+                  (org-ml--get-descendent '(0 0))
+                  (shift-element-node -8)
+                  (shift-property-node :scheduled -8)
+                  (shift-property-node :deadline -8)
+                  (shift-property-node :closed -8)))
+               ((eq type 'bold)
+                (from-prefixed-string " " '(0 1) string))
+               ((memq type '(superscript subscript))
+                (from-prefixed-string "s" '(0 1) string))
+               ((eq type 'table-cell)
+                (from-prefixed-string "|" '(0 0 0) string))
+               (t (let ((level (cond
+                                ((eq type 'headline) nil)
+                                ((eq type 'section) nil)
+                                ((eq type 'item) '(0 0))
+                                ((eq type 'table-row) '(0 0))
+                                ((memq type org-ml-objects) '(0 0))
+                                (t '(0)))))
+                    (-some->> (org-ml--from-string string)
+                      (org-ml--get-descendent level)))))
       (org-ml--set-property-nocheck :parent nil))))
 
 ;;; PATTERN MATCHING
