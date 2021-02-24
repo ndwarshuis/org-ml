@@ -182,81 +182,167 @@ is the converse."
            (cl-subsetp a b :test #'equal)))))
 
 (defun org-ml--equal~ (exclude-props node1 node2)
-  (cond
-   ((and (stringp node1) (stringp node2))
-    (equal node1 node2))
-   ((and (consp node1) (consp node2))
+  (if (and (stringp node1) (stringp node2))
+      `(expect ,node1 :to-equal ,node2)
     (-let (((type1 . (props1 . children1)) node1)
            ((type2 . (props2 . children2)) node2))
-      (and (eq type1 type2)
-           (org-ml--plist-equal-p exclude-props props1 props2)
-           (->> (-zip-fill nil children1 children2)
-                (--all? (org-ml--equal~ exclude-props (car it) (cdr it)))))))))
+      `(progn
+         (expect ',type1 :to-be ',type2)
+         (expect (org-ml--plist-equal-p ',exclude-props ',props1 ',props2))
+         (and (eq ',type1 ',type2)
+              (->> (-zip-fill nil ',children1 ',children2)
+                   (--all? (org-ml--equal~ ',exclude-props (car it) (cdr it)))))))))
 
-(defun org-ml--test-from-string (omit-props node string)
+(defun org-ml--test-from-string (omit-props &rest specs)
+  (declare (indent 1))
   (let ((props (append omit-props '(:begin :contents-begin :end :contents-end
                                            :parent :post-affiliated :name
-                                           :plot :header :results :caption)))
-        (type (org-ml-get-type node)))
-    (should (org-ml--equal~ props node (org-ml-from-string type string)))))
+                                           :plot :header :results :caption))))
+    (->> (-partition 2 specs)
+         (--map (-let* (((node string) it)
+                        (type (org-ml-get-type node)))
+                  `(it ,(format "%s - %s" type (s-replace "\n" "\\n" string))
+                     ,(org-ml--equal~ props node (org-ml-from-string type string))))))))
+
+(defmacro describe-many (header &rest forms)
+  (declare (indent 1))
+  (let ((it-forms (-flatten-n 1 (-map #'eval forms))))
+    `(describe ,header ,@it-forms)))
 
 (describe "converting from string"
-  (it "object nodes"
-    (org-ml--test-from-string '(:value) (org-ml-build-babel-call "name") "#+call: name()")
-    (org-ml--test-from-string nil (org-ml-build-bold "bold") "*bold*")
-    (org-ml--test-from-string nil (org-ml-build-code "code") "~code~")
-    (org-ml--test-from-string nil (org-ml-build-comment "comment") "# comment")
-    (org-ml--test-from-string nil (org-ml-build-diary-sexp :value '(print 'hi)) "%%(print 'hi)")
+  (describe-many "object leaf nodes"
+    (org-ml--test-from-string nil
+      (org-ml-build-code "code") "~code~")
     (org-ml--test-from-string '(:latex :latex-math-p :ascii :html :latin1 :utf-8)
-                              (org-ml-build-entity "pi") "\\pi")
-    (org-ml--test-from-string nil (org-ml-build-export-snippet "be" "val") "@@be:val@@")
-    (org-ml--test-from-string nil (org-ml-build-fixed-width "val") ": val")
-    ;; TODO add footnote ref
-    (org-ml--test-from-string '(:value) (org-ml-build-inline-babel-call "ktulu") "call_ktulu()")
-    (org-ml--test-from-string '(:value) (org-ml-build-inline-src-block "python") "src_python{}")
-    (org-ml--test-from-string nil (org-ml-build-italic "italic") "/italic/")
-    ;; TODO add latex env
-    ;; TODO add latex frag
-    (org-ml--test-from-string '(:raw-link :format) (org-ml-build-link "//example.com" :type "https") "https://example.com")
-    ;; TODO add macro
-    ;; TODO add radio target
-    (org-ml--test-from-string nil (org-ml-build-section (org-ml-build-paragraph! "sec")) "sec")
-    ;; TODO add special block
-    ;; TODO add src block
-    ;; TODO add stats cookie
-    (org-ml--test-from-string nil (org-ml-build-strike-through "s") "+s+")
-    ;; TODO add subscript
-    ;; TODO add superscript
-    ;; TODO add table-cell
-    ;; TODO add target
-    ;; TODO timestamp does not have all props so can't compare :(
-    ;; (org-ml--test-from-string '(:raw-value) (org-ml-build-timestamp! '(2020 1 1)) "[2020-01-01 Tue]")
-    (org-ml--test-from-string nil (org-ml-build-underline "u") "_u_")
-    (org-ml--test-from-string nil (org-ml-build-verbatim "b") "=b="))
+      (org-ml-build-entity "pi") "\\pi")
+    (org-ml--test-from-string nil
+      (org-ml-build-export-snippet "be" "val") "@@be:val@@")
+    (org-ml--test-from-string '(:value)
+      (org-ml-build-inline-babel-call "ktulu") "call_ktulu()")
+    (org-ml--test-from-string '(:value)
+      (org-ml-build-inline-src-block "python") "src_python{}")
+    (org-ml--test-from-string nil
+      (org-ml-build-line-break) "\\\\\n")
+    (org-ml--test-from-string nil
+      (org-ml-build-latex-fragment "$1+1$") "$1+1$")
+    (org-ml--test-from-string nil
+      (org-ml-build-macro "macro") "{{{macro}}}")
+    (org-ml--test-from-string '(:value)
+      (org-ml-build-radio-target "radio") "<<<radio>>>")
+    (org-ml--test-from-string nil
+      (org-ml-build-statistics-cookie '(1 2)) "[1/2]"
+      (org-ml-build-statistics-cookie '(nil nil)) "[/]"
+      (org-ml-build-statistics-cookie '(50)) "[50%]"
+      (org-ml-build-statistics-cookie '(nil)) "[%]")
+    (org-ml--test-from-string nil
+      (org-ml-build-target "target") "<<target>>")
+    (org-ml--test-from-string '(:raw-value)
+      (->> (org-ml-build-timestamp! '(2020 1 1 0 0)
+                                    :end '(2020 1 1 0 10)
+                                    :repeater '(cumulate 1 day)
+                                    :warning '(all 1 day))
+           (org-ml-timestamp-set-collapsed nil))
+      "[2020-01-01 Tue 00:00-00:10 -1d +1d]")
+    (org-ml--test-from-string nil
+      (org-ml-build-verbatim "b") "=b="))
 
-  (it "element nodes"
-    (org-ml--test-from-string nil (org-ml-build-center-block) "#+begin_center\n#+end_center")
-    ;; TODO cannot compare the values currently
-    ;; (org-ml--test-from-string nil (org-ml-build-clock! '(2020 1 1 0 0)) "CLOCK: [2020-01-01 Tue 00:00]")
-    (org-ml--test-from-string nil (org-ml-build-comment-block) "#+begin_comment\n#+end_comment")
-    (org-ml--test-from-string nil (org-ml-build-drawer "DRAW") ":DRAW:\n:END:")
-    (org-ml--test-from-string nil (org-ml-build-dynamic-block "name") "#+begin: name\n#+end")
-    (org-ml--test-from-string '(:value :retain-labels :use-labels) (org-ml-build-example-block) "#+begin_example\n#+end_example")
-    (org-ml--test-from-string nil (org-ml-build-export-block "TYPE" "value\n") "#+begin_export TYPE\nvalue\n#+end_export")
-    ;; TODO add footnote definition
-    (org-ml--test-from-string '(:raw-value) (org-ml-build-headline! :title-text "headline") "* headline")
-    (org-ml--test-from-string nil (org-ml-build-horizontal-rule) "------")
-    (org-ml--test-from-string nil (org-ml-build-paragraph! "para") "para")
-    (org-ml--test-from-string '(:structure) (org-ml-build-item! :paragraph "item") "- item")
-    (org-ml--test-from-string nil (org-ml-build-keyword "K" "v") "#+K: v")
-    (org-ml--test-from-string '(:structure :type) (org-ml-build-plain-list (org-ml-build-item! :paragraph "item")) "- item")
-    ;; TODO add node-property
-    ;; TODO add planning
-    ;; TODO add property drawer
-    ;; TODO add table
-    ;; TODO add table-row
-    ;; TODO add verse block
-    ))
+  (describe-many "object branch nodes"
+    (org-ml--test-from-string nil
+      (org-ml-build-bold "bold") "*bold*")
+    (org-ml--test-from-string '(:type)
+      (org-ml-build-footnote-reference "ref") "[fn::ref]")
+    (org-ml--test-from-string nil
+      (org-ml-build-italic "italic") "/italic/")
+    (org-ml--test-from-string '(:raw-link :format)
+      (org-ml-build-link "//example.com" :type "https") "https://example.com")
+    (org-ml--test-from-string nil
+      (org-ml-build-subscript "ss") "_ss")
+    (org-ml--test-from-string nil
+      (org-ml-build-superscript "ss") "^ss")
+    (org-ml--test-from-string nil
+      (org-ml-build-strike-through "s") "+s+")
+    (org-ml--test-from-string nil
+      (org-ml-build-table-cell "cell") " cell |")
+    (org-ml--test-from-string nil
+      (org-ml-build-underline "u") "_u_"))
+
+  (describe-many "element leaf nodes"
+    (org-ml--test-from-string '(:value)
+      (org-ml-build-babel-call "name") "#+call: name()")
+    (org-ml--test-from-string nil
+      (org-ml-build-center-block) "#+begin_center\n#+end_center"
+      (org-ml-build-center-block (org-ml-build-paragraph! "p")) "#+begin_center\np\n#+end_center")
+    ;; TODO maybe I should figure out how to compare values robustly, but at
+    ;; least this test demonstrates the string is parsed to a clock
+    (org-ml--test-from-string '(:value)
+      (org-ml-build-clock! '(2020 1 1 0 0)) "CLOCK: [2020-01-01 Tue 00:00]")
+    (org-ml--test-from-string nil
+      (org-ml-build-comment "comment") "# comment")
+    (org-ml--test-from-string nil
+      (org-ml-build-comment-block) "#+begin_comment\n#+end_comment"
+      (org-ml-build-comment-block :value "p\n") "#+begin_comment\np\n#+end_comment")
+    (org-ml--test-from-string nil
+      (org-ml-build-diary-sexp :value '(print 'hi)) "%%(print 'hi)")
+    (org-ml--test-from-string '(:value :retain-labels :use-labels)
+      (org-ml-build-example-block) "#+begin_example\n#+end_example"
+      (org-ml-build-example-block :value "v\n") "#+begin_example\nv\n#+end_example")
+    (org-ml--test-from-string nil
+      (org-ml-build-export-block "TYPE" "value\n") "#+begin_export TYPE\nvalue\n#+end_export")
+    (org-ml--test-from-string nil
+      (org-ml-build-fixed-width "val") ": val")
+    (org-ml--test-from-string nil
+      (org-ml-build-horizontal-rule) "------")
+    (org-ml--test-from-string nil
+      (org-ml-build-latex-environment '("env" "value")) "\\begin{env}\nvalue\n\\end{env}")
+    (org-ml--test-from-string nil
+      (org-ml-build-keyword "K" "v") "#+K: v")
+    (org-ml--test-from-string nil
+      (org-ml-build-special-block "type") "#+begin_type\n#+end_type")
+    (org-ml--test-from-string '(:number-lines :retain-labels :use-labels :label-fmt)
+      (org-ml-build-src-block :value "(print 'hi)\n") "#+begin_src\n(print 'hi)\n#+end_src")
+    (org-ml--test-from-string nil
+      (org-ml-build-node-property "KEY" "val") ":KEY: val")
+    (org-ml--test-from-string '(:scheduled :deadline :closed)
+      (org-ml-build-planning! :scheduled '(2020 1 1)) "SCHEDULED: [2020-01-01 Tue]"))
+
+  (describe-many "element branch nodes"
+    (org-ml--test-from-string nil
+      (org-ml-build-drawer "DRAW") ":DRAW:\n:END:"
+      (org-ml-build-drawer "DRAW" (org-ml-build-paragraph! "p")) ":DRAW:\np\n:END:")
+    (org-ml--test-from-string nil
+      (org-ml-build-dynamic-block "name") "#+begin: name\n#+end"
+      (org-ml-build-dynamic-block "name" (org-ml-build-paragraph! "p")) "#+begin: name\np\n#+end")
+    (org-ml--test-from-string nil
+      (org-ml-build-footnote-definition "label" (org-ml-build-paragraph! "p")) "[fn:label] p")
+    (org-ml--test-from-string '(:raw-value)
+      (org-ml-build-headline! :title-text "headline") "* headline")
+    (org-ml--test-from-string '(:structure)
+      (org-ml-build-item! :paragraph "item") "- item")
+    (org-ml--test-from-string nil
+      (org-ml-build-paragraph! "para") "para"
+      (org-ml-build-paragraph! "*para") "*para"
+      (org-ml-build-paragraph) "")
+    (org-ml--test-from-string '(:structure :type)
+      (org-ml-build-plain-list (org-ml-build-item! :paragraph "item")) "- item")
+    (org-ml--test-from-string nil
+      (org-ml-build-section (org-ml-build-paragraph! "sec")) "sec"
+      (org-ml-build-section (org-ml-build-paragraph! "*sec")) "*sec")
+    (org-ml--test-from-string nil
+      (org-ml-build-property-drawer) ":PROPERTIES:\n:END:"
+      (org-ml-build-property-drawer! '(KEY val)) ":PROPERTIES:\n:KEY: val\n:END:")
+    (org-ml--test-from-string nil
+      (org-ml-build-quote-block) "#+begin_quote\n#+end_quote"
+      (org-ml-build-quote-block (org-ml-build-paragraph! "p")) "#+begin_quote\np\n#+end_quote")
+    (org-ml--test-from-string nil
+      (org-ml-build-table! '("a")) "| a |"
+      (org-ml-build-table) "|")
+    (org-ml--test-from-string nil
+      (org-ml-build-table-row! '("a")) "| a |"
+      (org-ml-build-table-row-hline) "|---|"
+      (org-ml-build-table-row) "|")
+    (org-ml--test-from-string nil
+      (org-ml-build-verse-block) "#+begin_verse\n#+end_verse"
+      (org-ml-build-verse-block "hi\n") "#+begin_verse\nhi\n#+end_verse")))
 
 ;;; PARSING INVERTABILITY
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.6.1
+
+- make `org-ml-from-string` work correctly with all types and inputs
+
 ## 5.6.0
 
 - add get/set/map functions for timestamp repeaters and warnings
