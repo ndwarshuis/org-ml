@@ -8,6 +8,7 @@ jobs:
       matrix:
         emacs_version:
           - '27.1'
+          - '27.2'
           - 'snapshot'
         include:
           - emacs_version: 'snapshot'

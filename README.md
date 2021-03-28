@@ -37,10 +37,13 @@ Then require in your emacs config:
 
 ## Dependencies
 
-- emacs (>= 27.1)
-- org-mode (v9.3)
+- emacs (27.2, 27.1)
+- org-mode (9.4, 9.3)
 - dash
 - s
+
+Explicit versions noted above have been tested. Other versions may work but are
+not currently supported.
 
 # Motivation
 

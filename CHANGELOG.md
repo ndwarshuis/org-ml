@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.6.2
+
+- add explicit test path for emacs 27.2/org-mode 9.4
+
 ## 5.6.1
 
 - make `org-ml-from-string` work correctly with all types and inputs
