@@ -225,7 +225,8 @@ the car.")
       (section ,@standard)
       (special-block ,@standard)
       ;; tables can only have table-rows
-      (table table-row)))
+      (table table-row)
+      (org-data headline section)))
   "Alist of element node type restrictions for element branch nodes.
 The types in the cdr of each entry may be children of the type held at
 the car.")
