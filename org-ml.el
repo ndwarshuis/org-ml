@@ -2340,7 +2340,10 @@ All other arguments follow the same rules as `org-ml-build-table'."
 
 (defun org-ml-build-org-data (&rest headline-or-sections-nodes)
   "Return a new org-data node."
-  (apply #'list 'org-data headline-or-sections-nodes))
+  (->> (org-ml--build-blank-node 'org-data)
+    (org-ml--set-property-nocheck-nil :beg)
+    (org-ml--set-property-nocheck-nil :end)
+    (org-ml-set-children headline-or-sections-nodes)))
 
 ;;; logbook items
 
@@ -2349,8 +2352,8 @@ All other arguments follow the same rules as `org-ml-build-table'."
 (defun org-ml--log-replace (placeholder string heading)
   "Return HEADING with PLACEHOLDER replaced by STRING."
   (->> (cons placeholder string)
-       (list)
-       (org-replace-escapes heading)))
+    (list)
+    (org-replace-escapes heading)))
 
 (defun org-ml--log-replace-new (string heading)
   "Return HEADING with placeholder \"%s\" replaced by STRING."
