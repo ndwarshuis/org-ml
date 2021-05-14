@@ -2338,6 +2338,10 @@ All other arguments follow the same rules as `org-ml-build-table'."
   (->> (-map #'org-ml-build-table-row! row-lists)
        (apply #'org-ml-build-table :tblfm tblfm :post-blank post-blank)))
 
+(defun org-ml-build-org-data (&rest headline-or-sections-nodes)
+  "Return a new org-data node."
+  (apply #'list 'org-data headline-or-sections-nodes))
+
 ;;; logbook items
 
 ;; internal
