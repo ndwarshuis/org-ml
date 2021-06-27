@@ -706,6 +706,12 @@
   (def-example-subgroup "Branch Element Nodes with Child Element Nodes"
     nil
 
+    (defexamples org-ml-build-org-data
+      (->> (org-ml-build-headline :title '("dummy"))
+        (org-ml-build-org-data)
+        (org-ml-to-trimmed-string))
+      => "* dummy")
+
     (defexamples org-ml-build-center-block
       (->> (org-ml-build-center-block)
            (org-ml-to-trimmed-string))
