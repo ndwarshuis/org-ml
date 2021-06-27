@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.6.3
+## 5.7.0
 
 - add functions/checks for `org-data` nodes
 
