@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.6.2
+;; Version: 5.7.0
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -225,7 +225,8 @@ the car.")
       (section ,@standard)
       (special-block ,@standard)
       ;; tables can only have table-rows
-      (table table-row)))
+      (table table-row)
+      (org-data headline section)))
   "Alist of element node type restrictions for element branch nodes.
 The types in the cdr of each entry may be children of the type held at
 the car.")
@@ -2337,6 +2338,13 @@ All other arguments follow the same rules as `org-ml-build-table'."
   (->> (-map #'org-ml-build-table-row! row-lists)
        (apply #'org-ml-build-table :tblfm tblfm :post-blank post-blank)))
 
+(defun org-ml-build-org-data (&rest headline-or-sections-nodes)
+  "Return a new org-data node."
+  (->> (org-ml--build-blank-node 'org-data)
+    (org-ml--set-property-nocheck-nil :beg)
+    (org-ml--set-property-nocheck-nil :end)
+    (org-ml-set-children headline-or-sections-nodes)))
+
 ;;; logbook items
 
 ;; internal
@@ -2344,8 +2352,8 @@ All other arguments follow the same rules as `org-ml-build-table'."
 (defun org-ml--log-replace (placeholder string heading)
   "Return HEADING with PLACEHOLDER replaced by STRING."
   (->> (cons placeholder string)
-       (list)
-       (org-replace-escapes heading)))
+    (list)
+    (org-replace-escapes heading)))
 
 (defun org-ml--log-replace-new (string heading)
   "Return HEADING with placeholder \"%s\" replaced by STRING."
