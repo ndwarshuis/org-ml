@@ -85,6 +85,7 @@ Build new nodes.
 
 ### Branch Element Nodes with Child Element Nodes
 
+* [org-ml-build-org-data](#org-ml-build-org-data-rest-headline-or-sections-nodes) `(&rest headline-or-sections-nodes)`
 * [org-ml-build-center-block](#org-ml-build-center-block-key-name-plot-header-results-caption-post-blank-rest-element-nodes) `(&key name plot header results caption post-blank &rest element-nodes)`
 * [org-ml-build-drawer](#org-ml-build-drawer-drawer-name-key-name-plot-header-results-caption-post-blank-rest-element-nodes) `(drawer-name &key name plot header results caption post-blank &rest element-nodes)`
 * [org-ml-build-dynamic-block](#org-ml-build-dynamic-block-block-name-key-arguments-name-plot-header-results-caption-post-blank-rest-element-nodes) `(block-name &key arguments name plot header results caption post-blank &rest element-nodes)`
@@ -173,6 +174,7 @@ Set, get, and map properties of nodes.
 * [org-ml-set-properties](#org-ml-set-properties-plist-node) `(plist node)`
 * [org-ml-map-properties](#org-ml-map-properties-plist-node) `(plist node)`
 * [org-ml-get-parents](#org-ml-get-parents-node) `(node)`
+* [org-ml-remove-parent](#org-ml-remove-parent-node) `(node)`
 
 ### Clock
 
@@ -1806,6 +1808,18 @@ The following properties are settable:
 
 
 ### Branch Element Nodes with Child Element Nodes
+
+#### org-ml-build-org-data `(&rest headline-or-sections-nodes)`
+
+Return a new org-data node.
+
+```el
+(->> (org-ml-build-headline :title '("dummy"))
+  (org-ml-build-org-data)
+  (org-ml-to-trimmed-string))
+ ;; => "* dummy"
+
+```
 
 #### org-ml-build-center-block `(&key name plot header results caption post-blank &rest element-nodes)`
 
@@ -3531,6 +3545,61 @@ will be the rightmost member.
   (org-ml-get-parents)
   (--map (org-ml-get-property :begin it)))
  ;; => '(1 7 14)
+
+```
+
+#### org-ml-remove-parent `(node)`
+
+Return **`node`** with the :parent property set to nil.
+
+Short synopsis:
+
+Use this function to declutter a node if you are trying to print
+its literal list representation or you are running into infinite
+loops caused by self-referential lists (there are probably other
+valid reasons but these are the main ones).
+
+Gory details:
+
+The :parent property refers to the node one level higher in the
+tree that contains **`node`** as a child. It will be present in a node
+that is generated from a parse operation with
+`org-ml-parse-this-buffer` or related. This property offers a
+nice shortcut to traverse up the node tree from a child. Besides
+this, it is not necessary as the tree structure itself already
+encodes all parent-child relationships. Further, it is not used
+by org-element internally to convert nodes into strings (such as
+with [`org-ml-to-string`](#org-ml-to-string-node)) and thus can be thought of as a
+'read-only' property. This is why :parent will be set to nil when
+building a new node with the 'org-ml-build-' family of functions
+and why [`org-ml-set-property`](#org-ml-set-property-prop-value-node) forbids setting this property.
+
+In many cases, one can safely ignore :parent unless, of course,
+one actually needs to read it with [`org-ml-get-parents`](#org-ml-get-parents-node) or
+[`org-ml-get-property`](#org-ml-get-property-prop-node). However, it heavily clutters the list
+representation of nodes, and therefore it is nice to remove this
+property whenever literal node lists are printed/visualized (eg
+for debugging). Note that for deep trees, each parent will itself
+have a :parent property pointing to its own parent, with this
+pattern repeating until the top of the tree.
+
+Furthermore, each parent will itself contain its own child node,
+which implies a circular/self-referential list. For the most
+part, this won't matter. However, some functions don't like
+dealing with circular lists and will complain about infinite
+recursion. If this is happening, the :parent property is likely
+to blame, and setting it to nil has a high probability of fixing
+the issue.
+
+```el
+;; Given the following contents:
+; one
+
+;; This is actually a paragraph node, but parsing the object will directly
+;; return a plain-text node with the :parent pointing to the paragraph
+(->> (org-ml-parse-this-object)
+  (org-ml-remove-parent))
+ ;; => "one"
 
 ```
 
@@ -8070,4 +8139,4 @@ Unfold the children of **`node`** if they exist.
 ```el
 no examples :(
 ```
-Version: 5.6.2
+Version: 5.7.1

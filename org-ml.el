@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.7.0
+;; Version: 5.7.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -2943,6 +2943,76 @@ will be the rightmost member."
         (if (or (null node) (eq 'org-data (car node))) acc
           (get-parents (cons node acc) (org-ml-get-property :parent node)))))
     (get-parents nil node)))
+
+(defun org-ml-remove-parent (node)
+  "Return NODE with the :parent property set to nil.
+
+Short synopsis:
+
+Use this function to declutter a node if you are trying to print
+its literal list representation or you are running into infinite
+loops caused by self-referential lists (there are probably other
+valid reasons but these are the main ones).
+
+Gory details:
+
+The :parent property refers to the node one level higher in the
+tree that contains NODE as a child. It will be present in a node
+that is generated from a parse operation with
+`org-ml-parse-this-buffer' or related. This property offers a
+nice shortcut to traverse up the node tree from a child. Besides
+this, it is not necessary as the tree structure itself already
+encodes all parent-child relationships. Further, it is not used
+by org-element internally to convert nodes into strings (such as
+with `org-ml-to-string') and thus can be thought of as a
+'read-only' property. This is why :parent will be set to nil when
+building a new node with the 'org-ml-build-' family of functions
+and why `org-ml-set-property' forbids setting this property.
+
+In many cases, one can safely ignore :parent unless, of course,
+one actually needs to read it with `org-ml-get-parents' or
+`org-ml-get-property'. However, it heavily clutters the list
+representation of nodes, and therefore it is nice to remove this
+property whenever literal node lists are printed/visualized (eg
+for debugging). Note that for deep trees, each parent will itself
+have a :parent property pointing to its own parent, with this
+pattern repeating until the top of the tree.
+
+Furthermore, each parent will itself contain its own child node,
+which implies a circular/self-referential list. For the most
+part, this won't matter. However, some functions don't like
+dealing with circular lists and will complain about infinite
+recursion. If this is happening, the :parent property is likely
+to blame, and setting it to nil has a high probability of fixing
+the issue."
+  ;; TODO this will check if node is s string twice
+  (if (stringp node)
+      (progn (remove-text-properties 0 (length node) '(:parent) node) node)
+    (org-ml--set-property-nocheck-nil :parent node)))
+
+(defun org-ml-remove-parents (node)
+  "Like `org-ml-remove-parent' but for children of NODE as well.
+
+See `org-ml-remove-parent' for why you might want this."
+  (cl-flet
+      ((remove-recursive
+        (nodes)
+        (--map (org-ml-remove-parents it) nodes)))
+    (->>
+     ;; remove parents from secondary strings (if necessary)
+     (pcase (org-ml-get-type node)
+       (`headline
+        (org-ml--map-property-nocheck* :title
+          (remove-recursive it)
+          node))
+       (`item
+        (org-ml--map-property-nocheck* :tag
+          (remove-recursive it)
+          node))
+       (_ node))
+     (org-ml-remove-parent)
+     (org-ml--map-children-nocheck*
+      (--map (org-ml-remove-parents it) it)))))
 
 ;;; object nodes
 ;;

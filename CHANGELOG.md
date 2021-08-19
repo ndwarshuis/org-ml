@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.7.1
+
+- add `org-ml-remove-parent(s)`
+
 ## 5.7.0
 
 - add functions/checks for `org-data` nodes

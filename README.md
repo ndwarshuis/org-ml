@@ -136,6 +136,10 @@ manipulating the textual representation of the parse tree. In addition to these,
 some properties unique to certain types are not settable for the same reason.
 Each type's build function describes the properties that are settable.
 
+See `org-ml-remove-parent` and `org-ml-remove-parents` for specific information
+and functions regarding the `:parent` property, why it can be annoying, when you
+would want to remove it.
+
 ## Threading
 
 Each function that operates on an element/object will take the element/object as

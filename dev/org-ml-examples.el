@@ -2859,7 +2859,26 @@
            (car)
            (org-ml-get-parents)
            (--map (org-ml-get-property :begin it)))
-      => '(1 7 14)))
+      => '(1 7 14))
+
+    (defexamples-content org-ml-remove-parent
+      nil
+      (:buffer "one")
+      (:comment "This is actually a paragraph node, but parsing the object"
+                "will directly return a plain-text node with the :parent"
+                "pointing to the paragraph")
+      (->> (org-ml-parse-this-object)
+           (org-ml-remove-parent))
+      => "one"
+
+    (defexamples-content org-ml-remove-parents
+      nil
+      (:buffer "one")
+      (->> (org-ml-parse-this-element)
+           (org-ml-remove-parents))
+      => '(paragraph
+           (:begin 1 :end 4 :contents-begin 1 :contents-end 4 :post-blank 0 :post-affiliated 1 :parent nil)
+           "one"))))
 
   (def-example-subgroup "Clock"
     nil
