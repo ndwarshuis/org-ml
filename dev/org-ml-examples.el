@@ -2878,7 +2878,37 @@
            (org-ml-remove-parents))
       => '(paragraph
            (:begin 1 :end 4 :contents-begin 1 :contents-end 4 :post-blank 0 :post-affiliated 1 :parent nil)
-           "one"))))
+           "one"))
+
+      (:buffer "* headline")
+      (->> (org-ml-parse-this-element)
+           (org-ml-remove-parents))
+      => '(headline
+           (:raw-value "headline" :begin 1 :end 11 :pre-blank 0 :contents-begin nil :contents-end nil :level 1 :priority nil :tags nil :todo-keyword nil :todo-type nil :post-blank 0 :footnote-section-p nil :archivedp nil :commentedp nil :post-affiliated 1 :title ("headline") :parent nil))
+
+      (:buffer "- tag :: thingy")
+      (->> (org-ml-parse-this-item)
+           (org-ml-remove-parents))
+      => '(item
+           (:bullet "- " :begin 1 :end 16 :contents-begin 10 :contents-end 16 :checkbox nil :counter nil :structure ((1 0 "- " nil nil "tag" 16)) :pre-blank 0 :post-blank 0 :post-affiliated 1 :tag ("tag") :parent nil)
+           (paragraph
+            (:begin 10 :end 16 :contents-begin 10 :contents-end 16 :post-blank 0 :post-affiliated 10 :parent nil)
+            "thingy"))
+
+      :begin-hidden
+
+      ;; for some reason the timestamps in planning don't have parents
+      (:buffer "* headline"
+               "SCHEDULED: <2021-08-27 Fri>")
+      (->> (org-ml-parse-this-element)
+           (org-ml-headline-get-planning)
+           (org-ml-get-property :scheduled)
+           ;; (org-ml-remove-parents)
+           (org-ml-get-property :parent)
+      => nil)
+
+      :end-hidden
+    ))
 
   (def-example-subgroup "Clock"
     nil

@@ -443,6 +443,10 @@ STRING and ARGS are analogous to `error'."
   "Return NODE if it is one of TYPES or nil otherwise."
   (and (org-ml-is-any-type types node) node))
 
+(defun org-ml--is-secondary-string (list)
+  "Return t if LIST is a secondary string."
+  (--none? (org-ml-is-any-type org-ml-elements it) list))
+
 ;;; MISC HELPER FUNCTIONS
 
 (defun org-ml--get-head (node)
@@ -2146,7 +2150,7 @@ throw an error."
                     (org-ml--get-descendent '(0))
                     (org-ml-get-children)))
       (cond
-       ((--any? (org-ml-is-any-type org-ml-elements it) ss)
+       ((not (org-ml--is-secondary-string ss))
         (org-ml--arg-error "Secondary string must only contain objects"))
        ((equal (car ss) " ")
         (-drop 1 ss))
@@ -2990,29 +2994,52 @@ the issue."
       (progn (remove-text-properties 0 (length node) '(:parent) node) node)
     (org-ml--set-property-nocheck-nil :parent node)))
 
+(defun org-ml--caption-remove-parents (node)
+  "Remove parents from CAPTION property in NODE if present."
+  (cl-flet*
+      ((remove-ss
+        (ss)
+        (-map #'org-ml-remove-parents ss))
+       (remove-from-caption
+        (caption)
+        (pcase caption
+          (`(,(pred org-ml--is-secondary-string))
+           (list (remove-ss (car caption))))
+          (`(,(pred org-ml--is-secondary-string)
+             . ,(pred org-ml--is-secondary-string))
+           (-let (((long . short) caption))
+             (cons (remove-ss long) (remove-ss short))))
+          ;; TODO error here?
+          (_ caption))))
+    (if (and (org-ml-is-any-type org-ml--element-nodes-with-affiliated node)
+             (org-ml--get-property-nocheck :caption node))
+        (org-ml--map-property-nocheck* :caption
+          (-map #'remove-from-caption it)
+          node)
+      node)))
+
 (defun org-ml-remove-parents (node)
   "Like `org-ml-remove-parent' but for children of NODE as well.
 
 See `org-ml-remove-parent' for why you might want this."
-  (cl-flet
+  (cl-flet*
       ((remove-recursive
         (nodes)
-        (--map (org-ml-remove-parents it) nodes)))
+        (--map (org-ml-remove-parents it) nodes))
+       (remove-within-prop
+        (prop node)
+        (org-ml--map-property-nocheck* prop
+          (remove-recursive it)
+          node)))
     (->>
      ;; remove parents from secondary strings (if necessary)
      (pcase (org-ml-get-type node)
-       (`headline
-        (org-ml--map-property-nocheck* :title
-          (remove-recursive it)
-          node))
-       (`item
-        (org-ml--map-property-nocheck* :tag
-          (remove-recursive it)
-          node))
+       (`headline (remove-within-prop :title node))
+       (`item (remove-within-prop :tag node))
        (_ node))
+     (org-ml--caption-remove-parents)
      (org-ml-remove-parent)
-     (org-ml--map-children-nocheck*
-      (--map (org-ml-remove-parents it) it)))))
+     (org-ml--map-children-nocheck* (remove-recursive it)))))
 
 ;;; object nodes
 ;;
