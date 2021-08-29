@@ -29,6 +29,8 @@
 
 (defvar org-ml-dev-examples-list '())
 
+(defvar org-ml-dev-recipe-list '())
+
 (defconst org-ml-elem--fill-column 80)
 
 (defun org-ml-get-package-version ()
@@ -130,6 +132,11 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
                       (-partition 3)
                       (-map 'example-to-string)))))
 
+(defun format-buffer-contents (list)
+  (->> (--map (format "; %s" it) list)
+              (s-join "\n")
+              (format ";; Given the following contents:\n%s\n")))
+
 (defmacro defexamples-content (cmd docstring &rest args)
   `(cl-flet
        ((formatted-string?
@@ -139,9 +146,10 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
          (list)
          (->> (car list)
               (-drop 1)
-              (--map (format "; %s" it))
-              (s-join "\n")
-              (format ";; Given the following contents:\n%s\n")))
+              (format-buffer-contents)))
+              ;; (--map (format "; %s" it))
+              ;; (s-join "\n")
+              ;; (format ";; Given the following contents:\n%s\n")))
         (format-comment
          (list)
          (let ((comment (->> (car list)
@@ -171,6 +179,13 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
                                      (docs--signature ',cmd)
                                      doc
                                      (or example '("no examples :(")))))))
+
+(defmacro defrecipe (header description contents form operator result)
+  `(let ((example (example-to-string (list ',form ',operator ',result)))
+         (contents* (format-buffer-contents ',contents)))
+     (add-to-list 'org-ml-dev-recipe-list
+                  (format "## %s\n\n%s\n\n```el\n%s\n%s```\n"
+                          ,header ,description contents* example))))
 
 (defmacro def-example-subgroup (group desc &rest examples)
   `(progn
@@ -367,7 +382,9 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
     (insert
      (concat "The following are a list of common use cases and formulations"
              "for `org-ml`. If a function is not available straight from the"
-             "API it may be here.\n\n"))))
+             "API it may be here.\n\n"))
+
+    (insert (s-join "\n" org-ml-dev-recipe-list))))
 
 (defun create-api-ref ()
   (let ((org-ml-dev-examples-list (nreverse org-ml-dev-examples-list)))
@@ -389,6 +406,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
 ;; require the examples
 
 (require 'org-ml-examples)
+(require 'org-ml-cookbook)
 
 ;; tell user how many functions have no examples
 
