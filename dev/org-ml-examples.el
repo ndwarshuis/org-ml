@@ -2907,6 +2907,16 @@
            (org-ml-get-property :parent)
       => nil)
 
+      ;; same thing with clocks...
+      (:buffer "* headline"
+               "CLOCK: [2021-08-27 Fri 23:31]--[2021-08-28 Sat 00:45] =>  1:14")
+      (->> (org-ml-parse-this-element)
+           (org-ml-headline-get-logbook-clocks nil)
+           (car)
+           (org-ml-get-property :value)
+           (org-ml-get-property :parent)
+      => nil)
+
       :end-hidden
     ))
 
