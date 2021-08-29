@@ -10,7 +10,7 @@ test:
 docs:
 	${CASK} exec ${EMACS} -Q -L . -L dev -batch \
 		-l dev/org-ml-docs.el \
-		-f create-docs-file
+		-f create-docs-files
 
 internal:
 	${CASK} exec buttercup -L . -L dev \

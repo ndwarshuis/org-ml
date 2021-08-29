@@ -360,7 +360,16 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
     (delete-char (- (length s)))
     (insert replacement)))
 
-(defun create-docs-file ()
+(defun create-cookbook ()
+  (with-temp-file "./docs/cookbook.md"
+    (insert "# org-ml cookbook\n\n")
+
+    (insert
+     (concat "The following are a list of common use cases and formulations"
+             "for `org-ml`. If a function is not available straight from the"
+             "API it may be here.\n\n"))))
+
+(defun create-api-ref ()
   (let ((org-ml-dev-examples-list (nreverse org-ml-dev-examples-list)))
     (with-temp-file "./docs/api-reference.md"
       (insert "# API Reference\n")
@@ -372,6 +381,10 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
       (insert (format "Version: %s" (org-ml-get-package-version)))
 
       (simplify-quotes))))
+
+(defun create-docs-files ()
+  (create-cookbook)
+  (create-api-ref))
 
 ;; require the examples
 
