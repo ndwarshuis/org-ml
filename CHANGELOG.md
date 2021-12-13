@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.7.2
+
+- fix incompatibility with org v9.5 (note: 9.5 not fully tested yet)
+
 ## 5.7.1
 
 - add `org-ml-remove-parent(s)`
