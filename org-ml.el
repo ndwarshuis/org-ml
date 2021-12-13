@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.7.1
+;; Version: 5.7.2
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -6087,6 +6087,20 @@ PATTERN follows the same rules as `org-ml-match'."
 
 ;;; BUFFER PARSING
 
+;;; org-element--parse-elements wrapper
+
+(defun org-ml--parse-elements (beg end mode)
+  "Call `org-element--parse-elements' and unpack the result.
+BEG, END and MODE are passed to `org-element--parse-elements'."
+  ;; NOTE: A subject to review if something breaks eventually with another Org
+  ;; update.
+  ;;
+  ;; HACK: In future versions of Org as of commit fc80d052d, the last
+  ;; argument to `org-element--parse-elemnts' may not be nil.  We create a
+  ;; dummy list, pass it to the function and unpack the result.
+  (cddr
+   (org-element--parse-elements beg end mode nil nil nil (list 'org-data nil))))
+
 ;;; parse at specific point
 
 (defun org-ml--parse-objects (type begin end)
@@ -6098,8 +6112,8 @@ TYPE is the type of the node to be parsed."
       ;; that parsing and then printing will compose to the identity)
       (let ((org-link-abbrev-alist nil)
             (org-link-translation-function nil))
-        (org-element--parse-elements begin end 'first-section nil nil nil nil))
-    (org-element--parse-elements begin end 'first-section nil nil nil nil)))
+        (org-ml--parse-elements begin end 'first-section))
+    (org-ml--parse-elements begin end 'first-section)))
 
 ;; TODO add test for plain-text parsing
 (defun org-ml-parse-object-at (point)
@@ -6141,8 +6155,7 @@ elements vs item elements."
         ;; `org-element-at-point' does not parse children
         (-let* (((&plist :begin :end :contents-end :post-blank)
                  (org-ml-get-all-properties node))
-                (tree (car (org-element--parse-elements
-                            begin end 'first-section nil nil nil nil)))
+                (tree (car (org-ml--parse-elements begin end 'first-section)))
                 (nesting (pcase node-type
                            (`headline nil)
                            ;; `org-element-at-point' will return a table if on
@@ -6207,8 +6220,7 @@ t, parse the entire subtree, else just parse the top headline."
                      (or (outline-next-heading)
                          (point-max)))
                  (or (outline-next-heading) (point-max)))))
-        (car (org-element--parse-elements b e 'first-section
-                                          nil nil nil nil))))))
+        (car (org-ml--parse-elements b e 'first-section))))))
 
 (defun org-ml-parse-headline-at (point)
   "Return headline node under POINT or nil if not on a headline.
@@ -6238,9 +6250,8 @@ the section at the top of the org buffer."
            (org-back-to-heading)
            (org-ml--parse-headline-subtree-at point nil))
        (error
-        (org-element--parse-elements
-         (point-min) (or (outline-next-heading) (point-max))
-         'first-section nil nil nil nil))))))
+        (org-ml--parse-elements
+         (point-min) (or (outline-next-heading) (point-max)) 'first-section))))))
 
 ;;; parse at current point
 
@@ -6898,7 +6909,7 @@ regular expression used to search for the next headline."
                  (org-ml--get-region-bounds a b re)))
               (e (org-ml--arg-error "Invalid 'which' specification: Got %S" e)))))
       (when (and b e)
-        (org-element--parse-elements b e 'first-section nil nil nil nil)))))
+        (org-ml--parse-elements b e 'first-section)))))
 
 (defun org-ml-parse-headlines (which)
   "Return list of headline nodes from current buffer.
