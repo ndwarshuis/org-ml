@@ -117,7 +117,7 @@ wrapped in a lambda call binding the unary argument to the symbol
 
 (defun org-ml--get-let-symbols (let-syms form)
   "Return the symbols that should be bound in let forms from FORM.
-The symbols to search for a LET-SYMS, and the returned list will
+The symbols to search for are LET-SYMS, and the returned list will
 contain all symbols in LET-SYMS that appear more than once in
 FORM."
   (->> (-tree-seq #'consp #'identity form)
@@ -129,29 +129,43 @@ FORM."
        (--filter (< 1 (length (cdr it))))
        (-map #'car)))
 
-(defun org-ml--replace-syms (let-syms form)
+(defun org-ml--replace-syms (let-syms privatize? form)
   "Replace symbols in FORM.
-The symbols to replace are in LET-SYMS, and the value
-to replace the symbol will with be (\\, SYM)."
+The symbols to replace are in LET-SYMS, and the value to replace
+the symbol will with be (\\, SYM). If PRIVATIZE? is non-nil, also
+privatize any sym along with replacing it."
   (pcase form
-    ((pred consp) (--map (org-ml--replace-syms let-syms it) form))
-    ((pred symbolp) (if (memq form let-syms) (list '\, form) form))
+    ((pred consp) (--map (org-ml--replace-syms let-syms privatize? it) form))
+    ((pred symbolp) (if (not (memq form let-syms)) form
+                      (list '\, (if (not privatize?) form
+                                  (org-ml--make-private-sym form)))))
     (f f)))
+
+(defun org-ml--make-private-sym (sym)
+  "Return SYM prefixed with two dashes."
+  (intern (format "--%s" sym)))
 
 (defun org-ml--make-anaphoric-form (arglist body)
   "Make an anaphoric from from BODY.
 ARGLIST is the argument list from the non-anaphoric form."
   (let* ((body* (->> (-map #'macroexpand-all body)
                      (org-ml--replace-funcall 'form)))
-                     ;; (-flatten-n 1)))
-         (arglist* (-remove-item 'fun arglist))
-         (let-syms (org-ml--get-let-symbols arglist* body*))
-         (nonlet-syms (-difference arglist* let-syms))
-         (body** (org-ml--replace-syms nonlet-syms body*)))
-    (if let-syms
-        `(let ,(--map (list it (list '\, it)) let-syms)
-           ,@body**)
-      body**)))
+         (arglist* (-remove-item 'fun arglist)))
+    (-if-let (let-syms (org-ml--get-let-symbols arglist* body*))
+        (let* ((nonlet-syms (-difference arglist* let-syms))
+               (body** (->> (org-ml--replace-syms nonlet-syms nil body*)
+                            (org-ml--replace-syms let-syms t)))
+               (private-syms (-map #'org-ml--make-private-sym let-syms))
+               (mk-sym-forms (--map `(make-symbol ,(symbol-name it)) private-syms))
+               (outer-forms (--zip-with `(,it ,other) private-syms mk-sym-forms))
+               (inner-forms (--zip-with `(,(list '\, it) ,(list '\, other))
+                                        private-syms let-syms)))
+          `(let (,@outer-forms)
+             (backquote
+              (let (,@inner-forms)
+                ,@body**))))
+      (let ((body** (org-ml--replace-syms arglist* nil body*)))
+        `(backquote ,body**)))))
 
 (defmacro org-ml--defun-anaphoric* (name arglist &rest args)
   "Return a function definition for NAME, ARGLIST, and ARGS.
@@ -178,7 +192,8 @@ wrapped in a lambda call binding the unary argument to the symbol
        (defmacro ,name* ,arglist*
          ,docstring*
          ,dec*
-         (backquote ,body*))
+         ;; (backquote ,body*))
+         ,body*)
        (defun ,name ,arglist
          ,docstring
          ,dec
