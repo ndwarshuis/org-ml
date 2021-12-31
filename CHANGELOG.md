@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.7.3
+
+- fix leaky abtraction bug
+
 ## 5.7.2
 
 - fix incompatibility with org v9.5 (note: 9.5 not fully tested yet)
