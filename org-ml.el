@@ -6395,61 +6395,139 @@ of D."
           (setq D (1+ D))))
       (list D (- M N) Vd Dmax))))
 
-(defun org-ml--diff-ses-to-edits (D k Vd Dmax)
-  "Return the edit path as given by the Myers diff algorithm.
-See `org-ml--diff-find-ses' for the meaning of D, K, VD, and DMAX."
-  ;; backtrack overview: this will walk up the edit path backwards to make a
-  ;; condensed edit script (which is just like an edit script as referenced in
-  ;; the Myers paper except that consecutive edits are collapsed into one
-  ;; meta-edit).
-  ;;
-  ;; in order to get the collapsing part right, the basic idea is to define the
-  ;; start of any edit as the most left-bound point in any diagonal (which is
-  ;; stored as 'start-x' and 'start-y') and then traverse up/left until we hit a
-  ;; new diagonal, in which case we use the previous x and y as the end of the
-  ;; edit.
-  (let (path prev-x prev-y start-x start-y start-vert? V x y vert? x*)
-    (while (<= 0 D)
-      ;; for the given set of endpoints at D, find the current x and y given k
-      (setq V (car Vd)
-            x (elt (car Vd) (+ Dmax k))
-            y (- x k)
-            ;; determine direction of the next endpoint and it's x value
-            vert? (or (= k (- D))
-                      (and (/= k D) (< (elt V (+ (1- k) Dmax))
-                                       (elt V (+ (1+ k) Dmax)))))
-            x* (if vert? (elt V (+ (1+ k) Dmax)) (1+ (elt V (+ (1- k) Dmax)))))
-      ;; if current x = next x we must not be on a diagonal
-      (if (and (= x* x) (< 0 x*) (eq start-vert? vert?))
-          (progn
-            (unless start-x
-              (setq start-x x
-                    start-y y
-                    start-vert? vert?))
-            (setq prev-x x
-                  prev-y y))
-        ;; if we are on a diagonal, close off the previously held point
-        ;; and add it to the edit path as either an insert of a delete
-        ;; depending on if we are traversing up or left
-        (when start-x
-          (setq path (cons (if start-vert?
-                               `(ins ,(1- start-x) ,(1- prev-y) ,(1- start-y))
-                             `(del ,(1- prev-x) ,(1- start-x)))
-                           path)))
-        ;; then walk up the diagonal to get to the next horizontal/vertical
-        ;; sequence
-        (while (< x* x)
-          (setq x (1- x)
-                y (1- y)))
-        (setq start-x x
-              start-y y
-              start-vert? vert?
-              prev-x x
-              prev-y y))
-      (setq k (if vert? (1+ k) (1- k))
-            D (1- D)
-            Vd (cdr Vd)))
-    (nreverse path)))
+(defun org-ml--diff (str-a str-b)
+  "Return the edit commands to make STR-A `equal' STR-B.
+
+This is the linear-space version of the Myers diff algorithm with
+several other enhancements, including tighter diagonal bounds to
+prevent running off the edit grid (useless CPU cycles) and only
+allocating memory for each V-array according to the minimum
+string length and using them as circular buffers. After these
+edits, the time complexity should be O(min(A, B)*D) and the space
+complexity should be O(min(A, B).
+
+Return value will be a list of either '(ins I M N)' or '(del I
+J)'. For 'ins' commands M and N are the indices from STR-B to
+insert at I in STR-A, and for 'del' commands I and J are the
+indices between which will be deleted in STR-A. Note that
+consecutive edits will be consolidated so the length of the
+return list will not necessarily be the length of the LCS
+computed by the Myers diff algorithm."
+  (cl-labels
+      ((init-V
+        (len)
+        (string-to-multibyte (make-string len 0)))
+       (init-k
+        (D len)
+        (- (* 2 (max 0 (- D len))) D))
+       (get-x
+        (len V k)
+        (elt V (mod k len)))
+       (set-x
+        (len V k x)
+        (aset V (mod k len) x))
+       (get-str
+        (offset sign str len i)
+        (elt str (+ (* (- 1 offset) len) (* sign i) (1- offset))))
+
+       (extend-snake
+        (x y offset sign env)
+        (-let (((&plist :N :M :Sa :Sb) env)
+               (get (-partial #'get-str offset sign)))
+          (if (and (< x N) (< y M) (= (funcall get Sa N x)
+                                      (funcall get Sb M y)))
+              (extend-snake (1+ x) (1+ y) offset sign env)
+            `(,x ,y))))
+
+       (find-furthest
+        (D k kend state env fwd-p eval-p)
+        (when (<= k kend)
+          (-let* (((&plist :V-fwd :V-bwd) state)
+                  ((&plist :get-x :set-x :delta :N :M) env)
+                  ((Va Vb offset sign) (if fwd-p `(,V-fwd ,V-bwd 1 1)
+                                         `(,V-bwd ,V-bwd 0 -1)))
+                  (x-vert (funcall get-x Va (1+ k)))
+                  (x-horz (funcall get-x Va (1- k)))
+                  (x0 (if (or (= k (- D)) (and (/= k D) (< x-horz x-vert)))
+                          x-vert
+                        (1+ x-horz)))
+                  (y0 (- x0 k))
+                  ((x y) (extend-snake x0 y0 offset sign env))
+                  (z (- delta k)))
+            (funcall set-x Va k x)
+            (if (and eval-p
+                     (<= (- offset D) z)
+                     (<= z (- D offset))
+                     (<= N (+ (funcall get-x Va k) (funcall get-x Vb z))))
+                (let ((D-tot (- (* 2 D) offset)))
+                  (if fwd-p (list D-tot x0 y0 x y)
+                    (list D-tot (- N x) (- M y) (- N x0) (- M y0))))
+              (find-furthest D (+ 2 k) kend state env fwd-p eval-p)))))
+
+       (find-middle-snake
+        (D D-mid state env)
+        ;; I guess this will never fail since it will otherwise return nil
+        (when (<= D D-mid)
+          (-let* (((&plist :M :N :D-max) env)
+                  (kstart (init-k D M))
+                  (kend (- (init-k D N)))
+                  (find (-partial #'find-furthest D kstart kend state env))
+                  ;; if odd, only check for overlaps in the forward direction
+                  ;; (and vice versa)
+                  (r (if (= (mod D-max 2) 1)
+                         (let ((r (funcall find t t)))
+                           (unless r
+                             (funcall find nil nil))
+                           r)
+                       (funcall find t nil)
+                       (funcall find nil t))))
+            (if r
+                (-let (((D-tot x y u v) r)
+                       ((&plist :Sa :Sb :i :j) env))
+                  ;; TODO technically this is not linear space because we
+                  ;; are copying new strings for each stack increment (D*log(D))
+                  (cond
+                   ((and (or (< 1 D-tot) (and (/= x u) (/= y v))))
+                    (append
+                     (diff (substring Sa 0 x) (substring Sb 0 y) i j)
+                     (diff (substring Sa u N) (substring Sb v M) (+ i u) (+ j v))))
+                   ((< N M)
+                    (diff "" (substring Sb N M) (+ i N) (+ j N)))
+                   ((< M N)
+                    (diff (substring Sa M N) "" (+ i M) (+ j M)))
+                   (t
+                    nil)))
+              (find-middle-snake (1+ D) D-mid state env)))))
+
+       (diff
+        (str-a str-b i j)
+        (let ((N (length str-a))
+              (M (length str-b)))
+          (cond
+           ((and (< 0 N) (< 0 M))
+            ;; just pretend this is a State Monad ;)
+            (let* ((V-len (+ 2 (* 2 (min N M))))
+                   ;; TODO this technically is D*log(D) space because the x/k
+                   ;; state vectors remain in memory for every recursive call,
+                   ;; either clear them between each recursive call or figure
+                   ;; out a way to reuse them (harder but maybe slightly
+                   ;; faster)
+                   (state `(:V-fwd ,(init-V V-len) :V-bwd ,(init-V V-len)))
+                   (D-max (+ M N))
+                   (D-mid (ceiling D-max 2))
+                   (env (list :Sa str-a :Sb str-b
+                              :i i :j j
+                              :M M :N N
+                              :delta (- N M)
+                              :D-max D-max
+                              :get-x (-partial #'get-x V-len)
+                              :set-x (-partial #'set-x V-len))))
+              (find-middle-snake 0 D-mid state env)))
+           ((< 0 N)
+            `((del ,i ,(+ i N))))
+           ((< 0 M)
+            `((ins ,i ,j ,(+ j M))))))))
+    (diff str-a str-b 0 0)))
 
 (defun org-ml--diff-region (start end new-str)
   "Use Myers Diff algorithm to update the current buffer.
@@ -6458,17 +6536,16 @@ be made to look like NEW-STR. Only differences as given by the Myers
 diff algorithm (eg insertions and deletions) will actually be
 applied to the buffer."
   (-let* ((old-str (buffer-substring-no-properties start end))
-          ((D k Vd MAX) (org-ml--diff-find-ses old-str new-str))
-          (cmds (org-ml--diff-ses-to-edits D k Vd MAX)))
+          (edits (reverse (org-ml--diff old-str new-str))))
     (save-excursion
-      (while cmds
-        (pcase (car cmds)
+      (while edits
+        (pcase (car edits)
           (`(ins ,i ,m ,n)
-           (goto-char (+ 1 start i))
-           (insert (substring new-str m (1+ n))))
+           (goto-char (+ start i))
+           (insert (substring new-str m n)))
           (`(del ,i ,j)
-           (delete-region (+ start i) (+ 1 start j))))
-        (setq cmds (cdr cmds))))))
+           (delete-region (+ start i) (+ start j))))
+        (!cdr edits)))))
 
 ;; (defun org-ml--properties-equal (type prop value1 value2)
 ;;   "Return t if VALUE1 and VALUE2 are 'the same'.
