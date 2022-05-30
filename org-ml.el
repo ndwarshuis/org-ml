@@ -6427,16 +6427,15 @@ computed by the Myers diff algorithm."
         (len V k x)
         (aset V (mod k len) x))
        (get-str
-        (offset sign str len i)
-        (elt str (+ (* (- 1 offset) len) (* sign i) (1- offset))))
+        (fwd-p str start len i)
+        (elt str (+ start (if fwd-p i (- len i 1)))))
 
        (extend-snake
-        (x y offset sign env)
-        (-let (((&plist :N :M :Sa :Sb) env)
-               (get (-partial #'get-str offset sign)))
-          (if (and (< x N) (< y M) (= (funcall get Sa N x)
-                                      (funcall get Sb M y)))
-              (extend-snake (1+ x) (1+ y) offset sign env)
+        (x y fwd-p env)
+        (-let (((&plist :M :N :a0 :b0) env))
+          (if (and (< x M) (< y N) (= (get-str fwd-p str-a a0 M x)
+                                      (get-str fwd-p str-b b0 N y)))
+              (extend-snake (1+ x) (1+ y) fwd-p env)
             `(,x ,y))))
 
        (find-furthest
@@ -6444,90 +6443,85 @@ computed by the Myers diff algorithm."
         (when (<= k kend)
           (-let* (((&plist :V-fwd :V-bwd) state)
                   ((&plist :get-x :set-x :delta :N :M) env)
-                  ((Va Vb offset sign) (if fwd-p `(,V-fwd ,V-bwd 1 1)
-                                         `(,V-bwd ,V-bwd 0 -1)))
+                  ((Va Vb offset) (if fwd-p `(,V-fwd ,V-bwd 1)
+                                    `(,V-bwd ,V-bwd 0)))
                   (x-vert (funcall get-x Va (1+ k)))
                   (x-horz (funcall get-x Va (1- k)))
                   (x0 (if (or (= k (- D)) (and (/= k D) (< x-horz x-vert)))
                           x-vert
                         (1+ x-horz)))
                   (y0 (- x0 k))
-                  ((x y) (extend-snake x0 y0 offset sign env))
+                  ((x y) (extend-snake x0 y0 fwd-p env))
                   (z (- delta k)))
             (funcall set-x Va k x)
             (if (and eval-p
                      (<= (- offset D) z)
                      (<= z (- D offset))
-                     (<= N (+ (funcall get-x Va k) (funcall get-x Vb z))))
-                (let ((D-tot (- (* 2 D) offset)))
-                  (if fwd-p (list D-tot x0 y0 x y)
-                    (list D-tot (- N x) (- M y) (- N x0) (- M y0))))
+                     (<= M (+ (funcall get-x Va k) (funcall get-x Vb z))))
+                (let ((D-tot (- (* 2 D) offset))
+                      (coords (if fwd-p `(,x0 ,y0 ,x ,y)
+                                `(,(- M x) ,(- N y) ,(- M x0) ,(- N y0)))))
+                  `(,D-tot ,@coords))
               (find-furthest D (+ 2 k) kend state env fwd-p eval-p)))))
 
        (find-middle-snake
         (D D-mid state env)
         ;; I guess this will never fail since it will otherwise return nil
         (when (<= D D-mid)
-          (-let* (((&plist :M :N :D-max) env)
-                  (kstart (init-k D M))
-                  (kend (- (init-k D N)))
-                  (find (-partial #'find-furthest D kstart kend state env))
-                  ;; if odd, only check for overlaps in the forward direction
-                  ;; (and vice versa)
-                  (r (if (= (mod D-max 2) 1)
-                         (let ((r (funcall find t t)))
-                           (unless r
-                             (funcall find nil nil))
-                           r)
-                       (funcall find t nil)
-                       (funcall find nil t))))
-            (if r
-                (-let (((D-tot x y u v) r)
-                       ((&plist :Sa :Sb :i :j) env))
-                  ;; TODO technically this is not linear space because we
-                  ;; are copying new strings for each stack increment (D*log(D))
-                  (cond
-                   ((and (or (< 1 D-tot) (and (/= x u) (/= y v))))
-                    (append
-                     (diff (substring Sa 0 x) (substring Sb 0 y) i j)
-                     (diff (substring Sa u N) (substring Sb v M) (+ i u) (+ j v))))
-                   ((< N M)
-                    (diff "" (substring Sb N M) (+ i N) (+ j N)))
-                   ((< M N)
-                    (diff (substring Sa M N) "" (+ i M) (+ j M)))
-                   (t
-                    nil)))
-              (find-middle-snake (1+ D) D-mid state env)))))
+          ;; just pretend this is a do-block
+          (-let* (((&plist :M :N :check-fwd-p) env)
+                  (kstart (init-k D N))
+                  (kend (- (init-k D M)))
+                  (find (-partial #'find-furthest D kstart kend state env)))
+            ;; if odd, only check for overlaps in the forward direction (and
+            ;; vice versa)
+            (or (if check-fwd-p
+                    (or (funcall find t t)
+                        (funcall find nil nil))
+                  (funcall find t nil)
+                  (funcall find nil t))
+                (find-middle-snake (1+ D) D-mid state env)))))
+
+       (diff-inner
+        (a0 b0 M N)
+        (let* ((V-len (+ 2 (* 2 (min M N))))
+               (state `(:V-fwd ,(init-V V-len) :V-bwd ,(init-V V-len)))
+               (D-max (+ M N))
+               (D-mid (ceiling D-max 2))
+               (env (list :a0 a0 :b0 b0
+                          :N N :M M
+                          :delta (- M N)
+                          :check-fwd-p (= (mod D-max 2) 1)
+                          :get-x (-partial #'get-x V-len)
+                          :set-x (-partial #'set-x V-len))))
+          ;; just pretend this is a State Monad ;)
+          (find-middle-snake 0 D-mid state env)))
 
        (diff
-        (str-a str-b i j)
-        (let ((N (length str-a))
-              (M (length str-b)))
+        (a0 a1 b0 b1 i j)
+        (let ((M (- a1 a0))
+              (N (- b1 b0)))
           (cond
-           ((and (< 0 N) (< 0 M))
-            ;; just pretend this is a State Monad ;)
-            (let* ((V-len (+ 2 (* 2 (min N M))))
-                   ;; TODO this technically is D*log(D) space because the x/k
-                   ;; state vectors remain in memory for every recursive call,
-                   ;; either clear them between each recursive call or figure
-                   ;; out a way to reuse them (harder but maybe slightly
-                   ;; faster)
-                   (state `(:V-fwd ,(init-V V-len) :V-bwd ,(init-V V-len)))
-                   (D-max (+ M N))
-                   (D-mid (ceiling D-max 2))
-                   (env (list :Sa str-a :Sb str-b
-                              :i i :j j
-                              :M M :N N
-                              :delta (- N M)
-                              :D-max D-max
-                              :get-x (-partial #'get-x V-len)
-                              :set-x (-partial #'set-x V-len))))
-              (find-middle-snake 0 D-mid state env)))
-           ((< 0 N)
-            `((del ,i ,(+ i N))))
+           ((and (< 0 M) (< 0 N))
+            (-let (((D-tot x y u v) (diff-inner a0 b0 M N)))
+              (cond
+               ((and (or (< 1 D-tot) (and (/= x u) (/= y v))))
+                (append
+                 (diff a0 (+ a0 x) b0 (+ b0 y) i j)
+                 (diff (+ a0 u) (+ a0 M) (+ b0 v) (+ b0 N) (+ i u) (+ j v))))
+               ((< M N)
+                (diff 0 0 (+ b0 M) (+ b0 N) (+ i M) (+ j M)))
+               ((< N M)
+                (diff (+ a0 N) (+ a0 M) 0 0 (+ i N) (+ j N)))
+               (t
+                nil))))
            ((< 0 M)
-            `((ins ,i ,j ,(+ j M))))))))
-    (diff str-a str-b 0 0)))
+            `((del ,i ,(+ i M))))
+           ((< 0 N)
+            `((ins ,i ,j ,(+ j N))))))))
+    (let ((a1 (length str-a))
+          (b1 (length str-b)))
+      (nreverse (diff 0 a1 0 b1 0 0)))))
 
 (defun org-ml--diff-region (start end new-str)
   "Use Myers Diff algorithm to update the current buffer.
@@ -6536,7 +6530,7 @@ be made to look like NEW-STR. Only differences as given by the Myers
 diff algorithm (eg insertions and deletions) will actually be
 applied to the buffer."
   (-let* ((old-str (buffer-substring-no-properties start end))
-          (edits (reverse (org-ml--diff old-str new-str))))
+          (edits (org-ml--diff old-str new-str)))
     (save-excursion
       (while edits
         (pcase (car edits)

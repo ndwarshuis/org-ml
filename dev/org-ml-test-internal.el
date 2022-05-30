@@ -2061,7 +2061,6 @@ dummy."
           (`(del ,i ,j)
            (edit-del str i j)))))
     (->> (org-ml--diff str-a str-b)
-         (reverse)
          (-reduce-from #'edit str-a))))
 
 (defmacro org-ml--test-diff-specs (&rest specs)
