@@ -37,8 +37,8 @@ Then require in your emacs config:
 
 ## Dependencies
 
-- emacs (27.2, 27.1)
-- org-mode (9.4, 9.3)
+- emacs (27.2, 27.1, 28.1)
+- org-mode (9.5, 9.4, 9.3)
 - dash
 - s
 
