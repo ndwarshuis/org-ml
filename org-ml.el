@@ -6355,45 +6355,72 @@ NODE may be a node or a list of nodes. Return NODE."
 ;; the things that have changes to strings and put those in the buffer. At least
 ;; that seems to make sense, I haven't done complexity analysis yet.
 
-;; this is verbatim from the Myers paper and should have O(M+N+D^2) on average
-(defun org-ml--diff-find-ses (str-a str-b)
-  "Given STR-A and STR-B, find the shortest edit sequence (SES).
-Return a list like (D k Vd Dmax) where D is the length of the
-shortest edit sequence, k is the final diagonal on which the diff
-ends, Vd is a list of vectors describing the furthest, reaching
-paths at every D (which the highest D first), and Dmax is the max
-of D."
-  (let* ((M (length str-a))
-         (N (length str-b))
-         (Dmax (+ M N))
-         ;; this seems weird but it is much faster to use "strings" to hold
-         ;; the endpoints rather than vectors (since all we need is an array
-         ;; that holds positive integers, which is just a string)
-         (V (string-to-multibyte (make-string (1+ (* 2 Dmax)) 0)))
-         (D 0)
-         k x y stop Vd)
-    (if (= 0 Dmax) `(0 0 ,Vd ,Dmax)
-      (aset V (1+ Dmax) 0)
-      (while (and (not stop) (<= D Dmax))
-        (setq k (- D))
-        (while (and (not stop) (<= k D))
-          (if (or (= k (- D))
-                  (and (/= k D) (< (elt V (+ (1- k) Dmax))
-                                   (elt V (+ (1+ k) Dmax)))))
-              (setq x (elt V (+ (1+ k) Dmax)))
-            (setq x (1+ (elt V (+ (1- k) Dmax)))))
-          (setq y (- x k))
-          (while (and (< x M) (< y N) (= (elt str-a x) (elt str-b y)))
-            (setq x (1+ x)
-                  y (1+ y)))
-          (aset V (+ k Dmax) x)
-          (when (and (>= x M) (>= y N))
-            (setq stop t))
-          (setq k (+ 2 k)))
-        (setq Vd (cons (copy-sequence V) Vd))
-        (unless stop
-          (setq D (1+ D))))
-      (list D (- M N) Vd Dmax))))
+;; this is a souped-up version of the linear-space diff algorithm as presented
+;; from Myers; adapted from the python implementation listed here:
+;; https://blog.robertelder.org/diff-algorithm/
+
+(defun org-ml--diff-find-middle (str= M N)
+  (cl-flet*
+      ((init-V
+        (len)
+        (make-vector len 0))
+       (init-k
+        (D len)
+        (- D (* 2 (max 0 (- D len)))))
+       (get-x
+        (len V k)
+        (elt V (mod k len))))
+    (let* ((D-max (+ M N))
+           (D-mid (ceiling D-max 2))
+           (delta (- M N))
+           (V-len (+ 2 (* 2 (min M N))))
+           (V+ (init-V V-len))
+           (V- (init-V V-len))
+           ;; if D-max is odd, only check for overlaps in the forward direction
+           ;; (and vice versa); note that the directions are coded 0 for forward
+           ;; and 1 for backward (see below)
+           (check-dir-p (mod (1+ D-max) 2))
+           (D 0)
+           ret
+           dir fwd-p kstart kend z-lim x-vert x-horz x0 y0 x y z Va Vb offset k)
+      ;; iterate through D-paths for all D
+      (while (and (not ret) (<= D D-mid))
+        (setq kstart (- (init-k D N))
+              kend (init-k D M)
+              dir 0)
+        ;; this loop runs 2x for each direction (0 = forward and 1 = backward)
+        (while (and (not ret) (<= dir 1))
+          (setq fwd-p (= dir 0)
+                Va (if fwd-p V+ V-)
+                Vb (if fwd-p V- V+)
+                offset (if fwd-p 1 0)
+                z-lim (- D offset)
+                k kstart)
+          ;; iterate across all diagonals (k) to find furthest reaching paths
+          (while (and (not ret) (<= k kend))
+            (setq x-vert (get-x V-len Va (1+ k))
+                  x-horz (get-x V-len Va (1- k))
+                  x0 (if (or (= k (- D)) (and (/= k D) (< x-horz x-vert)))
+                         x-vert
+                       (1+ x-horz))
+                  y0 (- x0 k)
+                  x x0
+                  y y0
+                  z (- delta k))
+            (while (and (< x M) (< y N) (funcall str= fwd-p x y))
+              (setq x (1+ x)
+                    y (1+ y)))
+            (aset Va (mod k V-len) x)
+            (when (and (= dir check-dir-p)
+                       (<= (- z-lim) z z-lim)
+                       (<= M (+ (get-x V-len Va k) (get-x V-len Vb z))))
+              (setq ret (->> (if fwd-p `(,x0 ,y0 ,x ,y)
+                               `(,(- M x) ,(- N y) ,(- M x0) ,(- N y0)))
+                             (cons (- (* 2 D) offset)))))
+            (setq k (+ 2 k)))
+          (setq dir (1+ dir)))
+        (setq D (1+ D)))
+      ret)))
 
 (defun org-ml--diff (str-a str-b)
   "Return the edit commands to make STR-A `equal' STR-B.
@@ -6414,96 +6441,19 @@ consecutive edits will be consolidated so the length of the
 return list will not necessarily be the length of the LCS
 computed by the Myers diff algorithm."
   (cl-labels
-      ((init-V
-        (len)
-        (string-to-multibyte (make-string len 0)))
-       (init-k
-        (D len)
-        (- (* 2 (max 0 (- D len))) D))
-       (get-x
-        (len V k)
-        (elt V (mod k len)))
-       (set-x
-        (len V k x)
-        (aset V (mod k len) x))
-       (get-str
-        (fwd-p str start len i)
-        (elt str (+ start (if fwd-p i (- len i 1)))))
-
-       (extend-snake
-        (x y fwd-p env)
-        (-let (((&plist :M :N :a0 :b0) env))
-          (if (and (< x M) (< y N) (= (get-str fwd-p str-a a0 M x)
-                                      (get-str fwd-p str-b b0 N y)))
-              (extend-snake (1+ x) (1+ y) fwd-p env)
-            `(,x ,y))))
-
-       (find-furthest
-        (D k kend state env fwd-p eval-p)
-        (when (<= k kend)
-          (-let* (((&plist :V-fwd :V-bwd) state)
-                  ((&plist :get-x :set-x :delta :N :M) env)
-                  ((Va Vb offset) (if fwd-p `(,V-fwd ,V-bwd 1)
-                                    `(,V-bwd ,V-bwd 0)))
-                  (x-vert (funcall get-x Va (1+ k)))
-                  (x-horz (funcall get-x Va (1- k)))
-                  (x0 (if (or (= k (- D)) (and (/= k D) (< x-horz x-vert)))
-                          x-vert
-                        (1+ x-horz)))
-                  (y0 (- x0 k))
-                  ((x y) (extend-snake x0 y0 fwd-p env))
-                  (z (- delta k)))
-            (funcall set-x Va k x)
-            (if (and eval-p
-                     (<= (- offset D) z)
-                     (<= z (- D offset))
-                     (<= M (+ (funcall get-x Va k) (funcall get-x Vb z))))
-                (let ((D-tot (- (* 2 D) offset))
-                      (coords (if fwd-p `(,x0 ,y0 ,x ,y)
-                                `(,(- M x) ,(- N y) ,(- M x0) ,(- N y0)))))
-                  `(,D-tot ,@coords))
-              (find-furthest D (+ 2 k) kend state env fwd-p eval-p)))))
-
-       (find-middle-snake
-        (D D-mid state env)
-        ;; I guess this will never fail since it will otherwise return nil
-        (when (<= D D-mid)
-          ;; just pretend this is a do-block
-          (-let* (((&plist :M :N :check-fwd-p) env)
-                  (kstart (init-k D N))
-                  (kend (- (init-k D M)))
-                  (find (-partial #'find-furthest D kstart kend state env)))
-            ;; if odd, only check for overlaps in the forward direction (and
-            ;; vice versa)
-            (or (if check-fwd-p
-                    (or (funcall find t t)
-                        (funcall find nil nil))
-                  (funcall find t nil)
-                  (funcall find nil t))
-                (find-middle-snake (1+ D) D-mid state env)))))
-
-       (diff-inner
-        (a0 b0 M N)
-        (let* ((V-len (+ 2 (* 2 (min M N))))
-               (state `(:V-fwd ,(init-V V-len) :V-bwd ,(init-V V-len)))
-               (D-max (+ M N))
-               (D-mid (ceiling D-max 2))
-               (env (list :a0 a0 :b0 b0
-                          :N N :M M
-                          :delta (- M N)
-                          :check-fwd-p (= (mod D-max 2) 1)
-                          :get-x (-partial #'get-x V-len)
-                          :set-x (-partial #'set-x V-len))))
-          ;; just pretend this is a State Monad ;)
-          (find-middle-snake 0 D-mid state env)))
-
-       (diff
+      ((diff
         (a0 a1 b0 b1 i j)
-        (let ((M (- a1 a0))
-              (N (- b1 b0)))
+        (let* ((M (- a1 a0))
+               (N (- b1 b0))
+               (str=
+                (lambda (fwd-p x y)
+                  (if fwd-p
+                      (= (elt str-a (+ a0 x)) (elt str-b (+ b0 y)))
+                    (= (elt str-a (+ a0 (- M 1 x)))
+                       (elt str-b (+ b0 (- N 1 y))))))))
           (cond
            ((and (< 0 M) (< 0 N))
-            (-let (((D-tot x y u v) (diff-inner a0 b0 M N)))
+            (-let (((D-tot x y u v) (org-ml--diff-find-middle str= M N)))
               (cond
                ((and (or (< 1 D-tot) (and (/= x u) (/= y v))))
                 (append
