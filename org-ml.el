@@ -1451,6 +1451,12 @@ If list PROPS is length LEN, use FUN-0, otherwise FUN-N."
     (declare (indent 1))
     (if (= len (length props)) `(,fun-0 ,@props) `(,fun-n (list ,@props))))
 
+  (defun org-ml--indent-doc (s)
+    (with-temp-buffer
+      (insert s)
+      (fill-paragraph)
+      (buffer-string)))
+
   (defun org-ml--autodef-make-docstring (type rest-arg props)
     "Return docstring for PROPS.
 TYPE is the type of the node in question and REST-ARG is the
@@ -1482,7 +1488,8 @@ symbol for the rest argument."
                      (unless d
                        (error "No type-desc: %s %s" type p))
                      (->> (if (listp d) (s-join " " d) d)
-                          (format "- %s: %s %s" p r))))
+                          (format "- %s: %s %s" p r)
+                          (org-ml--indent-doc))))
             (s-join "\n"))))
       (concat
        (format "Build %s %s node" (org-ml--autodef-prepend-article type) class)
@@ -1756,7 +1763,7 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
        (org-ml--timestamp-set-type-ranged nil)))
 
 (defun org-ml--timestamp-set-double-time (time1 time2 timestamp)
-  "Return TIMESTAMP with start and end properties set to time lists TIME1 and TIME2."
+  "Return TIMESTAMP with start/end set to TIME1 and TIME2."
   (->> (org-ml--timestamp-set-start-time-nocheck time1 timestamp)
        (org-ml--timestamp-set-end-time-nocheck time2)
        (org-ml--timestamp-update-type-ranged)))
@@ -4390,7 +4397,7 @@ or :clocks depending on what is intended to be sorted."
               (error msg node)))))
          ;; this should be imperative because the recursive version has O(n)
          ;; calls to itself...byebye stack :(
-         (merge
+         (merge-nodes
           (nodes-a nodes-b)
           (let (merged)
             (while (or nodes-a nodes-b)
@@ -4423,7 +4430,7 @@ or :clocks depending on what is intended to be sorted."
           (let ((L (length nodes)))
             (if (<= L 1) nodes
               (-let (((left right) (-split-at (/ L 2) nodes)))
-                (merge (merge-and-sort left) (merge-and-sort right)))))))
+                (merge-nodes (merge-and-sort left) (merge-and-sort right)))))))
       (->> (-reduce-from #'prepare-node nil nodes)
            (merge-and-sort)
            (-flatten-n 1)
@@ -4471,13 +4478,13 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
         (->> (org-ml-logbook-get-clocks logbook)
              (--count (org-ml-is-type 'clock it))
              (>= limit)))
-       (merge
+       (merge-nodes
         (enconf logbook)
         (-let (((&alist :items :clocks) logbook))
           (org-ml--merge-logbook enconf items clocks)))
        (build-mixed-drawer-maybe
         (enconf m logbook)
-        (-some->> (merge enconf logbook)
+        (-some->> (merge-nodes enconf logbook)
           (build-drawer m)
           (list)))
        (to-item-clock-nodes
@@ -4491,7 +4498,7 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
 
            ;; items not in drawer, clocks not in drawer
            (`(:items nil :clocks nil :mixed nil :clock-limit nil)
-            (merge enconf logbook))
+            (merge-nodes enconf logbook))
 
            ;; items and clocks in the same drawer
            (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
@@ -4516,7 +4523,7 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
            
            ;; items not in drawer, clocks might be in a drawer
            (`(:items nil :clocks ,c :mixed nil :clock-limit ,l)
-            (if (below-limit l logbook) (merge enconf logbook)
+            (if (below-limit l logbook) (merge-nodes enconf logbook)
               (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
                 (cons-drawer-maybe c clocks items))))
 
