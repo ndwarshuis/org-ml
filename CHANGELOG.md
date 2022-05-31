@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.8.0
+
+- make myers diff algorithm use linear space
+- fix a bunch of compiler warnings for emacs 28+
+
 ## 5.7.3
 
 - fix leaky abtraction bug
