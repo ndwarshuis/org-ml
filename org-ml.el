@@ -6468,10 +6468,25 @@ computed by the Myers diff algorithm."
            ((< 0 M)
             `((del ,i ,(+ i M))))
            ((< 0 N)
-            `((ins ,i ,j ,(+ j N))))))))
+            `((ins ,i ,j ,(+ j N)))))))
+       (consolidate
+        (acc next)
+        (-let (((last . rest) acc))
+          (pcase `(,last ,next)
+            (`((ins ,i0 ,m0 ,n0) (ins ,i1 ,m1 ,n1))
+             (if (and (= i0 i1) (= n0 m1))
+                 (cons `(ins ,i0 ,m0 ,n1) rest)
+               (cons next acc)))
+            (`((del ,i0 ,j0) (del ,i1 ,j1))
+             (if (= j0 i1)
+                 (cons `(del ,i0 ,j1) rest)
+               (cons next acc)))
+            (_
+             (cons next acc))))))
     (let ((a1 (length str-a))
           (b1 (length str-b)))
-      (nreverse (diff 0 a1 0 b1 0 0)))))
+      (->> (diff 0 a1 0 b1 0 0)
+           (-reduce-from #'consolidate nil)))))
 
 (defun org-ml--diff-region (start end new-str)
   "Use Myers Diff algorithm to update the current buffer.
@@ -6481,6 +6496,7 @@ diff algorithm (eg insertions and deletions) will actually be
 applied to the buffer."
   (-let* ((old-str (buffer-substring-no-properties start end))
           (edits (org-ml--diff old-str new-str)))
+    (print edits)
     (save-excursion
       (while edits
         (pcase (car edits)
