@@ -5,8 +5,8 @@
 ;; Author: Nathan Dwarshuis <ndwar@yavin4.ch>
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
-;; Package-Requires: ((emacs "26.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.7.3
+;; Package-Requires: ((emacs "27.1") (org "9.3") (dash "2.17") (s "1.12"))
+;; Version: 5.8.0
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -2349,8 +2349,9 @@ All other arguments follow the same rules as `org-ml-build-table'."
   (->> (-map #'org-ml-build-table-row! row-lists)
        (apply #'org-ml-build-table :tblfm tblfm :post-blank post-blank)))
 
-(defun org-ml-build-org-data (&rest headline-or-sections-nodes)
-  "Return a new org-data node."
+(defun org-ml-build-org-data (&rest nodes)
+  "Return a new org-data node using NODES.
+NODES should be either headline or section nodes."
   (->> (org-ml--build-blank-node 'org-data)
     (org-ml--set-property-nocheck-nil :beg)
     (org-ml--set-property-nocheck-nil :end)
@@ -3296,6 +3297,7 @@ t, return a list like (TYPE VALUE UNIT HABIT-VALUE HABIT-UNIT)."
             `(,@rep ,v* ,u*)))))
 
 (defun org-ml--timestamp-unit-to-string (unit)
+  "Convert UNIT of time to string representation."
   (pcase unit
     (`year "y")
     (`month "m")
@@ -6367,6 +6369,14 @@ NODE may be a node or a list of nodes. Return NODE."
 ;; https://blog.robertelder.org/diff-algorithm/
 
 (defun org-ml--diff-find-middle (str= M N)
+  "Return the coordinates for the middle snake.
+
+STR= is a ternary function that takes a direction (0 = forward, 1
+= backward) and X/Y coordinates; it will return t if the two
+strings at the given coordinates in the indicated direction
+match.
+
+M and N are the length of the current substrings."
   (cl-flet*
       ((init-V
         (len)
