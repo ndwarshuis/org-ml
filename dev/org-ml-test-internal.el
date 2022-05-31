@@ -2039,53 +2039,77 @@ applied."
 
 ;; DIFF ALGORITHM
 
-(defmacro org-ml--test-lcs-specs (&rest specs)
+(defun org-ml--diff-apply (str-a str-b)
+  "Turn STR-A into STR-B using the diff algorithm.
+Obviously this should return a string identical to STR-B assuming
+diff is working correctly, and if not, well...get it together,
+dummy."
+  (cl-flet*
+      ((edit-del
+        (str i j)
+        (concat (substring str 0 i) (substring str j)))
+       (edit-ins
+        (str i a b)
+        (concat (substring str 0 i)
+                (substring str-b a b)
+                (substring str i)))
+       (edit
+        (str edit)
+        (pcase edit
+          (`(ins ,i ,a ,b)
+           (edit-ins str i a b))
+          (`(del ,i ,j)
+           (edit-del str i j)))))
+    (->> (org-ml--diff str-a str-b)
+         (-reduce-from #'edit str-a))))
+
+(defmacro org-ml--test-diff-specs (&rest specs)
   (declare (indent 1))
   (let ((forms
-         (->> (-partition 4 specs)
+         (->> (-partition 3 specs)
               (--map
-               (-let (((title a b ses) it))
+               (-let (((title a b) it))
                  `(it ,title
-                    (expect (car (org-ml--diff-find-ses ,a ,b)) :to-equal ,ses)))))))
+                    (expect (org-ml--diff-apply ,a ,b) :to-equal ,b)))))))
     `(progn ,@forms)))
 
-(describe "diff algorithm"
+(describe "better diff algorithm"
   (describe "find SES"
-    (org-ml--test-lcs-specs
-        "empty strings" "" "" 0
-        "one identical char" "a" "a" 0
-        "two identical chars" "aa" "aa" 0
+    (org-ml--test-diff-specs
+        "empty strings" "" ""
+        "one identical char" "a" "a"
+        "two identical chars" "aa" "aa"
 
-        "zero chars, insert one (1)" "a" "" 1
-        "zero chars, insert one (2)" "" "a" 1
+        "zero chars, insert one (1)" "a" ""
+        "zero chars, insert one (2)" "" "a"
 
-        "one char, insert one (1)" "ba" "a" 1
-        "one char, insert one (2)" "ab" "a" 1
-        "one char, insert one (3)" "a" "ba" 1
-        "one char, insert one (4)" "a" "ab" 1
+        "one char, insert one (1)" "ba" "a"
+        "one char, insert one (2)" "ab" "a"
+        "one char, insert one (3)" "a" "ba"
+        "one char, insert one (4)" "a" "ab"
         
-        "one char, insert two (1)" "a" "abc" 2
-        "one char, insert two (2)" "a" "acb" 2
-        "one char, insert two (3)" "a" "cab" 2
-        "one char, insert two (4)" "a" "cba" 2
-        "one char, insert two (5)" "a" "bca" 2
-        "one char, insert two (6)" "a" "bac" 2
+        "one char, insert two (1)" "a" "abc"
+        "one char, insert two (2)" "a" "acb"
+        "one char, insert two (3)" "a" "cab"
+        "one char, insert two (4)" "a" "cba"
+        "one char, insert two (5)" "a" "bca"
+        "one char, insert two (6)" "a" "bac"
 
-        "different chars" "a" "b" 2
+        "different chars" "a" "b"
 
-        "two chars, one different (1)" "aa" "ab" 2
-        "two chars, one different (2)" "aa" "ba" 2
+        "two chars, one different (1)" "aa" "ab"
+        "two chars, one different (2)" "aa" "ba"
 
-        "three chars, one different (1)" "aaa" "baa" 2
-        "three chars, one different (2)" "aaa" "aba" 2
-        "three chars, one different (3)" "aaa" "aab" 2
+        "three chars, one different (1)" "aaa" "baa"
+        "three chars, one different (2)" "aaa" "aba"
+        "three chars, one different (3)" "aaa" "aab"
 
-        "three chars, two different (1)" "aaa" "abc" 4
-        "three chars, two different (2)" "aaa" "acb" 4
-        "three chars, two different (3)" "aaa" "bac" 4
-        "three chars, two different (4)" "aaa" "cab" 4
-        "three chars, two different (5)" "aaa" "cba" 4
-        "three chars, two different (6)" "aaa" "bca" 4
+        "three chars, two different (1)" "aaa" "abc"
+        "three chars, two different (2)" "aaa" "acb"
+        "three chars, two different (3)" "aaa" "bac"
+        "three chars, two different (4)" "aaa" "cab"
+        "three chars, two different (5)" "aaa" "cba"
+        "three chars, two different (6)" "aaa" "bca"
         )))
 
 (provide 'org-ml-dev-test)

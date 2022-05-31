@@ -9,10 +9,7 @@ jobs:
         emacs_version:
           - '27.1'
           - '27.2'
-          - 'snapshot'
-        include:
-          - emacs_version: 'snapshot'
-            allow_failure: true
+          - '28.1'
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
