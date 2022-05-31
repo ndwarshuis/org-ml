@@ -6496,7 +6496,6 @@ diff algorithm (eg insertions and deletions) will actually be
 applied to the buffer."
   (-let* ((old-str (buffer-substring-no-properties start end))
           (edits (org-ml--diff old-str new-str)))
-    (print edits)
     (save-excursion
       (while edits
         (pcase (car edits)
