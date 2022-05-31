@@ -2355,7 +2355,7 @@ NODES should be either headline or section nodes."
   (->> (org-ml--build-blank-node 'org-data)
     (org-ml--set-property-nocheck-nil :beg)
     (org-ml--set-property-nocheck-nil :end)
-    (org-ml-set-children headline-or-sections-nodes)))
+    (org-ml-set-children nodes)))
 
 ;;; logbook items
 
