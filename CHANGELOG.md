@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.8.1
+
+- fix typo
+
 ## 5.8.0
 
 - make myers diff algorithm use linear space
