@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "27.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.8.0
+;; Version: 5.8.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -2355,7 +2355,7 @@ NODES should be either headline or section nodes."
   (->> (org-ml--build-blank-node 'org-data)
     (org-ml--set-property-nocheck-nil :beg)
     (org-ml--set-property-nocheck-nil :end)
-    (org-ml-set-children headline-or-sections-nodes)))
+    (org-ml-set-children nodes)))
 
 ;;; logbook items
 
