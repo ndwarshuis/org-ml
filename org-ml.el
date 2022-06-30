@@ -5212,7 +5212,7 @@ This is a workaround for a bug")
 ;; empty
 (defconst org-ml--blank-if-empty
   '(center-block drawer dynamic-block property-drawer quote-block
-                 special-block verse-block)
+                 special-block table-cell verse-block)
   "Branch element nodes that require \"\" to correctly print empty.
 This is a workaround for a bug.")
 
