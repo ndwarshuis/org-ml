@@ -1029,6 +1029,9 @@
       (->> (org-ml-build-table-row! '("R" "A" "G" "E"))
            (org-ml-to-trimmed-string))
       => "| R | A | G | E |"
+      (->> (org-ml-build-table-row! '("S" "" "X"))
+           (org-ml-to-trimmed-string))
+      => "| S |  | X |"
       (->> (org-ml-build-table-row! 'hline)
            (org-ml-to-trimmed-string))
       => "|-")
@@ -1038,6 +1041,10 @@
            (org-ml-to-trimmed-string))
       => (:result "| R | A |"
                   "| G | E |")
+      (->> (org-ml-build-table! '("S" "") '("" "X"))
+           (org-ml-to-trimmed-string))
+      => (:result "| S |   |"
+                  "|   | X |")
       (->> (org-ml-build-table! '("L" "O") 'hline '("V" "E"))
            (org-ml-to-trimmed-string))
       => (:result "| L | O |"

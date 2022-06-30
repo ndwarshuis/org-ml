@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "27.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.8.1
+;; Version: 5.8.2
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -5212,7 +5212,7 @@ This is a workaround for a bug")
 ;; empty
 (defconst org-ml--blank-if-empty
   '(center-block drawer dynamic-block property-drawer quote-block
-                 special-block verse-block)
+                 special-block table-cell verse-block)
   "Branch element nodes that require \"\" to correctly print empty.
 This is a workaround for a bug.")
 
