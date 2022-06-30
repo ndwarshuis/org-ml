@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.8.2
+
+- fix blank table cell bug
+
 ## 5.8.1
 
 - fix typo
