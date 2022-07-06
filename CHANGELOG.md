@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.8.3
+
+- fix typo in README.md
+
 ## 5.8.2
 
 - fix blank table cell bug
