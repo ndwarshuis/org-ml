@@ -107,7 +107,7 @@ to be a child depending on the type. There are three of these restrictions:
 
 Note: it is never allowed for an element type to be a child of a branch object
 type.
-      
+
 # Conventions
 
 ## Terminology
@@ -208,7 +208,7 @@ string formating, regular expressions, buffer searching, etc (examples:
 `org-ml-parse-this-THING`, `org-ml-update-this-THING` and friends). Once the
 data is in node space, execution should be very fast since nodes are just lists.
 Thus if you have performance-intensive code that requires many small edits to
-org-mode files, it might be better to use org-mode's build-in functions. On the
+org-mode files, it might be better to use org-mode's built-in functions. On the
 other hand, if most of the complicated processing can be done in node space
 while limiting the number of conversions to/from buffer space, `org-ml` will be
 much faster.
