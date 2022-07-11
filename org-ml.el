@@ -6985,7 +6985,7 @@ Each headline is obtained with `org-ml-parse-headline-at'."
         (->> (org-ml-headline-get-subheadlines headline)
              (-mapcat #'get-subheadlines)
              (cons headline))))
-    (->> (org-ml--parse-patterns-where which "^\\*")
+    (->> (org-ml--parse-patterns-where which "^\\*+ ")
          (-mapcat #'get-subheadlines))))
 
 (defun org-ml-parse-subtrees (which)
@@ -7022,7 +7022,7 @@ nil (see this for use and meaning of FUN)."
       ;; between headlines, section, etc. It has the disadvantage of requiring
       ;; more text to be modified in the buffer at once, which could be
       ;; disruptive.
-      (--> (org-ml--parse-patterns-where which "^\\*")
+      (--> (org-ml--parse-patterns-where which "^\\*+ ")
            (nreverse it)
            (--each it (org-ml~update nil #'map-to-subheadlines it))))))
 
