@@ -297,6 +297,7 @@
     => '("* one\n** two\n*** three" "** two\n*** three" "*** three")
 
     (:buffer "not headline"
+             "*ignore this*"
              "* one"
              "* two"
              "* three")
@@ -309,7 +310,7 @@
          (s-join ""))
     => (:result "* one"
                 "* two\n")
-    (->> (org-ml-parse-headlines [10 25])
+    (->> (org-ml-parse-headlines [23 38])
          (-map #'org-ml-to-string)
          (s-join ""))
     => (:result "* one"

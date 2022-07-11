@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "27.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.8.3
+;; Version: 5.8.4
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -6985,7 +6985,7 @@ Each headline is obtained with `org-ml-parse-headline-at'."
         (->> (org-ml-headline-get-subheadlines headline)
              (-mapcat #'get-subheadlines)
              (cons headline))))
-    (->> (org-ml--parse-patterns-where which "^\\*")
+    (->> (org-ml--parse-patterns-where which "^\\*+ ")
          (-mapcat #'get-subheadlines))))
 
 (defun org-ml-parse-subtrees (which)
@@ -7022,7 +7022,7 @@ nil (see this for use and meaning of FUN)."
       ;; between headlines, section, etc. It has the disadvantage of requiring
       ;; more text to be modified in the buffer at once, which could be
       ;; disruptive.
-      (--> (org-ml--parse-patterns-where which "^\\*")
+      (--> (org-ml--parse-patterns-where which "^\\*+ ")
            (nreverse it)
            (--each it (org-ml~update nil #'map-to-subheadlines it))))))
 
