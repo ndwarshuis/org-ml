@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.8.4
+
+- don't parse bold text as a headline
+
 ## 5.8.3
 
 - fix typo in README.md
