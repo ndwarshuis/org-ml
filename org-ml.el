@@ -2341,8 +2341,8 @@ create a rule-typed table-row."
 (org-ml--defun-kw org-ml-build-table! (&key tblfm post-blank &rest row-lists)
   "Return a new table node.
 
-ROW-LISTS is a list of lists where each member list will be converted
-to a table-row node via `org-ml-build-table-row!' (see that function for
+Each member of ROW-LISTS will be converted to a table-row node
+via `org-ml-build-table-row!' (see that function for
 restrictions).
 
 All other arguments follow the same rules as `org-ml-build-table'."
