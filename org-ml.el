@@ -394,7 +394,7 @@ non-nil)."
      ((<= 0 n upper) n)
      ((>= -1 n lower) (+ N n))
      ((and use-oor (< upper n)) upper)
-     ((and use-oor (< n lower)) lower)
+     ((and use-oor (< n lower)) 0)
      (t (org-ml--arg-error
          "Index (%s) out of range; must be between %s and %s"
          n lower upper)))))
