@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.8.6
+
+- bugfixes
+
+## 5.8.5
+
+- make docstring clearer
+
 ## 5.8.4
 
 - don't parse bold text as a headline

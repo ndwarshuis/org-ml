@@ -1,4 +1,4 @@
-# org-ml ![Github Workflow Status](https://img.shields.io/github/workflow/status/ndwarshuis/org-ml/CI) ![MELPA VERSION](https://melpa.org/packages/org-ml-badge.svg)
+# org-ml ![CI](https://github.com/ndwarshuis/org-ml/actions/workflows/test.yml/badge.svg) ![MELPA VERSION](https://melpa.org/packages/org-ml-badge.svg)
 
 A functional API for org-mode inspired by
 [@magnars](https://github.com/magnars)'s
