@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.8.6
+
+- bugfixes
+
 ## 5.8.5
 
 - make docstring clearer
