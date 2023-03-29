@@ -329,7 +329,7 @@ is the converse."
       (org-ml-build-section (org-ml-build-paragraph! "*sec")) "*sec")
     (org-ml--test-from-string nil
       (org-ml-build-property-drawer) ":PROPERTIES:\n:END:"
-      (org-ml-build-property-drawer! '(KEY val)) ":PROPERTIES:\n:KEY: val\n:END:")
+      (org-ml-build-property-drawer! '("KEY" "val")) ":PROPERTIES:\n:KEY: val\n:END:")
     (org-ml--test-from-string nil
       (org-ml-build-quote-block) "#+begin_quote\n#+end_quote"
       (org-ml-build-quote-block (org-ml-build-paragraph! "p")) "#+begin_quote\np\n#+end_quote")
