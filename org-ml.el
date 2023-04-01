@@ -2231,8 +2231,8 @@ Each member in KEYVALS is a list like (KEY VAL) where KEY and VAL
 are both strings, where each list will generate a node-property
 node in the property-drawer node like \":key: val\"."
   (->> keyvals
-       (org-ml--map* (let ((key (symbol-name (car it)))
-                           (val (symbol-name (cadr it))))
+       (org-ml--map* (let ((key (car it))
+                           (val (cadr it)))
                        (org-ml-build-node-property key val)))
        (apply #'org-ml-build-property-drawer :post-blank post-blank)))
 
