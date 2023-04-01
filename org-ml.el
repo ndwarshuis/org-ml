@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "27.1") (org "9.3") (dash "2.17") (s "1.12"))
-;; Version: 5.8.6
+;; Version: 5.8.7
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -2231,8 +2231,8 @@ Each member in KEYVALS is a list like (KEY VAL) where KEY and VAL
 are both strings, where each list will generate a node-property
 node in the property-drawer node like \":key: val\"."
   (->> keyvals
-       (org-ml--map* (let ((key (symbol-name (car it)))
-                           (val (symbol-name (cadr it))))
+       (org-ml--map* (let ((key (car it))
+                           (val (cadr it)))
                        (org-ml-build-node-property key val)))
        (apply #'org-ml-build-property-drawer :post-blank post-blank)))
 

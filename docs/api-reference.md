@@ -2351,7 +2351,7 @@ are both strings, where each list will generate a node-property
 node in the property-drawer node like `":key: val"`.
 
 ```el
-(->> (org-ml-build-property-drawer! '(key val))
+(->> (org-ml-build-property-drawer! '("key" "val"))
   (org-ml-to-trimmed-string))
  ;; => ":PROPERTIES:
  ;      :key:      val
@@ -2393,7 +2393,7 @@ All arguments not mentioned here follow the same rules as
   (org-ml-to-trimmed-string))
  ;; => "* really impressive title [0/9000]"
 
-(->> (org-ml-build-headline! :title-text "really impressive title" :section-children (list (org-ml-build-property-drawer! '(key val))
+(->> (org-ml-build-headline! :title-text "really impressive title" :section-children (list (org-ml-build-property-drawer! '("key" "val"))
 											   (org-ml-build-paragraph! "section text"))
 			      (org-ml-build-headline! :title-text "subhead"))
   (org-ml-to-trimmed-string))

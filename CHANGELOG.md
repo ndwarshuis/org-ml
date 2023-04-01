@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.8.7
+
+- use strings for `org-ml-build-property-drawer!` arguments
+
 ## 5.8.6
 
 - bugfixes

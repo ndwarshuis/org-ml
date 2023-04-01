@@ -968,7 +968,7 @@
       => "CLOSED: [2019-01-01 Tue +1m -1d]")
 
     (defexamples org-ml-build-property-drawer!
-      (->> (org-ml-build-property-drawer! '(key val))
+      (->> (org-ml-build-property-drawer! '("key" "val"))
            (org-ml-to-trimmed-string))
       => (:result ":PROPERTIES:"
                   ":key:      val"
@@ -985,7 +985,7 @@
       (->> (org-ml-build-headline!
             :title-text "really impressive title"
             :section-children
-            (list (org-ml-build-property-drawer! '(key val))
+            (list (org-ml-build-property-drawer! '("key" "val"))
                   (org-ml-build-paragraph! "section text"))
             (org-ml-build-headline! :title-text "subhead"))
            (org-ml-to-trimmed-string))
