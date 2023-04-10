@@ -2153,16 +2153,32 @@ object nodes. If the string does not represent a list of object nodes,
 throw an error."
   ;; fool parser to always parse objects, bold will parse to headlines
   ;; because of the stars
-  (-if-let (ss (->> (org-ml--from-string (concat " " string))
-                    (org-ml--get-descendent '(0))
-                    (org-ml-get-children)))
-      (cond
-       ((not (org-ml--is-secondary-string ss))
-        (org-ml--arg-error "Secondary string must only contain objects"))
-       ((equal (car ss) " ")
-        (-drop 1 ss))
-       (t (org-ml--map-first* (substring it 1) ss)))
-    (org-ml--arg-error "Could not make secondary string from %S" string)))
+  (cl-flet
+      ((err
+        ()
+        (org-ml--arg-error "Could not make secondary string from %S" string)))
+    ;; add space to prevent leading stars from parsing as headlines
+    (-if-let (d (->> (org-ml--from-string (concat " " string))
+                     (org-ml--get-descendent '(0))))
+        ;; special case, anything starting with what looks like a bullet will
+        ;; be parsed as a list with one item
+        (if (org-ml-is-type 'plain-list d)
+            (-let* ((i (org-ml--get-descendent '(0) d))
+                    ((first . rest) (->> (org-ml--get-descendent '(0) i)
+                                       (org-ml-get-children)))
+                    (bullet (org-ml--get-property-nocheck :bullet i)))
+              (if (org-ml-is-type 'plain-text first)
+                  `(,(concat bullet first) ,@rest)
+                `(,bullet ,first ,@rest)))
+          (if-let (ss (org-ml-get-children d))
+              (cond
+               ((not (org-ml--is-secondary-string ss))
+                (org-ml--arg-error "Secondary string must only contain objects"))
+               ((equal (car ss) " ")
+                (-drop 1 ss))
+               (t (org-ml--map-first* (substring it 1) ss)))
+            (err)))
+      (err))))
 
 (org-ml--defun-kw org-ml-build-timestamp! (start &key end active repeater
                                                  warning post-blank)
