@@ -909,9 +909,12 @@
       (->> (org-ml-build-secondary-string! "I'm *not* plain")
            (-map #'org-ml-get-type))
       => '(plain-text bold plain-text)
+      (->> (org-ml-build-secondary-string! "1. I'm *not* a plain list")
+           (-map #'org-ml-get-type))
+      => '(plain-text bold plain-text)
       (->> (org-ml-build-secondary-string! "* I'm not an object")
            (-map #'org-ml-get-type))
-      !!> arg-type-error)
+      => '(plain-text))
 
     (defexamples org-ml-build-table-row-hline
       (->>  (org-ml-build-table
@@ -1016,7 +1019,8 @@
                   "")
       (->> (org-ml-build-paragraph! "* stuff /with/ *formatting*")
            (org-ml-to-string))
-      !!> arg-type-error)
+      => (:result "* stuff /with/ *formatting*"
+                  ""))
 
     (defexamples org-ml-build-table-cell!
       (->> (org-ml-build-table-cell! "rage")
