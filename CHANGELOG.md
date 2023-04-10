@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.8.8
+
+- fix list-like syntax in secondary string parsing
+
 ## 5.8.7
 
 - use strings for `org-ml-build-property-drawer!` arguments
