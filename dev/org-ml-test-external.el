@@ -1,4 +1,4 @@
-;;; org-ml-test-external.el --- External tests for org-ml
+;;; org-ml-test-external.el --- External tests for org-ml -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
