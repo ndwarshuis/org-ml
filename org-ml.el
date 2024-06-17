@@ -1402,7 +1402,8 @@ and ILLEGAL types were attempted to be set."
 (defun org-ml--build-bare-node (type post-blank)
   "Return a new node assembled from TYPE with POST-BLANK.
 TYPE is a symbol and POST-BLANK is a positive integer."
-  `(,type (:post-blank ,(or post-blank 0))))
+  (org-element-create type `(:post-blank ,(or post-blank 0))))
+  ;; `(,type (:post-blank ,(or post-blank 0))))
 
 (defun org-ml--build-leaf-node (type post-blank)
   "Return a new object-typed node from TYPE and POST-BLANK."
@@ -1497,6 +1498,8 @@ symbol for the rest argument."
        "\n\nThe following properties are settable:\n"
        prop "\n- POST-BLANK: a non-negative integer")))
 
+  ;; TODO this entire function (macro) will need to change in order to use
+  ;; org-element-create (rather than building each node manually as a list)
   (defun org-ml--autodef-build-node-form (entry)
     "Return defun form for ENTRY."
     (let* ((type (car entry))
@@ -2655,16 +2658,19 @@ If string NOTE is supplied, append a note to the log entry."
 
 ;;; PUBLIC TYPE FUNCTIONS
 
+;; TODO this is now in AST
 (defun org-ml-get-type (node)
   "Return the type of NODE."
   (org-element-type node))
 
+;; TODO see org-element-type-p
 (defun org-ml-is-type (type node)
   "Return t if the type of NODE is TYPE (a symbol)."
   (unless (memq type org-ml-nodes)
     (org-ml--arg-error "Argument 'type' must be in `org-ml-nodes': Got %s" type))
   (eq (org-ml-get-type node) type))
 
+;; TODO see org-element-type-p
 (defun org-ml-is-any-type (types node)
   "Return t if the type of NODE is in TYPES (a list of symbols)."
   (-some->>
