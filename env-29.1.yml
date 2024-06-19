@@ -1,0 +1,5 @@
+name: org-ml-29.1
+channels:
+  - conda-forge
+dependencies:
+  - emacs=29.1

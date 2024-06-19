@@ -1,0 +1,5 @@
+name: org-ml-28.2
+channels:
+  - conda-forge
+dependencies:
+  - emacs=28.2
