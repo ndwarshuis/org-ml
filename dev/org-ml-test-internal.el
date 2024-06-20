@@ -1,4 +1,4 @@
-;;; org-ml-test-internal.el --- Internal tests for org-ml
+;;; org-ml-test-internal.el --- Internal tests for org-ml -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 

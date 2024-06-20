@@ -47,3 +47,8 @@ package for Emacs. These look like `blabla\0\0\0\0\0\0\0`."
 
 ;; (straight-freeze-versions)
 ;; (straight-thaw-versions)
+
+(defun compile-target ()
+  "Compile org-ml."
+  (byte-compile-file "org-ml-macs.el")
+  (byte-compile-file "org-ml.el"))

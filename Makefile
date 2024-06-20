@@ -1,5 +1,5 @@
-EMACS ?= emacs
-CASK ?= cask
+EMACS ?= emacs -Q --batch --load init.el -L .
+RM ?= rm -f
 
 all: test
 
@@ -8,36 +8,42 @@ test:
 	${MAKE} compile
 
 docs:
-	${CASK} exec ${EMACS} -Q -L . -L dev -batch \
+	${EMACS} -L dev \
 		-l dev/org-ml-docs.el \
 		-f create-docs-files
 
 internal:
-	${CASK} exec buttercup -L . -L dev \
-		-l dev/org-ml-test-internal.el
+	${EMACS} -L dev \
+		-l dev/org-ml-test-internal.el \
+        -f buttercup-run-discover
 
 external:
-	${CASK} exec buttercup -L . -L dev \
-		-l dev/org-ml-test-external.el
+	${EMACS} -L dev \
+		-l dev/org-ml-test-external.el \
+        -f buttercup-run-discover
 
 unit: 
-	${CASK} exec buttercup -L . -L dev \
+	${EMACS} -L dev \
 		-l dev/org-ml-test-external.el \
-		-l dev/org-ml-test-internal.el
+		-l dev/org-ml-test-internal.el \
+        -f buttercup-run-discover
+
+build:
+	${EMACS} -f compile-target
 
 compile:
-	${CASK} build
+	${MAKE} build
 	${MAKE} unit
 	${MAKE} clean-elc
 
 benchmark:
-	${CASK} build
-	${CASK} exec ${EMACS} -Q -L . -L bench -batch \
+	${EMACS} build
+	${EMACS} -L bench \
 		-l bench/org-ml-benchmarks.el \
 		-f org-ml-bench-run
 	${MAKE} clean-elc
 
 clean-elc:
-	${CASK} clean-elc
+	${RM} *.elc
 
 .PHONY:	all test docs unit
