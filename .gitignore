@@ -1,3 +1,5 @@
 .cask
 *.elc
-.emacs
+.emacs/*/straight/build
+.emacs/*/straight/repos
+.emacs/*/straight/build-cache.el

@@ -44,3 +44,6 @@ package for Emacs. These look like `blabla\0\0\0\0\0\0\0`."
 (straight-use-package 'lispy)
 
 ;; (straight-use-package 'org)
+
+;; (straight-freeze-versions)
+;; (straight-thaw-versions)
