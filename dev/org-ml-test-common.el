@@ -49,8 +49,8 @@
           ((eq sym '$>)
            `(expect (progn ,actual (s-trim (buffer-string))) :to-equal ,expected))
           ;; TODO I never use this?
-          ((eq sym '~>)
-           `(should (approx-equal ,actual ,expected)))
+          ;; ((eq sym '~>)
+          ;;  `(should (approx-equal ,actual ,expected)))
           ((eq sym '!!>)
            `(should-error (eval ',actual) :type ',expected))
           (t

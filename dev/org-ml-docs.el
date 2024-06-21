@@ -20,7 +20,6 @@
 ;;; Code:
 
 (require 's)
-(require 'lispy)
 (require 'dash)
 (require 'help-fns)
 (require 'package)
@@ -38,14 +37,27 @@
   (with-current-buffer (find-file-noselect "org-ml.el")
     (mapconcat 'number-to-string (package-desc-version (package-buffer-info)) version-separator)))
 
+(defun format-multiline (s &optional ident)
+  (let ((ident (or ident 2)))
+    (cl-labels
+        ((go
+           (x i)
+           (let ((test (format "%S" x)))
+             (if (< (+ (length test) i) 80) test
+               (if (not (consp x)) test
+                 (-let* (((fun . rest) x)
+                         (sfun (format "%S" fun))
+                         (ws (concat "\n" (s-repeat i " ")))
+                         (srest (--map (go it (+ i ident)) rest)))
+                   (if (null srest) test
+                     (-let (((r . rs) srest))
+                       (if (< (+ (length sfun) (length r) 2) 80)
+                           (format "(%S %s)" fun (s-join ws srest))
+                         (format "(%s)" (s-join ws `(,sfun ,r ,@rs))))))))))))
+      (go s ident))))
+
 (defun format-actual (actual)
-  (with-temp-buffer
-    (--> (format "%S" actual)
-         (replace-regexp-in-string "\n" "\\n" it t t)
-         (insert it))
-    (goto-char (point-min))
-    (lispy-multiline)
-    (buffer-string)))
+  (format-multiline actual))
 
 (defun format-expected (sym expected)
   (let* ((s (s-lines (format "%S" expected)))
@@ -65,7 +77,7 @@
           (comment
            (cond
             ((eq sym '=>) (format-expected sym expected))
-            ((eq sym '~>) (format-expected sym expected))
+            ;; ((eq sym '~>) (format-expected sym expected))
             ((eq sym '$>) (concat " ;; Output these buffer contents\n"
                                   (format-expected sym expected)))
             ((eq sym '!!>) (format "Error"))
