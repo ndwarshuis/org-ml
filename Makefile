@@ -58,10 +58,14 @@ build:
 
 # install all development packages for the current version
 install:
+	${MAKE} thaw
 	${EMACS} --eval '(print "Install finished")'
 
 # write lockfile for current emacs version given each repo dependency
 freeze:
 	${EMACS} -f straight-freeze-versions
+
+thaw:
+	${EMACS} -f straight-thaw-versions
 
 .PHONY:	all test docs unit

@@ -1,6 +1,6 @@
 (("dash.el" . "721436b04da4e2795387cb48a98ac6de37ece0fd")
  ("el-get" . "f220df34333fdb363b84b28f4ed4a5575341bf45")
- ("emacs-buttercup" . "a1a86b027ffe030e1c78a9f43c50cd20a6fed19a")
+ ("emacs-buttercup" . "e4fb7cd560d27d8879a2c7739ee96946adec2df8")
  ("emacsmirror-mirror" . "d9919dfe6eede6ff668614b23f64cfef0f954c48")
  ("gnu-elpa-mirror" . "e59499eeb86979ef2b41f004b11c0e712f6354b3")
  ("melpa" . "fd3bb4b191bf416dd419c5c76d510c7f5890e673")
