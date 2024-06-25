@@ -73,8 +73,8 @@ performance if relatively few patterns are used relative to the
 calls made to pattern-consuming functions.
 
 The following values are understood:
-- nil: don't memoize anything
-- 'compiled': memoize byte-compiled lambda forms
+- nil: do not memoize anything
+- `compiled': memoize byte-compiled lambda forms
 - any other non-nil: memoize non-compiled lambda forms"
   :type 'boolean
   :group 'org-ml)
@@ -142,11 +142,11 @@ The following values are understood:
 
 (org-ml--defconst org-ml-elements
   (cons 'org-data org-element-all-elements)
-  "List of all element types including 'org-data'.")
+  "List of all element types including `org-data'.")
 
 (org-ml--defconst org-ml-objects
   (cons 'plain-text org-element-all-objects)
-  "List of all object types including 'plain-text'.")
+  "List of all object types including `plain-text'.")
 
 (defconst org-ml-nodes
   (eval-when-compile
@@ -1879,7 +1879,7 @@ SUBCOMPONENTS is a list like that returned by
 (defmacro org-ml--item-map-subcomponents* (form item)
   "Return ITEM with subcomponents modified.
 FORM is a form where the subcomponents of item are bound to the
-symbol 'it' and returns modified subcomponents. The subcomponents
+symbol `it' and returns modified subcomponents. The subcomponents
 will conform to those given in `org-ml--item-get-subcomponents'."
   (declare (debug (form form)))
   (let ((i (make-symbol "item")))
@@ -1901,7 +1901,7 @@ will conform to those given in `org-ml--item-get-subcomponents'."
 
 (defmacro org-ml--item-map-subitems* (form item)
   "Return a ITEM with FORM applied to its sublist if present.
-FORM is a Lisp form in which the symbol 'it' is bound to the
+FORM is a Lisp form in which the symbol `it' is bound to the
 items in the sub plain-list, and returns a modified list of
 items."
   (declare (debug (form form)))
@@ -2480,7 +2480,7 @@ from OLD-TIMESTAMP at UNIXTIME with optionally supplied NOTE."
   "Return an item node for a done log entry.
 
 This will format the log entry from the default value for the
-'done` cell in `org-log-note-headings'.
+`done' cell in `org-log-note-headings'.
 
 UNIXTIME is an integer representing the time to be used for all
 timestamp nodes.
@@ -2494,7 +2494,7 @@ If string NOTE is supplied, append a note to the log entry."
   "Return an item node for a state change log entry.
 
 This will format the log entry from the default value for the
-'state` cell in `org-log-note-headings'.
+`state' cell in `org-log-note-headings'.
 
 UNIXTIME is an integer representing the time to be used for all
 timestamp nodes.
@@ -2513,7 +2513,7 @@ If string NOTE is supplied, append a note to the log entry."
   "Return an item node for a new note log entry.
 
 This will format the log entry from the default value for the
-'note` cell in `org-log-note-headings'.
+`note' cell in `org-log-note-headings'.
 
 UNIXTIME is an integer representing the time to be used for all
 timestamp nodes.
@@ -2527,7 +2527,7 @@ NOTE is a string for the note text."
   "Return an item node for a new schedule log entry.
 
 This will format the log entry from the default value for the
-'reschedule` cell in `org-log-note-headings'.
+`reschedule' cell in `org-log-note-headings'.
 
 UNIXTIME is an integer representing the time to be used for all
 timestamp nodes.
@@ -2542,7 +2542,7 @@ If string NOTE is supplied, append a note to the log entry."
   "Return an item node for a delete schedule log entry.
 
 This will format the log entry from the default value for the
-'delschedule` cell in `org-log-note-headings'.
+`delschedule' cell in `org-log-note-headings'.
 
 UNIXTIME is an integer representing the time to be used for all
 timestamp nodes.
@@ -2557,7 +2557,7 @@ If string NOTE is supplied, append a note to the log entry."
   "Return an item node for a new deadline log entry.
 
 This will format the log entry from the default value for the
-'redeadline` cell in `org-log-note-headings'.
+`redeadline' cell in `org-log-note-headings'.
 
 UNIXTIME is an integer representing the time to be used for all
 timestamp nodes.
@@ -2572,7 +2572,7 @@ If string NOTE is supplied, append a note to the log entry."
   "Return an item node for a delete deadline log entry.
 
 This will format the log entry from the default value for the
-'deldeadline` cell in `org-log-note-headings'.
+`deldeadline' cell in `org-log-note-headings'.
 
 UNIXTIME is an integer representing the time to be used for all
 timestamp nodes.
@@ -2586,7 +2586,7 @@ If string NOTE is supplied, append a note to the log entry."
 (defun org-ml-build-log-refile (unixtime &optional note)
   "Return an item node for a refile log entry.
 This will format the log entry from the default value for the
-'deldeadline` cell in `org-log-note-headings'.
+`deldeadline' cell in `org-log-note-headings'.
 
 UNIXTIME is an integer representing the time to be used for all
 timestamp nodes.
@@ -2998,8 +2998,8 @@ this, it is not necessary as the tree structure itself already
 encodes all parent-child relationships. Further, it is not used
 by org-element internally to convert nodes into strings (such as
 with `org-ml-to-string') and thus can be thought of as a
-'read-only' property. This is why :parent will be set to nil when
-building a new node with the 'org-ml-build-' family of functions
+\"read-only\" property. This is why :parent will be set to nil when
+building a new node with the \"org-ml-build-\" family of functions
 and why `org-ml-set-property' forbids setting this property.
 
 In many cases, one can safely ignore :parent unless, of course,
@@ -3279,9 +3279,9 @@ Return a list like (TYPE VALUE UNIT)."
 (defun org-ml-timestamp-set-warning (warning timestamp)
   "Set the warning of TIMESTAMP to WARNING.
 
-WARNING is a list like (TYPE VALUE UNIT). TYPE is one of 'year',
-'month', 'week', or 'day'. VALUE and is an integer. UNIT is one
-of 'year', 'month', 'week', or 'day'."
+WARNING is a list like (TYPE VALUE UNIT). TYPE is one of `year',
+`month', `week', or `day'. VALUE and is an integer. UNIT is one
+of `year', `month', `week', or `day'."
   (org-ml--timestamp-set-warning warning timestamp))
 
 (org-ml--defun-anaphoric* org-ml-timestamp-map-warning (fun timestamp)
@@ -3332,9 +3332,9 @@ t, return a list like (TYPE VALUE UNIT HABIT-VALUE HABIT-UNIT)."
 REPEATER is a list like (TYPE VALUE UNIT) or (TYPE VALUE UNIT
 HABIT-VALUE HABIT-UNIT); if `org-ml-parse-habits' is nil, only
 accept the former and error on the latter (and vice versa). TYPE
-is one of 'year', 'month', 'week', or 'day'. VALUE and
-HABIT-VALUE are integers. UNIT and HABIT-UNIT are one of 'year',
-'month', 'week', or 'day'.
+is one of `year', `month', `week', or `day'. VALUE and
+HABIT-VALUE are integers. UNIT and HABIT-UNIT are one of `year',
+`month', `week', or `day'.
 
 In order to remove the repeater entirely, set REPEATER to nil
 or (nil nil nil). To delete just the habit (if it exists and
@@ -4060,8 +4060,8 @@ This is the dual of `org-ml--flatten-plain-lists'."
   "Separate NODES into logbook components.
 SCC is the supercontents-config as given by `org-ml--scc-encode'.
 MODE is the mode by which to separate the nodes and is one of
-'mixed' (items and clocks are mixed together), 'clocks', or
-'items'. The returned list will be like (ITEMS CLOCKS UNKNOWN)."
+`mixed' (items and clocks are mixed together), `clocks', or
+`items'. The returned list will be like (ITEMS CLOCKS UNKNOWN)."
   (let ((n (org-ml--scc-get-clock-notes scc))
         (f (org-ml--scc-get-log-item-fun scc)))
     (cl-flet
@@ -4238,7 +4238,7 @@ is given by `org-ml--state-slot'. The purpose of this data
 structure is to represent valid logbook nodes for a particular
 configuration as well as their order and number. The reason it is
 called a state is because it will be used in an iterator as the
-logbook is separated from the contents, and a 'stateful' iterator
+logbook is separated from the contents, and a `stateful' iterator
 is needed because most logbook configurations have sequential
 dependencies for valid nodes."
   (-let ((funs
@@ -4306,8 +4306,8 @@ dependencies for valid nodes."
     (cons 'state funs)))
 
 (defmacro org-ml--reduce-state (initial-state form list)
-  "Sort of like `--reduce` but with state.
-It is only 'sort of' like a standard reduce function for two
+  "Sort of like `--reduce' but with state.
+It is only \"sort of\" like a standard reduce function for two
 reasons a) it keeps track of state and b) returns the remainder
 of LIST when the state is nil (which signifies termination of the
 loop). FORM is a form where `it' is bound to the current node,
@@ -4983,8 +4983,8 @@ If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
 (defmacro org-ml--tree-set-child* (index form tree)
   "Return TREE with node at INDEX set as child of the node before it.
 FORM is a Lisp form that takes the last member of TREE
-immediately before INDEX (called \"parent\", bound to 'it') and
-the item at INDEX to be set as its child (bound to 'it-target')
+immediately before INDEX (called \"parent\", bound to `it') and
+the item at INDEX to be set as its child (bound to `it-target')
 and returns a new \"parent\" node."
   (declare (indent 1) (debug (form form form)))
   (let ((i (make-symbol "index"))
@@ -5091,7 +5091,7 @@ item node's children."
 
 (defmacro org-ml--split-children-at-index* (index form tree)
   "Return TREE with node at INDEX split according to FORM.
-The node at INDEX will be bound to the symbol 'it' which is to be
+The node at INDEX will be bound to the symbol `it' which is to be
 referenced in FORM, and FORM is to return a list like (PARENT
 CHILDREN) where PARENT is the modified node at INDEX and CHILDREN
 is a list of nodes that were children under PARENT but are to be
@@ -5883,7 +5883,7 @@ function and POSIX extended regular expressions.:
 - SUB `+' - match SUB one or more times
 - SUB [N] - match SUB N times
 - SUB [M N] - match SUB M to N times (inclusive); if M or N is
-  nil, this will match 'at most N times' or 'at least M times'
+  nil, this will match \"at most N times\" or \"at least M times\"
   respectively
 - (ALT-A1 [ALT-A2 ...] | ALT-B1 [ALT-B2 ...] [| ...]) - match
   any of the ALT expressions separated by `|' where ALT is a list
@@ -5917,8 +5917,7 @@ shared between all functions that consume a PATTERN parameter."
     "Recursively modify the children of NODE using FORM.
 FORM returns a list of element or object nodes as the new children,
 and the variable `it' is bound to the original children."
-    (declare (debug (form def-form)))
-    (declare (indent 1))
+    (declare (debug (form def-form)) (indent 1))
     ;; TODO this makes a closure
     `(cl-labels
          ((rec
@@ -6165,14 +6164,14 @@ TYPE is the type of the node to be parsed."
 (defun org-ml--parse-element-at (point type)
   "Return element node immediately under POINT.
 For a list of all possible return types refer to `org-ml-elements'; this
-will return everything in this list except 'section' which is
+will return everything in this list except `section' which is
 ambiguous when referring to a single point.
 \(see `org-ml-parse-section-at').
 
 If TYPE is non-nil, only return nil if the object under point is not
 of that type. TYPE is a symbol from `org-ml-elements'. Furthermore,
-setting TYPE to 'table-row' will prefer table-row elements over table
-elements and likewise when setting TYPE to 'item' for plain-list
+setting TYPE to `table-row' will prefer table-row elements over table
+elements and likewise when setting TYPE to `item' for plain-list
 elements vs item elements."
   (save-excursion
     (goto-char point)
@@ -6389,10 +6388,10 @@ NODE may be a node or a list of nodes. Return NODE."
 ;; from Myers; adapted from the python implementation listed here:
 ;; https://blog.robertelder.org/diff-algorithm/
 
-(defun org-ml--diff-find-middle (str= M N)
+(defun org-ml--diff-find-middle (str-eq M N)
   "Return the coordinates for the middle snake.
 
-STR= is a ternary function that takes a direction (0 = forward, 1
+STR-EQ is a ternary function that takes a direction (0 = forward, 1
 = backward) and X/Y coordinates; it will return t if the two
 strings at the given coordinates in the indicated direction
 match.
@@ -6445,7 +6444,7 @@ M and N are the length of the current substrings."
                   x x0
                   y y0
                   z (- delta k))
-            (while (and (< x M) (< y N) (funcall str= fwd-p x y))
+            (while (and (< x M) (< y N) (funcall str-eq fwd-p x y))
               (setq x (1+ x)
                     y (1+ y)))
             (aset Va (mod k V-len) x)
@@ -6471,9 +6470,9 @@ string length and using them as circular buffers. After these
 edits, the time complexity should be O(min(A, B)*D) and the space
 complexity should be O(min(A, B).
 
-Return value will be a list of either '(ins I M N)' or '(del I
-J)'. For 'ins' commands M and N are the indices from STR-B to
-insert at I in STR-A, and for 'del' commands I and J are the
+Return value will be a list of either `(ins I M N)' or `(del I
+J)'. For `ins' commands M and N are the indices from STR-B to
+insert at I in STR-A, and for `del' commands I and J are the
 indices between which will be deleted in STR-A. Note that
 consecutive edits will be consolidated so the length of the
 return list will not necessarily be the length of the LCS
@@ -6741,7 +6740,7 @@ middle of NODE."
 
 (org-ml--defun* org-ml-update-this-buffer (fun)
   "Apply FUN to the contents of the current buffer.
-FUN is a unary function that takes a node of type 'org-data' and
+FUN is a unary function that takes a node of type `org-data' and
 returns a modified node."
   (org-ml-update fun (org-ml-parse-this-buffer)))
 
@@ -6997,7 +6996,7 @@ of the following:
 - [A B]: parse all headlines whose first point falls between points
   A and B in the buffer; if A and B are nil, use `point-min' and
   `point-max' respectively.
-- 'all': parse all headlines (equivalent to [nil nil])
+- `all': parse all headlines (equivalent to [nil nil])
 
 Each headline is obtained with `org-ml-parse-headline-at'."
   (cl-labels
