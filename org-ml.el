@@ -1082,7 +1082,11 @@ bounds."
                         :type-desc '("nil or a symbol from `year' `month'"
                                      "`week' `day', or `hour'")))
          (post-blank `(:post-blank ,@nn-int
-                                   :shift org-ml--shift-non-neg-integer)))
+                                   :shift org-ml--shift-non-neg-integer))
+         (robust `((:robust-begin ,@nn-int-nil
+                                  :shift org-ml--shift-non-neg-integer)
+                   (:robust-end ,@nn-int-nil
+                                :shift org-ml--shift-non-neg-integer))))
     (->>
      `((babel-call (:call ,@ol-str :require t)
                    (:inside-header ,@plist)
@@ -1147,6 +1151,7 @@ bounds."
                  (:pre-blank ,@nn-int
                              :shift org-ml--shift-non-neg-integer
                              :require 0)
+                 ,@robust
                  (:priority :pred org-ml--is-valid-headline-priority
                             :shift org-ml--shift-headline-priority
                             :type-desc ("an integer between (inclusive)"
@@ -1227,8 +1232,8 @@ bounds."
        (quote-block)
        ;; TODO this should not have multiline strings in it
        (radio-target (:value))
-       (section)
-       (special-block (:type ,@ol-str :require t))
+       (section ,@robust)
+       (special-block (:type ,@ol-str :require t) (:parameters ,@ol-str-nil))
        (src-block (:value ,@str :decode s-trim-right :require "")
                   (:language ,@str-nil)
                   (:parameters ,@plist)
@@ -1293,7 +1298,7 @@ bounds."
      (--map-when (memq (car it) org-ml-branch-nodes)
                  (-snoc it '(:contents-begin) '(:contents-end)))
      (--map-when (memq (car it) org-ml-elements)
-                 (-snoc it '(:post-affiliated)))
+                 (-snoc it '(:post-affiliated) '(:granularity) '(:mode)))
      (--map-when (memq (car it) org-ml--element-nodes-with-affiliated)
                  (append it
                          `((:name ,@str-nil)

@@ -58,7 +58,6 @@ build:
 
 # install all development packages for the current version
 install:
-	${MAKE} thaw
 	${EMACS} --eval '(print "Install finished")'
 
 # write lockfile for current emacs version given each repo dependency

@@ -57,7 +57,7 @@
   (defexamples org-ml-from-string
     (org-ml-from-string 'bold "*text*")
     => '(bold
-         (:begin 1 :end 7 :contents-begin 2 :contents-end 6 :post-blank 0 :parent nil)
+         (:begin 1 :end 7 :post-blank 0 :contents-begin 2 :contents-end 6 :parent nil)
          "text")
 
     (org-ml-from-string 'italic "*text*")
@@ -852,6 +852,7 @@
            (org-ml-to-trimmed-string))
       => "text")
 
+    ;; TODO add :parameters to test
     (defexamples org-ml-build-special-block
       (->> (org-ml-build-special-block "monad")
            (org-ml-to-trimmed-string))
@@ -2813,7 +2814,7 @@
       (--> (org-ml-parse-this-object)
            (org-ml-get-all-properties it)
            (plist-put it :parent nil))
-      => '(:begin 1 :end 7 :contents-begin 2 :contents-end 6 :post-blank 0 :parent nil))
+      => '(:begin 1 :end 7 :post-blank 0 :contents-begin 2 :contents-end 6 :parent nil))
 
     (defexamples-content org-ml-set-properties
       nil
@@ -2896,15 +2897,15 @@
       (->> (org-ml-parse-this-element)
            (org-ml-remove-parents))
       => '(headline
-           (:raw-value "headline" :begin 1 :end 11 :pre-blank 0 :contents-begin nil :contents-end nil :level 1 :priority nil :tags nil :todo-keyword nil :todo-type nil :post-blank 0 :footnote-section-p nil :archivedp nil :commentedp nil :post-affiliated 1 :title ("headline") :parent nil))
+           (:raw-value "headline" :begin 1 :end 11 :pre-blank 0 :contents-begin nil :contents-end nil :robust-begin nil :robust-end nil :level 1 :priority nil :tags nil :todo-keyword nil :todo-type nil :post-blank 0 :footnote-section-p nil :archivedp nil :commentedp nil :post-affiliated 1 :title ("headline") :mode first-section :granularity nil :parent nil))
 
       (:buffer "- tag :: thingy")
       (->> (org-ml-parse-this-item)
            (org-ml-remove-parents))
       => '(item
-           (:bullet "- " :begin 1 :end 16 :contents-begin 10 :contents-end 16 :checkbox nil :counter nil :structure ((1 0 "- " nil nil "tag" 16)) :pre-blank 0 :post-blank 0 :post-affiliated 1 :tag ("tag") :parent nil)
+           (:bullet "- " :begin 1 :end 16 :contents-begin 10 :contents-end 16 :checkbox nil :counter nil :structure ((1 0 "- " nil nil "tag" 16)) :pre-blank 0 :post-blank 0 :post-affiliated 1 :tag ("tag") :mode item :granularity nil :parent nil)
            (paragraph
-            (:begin 10 :end 16 :contents-begin 10 :contents-end 16 :post-blank 0 :post-affiliated 10 :parent nil)
+            (:begin 10 :end 16 :contents-begin 10 :contents-end 16 :post-blank 0 :post-affiliated 10 :mode nil :granularity nil :parent nil)
             "thingy"))
 
       :begin-hidden

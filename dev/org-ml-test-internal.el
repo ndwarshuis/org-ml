@@ -197,7 +197,9 @@ is the converse."
   (declare (indent 1))
   (let ((props (append omit-props '(:begin :contents-begin :end :contents-end
                                            :parent :post-affiliated :name
-                                           :plot :header :results :caption))))
+                                           :plot :header :results :caption
+                                           :granularity :mode :robust-begin
+                                           :robust-end))))
     (->> (-partition 2 specs)
          (--map (-let* (((node string) it)
                         (type (org-ml-get-type node)))
