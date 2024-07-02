@@ -179,19 +179,26 @@ is the converse."
           (b (partition-plist exclude-props plist2)))
       (and (equal (length a) (length b))
            (cl-subsetp a b :test #'equal)
-           (cl-subsetp a b :test #'equal)))))
+           (cl-subsetp b a :test #'equal)))))
 
 (defun org-ml--equal~ (exclude-props node1 node2)
   (if (and (stringp node1) (stringp node2))
       `(expect ,node1 :to-equal ,node2)
     (-let (((type1 . (props1 . children1)) node1)
-           ((type2 . (props2 . children2)) node2))
+           ((type2 . (props2 . children2)) node2)
+           (pb1 (org-element-property :post-blank node1))
+           (pb2 (org-element-property :post-blank node2))
+           ;; TODO deal with standard-props
+           ;; NOTE exclude post-blank since some elements won't have it in their
+           ;; regular plist, and we already query it above
+           (xs (append '(:post-blank :standard-properties) exclude-props)))
       `(progn
          (expect ',type1 :to-be ',type2)
-         (expect (org-ml--plist-equal-p ',exclude-props ',props1 ',props2))
+         (expect ,pb1 :to-be ,pb2)
+         (expect (org-ml--plist-equal-p ',xs ',props1 ',props2))
          (and (eq ',type1 ',type2)
               (->> (-zip-fill nil ',children1 ',children2)
-                   (--all? (org-ml--equal~ ',exclude-props (car it) (cdr it)))))))))
+                   (--all? (org-ml--equal~ ',xs (car it) (cdr it)))))))))
 
 (defun org-ml--test-from-string (omit-props &rest specs)
   (declare (indent 1))
@@ -210,6 +217,8 @@ is the converse."
   (declare (indent 1))
   (let ((it-forms (-flatten-n 1 (-map #'eval forms))))
     `(describe ,header ,@it-forms)))
+
+(print (org-ml--build-blank-node 'timestamp))
 
 (describe "converting from string"
   (describe-many "object leaf nodes"
@@ -239,14 +248,15 @@ is the converse."
     (org-ml--test-from-string nil
       (org-ml-build-target "target") "<<target>>")
     (org-ml--test-from-string '(:raw-value)
-      (->> (org-ml-build-timestamp! '(2020 1 1 0 0)
-                                    :end '(2020 1 1 0 10)
-                                    :repeater '(cumulate 1 day)
-                                    :warning '(all 1 day))
-           (org-ml-timestamp-set-collapsed nil))
+      (org-ml-build-timestamp! '(2020 1 1 0 0)
+                               :end '(2020 1 1 0 10)
+                               :repeater '(cumulate 1 day)
+                               :warning '(all 1 day))
+           ;; (org-ml-timestamp-set-collapsed t))
       "[2020-01-01 Tue 00:00-00:10 -1d +1d]")
     (org-ml--test-from-string nil
-      (org-ml-build-verbatim "b") "=b="))
+                              (org-ml-build-verbatim "b") "=b=")
+    )
 
   (describe-many "object branch nodes"
     (org-ml--test-from-string nil
@@ -346,15 +356,15 @@ is the converse."
       (org-ml-build-verse-block) "#+begin_verse\n#+end_verse"
       (org-ml-build-verse-block "hi\n") "#+begin_verse\nhi\n#+end_verse")))
 
-;;; PARSING INVERTABILITY
+;; ;;; PARSING INVERTABILITY
 
-;; For all org buffer contents, parsing and printing should be
-;; perfect inverses.
+;; ;; For all org buffer contents, parsing and printing should be
+;; ;; perfect inverses.
 
-;; These tests test/use the following:
-;; - all the parse functions
-;; - `org-ml-to-string'
-;; - `org-ml-get-type'
+;; ;; These tests test/use the following:
+;; ;; - all the parse functions
+;; ;; - `org-ml-to-string'
+;; ;; - `org-ml-get-type'
 
 (defun org-ml--test-contents-parse-inversion (type parse-fun contents-list
                                                    &optional prefix suffix)
@@ -372,18 +382,20 @@ be parsed to TYPE."
                                 (--map (s-append suffix-char it) contents-list)))
          (test-list (append contents-list contents-list-space)))
     (--each test-list
-      (let* ((at (if prefix (1+ (length prefix)) 1))
-             (parsed (org-ml--with-org-env
-                      (when prefix (insert prefix))
-                      (insert it)
-                      (when suffix (insert suffix))
-                      (funcall parse-fun at)))
-             (parsed-type (org-ml-get-type parsed)))
+      ;; TODO resolve all in the temp buffer somehow?
+      (-let* ((at (if prefix (1+ (length prefix)) 1))
+              ((parsed parsed-type)
+               (org-ml--with-org-env
+                (when prefix (insert prefix))
+                (insert it)
+                (when suffix (insert suffix))
+                (let ((p (funcall parse-fun at)))
+                  (list (org-ml-to-string p) (org-ml-get-type p))))))
         ;; TODO not DRY
         (unless (equal type parsed-type)
           (print (format "%s parsed as %s" it parsed-type)))
         (should (equal type parsed-type))
-        (should (equal it (org-ml-to-string parsed)))))))
+        (should (equal it parsed))))))
 
 (describe "parse and print should be perfect inverses"
   (describe "object nodes"
@@ -1028,7 +1040,7 @@ be parsed to TYPE."
         (org-ml--compare-element-props
          (org-ml-build-table) "| table |")))))
 
-;; SPECIALIZED DEFUN MACRO TESTS
+;; ;; SPECIALIZED DEFUN MACRO TESTS
 
 (describe "org-ml--defun-kw internal definition"
   (describe "org-ml--make-header"
@@ -1099,9 +1111,9 @@ be parsed to TYPE."
     (setq enconf (org-ml--scc-encode nil)
           enconf-notes (org-ml--scc-encode '(:clock-out-notes t))
           c1 (org-ml-build-clock! '(2020 1 1 0 0) :end '(2020 1 1 1 0))
-          i1 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 2 0 0)) "1")
+          i1 (org-ml-build-log-note (org-ml-timelist-to-unixtime '(2020 1 2 0 0)) "1")
           c2 (org-ml-build-clock! '(2020 1 3 0 0) :end '(2020 1 3 1 0))
-          i2 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 4 0 0)) "2")
+          i2 (org-ml-build-log-note (org-ml-timelist-to-unixtime '(2020 1 4 0 0)) "2")
           n1 (org-ml-build-item! :paragraph "clock note")
           p1 (org-ml-build-plain-list i1)
           p2 (org-ml-build-plain-list i2)
@@ -1162,9 +1174,9 @@ be parsed to TYPE."
     (setq enconf (org-ml--scc-encode nil)
           enconf-notes (org-ml--scc-encode '(:clock-out-notes t))
           c1 (org-ml-build-clock! '(2020 1 1 0 0) :end '(2020 1 1 1 0))
-          i1 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 2 0 0)) "1")
+          i1 (org-ml-build-log-note (org-ml-timelist-to-unixtime '(2020 1 2 0 0)) "1")
           c2 (org-ml-build-clock! '(2020 1 3 0 0) :end '(2020 1 3 1 0))
-          i2 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 4 0 0)) "2")
+          i2 (org-ml-build-log-note (org-ml-timelist-to-unixtime '(2020 1 4 0 0)) "2")
           n1 (org-ml-build-item! :paragraph "clock note")
           p1 (org-ml-build-plain-list i1)
           p2 (org-ml-build-plain-list i2)
@@ -1295,10 +1307,14 @@ be parsed to TYPE."
     (setq i-name "LOGGING"
           c-name "CLOCKING"
           m-name "LOGBOOK"
-          c1 (org-ml-build-clock! '(2020 1 1 0 0) :end '(2020 1 1 1 0))
-          i1 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 2 0 0)) "1")
-          c2 (org-ml-build-clock! '(2020 1 3 0 0) :end '(2020 1 3 1 0))
-          i2 (org-ml-build-log-note (org-ml-time-to-unixtime '(2020 1 4 0 0)) "2")
+          c1 (->> (org-ml-build-clock! '(2020 1 1 0 0) :end '(2020 1 1 1 0))
+                  (org-ml-remove-parents))
+          i1 (->> (org-ml-build-log-note (org-ml-timelist-to-unixtime '(2020 1 2 0 0)) "1")
+                  (org-ml-remove-parents))
+          c2 (->> (org-ml-build-clock! '(2020 1 3 0 0) :end '(2020 1 3 1 0))
+                  (org-ml-remove-parents))
+          i2 (->> (org-ml-build-log-note (org-ml-timelist-to-unixtime '(2020 1 4 0 0)) "2")
+                  (org-ml-remove-parents))
           p1 (org-ml-build-plain-list i1)
           p2 (org-ml-build-plain-list i2)
           p21 (org-ml-build-plain-list i2 i1)
@@ -2014,30 +2030,30 @@ applied."
     (match-empty '(:first (nil | headline)))
     (match-empty '(:last (headline | nil)))))
 
-;; (ert-deftest org-ml-match/slicer-many ()
-;;   ;; Test the * paths with all slicers. Here the node
-;;   ;; is chosen such that some values are nested and thus * will
-;;   ;; return them but *! will not
-;;   (let ((node (->> (s-join "\n"
-;;                            '("* one"
-;;                              "- 1"
-;;                              "- 2"
-;;                              "  - 3"
-;;                              "** two"
-;;                              "- 4"
-;;                              "- 5"
-;;                              "  - 6"
-;;                              "** three"
-;;                              "- 7"
-;;                              "- 8"
-;;                              "  - 9"))
-;;                    (org-ml--from-string)))
-;;         (expected '("- 1" "- 2\n  - 3" "- 3" "- 4" "- 5\n  - 6"
-;;                     "- 6" "- 7" "- 8\n  - 9" "- 9"))
-;;         (expected! '("- 1" "- 2\n  - 3" "- 4" "- 5\n  - 6" "- 7"
-;;                      "- 8\n  - 9")))
-;;     (match-slicer-should-equal node expected (:any * item))
-;;     (match-slicer-should-equal node expected! (:any *! item))))
+(ert-deftest org-ml-match/slicer-many ()
+  ;; Test the * paths with all slicers. Here the node
+  ;; is chosen such that some values are nested and thus * will
+  ;; return them but *! will not
+  (let ((node (->> (s-join "\n"
+                           '("* one"
+                             "- 1"
+                             "- 2"
+                             "  - 3"
+                             "** two"
+                             "- 4"
+                             "- 5"
+                             "  - 6"
+                             "** three"
+                             "- 7"
+                             "- 8"
+                             "  - 9"))
+                   (org-ml--from-string)))
+        (expected '("- 1" "- 2\n  - 3" "- 3" "- 4" "- 5\n  - 6"
+                    "- 6" "- 7" "- 8\n  - 9" "- 9"))
+        (expected! '("- 1" "- 2\n  - 3" "- 4" "- 5\n  - 6" "- 7"
+                     "- 8\n  - 9")))
+    (match-slicer-should-equal node expected (:any * item))
+    (match-slicer-should-equal node expected! (:any *! item))))
 
 ;; DIFF ALGORITHM
 

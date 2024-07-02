@@ -516,6 +516,9 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
     (if (org-ml-is-type 'headline parent) parent
       (org-ml--get-parent-headline parent))))
 
+;; TODO this seems crazy slow for most of the places where I'm using it,
+;; consider using setcdr et al for many internal things where I can make the
+;; tradeoff b/t side effects and speed
 (defun org-ml--set-property-nocheck (prop value node)
   "Set PROP in NODE to VALUE."
   (if (stringp node)
@@ -523,7 +526,12 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
           (->> (s-trim-right node) (s-append (s-repeat value " ")))
         (org-add-props node nil prop value))
     (-let (((type . (props . children)) node))
-      (org-ml--construct type (plist-put props prop value) children))))
+      (if (eq prop :post-blank)
+          (let ((ar (copy-sequence (org-element--parray node))))
+            (->> (org-ml--construct type props children)
+                 (org-element-put-property-2 :standard-properties ar)
+                 (org-element-put-property-2 :post-blank value)))
+        (org-ml--construct type (plist-put props prop value) children)))))
 
 (defun org-ml--set-properties-nocheck (plist node)
   "Set all properties in NODE to the values corresponding to PLIST.
@@ -611,7 +619,7 @@ property value."
 ;;       given then VALUE and IVALUE are `equal'
 ;;     - :decode - a function that inverts the function at :encode
 ;;     - :cis - a unary function that takes NODE and returns a modified NODE;
-;;       the point of this it so 'update' other properties when PROP is changed
+;;       the point of this it to "update" other properties when PROP is changed
 ;;     - :const - a value that PROP should always have
 ;;     - :shift - a binary function that shifts PROP; the first argument takes
 ;;       an integer describing the magnitude and direction of the shift and the
@@ -713,6 +721,10 @@ property value."
 (defun org-ml--is-valid-timestamp-type (x)
   "Return t if X is an allowed value for a timestamp node type property."
   (memq x '(inactive inactive-range active active-range)))
+
+(defun org-ml--is-valid-timestamp-range-type (x)
+  "Return t if X is an allowed value for a timestamp node range-type property."
+  (memq x '(nil daterange timerange)))
 
 (defun org-ml--is-valid-timestamp-repeater-type (x)
   "Return t if X is an allowed value for a timestamp node repeater-type property."
@@ -974,7 +986,7 @@ This will be based on MACRO's key and value properties."
   "Return CLOCK node with its duration and status properties updated.
 This will be based on CLOCK's value property."
   (let* ((ts (org-ml--get-property-nocheck :value clock))
-         (seconds (org-ml--timestamp-get-range ts)))
+         (seconds (org-ml--timestamp-get-length ts)))
     (if (= seconds 0)
         (->> (org-ml--set-property-nocheck :duration nil clock)
              (org-ml--set-property-nocheck :status 'running))
@@ -1002,6 +1014,13 @@ This will be based on HEADLINE's archivedp property."
           (-snoc tags* org-archive-tag) tags*))
     headline))
 
+(defun org-ml--link-update-type-explicit (link)
+  "Return LINK with `:type-explicit-p' updated."
+  (let ((x (-> (org-ml--get-property-nocheck :type link)
+               (member (org-link-types))
+               (null)
+               (not))))
+    (org-ml--set-property-nocheck :type-explicit-p x link)))
 
 ;;; shifters
 
@@ -1080,13 +1099,13 @@ bounds."
                                 :type-desc "a zero-range, inactive timestamp node"))
          (ts-unit (list :pred #'org-ml--is-valid-timestamp-unit
                         :type-desc '("nil or a symbol from `year' `month'"
-                                     "`week' `day', or `hour'")))
-         (post-blank `(:post-blank ,@nn-int
-                                   :shift org-ml--shift-non-neg-integer))
-         (robust `((:robust-begin ,@nn-int-nil
-                                  :shift org-ml--shift-non-neg-integer)
-                   (:robust-end ,@nn-int-nil
-                                :shift org-ml--shift-non-neg-integer))))
+                                     "`week' `day', or `hour'"))))
+         ;; (post-blank `(:post-blank ,@nn-int
+         ;;                           :shift org-ml--shift-non-neg-integer))
+         ;; (robust `((:robust-begin ,@nn-int-nil
+         ;;                          :shift org-ml--shift-non-neg-integer)
+         ;;           (:robust-end ,@nn-int-nil
+         ;;                        :shift org-ml--shift-non-neg-integer))))
     (->>
      `((babel-call (:call ,@ol-str :require t)
                    (:inside-header ,@plist)
@@ -1151,7 +1170,7 @@ bounds."
                  (:pre-blank ,@nn-int
                              :shift org-ml--shift-non-neg-integer
                              :require 0)
-                 ,@robust
+                 ;; ,@robust
                  (:priority :pred org-ml--is-valid-headline-priority
                             :shift org-ml--shift-headline-priority
                             :type-desc ("an integer between (inclusive)"
@@ -1192,8 +1211,8 @@ bounds."
                         :type-desc "nil or the symbols `on', `off', or `trans'")
              (:counter ,@pos-int-nil :shift org-ml--shift-pos-integer)
              (:tag :pred org-ml--is-valid-item-tag
-                   :type-desc "a secondary string")
-             (:structure))
+                   :type-desc "a secondary string"))
+             ;; (:structure))
        (keyword (:key ,@ol-str :require t)
                 (:value ,@ol-str :require t))
        (latex-environment (:value :encode org-ml--encode-latex-environment-value
@@ -1207,6 +1226,7 @@ bounds."
              (:format :pred org-ml--is-valid-link-format
                       :type-desc "the symbol `plain', `bracket' or `angle'")
              (:type :pred org-ml--is-valid-link-type
+                    :cis org-ml--link-update-type-explicit
                     :type-desc ("a oneline string from `org-link-types'"
                                 "or \"coderef\", \"custorg-ml-id\","
                                 "\"file\", \"id\", \"radio\", or"
@@ -1222,7 +1242,7 @@ bounds."
        (node-property (:key ,@ol-str :require t)
                       (:value ,@ol-str :require t))
        (paragraph)
-       (plain-list (:structure)
+       (plain-list ;;(:structure)
                    (:type))
        (plain-text)
        (planning (:closed ,@planning-closed)
@@ -1232,7 +1252,7 @@ bounds."
        (quote-block)
        ;; TODO this should not have multiline strings in it
        (radio-target (:value))
-       (section ,@robust)
+       (section)
        (special-block (:type ,@ol-str :require t) (:parameters ,@ol-str-nil))
        (src-block (:value ,@str :decode s-trim-right :require "")
                   (:language ,@str-nil)
@@ -1268,6 +1288,9 @@ bounds."
                                      "`active', `inactive-range', or"
                                      "`active-range'")
                          :require t)
+                  (:range-type :pred org-ml--is-valid-timestamp-range-type
+                               :type-desc ("either symbol `daterange' or"
+                                           "`timerange' or nil"))
                   (:year-start ,@pos-int :require t)
                   (:month-start ,@pos-int :require t)
                   (:day-start ,@pos-int :require t)
@@ -1294,11 +1317,11 @@ bounds."
        (verbatim (:value ,@str :require t))
        (verse-block))
      ;; add post-blank/begin/end to everything
-     (--map (append it `(,post-blank (:begin) (:end) (:parent))))
-     (--map-when (memq (car it) org-ml-branch-nodes)
-                 (-snoc it '(:contents-begin) '(:contents-end)))
-     (--map-when (memq (car it) org-ml-elements)
-                 (-snoc it '(:post-affiliated) '(:granularity) '(:mode)))
+     ;; (--map (append it `(,post-blank (:begin) (:end) (:parent))))
+     ;; (--map-when (memq (car it) org-ml-branch-nodes)
+     ;;             (-snoc it '(:contents-begin) '(:contents-end)))
+     ;; (--map-when (memq (car it) org-ml-elements)
+     ;;             (-snoc it '(:post-affiliated) '(:granularity) '(:mode)))
      (--map-when (memq (car it) org-ml--element-nodes-with-affiliated)
                  (append it
                          `((:name ,@str-nil)
@@ -1330,10 +1353,20 @@ bounds."
   "Return ATTRIBUTE for PROP of node TYPE.
 Signal an error if PROP in TYPE does not have ATTRIBUTE."
   (-if-let (type-list (alist-get type org-ml--property-alist))
-      (if (assq prop type-list)
-          (-when-let (plist (alist-get prop type-list))
-            (plist-get plist attribute))
-        (org-ml--arg-error "Type '%s' does not have property '%s'" type prop))
+      (cond
+       ((assq prop type-list)
+        (-when-let (plist (alist-get prop type-list))
+          (plist-get plist attribute)))
+       ;; post-blank is special, since this makes sense to expose as a
+       ;; modifiable property yet it is in the standard-properties array; all
+       ;; the other properties in this array are not modifiable (ie we shouldn't
+       ;; change :begin and :end or set them upon node creation)
+       ((eq prop :post-blank)
+        (cond
+         ((eq attribute :shift) #'org-ml--shift-non-neg-integer)
+         ((eq attribute :pred) #'org-ml--is-non-neg-integer)))
+       (t
+        (org-ml--arg-error "Type '%s' does not have property '%s'" type prop)))
     (org-ml--arg-error "Tried to query property '%s' for non-existent type '%s'" prop type)))
 
 (defun org-ml--get-property-encoder (type prop)
@@ -1407,7 +1440,8 @@ and ILLEGAL types were attempted to be set."
 (defun org-ml--build-bare-node (type post-blank)
   "Return a new node assembled from TYPE with POST-BLANK.
 TYPE is a symbol and POST-BLANK is a positive integer."
-  `(,type (:post-blank ,(or post-blank 0))))
+  (org-element-create type `(:post-blank ,(or post-blank 0))))
+  ;; `(,type (:post-blank ,(or post-blank 0))))
 
 (defun org-ml--build-leaf-node (type post-blank)
   "Return a new object-typed node from TYPE and POST-BLANK."
@@ -1574,55 +1608,95 @@ If fractional cookie, return `fraction'; if percentage cookie return
 
 ;; timestamp (auxiliary functions)
 
-(defun org-ml-time-is-long (time)
-  "Return t if TIME is a long format time list."
-  (pcase time
+;; terminology (in haskell types)
+;; type Date = (Y, M, D)
+;; type Time = (H, M)
+;; type DateTime = (Y, M, D, H, M)
+;; type TimeList = (Y, M, D, (Maybe H), (Maybe M))
+
+(defun org-ml-timelist-has-time (timelist)
+  "Return t if TIMELIST has a time."
+  (pcase timelist
     (`(,(pred integerp) ,(pred integerp) ,(pred integerp)
        ,(pred integerp) ,(pred integerp))
      t)))
 
 ;; make these public, not sure where else to put them
-(defun org-ml-time-to-unixtime (time)
-  "Return the unix time (integer seconds) of time list TIME.
+(defun org-ml-timelist-to-unixtime (timelist)
+  "Return the unix time (integer seconds) of TIMELIST.
 The returned value is dependent on the time zone of the operating
 system."
-  (->> (if (org-ml-time-is-long time)
-           (-let (((y m d H M) time))
-             (list 0 M H d m y nil -1 (current-time-zone)))
-         (-let (((y m d) time))
-           (list 0 0 0 d m y nil -1 (current-time-zone))))
+  (->> (-let (((y m d H M) timelist))
+         (list 0 (or M 0) (or H 0) d m y nil -1 (current-time-zone)))
        (encode-time)
        (float-time)
        (round)))
 
-(defun org-ml-unixtime-to-time-long (unixtime)
+(defun org-ml-unixtime-to-timelist (has-time unixtime)
+  "Return the long time list of UNIXTIME.
+
+The list will be formatted like (YEAR MONTH DAY HOUR MIN) unless
+HAS-TIME is nil, in which case HOUR and MIN will be set to nil."
+  (-let (((H M d m y) (-slice (decode-time unixtime (current-time-zone)) 1 6)))
+    (if has-time (list y m d H M) (list y m d nil nil))))
+
+(defun org-ml-unixtime-to-datetime (unixtime)
   "Return the long time list of UNIXTIME.
 The list will be formatted like (YEAR MONTH DAY HOUR MIN)."
   (reverse (-slice (decode-time unixtime (current-time-zone)) 1 6)))
 
-(defun org-ml-unixtime-to-time-short (unixtime)
+(defun org-ml-unixtime-to-date (unixtime)
   "Return the short time list of UNIXTIME.
 The list will be formatted like (YEAR MONTH DAY nil nil)."
-  (append (-take 3 (org-ml-unixtime-to-time-long unixtime)) '(nil nil)))
+  (append (-take 3 (org-ml-unixtime-to-datetime unixtime)) '(nil nil)))
 
-(defun org-ml--time-truncate (time)
-  "Return the short time format of TIME regardless of input format."
-  (-take 3 time))
+(defun org-ml--timelist-truncate (timelist)
+  "Return the date of TIMELIST with hour amd minute fields nil-ed."
+  `(,@(-take 3 timelist) nil nil))
 
-(defun org-ml--time-shift (n unit time)
-  "Return modified time list TIME shifted N UNIT's.
+(defun org-ml-timelist-split (timelist)
+  "Return TIMELIST split into ((Y M D) (H M)).
+
+The second member will be nil if either hours or minutes is nil."
+  (-let (((ymd (h m)) (-split-at 3 timelist)))
+    (list ymd (if (and h m) (list h m) nil))))
+
+(defun org-ml-times-equal-date-p (time1 time2)
+  "Return t if the dates of TIME1 and TIME2 are the same."
+  (equal (org-ml--timelist-truncate time1) (org-ml--timelist-truncate time2)))
+
+(defun org-ml--timelists-get-range-type (timelist1 timelist2 original)
+  "Return range type of TIMELIST1 and TIMELIST2.
+
+Valid return values are nil (unranged), `daterange' (ranged with
+different dates), or `timerange' (ranged with same date).
+
+ORIGINAL can be any of the return values above. If TIME1 and TIME2 are
+a timerange as defined above, return ORIGINAL if it is non-nil."
+  (-let (((d1 t1) (org-ml-timelist-split timelist1))
+         ((d2 t2) (org-ml-timelist-split timelist2)))
+    (if (equal d1 d2)
+        (if (equal t1 t2) nil (or original 'timerange))
+      'daterange)))
+
+;; ASSUME any "impossible datetimes" will be corrected when the timelist is
+;; parsed back into a timestamp (or however it will be used). Ie if I add 10000
+;; days to any timestamp assume this will be reflected sensibly in the month
+;; and year of the final result downstream.
+(defun org-ml--timelist-shift (n unit timelist)
+  "Return modified TIMELIST shifted N UNIT's.
 
 UNIT is one of `day', `week', `month', `year', `minute', or `hour'.
 N is an integer."
   (-let (((i s) (cond
-                 ((eq unit 'year) (list 0 n))
-                 ((eq unit 'month) (list 1 n))
-                 ((eq unit 'week) (list 2 (* 7 n)))
-                 ((eq unit 'day) (list 2 n))
-                 ((and (eq unit 'hour) (org-ml-time-is-long time)) (list 3 n))
-                 ((and (eq unit 'minute) (org-ml-time-is-long time)) (list 4 n))
+                 ((eq unit 'year) `(0 ,n))
+                 ((eq unit 'month) `(1 ,n))
+                 ((eq unit 'week) `(2 ,(* 7 n)))
+                 ((eq unit 'day) `(2 ,n))
+                 ((and (eq unit 'hour) (org-ml-timelist-has-time timelist)) `(3 ,n))
+                 ((and (eq unit 'minute) (org-ml-timelist-has-time timelist)) `(4 ,n))
                  (t (org-ml--arg-error "Invalid time unit: %S" unit)))))
-    (org-ml--map-at* i (+ s it) time)))
+    (org-ml--map-at* i (+ s it) timelist)))
 
 (defconst org-ml--time-start-keys
   '(:year-start :month-start :day-start :hour-start :minute-start)
@@ -1632,30 +1706,30 @@ N is an integer."
   '(:year-end :month-end :day-end :hour-end :minute-end)
   "Properties for the ending time values of a timestamp node.")
 
-(defun org-ml--time-format-props (time start?)
-  "Return plist representation of time list TIME.
-If START? is t, the plist will represent a start time, else and
-end time."
-  (let* ((props (if start? org-ml--time-start-keys org-ml--time-end-keys))
-         (time* (pcase time
-                  (`(,(pred integerp)
-                     ,(pred integerp)
-                     ,(pred integerp))
-                   (append time '(nil nil)))
-                  ((or `(,(pred integerp)
-                         ,(pred integerp)
-                         ,(pred integerp)
-                         ,(pred integerp)
-                         ,(pred integerp))
-                       `(,(pred integerp)
-                         ,(pred integerp)
-                         ,(pred integerp)
-                         ,(pred null)
-                         ,(pred null)))
-                   time)
-                  (`nil (-repeat 5 nil))
-                  (_ (org-ml--arg-error "Invalid time given: %s" time)))))
-    (-interleave props time*)))
+;; (defun org-ml--timelist-format-props (timelist start?)
+;;   "Return plist representation of time list TIMELIST.
+;; If START? is t, the plist will represent a start time, else and
+;; end time."
+;;   (let* ((props (if start? org-ml--time-start-keys org-ml--time-end-keys))
+;;          (time* (pcase timelist
+;;                   (`(,(pred integerp)
+;;                      ,(pred integerp)
+;;                      ,(pred integerp))
+;;                    (append time '(nil nil)))
+;;                   ((or `(,(pred integerp)
+;;                          ,(pred integerp)
+;;                          ,(pred integerp)
+;;                          ,(pred integerp)
+;;                          ,(pred integerp))
+;;                        `(,(pred integerp)
+;;                          ,(pred integerp)
+;;                          ,(pred integerp)
+;;                          ,(pred null)
+;;                          ,(pred null)))
+;;                    time)
+;;                   (`nil (-repeat 5 nil))
+;;                   (_ (org-ml--arg-error "Invalid time given: %s" time)))))
+;;     (-interleave props time*)))
 
 (defconst org-ml--warning-keys
   '(:warning-type :warning-value :warning-unit)
@@ -1684,31 +1758,119 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
 
 ;; timestamp (regular)
 
-(defun org-ml--timestamp-get-start-time (timestamp)
-  "Return the time list of the start time in TIMESTAMP."
+;; ASSUME the source of truth for if a timestamp is ranged or not is in the
+;; :ranged-type property. This is much faster than querying each piece of the
+;; timestamp and inferring if it is ranged or not. It also is less ambiguous for
+;; in cases where the timestamp may be collapsed.
+
+(defun org-ml--timestamp-get-start-timelist (timestamp)
+  "Return the timelist of the start time in TIMESTAMP."
   (-let (((&plist :minute-start n :hour-start h :day-start d
                   :month-start m :year-start y)
           (org-ml-get-all-properties timestamp)))
     `(,y ,m ,d ,h ,n)))
 
-(defun org-ml--timestamp-get-end-time (timestamp)
-  "Return the time list of the end time in TIMESTAMP."
+(defun org-ml--timestamp-get-start-date (timestamp)
+  "Return the start date of TIMESTAMP."
+  (-let (((&plist :year-start y :month-start m :day-start d)
+          (org-ml-get-all-properties timestamp)))
+    `(,y ,m ,d)))
+
+(defun org-ml--timestamp-get-start-time (timestamp)
+  "Return the start time of TIMESTAMP or nil if not set."
+  (-let (((&plist :minute-start m :hour-start h)
+          (org-ml-get-all-properties timestamp)))
+    (if (and m h) `(,m ,h) nil)))
+
+(defun org-ml--timestamp-get-end-timelist (timestamp)
+  "Return the timelist of the end time in TIMESTAMP."
   (-let (((&plist :minute-end n :hour-end h :day-end d
                   :month-end m :year-end y)
           (org-ml-get-all-properties timestamp)))
     `(,y ,m ,d ,h ,n)))
 
+(defun org-ml--timestamp-get-end-date (timestamp)
+  "Return the end date of TIMESTAMP."
+  (-let (((&plist :year-end y :month-end m :day-end d)
+          (org-ml-get-all-properties timestamp)))
+    `(,y ,m ,d)))
+
+(defun org-ml--timestamp-get-end-time (timestamp)
+  "Return the end time of TIMESTAMP or nil if not set."
+  (-let (((&plist :minute-end m :hour-end h)
+          (org-ml-get-all-properties timestamp)))
+    (if (and m h) `(,m ,h) nil)))
+
+;; (eval-when-compile
+;;   (defmacro org-ml--timestamp-map-start-timelist* (form timestamp)
+;;     "Return TIMESTAMP with FORM applied to the start timelist.
+;; FORM returns a modified timelist and contains `it' bound to the
+;; timelist."
+;;     (let ((timestamp* (make-symbol "timestamp")))
+;;       `(let ((,timestamp* ,timestamp))
+;;          (let ((it (org-ml--timestamp-get-start-timelist ,timestamp*)))
+;;            (org-ml--timestamp-set-start-timelist ,form ,timestamp*)))))
+
+;;   (defmacro org-ml--timestamp-map-end-timelist* (form timestamp)
+;;     "Return TIMESTAMP with FORM applied to the end timelist.
+;; FORM returns a modified timelist and contains `it' bound to the
+;; timelist."
+;;     (let ((timestamp* (make-symbol "timestamp")))
+;;       `(let ((,timestamp* ,timestamp))
+;;          (let ((it (org-ml--timestamp-get-end-timelist ,timestamp*)))
+;;            (org-ml--timestamp-set-end-timelist ,form ,timestamp*)))))
+
+;;   (defmacro org-ml--timestamp-map-start-end-timelist*
+;;       (unranged-form start-form end-form timestamp)
+;;     "Return TIMESTAMP start or end modified depending on type.
+;; UNRANGED-FORM applies when TIMESTAMP is unranged. START-FORM and
+;; END-FORM apply to start/end respectively when TIMESTAMP is
+;; ranged."
+;;     (declare (indent 3))
+;;     (let ((timestamp* (make-symbol "timestamp")))
+;;       `(let ((,timestamp* ,timestamp))
+;;          (if (org-ml--get-property-no-check :range-type ,timestamp*)
+;;              (let ((it-start (org-ml--timestamp-get-start-timelist ,timestamp*))
+;;                    (it-end (org-ml--timestamp-get-end-timelist ,timestamp*)))
+;;                (->> (org-ml--timestamp-set-start-timelist ,start-form ,timestamp*)
+;;                     (org-ml--timestamp-set-end-timelist ,end-form)))
+;;            ;; ASSUME start == end
+;;            (let ((it (org-ml--timestamp-get-start-timelist ,timestamp*)))
+;;              (->> (org-ml--timestamp-set-start-timelist ,unranged-form ,timestamp*)
+;;                   (org-ml--timestamp-set-end-timelist ,unranged-form))))))))
+
+;;   (defmacro org-ml--timestamp-map-end-timelist-maybe* (form timestamp)
+;;     "Return TIMESTAMP with FORM applied to non-nil end timelist.
+;; FORM returns a modified timelist and contains `it' bound to the
+;; timelist."
+;;     `(org-ml--timestamp-map-end-timelist*
+;;       (if (org-ml--get-property :range-type timestamp)
+;;           ,form
+;;         it)
+;;       timestamp)))
+
+(defun org-ml--timestamp-set-collapse (flag timestamp)
+  "Return collapsed TIMESTAMP if FLAG is t."
+  (org-ml--map-property-nocheck* :range-type
+    (if it (if flag 'timerange 'daterange) it)
+    timestamp))
+
 (defun org-ml--timestamp-get-start-unixtime (timestamp)
   "Return the unixtime of the start time in TIMESTAMP."
-  (->> (org-ml--timestamp-get-start-time timestamp)
-       (org-ml-time-to-unixtime)))
+  (->> (org-ml--timestamp-get-start-timelist timestamp)
+       (org-ml-timelist-to-unixtime)))
 
 (defun org-ml--timestamp-get-end-unixtime (timestamp)
   "Return the unixtime of the end time in TIMESTAMP."
-  (->> (org-ml--timestamp-get-end-time timestamp)
-       (org-ml-time-to-unixtime)))
+  (->> (org-ml--timestamp-get-end-timelist timestamp)
+       (org-ml-timelist-to-unixtime)))
 
-(defun org-ml--timestamp-get-range (timestamp)
+(defun org-ml--timestamp-has-equal-dates-p (timestamp)
+  "Return t if start and end dates of TIMESTAMP are the same."
+  (equal (org-ml--timestamp-get-start-date timestamp)
+         (org-ml--timestamp-get-end-date timestamp)))
+
+(defun org-ml--timestamp-get-length (timestamp)
   "Return the range of TIMESTAMP in seconds."
   (- (org-ml--timestamp-get-end-unixtime timestamp)
      (org-ml--timestamp-get-start-unixtime timestamp)))
@@ -1722,90 +1884,126 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
   (memq (org-ml--get-property-nocheck :type timestamp)
         '(active-range inactive-range)))
 
+;; (defun org-ml--timestamp-is-date-or-time-range (timestamp)
+;;   "Return t if TIMESTAMP has a range type of `daterange' or `timerange'."
+;;   (memq (org-ml--get-property-nocheck :range-type timestamp)
+;;         '(daterange timerange)))
+
 (defun org-ml--timestamp-is-ranged (timestamp)
   "Return t if TIMESTAMP has a range greater than 0 seconds."
-  (/= 0 (org-ml--timestamp-get-range timestamp)))
+  (/= 0 (org-ml--timestamp-get-length timestamp)))
 
-(defun org-ml--timestamp-is-ranged-lowres (timestamp)
-  "Return t if TIMESTAMP is range according to only year, month, and day."
-  (-let* (((l s) (-split-at 3 (org-ml--timestamp-get-start-time timestamp)))
-          ((L S) (-split-at 3 (org-ml--timestamp-get-end-time timestamp))))
-    ;; lowres if Y/M/D is different and Min/Hour are the same but only if
-    ;; Min/Hour are both not nil
-    (and (not (equal l L)) (or (equal s S)
-                               (memq nil s)
-                               (memq nil S)))))
+;; TODO IDK why this is useful anymore
+;; (defun org-ml--timestamp-is-ranged-lowres (timestamp)
+;;   "Return t if TIMESTAMP is range according to only year, month, and day."
+;;   (-let* (((l s) (-split-at 3 (org-ml--timestamp-get-start-timelist timestamp)))
+;;           ((L S) (-split-at 3 (org-ml--timestamp-get-end-timelist timestamp))))
+;;     ;; lowres if Y/M/D is different and Min/Hour are the same but only if
+;;     ;; Min/Hour are both not nil
+;;     (and (not (equal l L)) (or (equal s S)
+;;                                (memq nil s)
+;;                                (memq nil S)))))
 
-(defun org-ml--timestamp-set-start-time-nocheck (time timestamp)
-  "Set the start TIME of TIMESTAMP. Does not set type."
-  (let ((time* (org-ml--time-format-props time t)))
-      (org-ml--set-properties-nocheck time* timestamp)))
+;; TODO check timelist here?
+(defun org-ml--timestamp-set-start-timelist-nocheck (timelist timestamp)
+  "Set the start of TIMESTAMP using TIMELIST. Does not set type."
+  (-let (((y m d H M) timelist))
+    (org-ml--set-properties-nocheck
+     (list :year-start y
+           :month-start m
+           :day-start d
+           :hour-start H
+           :minute-start M)
+     timestamp)))
 
-(defun org-ml--timestamp-set-start-time (time timestamp)
-  "Return TIMESTAMP with start time properties set according to time list TIME."
-  (->> (org-ml--timestamp-set-start-time-nocheck time timestamp)
+(defun org-ml--timestamp-set-start-timelist (timelist timestamp)
+  "Return TIMESTAMP with start time set according to TIMELIST."
+  (->> (org-ml--timestamp-set-start-timelist-nocheck timelist timestamp)
        (org-ml--timestamp-update-type-ranged)))
 
-(defun org-ml--timestamp-set-end-time-nocheck (time timestamp)
-  "Set the end TIME of TIMESTAMP. Does not set type."
-  (if time
-      (-> (org-ml--time-format-props time nil)
-          (org-ml--set-properties-nocheck timestamp))
-    (-> (org-ml--timestamp-get-start-time timestamp)
-        (org-ml--time-format-props nil)
-        (org-ml--set-properties-nocheck timestamp))))
+;; TODO check timelist here?
+(defun org-ml--timestamp-set-end-timelist-nocheck (timelist timestamp)
+  "Set the end of TIMESTAMP using TIMELIST. Does not set type.
 
-(defun org-ml--timestamp-set-end-time (time timestamp)
-  "Return TIMESTAMP with end time properties set according to time list TIME."
-  (let ((ts* (org-ml--timestamp-set-end-time-nocheck time timestamp)))
-    (if time (org-ml--timestamp-update-type-ranged ts*)
-      (org-ml--timestamp-set-type-ranged nil ts*))))
+Set end to start if TIMELIST is nil."
+  (-let (((y m d H M)
+          (or timelist (org-ml--timestamp-get-start-timelist timestamp))))
+    (org-ml--set-properties-nocheck
+     (list :year-end y
+           :month-end m
+           :day-end d
+           :hour-end H
+           :minute-end M)
+     timestamp)))
 
-(defun org-ml--timestamp-set-single-time (time timestamp)
-  "Return TIMESTAMP with start/end properties set to time list TIME."
-  (->> (org-ml--timestamp-set-start-time-nocheck time timestamp)
-       (org-ml--timestamp-set-end-time-nocheck time)
-       (org-ml--timestamp-set-type-ranged nil)))
-
-(defun org-ml--timestamp-set-double-time (time1 time2 timestamp)
-  "Return TIMESTAMP with start/end set to TIME1 and TIME2."
-  (->> (org-ml--timestamp-set-start-time-nocheck time1 timestamp)
-       (org-ml--timestamp-set-end-time-nocheck time2)
+(defun org-ml--timestamp-set-end-timelist (timelist timestamp)
+  "Return TIMESTAMP with end set according to TIMELIST."
+  (->> (org-ml--timestamp-set-end-timelist-nocheck timelist timestamp)
        (org-ml--timestamp-update-type-ranged)))
 
-(defun org-ml--timestamp-set-range (range timestamp)
-  "Return TIMESTAMP with end time shifted to RANGE seconds from start time."
-  (let* ((start (org-ml--timestamp-get-start-time timestamp))
-         (long? (org-ml-time-is-long start))
-         (range (* range (if long? 60 86400)))
-         (t2 (--> (org-ml-time-to-unixtime start)
-                  (+ it range)
-                  (if long? (org-ml-unixtime-to-time-long it)
-                    (org-ml-unixtime-to-time-short it)))))
-    (->> (org-ml--timestamp-set-end-time-nocheck t2 timestamp)
-         (org-ml--timestamp-update-type-ranged))))
+(defun org-ml--timestamp-set-single-timelist (timelist timestamp)
+  "Return TIMESTAMP with start/end set to TIMELIST."
+  (->> (org-ml--timestamp-set-start-timelist-nocheck timelist timestamp)
+       (org-ml--timestamp-set-end-timelist-nocheck timelist)
+       (org-ml--timestamp-set-range-type nil)))
 
-(defun org-ml--timestamp-update-type-ranged (timestamp)
-  "Return TIMESTAMP with updated type based on if it is ranged."
-  (-> (org-ml--timestamp-is-ranged-lowres timestamp)
-      (org-ml--timestamp-set-type-ranged timestamp)))
+(defun org-ml--timestamp-set-double-timelist (timelist1 timelist2 timestamp)
+  "Return TIMESTAMP with start/end set to TIMELIST1/TIMELIST2."
+  (->> (org-ml--timestamp-set-start-timelist-nocheck timelist1 timestamp)
+       (org-ml--timestamp-set-end-timelist-nocheck timelist2)
+       (org-ml--timestamp-update-type-ranged)))
 
-(defun org-ml--timestamp-set-type-ranged (ranged? timestamp)
-  "Return TIMESTAMP with type set according to RANGED?."
+(defun org-ml--timestamp-set-type-ranged (is-ranged timestamp)
+  "Return TIMESTAMP with `:type' set according to IS-RANGED."
   (org-ml--map-property-nocheck* :type
     (pcase it
       ((or `active `active-range)
-       (if ranged? 'active-range 'active))
+       (if is-ranged 'active-range 'active))
       ((or `inactive `inactive-range)
-       (if ranged? 'inactive-range 'inactive))
+       (if is-ranged 'inactive-range 'inactive))
       (e (org-ml--arg-error "Invalid timestamp type: %s" e)))
     timestamp))
 
+(defun org-ml--timestamp-set-range-type (range-type timestamp)
+  "Return TIMESTAMP updated to reflect RANGE-TYPE.
+Specifically update `:range-type' and `:type'."
+  (->> (org-ml--timestamp-set-type-ranged range-type timestamp)
+       (org-ml--set-property-nocheck :range-type range-type)))
+
+(defun org-ml--timestamp-set-range (n unit timestamp)
+  "Return TIMESTAMP with end time shifted to N UNITs from start time."
+  (let* ((t1 (org-ml--timestamp-get-start-timelist timestamp))
+         (has-time (org-ml-timelist-has-time t1))
+         ;; convert to unixtime and back to fix any overflow values
+         (t2 (->> (org-ml--timelist-shift n unit t1)
+                  (org-ml-timelist-to-unixtime)
+                  (org-ml-unixtime-to-timelist has-time)))
+         (rt (->> (org-ml--get-property-nocheck :range-type timestamp)
+                  (org-ml--timelists-get-range-type t1 t2))))
+    (->> (org-ml--timestamp-set-end-timelist-nocheck t2 timestamp)
+         (org-ml--timestamp-update-type-ranged)
+         (org-ml--timestamp-set-range-type rt))))
+
+(defun org-ml--timestamp-update-type-ranged (timestamp)
+  "Return TIMESTAMP with updated `:type' and `:range-type'.
+
+Specifically, this assumes that the start and/or end of TIMESTAMP
+have just been updated, and that the `:type' and `:range-type'
+are now out of sync with the range between start/end. If deciding
+between `timerange' or `daterange', prefer the original value of
+TIMESTAMP if possible."
+  ;; TODO this smells repetitive
+  (let* ((t1 (org-ml--timestamp-get-start-timelist timestamp))
+         (t2 (org-ml--timestamp-get-end-timelist timestamp))
+         (rt (->> (org-ml--get-property-nocheck :range-type timestamp)
+                  (org-ml--timelists-get-range-type t1 t2))))
+    (org-ml--timestamp-set-range-type rt timestamp)))
+
 (defun org-ml--timestamp-set-active (flag timestamp)
   "Return TIMESTAMP with active type if FLAG is t."
-  (let* ((type (if (org-ml--timestamp-is-ranged-lowres timestamp)
-                   (if flag 'active-range 'inactive-range)
-                 (if flag 'active 'inactive))))
+  (let ((type (if (org-ml--get-property-nocheck :range-type timestamp)
+                  (if flag 'active-range 'inactive-range)
+                (if flag 'active 'inactive))))
     (org-ml--set-property-nocheck :type type timestamp)))
 
 (defun org-ml--timestamp-set-warning (warning timestamp)
@@ -1818,19 +2016,19 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
   (-> (org-ml--decorator-format repeater nil '(catch-up restart cumulate))
       (org-ml--set-properties-nocheck timestamp)))
 
-(defun org-ml--timestamp-shift-start (n unit timestamp)
-  "Return TIMESTAMP with start time shifted N UNIT's."
-  (let ((time* (->> (org-ml--timestamp-get-start-time timestamp)
-                    (org-ml--time-shift n unit))))
-    (->> (org-ml--timestamp-set-start-time time* timestamp)
-         (org-ml--timestamp-update-type-ranged))))
+;; (defun org-ml--timestamp-shift-start (n unit timestamp)
+;;   "Return TIMESTAMP with start time shifted N UNIT's."
+;;   (let ((time* (->> (org-ml--timestamp-get-start-timelist timestamp)
+;;                     (org-ml--timelist-shift n unit))))
+;;     (->> (org-ml--timestamp-set-start-timelist time* timestamp)
+;;          (org-ml--timestamp-update-type-ranged))))
 
-(defun org-ml--timestamp-shift-end (n unit timestamp)
-  "Return TIMESTAMP with end time shifted N UNIT's."
-  (let ((time* (->> (org-ml--timestamp-get-end-time timestamp)
-                    (org-ml--time-shift n unit))))
-    (->> (org-ml--timestamp-set-end-time time* timestamp)
-         (org-ml--timestamp-update-type-ranged))))
+;; (defun org-ml--timestamp-shift-end (n unit timestamp)
+;;   "Return TIMESTAMP with end time shifted N UNIT's."
+;;   (let ((time* (->> (org-ml--timestamp-get-end-timelist timestamp)
+;;                     (org-ml--timelist-shift n unit))))
+;;     (->> (org-ml--timestamp-set-end-timelist time* timestamp)
+;;          (org-ml--timestamp-update-type-ranged))))
 
 ;; timestamp (diary sexp)
 
@@ -1852,6 +2050,7 @@ for all sensible items)."
           (i (org-ml-get-children s)))
     (list h i pb r)))
 
+;; TODO put-property isn't pure
 (defun org-ml--item-set-subcomponents (subcomponents item)
   "Return the child subcomponents of ITEM.
 SUBCOMPONENTS is a list like that returned by
@@ -2134,7 +2333,8 @@ list. None of the builder functions add parent references, so
   "Return a new diary-sexp timestamp node from FORM.
 Optionally set POST-BLANK (a positive integer)."
   (->> (org-ml--build-blank-node 'timestamp)
-       (org-ml-set-property :post-blank (or post-blank 0))
+       (org-element-put-property-2 :post-blank (or post-blank 0))
+       ;; (org-ml-set-property :post-blank (or post-blank 0))
        (org-ml--set-property-nocheck :type 'diary)
        (org-ml-timestamp-diary-set-value form)))
 
@@ -2142,7 +2342,8 @@ Optionally set POST-BLANK (a positive integer)."
   "Return a new rule-typed table-row node.
 Optionally set POST-BLANK (a positive integer)."
   (->> (org-ml--build-blank-node 'table-row)
-       (org-ml-set-property :post-blank (or post-blank 0))
+       (org-element-put-property-2 :post-blank (or post-blank 0))
+       ;; (org-ml-set-property :post-blank (or post-blank 0))
        (org-ml--set-property-nocheck :type 'rule)))
 
 ;;; shorthand builders
@@ -2208,10 +2409,12 @@ for `org-ml-timestamp-set-repeater' and
 
 Building a diary sexp timestamp is not possible with this function."
   (->> (org-ml--build-blank-node 'timestamp)
-       (org-ml-set-property :post-blank (or post-blank 0))
-       (org-ml--timestamp-set-start-time-nocheck start)
-       (org-ml--timestamp-set-end-time-nocheck end)
+       (org-element-put-property-2 :post-blank (or post-blank 0))
+       ;; (org-ml-set-property :post-blank (or post-blank 0))
+       (org-ml--timestamp-set-start-timelist-nocheck start)
+       (org-ml--timestamp-set-end-timelist-nocheck end)
        (org-ml--timestamp-set-active active)
+       (org-ml--timestamp-update-type-ranged)
        (org-ml-timestamp-set-warning warning)
        (org-ml-timestamp-set-repeater repeater)))
 
@@ -2437,8 +2640,8 @@ on the boolean values of ACTIVE-P and LONG-P:
                    (active-p "%D")
                    (long-p "%t")
                    (t "%d")))
-        (time (if long-p (org-ml-unixtime-to-time-long unixtime)
-                (org-ml-unixtime-to-time-short unixtime))))
+        (time (if long-p (org-ml-unixtime-to-datetime unixtime)
+                (org-ml-unixtime-to-date unixtime))))
     (--> (org-ml-build-timestamp! time :active active-p)
          (org-ml-to-string it)
          (org-ml--log-replace key it heading))))
@@ -3113,18 +3316,20 @@ Any other keys will trigger an error."
 
 ;; timestamp (standard)
 
+;; TODO be more specific about date vs time vs datetime
+
 (defun org-ml-timestamp-get-start-time (timestamp)
   "Return the time list for start time of TIMESTAMP node.
 The return value will be a list as specified by the TIME argument in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-get-start-time timestamp))
+  (org-ml--timestamp-get-start-timelist timestamp))
 
 (defun org-ml-timestamp-get-end-time (timestamp)
   "Return the end time list for end time of TIMESTAMP or nil if not a range.
 The return value will be a list as specified by the TIME argument in
 `org-ml-build-timestamp!'."
   (and (org-ml--timestamp-is-range-type timestamp)
-       (org-ml--timestamp-get-end-time timestamp)))
+       (org-ml--timestamp-get-end-timelist timestamp)))
 
 ;; TODO this should be ""-get-length
 (defun org-ml-timestamp-get-range (timestamp)
@@ -3132,7 +3337,7 @@ The return value will be a list as specified by the TIME argument in
 If non-ranged, this function will return 0. If ranged but
 the start time is in the future relative to end the time, return
 a negative integer."
-  (org-ml--timestamp-get-range timestamp))
+  (org-ml--timestamp-get-length timestamp))
 
 (defun org-ml-timestamp-is-active (timestamp)
   "Return t if TIMESTAMP node is active."
@@ -3157,34 +3362,34 @@ interpreted according to the localtime of the operating system."
   "Return TIMESTAMP node with start time set to TIME.
 TIME is a list analogous to the same argument specified in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-set-start-time time timestamp))
+  (org-ml--timestamp-set-start-timelist time timestamp))
 
 (defun org-ml-timestamp-set-end-time (time timestamp)
   "Return TIMESTAMP node with end time set to TIME.
 TIME is a list analogous to the same argument specified in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-set-end-time time timestamp))
+  (org-ml--timestamp-set-end-timelist time timestamp))
 
 (defun org-ml-timestamp-set-single-time (time timestamp)
   "Return TIMESTAMP node with start and end times set to TIME.
 TIME is a list analogous to the same argument specified in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-set-single-time time timestamp))
+  (org-ml--timestamp-set-single-timelist time timestamp))
 
 (defun org-ml-timestamp-set-double-time (time1 time2 timestamp)
   "Return TIMESTAMP node with start/end times set to TIME1/TIME2 respectively.
 TIME1 and TIME2 are lists analogous to the TIME argument specified in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-set-double-time time1 time2 timestamp))
+  (org-ml--timestamp-set-double-timelist time1 time2 timestamp))
 
 ;; TODO this should be ""-set-length
-(defun org-ml-timestamp-set-range (range timestamp)
-  "Return TIMESTAMP node with range set to RANGE.
+(defun org-ml-timestamp-set-range (n unit timestamp)
+  "Return TIMESTAMP node with range set to N UNITs.
 If TIMESTAMP is ranged, keep start time the same and adjust the end
 time. If not, make a new end time. The units for RANGE are in minutes
 if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format."
-  (org-ml--timestamp-set-range range timestamp))
+  (org-ml--timestamp-set-range n unit timestamp))
 
 (defun org-ml-timestamp-set-active (flag timestamp)
   "Return TIMESTAMP node with active type if FLAG is t."
@@ -3202,8 +3407,28 @@ N is a positive or negative integer and UNIT is one of `minute',
 `hour', `day', `month', or `year'. Overflows will wrap around
 transparently; for instance, supplying `minute' for UNIT and 90 for N
 will increase the hour property by 1 and the minute property by 30."
-  (->> (org-ml--timestamp-shift-start n unit timestamp)
-       (org-ml--timestamp-shift-end n unit)))
+  ;; if not ranged, simply need to shift start and end (which are the same);
+  ;; otherwise need to shift both, set both, and update the timerange depending
+  ;; on if we straddle a day boundary after the shift
+  (let ((rt (org-ml--get-property-nocheck :range-type timestamp)))
+    (if (not rt)
+        (let ((t1 (->> (org-ml--timestamp-get-start-timelist timestamp)
+                       (org-ml--timelist-shift n unit))))
+          (->> (org-ml--timestamp-set-start-timelist t1 timestamp)
+               (org-ml--timestamp-set-end-timelist t1)))
+      (-let* ((s1 (->> (org-ml--timestamp-get-start-timelist timestamp)
+                       (org-ml--timelist-shift n unit)))
+              (s2 (->> (org-ml--timestamp-get-end-timelist timestamp)
+                       (org-ml--timelist-shift n unit)))
+              ;; total micro-optimization...
+              ((d1 t1) (org-ml-timelist-split s1))
+              ((d2 t2) (org-ml-timelist-split s2))
+              (rt* (if (and (not (equal t1 t2)) (equal d1 d2))
+                       (or rt 'timerange)
+                     'daterange)))
+        (->> (org-ml--timestamp-set-start-timelist s1 timestamp)
+             (org-ml--timestamp-set-end-timelist s2)
+             (org-ml--timestamp-set-range-type rt*))))))
 
 (defun org-ml-timestamp-shift-start (n unit timestamp)
   "Return TIMESTAMP node with start time shifted by N UNIT's.
@@ -3213,7 +3438,13 @@ N and UNIT behave the same as those in `org-ml-timestamp-shift'.
 If TIMESTAMP is not range, the output will be a ranged timestamp with
 the shifted start time and the end time as that of TIMESTAMP. If this
 behavior is not desired, use `org-ml-timestamp-shift'."
-  (org-ml--timestamp-shift-start n unit timestamp))
+  (let* ((t1 (->> (org-ml--timestamp-get-start-timelist timestamp)
+                  (org-ml--timelist-shift n unit)))
+         (t2 (org-ml--timestamp-get-end-timelist timestamp))
+         (rt (->> (org-ml--get-property-nocheck :range-type timestamp)
+                  (org-ml--timelists-get-range-type t1 t2))))
+    (->> (org-ml--timestamp-set-start-timelist t1 timestamp)
+         (org-ml--timestamp-set-range-type rt))))
 
 (defun org-ml-timestamp-shift-end (n unit timestamp)
   "Return TIMESTAMP node with end time shifted by N UNIT's.
@@ -3223,7 +3454,13 @@ N and UNIT behave the same as those in `org-ml-timestamp-shift'.
 If TIMESTAMP is not range, the output will be a ranged timestamp with
 the shifted end time and the start time as that of TIMESTAMP. If this
 behavior is not desired, use `org-ml-timestamp-shift'."
-  (org-ml--timestamp-shift-end n unit timestamp))
+  (let* ((t1 (org-ml--timestamp-get-start-timelist timestamp))
+         (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
+                  (org-ml--timelist-shift n unit)))
+         (rt (->> (org-ml--get-property-nocheck :range-type timestamp)
+                  (org-ml--timelists-get-range-type t1 t2))))
+    (->> (org-ml--timestamp-set-end-timelist t2 timestamp)
+         (org-ml--timestamp-set-range-type rt))))
 
 (defun org-ml-timestamp-toggle-active (timestamp)
   "Return TIMESTAMP node with its active/inactive type flipped."
@@ -3233,39 +3470,94 @@ behavior is not desired, use `org-ml-timestamp-shift'."
 
 (defun org-ml-timestamp-truncate (timestamp)
   "Return TIMESTAMP node with start/end times forced to short format."
-  (let ((t1 (->> (org-ml--timestamp-get-start-time timestamp)
-                 (org-ml--time-truncate)))
-        (t2 (->> (org-ml--timestamp-get-end-time timestamp)
-                 (org-ml--time-truncate))))
-    (org-ml--timestamp-set-double-time t1 t2 timestamp)))
+  (let* ((t1 (->> (org-ml--timestamp-get-start-timelist timestamp)
+                  (org-ml--timelist-truncate)))
+         (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
+                  (org-ml--timelist-truncate)))
+         ;; NOTE it is impossible for range-type to be 'timerange since hours
+         ;; and minutes will be missing
+         (rt (if (equal t1 t2) 'daterange nil)))
+    (->> (org-ml--timestamp-set-start-timelist t1 timestamp)
+         (org-ml--timestamp-set-end-timelist t2)
+         (org-ml--timestamp-set-range-type rt))))
 
 (defun org-ml-timestamp-truncate-start (timestamp)
-  "Return TIMESTAMP node with start time forced to short format."
-  (let ((time (->> (org-ml--timestamp-get-start-time timestamp)
-                   (org-ml--time-truncate))))
-    (org-ml--timestamp-set-start-time time timestamp)))
+  "Return TIMESTAMP node with start time forced to short format.
+
+Collapsed timestamps will become uncollapsed."
+  (let* ((t1 (->> (org-ml--timestamp-get-start-timelist timestamp)
+                  (org-ml--timelist-truncate)))
+         (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
+                  (org-ml--timelist-truncate)))
+         (rt (if (equal t1 t2) 'daterange nil)))
+    (->> (org-ml--timestamp-set-start-timelist t1 timestamp)
+         (org-ml--timestamp-set-range-type rt))))
 
 (defun org-ml-timestamp-truncate-end (timestamp)
-  "Return TIMESTAMP node with end time forced to short format."
-  (let ((time (->> (org-ml--timestamp-get-end-time timestamp)
-                   (org-ml--time-truncate))))
-    (org-ml--timestamp-set-end-time time timestamp)))
+  "Return TIMESTAMP node with end time forced to short format.
+
+Collapsed timestamps will become uncollapsed."
+  (let* ((t1 (->> (org-ml--timestamp-get-start-timelist timestamp)
+                  (org-ml--timelist-truncate)))
+         (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
+                  (org-ml--timelist-truncate)))
+         (rt (if (equal t1 t2) 'daterange nil)))
+    (->> (org-ml--timestamp-set-end-timelist t2 timestamp)
+         (org-ml--timestamp-set-range-type rt))))
 
 (defun org-ml-timestamp-set-collapsed (flag timestamp)
   "Return TIMESTAMP with collapsed set to FLAG.
 
-If timestamp is ranged but not outside of one day, it may be collapsed
-\(FLAG is t) to short format like [yyyy-mm-dd xxx hh:mm-hh:mm] or
-expanded (FLAG is nil) to long format like [yyyy-mm-dd xxx
-hh:mm]--[yyyy-mm-dd xxx hh:mm]. If these conditions are not met,
-return TIMESTAMP untouched regardless of FLAG.
+Collapsed timestamps are like [yyyy-mm-dd xxx hh:mm-hh:mm].
 
-Note: the default for all timestamp functions in `om.el' is to favor
-collapsed format."
-  (if (and (not (org-ml--timestamp-is-ranged-lowres timestamp))
-           (org-ml--timestamp-is-ranged timestamp))
-      (org-ml--timestamp-set-type-ranged (not flag) timestamp)
-    timestamp))
+Uncollapsed timestamp are like
+[yyyy-mm-dd xxx hh:mm]--[yyyy-mm-dd xxx hh:mm].
+
+FLAG may be one of nil, t, or `force'.
+
+If nil, uncollapse the timestamp if it is collapsed. The dates in
+the uncollapsed timestamp will be the same. Has no effect if the
+timestamp is not collapsed.
+
+If t, collapse the timestamp from uncollapsed format if the following
+conditions are met:
+1. the dates are the same
+2. start and end hours/minutes are non-nil
+
+Has no effect if timestamp id not uncollapsed and these
+conditions are not met.
+
+If `force', ignore condition 1 above. The date in the collapsed
+timestamp will be taken from the start date and the end date will
+be ignored."
+  (pcase (org-ml-get-property :range-type timestamp)
+    ;; collapsed
+    (`timerange
+     (if flag timestamp
+       (org-ml--set-property-nocheck :range-type 'daterange timestamp)))
+    ;; uncollapsed
+    (`daterange
+     (if (and (org-ml--timestamp-get-start-time timestamp)
+              (org-ml--timestamp-get-end-time timestamp))
+         (cond
+          ((and (eq flag t) (org-ml--timestamp-has-equal-dates-p timestamp))
+           (org-ml--set-property-nocheck :range-type 'timerange timestamp))
+          ((and (eq flag 'force))
+           (let ((s (org-ml--timestamp-get-start-timelist timestamp)))
+             (->> (org-ml--timestamp-set-end-timelist-nocheck s timestamp)
+                  (org-ml--set-property-nocheck :range-type 'timerange))))
+          (t
+           timestamp))
+       timestamp))
+    ;; neither
+    (`nil
+     timestamp)
+    (e
+     (error "Invalid range-type %s" e))))
+  ;; (if (and (not (org-ml--timestamp-is-ranged-lowres timestamp))
+  ;;          (org-ml--timestamp-is-ranged timestamp))
+  ;;     (org-ml--timestamp-set-type-ranged (not flag) timestamp)
+  ;;   timestamp))
 
 (defun org-ml-timestamp-get-warning (timestamp)
   "Return the warning component of TIMESTAMP.
@@ -3956,8 +4248,8 @@ logbook."
         (node)
         (when (and (org-ml-is-type 'timestamp node)
                    (org-ml--property-is-eq :type 'inactive node)
-                   (-some->> (org-ml--timestamp-get-start-time node)
-                     (org-ml-time-is-long)))
+                   (-some->> (org-ml--timestamp-get-start-timelist node)
+                     (org-ml-timelist-has-time)))
           (org-ml--timestamp-get-start-unixtime node)))
        (is-line-break
         (node)
@@ -4766,7 +5058,7 @@ See `org-ml-headline-get-supercontents' for the meaning of
 CONFIG. UNIXTIME will set the start time of the clock. The
 logbook will be started if it does not already exist, else the
 new clock will be added in chronological order."
-  (let ((clock (-> (org-ml-unixtime-to-time-long unixtime)
+  (let ((clock (-> (org-ml-unixtime-to-datetime unixtime)
                    (org-ml-build-clock!))))
     (org-ml-headline-map-logbook-clocks* config (cons clock it) headline)))
 
@@ -4782,7 +5074,7 @@ error."
   (org-ml-headline-map-logbook-clocks* config
     (-let (((first . rest) it))
       (if (not (org-ml-clock-is-running first)) it
-        (let* ((time (org-ml-unixtime-to-time-long unixtime))
+        (let* ((time (org-ml-unixtime-to-datetime unixtime))
                (closed (org-ml-map-property* :value
                          (org-ml-timestamp-set-end-time time it)
                          first))
@@ -5237,6 +5529,7 @@ This is a workaround for a bug")
   "Branch element nodes that require \"\" to correctly print empty.
 This is a workaround for a bug.")
 
+;; TODO do I still need this in 9.7?
 (defun org-ml--blank (node)
   "Return NODE with empty child nodes `org-ml--blank-if-empty' set to contain \"\"."
   (if (org-ml-is-childless node)
@@ -5266,9 +5559,20 @@ This is a workaround for a bug.")
    ((null node)
     "")
    ((org-ml--is-node node)
-    (->> (org-ml--blank node)
-         (org-element-interpret-data)
-         (substring-no-properties)))
+    (let ((s (->> (org-ml--blank node)
+                  (org-element-interpret-data)
+                  (substring-no-properties))))
+      (if (not (org-ml-is-type 'section node)) s
+        ;; TODO this is a bug in 9.7; sections now don't carry a post-blank
+        ;; property, and instead assume that the post-blank is encoded in the
+        ;; underlying contents. Unfortunately, `org-element-interpret-data' will
+        ;; normalize the underlying contents (as a string) to only have one
+        ;; newline regardless of post-blank. This workaround will manually add
+        ;; the newlines back in the case of section nodes
+        (let ((pb (->> (org-ml-get-children node)
+                       (-last-item)
+                       (org-element-property :post-blank))))
+          (concat s (make-string pb ?\n))))))
    (t
     (org-ml--arg-error "Can only stringify node or nil, got %s" node))))
 
@@ -6155,12 +6459,16 @@ TYPE is the type of the node to be parsed."
                                 ((or `superscript `subscript) '(-1 (0 1)))
                                 (`table-cell '(-1 (0 0 0)))
                                 (_ '(0 (0 0)))))
-            ((&plist :begin :end) (org-ml-get-all-properties context))
+            (begin (org-element-property :begin context))
+            (end (org-element-property :end context))
             (tree (org-ml--parse-objects type (+ begin offset) end)))
       (->> (car tree)
            (org-ml--get-descendent nesting)
            (org-ml--filter-types org-ml-objects)))))
 
+
+;; TODO this seems really inefficient; essentially we are parsing twice and
+;; there is probably a better way to do this with the new API
 (defun org-ml--parse-element-at (point type)
   "Return element node immediately under POINT.
 For a list of all possible return types refer to `org-ml-elements'; this
@@ -6175,15 +6483,15 @@ elements and likewise when setting TYPE to `item' for plain-list
 elements vs item elements."
   (save-excursion
     (goto-char point)
-    ;; TODO this seems really inefficient; essentially we are parsing twice
     (let* ((node (org-element-at-point))
            (node-type (org-ml-get-type node)))
       ;; NOTE this will not filter by type if it is a leaf node
       (if (not (memq node-type org-ml-branch-nodes)) node
         ;; need to parse again if branch-node since
         ;; `org-element-at-point' does not parse children
-        (-let* (((&plist :begin :end :contents-end :post-blank)
-                 (org-ml-get-all-properties node))
+        (-let* ((begin (org-element-property :begin node))
+                (end (org-element-property :end node))
+                (contents-end (org-element-property :contents-end node))
                 (tree (car (org-ml--parse-elements begin end 'first-section)))
                 (nesting (pcase node-type
                            (`headline nil)
@@ -6194,14 +6502,17 @@ elements vs item elements."
                            (`table (if (eq type 'table-row) '(0 0) '(0)))
                            (`plain-list (if (eq type 'item) '(0 0) '(0)))
                            (`item '(0 0))
-                           (_ '(0)))))
-          (--> (org-ml--get-descendent nesting tree)
-               ;; set ending boundaries according to what we get from
-               ;; `org-element-at-point'
-               (org-ml--set-properties-nocheck (list :end end
-                                                     :contents-end contents-end
-                                                     :post-blank post-blank)
-                                               it)
+                           (_ '(0))))
+                (node* (->> (org-ml--get-descendent nesting tree)
+                            ;; set ending boundaries according to what we get
+                            ;; from `org-element-at-point'
+                            (org-element-put-property-2 :end end)
+                            (org-element-put-property-2 :contents-end contents-end))))
+          ;; some elements will always have post-blank set to 0, so no need to
+          ;; update it
+          (--> (if (memq node-type '(section table-row)) node*
+                 (let ((pb (org-element-property :post-blank node)))
+                   (org-element-put-property-2 :post-blank pb node*)))
                (if type (org-ml--filter-type type it) it)))))))
 
 (defun org-ml-parse-element-at (point)
