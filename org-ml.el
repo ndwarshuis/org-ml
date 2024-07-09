@@ -496,6 +496,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 
 ;;; INTERNAL NODE PROPERTY FUNCTIONS
 
+;; TODO update this to resolve all deferred properties on the fly
 (defun org-ml-get-all-properties (node)
   "Return the properties list of NODE."
   (if (stringp node) (text-properties-at 0 node) (nth 1 node)))
@@ -521,17 +522,25 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 ;; tradeoff b/t side effects and speed
 (defun org-ml--set-property-nocheck (prop value node)
   "Set PROP in NODE to VALUE."
-  (if (stringp node)
-      (if (eq prop :post-blank)
-          (->> (s-trim-right node) (s-append (s-repeat value " ")))
-        (org-add-props node nil prop value))
-    (-let (((type . (props . children)) node))
-      (if (eq prop :post-blank)
-          (let ((ar (copy-sequence (org-element--parray node))))
-            (->> (org-ml--construct type props children)
-                 (org-element-put-property-2 :standard-properties ar)
-                 (org-element-put-property-2 :post-blank value)))
-        (org-ml--construct type (plist-put props prop value) children)))))
+  (cond
+   ((stringp node)
+    (if (eq prop :post-blank)
+        (->> (s-trim-right node) (s-append (s-repeat value " ")))
+      (org-add-props node nil prop value)))
+   ;; TODO side effects
+   ((org-ml-is-type 'headline node)
+    (->> (org-element-properties-resolve node)
+         (org-element-put-property-2 prop value)))
+   (t
+    ;; (->> (org-element-copy node t)
+    (org-element-put-property-2 prop value node))))
+    ;; (-let (((type . (props . children)) node))
+    ;;   (if (eq prop :post-blank)
+    ;;       (let ((ar (copy-sequence (org-element--parray node))))
+    ;;         (->> (org-ml--construct type props children)
+    ;;              (org-element-put-property-2 :standard-properties ar)
+    ;;              (org-element-put-property-2 :post-blank value)))
+    ;;     (org-ml--construct type (plist-put props prop value) children)))))
 
 (defun org-ml--set-properties-nocheck (plist node)
   "Set all properties in NODE to the values corresponding to PLIST.
@@ -919,19 +928,19 @@ Return value will conform to `org-ml--is-valid-diary-sexp-value'."
 
 (defun org-ml--encode-header (plists)
   "Return PLISTS as a list of strings."
-  (->> (reverse plists)
-       (org-ml--map*
-        (-some->> it
-          (-partition 2)
-          (org-ml--map* (format "%S %s" (car it) (cadr it)))
-          (s-join " ")))))
+  (org-ml--map*
+   (-some->> it
+     (-partition 2)
+     (org-ml--map* (format "%S %s" (car it) (cadr it)))
+     (s-join " "))
+   plists))
 
 (defun org-ml--decode-header (headers)
   "Return HEADERS (a list of strings) as a list of plists."
-  (->> (reverse headers)
-       (org-ml--map*
-        (->> (org-ml--decode-string-list-space-delim it)
-             (--map-indexed (if (cl-evenp it-index) (intern it) it))))))
+  (org-ml--map*
+   (->> (org-ml--decode-string-list-space-delim it)
+        (--map-indexed (if (cl-evenp it-index) (intern it) it)))
+   headers))
 
 (defun org-ml--encode-results (results)
   "Return a encoded results affiliated keyword value.
@@ -949,7 +958,7 @@ INTERNAL-RESULTS stored in a node."
 (defun org-ml--encode-caption (caption)
   "Return a encoded caption affiliated keyword value.
 CAPTION should conform to `org-ml--is-valid-caption'."
-  (->> caption
+  (->> (reverse caption)
        (--reduce-from
         (pcase it
           ((and (pred stringp) long)
@@ -970,7 +979,7 @@ INTERNAL-CAPTION stored in a node."
                          (substring-no-properties long))
            (substring-no-properties long))
          (cons acc)))
-   nil internal-caption))
+   nil (reverse internal-caption)))
 
 ;;; cis functions
 
@@ -1011,7 +1020,8 @@ This will be based on HEADLINE's archivedp property."
   (org-ml--map-property-nocheck* :tags
     (let ((tags* (remove org-archive-tag it)))
       (if (org-ml--get-property-nocheck :archivedp headline)
-          (-snoc tags* org-archive-tag) tags*))
+          (-snoc tags* org-archive-tag)
+        tags*))
     headline))
 
 (defun org-ml--link-update-type-explicit (link)
@@ -1352,22 +1362,22 @@ bounds."
 (defun org-ml--get-property-attribute (attribute type prop)
   "Return ATTRIBUTE for PROP of node TYPE.
 Signal an error if PROP in TYPE does not have ATTRIBUTE."
-  (-if-let (type-list (alist-get type org-ml--property-alist))
+  ;; post-blank is special, since this makes sense to expose as a
+  ;; modifiable property yet it is in the standard-properties array; all
+  ;; the other properties in this array are not modifiable (ie we shouldn't
+  ;; change :begin and :end or set them upon node creation)
+  (if (eq prop :post-blank)
       (cond
-       ((assq prop type-list)
-        (-when-let (plist (alist-get prop type-list))
-          (plist-get plist attribute)))
-       ;; post-blank is special, since this makes sense to expose as a
-       ;; modifiable property yet it is in the standard-properties array; all
-       ;; the other properties in this array are not modifiable (ie we shouldn't
-       ;; change :begin and :end or set them upon node creation)
-       ((eq prop :post-blank)
+       ((eq attribute :shift) #'org-ml--shift-non-neg-integer)
+       ((eq attribute :pred) #'org-ml--is-non-neg-integer))
+    (-if-let (type-list (alist-get type org-ml--property-alist))
         (cond
-         ((eq attribute :shift) #'org-ml--shift-non-neg-integer)
-         ((eq attribute :pred) #'org-ml--is-non-neg-integer)))
-       (t
-        (org-ml--arg-error "Type '%s' does not have property '%s'" type prop)))
-    (org-ml--arg-error "Tried to query property '%s' for non-existent type '%s'" prop type)))
+         ((assq prop type-list)
+          (-when-let (plist (alist-get prop type-list))
+            (plist-get plist attribute)))
+         (t
+          (org-ml--arg-error "Type '%s' does not have property '%s'" type prop)))
+      (org-ml--arg-error "Tried to query property '%s' for non-existent type '%s'" prop type))))
 
 (defun org-ml--get-property-encoder (type prop)
   "Return the encoder function for PROP of node TYPE."
@@ -1763,6 +1773,7 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
 ;; timestamp and inferring if it is ranged or not. It also is less ambiguous for
 ;; in cases where the timestamp may be collapsed.
 
+;; TODO inline all these property getters
 (defun org-ml--timestamp-get-start-timelist (timestamp)
   "Return the timelist of the start time in TIMESTAMP."
   (-let (((&plist :minute-start n :hour-start h :day-start d
@@ -2906,9 +2917,10 @@ elements may have other elements as children."
 
 (defun org-ml-contains-point-p (point node)
   "Return t if POINT is within the boundaries of NODE."
-  (-let (((&plist :begin :end) (org-ml-get-all-properties node)))
-    (if (and (integerp begin) (integerp end))
-        (<= begin point end)
+  (-let ((b (org-element-property :begin node))
+         (e (org-element-property :end node)))
+    (if (and (integerp b) (integerp e))
+        (<= b point e)
       (error "Node boundaries are not defined"))))
 
 (defun org-ml--property-is-attribute (prop)
@@ -2944,6 +2956,12 @@ each type."
     ;; Specialized code to handle :attr_X properties which can't be put in
     ;; `org-ml--property-alist'. Values for these can only be lists of strings
     ;; and have no encoder or decoder.
+  ;; (when (eq type 'headline)
+  ;;   ;; (print (org-ml-get-property :raw-value node))
+  ;;   ;; (print (plist-get (nth 1 node) :raw-value))
+  ;;   (--> (nth 1 node)
+  ;;        (plist-get it :archivedp)
+  ;;        (print it)))
     (if (and (memq type org-ml--element-nodes-with-affiliated)
              (org-ml--property-is-attribute prop))
         (if (org-ml--is-string-list value)
@@ -2998,8 +3016,9 @@ each type."
 (defun org-ml-get-property (prop node)
   "Return the value of PROP of NODE."
   (let* ((type (org-ml-get-type node))
-         (decoder-fun (unless (and (memq type org-ml--element-nodes-with-affiliated)
-                                   (org-ml--property-is-attribute prop))
+         (decoder-fun (unless (or (and (memq type org-ml--element-nodes-with-affiliated)
+                                       (org-ml--property-is-attribute prop))
+                                  (memq prop org-element--standard-properties))
                         (org-ml--get-property-decoder type prop)))
          (value (org-ml--get-property-nocheck prop node)))
     (if decoder-fun (funcall decoder-fun value) value)))
@@ -3686,8 +3705,9 @@ new repeater list. The same rules that apply to
   "Return TIMESTAMP-DIARY node with value set to FORM.
 The node must have a type `eq' to `diary'. FORM is a quoted list."
   (if (listp form)
-      (org-ml--set-property-nocheck :raw-value (format "<%%%%%S>" form)
-                                    timestamp-diary)
+      (->> timestamp-diary
+           (org-ml--set-property-nocheck :raw-value (format "<%%%%%S>" form))
+           (org-ml--set-property-nocheck :diary-sexp (format "%S" form)))
     (org-ml--arg-error "Timestamp-diary node value must be a form: Got %S" form)))
 
 ;;; element nodes
@@ -3763,10 +3783,10 @@ is the same as that described in `org-ml-build-planning!'."
 
 (defun org-ml-children-contain-point (point branch-node)
   "Return t if POINT is within the boundaries of BRANCH-NODE's children."
-  (-let (((&plist :contents-begin :contents-end)
-          (org-ml-get-all-properties branch-node)))
-    (if (and (integerp contents-begin) (integerp contents-end))
-        (<= contents-begin point contents-end)
+  (-let ((b (org-ml-get-property :contents-begin branch-node))
+         (e (org-ml-get-property :contents-end branch-node)))
+    (if (and (integerp b) (integerp e))
+        (<= b point e)
       (error "Node boundaries are not defined"))))
 
 (defun org-ml-get-children (branch-node)
