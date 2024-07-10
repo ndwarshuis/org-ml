@@ -10,6 +10,10 @@
 (require 'org-ml-macs)
 (require 'org-ml-test-common)
 
+(defconst org-ml--inter-ignore-props
+  (list :begin :contents-begin :end :contents-end :parent :post-affiliated :name
+        :plot :header :results :caption :granularity :mode :robust-begin :robust-end))
+
 ;;; LIST OPERATIONS
 
 (describe "internal list functions"
@@ -184,29 +188,28 @@ is the converse."
 (defun org-ml--equal~ (exclude-props node1 node2)
   (if (and (stringp node1) (stringp node2))
       `(expect ,node1 :to-equal ,node2)
-    (-let (((type1 . (props1 . children1)) node1)
-           ((type2 . (props2 . children2)) node2)
-           (pb1 (org-element-property :post-blank node1))
-           (pb2 (org-element-property :post-blank node2))
-           ;; TODO deal with standard-props
-           ;; NOTE exclude post-blank since some elements won't have it in their
-           ;; regular plist, and we already query it above
-           (xs (append '(:post-blank :standard-properties) exclude-props)))
-      `(progn
-         (expect ',type1 :to-be ',type2)
-         (expect ,pb1 :to-be ,pb2)
-         (expect (org-ml--plist-equal-p ',xs ',props1 ',props2))
-         (and (eq ',type1 ',type2)
-              (->> (-zip-fill nil ',children1 ',children2)
-                   (--all? (org-ml--equal~ ',xs (car it) (cdr it)))))))))
+    (cl-flet
+        ((prop2
+           (key node1 node2)
+           (list (org-element-property key node1)
+                 (org-element-property key node2))))
+      (-let (((type1 . (props1 . children1)) node1)
+             ((type2 . (props2 . children2)) node2)
+             ((pb1 pb2) (prop2 :post-blank node1 node2))
+             ;; NOTE exclude post-blank since some elements won't have it in their
+             ;; regular plist, and we already query it above
+             (xs (append '(:post-blank :standard-properties) exclude-props)))
+        `(progn
+           (expect ',type1 :to-be ',type2)
+           (expect ,pb1 :to-be ,pb2)
+           (expect (org-ml--plist-equal-p ',xs ',props1 ',props2))
+           (and (eq ',type1 ',type2)
+                (->> (-zip-fill nil ',children1 ',children2)
+                     (--all? (org-ml--equal~ ',xs (car it) (cdr it))))))))))
 
 (defun org-ml--test-from-string (omit-props &rest specs)
   (declare (indent 1))
-  (let ((props (append omit-props '(:begin :contents-begin :end :contents-end
-                                           :parent :post-affiliated :name
-                                           :plot :header :results :caption
-                                           :granularity :mode :robust-begin
-                                           :robust-end))))
+  (let ((props (append omit-props org-ml--inter-ignore-props)))
     (->> (-partition 2 specs)
          (--map (-let* (((node string) it)
                         (type (org-ml-get-type node)))
@@ -251,11 +254,8 @@ is the converse."
                                :end '(2020 1 1 0 10)
                                :repeater '(cumulate 1 day)
                                :warning '(all 1 day))
-           ;; (org-ml-timestamp-set-collapsed t))
       "[2020-01-01 Tue 00:00-00:10 -1d +1d]")
-    (org-ml--test-from-string nil
-                              (org-ml-build-verbatim "b") "=b=")
-    )
+    (org-ml--test-from-string nil (org-ml-build-verbatim "b") "=b="))
 
   (describe-many "object branch nodes"
     (org-ml--test-from-string nil
@@ -283,10 +283,17 @@ is the converse."
     (org-ml--test-from-string nil
       (org-ml-build-center-block) "#+begin_center\n#+end_center"
       (org-ml-build-center-block (org-ml-build-paragraph! "p")) "#+begin_center\np\n#+end_center")
-    ;; TODO maybe I should figure out how to compare values robustly, but at
-    ;; least this test demonstrates the string is parsed to a clock
-    (org-ml--test-from-string '(:value)
-      (org-ml-build-clock! '(2020 1 1 0 0)) "CLOCK: [2020-01-01 Tue 00:00]")
+    ;; NOTE special treatment for clock so we can compare values directly
+    (-let* ((s "CLOCK: [2020-01-01 Tue 00:00]")
+            (result (org-ml-from-string 'clock s))
+            (node (org-ml-build-clock! '(2020 1 1 0 0)))
+            (type (org-ml-get-type node)))
+      `((it ,(format "clock - %s" s)
+        (expect ',type :to-be 'clock)
+        (org-ml--equal~ (cons :value org-ml--inter-ignore-props) ',node ',result)
+        (org-ml--equal~ org-ml--inter-ignore-props
+                        (org-element-property :value ',node)
+                        (org-element-property :value ',result)))))
     (org-ml--test-from-string nil
       (org-ml-build-comment "comment") "# comment")
     (org-ml--test-from-string nil
