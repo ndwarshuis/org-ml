@@ -3424,13 +3424,6 @@
            (org-ml-timestamp-set-start-time '(2019 1 2 0 0))
            (org-ml-to-trimmed-string))
       => "[2019-01-02 Wed 00:00-12:00 +1d/3d]"
-      ;; and enabling will preserve it
-      ;; (:buffer "[2019-01-02 Wed 12:00 +1d/3d]")
-      ;; (let ((org-ml-parse-habits t))
-      ;;   (->> (org-ml-parse-this-object)
-      ;;        (org-ml-timestamp-set-start-time '(2019 2 1 0 0))
-      ;;        (org-ml-to-trimmed-string)))
-      ;; => "[2019-01-02 Wed 00:00-12:00 +1d/3d]"
       :end-hidden)
 
     (defexamples-content org-ml-timestamp-set-end-time
@@ -3819,2781 +3812,2783 @@
            (org-ml-to-trimmed-string))
       => "short paragraph"))
 
-;; (def-example-group "Branch/Child Manipulation"
-;;   "Set, get, and map the children of branch nodes."
+(def-example-group "Branch/Child Manipulation"
+  "Set, get, and map the children of branch nodes."
 
-;;   (def-example-subgroup "Polymorphic"
-;;     nil
+  (def-example-subgroup "Polymorphic"
+    nil
 
-;;     (defexamples-content org-ml-children-contain-point
-;;       nil
-;;       (:buffer "* headline"
-;;                "findme")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-children-contain-point 2))
-;;       => nil
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-children-contain-point 15))
-;;       => t)
+    (defexamples-content org-ml-children-contain-point
+      nil
+      (:buffer "* headline"
+               "findme")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-children-contain-point 2))
+      => nil
+      (->> (org-ml-parse-this-headline)
+           (org-ml-children-contain-point 15))
+      => t)
 
-;;     (defexamples-content org-ml-get-children
-;;       nil
+    (defexamples-content org-ml-get-children
+      nil
 
-;;       (:buffer "/this/ is a *paragraph*")
-;;       (:comment "Return child nodes for branch nodes")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-get-children)
-;;            (-map #'org-ml-get-type))
-;;       => '(italic plain-text bold)
+      (:buffer "/this/ is a *paragraph*")
+      (:comment "Return child nodes for branch nodes")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-children)
+           (-map #'org-ml-get-type))
+      => '(italic plain-text bold)
 
-;;       (:buffer "* headline")
-;;       (:comment "Return nil if no children")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-get-children)
-;;            (-map #'org-ml-get-type))
-;;       => nil
+      (:buffer "* headline")
+      (:comment "Return nil if no children")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-get-children)
+           (-map #'org-ml-get-type))
+      => nil
 
-;;       ;; (:buffer "#+call: ktulu()")
-;;       ;; (:comment "Throw error when attempting to get contents of a non-branch node")
-;;       ;; (->> (org-ml-parse-this-element)
-;;       ;;      (org-ml-get-children)
-;;       ;;      (-map #'org-ml-get-type))
-;;       ;; !!> arg-type-error
+      ;; (:buffer "#+call: ktulu()")
+      ;; (:comment "Throw error when attempting to get contents of a non-branch node")
+      ;; (->> (org-ml-parse-this-element)
+      ;;      (org-ml-get-children)
+      ;;      (-map #'org-ml-get-type))
+      ;; !!> arg-type-error
 
-;;       :begin-hidden
+      :begin-hidden
 
-;;       (:buffer "* headline"
-;;                "stuff"
-;;                "** subheadline")
-;;       (:comment "Return child element nodes")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-get-children)
-;;            (-map #'org-ml-get-type))
-;;       => '(section headline)
+      (:buffer "* headline"
+               "stuff"
+               "** subheadline")
+      (:comment "Return child element nodes")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-get-children)
+           (-map #'org-ml-get-type))
+      => '(section headline)
 
-;;       (:buffer "| a | b |")
-;;       (->> (org-ml-parse-this-table-row)
-;;            (org-ml-get-children)
-;;            (-map #'org-ml-get-type))
-;;       => '(table-cell table-cell)
+      (:buffer "| a | b |")
+      (->> (org-ml-parse-this-table-row)
+           (org-ml-get-children)
+           (-map #'org-ml-get-type))
+      => '(table-cell table-cell)
 
-;;       (:buffer "#+begin_verse"
-;;                "verse /666/"
-;;                "#+end_verse")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-get-children)
-;;            (-map #'org-ml-get-type))
-;;       ;; plain-text for the newline at the end...I think
-;;       => '(plain-text italic plain-text)
+      (:buffer "#+begin_verse"
+               "verse /666/"
+               "#+end_verse")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-children)
+           (-map #'org-ml-get-type))
+      ;; plain-text for the newline at the end...I think
+      => '(plain-text italic plain-text)
 
-;;       (:buffer "#+begin_center"
-;;                "paragraph thing"
-;;                "#+end_center")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-get-children)
-;;            (-map #'org-ml-get-type))
-;;       => '(paragraph)
+      (:buffer "#+begin_center"
+               "paragraph thing"
+               "#+end_center")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-children)
+           (-map #'org-ml-get-type))
+      => '(paragraph)
 
-;;       (:buffer ":LOGBOOK:"
-;;                "- log entry"
-;;                "CLOCK: [2019-01-01 Tue]"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-get-children)
-;;            (-map #'org-ml-get-type))
-;;       => '(plain-list clock)
+      (:buffer ":LOGBOOK:"
+               "- log entry"
+               "CLOCK: [2019-01-01 Tue]"
+               ":END:")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-children)
+           (-map #'org-ml-get-type))
+      => '(plain-list clock)
 
-;;       (:buffer "[fn:1] bigfoot")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-get-children)
-;;            (-map #'org-ml-get-type))
-;;       => '(paragraph)
+      (:buffer "[fn:1] bigfoot")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-children)
+           (-map #'org-ml-get-type))
+      => '(paragraph)
 
-;;       (:buffer "- item"
-;;                "  - subitem")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-get-children)
-;;            (-map #'org-ml-get-type))
-;;       => '(item)
-;;       (->> (org-ml-parse-this-item)
-;;            (org-ml-get-children)
-;;            (-map #'org-ml-get-type))
-;;       => '(paragraph plain-list)
+      (:buffer "- item"
+               "  - subitem")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-children)
+           (-map #'org-ml-get-type))
+      => '(item)
+      (->> (org-ml-parse-this-item)
+           (org-ml-get-children)
+           (-map #'org-ml-get-type))
+      => '(paragraph plain-list)
 
-;;       (:buffer "* dummy"
-;;                ":PROPERTIES:"
-;;                ":ONE: one"
-;;                ":TWO: two"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-get-node-properties)
-;;            (-map #'org-ml-get-type))
-;;       => '(node-property node-property)
+      (:buffer "* dummy"
+               ":PROPERTIES:"
+               ":ONE: one"
+               ":TWO: two"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-node-properties)
+           (-map #'org-ml-get-type))
+      => '(node-property node-property)
 
-;;       (:buffer "#+begin_quote"
-;;                "no pity for the majority"
-;;                "#+end_quote")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-get-children)
-;;            (-map #'org-ml-get-type))
-;;       => '(paragraph)
+      (:buffer "#+begin_quote"
+               "no pity for the majority"
+               "#+end_quote")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-children)
+           (-map #'org-ml-get-type))
+      => '(paragraph)
 
-;;       ;; (:buffer "* dummy"
-;;       ;;           "stuff")
-;;       ;; (->> (org-ml-parse-this-headline)
-;;       ;;      (org-ml-headline-get-section)
-;;       ;;      (org-ml-get-children)
-;;       ;;      (-map #'org-ml-get-type))
-;;       ;; => '(paragraph)
+      ;; (:buffer "* dummy"
+      ;;           "stuff")
+      ;; (->> (org-ml-parse-this-headline)
+      ;;      (org-ml-headline-get-section)
+      ;;      (org-ml-get-children)
+      ;;      (-map #'org-ml-get-type))
+      ;; => '(paragraph)
 
-;;       (:buffer "| a |"
-;;                "| b |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-get-children)
-;;            (-map #'org-ml-get-type))
-;;       => '(table-row table-row)
+      (:buffer "| a |"
+               "| b |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-get-children)
+           (-map #'org-ml-get-type))
+      => '(table-row table-row)
 
-;;       :end-hidden)
+      :end-hidden)
 
-;;     (defexamples-content org-ml-set-children
-;;       nil
+    (defexamples-content org-ml-set-children
+      nil
 
-;;       (:buffer "/this/ is a *paragraph*")
-;;       (:comment "Set children for branch object")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-set-children (list "this is lame"))
-;;            (org-ml-to-trimmed-string))
-;;       => "this is lame"
+      (:buffer "/this/ is a *paragraph*")
+      (:comment "Set children for branch object")
+      (->> (org-ml-parse-this-element)
+           (org-ml-set-children (list "this is lame"))
+           (org-ml-to-trimmed-string))
+      => "this is lame"
 
-;;       (:buffer "* headline")
-;;       (:comment "Set children for branch element nodes")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-set-children (list (org-ml-build-headline! :title-text "only me" :level 2)))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "** only me")
+      (:buffer "* headline")
+      (:comment "Set children for branch element nodes")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-set-children (list (org-ml-build-headline! :title-text "only me" :level 2)))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "** only me")
 
-;;       ;; (:buffer "#+call: ktulu()")
-;;       ;; (:comment "Throw error when attempting to set children of a non-branch nodes")
-;;       ;; (->> (org-ml-parse-this-element)
-;;       ;;      (org-ml-set-children "nil by mouth")
-;;       ;;      (org-ml-to-trimmed-string))
-;;       ;; !!> arg-type-error
+      ;; (:buffer "#+call: ktulu()")
+      ;; (:comment "Throw error when attempting to set children of a non-branch nodes")
+      ;; (->> (org-ml-parse-this-element)
+      ;;      (org-ml-set-children "nil by mouth")
+      ;;      (org-ml-to-trimmed-string))
+      ;; !!> arg-type-error
 
-;;       :begin-hidden
+      :begin-hidden
 
-;;       ;; TODO add hidden tests
+      ;; TODO add hidden tests
 
-;;       :end-hidden)
+      :end-hidden)
 
-;;     (defexamples-content org-ml-map-children
-;;       nil
+    (defexamples-content org-ml-map-children
+      nil
 
-;;       (:buffer "/this/ is a *paragraph*")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-map-children
-;;              (lambda (objs) (append objs (list " ...yeah"))))
-;;            (org-ml-to-trimmed-string))
-;;       => "/this/ is a *paragraph* ...yeah"
+      (:buffer "/this/ is a *paragraph*")
+      (->> (org-ml-parse-this-element)
+           (org-ml-map-children
+             (lambda (objs) (append objs (list " ...yeah"))))
+           (org-ml-to-trimmed-string))
+      => "/this/ is a *paragraph* ...yeah"
 
-;;       (:buffer "* headline"
-;;                "** subheadline")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-map-children* (--map (org-ml-shift-property :level 1 it) it))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "*** subheadline")
+      (:buffer "* headline"
+               "** subheadline")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-map-children* (--map (org-ml-shift-property :level 1 it) it))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "*** subheadline")
 
-;;       ;; (:buffer "#+call: ktulu()")
-;;       ;; (:comment "Throw error when attempting to map children of a non-branch node")
-;;       ;; (->> (org-ml-parse-this-element)
-;;       ;;      (org-ml-map-children #'ignore)
-;;       ;;      (org-ml-to-trimmed-string))
-;;       ;; !!> arg-type-error
+      ;; (:buffer "#+call: ktulu()")
+      ;; (:comment "Throw error when attempting to map children of a non-branch node")
+      ;; (->> (org-ml-parse-this-element)
+      ;;      (org-ml-map-children #'ignore)
+      ;;      (org-ml-to-trimmed-string))
+      ;; !!> arg-type-error
 
-;;       :begin-hidden
+      :begin-hidden
 
-;;       ;; TODO add hidden tests
+      ;; TODO add hidden tests
 
-;;       :end-hidden)
+      :end-hidden)
 
     
-;;     (defexamples-content org-ml-is-childless
-;;       nil
-;;       (:buffer "* dummy"
-;;                "filled with useless knowledge")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-is-childless))
-;;       => nil
-;;       (:buffer "* dummy")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-is-childless))
-;;       => t
-;;       ;; (:buffer "#+call: ktulu()")
-;;       ;; (:comment "Throw error when attempting to determine if non-branch node is empty")
-;;       ;; (->> (org-ml-parse-this-element)
-;;       ;;      (org-ml-is-childless))
-;;       ;; !!> arg-type-error
-;;       ))
+    (defexamples-content org-ml-is-childless
+      nil
+      (:buffer "* dummy"
+               "filled with useless knowledge")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-is-childless))
+      => nil
+      (:buffer "* dummy")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-is-childless))
+      => t
+      ;; (:buffer "#+call: ktulu()")
+      ;; (:comment "Throw error when attempting to determine if non-branch node is empty")
+      ;; (->> (org-ml-parse-this-element)
+      ;;      (org-ml-is-childless))
+      ;; !!> arg-type-error
+      ))
 
-;;   (def-example-subgroup "Object Nodes"
-;;     nil
+  (def-example-subgroup "Object Nodes"
+    nil
 
-;;     (defexamples-content org-ml-unwrap
-;;       nil
-;;       (:buffer "_1 *2* 3 */4/* 5 /6/_")
-;;       (:comment "Remove the outer underline formatting")
-;;       (->> (org-ml-parse-this-object)
-;;            (org-ml-unwrap)
-;;            (apply #'org-ml-build-paragraph)
-;;            (org-ml-to-trimmed-string))
-;;       => "1 *2* 3 */4/* 5 /6/")
+    (defexamples-content org-ml-unwrap
+      nil
+      (:buffer "_1 *2* 3 */4/* 5 /6/_")
+      (:comment "Remove the outer underline formatting")
+      (->> (org-ml-parse-this-object)
+           (org-ml-unwrap)
+           (apply #'org-ml-build-paragraph)
+           (org-ml-to-trimmed-string))
+      => "1 *2* 3 */4/* 5 /6/")
     
-;;     (defexamples-content org-ml-unwrap-types-deep
-;;       nil
-;;       (:buffer "_1 *2* 3 */4/* 5 /6/_")
-;;       (:comment "Remove bold formatting at any level")
-;;       (->> (org-ml-parse-this-object)
-;;            (org-ml-unwrap-types-deep '(bold))
-;;            (apply #'org-ml-build-paragraph)
-;;            (org-ml-to-trimmed-string))
-;;       => "_1 2 3 /4/ 5 /6/_")
+    (defexamples-content org-ml-unwrap-types-deep
+      nil
+      (:buffer "_1 *2* 3 */4/* 5 /6/_")
+      (:comment "Remove bold formatting at any level")
+      (->> (org-ml-parse-this-object)
+           (org-ml-unwrap-types-deep '(bold))
+           (apply #'org-ml-build-paragraph)
+           (org-ml-to-trimmed-string))
+      => "_1 2 3 /4/ 5 /6/_")
 
-;;     (defexamples-content org-ml-unwrap-deep
-;;       nil
-;;       (:buffer "_1 *2* 3 */4/* 5 /6/_")
-;;       (:comment "Remove all formatting")
-;;       (->> (org-ml-parse-this-object)
-;;            (org-ml-unwrap-deep)
-;;            (apply #'org-ml-build-paragraph)
-;;            (org-ml-to-trimmed-string))
-;;       => "1 2 3 4 5 6"))
+    (defexamples-content org-ml-unwrap-deep
+      nil
+      (:buffer "_1 *2* 3 */4/* 5 /6/_")
+      (:comment "Remove all formatting")
+      (->> (org-ml-parse-this-object)
+           (org-ml-unwrap-deep)
+           (apply #'org-ml-build-paragraph)
+           (org-ml-to-trimmed-string))
+      => "1 2 3 4 5 6"))
 
-;;   (def-example-subgroup "Secondary Strings"
-;;     nil
+  (def-example-subgroup "Secondary Strings"
+    nil
 
-;;     (defexamples-content org-ml-flatten
-;;       nil
-;;       (:buffer "This (1 *2* 3 */4/* 5 /6/) is randomly formatted")
-;;       (:comment "Remove first level of formatting")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-map-children #'org-ml-flatten)
-;;            (org-ml-to-trimmed-string))
-;;       => "This (1 2 3 /4/ 5 6) is randomly formatted")
+    (defexamples-content org-ml-flatten
+      nil
+      (:buffer "This (1 *2* 3 */4/* 5 /6/) is randomly formatted")
+      (:comment "Remove first level of formatting")
+      (->> (org-ml-parse-this-element)
+           (org-ml-map-children #'org-ml-flatten)
+           (org-ml-to-trimmed-string))
+      => "This (1 2 3 /4/ 5 6) is randomly formatted")
 
-;;     (defexamples-content org-ml-flatten-types-deep
-;;       nil
-;;       (:buffer "This (1 *2* 3 */4/* 5 /6/) is randomly formatted")
-;;       (:comment "Remove italic formatting at any level")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-map-children* (org-ml-flatten-types-deep '(italic) it))
-;;            (org-ml-to-trimmed-string))
-;;       => "This (1 *2* 3 *4* 5 6) is randomly formatted")
+    (defexamples-content org-ml-flatten-types-deep
+      nil
+      (:buffer "This (1 *2* 3 */4/* 5 /6/) is randomly formatted")
+      (:comment "Remove italic formatting at any level")
+      (->> (org-ml-parse-this-element)
+           (org-ml-map-children* (org-ml-flatten-types-deep '(italic) it))
+           (org-ml-to-trimmed-string))
+      => "This (1 *2* 3 *4* 5 6) is randomly formatted")
 
-;;     (defexamples-content org-ml-flatten-deep
-;;       nil
-;;       (:buffer "This (1 *2* 3 */4/* 5 /6/) is randomly formatted")
-;;       (:comment "Remove italic formatting at any level")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-map-children #'org-ml-flatten-deep)
-;;            (org-ml-to-trimmed-string))
-;;       => "This (1 2 3 4 5 6) is randomly formatted"))
+    (defexamples-content org-ml-flatten-deep
+      nil
+      (:buffer "This (1 *2* 3 */4/* 5 /6/) is randomly formatted")
+      (:comment "Remove italic formatting at any level")
+      (->> (org-ml-parse-this-element)
+           (org-ml-map-children #'org-ml-flatten-deep)
+           (org-ml-to-trimmed-string))
+      => "This (1 2 3 4 5 6) is randomly formatted"))
 
-;;   (def-example-subgroup "Item"
-;;     nil
+  (def-example-subgroup "Item"
+    nil
 
-;;     (defexamples-content org-ml-item-get-paragraph
-;;       nil
-;;       (:buffer "- one")
-;;       (->> (org-ml-parse-this-item)
-;;            (org-ml-item-get-paragraph))
-;;       => '("one")
-;;       (:buffer "- ")
-;;       (->> (org-ml-parse-this-item)
-;;            (org-ml-item-get-paragraph))
-;;       => nil)
+    (defexamples-content org-ml-item-get-paragraph
+      nil
+      (:buffer "- one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-get-paragraph))
+      => '("one")
+      (:buffer "- ")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-get-paragraph))
+      => nil)
 
-;;     (defexamples-content org-ml-item-set-paragraph
-;;       nil
-;;       (:buffer "- one")
-;;       (->> (org-ml-parse-this-item)
-;;            (org-ml-item-set-paragraph '("two"))
-;;            (org-ml-to-string))
-;;       => "- two\n"
-;;       (:buffer "- one")
-;;       (->> (org-ml-parse-this-item)
-;;            (org-ml-item-set-paragraph nil)
-;;            (org-ml-to-string))
-;;       => "- \n")
+    (defexamples-content org-ml-item-set-paragraph
+      nil
+      (:buffer "- one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-set-paragraph '("two"))
+           (org-ml-to-string))
+      => "- two\n"
+      (:buffer "- one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-set-paragraph nil)
+           (org-ml-to-string))
+      => "- \n")
 
-;;     (defexamples-content org-ml-item-map-paragraph
-;;       nil
-;;       (:buffer "- one")
-;;       (->> (org-ml-parse-this-item)
-;;            (org-ml-item-map-paragraph* (-map #'upcase it))
-;;            (org-ml-to-string))
-;;       => "- ONE\n"))
+    (defexamples-content org-ml-item-map-paragraph
+      nil
+      (:buffer "- one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-map-paragraph* (-map #'upcase it))
+           (org-ml-to-string))
+      => "- ONE\n"))
 
-;;   (def-example-subgroup "Headline"
-;;     nil
+  (def-example-subgroup "Headline"
+    nil
 
-;;     (defexamples-content org-ml-headline-get-section
-;;       nil
-;;       (:buffer "* headline 1"
-;;                "sectional stuff"
-;;                "** headline 2"
-;;                "** headline 3")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-get-section)
-;;            (-map #'org-ml-to-trimmed-string))
-;;       => '("sectional stuff")
-;;       (:buffer "* headline 1"
-;;                "** headline 2"
-;;                "** headline 3")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-get-section)
-;;            (org-ml-to-trimmed-string))
-;;       => "")
+    (defexamples-content org-ml-headline-get-section
+      nil
+      (:buffer "* headline 1"
+               "sectional stuff"
+               "** headline 2"
+               "** headline 3")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-get-section)
+           (-map #'org-ml-to-trimmed-string))
+      => '("sectional stuff")
+      (:buffer "* headline 1"
+               "** headline 2"
+               "** headline 3")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-get-section)
+           (org-ml-to-trimmed-string))
+      => "")
 
-;;     (defexamples-content org-ml-headline-set-section
-;;       nil
-;;       (:buffer "* headline")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-set-section (list (org-ml-build-paragraph! "x-section")))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "x-section")
-;;       (:buffer "* headline"
-;;                "x-section")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-set-section (list (org-ml-build-paragraph! "x-guard")))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "x-guard")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-set-section nil)
-;;            (org-ml-to-trimmed-string))
-;;       => "* headline")
+    (defexamples-content org-ml-headline-set-section
+      nil
+      (:buffer "* headline")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-set-section (list (org-ml-build-paragraph! "x-section")))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "x-section")
+      (:buffer "* headline"
+               "x-section")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-set-section (list (org-ml-build-paragraph! "x-guard")))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "x-guard")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-set-section nil)
+           (org-ml-to-trimmed-string))
+      => "* headline")
 
-;;     (defexamples-content org-ml-headline-map-section
-;;       nil
-;;       (:buffer "* headline"
-;;                "x-section")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-map-section* (cons (org-ml-build-planning! :closed '(2019 1 1)) it))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "CLOSED: [2019-01-01 Tue]"
-;;                   "x-section"))
+    (defexamples-content org-ml-headline-map-section
+      nil
+      (:buffer "* headline"
+               "x-section")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-map-section* (cons (org-ml-build-planning! :closed '(2019 1 1)) it))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: [2019-01-01 Tue]"
+                  "x-section"))
 
-;;     (defexamples-content org-ml-headline-get-subheadlines
-;;       nil
-;;       (:buffer "* headline 1"
-;;                "sectional stuff"
-;;                "** headline 2"
-;;                "** headline 3")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-get-subheadlines)
-;;            (-map #'org-ml-to-trimmed-string))
-;;       => '("** headline 2" "** headline 3")
-;;       (:buffer "* headline 1"
-;;                "sectional stuff")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-get-subheadlines)
-;;            (-map #'org-ml-to-trimmed-string))
-;;       => nil)
+    (defexamples-content org-ml-headline-get-subheadlines
+      nil
+      (:buffer "* headline 1"
+               "sectional stuff"
+               "** headline 2"
+               "** headline 3")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-get-subheadlines)
+           (-map #'org-ml-to-trimmed-string))
+      => '("** headline 2" "** headline 3")
+      (:buffer "* headline 1"
+               "sectional stuff")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-get-subheadlines)
+           (-map #'org-ml-to-trimmed-string))
+      => nil)
 
-;;     (defexamples-content org-ml-headline-set-subheadlines
-;;       nil
-;;       (:buffer "* headline 1"
-;;                "sectional stuff"
-;;                "** headline 2"
-;;                "** headline 3")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-set-subheadlines (list (org-ml-build-headline! :level 2 :title-text "headline x")))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline 1"
-;;                   "sectional stuff"
-;;                   "** headline x")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-set-subheadlines nil)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline 1"
-;;                   "sectional stuff"))
+    (defexamples-content org-ml-headline-set-subheadlines
+      nil
+      (:buffer "* headline 1"
+               "sectional stuff"
+               "** headline 2"
+               "** headline 3")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-set-subheadlines (list (org-ml-build-headline! :level 2 :title-text "headline x")))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline 1"
+                  "sectional stuff"
+                  "** headline x")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-set-subheadlines nil)
+           (org-ml-to-trimmed-string))
+      => (:result "* headline 1"
+                  "sectional stuff"))
 
-;;     (defexamples-content org-ml-headline-map-subheadlines
-;;       nil
-;;       (:buffer "* headline 1"
-;;                "** headline 2"
-;;                "** headline 3")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-map-subheadlines* (--map (org-ml-set-property :todo-keyword "TODO" it) it))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline 1"
-;;                   "** TODO headline 2"
-;;                   "** TODO headline 3")))
+    (defexamples-content org-ml-headline-map-subheadlines
+      nil
+      (:buffer "* headline 1"
+               "** headline 2"
+               "** headline 3")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-map-subheadlines* (--map (org-ml-set-property :todo-keyword "TODO" it) it))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline 1"
+                  "** TODO headline 2"
+                  "** TODO headline 3")))
 
-;;   (def-example-subgroup "Headline (metadata)"
-;;     nil
+  (def-example-subgroup "Headline (metadata)"
+    nil
 
-;;     (defexamples-content org-ml-headline-get-planning
-;;       nil
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue]")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-get-planning)
-;;            (org-ml-to-trimmed-string))
-;;       => "CLOSED: [2019-01-01 Tue]"
-;;       (:buffer "* headline")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-get-planning)
-;;            (org-ml-to-trimmed-string))
-;;       => "")
+    (defexamples-content org-ml-headline-get-planning
+      nil
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue]")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-planning)
+           (org-ml-to-trimmed-string))
+      => "CLOSED: [2019-01-01 Tue]"
+      (:buffer "* headline")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-planning)
+           (org-ml-to-trimmed-string))
+      => "")
 
-;;     (defexamples-content org-ml-headline-set-planning
-;;       nil
-;;       (:buffer "* headline")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-planning (org-ml-build-planning! :closed '(2019 1 1)))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "CLOSED: [2019-01-01 Tue]")
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue]")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "SCHEDULED: <2019-01-01 Tue>")
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue]")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-planning nil)
-;;            (org-ml-to-trimmed-string))
-;;       => "* headline"
-;;       :begin-hidden
-;;       (:buffer "* headline"
-;;                ""
-;;                "rest")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "SCHEDULED: <2019-01-01 Tue>"
-;;                   ""
-;;                   "rest")
-;;       (:buffer "* headline"
-;;                "SCHEDULED: <2019-01-01 Tue>"
-;;                ""
-;;                "rest")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-planning nil)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ""
-;;                   "rest")
-;;       :end-hidden
-;;       )
+    (defexamples-content org-ml-headline-set-planning
+      nil
+      (:buffer "* headline")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-planning (org-ml-build-planning! :closed '(2019 1 1)))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: [2019-01-01 Tue]")
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue]")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "SCHEDULED: <2019-01-01 Tue>")
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue]")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-planning nil)
+           (org-ml-to-trimmed-string))
+      => "* headline"
+      :begin-hidden
+      (:buffer "* headline"
+               ""
+               "rest")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "SCHEDULED: <2019-01-01 Tue>"
+                  ""
+                  "rest")
+      (:buffer "* headline"
+               "SCHEDULED: <2019-01-01 Tue>"
+               ""
+               "rest")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-planning nil)
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ""
+                  "rest")
+      :end-hidden
+      )
 
-;;     (defexamples-content org-ml-headline-map-planning
-;;       nil
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue]")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-map-planning*
-;;              (org-ml-map-property* :closed
-;;                (org-ml-timestamp-shift 1 'day it) it))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "CLOSED: [2019-01-02 Wed]"))
+    (defexamples-content org-ml-headline-map-planning
+      nil
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue]")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-map-planning*
+             (org-ml-map-property* :closed
+               (org-ml-timestamp-shift 1 'day it) it))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: [2019-01-02 Wed]"))
 
-;;     (defexamples-content org-ml-headline-get-node-properties
-;;       nil
-;;       (:buffer "* headline"
-;;                ":PROPERTIES:"
-;;                ":Effort:   1:00"
-;;                ":ID:       minesfake"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-get-node-properties)
-;;            (-map #'org-ml-to-trimmed-string))
-;;       => '(":Effort:   1:00" ":ID:       minesfake")
-;;       (:buffer "* headline")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-get-node-properties)
-;;            (-map #'org-ml-to-trimmed-string))
-;;       => nil
-;;       :begin-hidden
-;;       (:buffer "* headline"
-;;                "CLOSED: <2019-01-01 Tue>"
-;;                ":PROPERTIES:"
-;;                ":Effort:   1:00"
-;;                ":ID:       minesfake"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-get-node-properties)
-;;            (-map #'org-ml-to-trimmed-string))
-;;       => '(":Effort:   1:00" ":ID:       minesfake")
-;;       :end-hidden)
+    (defexamples-content org-ml-headline-get-node-properties
+      nil
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":Effort:   1:00"
+               ":ID:       minesfake"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-node-properties)
+           (-map #'org-ml-to-trimmed-string))
+      => '(":Effort:   1:00" ":ID:       minesfake")
+      (:buffer "* headline")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-node-properties)
+           (-map #'org-ml-to-trimmed-string))
+      => nil
+      :begin-hidden
+      (:buffer "* headline"
+               "CLOSED: <2019-01-01 Tue>"
+               ":PROPERTIES:"
+               ":Effort:   1:00"
+               ":ID:       minesfake"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-node-properties)
+           (-map #'org-ml-to-trimmed-string))
+      => '(":Effort:   1:00" ":ID:       minesfake")
+      :end-hidden)
 
-;;     (defexamples-content org-ml-headline-set-node-properties
-;;       nil
-;;       (:buffer "* headline"
-;;                ":PROPERTIES:"
-;;                ":Effort:   1:00"
-;;                ":ID:       minesfake"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-node-properties
-;;             (--map (apply #'org-ml-build-node-property it)
-;;                    '(("Effort" "0:01") ("ID" "easy"))))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":PROPERTIES:"
-;;                   ":Effort:   0:01"
-;;                   ":ID:       easy"
-;;                   ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-node-properties nil)
-;;            (org-ml-to-trimmed-string))
-;;       => "* headline"
-;;       :begin-hidden
-;;       (:buffer "* headline"
-;;                "CLOSED: <2019-01-01 Tue>"
-;;                ":PROPERTIES:"
-;;                ":Effort:   1:00"
-;;                ":ID:       minesfake"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-node-properties
-;;             (--map (apply #'org-ml-build-node-property it)
-;;                    '(("Effort" "0:01") ("ID" "easy"))))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "CLOSED: <2019-01-01 Tue>"
-;;                   ":PROPERTIES:"
-;;                   ":Effort:   0:01"
-;;                   ":ID:       easy"
-;;                   ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-node-properties nil)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "CLOSED: <2019-01-01 Tue>")
-;;       (:buffer "* headline"
-;;                ""
-;;                "section")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":PROPERTIES:"
-;;                   ":New:      world man"
-;;                   ":END:"
-;;                   ""
-;;                   "section")
-;;       (:buffer "* headline"
-;;                "CLOSED: <2019-01-01 Tue>"
-;;                ""
-;;                "section")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "CLOSED: <2019-01-01 Tue>"
-;;                   ":PROPERTIES:"
-;;                   ":New:      world man"
-;;                   ":END:"
-;;                   ""
-;;                   "section")
-;;       (:buffer "* headline"
-;;                "CLOSED: <2019-01-01 Tue>"
-;;                ":PROPERTIES:"
-;;                ":Effort:   0:01"
-;;                ":ID:       easy"
-;;                ":END:"
-;;                ""
-;;                "section")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-node-properties nil)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "CLOSED: <2019-01-01 Tue>"
-;;                   ""
-;;                   "section"))
+    (defexamples-content org-ml-headline-set-node-properties
+      nil
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":Effort:   1:00"
+               ":ID:       minesfake"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-properties
+            (--map (apply #'org-ml-build-node-property it)
+                   '(("Effort" "0:01") ("ID" "easy"))))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":Effort:   0:01"
+                  ":ID:       easy"
+                  ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-properties nil)
+           (org-ml-to-trimmed-string))
+      => "* headline"
+      :begin-hidden
+      (:buffer "* headline"
+               "CLOSED: <2019-01-01 Tue>"
+               ":PROPERTIES:"
+               ":Effort:   1:00"
+               ":ID:       minesfake"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-properties
+            (--map (apply #'org-ml-build-node-property it)
+                   '(("Effort" "0:01") ("ID" "easy"))))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: <2019-01-01 Tue>"
+                  ":PROPERTIES:"
+                  ":Effort:   0:01"
+                  ":ID:       easy"
+                  ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-properties nil)
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: <2019-01-01 Tue>")
+      (:buffer "* headline"
+               ""
+               "section")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":New:      world man"
+                  ":END:"
+                  ""
+                  "section")
+      (:buffer "* headline"
+               "CLOSED: <2019-01-01 Tue>"
+               ""
+               "section")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: <2019-01-01 Tue>"
+                  ":PROPERTIES:"
+                  ":New:      world man"
+                  ":END:"
+                  ""
+                  "section")
+      (:buffer "* headline"
+               "CLOSED: <2019-01-01 Tue>"
+               ":PROPERTIES:"
+               ":Effort:   0:01"
+               ":ID:       easy"
+               ":END:"
+               ""
+               "section")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-properties nil)
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "CLOSED: <2019-01-01 Tue>"
+                  ""
+                  "section"))
 
-;;     (defexamples-content org-ml-headline-map-node-properties
-;;       nil
-;;       (:buffer "* headline"
-;;                ":PROPERTIES:"
-;;                ":Effort:   1:00"
-;;                ":ID:       minesfake"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-map-node-properties*
-;;              (cons (org-ml-build-node-property "New" "world man") it))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":PROPERTIES:"
-;;                   ":New:      world man"
-;;                   ":Effort:   1:00"
-;;                   ":ID:       minesfake"
-;;                   ":END:")
-;;       ;; assume this will work with planning in front because
-;;       ;; we already tested the get/set base functions
-;;       )
+    (defexamples-content org-ml-headline-map-node-properties
+      nil
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":Effort:   1:00"
+               ":ID:       minesfake"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-map-node-properties*
+             (cons (org-ml-build-node-property "New" "world man") it))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":New:      world man"
+                  ":Effort:   1:00"
+                  ":ID:       minesfake"
+                  ":END:")
+      ;; assume this will work with planning in front because
+      ;; we already tested the get/set base functions
+      )
 
-;;     ;; assume these will work when planning is in front since
-;;     ;; they are all based on the -map-properties (plural) functions
-;;     ;; and these have already been tested
-;;     (defexamples-content org-ml-headline-get-node-property
-;;       nil
-;;       (:buffer "* headline"
-;;                ":PROPERTIES:"
-;;                ":ID:       fake"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-get-node-property "ID"))
-;;       => "fake"
+    ;; assume these will work when planning is in front since
+    ;; they are all based on the -map-properties (plural) functions
+    ;; and these have already been tested
+    (defexamples-content org-ml-headline-get-node-property
+      nil
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-node-property "ID"))
+      => "fake"
 
-;;       (:buffer "* headline"
-;;                ":PROPERTIES:"
-;;                ":ID:       fake"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-get-node-property "READ_ID"))
-;;       => nil)
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-node-property "READ_ID"))
+      => nil)
 
-;;     (defexamples-content org-ml-headline-set-node-property
-;;       nil
-;;       (:buffer "* headline"
-;;                ":PROPERTIES:"
-;;                ":ID:       fake"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-node-property "ID" "real")
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":PROPERTIES:"
-;;                   ":ID:       real"
-;;                   ":END:")
-;;       (:buffer "* headline")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-node-property "ID" "real")
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":PROPERTIES:"
-;;                   ":ID:       real"
-;;                   ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-node-property "ID" nil)
-;;            (org-ml-to-trimmed-string))
-;;       => "* headline"
-;;      (:buffer "* headline"
-;;               ":PROPERTIES:"
-;;               ":ID:       real"
-;;               ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-node-property "ID" nil)
-;;            (org-ml-to-trimmed-string))
-;;       => "* headline")
+    (defexamples-content org-ml-headline-set-node-property
+      nil
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-property "ID" "real")
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":ID:       real"
+                  ":END:")
+      (:buffer "* headline")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-property "ID" "real")
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":ID:       real"
+                  ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-property "ID" nil)
+           (org-ml-to-trimmed-string))
+      => "* headline"
+     (:buffer "* headline"
+              ":PROPERTIES:"
+              ":ID:       real"
+              ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-node-property "ID" nil)
+           (org-ml-to-trimmed-string))
+      => "* headline")
 
-;;     (defexamples-content org-ml-headline-map-node-property
-;;       nil
-;;       (:buffer "* headline"
-;;                ":PROPERTIES:"
-;;                ":ID:       fake"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-map-node-property "ID" #'s-upcase)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":PROPERTIES:"
-;;                   ":ID:       FAKE"
-;;                   ":END:")))
+    (defexamples-content org-ml-headline-map-node-property
+      nil
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":ID:       fake"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-map-node-property "ID" #'s-upcase)
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":PROPERTIES:"
+                  ":ID:       FAKE"
+                  ":END:")))
 
-;;   (def-example-subgroup "Headline (logbook and contents)"
-;;     nil
+  (def-example-subgroup "Headline (logbook and contents)"
+    nil
 
 
-;;     (defexamples-content org-ml-headline-get-supercontents
-;;       nil
+    (defexamples-content org-ml-headline-get-supercontents
+      nil
       
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue 00:00]"
-;;                ":PROPERTIES:"
-;;                ":Effort: 0:30"
-;;                ":END:"
-;;                ":LOGGING:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log note"
-;;                ":END:"
-;;                ":CLOCKING:"
-;;                "CLOCK: [2019-01-01 Tue 00:00]"
-;;                ":END:"
-;;                "contents")
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort: 0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               "contents")
 
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-get-supercontents config)
-;;              (org-ml-supercontents-get-logbook)
-;;              (org-ml-logbook-get-items)
-;;              (-map #'org-ml-to-trimmed-string)))
-;;       => '("- Note taken on [2018-12-31 Mon 00:00] \\\\\n  log note")
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-get-supercontents config)
+             (org-ml-supercontents-get-logbook)
+             (org-ml-logbook-get-items)
+             (-map #'org-ml-to-trimmed-string)))
+      => '("- Note taken on [2018-12-31 Mon 00:00] \\\\\n  log note")
 
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-get-supercontents config)
-;;              (org-ml-supercontents-get-logbook)
-;;              (org-ml-logbook-get-clocks)
-;;              (-map #'org-ml-to-trimmed-string)))
-;;       => '("CLOCK: [2019-01-01 Tue 00:00]")
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-get-supercontents config)
+             (org-ml-supercontents-get-logbook)
+             (org-ml-logbook-get-clocks)
+             (-map #'org-ml-to-trimmed-string)))
+      => '("CLOCK: [2019-01-01 Tue 00:00]")
 
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-get-supercontents config)
-;;              (org-ml-supercontents-get-logbook)
-;;              (alist-get :unknown)
-;;              (-map #'org-ml-to-trimmed-string)))
-;;       => nil
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-get-supercontents config)
+             (org-ml-supercontents-get-logbook)
+             (alist-get :unknown)
+             (-map #'org-ml-to-trimmed-string)))
+      => nil
 
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-get-supercontents config)
-;;              (org-ml-supercontents-get-contents)
-;;              (-map #'org-ml-to-trimmed-string)))
-;;       => '("contents"))
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-get-supercontents config)
+             (org-ml-supercontents-get-contents)
+             (-map #'org-ml-to-trimmed-string)))
+      => '("contents"))
 
-;;     (defexamples-content org-ml-headline-set-supercontents
-;;       nil
+    (defexamples-content org-ml-headline-set-supercontents
+      nil
       
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue 00:00]"
-;;                ":PROPERTIES:"
-;;                ":Effort:    0:30"
-;;                ":END:"
-;;                ":LOGGING:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log note"
-;;                ":END:"
-;;                ":CLOCKING:"
-;;                "CLOCK: [2019-01-01 Tue 00:00]"
-;;                ":END:"
-;;                "contents")
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort:    0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               "contents")
 
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-set-supercontents
-;;               config `((:logbook nil) (:contents ,(org-ml-build-paragraph! "new contents"))))
-;;              (org-ml-to-trimmed-string)))
-;;       => (:result "* headline"
-;;                   "CLOSED: [2019-01-01 Tue 00:00]"
-;;                   ":PROPERTIES:"
-;;                   ":Effort:   0:30"
-;;                   ":END:"
-;;                   "new contents"))
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-set-supercontents
+              config `((:logbook nil) (:contents ,(org-ml-build-paragraph! "new contents"))))
+             (org-ml-to-trimmed-string)))
+      => (:result "* headline"
+                  "CLOSED: [2019-01-01 Tue 00:00]"
+                  ":PROPERTIES:"
+                  ":Effort:   0:30"
+                  ":END:"
+                  "new contents"))
 
-;;     (defexamples-content org-ml-headline-map-supercontents
-;;       nil
+    (defexamples-content org-ml-headline-map-supercontents
+      nil
       
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue 00:00]"
-;;                ":PROPERTIES:"
-;;                ":Effort:    0:30"
-;;                ":END:"
-;;                ":LOGGING:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log note"
-;;                ":END:"
-;;                ":CLOCKING:"
-;;                "CLOCK: [2019-01-01 Tue 00:00]"
-;;                ":END:"
-;;                "contents")
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort:    0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               "contents")
 
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-map-supercontents*
-;;                  config (org-ml-supercontents-map-contents*
-;;                           (cons (org-ml-build-paragraph! "new contents") it) it))
-;;              (org-ml-to-trimmed-string)))
-;;       => (:result "* headline"
-;;                   "CLOSED: [2019-01-01 Tue 00:00]"
-;;                   ":PROPERTIES:"
-;;                   ":Effort:   0:30"
-;;                   ":END:"
-;;                   ":LOGGING:"
-;;                   "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                   "  log note"
-;;                   ":END:"
-;;                   ":CLOCKING:"
-;;                   "CLOCK: [2019-01-01 Tue 00:00]"
-;;                   ":END:"
-;;                   "new contents"
-;;                   "contents"))
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-map-supercontents*
+                 config (org-ml-supercontents-map-contents*
+                          (cons (org-ml-build-paragraph! "new contents") it) it))
+             (org-ml-to-trimmed-string)))
+      => (:result "* headline"
+                  "CLOSED: [2019-01-01 Tue 00:00]"
+                  ":PROPERTIES:"
+                  ":Effort:   0:30"
+                  ":END:"
+                  ":LOGGING:"
+                  "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+                  "  log note"
+                  ":END:"
+                  ":CLOCKING:"
+                  "CLOCK: [2019-01-01 Tue 00:00]"
+                  ":END:"
+                  "new contents"
+                  "contents"))
 
-;;     (defexamples-content org-ml-headline-get-logbook-items
-;;       nil
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue 00:00]"
-;;                ":PROPERTIES:"
-;;                ":Effort: 0:30"
-;;                ":END:"
-;;                ":LOGGING:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log note"
-;;                ":END:"
-;;                ":CLOCKING:"
-;;                "CLOCK: [2019-01-01 Tue 00:00]"
-;;                ":END:"
-;;                "contents")
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-get-logbook-items config)
-;;              (-map #'org-ml-to-trimmed-string)))
-;;       => '("- Note taken on [2018-12-31 Mon 00:00] \\\\\n  log note"))
+    (defexamples-content org-ml-headline-get-logbook-items
+      nil
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort: 0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               "contents")
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-get-logbook-items config)
+             (-map #'org-ml-to-trimmed-string)))
+      => '("- Note taken on [2018-12-31 Mon 00:00] \\\\\n  log note"))
 
-;;     (defexamples-content org-ml-headline-set-logbook-items
-;;       nil
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue 00:00]"
-;;                ":PROPERTIES:"
-;;                ":Effort: 0:30"
-;;                ":END:"
-;;                ":LOGGING:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log note"
-;;                ":END:"
-;;                ":CLOCKING:"
-;;                "CLOCK: [2019-01-01 Tue 00:00]"
-;;                ":END:"
-;;                "contents")
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-set-logbook-items config nil)
-;;              (org-ml-to-trimmed-string)))
-;;       =>  (:result "* headline"
-;;                    "CLOSED: [2019-01-01 Tue 00:00]"
-;;                    ":PROPERTIES:"
-;;                    ":Effort:   0:30"
-;;                    ":END:"
-;;                    ":CLOCKING:"
-;;                    "CLOCK: [2019-01-01 Tue 00:00]"
-;;                    ":END:"
-;;                    "contents")
-;;       :begin-hidden
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue 00:00]"
-;;                ":PROPERTIES:"
-;;                ":Effort: 0:30"
-;;                ":END:"
-;;                ":LOGGING:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log note"
-;;                ":END:"
-;;                ""
-;;                "contents")
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-set-logbook-items config nil)
-;;              (org-ml-to-trimmed-string)))
-;;       =>  (:result "* headline"
-;;                    "CLOSED: [2019-01-01 Tue 00:00]"
-;;                    ":PROPERTIES:"
-;;                    ":Effort:   0:30"
-;;                    ":END:"
-;;                    ""
-;;                    "contents")
-;;       :end-hidden)
+    (defexamples-content org-ml-headline-set-logbook-items
+      nil
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort: 0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               "contents")
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-set-logbook-items config nil)
+             (org-ml-to-trimmed-string)))
+      =>  (:result "* headline"
+                   "CLOSED: [2019-01-01 Tue 00:00]"
+                   ":PROPERTIES:"
+                   ":Effort:   0:30"
+                   ":END:"
+                   ":CLOCKING:"
+                   "CLOCK: [2019-01-01 Tue 00:00]"
+                   ":END:"
+                   "contents")
+      :begin-hidden
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort: 0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ""
+               "contents")
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-set-logbook-items config nil)
+             (org-ml-to-trimmed-string)))
+      =>  (:result "* headline"
+                   "CLOSED: [2019-01-01 Tue 00:00]"
+                   ":PROPERTIES:"
+                   ":Effort:   0:30"
+                   ":END:"
+                   ""
+                   "contents")
+      :end-hidden)
 
-;;     (defexamples-content org-ml-headline-map-logbook-items
-;;       nil
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue 00:00]"
-;;                ":PROPERTIES:"
-;;                ":Effort: 0:30"
-;;                ":END:"
-;;                ":LOGGING:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log note"
-;;                ":END:"
-;;                ":CLOCKING:"
-;;                "CLOCK: [2019-01-01 Tue 00:00]"
-;;                ":END:"
-;;                "contents")
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-map-logbook-items* config
-;;                (--map (org-ml-map-children*
-;;                         (--map (org-ml-map-children*
-;;                                  (--map-when (org-ml-is-type 'plain-text it)
-;;                                              (upcase it)
-;;                                              it)
-;;                                  it)
-;;                                it)
-;;                         it)
-;;                       it))
-;;              (org-ml-to-trimmed-string)))
-;;       =>  (:result "* headline"
-;;                    "CLOSED: [2019-01-01 Tue 00:00]"
-;;                    ":PROPERTIES:"
-;;                    ":Effort:   0:30"
-;;                    ":END:"
-;;                    ":LOGGING:"
-;;                    "- NOTE TAKEN ON [2018-12-31 Mon 00:00] \\\\"
-;;                    "  LOG NOTE"
-;;                    ":END:"
-;;                    ":CLOCKING:"
-;;                    "CLOCK: [2019-01-01 Tue 00:00]"
-;;                    ":END:"
-;;                    "contents"))
+    (defexamples-content org-ml-headline-map-logbook-items
+      nil
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort: 0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               "contents")
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-map-logbook-items* config
+               (--map (org-ml-map-children*
+                        (--map (org-ml-map-children*
+                                 (--map-when (org-ml-is-type 'plain-text it)
+                                             (upcase it)
+                                             it)
+                                 it)
+                               it)
+                        it)
+                      it))
+             (org-ml-to-trimmed-string)))
+      =>  (:result "* headline"
+                   "CLOSED: [2019-01-01 Tue 00:00]"
+                   ":PROPERTIES:"
+                   ":Effort:   0:30"
+                   ":END:"
+                   ":LOGGING:"
+                   "- NOTE TAKEN ON [2018-12-31 Mon 00:00] \\\\"
+                   "  LOG NOTE"
+                   ":END:"
+                   ":CLOCKING:"
+                   "CLOCK: [2019-01-01 Tue 00:00]"
+                   ":END:"
+                   "contents"))
 
-;;     (defexamples-content org-ml-headline-get-logbook-clocks
-;;       nil
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue 00:00]"
-;;                ":PROPERTIES:"
-;;                ":Effort: 0:30"
-;;                ":END:"
-;;                ":LOGGING:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log note"
-;;                ":END:"
-;;                ":CLOCKING:"
-;;                "CLOCK: [2019-01-01 Tue 00:00]"
-;;                ":END:"
-;;                "contents")
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-get-logbook-clocks config)
-;;              (-map #'org-ml-to-trimmed-string)))
-;;       => '("CLOCK: [2019-01-01 Tue 00:00]"))
+    (defexamples-content org-ml-headline-get-logbook-clocks
+      nil
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort: 0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               "contents")
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-get-logbook-clocks config)
+             (-map #'org-ml-to-trimmed-string)))
+      => '("CLOCK: [2019-01-01 Tue 00:00]"))
 
-;;     (defexamples-content org-ml-headline-set-logbook-clocks
-;;       nil
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue 00:00]"
-;;                ":PROPERTIES:"
-;;                ":Effort: 0:30"
-;;                ":END:"
-;;                ":LOGGING:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log note"
-;;                ":END:"
-;;                ":CLOCKING:"
-;;                "CLOCK: [2019-01-01 Tue 00:00]"
-;;                ":END:"
-;;                "contents")
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-set-logbook-clocks config nil)
-;;              (org-ml-to-trimmed-string)))
-;;       =>  (:result "* headline"
-;;                    "CLOSED: [2019-01-01 Tue 00:00]"
-;;                    ":PROPERTIES:"
-;;                    ":Effort:   0:30"
-;;                    ":END:"
-;;                    ":LOGGING:"
-;;                    "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                    "  log note"
-;;                    ":END:"
-;;                    "contents"))
+    (defexamples-content org-ml-headline-set-logbook-clocks
+      nil
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort: 0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               "contents")
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-set-logbook-clocks config nil)
+             (org-ml-to-trimmed-string)))
+      =>  (:result "* headline"
+                   "CLOSED: [2019-01-01 Tue 00:00]"
+                   ":PROPERTIES:"
+                   ":Effort:   0:30"
+                   ":END:"
+                   ":LOGGING:"
+                   "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+                   "  log note"
+                   ":END:"
+                   "contents"))
 
-;;     (defexamples-content org-ml-headline-map-logbook-clocks
-;;       nil
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue 00:00]"
-;;                ":PROPERTIES:"
-;;                ":Effort: 0:30"
-;;                ":END:"
-;;                ":LOGGING:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log note"
-;;                ":END:"
-;;                ":CLOCKING:"
-;;                "CLOCK: [2019-01-01 Tue 00:00]"
-;;                ":END:"
-;;                "contents")
-;;       (let ((config (list :log-into-drawer "LOGGING"
-;;                           :clock-into-drawer "CLOCKING")))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-map-logbook-clocks* config
-;;                (--map (org-ml-map-property* :value
-;;                         (org-ml-timestamp-shift 1 'day it)
-;;                         it)
-;;                       it))
-;;              (org-ml-to-trimmed-string)))
-;;       =>  (:result "* headline"
-;;                    "CLOSED: [2019-01-01 Tue 00:00]"
-;;                    ":PROPERTIES:"
-;;                    ":Effort:   0:30"
-;;                    ":END:"
-;;                    ":LOGGING:"
-;;                    "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                    "  log note"
-;;                    ":END:"
-;;                    ":CLOCKING:"
-;;                    "CLOCK: [2019-01-02 Wed 00:00]"
-;;                    ":END:"
-;;                    "contents"))
+    (defexamples-content org-ml-headline-map-logbook-clocks
+      nil
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":PROPERTIES:"
+               ":Effort: 0:30"
+               ":END:"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               "contents")
+      (let ((config (list :log-into-drawer "LOGGING"
+                          :clock-into-drawer "CLOCKING")))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-map-logbook-clocks* config
+               (--map (org-ml-map-property* :value
+                        (org-ml-timestamp-shift 1 'day it)
+                        it)
+                      it))
+             (org-ml-to-trimmed-string)))
+      =>  (:result "* headline"
+                   "CLOSED: [2019-01-01 Tue 00:00]"
+                   ":PROPERTIES:"
+                   ":Effort:   0:30"
+                   ":END:"
+                   ":LOGGING:"
+                   "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+                   "  log note"
+                   ":END:"
+                   ":CLOCKING:"
+                   "CLOCK: [2019-01-02 Wed 00:00]"
+                   ":END:"
+                   "contents"))
 
-;;     (defexamples-content org-ml-headline-get-contents
-;;       nil
-;;       (:buffer "* headline")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-get-contents
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t
-;;                   :clock-out-notes t))
-;;            (-map #'org-ml-to-trimmed-string))
-;;       => nil
+    (defexamples-content org-ml-headline-get-contents
+      nil
+      (:buffer "* headline")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-contents
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t))
+           (-map #'org-ml-to-trimmed-string))
+      => nil
 
-;;       (:buffer "* headline"
-;;                "something")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-get-contents
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t
-;;                   :clock-out-notes t))
-;;            (-map #'org-ml-to-trimmed-string))
-;;       => '("something")
+      (:buffer "* headline"
+               "something")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-contents
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t))
+           (-map #'org-ml-to-trimmed-string))
+      => '("something")
 
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue 00:00]"
-;;                ":LOGBOOK:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log note"
-;;                "CLOCK: [2019-01-01 Tue 00:00]"
-;;                ":END:"
-;;                ""
-;;                "- not log")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-get-contents
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t
-;;                   :clock-out-notes t))
-;;            (-map #'org-ml-to-trimmed-string))
-;;       => '("- not log")
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":LOGBOOK:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               ""
+               "- not log")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-contents
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t))
+           (-map #'org-ml-to-trimmed-string))
+      => '("- not log")
 
-;;       (:buffer "* headline"
-;;                "CLOSED: [2019-01-01 Tue 00:00]"
-;;                ":LOGGING:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log note"
-;;                ":END:"
-;;                ":CLOCKING:"
-;;                "CLOCK: [2019-01-01 Tue 00:00]"
-;;                ":END:"
-;;                ""
-;;                "- not log")
+      (:buffer "* headline"
+               "CLOSED: [2019-01-01 Tue 00:00]"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2019-01-01 Tue 00:00]"
+               ":END:"
+               ""
+               "- not log")
 
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-get-contents
-;;             (list :log-into-drawer "LOGGING"
-;;                   :clock-into-drawer "CLOCKING"))
-;;            (-map #'org-ml-to-trimmed-string))
-;;       => '("- not log"))
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-contents
+            (list :log-into-drawer "LOGGING"
+                  :clock-into-drawer "CLOCKING"))
+           (-map #'org-ml-to-trimmed-string))
+      => '("- not log"))
 
-;;     (defexamples-content org-ml-headline-set-contents
-;;       nil
+    (defexamples-content org-ml-headline-set-contents
+      nil
 
-;;       (:buffer "* headline")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-contents
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t
-;;                   :clock-out-notes t)
-;;             (list (org-ml-build-paragraph! "I'm new")))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "I'm new")
+      (:buffer "* headline")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-contents
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t)
+            (list (org-ml-build-paragraph! "I'm new")))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "I'm new")
 
-;;       (:buffer "* headline"
-;;                "something")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-contents
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t
-;;                   :clock-out-notes t)
-;;             (list (org-ml-build-paragraph! "I'm new")))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "I'm new")
+      (:buffer "* headline"
+               "something")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-contents
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t)
+            (list (org-ml-build-paragraph! "I'm new")))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "I'm new")
 
-;;       (:buffer "* headline"
-;;                ":LOGBOOK:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log1"
-;;                ":END:"
-;;                "something")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-contents
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t
-;;                   :clock-out-notes t)
-;;             (list (org-ml-build-paragraph! "I'm new")))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":LOGBOOK:"
-;;                   "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                   "  log1"
-;;                   ":END:"
-;;                   "I'm new")
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log1"
+               ":END:"
+               "something")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-contents
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t)
+            (list (org-ml-build-paragraph! "I'm new")))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+                  "  log1"
+                  ":END:"
+                  "I'm new")
 
-;;       (:buffer "* headline"
-;;                ":LOGBOOK:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  log1"
-;;                ":END:"
-;;                "something")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-set-contents
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t
-;;                   :clock-out-notes t)
-;;             nil)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":LOGBOOK:"
-;;                   "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                   "  log1"
-;;                   ":END:"))
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  log1"
+               ":END:"
+               "something")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-contents
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t)
+            nil)
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+                  "  log1"
+                  ":END:"))
 
-;;     (defexamples-content org-ml-headline-map-contents
-;;       nil
+    (defexamples-content org-ml-headline-map-contents
+      nil
 
-;;       (:buffer "* headline"
-;;                "something")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-map-contents*
-;;                (list :log-into-drawer t
-;;                      :clock-into-drawer t
-;;                      :clock-out-notes t)
-;;              (cons (org-ml-build-paragraph! "I'm new") it))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   "I'm new"
-;;                   "something"))
+      (:buffer "* headline"
+               "something")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-map-contents*
+               (list :log-into-drawer t
+                     :clock-into-drawer t
+                     :clock-out-notes t)
+             (cons (org-ml-build-paragraph! "I'm new") it))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  "I'm new"
+                  "something"))
 
-;;     (defexamples-content org-ml-headline-logbook-append-item
-;;       nil
-;;       (:buffer "* headline")
-;;       (let ((ut (- 1546300800 (car (current-time-zone)))))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-logbook-append-item
+    (defexamples-content org-ml-headline-logbook-append-item
+      nil
+      (:buffer "* headline")
+      (let ((ut (- 1546300800 (car (current-time-zone)))))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-logbook-append-item
               
-;;               (list :log-into-drawer t
-;;                     :clock-into-drawer t
-;;                     :clock-out-notes t)
-;;               (org-ml-build-log-note ut "new note"))
-;;              (org-ml-to-trimmed-string)))
-;;       => (:result "* headline"
-;;                   ":LOGBOOK:"
-;;                   "- Note taken on [2019-01-01 Tue 00:00] \\\\"
-;;                   "  new note"
-;;                   ":END:")
+              (list :log-into-drawer t
+                    :clock-into-drawer t
+                    :clock-out-notes t)
+              (org-ml-build-log-note ut "new note"))
+             (org-ml-to-trimmed-string)))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "- Note taken on [2019-01-01 Tue 00:00] \\\\"
+                  "  new note"
+                  ":END:")
 
-;;       (:buffer "* headline"
-;;                ":LOGBOOK:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  old note"
-;;                ":END:")
-;;       (let ((ut (- 1546300800 (car (current-time-zone)))))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-logbook-append-item
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  old note"
+               ":END:")
+      (let ((ut (- 1546300800 (car (current-time-zone)))))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-logbook-append-item
               
-;;               (list :log-into-drawer t
-;;                     :clock-into-drawer t
-;;                     :clock-out-notes t)
-;;               (org-ml-build-log-note ut "new note"))
-;;              (org-ml-to-trimmed-string)))
-;;       => (:result "* headline"
-;;                   ":LOGBOOK:"
-;;                   "- Note taken on [2019-01-01 Tue 00:00] \\\\"
-;;                   "  new note"
-;;                   "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                   "  old note"
-;;                   ":END:")
+              (list :log-into-drawer t
+                    :clock-into-drawer t
+                    :clock-out-notes t)
+              (org-ml-build-log-note ut "new note"))
+             (org-ml-to-trimmed-string)))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "- Note taken on [2019-01-01 Tue 00:00] \\\\"
+                  "  new note"
+                  "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+                  "  old note"
+                  ":END:")
 
-;;       (:buffer "* headline"
-;;                ":LOGGING:"
-;;                "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                "  old note"
-;;                ":END:"
-;;                ":CLOCKING:"
-;;                "CLOCK: [2112-01-01 Fri]"
-;;                ":END:")
-;;       (let ((ut (- 1546300800 (car (current-time-zone)))))
-;;         (->> (org-ml-parse-this-headline)
-;;              (org-ml-headline-logbook-append-item
-;;               (list :log-into-drawer "LOGGING"
-;;                     :clock-into-drawer "CLOCKING")
-;;               (org-ml-build-log-note ut "new note"))
-;;              (org-ml-to-trimmed-string)))
-;;       => (:result "* headline"
-;;                   ":LOGGING:"
-;;                   "- Note taken on [2019-01-01 Tue 00:00] \\\\"
-;;                   "  new note"
-;;                   "- Note taken on [2018-12-31 Mon 00:00] \\\\"
-;;                   "  old note"
-;;                   ":END:"
-;;                   ":CLOCKING:"
-;;                   "CLOCK: [2112-01-01 Fri]"
-;;                   ":END:"))
+      (:buffer "* headline"
+               ":LOGGING:"
+               "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+               "  old note"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2112-01-01 Fri]"
+               ":END:")
+      (let ((ut (- 1546300800 (car (current-time-zone)))))
+        (->> (org-ml-parse-this-headline)
+             (org-ml-headline-logbook-append-item
+              (list :log-into-drawer "LOGGING"
+                    :clock-into-drawer "CLOCKING")
+              (org-ml-build-log-note ut "new note"))
+             (org-ml-to-trimmed-string)))
+      => (:result "* headline"
+                  ":LOGGING:"
+                  "- Note taken on [2019-01-01 Tue 00:00] \\\\"
+                  "  new note"
+                  "- Note taken on [2018-12-31 Mon 00:00] \\\\"
+                  "  old note"
+                  ":END:"
+                  ":CLOCKING:"
+                  "CLOCK: [2112-01-01 Fri]"
+                  ":END:"))
 
-;;     (defexamples-content org-ml-headline-logbook-append-open-clock
-;;       nil
+    (defexamples-content org-ml-headline-logbook-append-open-clock
+      nil
 
-;;       (:buffer "* headline")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-logbook-append-open-clock
+      (:buffer "* headline")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-append-open-clock
             
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t
-;;                   :clock-out-notes t)
-;;             (- 1546300800 (car (current-time-zone))))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":LOGBOOK:"
-;;                   "CLOCK: [2019-01-01 Tue 00:00]"
-;;                   ":END:")
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t)
+            (- 1546300800 (car (current-time-zone))))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "CLOCK: [2019-01-01 Tue 00:00]"
+                  ":END:")
 
-;;       (:buffer "* headline"
-;;                ":LOGBOOK:"
-;;                "- note taken on [2018-12-30 Sun 00:00]"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-logbook-append-open-clock
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "- note taken on [2018-12-30 Sun 00:00]"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-append-open-clock
             
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t
-;;                   :clock-out-notes t)
-;;             (- 1546300800 (car (current-time-zone))))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":LOGBOOK:"
-;;                   "CLOCK: [2019-01-01 Tue 00:00]"
-;;                   "- note taken on [2018-12-30 Sun 00:00]"
-;;                   ":END:")
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t)
+            (- 1546300800 (car (current-time-zone))))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "CLOCK: [2019-01-01 Tue 00:00]"
+                  "- note taken on [2018-12-30 Sun 00:00]"
+                  ":END:")
 
-;;       (:buffer "* headline"
-;;                ":LOGGING:"
-;;                "- note taken on [2018-12-30 Sun 00:00]"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-logbook-append-open-clock
-;;             (list :log-into-drawer "LOGGING"
-;;                   :clock-into-drawer "CLOCKING")
-;;             (- 1546300800 (car (current-time-zone))))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":LOGGING:"
-;;                   "- note taken on [2018-12-30 Sun 00:00]"
-;;                   ":END:"
-;;                   ":CLOCKING:"
-;;                   "CLOCK: [2019-01-01 Tue 00:00]"
-;;                   ":END:"))
+      (:buffer "* headline"
+               ":LOGGING:"
+               "- note taken on [2018-12-30 Sun 00:00]"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-append-open-clock
+            (list :log-into-drawer "LOGGING"
+                  :clock-into-drawer "CLOCKING")
+            (- 1546300800 (car (current-time-zone))))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGGING:"
+                  "- note taken on [2018-12-30 Sun 00:00]"
+                  ":END:"
+                  ":CLOCKING:"
+                  "CLOCK: [2019-01-01 Tue 00:00]"
+                  ":END:"))
 
-;;     (defexamples-content org-ml-headline-logbook-close-open-clock
-;;       nil
-;;       (:buffer "* headline"
-;;                ":LOGBOOK:"
-;;                "- note taken on [2018-12-30 Sun 00:00]"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-logbook-close-open-clock
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t
-;;                   :clock-out-notes t)
-;;             (- 1546300800 (car (current-time-zone))) nil)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":LOGBOOK:"
-;;                   "- note taken on [2018-12-30 Sun 00:00]"
-;;                   ":END:")
+    (defexamples-content org-ml-headline-logbook-close-open-clock
+      nil
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "- note taken on [2018-12-30 Sun 00:00]"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-close-open-clock
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t)
+            (- 1546300800 (car (current-time-zone))) nil)
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "- note taken on [2018-12-30 Sun 00:00]"
+                  ":END:")
 
-;;       (:buffer "* headline"
-;;                ":LOGBOOK:"
-;;                "CLOCK: [2018-12-31 Mon 00:00]"
-;;                "- note taken on [2018-12-30 Sun 00:00]"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-logbook-close-open-clock
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t
-;;                   :clock-out-notes t)
-;;             (- 1546300800 (car (current-time-zone))) nil)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":LOGBOOK:"
-;;                   "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
-;;                   "- note taken on [2018-12-30 Sun 00:00]"
-;;                   ":END:")
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "CLOCK: [2018-12-31 Mon 00:00]"
+               "- note taken on [2018-12-30 Sun 00:00]"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-close-open-clock
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t)
+            (- 1546300800 (car (current-time-zone))) nil)
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+                  "- note taken on [2018-12-30 Sun 00:00]"
+                  ":END:")
 
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-logbook-close-open-clock
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t
-;;                   :clock-out-notes t)
-;;             (- 1546300800 (car (current-time-zone))) "new note")
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":LOGBOOK:"
-;;                   "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
-;;                   "- new note"
-;;                   "- note taken on [2018-12-30 Sun 00:00]"
-;;                   ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-close-open-clock
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t)
+            (- 1546300800 (car (current-time-zone))) "new note")
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+                  "- new note"
+                  "- note taken on [2018-12-30 Sun 00:00]"
+                  ":END:")
 
-;;       (:buffer "* headline"
-;;                ":LOGGING:"
-;;                "- note taken on [2018-12-30 Sun 00:00]"
-;;                ":END:"
-;;                ":CLOCKING:"
-;;                "CLOCK: [2018-12-31 Mon 00:00]"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-logbook-close-open-clock
-;;             '(:log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING" :clock-out-notes t) (- 1546300800 (car (current-time-zone))) nil)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":LOGGING:"
-;;                   "- note taken on [2018-12-30 Sun 00:00]"
-;;                   ":END:"
-;;                   ":CLOCKING:"
-;;                   "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
-;;                   ":END:"))
+      (:buffer "* headline"
+               ":LOGGING:"
+               "- note taken on [2018-12-30 Sun 00:00]"
+               ":END:"
+               ":CLOCKING:"
+               "CLOCK: [2018-12-31 Mon 00:00]"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-close-open-clock
+            '(:log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING" :clock-out-notes t) (- 1546300800 (car (current-time-zone))) nil)
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGGING:"
+                  "- note taken on [2018-12-30 Sun 00:00]"
+                  ":END:"
+                  ":CLOCKING:"
+                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+                  ":END:"))
 
-;;     (defexamples-content org-ml-headline-logbook-convert-config
-;;       nil
-;;       (:buffer "* headline"
-;;                "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
-;;                "- note taken on [2018-12-30 Sun 00:00]")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-logbook-convert-config nil
-;;                                                    (list :log-into-drawer t :clock-into-drawer t))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":LOGBOOK:"
-;;                   "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
-;;                   "- note taken on [2018-12-30 Sun 00:00]"
-;;                   ":END:")
+    (defexamples-content org-ml-headline-logbook-convert-config
+      nil
+      (:buffer "* headline"
+               "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+               "- note taken on [2018-12-30 Sun 00:00]")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-convert-config nil
+                                                   (list :log-into-drawer t :clock-into-drawer t))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGBOOK:"
+                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+                  "- note taken on [2018-12-30 Sun 00:00]"
+                  ":END:")
 
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-logbook-convert-config nil
-;;                                                    (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING"))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":LOGGING:"
-;;                   "- note taken on [2018-12-30 Sun 00:00]"
-;;                   ":END:"
-;;                   ":CLOCKING:"
-;;                   "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
-;;                   ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-convert-config nil
+                                                   (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING"))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGGING:"
+                  "- note taken on [2018-12-30 Sun 00:00]"
+                  ":END:"
+                  ":CLOCKING:"
+                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+                  ":END:")
 
-;;       (:buffer "* headline"
-;;                ":LOGBOOK:"
-;;                "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
-;;                "- note taken on [2018-12-30 Sun 00:00]"
-;;                ":END:")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-logbook-convert-config
-;;             (list :log-into-drawer t
-;;                   :clock-into-drawer t)
-;;             (list :log-into-drawer "LOGGING"
-;;                   :clock-into-drawer "CLOCKING"))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* headline"
-;;                   ":LOGGING:"
-;;                   "- note taken on [2018-12-30 Sun 00:00]"
-;;                   ":END:"
-;;                   ":CLOCKING:"
-;;                   "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
-;;                   ":END:")))
+      (:buffer "* headline"
+               ":LOGBOOK:"
+               "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+               "- note taken on [2018-12-30 Sun 00:00]"
+               ":END:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-logbook-convert-config
+            (list :log-into-drawer t
+                  :clock-into-drawer t)
+            (list :log-into-drawer "LOGGING"
+                  :clock-into-drawer "CLOCKING"))
+           (org-ml-to-trimmed-string))
+      => (:result "* headline"
+                  ":LOGGING:"
+                  "- note taken on [2018-12-30 Sun 00:00]"
+                  ":END:"
+                  ":CLOCKING:"
+                  "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
+                  ":END:")))
 
-;;   (def-example-subgroup "Headline (misc)"
-;;     nil
+  (def-example-subgroup "Headline (misc)"
+    nil
 
-;;     (defexamples-content org-ml-headline-get-path
-;;       nil
-;;       (:buffer "* one"
-;;                "** two"
-;;                "*** three")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-get-path))
-;;       => '("one")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-get-subheadlines)
-;;            (car)
-;;            (org-ml-headline-get-subheadlines)
-;;            (car)
-;;            (org-ml-headline-get-path))
-;;       => '("one" "two" "three"))
+    (defexamples-content org-ml-headline-get-path
+      nil
+      (:buffer "* one"
+               "** two"
+               "*** three")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-get-path))
+      => '("one")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-get-subheadlines)
+           (car)
+           (org-ml-headline-get-subheadlines)
+           (car)
+           (org-ml-headline-get-path))
+      => '("one" "two" "three"))
 
-;;     (defexamples-content org-ml-headline-update-item-statistics
-;;       nil
-;;       (:buffer "* statistically significant [/]"
-;;                "- irrelevant data"
-;;                "- [ ] good data"
-;;                "- [X] bad data")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-update-item-statistics)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* statistically significant [1/2]"
-;;                   "- irrelevant data"
-;;                   "- [ ] good data"
-;;                   "- [X] bad data")
+    (defexamples-content org-ml-headline-update-item-statistics
+      nil
+      (:buffer "* statistically significant [/]"
+               "- irrelevant data"
+               "- [ ] good data"
+               "- [X] bad data")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-update-item-statistics)
+           (org-ml-to-trimmed-string))
+      => (:result "* statistically significant [1/2]"
+                  "- irrelevant data"
+                  "- [ ] good data"
+                  "- [X] bad data")
 
-;;       :begin-hidden
-;;       (:buffer "* statistically significant [%]"
-;;                "- irrelevant data"
-;;                "- [ ] good data"
-;;                "- [X] bad data")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-update-item-statistics)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* statistically significant [50%]"
-;;                   "- irrelevant data"
-;;                   "- [ ] good data"
-;;                   "- [X] bad data")
-;;       :end-hidden
+      :begin-hidden
+      (:buffer "* statistically significant [%]"
+               "- irrelevant data"
+               "- [ ] good data"
+               "- [X] bad data")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-update-item-statistics)
+           (org-ml-to-trimmed-string))
+      => (:result "* statistically significant [50%]"
+                  "- irrelevant data"
+                  "- [ ] good data"
+                  "- [X] bad data")
+      :end-hidden
 
-;;       (:buffer "* statistically significant"
-;;                "- irrelevant data"
-;;                "- [ ] good data"
-;;                "- [X] bad data")
-;;       (:comment "Do nothing if nothing to update")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-headline-update-item-statistics)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* statistically significant"
-;;                   "- irrelevant data"
-;;                   "- [ ] good data"
-;;                   "- [X] bad data"))
+      (:buffer "* statistically significant"
+               "- irrelevant data"
+               "- [ ] good data"
+               "- [X] bad data")
+      (:comment "Do nothing if nothing to update")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-update-item-statistics)
+           (org-ml-to-trimmed-string))
+      => (:result "* statistically significant"
+                  "- irrelevant data"
+                  "- [ ] good data"
+                  "- [X] bad data"))
 
-;;     (defexamples-content org-ml-headline-update-todo-statistics
-;;       nil
-;;       (:buffer "* statistically significant [/]"
-;;                "** irrelevant data"
-;;                "** TODO good data"
-;;                "** DONE bad data")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-update-todo-statistics)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* statistically significant [1/2]"
-;;                   "** irrelevant data"
-;;                   "** TODO good data"
-;;                   "** DONE bad data")
+    (defexamples-content org-ml-headline-update-todo-statistics
+      nil
+      (:buffer "* statistically significant [/]"
+               "** irrelevant data"
+               "** TODO good data"
+               "** DONE bad data")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-update-todo-statistics)
+           (org-ml-to-trimmed-string))
+      => (:result "* statistically significant [1/2]"
+                  "** irrelevant data"
+                  "** TODO good data"
+                  "** DONE bad data")
 
-;;       :begin-hidden
-;;       (:buffer "* statistically significant [%]"
-;;                "** irrelevant data"
-;;                "** TODO good data"
-;;                "** DONE bad data")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-update-todo-statistics)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* statistically significant [50%]"
-;;                   "** irrelevant data"
-;;                   "** TODO good data"
-;;                   "** DONE bad data")
-;;       :end-hidden
+      :begin-hidden
+      (:buffer "* statistically significant [%]"
+               "** irrelevant data"
+               "** TODO good data"
+               "** DONE bad data")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-update-todo-statistics)
+           (org-ml-to-trimmed-string))
+      => (:result "* statistically significant [50%]"
+                  "** irrelevant data"
+                  "** TODO good data"
+                  "** DONE bad data")
+      :end-hidden
 
-;;       (:buffer "* statistically significant"
-;;                "** irrelevant data"
-;;                "** TODO good data"
-;;                "** DONE bad data")
-;;       (:comment "Do nothing if nothing to update")
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-headline-update-todo-statistics)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* statistically significant"
-;;                   "** irrelevant data"
-;;                   "** TODO good data"
-;;                   "** DONE bad data"))
+      (:buffer "* statistically significant"
+               "** irrelevant data"
+               "** TODO good data"
+               "** DONE bad data")
+      (:comment "Do nothing if nothing to update")
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-headline-update-todo-statistics)
+           (org-ml-to-trimmed-string))
+      => (:result "* statistically significant"
+                  "** irrelevant data"
+                  "** TODO good data"
+                  "** DONE bad data"))
 
-;;     (defexamples-content org-ml-headline-demote-subheadline
-;;       nil
-;;       (:buffer "* one"
-;;                "** two"
-;;                "** three"
-;;                "*** four")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-headline-demote-subheadline 0)
-;;            (org-ml-to-trimmed-string))
-;;       !!> error
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-headline-demote-subheadline 1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* one"
-;;                   "** two"
-;;                   "*** three"
-;;                   "*** four")
+    (defexamples-content org-ml-headline-demote-subheadline
+      nil
+      (:buffer "* one"
+               "** two"
+               "** three"
+               "*** four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-headline-demote-subheadline 0)
+           (org-ml-to-trimmed-string))
+      !!> error
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-headline-demote-subheadline 1)
+           (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  "** two"
+                  "*** three"
+                  "*** four")
 
-;;       :begin-hidden
+      :begin-hidden
 
-;;       ;; make sure this works with whitespace
+      ;; make sure this works with whitespace
 
-;;       ;; (:buffer "* one"
-;;       ;;          ""
-;;       ;;          "** two"
-;;       ;;          ""
-;;       ;;          "** three"
-;;       ;;          ""
-;;       ;;          "*** four")
-;;       ;; (->> (org-ml-parse-element-at 1)
-;;       ;;      (org-ml-headline-demote-subheadline 1)
-;;       ;;      (org-ml-to-trimmed-string))
-;;       ;; => (:result "* one"
-;;       ;;             ""
-;;       ;;             "** two"
-;;       ;;             ""
-;;       ;;             "*** three"
-;;       ;;             ""
-;;       ;;             "*** four")
+      ;; (:buffer "* one"
+      ;;          ""
+      ;;          "** two"
+      ;;          ""
+      ;;          "** three"
+      ;;          ""
+      ;;          "*** four")
+      ;; (->> (org-ml-parse-element-at 1)
+      ;;      (org-ml-headline-demote-subheadline 1)
+      ;;      (org-ml-to-trimmed-string))
+      ;; => (:result "* one"
+      ;;             ""
+      ;;             "** two"
+      ;;             ""
+      ;;             "*** three"
+      ;;             ""
+      ;;             "*** four")
 
-;;       (:buffer "* one"
-;;                "something"
-;;                ""
-;;                "** two"
-;;                "something"
-;;                ""
-;;                "** three"
-;;                "something"
-;;                ""
-;;                "*** four")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-headline-demote-subheadline 1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* one"
-;;                   "something"
-;;                   ""
-;;                   "** two"
-;;                   "something"
-;;                   ""
-;;                   "*** three"
-;;                   "something"
-;;                   ""
-;;                   "*** four")
+      ;;  TODO this fails
+      ;; (:buffer "* one"
+      ;;          "something"
+      ;;          ""
+      ;;          "** two"
+      ;;          "something"
+      ;;          ""
+      ;;          "** three"
+      ;;          "something"
+      ;;          ""
+      ;;          "*** four")
+      ;; (->> (org-ml-parse-element-at 1)
+      ;;      (org-ml-headline-demote-subheadline 1)
+      ;;      (org-ml-to-trimmed-string))
+      ;; => (:result "* one"
+      ;;             "something"
+      ;;             ""
+      ;;             "** two"
+      ;;             "something"
+      ;;             ""
+      ;;             "*** three"
+      ;;             "something"
+      ;;             ""
+      ;;             "*** four")
 
-;;       :end-hidden)
+      :end-hidden)
 
-;;     (defexamples-content org-ml-headline-demote-subtree
-;;       nil
-;;       (:buffer "* one"
-;;                "** two"
-;;                "** three"
-;;                "*** four")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-headline-demote-subtree 1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* one"
-;;                   "** two"
-;;                   "*** three"
-;;                   "**** four"))
+    (defexamples-content org-ml-headline-demote-subtree
+      nil
+      (:buffer "* one"
+               "** two"
+               "** three"
+               "*** four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-headline-demote-subtree 1)
+           (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  "** two"
+                  "*** three"
+                  "**** four"))
 
-;;     (defexamples-content org-ml-headline-promote-subheadline
-;;       nil
-;;       (:buffer "* one"
-;;                "** two"
-;;                "** three"
-;;                "*** four"
-;;                "*** four"
-;;                "*** four")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-headline-promote-subheadline 1 1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* one"
-;;                   "** two"
-;;                   "** three"
-;;                   "*** four"
-;;                   "** four"
-;;                   "*** four"))
+    (defexamples-content org-ml-headline-promote-subheadline
+      nil
+      (:buffer "* one"
+               "** two"
+               "** three"
+               "*** four"
+               "*** four"
+               "*** four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-headline-promote-subheadline 1 1)
+           (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  "** two"
+                  "** three"
+                  "*** four"
+                  "** four"
+                  "*** four"))
 
-;;     (defexamples-content org-ml-headline-promote-all-subheadlines
-;;       nil
-;;       (:buffer "* one"
-;;                "** two"
-;;                "** three"
-;;                "*** four"
-;;                "*** four"
-;;                "*** four")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-headline-promote-all-subheadlines 1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "* one"
-;;                   "** two"
-;;                   "** three"
-;;                   "** four"
-;;                   "** four"
-;;                   "** four")))
+    (defexamples-content org-ml-headline-promote-all-subheadlines
+      nil
+      (:buffer "* one"
+               "** two"
+               "** three"
+               "*** four"
+               "*** four"
+               "*** four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-headline-promote-all-subheadlines 1)
+           (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  "** two"
+                  "** three"
+                  "** four"
+                  "** four"
+                  "** four")))
 
-;;   ;; (def-example-subgroup "Item"
-;;   ;;   nil
+  ;; TODO why is this here?
+  ;; (def-example-subgroup "Item"
+  ;;   nil
 
-;;   ;; (defexamples-content org-ml-item-get-level
-;;   ;;   nil
-;;   ;;   (:buffer "- one"
-;;   ;;             "  - two"
-;;   ;;             "    - three")
-;;   ;;   (->> (org-ml-parse-this-item)
-;;   ;;        (org-ml-)))
+  ;; (defexamples-content org-ml-item-get-level
+  ;;   nil
+  ;;   (:buffer "- one"
+  ;;             "  - two"
+  ;;             "    - three")
+  ;;   (->> (org-ml-parse-this-item)
+  ;;        (org-ml-)))
 
-;;   ;; (defexamples-content org-ml-item-get-sublist
-;;   ;;   nil
-;;   ;;   (:buffer "- one"
-;;   ;;             "  - two"
-;;   ;;             "  - three"
-;;   ;;             "- four")
-;;   ;;   (->> (org-ml-parse-this-item)
-;;   ;;        (org-ml-item-get-sublist)
-;;   ;;        (org-ml-to-trimmed-string))
-;;   ;;   => (:result "- two"
-;;   ;;               "- three")
-;;   ;;   (:buffer "- one"
-;;   ;;             "- two")
-;;   ;;   (->> (org-ml-parse-this-item)
-;;   ;;        (org-ml-item-get-sublist)
-;;   ;;        (org-ml-to-trimmed-string))
-;;   ;;   => "")
+  ;; (defexamples-content org-ml-item-get-sublist
+  ;;   nil
+  ;;   (:buffer "- one"
+  ;;             "  - two"
+  ;;             "  - three"
+  ;;             "- four")
+  ;;   (->> (org-ml-parse-this-item)
+  ;;        (org-ml-item-get-sublist)
+  ;;        (org-ml-to-trimmed-string))
+  ;;   => (:result "- two"
+  ;;               "- three")
+  ;;   (:buffer "- one"
+  ;;             "- two")
+  ;;   (->> (org-ml-parse-this-item)
+  ;;        (org-ml-item-get-sublist)
+  ;;        (org-ml-to-trimmed-string))
+  ;;   => "")
 
-;;   ;; (defexamples-content org-ml-item-get-paragraph
-;;   ;;   nil
-;;   ;;   (:buffer "- one")
-;;   ;;   (->> (org-ml-parse-this-item)
-;;   ;;        (org-ml-item-get-paragraph)
-;;   ;;        (org-ml-to-trimmed-string))
-;;   ;;   => "one"
-;;   ;;   (:buffer "- [ ] one")
-;;   ;;   (->> (org-ml-parse-this-item)
-;;   ;;        (org-ml-item-get-paragraph)
-;;   ;;        (org-ml-to-trimmed-string))
-;;   ;;   => "one"
-;;   ;;   (:buffer "- tmsu :: one")
-;;   ;;   (->> (org-ml-parse-this-item)
-;;   ;;        (org-ml-item-get-paragraph)
-;;   ;;        (org-ml-to-trimmed-string))
-;;   ;;   => "one"
-;;   ;;   (:buffer "- tmsu ::")
-;;   ;;   (->> (org-ml-parse-this-item)
-;;   ;;        (org-ml-item-get-paragraph)
-;;   ;;        (org-ml-to-trimmed-string))
-;;   ;;   => ""))
+  ;; (defexamples-content org-ml-item-get-paragraph
+  ;;   nil
+  ;;   (:buffer "- one")
+  ;;   (->> (org-ml-parse-this-item)
+  ;;        (org-ml-item-get-paragraph)
+  ;;        (org-ml-to-trimmed-string))
+  ;;   => "one"
+  ;;   (:buffer "- [ ] one")
+  ;;   (->> (org-ml-parse-this-item)
+  ;;        (org-ml-item-get-paragraph)
+  ;;        (org-ml-to-trimmed-string))
+  ;;   => "one"
+  ;;   (:buffer "- tmsu :: one")
+  ;;   (->> (org-ml-parse-this-item)
+  ;;        (org-ml-item-get-paragraph)
+  ;;        (org-ml-to-trimmed-string))
+  ;;   => "one"
+  ;;   (:buffer "- tmsu ::")
+  ;;   (->> (org-ml-parse-this-item)
+  ;;        (org-ml-item-get-paragraph)
+  ;;        (org-ml-to-trimmed-string))
+  ;;   => ""))
 
-;;   (def-example-subgroup "Plain List"
-;;     nil
+  (def-example-subgroup "Plain List"
+    nil
     
-;;     (defexamples-content org-ml-plain-list-set-type
-;;       nil
-;;       (:buffer "- [ ] one"
-;;                "- [X] two")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-plain-list-set-type 'ordered)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "1. [ ] one"
-;;                   "2. [X] two")
-;;       (:buffer "1. [ ] one"
-;;                "2. [X] two")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-plain-list-set-type 'unordered)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "- [ ] one"
-;;                   "- [X] two"))
+    (defexamples-content org-ml-plain-list-set-type
+      nil
+      (:buffer "- [ ] one"
+               "- [X] two")
+      (->> (org-ml-parse-this-element)
+           (org-ml-plain-list-set-type 'ordered)
+           (org-ml-to-trimmed-string))
+      => (:result "1. [ ] one"
+                  "2. [X] two")
+      (:buffer "1. [ ] one"
+               "2. [X] two")
+      (->> (org-ml-parse-this-element)
+           (org-ml-plain-list-set-type 'unordered)
+           (org-ml-to-trimmed-string))
+      => (:result "- [ ] one"
+                  "- [X] two"))
 
-;;     (defexamples-content org-ml-plain-list-indent-item
-;;       nil
-;;       (:buffer "- one"
-;;                "- two"
-;;                "  - three"
-;;                "- four")
-;;       (:comment "It makes no sense to indent the first item")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-plain-list-indent-item 0)
-;;            (org-ml-to-trimmed-string))
-;;       !!> error
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-plain-list-indent-item 1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "- one"
-;;                   "  - two"
-;;                   "  - three"
-;;                   "- four")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-plain-list-indent-item 2)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "- one"
-;;                   "- two"
-;;                   "  - three"
-;;                   "  - four"))
+    (defexamples-content org-ml-plain-list-indent-item
+      nil
+      (:buffer "- one"
+               "- two"
+               "  - three"
+               "- four")
+      (:comment "It makes no sense to indent the first item")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-plain-list-indent-item 0)
+           (org-ml-to-trimmed-string))
+      !!> error
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-plain-list-indent-item 1)
+           (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  "  - two"
+                  "  - three"
+                  "- four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-plain-list-indent-item 2)
+           (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  "- two"
+                  "  - three"
+                  "  - four"))
 
-;;     (defexamples-content org-ml-plain-list-indent-item-tree
-;;       nil
-;;       (:buffer "- one"
-;;                "- two"
-;;                "  - three"
-;;                "- four")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-plain-list-indent-item-tree 1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "- one"
-;;                   "  - two"
-;;                   "    - three"
-;;                   "- four"))
+    (defexamples-content org-ml-plain-list-indent-item-tree
+      nil
+      (:buffer "- one"
+               "- two"
+               "  - three"
+               "- four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-plain-list-indent-item-tree 1)
+           (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  "  - two"
+                  "    - three"
+                  "- four"))
 
-;;     (defexamples-content org-ml-plain-list-outdent-item
-;;       nil
-;;       (:buffer "- one"
-;;                "- two"
-;;                "  - three"
-;;                "  - three"
-;;                "  - three"
-;;                "- four")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-plain-list-outdent-item 1 0)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "- one"
-;;                   "- two"
-;;                   "- three"
-;;                   "  - three"
-;;                   "  - three"
-;;                   "- four")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-plain-list-outdent-item 1 1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "- one"
-;;                   "- two"
-;;                   "  - three"
-;;                   "- three"
-;;                   "  - three"
-;;                   "- four")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-plain-list-outdent-item 2 1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "- one"
-;;                   "- two"
-;;                   "  - three"
-;;                   "  - three"
-;;                   "  - three"
-;;                   "- four"))
+    (defexamples-content org-ml-plain-list-outdent-item
+      nil
+      (:buffer "- one"
+               "- two"
+               "  - three"
+               "  - three"
+               "  - three"
+               "- four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-plain-list-outdent-item 1 0)
+           (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  "- two"
+                  "- three"
+                  "  - three"
+                  "  - three"
+                  "- four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-plain-list-outdent-item 1 1)
+           (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  "- two"
+                  "  - three"
+                  "- three"
+                  "  - three"
+                  "- four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-plain-list-outdent-item 2 1)
+           (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  "- two"
+                  "  - three"
+                  "  - three"
+                  "  - three"
+                  "- four"))
     
-;;     (defexamples-content org-ml-plain-list-outdent-all-items
-;;       nil
-;;       (:buffer "- one"
-;;                "- two"
-;;                "  - three"
-;;                "  - three"
-;;                "  - three"
-;;                "- four")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-plain-list-outdent-all-items 1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "- one"
-;;                   "- two"
-;;                   "- three"
-;;                   "- three"
-;;                   "- three"
-;;                   "- four")
-;;       (->> (org-ml-parse-element-at 1)
-;;            (org-ml-plain-list-outdent-all-items 2)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "- one"
-;;                   "- two"
-;;                   "  - three"
-;;                   "  - three"
-;;                   "  - three"
-;;                   "- four")))
+    (defexamples-content org-ml-plain-list-outdent-all-items
+      nil
+      (:buffer "- one"
+               "- two"
+               "  - three"
+               "  - three"
+               "  - three"
+               "- four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-plain-list-outdent-all-items 1)
+           (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  "- two"
+                  "- three"
+                  "- three"
+                  "- three"
+                  "- four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-plain-list-outdent-all-items 2)
+           (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  "- two"
+                  "  - three"
+                  "  - three"
+                  "  - three"
+                  "- four")))
 
-;;   (def-example-subgroup "Table"
-;;     nil
+  (def-example-subgroup "Table"
+    nil
 
-;;     (defexamples-content org-ml-table-get-cell
-;;       nil
-;;       (:buffer "| 1 | 2 | 3 |"
-;;                "|---+---+---|"
-;;                "| a | b | c |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-get-cell 0 0)
-;;            (org-ml-get-children)
-;;            (car))
-;;       => "1"
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-get-cell 1 1)
-;;            (org-ml-get-children)
-;;            (car))
-;;       => "b"
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-get-cell -1 -1)
-;;            (org-ml-get-children)
-;;            (car))
-;;       => "c"
-;;       :begin-hidden
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-get-cell 0 3)
-;;            (org-ml-get-children)
-;;            (car))
-;;       !!> arg-type-error
-;;       :end-hidden)
+    (defexamples-content org-ml-table-get-cell
+      nil
+      (:buffer "| 1 | 2 | 3 |"
+               "|---+---+---|"
+               "| a | b | c |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-get-cell 0 0)
+           (org-ml-get-children)
+           (car))
+      => "1"
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-get-cell 1 1)
+           (org-ml-get-children)
+           (car))
+      => "b"
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-get-cell -1 -1)
+           (org-ml-get-children)
+           (car))
+      => "c"
+      :begin-hidden
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-get-cell 0 3)
+           (org-ml-get-children)
+           (car))
+      !!> arg-type-error
+      :end-hidden)
 
-;;     (defexamples-content org-ml-table-delete-column
-;;       nil
-;;       (:buffer "| a | b |"
-;;                "|---+---|"
-;;                "| c | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-delete-column 0)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| b |"
-;;                   "|---|"
-;;                   "| d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-delete-column 1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| a |"
-;;                   "|---|"
-;;                   "| c |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-delete-column -1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| a |"
-;;                   "|---|"
-;;                   "| c |"))
+    (defexamples-content org-ml-table-delete-column
+      nil
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-delete-column 0)
+           (org-ml-to-trimmed-string))
+      => (:result "| b |"
+                  "|---|"
+                  "| d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-delete-column 1)
+           (org-ml-to-trimmed-string))
+      => (:result "| a |"
+                  "|---|"
+                  "| c |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-delete-column -1)
+           (org-ml-to-trimmed-string))
+      => (:result "| a |"
+                  "|---|"
+                  "| c |"))
 
-;;     (defexamples-content org-ml-table-delete-row
-;;       nil
-;;       (:buffer "| a | b |"
-;;                "|---+---|"
-;;                "| c | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-delete-row 0)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "|---+---|"
-;;                   "| c | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-delete-row 1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| a | b |"
-;;                   "| c | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-delete-row -1)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| a | b |"
-;;                   "|---+---|"))
+    (defexamples-content org-ml-table-delete-row
+      nil
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-delete-row 0)
+           (org-ml-to-trimmed-string))
+      => (:result "|---+---|"
+                  "| c | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-delete-row 1)
+           (org-ml-to-trimmed-string))
+      => (:result "| a | b |"
+                  "| c | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-delete-row -1)
+           (org-ml-to-trimmed-string))
+      => (:result "| a | b |"
+                  "|---+---|"))
 
-;;     (defexamples-content org-ml-table-insert-column!
-;;       nil
-;;       (:buffer "| a | b |"
-;;                "|---+---|"
-;;                "| c | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-insert-column! 1 '("x" "y"))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| a | x | b |"
-;;                   "|---+---+---|"
-;;                   "| c | y | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-insert-column! -1 '("x" "y"))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| a | b | x |"
-;;                   "|---+---+---|"
-;;                   "| c | d | y |"))
+    (defexamples-content org-ml-table-insert-column!
+      nil
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-insert-column! 1 '("x" "y"))
+           (org-ml-to-trimmed-string))
+      => (:result "| a | x | b |"
+                  "|---+---+---|"
+                  "| c | y | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-insert-column! -1 '("x" "y"))
+           (org-ml-to-trimmed-string))
+      => (:result "| a | b | x |"
+                  "|---+---+---|"
+                  "| c | d | y |"))
 
-;;     (defexamples-content org-ml-table-insert-row!
-;;       nil
-;;       (:buffer "| a | b |"
-;;                "|---+---|"
-;;                "| c | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-insert-row! 1 '("x" "y"))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| a | b |"
-;;                   "| x | y |"
-;;                   "|---+---|"
-;;                   "| c | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-insert-row! 2 '("x" "y"))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| a | b |"
-;;                   "|---+---|"
-;;                   "| x | y |"
-;;                   "| c | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-insert-row! -1 '("x" "y"))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| a | b |"
-;;                   "|---+---|"
-;;                   "| c | d |"
-;;                   "| x | y |"))
+    (defexamples-content org-ml-table-insert-row!
+      nil
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-insert-row! 1 '("x" "y"))
+           (org-ml-to-trimmed-string))
+      => (:result "| a | b |"
+                  "| x | y |"
+                  "|---+---|"
+                  "| c | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-insert-row! 2 '("x" "y"))
+           (org-ml-to-trimmed-string))
+      => (:result "| a | b |"
+                  "|---+---|"
+                  "| x | y |"
+                  "| c | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-insert-row! -1 '("x" "y"))
+           (org-ml-to-trimmed-string))
+      => (:result "| a | b |"
+                  "|---+---|"
+                  "| c | d |"
+                  "| x | y |"))
 
-;;     (defexamples-content org-ml-table-replace-cell!
-;;       nil
-;;       (:buffer "| 1 | 2 |"
-;;                "|---+---|"
-;;                "| a | b |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-replace-cell! 0 0 "2")
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| 2 | 2 |"
-;;                   "|---+---|"
-;;                   "| a | b |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-replace-cell! 0 0 nil)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "|   | 2 |"
-;;                   "|---+---|"
-;;                   "| a | b |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-replace-cell! -1 -1 "B")
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| 1 | 2 |"
-;;                   "|---+---|"
-;;                   "| a | B |"))
+    (defexamples-content org-ml-table-replace-cell!
+      nil
+      (:buffer "| 1 | 2 |"
+               "|---+---|"
+               "| a | b |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-replace-cell! 0 0 "2")
+           (org-ml-to-trimmed-string))
+      => (:result "| 2 | 2 |"
+                  "|---+---|"
+                  "| a | b |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-replace-cell! 0 0 nil)
+           (org-ml-to-trimmed-string))
+      => (:result "|   | 2 |"
+                  "|---+---|"
+                  "| a | b |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-replace-cell! -1 -1 "B")
+           (org-ml-to-trimmed-string))
+      => (:result "| 1 | 2 |"
+                  "|---+---|"
+                  "| a | B |"))
 
-;;     (defexamples-content org-ml-table-replace-column!
-;;       nil
-;;       (:buffer "| a | b |"
-;;                "|---+---|"
-;;                "| c | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-replace-column! 0 '("A" "B"))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| A | b |"
-;;                   "|---+---|"
-;;                   "| B | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-replace-column! 0 nil)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "|   | b |"
-;;                   "|---+---|"
-;;                   "|   | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-replace-column! -1 '("A" "B"))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| a | A |"
-;;                   "|---+---|"
-;;                   "| c | B |"))
+    (defexamples-content org-ml-table-replace-column!
+      nil
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-replace-column! 0 '("A" "B"))
+           (org-ml-to-trimmed-string))
+      => (:result "| A | b |"
+                  "|---+---|"
+                  "| B | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-replace-column! 0 nil)
+           (org-ml-to-trimmed-string))
+      => (:result "|   | b |"
+                  "|---+---|"
+                  "|   | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-replace-column! -1 '("A" "B"))
+           (org-ml-to-trimmed-string))
+      => (:result "| a | A |"
+                  "|---+---|"
+                  "| c | B |"))
 
-;;     (defexamples-content org-ml-table-replace-row!
-;;       nil
-;;       (:buffer "| a | b |"
-;;                "|---+---|"
-;;                "| c | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-replace-row! 0 '("A" "B"))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| A | B |"
-;;                   "|---+---|"
-;;                   "| c | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-replace-row! 0 nil)
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "|   |   |"
-;;                   "|---+---|"
-;;                   "| c | d |")
-;;       (->> (org-ml-parse-this-element)
-;;            (org-ml-table-replace-row! -1 '("A" "B"))
-;;            (org-ml-to-trimmed-string))
-;;       => (:result "| a | b |"
-;;                   "|---+---|"
-;;                   "| A | B |"))))
+    (defexamples-content org-ml-table-replace-row!
+      nil
+      (:buffer "| a | b |"
+               "|---+---|"
+               "| c | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-replace-row! 0 '("A" "B"))
+           (org-ml-to-trimmed-string))
+      => (:result "| A | B |"
+                  "|---+---|"
+                  "| c | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-replace-row! 0 nil)
+           (org-ml-to-trimmed-string))
+      => (:result "|   |   |"
+                  "|---+---|"
+                  "| c | d |")
+      (->> (org-ml-parse-this-element)
+           (org-ml-table-replace-row! -1 '("A" "B"))
+           (org-ml-to-trimmed-string))
+      => (:result "| a | b |"
+                  "|---+---|"
+                  "| A | B |"))))
 
-;; (def-example-group "Node Matching"
-;;   "Use pattern-matching to selectively perform operations on nodes in trees."
+(def-example-group "Node Matching"
+  "Use pattern-matching to selectively perform operations on nodes in trees."
 
-;;   (defexamples-content org-ml-match
-;;     nil
+  (defexamples-content org-ml-match
+    nil
 
-;;     (:buffer "* headline 1"
-;;              "** TODO headline 2"
-;;              "stuff"
-;;              "- item 1"
-;;              "- item 2"
-;;              "- item 3"
-;;              "** DONE headline 3"
-;;              "- item 4"
-;;              "- item 5"
-;;              "- item 6"
-;;              "** TODO COMMENT headline 4"
-;;              "- item 7"
-;;              "- item 8"
-;;              "- item 9")
-;;     (:comment "Match items (excluding the first) in headlines that"
-;;               "are marked \"TODO\" and not commented."
-;;               "The :many keyword matches the section and plain-list"
-;;               "nodes holding the items.")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:and (:todo-keyword "TODO") (:commentedp nil))
-;;                          :any *
-;;                          (:and item (> 0))))
-;;          (-map #'org-ml-to-trimmed-string))
-;;     => '("- item 2" "- item 3")
+    (:buffer "* headline 1"
+             "** TODO headline 2"
+             "stuff"
+             "- item 1"
+             "- item 2"
+             "- item 3"
+             "** DONE headline 3"
+             "- item 4"
+             "- item 5"
+             "- item 6"
+             "** TODO COMMENT headline 4"
+             "- item 7"
+             "- item 8"
+             "- item 9")
+    (:comment "Match items (excluding the first) in headlines that"
+              "are marked \"TODO\" and not commented."
+              "The :many keyword matches the section and plain-list"
+              "nodes holding the items.")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:and (:todo-keyword "TODO") (:commentedp nil))
+                         :any *
+                         (:and item (> 0))))
+         (-map #'org-ml-to-trimmed-string))
+    => '("- item 2" "- item 3")
 
-;;     (:buffer "*one* *two* *three* *four* *five* *six*")
-;;     (:comment "Return all bold nodes")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(bold))
-;;          (-map #'org-ml-to-trimmed-string))
-;;     => '("*one*" "*two*" "*three*" "*four*" "*five*" "*six*")
-;;     (:comment "Return first bold node")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(:first bold))
-;;          (-map #'org-ml-to-trimmed-string))
-;;     => '("*one*")
-;;     (:comment "Return last bold node")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(:last bold))
-;;          (-map #'org-ml-to-trimmed-string))
-;;     => '("*six*")
-;;     (:comment "Return a select bold node")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(:nth 2 bold))
-;;          (-map #'org-ml-to-trimmed-string))
-;;     => '("*three*")
-;;     (:comment "Return a sublist of matched bold nodes")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(:sub 1 3 bold))
-;;          (-map #'org-ml-to-trimmed-string))
-;;     => '("*two*" "*three*" "*four*")
+    (:buffer "*one* *two* *three* *four* *five* *six*")
+    (:comment "Return all bold nodes")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(bold))
+         (-map #'org-ml-to-trimmed-string))
+    => '("*one*" "*two*" "*three*" "*four*" "*five*" "*six*")
+    (:comment "Return first bold node")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(:first bold))
+         (-map #'org-ml-to-trimmed-string))
+    => '("*one*")
+    (:comment "Return last bold node")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(:last bold))
+         (-map #'org-ml-to-trimmed-string))
+    => '("*six*")
+    (:comment "Return a select bold node")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(:nth 2 bold))
+         (-map #'org-ml-to-trimmed-string))
+    => '("*three*")
+    (:comment "Return a sublist of matched bold nodes")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(:sub 1 3 bold))
+         (-map #'org-ml-to-trimmed-string))
+    => '("*two*" "*three*" "*four*")
 
-;;     :begin-hidden
+    :begin-hidden
 
-;;     ;; Test all atomic and compound condition combinations here.
-;;     ;; These tests ensure that:
-;;     ;; - `org-ml--match-make-condition-form' is correct for all VALID
-;;     ;;   condition combinations (the error cases are tested in
-;;     ;;   `org-ml-test.el')
-;;     ;; - the single and multiple condition paths in
-;;     ;;   `org-ml--match-make-inner-pattern-form' are correct
+    ;; Test all atomic and compound condition combinations here.
+    ;; These tests ensure that:
+    ;; - `org-ml--match-make-condition-form' is correct for all VALID
+    ;;   condition combinations (the error cases are tested in
+    ;;   `org-ml-test.el')
+    ;; - the single and multiple condition paths in
+    ;;   `org-ml--match-make-inner-pattern-form' are correct
     
-;;     (:buffer "* one"
-;;              "** TODO two"
-;;              "2"
-;;              "** COMMENT three"
-;;              "3"
-;;              "** four"
-;;              "4"
-;;              "** DONE five"
-;;              "5")
+    (:buffer "* one"
+             "** TODO two"
+             "2"
+             "** COMMENT three"
+             "3"
+             "** four"
+             "4"
+             "** DONE five"
+             "5")
     
-;;     ;; type
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '(headline section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("2" "3" "4" "5")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '(headline table))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => nil
+    ;; type
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '(headline section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("2" "3" "4" "5")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '(headline table))
+         (--map (org-ml-to-trimmed-string it)))
+    => nil
 
-;;     ;; index
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '(0 section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("2")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '(-1 section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("5")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '(4 section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => nil
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '(-5 section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => nil
+    ;; index
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '(0 section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("2")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '(-1 section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("5")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '(4 section))
+         (--map (org-ml-to-trimmed-string it)))
+    => nil
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '(-5 section))
+         (--map (org-ml-to-trimmed-string it)))
+    => nil
 
-;;     ;; relative index
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((> 0) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("3" "4" "5")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((>= 1) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("3" "4" "5")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((<= -2) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("2" "3" "4")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((< -1) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("2" "3" "4")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((< 0) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => nil
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((> 3) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => nil
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((> -1) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => nil
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((< -4) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => nil
+    ;; relative index
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((> 0) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("3" "4" "5")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((>= 1) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("3" "4" "5")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((<= -2) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("2" "3" "4")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((< -1) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("2" "3" "4")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((< 0) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => nil
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((> 3) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => nil
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((> -1) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => nil
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((< -4) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => nil
 
-;;     ;; properties
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:todo-keyword "TODO") section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("2")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:todo-keyword nil) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("3" "4")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:todo-keyword "DONE") section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("5")
+    ;; properties
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:todo-keyword "TODO") section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("2")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:todo-keyword nil) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("3" "4")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:todo-keyword "DONE") section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("5")
 
-;;     ;; pred
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:pred org-ml-headline-is-done) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("5")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:pred stringp) section)) ; silly but proves my point
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => nil
+    ;; pred
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:pred org-ml-headline-is-done) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("5")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:pred stringp) section)) ; silly but proves my point
+         (--map (org-ml-to-trimmed-string it)))
+    => nil
 
-;;     ;; :not
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:not (:todo-keyword nil)) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("2" "5")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:not headline) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => nil
+    ;; :not
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:not (:todo-keyword nil)) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("2" "5")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:not headline) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => nil
     
-;;     ;; :and
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:and (< 2) (:todo-keyword nil)) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("3")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:and (:archivedp t) (:todo-keyword nil)) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => nil
+    ;; :and
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:and (< 2) (:todo-keyword nil)) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("3")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:and (:archivedp t) (:todo-keyword nil)) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => nil
 
-;;     ;; :or
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:or (:todo-keyword "DONE") (:todo-keyword "TODO")) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("2" "5")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:or (:archivedp t) (:todo-keyword "NEXT")) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => nil
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match '((:or (:todo-keyword "DONE") (:todo-keyword "TODO")) section))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("2" "5")
+    ;; :or
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:or (:todo-keyword "DONE") (:todo-keyword "TODO")) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("2" "5")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:or (:archivedp t) (:todo-keyword "NEXT")) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => nil
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match '((:or (:todo-keyword "DONE") (:todo-keyword "TODO")) section))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("2" "5")
 
-;;     ;; Test the remaining paths of `org-ml--match-make-inner-pattern-form'
-;;     ;; These test cases ensure that:
-;;     ;; - the :any + condition path is correct
-;;     ;; - the condition + :any path is correct
-;;     ;; - the * path is correct
-;;     ;; - the + path is correct
-;;     ;; - the ordering of each above path is correct (assumed because the tests
-;;     ;;   contain nodes with multiple children that have a defined order to be
-;;     ;;   preserved)
-;;     ;;
-;;     ;; Note that all error cases are tested in `org-ml-test.el'
-;;     ;;
-;;     ;; Also note that we assume `org-ml--match-make-condition-form' is
-;;     ;; independent of `org-ml--match-make-inner-pattern-form' which
-;;     ;; liberates us from testing all predicate patterns again below.
+    ;; Test the remaining paths of `org-ml--match-make-inner-pattern-form'
+    ;; These test cases ensure that:
+    ;; - the :any + condition path is correct
+    ;; - the condition + :any path is correct
+    ;; - the * path is correct
+    ;; - the + path is correct
+    ;; - the ordering of each above path is correct (assumed because the tests
+    ;;   contain nodes with multiple children that have a defined order to be
+    ;;   preserved)
+    ;;
+    ;; Note that all error cases are tested in `org-ml-test.el'
+    ;;
+    ;; Also note that we assume `org-ml--match-make-condition-form' is
+    ;; independent of `org-ml--match-make-inner-pattern-form' which
+    ;; liberates us from testing all predicate patterns again below.
 
-;;     ;; :any (first)
-;;     (:buffer "*_1_* */2/* _*3*_ _/4/_ /*5*/ /_6_/")
+    ;; :any (first)
+    (:buffer "*_1_* */2/* _*3*_ _/4/_ /*5*/ /_6_/")
 
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(:any (:or bold italic)))
-;;          (--map (org-ml-to-trimmed-string it)))
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(:any (:or bold italic)))
+         (--map (org-ml-to-trimmed-string it)))
     
-;;     ;; :any (last)
-;;     => '("/2/" "*3*" "/4/" "*5*")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '((:or bold italic) :any))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("_1_" "/2/" "*5*" "_6_")
+    ;; :any (last)
+    => '("/2/" "*3*" "/4/" "*5*")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '((:or bold italic) :any))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("_1_" "/2/" "*5*" "_6_")
 
-;;     ;; *
-;;     (:buffer "* one"
-;;              "- 1"
-;;              "- 2"
-;;              "  - 3"
-;;              "** two"
-;;              "- 4"
-;;              "- 5"
-;;              "  - 6"
-;;              "** three"
-;;              "- 7"
-;;              "- 8"
-;;              "  - 9")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(:any * item))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("- 1" "- 2\n  - 3" "- 3" "- 4" "- 5\n  - 6" "- 6" "- 7"
-;;          "- 8\n  - 9" "- 9")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(section plain-list :any * item))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("- 1" "- 2\n  - 3" "- 3")
+    ;; *
+    (:buffer "* one"
+             "- 1"
+             "- 2"
+             "  - 3"
+             "** two"
+             "- 4"
+             "- 5"
+             "  - 6"
+             "** three"
+             "- 7"
+             "- 8"
+             "  - 9")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(:any * item))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("- 1" "- 2\n  - 3" "- 3" "- 4" "- 5\n  - 6" "- 6" "- 7"
+         "- 8\n  - 9" "- 9")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(section plain-list :any * item))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("- 1" "- 2\n  - 3" "- 3")
 
-;;     ;; + and ?
-;;     (:buffer "* one"
-;;              "** two"
-;;              "*** three"
-;;              "** four"
-;;              "*** five"
-;;              "**** six")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(headline +))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("** two\n*** three" "*** three" "** four\n*** five\n**** six"
-;;          "*** five\n**** six" "**** six")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(headline + headline))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("*** three" "*** five\n**** six" "**** six")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(headline headline \?))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("** two\n*** three" "** four\n*** five\n**** six" "*** three"
-;;          "*** five\n**** six")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(headline headline \? headline))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("*** three" "*** five\n**** six" "**** six")
+    ;; + and ?
+    (:buffer "* one"
+             "** two"
+             "*** three"
+             "** four"
+             "*** five"
+             "**** six")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(headline +))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("** two\n*** three" "*** three" "** four\n*** five\n**** six"
+         "*** five\n**** six" "**** six")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(headline + headline))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("*** three" "*** five\n**** six" "**** six")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(headline headline \?))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("** two\n*** three" "** four\n*** five\n**** six" "*** three"
+         "*** five\n**** six")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(headline headline \? headline))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("*** three" "*** five\n**** six" "**** six")
 
-;;     ;; alternation
-;;     (:buffer "* one"
-;;              "** two"
-;;              "*a* /_b_/"
-;;              "*** three"
-;;              "*c* /_d_/")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(headline section paragraph (bold | italic underline)))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("*a*" "_b_")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match '(headline (nil | headline) section paragraph (bold | italic underline)))
-;;          (--map (org-ml-to-trimmed-string it)))
-;;     => '("*a*" "_b_" "*c*" "_d_")
+    ;; alternation
+    (:buffer "* one"
+             "** two"
+             "*a* /_b_/"
+             "*** three"
+             "*c* /_d_/")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(headline section paragraph (bold | italic underline)))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("*a*" "_b_")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match '(headline (nil | headline) section paragraph (bold | italic underline)))
+         (--map (org-ml-to-trimmed-string it)))
+    => '("*a*" "_b_" "*c*" "_d_")
 
-;;     ;; slicer tests are not here, see `org-ml-test.el'
+    ;; slicer tests are not here, see `org-ml-test.el'
 
-;;     :end-hidden)
+    :end-hidden)
 
-;;   (defexamples-content org-ml-match-delete
-;;     nil
-;;     (:buffer "* headline one"
-;;              "** headline two"
-;;              "** headline three"
-;;              "** headline four")
-;;     (:comment "Selectively delete headlines")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match-delete '(headline))
-;;          (org-ml-to-trimmed-string))
-;;     => "* headline one"
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match-delete '(:first headline))
-;;          (org-ml-to-trimmed-string))
-;;     => (:result "* headline one"
-;;                 "** headline three"
-;;                 "** headline four")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match-delete '(:last headline))
-;;          (org-ml-to-trimmed-string))
-;;     => (:result "* headline one"
-;;                 "** headline two"
-;;                 "** headline three"))
+  (defexamples-content org-ml-match-delete
+    nil
+    (:buffer "* headline one"
+             "** headline two"
+             "** headline three"
+             "** headline four")
+    (:comment "Selectively delete headlines")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match-delete '(headline))
+         (org-ml-to-trimmed-string))
+    => "* headline one"
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match-delete '(:first headline))
+         (org-ml-to-trimmed-string))
+    => (:result "* headline one"
+                "** headline three"
+                "** headline four")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match-delete '(:last headline))
+         (org-ml-to-trimmed-string))
+    => (:result "* headline one"
+                "** headline two"
+                "** headline three"))
 
-;;   (defexamples-content org-ml-match-extract
-;;     nil
-;;     (:buffer "pull me /under/")
-;;     (--> (org-ml-parse-this-element)
-;;          (org-ml-match-extract '(:any * italic) it)
-;;          (cons (-map #'org-ml-to-trimmed-string (car it))
-;;                (org-ml-to-trimmed-string (cdr it))))
-;;     => '(("/under/") . "pull me"))
+  (defexamples-content org-ml-match-extract
+    nil
+    (:buffer "pull me /under/")
+    (--> (org-ml-parse-this-element)
+         (org-ml-match-extract '(:any * italic) it)
+         (cons (-map #'org-ml-to-trimmed-string (car it))
+               (org-ml-to-trimmed-string (cdr it))))
+    => '(("/under/") . "pull me"))
 
-;;   (defexamples-content org-ml-match-map
-;;     nil
+  (defexamples-content org-ml-match-map
+    nil
 
-;;     (:buffer "* headline one"
-;;              "** TODO headline two"
-;;              "** headline three"
-;;              "** headline four")
+    (:buffer "* headline one"
+             "** TODO headline two"
+             "** headline three"
+             "** headline four")
 
-;;     (:comment "Selectively mark headlines as DONE")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match-map '(headline)
-;;            (lambda (it) (org-ml-set-property :todo-keyword "DONE" it)))
-;;          (org-ml-to-trimmed-string))
-;;     => (:result "* headline one"
-;;                 "** DONE headline two"
-;;                 "** DONE headline three"
-;;                 "** DONE headline four")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match-map* '(:first headline)
-;;            (org-ml-set-property :todo-keyword "DONE" it))
-;;          (org-ml-to-trimmed-string))
-;;     => (:result "* headline one"
-;;                 "** DONE headline two"
-;;                 "** headline three"
-;;                 "** headline four")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match-map '(:last headline)
-;;            (-partial #'org-ml-set-property :todo-keyword "DONE"))
-;;          (org-ml-to-trimmed-string))
-;;     => (:result "* headline one"
-;;                 "** TODO headline two"
-;;                 "** headline three"
-;;                 "** DONE headline four"))
+    (:comment "Selectively mark headlines as DONE")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match-map '(headline)
+           (lambda (it) (org-ml-set-property :todo-keyword "DONE" it)))
+         (org-ml-to-trimmed-string))
+    => (:result "* headline one"
+                "** DONE headline two"
+                "** DONE headline three"
+                "** DONE headline four")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match-map* '(:first headline)
+           (org-ml-set-property :todo-keyword "DONE" it))
+         (org-ml-to-trimmed-string))
+    => (:result "* headline one"
+                "** DONE headline two"
+                "** headline three"
+                "** headline four")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match-map '(:last headline)
+           (-partial #'org-ml-set-property :todo-keyword "DONE"))
+         (org-ml-to-trimmed-string))
+    => (:result "* headline one"
+                "** TODO headline two"
+                "** headline three"
+                "** DONE headline four"))
 
-;;   ;; (:buffer "* headline"
-;;   ;;          ":PROPERTIES:"
-;;   ;;          ":Effort:   0:30"
-;;   ;;          ":END:")
-;;   ;; (:comment "Match the literal property-drawer node and map the"
-;;   ;;           "node-property inside if the property-drawer exists")
-;;   ;; (let ((hl (org-ml-parse-this-headline)))
-;;   ;;   (-if-let (pd (org-ml-headline-get-property-drawer hl))
-;;   ;;       (->> hl
-;;   ;;            (org-ml-match-map* `(,pd node-property)
-;;   ;;                           (org-ml-set-property :value "1:30" it))
-;;   ;;            (org-ml-to-trimmed-string))
-;;   ;;     (print "...or do something else if no drawer")))
-;;   ;; => (:result "* headline"
-;;   ;;             ":PROPERTIES:"
-;;   ;;             ":Effort:   1:30"
-;;   ;;             ":END:"))
+  ;; (:buffer "* headline"
+  ;;          ":PROPERTIES:"
+  ;;          ":Effort:   0:30"
+  ;;          ":END:")
+  ;; (:comment "Match the literal property-drawer node and map the"
+  ;;           "node-property inside if the property-drawer exists")
+  ;; (let ((hl (org-ml-parse-this-headline)))
+  ;;   (-if-let (pd (org-ml-headline-get-property-drawer hl))
+  ;;       (->> hl
+  ;;            (org-ml-match-map* `(,pd node-property)
+  ;;                           (org-ml-set-property :value "1:30" it))
+  ;;            (org-ml-to-trimmed-string))
+  ;;     (print "...or do something else if no drawer")))
+  ;; => (:result "* headline"
+  ;;             ":PROPERTIES:"
+  ;;             ":Effort:   1:30"
+  ;;             ":END:"))
   
-;;   (defexamples-content org-ml-match-mapcat
-;;     nil
+  (defexamples-content org-ml-match-mapcat
+    nil
 
-;;     (:buffer "* one"
-;;              "** two")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match-mapcat* '(:first headline)
-;;            (list (org-ml-build-headline! :title-text "1.5" :level 2) it))
-;;          (org-ml-to-trimmed-string))
-;;     => (:result "* one"
-;;                 "** 1.5"
-;;                 "** two"))
+    (:buffer "* one"
+             "** two")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match-mapcat* '(:first headline)
+           (list (org-ml-build-headline! :title-text "1.5" :level 2) it))
+         (org-ml-to-trimmed-string))
+    => (:result "* one"
+                "** 1.5"
+                "** two"))
 
-;;   (defexamples-content org-ml-match-replace
-;;     nil
-;;     (:buffer "*1* 2 *3* 4 *5* 6 *7* 8 *9* 10")
-;;     (->> (org-ml-parse-this-element)
-;;          (org-ml-match-replace '(:any * bold)
-;;            (org-ml-build-bold :post-blank 1 "0"))
-;;          (org-ml-to-trimmed-string))
-;;     => "*0* 2 *0* 4 *0* 6 *0* 8 *0* 10")
+  (defexamples-content org-ml-match-replace
+    nil
+    (:buffer "*1* 2 *3* 4 *5* 6 *7* 8 *9* 10")
+    (->> (org-ml-parse-this-element)
+         (org-ml-match-replace '(:any * bold)
+           (org-ml-build-bold :post-blank 1 "0"))
+         (org-ml-to-trimmed-string))
+    => "*0* 2 *0* 4 *0* 6 *0* 8 *0* 10")
 
-;;   (defexamples-content org-ml-match-insert-before
-;;     nil
-;;     (:buffer "* one"
-;;              "** two"
-;;              "** three")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match-insert-before '(headline)
-;;            (org-ml-build-headline! :title-text "new" :level 2))
-;;          (org-ml-to-trimmed-string))
-;;     => (:result "* one"
-;;                 "** new"
-;;                 "** two"
-;;                 "** new"
-;;                 "** three"))
+  (defexamples-content org-ml-match-insert-before
+    nil
+    (:buffer "* one"
+             "** two"
+             "** three")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match-insert-before '(headline)
+           (org-ml-build-headline! :title-text "new" :level 2))
+         (org-ml-to-trimmed-string))
+    => (:result "* one"
+                "** new"
+                "** two"
+                "** new"
+                "** three"))
 
-;;   (defexamples-content org-ml-match-insert-after
-;;     nil
-;;     (:buffer "* one"
-;;              "** two"
-;;              "** three")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match-insert-after '(headline)
-;;            (org-ml-build-headline! :title-text "new" :level 2))
-;;          (org-ml-to-trimmed-string))
-;;     => (:result "* one"
-;;                 "** two"
-;;                 "** new"
-;;                 "** three"
-;;                 "** new"))
+  (defexamples-content org-ml-match-insert-after
+    nil
+    (:buffer "* one"
+             "** two"
+             "** three")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match-insert-after '(headline)
+           (org-ml-build-headline! :title-text "new" :level 2))
+         (org-ml-to-trimmed-string))
+    => (:result "* one"
+                "** two"
+                "** new"
+                "** three"
+                "** new"))
 
-;;   (defexamples-content org-ml-match-insert-within
-;;     nil
-;;     (:buffer "* one"
-;;              "** two"
-;;              "** three")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match-insert-within '(headline) 0
-;;            (org-ml-build-headline! :title-text "new" :level 3))
-;;          (org-ml-to-trimmed-string))
-;;     => (:result "* one"
-;;                 "** two"
-;;                 "*** new"
-;;                 "** three"
-;;                 "*** new")
-;;     (:comment "The nil pattern denotes top-level element")
-;;     (->> (org-ml-parse-this-subtree)
-;;          (org-ml-match-insert-within nil 1
-;;            (org-ml-build-headline! :title-text "new" :level 2))
-;;          (org-ml-to-trimmed-string))
-;;     => (:result "* one"
-;;                 "** two"
-;;                 "** new"
-;;                 "** three"))
+  (defexamples-content org-ml-match-insert-within
+    nil
+    (:buffer "* one"
+             "** two"
+             "** three")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match-insert-within '(headline) 0
+           (org-ml-build-headline! :title-text "new" :level 3))
+         (org-ml-to-trimmed-string))
+    => (:result "* one"
+                "** two"
+                "*** new"
+                "** three"
+                "*** new")
+    (:comment "The nil pattern denotes top-level element")
+    (->> (org-ml-parse-this-subtree)
+         (org-ml-match-insert-within nil 1
+           (org-ml-build-headline! :title-text "new" :level 2))
+         (org-ml-to-trimmed-string))
+    => (:result "* one"
+                "** two"
+                "** new"
+                "** three"))
 
-;;   (defexamples-content org-ml-match-splice
-;;     nil
-;;     (:buffer "* one"
-;;              "** two"
-;;              "** three")
-;;     (let ((L (list
-;;               (org-ml-build-headline! :title-text "new0" :level 2)
-;;               (org-ml-build-headline! :title-text "new1" :level 2))))
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-match-splice '(0) L)
-;;            (org-ml-to-trimmed-string)))
-;;     => (:result "* one"
-;;                 "** new0"
-;;                 "** new1"
-;;                 "** three"))
+  (defexamples-content org-ml-match-splice
+    nil
+    (:buffer "* one"
+             "** two"
+             "** three")
+    (let ((L (list
+              (org-ml-build-headline! :title-text "new0" :level 2)
+              (org-ml-build-headline! :title-text "new1" :level 2))))
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-match-splice '(0) L)
+           (org-ml-to-trimmed-string)))
+    => (:result "* one"
+                "** new0"
+                "** new1"
+                "** three"))
 
-;;   (defexamples-content org-ml-match-splice-before
-;;     nil
-;;     (:buffer "* one"
-;;              "** two"
-;;              "** three")
-;;     (let ((L (list
-;;               (org-ml-build-headline! :title-text "new0" :level 2)
-;;               (org-ml-build-headline! :title-text "new1" :level 2))))
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-match-splice-before '(0) L)
-;;            (org-ml-to-trimmed-string)))
-;;     => (:result "* one"
-;;                 "** new0"
-;;                 "** new1"
-;;                 "** two"
-;;                 "** three"))
+  (defexamples-content org-ml-match-splice-before
+    nil
+    (:buffer "* one"
+             "** two"
+             "** three")
+    (let ((L (list
+              (org-ml-build-headline! :title-text "new0" :level 2)
+              (org-ml-build-headline! :title-text "new1" :level 2))))
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-match-splice-before '(0) L)
+           (org-ml-to-trimmed-string)))
+    => (:result "* one"
+                "** new0"
+                "** new1"
+                "** two"
+                "** three"))
 
-;;   (defexamples-content org-ml-match-splice-after
-;;     nil
-;;     (:buffer "* one"
-;;              "** two"
-;;              "** three")
-;;     (let ((L (list
-;;               (org-ml-build-headline! :title-text "new0" :level 2)
-;;               (org-ml-build-headline! :title-text "new1" :level 2))))
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-match-splice-after '(0) L)
-;;            (org-ml-to-trimmed-string)))
-;;     => (:result "* one"
-;;                 "** two"
-;;                 "** new0"
-;;                 "** new1"
-;;                 "** three"))
+  (defexamples-content org-ml-match-splice-after
+    nil
+    (:buffer "* one"
+             "** two"
+             "** three")
+    (let ((L (list
+              (org-ml-build-headline! :title-text "new0" :level 2)
+              (org-ml-build-headline! :title-text "new1" :level 2))))
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-match-splice-after '(0) L)
+           (org-ml-to-trimmed-string)))
+    => (:result "* one"
+                "** two"
+                "** new0"
+                "** new1"
+                "** three"))
 
-;;   (defexamples-content org-ml-match-splice-within
-;;     nil
-;;     (:buffer "* one"
-;;              "** two"
-;;              "** three"
-;;              "*** four")
-;;     (let ((L (list
-;;               (org-ml-build-headline! :title-text "new0" :level 3)
-;;               (org-ml-build-headline! :title-text "new1" :level 3))))
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-match-splice-within '(headline) 0 L)
-;;            (org-ml-to-trimmed-string)))
-;;     => (:result "* one"
-;;                 "** two"
-;;                 "*** new0"
-;;                 "*** new1"
-;;                 "** three"
-;;                 "*** new0"
-;;                 "*** new1"
-;;                 "*** four")
-;;     (let ((L (list
-;;               (org-ml-build-headline! :title-text "new0" :level 2)
-;;               (org-ml-build-headline! :title-text "new1" :level 2))))
-;;       (->> (org-ml-parse-this-subtree)
-;;            (org-ml-match-splice-within nil 1 L)
-;;            (org-ml-to-trimmed-string)))
-;;     => (:result "* one"
-;;                 "** two"
-;;                 "** new0"
-;;                 "** new1"
-;;                 "** three"
-;;                 "*** four"))
+  (defexamples-content org-ml-match-splice-within
+    nil
+    (:buffer "* one"
+             "** two"
+             "** three"
+             "*** four")
+    (let ((L (list
+              (org-ml-build-headline! :title-text "new0" :level 3)
+              (org-ml-build-headline! :title-text "new1" :level 3))))
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-match-splice-within '(headline) 0 L)
+           (org-ml-to-trimmed-string)))
+    => (:result "* one"
+                "** two"
+                "*** new0"
+                "*** new1"
+                "** three"
+                "*** new0"
+                "*** new1"
+                "*** four")
+    (let ((L (list
+              (org-ml-build-headline! :title-text "new0" :level 2)
+              (org-ml-build-headline! :title-text "new1" :level 2))))
+      (->> (org-ml-parse-this-subtree)
+           (org-ml-match-splice-within nil 1 L)
+           (org-ml-to-trimmed-string)))
+    => (:result "* one"
+                "** two"
+                "** new0"
+                "** new1"
+                "** three"
+                "*** four"))
 
-;;   (defexamples-content org-ml-match-do
-;;     nil))
+  (defexamples-content org-ml-match-do
+    nil))
 
-;; (def-example-group "Buffer Side Effects"
-;;   "Map node manipulations into buffers."
+(def-example-group "Buffer Side Effects"
+  "Map node manipulations into buffers."
 
-;;   (def-example-subgroup "Insert"
-;;     nil
+  (def-example-subgroup "Insert"
+    nil
 
-;;     (defexamples-content org-ml-insert
-;;       nil
-;;       (:buffer "* one"
-;;                "")
-;;       (:comment "Insert single node")
-;;       (->> (org-ml-build-headline! :title-text "two")
-;;            (org-ml-insert (point-max)))
-;;       $> (:result "* one"
-;;                   "* two")
-;;       (:comment "Insert multiple nodes")
-;;       (->> (org-ml-build-headline! :title-text "two")
-;;            (list (org-ml-build-headline! :title-text "more"))
-;;            (org-ml-insert (point-max)))
-;;       $> (:result "* one"
-;;                   "* more"
-;;                   "* two")
+    (defexamples-content org-ml-insert
+      nil
+      (:buffer "* one"
+               "")
+      (:comment "Insert single node")
+      (->> (org-ml-build-headline! :title-text "two")
+           (org-ml-insert (point-max)))
+      $> (:result "* one"
+                  "* two")
+      (:comment "Insert multiple nodes")
+      (->> (org-ml-build-headline! :title-text "two")
+           (list (org-ml-build-headline! :title-text "more"))
+           (org-ml-insert (point-max)))
+      $> (:result "* one"
+                  "* more"
+                  "* two")
 
-;;       (:buffer "a *game* or a /boy/")
-;;       (->> (org-ml-build-paragraph! "we don't care if you're")
-;;            (org-ml-insert (point-min)))
-;;       $> (:result "we don't care if you're"
-;;                   "a *game* or a /boy/"))
+      (:buffer "a *game* or a /boy/")
+      (->> (org-ml-build-paragraph! "we don't care if you're")
+           (org-ml-insert (point-min)))
+      $> (:result "we don't care if you're"
+                  "a *game* or a /boy/"))
 
-;;     (defexamples-content org-ml-insert-tail
-;;       nil
-;;       :begin-hidden
-;;       (:buffer "* one"
-;;                "")
-;;       (:comment "Insert single node")
-;;       (->> (org-ml-build-headline! :title-text "two")
-;;            (org-ml-insert-tail (point-max)))
-;;       $> (:result "* one"
-;;                   "* two")
-;;       (:comment "Insert multiple nodes")
-;;       (->> (org-ml-build-headline! :title-text "two")
-;;            (list (org-ml-build-headline! :title-text "more"))
-;;            (org-ml-insert (point-max)))
-;;       $> (:result "* one"
-;;                   "* more"
-;;                   "* two")
+    (defexamples-content org-ml-insert-tail
+      nil
+      :begin-hidden
+      (:buffer "* one"
+               "")
+      (:comment "Insert single node")
+      (->> (org-ml-build-headline! :title-text "two")
+           (org-ml-insert-tail (point-max)))
+      $> (:result "* one"
+                  "* two")
+      (:comment "Insert multiple nodes")
+      (->> (org-ml-build-headline! :title-text "two")
+           (list (org-ml-build-headline! :title-text "more"))
+           (org-ml-insert (point-max)))
+      $> (:result "* one"
+                  "* more"
+                  "* two")
 
-;;       (:buffer "a *game* or a /boy/")
-;;       (->> (org-ml-build-paragraph! "we don't care if you're")
-;;            (org-ml-insert-tail (point-min)))
-;;       $> (:result "we don't care if you're"
-;;                   "a *game* or a /boy/")
-;;       :end-hidden))
+      (:buffer "a *game* or a /boy/")
+      (->> (org-ml-build-paragraph! "we don't care if you're")
+           (org-ml-insert-tail (point-min)))
+      $> (:result "we don't care if you're"
+                  "a *game* or a /boy/")
+      :end-hidden))
 
-;;   (def-example-subgroup "Update"
-;;     nil
+  (def-example-subgroup "Update"
+    nil
 
-;;     (defexamples-content org-ml-update
-;;       nil
+    (defexamples-content org-ml-update
+      nil
       
-;;       (:buffer "* TODO win grammy")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-update
-;;              (lambda (hl) (org-ml-set-property :todo-keyword "DONE" hl))))
-;;       $> "* DONE win grammy"
+      (:buffer "* TODO win grammy")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-update
+             (lambda (hl) (org-ml-set-property :todo-keyword "DONE" hl))))
+      $> "* DONE win grammy"
 
-;;       (:buffer "* win grammy [0/0]"
-;;                "- [ ] write punk song"
-;;                "- [ ] get new vocalist"
-;;                "- [ ] sell 2 singles")
-;;       (->> (org-ml-parse-this-headline)
-;;            (org-ml-update*
-;;              (->> (org-ml-match-map '(:any * item) #'org-ml-item-toggle-checkbox it)
-;;                   (org-ml-headline-update-item-statistics))))
-;;       $> (:result "* win grammy [3/3]"
-;;                   "- [X] write punk song"
-;;                   "- [X] get new vocalist"
-;;                   "- [X] sell 2 singles"))
+      (:buffer "* win grammy [0/0]"
+               "- [ ] write punk song"
+               "- [ ] get new vocalist"
+               "- [ ] sell 2 singles")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-update*
+             (->> (org-ml-match-map '(:any * item) #'org-ml-item-toggle-checkbox it)
+                  (org-ml-headline-update-item-statistics))))
+      $> (:result "* win grammy [3/3]"
+                  "- [X] write punk song"
+                  "- [X] get new vocalist"
+                  "- [X] sell 2 singles"))
 
-;;     (defexamples-content org-ml-update-object-at
-;;       nil
-;;       (:buffer "[[http://example.com][desc]]")
-;;       (org-ml-update-object-at* (point)
-;;         (org-ml-set-property :path "//buymoreram.com" it))
-;;       $> "[[http://buymoreram.com][desc]]")
+    (defexamples-content org-ml-update-object-at
+      nil
+      (:buffer "[[http://example.com][desc]]")
+      (org-ml-update-object-at* (point)
+        (org-ml-set-property :path "//buymoreram.com" it))
+      $> "[[http://buymoreram.com][desc]]")
 
-;;     (defexamples-content org-ml-update-element-at
-;;       nil
-;;       (:buffer "#+call: ktulu()")
-;;       (org-ml-update-element-at* (point)
-;;         (org-ml-set-properties 
-;;          (list :call "cthulhu"
-;;                :inside-header '(:cache no)
-;;                :arguments '("x=4")
-;;                :end-header '(:results html))
-;;          it))
-;;       $> "#+call: cthulhu[:cache no](x=4) :results html")
+    (defexamples-content org-ml-update-element-at
+      nil
+      (:buffer "#+call: ktulu()")
+      (org-ml-update-element-at* (point)
+        (org-ml-set-properties 
+         (list :call "cthulhu"
+               :inside-header '(:cache no)
+               :arguments '("x=4")
+               :end-header '(:results html))
+         it))
+      $> "#+call: cthulhu[:cache no](x=4) :results html")
 
-;;     (defexamples-content org-ml-update-table-row-at
-;;       nil
-;;       (:buffer "| a | b |")
-;;       (org-ml-update-table-row-at* (point)
-;;         (org-ml-map-children* (cons (org-ml-build-table-cell! "0") it) it))
-;;       $> "| 0 | a | b |")
+    (defexamples-content org-ml-update-table-row-at
+      nil
+      (:buffer "| a | b |")
+      (org-ml-update-table-row-at* (point)
+        (org-ml-map-children* (cons (org-ml-build-table-cell! "0") it) it))
+      $> "| 0 | a | b |")
 
-;;     (defexamples-content org-ml-update-item-at
-;;       nil
-;;       (:buffer "- [ ] thing")
-;;       (org-ml-update-item-at* (point)
-;;         (org-ml-item-toggle-checkbox it))
-;;       $> "- [X] thing")
+    (defexamples-content org-ml-update-item-at
+      nil
+      (:buffer "- [ ] thing")
+      (org-ml-update-item-at* (point)
+        (org-ml-item-toggle-checkbox it))
+      $> "- [X] thing")
 
-;;     (defexamples-content org-ml-update-headline-at
-;;       nil
-;;       (:buffer "* TODO might get done"
-;;                "* DONE no need to update")
-;;       (org-ml-update-headline-at* (point)
-;;         (org-ml-set-property :todo-keyword "DONE" it))
-;;       $> (:result "* DONE might get done"
-;;                   "* DONE no need to update"))
+    (defexamples-content org-ml-update-headline-at
+      nil
+      (:buffer "* TODO might get done"
+               "* DONE no need to update")
+      (org-ml-update-headline-at* (point)
+        (org-ml-set-property :todo-keyword "DONE" it))
+      $> (:result "* DONE might get done"
+                  "* DONE no need to update"))
 
-;;     (defexamples-content org-ml-update-subtree-at
-;;       nil
-;;       (:buffer "* one"
-;;                "** two"
-;;                "** three"
-;;                "* not updated")
-;;       (org-ml-update-subtree-at* (point)
-;;         (org-ml-headline-demote-subheadline 1 it))
-;;       $> (:result "* one"
-;;                   "** two"
-;;                   "*** three"
-;;                   "* not updated"))
+    (defexamples-content org-ml-update-subtree-at
+      nil
+      (:buffer "* one"
+               "** two"
+               "** three"
+               "* not updated")
+      (org-ml-update-subtree-at* (point)
+        (org-ml-headline-demote-subheadline 1 it))
+      $> (:result "* one"
+                  "** two"
+                  "*** three"
+                  "* not updated"))
 
-;;     (defexamples-content org-ml-update-section-at
-;;       nil
-;;       (:buffer "#+key1: VAL1"
-;;                "#+key2: VAL2"
-;;                "* irrelevant headline")
-;;       (:comment "Update the top buffer section before the headlines start")
-;;       (org-ml-update-section-at* (point)
-;;         (org-ml-map-children* (--map (org-ml-map-property :value #'s-downcase it) it) it))
-;;       $> (:result "#+key1: val1"
-;;                   "#+key2: val2"
-;;                   "* irrelevant headline"))
+    (defexamples-content org-ml-update-section-at
+      nil
+      (:buffer "#+key1: VAL1"
+               "#+key2: VAL2"
+               "* irrelevant headline")
+      (:comment "Update the top buffer section before the headlines start")
+      (org-ml-update-section-at* (point)
+        (org-ml-map-children* (--map (org-ml-map-property :value #'s-downcase it) it) it))
+      $> (:result "#+key1: val1"
+                  "#+key2: val2"
+                  "* irrelevant headline"))
 
-;;     (defexamples-content org-ml-update-headlines
-;;       nil
-;;       (:buffer "* one"
-;;                "* two"
-;;                "* three")
-;;       (org-ml-update-headlines* 0
-;;         (org-ml-set-property :todo-keyword "DONE" it))
-;;       $> (:result "* DONE one"
-;;                   "* two"
-;;                   "* three")
-;;       (org-ml-update-headlines* '(0 1)
-;;         (org-ml-set-property :todo-keyword "DONE" it))
-;;       $> (:result "* DONE one"
-;;                   "* DONE two"
-;;                   "* three")
-;;       (org-ml-update-headlines* [2 nil]
-;;         (org-ml-set-property :todo-keyword "DONE" it))
-;;       $> (:result "* one"
-;;                   "* DONE two"
-;;                   "* DONE three")
-;;       (org-ml-update-headlines* [2 10]
-;;         (org-ml-set-property :todo-keyword "DONE" it))
-;;       $> (:result "* one"
-;;                   "* DONE two"
-;;                   "* three")
+    (defexamples-content org-ml-update-headlines
+      nil
+      (:buffer "* one"
+               "* two"
+               "* three")
+      (org-ml-update-headlines* 0
+        (org-ml-set-property :todo-keyword "DONE" it))
+      $> (:result "* DONE one"
+                  "* two"
+                  "* three")
+      (org-ml-update-headlines* '(0 1)
+        (org-ml-set-property :todo-keyword "DONE" it))
+      $> (:result "* DONE one"
+                  "* DONE two"
+                  "* three")
+      (org-ml-update-headlines* [2 nil]
+        (org-ml-set-property :todo-keyword "DONE" it))
+      $> (:result "* one"
+                  "* DONE two"
+                  "* DONE three")
+      (org-ml-update-headlines* [2 10]
+        (org-ml-set-property :todo-keyword "DONE" it))
+      $> (:result "* one"
+                  "* DONE two"
+                  "* three")
 
-;;       (:buffer "* one"
-;;                "* two"
-;;                "* three")
-;;       (org-ml-update-headlines* 'all
-;;         (org-ml-set-property :todo-keyword "DONE" it))
-;;       $> (:result "* DONE one"
-;;                   "* DONE two"
-;;                   "* DONE three"))
+      (:buffer "* one"
+               "* two"
+               "* three")
+      (org-ml-update-headlines* 'all
+        (org-ml-set-property :todo-keyword "DONE" it))
+      $> (:result "* DONE one"
+                  "* DONE two"
+                  "* DONE three"))
 
-;;     (defexamples-content org-ml-update-subtrees
-;;       nil
-;;       (:buffer "* one [/]"
-;;                "** DONE _one"
-;;                "* two [/]"
-;;                "** DONE _one"
-;;                "* three [/]"
-;;                "** DONE _one")
-;;       (org-ml-update-subtrees* 0
-;;         (org-ml-headline-update-todo-statistics))
-;;       $> (:buffer "* one [1/1]"
-;;                   "** DONE _one"
-;;                   "* two [/]"
-;;                   "** DONE _one"
-;;                   "* three [/]"
-;;                   "** DONE _one")
-;;       (org-ml-update-subtrees* '(0 1)
-;;         (org-ml-headline-update-todo-statistics))
-;;       $> (:buffer "* one [1/1]"
-;;                   "** DONE _one"
-;;                   "* two [1/1]"
-;;                   "** DONE _one"
-;;                   "* three [/]"
-;;                   "** DONE _one")
-;;       (org-ml-update-subtrees* [2 nil]
-;;         (org-ml-headline-update-todo-statistics))
-;;       $> (:buffer "* one [/]"
-;;                   "** DONE _one"
-;;                   "* two [1/1]"
-;;                   "** DONE _one"
-;;                   "* three [1/1]"
-;;                   "** DONE _one")
-;;       (org-ml-update-subtrees* [nil 5]
-;;         (org-ml-headline-update-todo-statistics))
-;;       $> (:buffer "* one [1/1]"
-;;                   "** DONE _one"
-;;                   "* two [/]"
-;;                   "** DONE _one"
-;;                   "* three [/]"
-;;                   "** DONE _one")
+    (defexamples-content org-ml-update-subtrees
+      nil
+      (:buffer "* one [/]"
+               "** DONE _one"
+               "* two [/]"
+               "** DONE _one"
+               "* three [/]"
+               "** DONE _one")
+      (org-ml-update-subtrees* 0
+        (org-ml-headline-update-todo-statistics))
+      $> (:buffer "* one [1/1]"
+                  "** DONE _one"
+                  "* two [/]"
+                  "** DONE _one"
+                  "* three [/]"
+                  "** DONE _one")
+      (org-ml-update-subtrees* '(0 1)
+        (org-ml-headline-update-todo-statistics))
+      $> (:buffer "* one [1/1]"
+                  "** DONE _one"
+                  "* two [1/1]"
+                  "** DONE _one"
+                  "* three [/]"
+                  "** DONE _one")
+      (org-ml-update-subtrees* [2 nil]
+        (org-ml-headline-update-todo-statistics))
+      $> (:buffer "* one [/]"
+                  "** DONE _one"
+                  "* two [1/1]"
+                  "** DONE _one"
+                  "* three [1/1]"
+                  "** DONE _one")
+      (org-ml-update-subtrees* [nil 5]
+        (org-ml-headline-update-todo-statistics))
+      $> (:buffer "* one [1/1]"
+                  "** DONE _one"
+                  "* two [/]"
+                  "** DONE _one"
+                  "* three [/]"
+                  "** DONE _one")
 
-;;       (:buffer "* one [/]"
-;;                "** DONE _one"
-;;                "** DONE _two"
-;;                "* two [/]"
-;;                "** DONE _one"
-;;                "** DONE _two")
-;;       (org-ml-do-subtrees* 'all
-;;         (org-ml-headline-update-todo-statistics))
-;;       $> (:buffer "* one [2/2]"
-;;                   "** DONE _one"
-;;                   "** DONE _two"
-;;                   "* two [2/2]"
-;;                   "** DONE _one"
-;;                   "** DONE _two")))
+      (:buffer "* one [/]"
+               "** DONE _one"
+               "** DONE _two"
+               "* two [/]"
+               "** DONE _one"
+               "** DONE _two")
+      (org-ml-do-subtrees* 'all
+        (org-ml-headline-update-todo-statistics))
+      $> (:buffer "* one [2/2]"
+                  "** DONE _one"
+                  "** DONE _two"
+                  "* two [2/2]"
+                  "** DONE _one"
+                  "** DONE _two")))
 
-;;   (def-example-subgroup "Misc"
-;;     nil
+  (def-example-subgroup "Misc"
+    nil
 
-;;     (defexamples-content org-ml-fold
-;;       nil)
+    (defexamples-content org-ml-fold
+      nil)
 
-;;     (defexamples-content org-ml-unfold
-;;       nil)))
+    (defexamples-content org-ml-unfold
+      nil)))
 
 (provide 'org-ml-examples)
 ;;; org-ml-examples.el ends here

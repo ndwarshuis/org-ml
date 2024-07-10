@@ -218,8 +218,6 @@ is the converse."
   (let ((it-forms (-flatten-n 1 (-map #'eval forms))))
     `(describe ,header ,@it-forms)))
 
-(print (org-ml--build-blank-node 'timestamp))
-
 (describe "converting from string"
   (describe-many "object leaf nodes"
     (org-ml--test-from-string nil
@@ -247,7 +245,8 @@ is the converse."
       (org-ml-build-statistics-cookie '(nil)) "[%]")
     (org-ml--test-from-string nil
       (org-ml-build-target "target") "<<target>>")
-    (org-ml--test-from-string '(:raw-value)
+    ;; TODO this is a bug in org-element which should include :repeater-deadline-value/unit
+    (org-ml--test-from-string '(:raw-value :repeater-deadline-value :repeater-deadline-unit)
       (org-ml-build-timestamp! '(2020 1 1 0 0)
                                :end '(2020 1 1 0 10)
                                :repeater '(cumulate 1 day)
@@ -690,6 +689,7 @@ be parsed to TYPE."
            "[fn:label] stuff after\n"
            )))
 
+      ;; TODO this doesn't work with spaces after
       (it "headline"
         (org-ml--test-contents-parse-inversion 'headline #'org-ml-parse-element-at
           ;; this is not exhaustive...
@@ -840,9 +840,10 @@ be parsed to TYPE."
       (it "org-ml--timestamp"
         (org-ml--compare-object-props
          (org-ml-build-timestamp! '(2019 1 1))
-         ;; TODO the timestamp parser does not add properties for warnings
-         ;; or repeaters if they are not given, this appears to be a bug
-         "[2019-01-01 Tue +1d -1d]"))
+         ;; TODO the timestamp parser does not add properties for warnings,
+         ;; deadlines, or repeaters if they are not given, this appears to be a
+         ;; bug
+         "[2019-01-01 Tue +1d/3d -1d]"))
 
       (it "org-ml--verbatim"
         (org-ml--compare-object-props
