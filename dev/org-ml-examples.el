@@ -2765,6 +2765,7 @@
                   "#+end_src")
       :end-hidden)
 
+    ;; TODO fixme
     ;; (defexamples-content org-ml-property-is-nil-p
     ;;   nil
     ;;   (:buffer "* TODO dummy")
@@ -2947,170 +2948,170 @@
       :end-hidden
     ))
 
-  ;; (def-example-subgroup "Clock"
-  ;;   nil
+  (def-example-subgroup "Clock"
+    nil
 
-  ;;   (defexamples-content org-ml-clock-is-running
-  ;;     nil
-  ;;     (:buffer "CLOCK: [2019-01-01 Tue 00:00]")
-  ;;     (->> (org-ml-parse-this-element)
-  ;;          (org-ml-clock-is-running))
-  ;;     => t
-  ;;     (:buffer "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00")
-  ;;     (->> (org-ml-parse-this-element)
-  ;;          (org-ml-clock-is-running))
-  ;;     => nil))
+    (defexamples-content org-ml-clock-is-running
+      nil
+      (:buffer "CLOCK: [2019-01-01 Tue 00:00]")
+      (->> (org-ml-parse-this-element)
+           (org-ml-clock-is-running))
+      => t
+      (:buffer "CLOCK: [2019-01-01 Tue 00:00]--[2019-01-02 Wed 00:00] => 24:00")
+      (->> (org-ml-parse-this-element)
+           (org-ml-clock-is-running))
+      => nil))
 
-  ;; (def-example-subgroup "Entity"
-  ;;   nil
+  (def-example-subgroup "Entity"
+    nil
 
-  ;;   (defexamples-content org-ml-entity-get-replacement
-  ;;     nil
-  ;;     (:buffer "\\pi{}")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-entity-get-replacement :latex))
-  ;;     => "\\pi"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-entity-get-replacement :latex-math-p))
-  ;;     => t
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-entity-get-replacement :html))
-  ;;     => "&pi;"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-entity-get-replacement :ascii))
-  ;;     => "pi"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-entity-get-replacement :latin1))
-  ;;     => "pi"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-entity-get-replacement :utf-8))
-  ;;     => "π"))
+    (defexamples-content org-ml-entity-get-replacement
+      nil
+      (:buffer "\\pi{}")
+      (->> (org-ml-parse-this-object)
+           (org-ml-entity-get-replacement :latex))
+      => "\\pi"
+      (->> (org-ml-parse-this-object)
+           (org-ml-entity-get-replacement :latex-math-p))
+      => t
+      (->> (org-ml-parse-this-object)
+           (org-ml-entity-get-replacement :html))
+      => "&pi;"
+      (->> (org-ml-parse-this-object)
+           (org-ml-entity-get-replacement :ascii))
+      => "pi"
+      (->> (org-ml-parse-this-object)
+           (org-ml-entity-get-replacement :latin1))
+      => "pi"
+      (->> (org-ml-parse-this-object)
+           (org-ml-entity-get-replacement :utf-8))
+      => "π"))
 
-  ;; (def-example-subgroup "Headline"
-  ;;   nil
+  (def-example-subgroup "Headline"
+    nil
 
-  ;;   (defexamples-content org-ml-headline-set-title!
-  ;;     nil
-  ;;     (:buffer "* really impressive title")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-set-title! "really *impressive* title" '(2 3))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "* really *impressive* title [2/3]")
+    (defexamples-content org-ml-headline-set-title!
+      nil
+      (:buffer "* really impressive title")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-set-title! "really *impressive* title" '(2 3))
+           (org-ml-to-trimmed-string))
+      => "* really *impressive* title [2/3]")
 
-  ;;   (defexamples-content org-ml-headline-is-done
-  ;;     nil
-  ;;     (:buffer "* TODO darn")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-is-done))
-  ;;     => nil
-  ;;     (:buffer "* DONE yay")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-is-done))
-  ;;     => t)
+    (defexamples-content org-ml-headline-is-done
+      nil
+      (:buffer "* TODO darn")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-is-done))
+      => nil
+      (:buffer "* DONE yay")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-is-done))
+      => t)
 
-  ;;   (defexamples-content org-ml-headline-has-tag
-  ;;     nil
-  ;;     (:buffer "* dummy")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-has-tag "tmsu"))
-  ;;     => nil
-  ;;     (:buffer "* dummy                  :tmsu:")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-has-tag "tmsu"))
-  ;;     => t)
+    (defexamples-content org-ml-headline-has-tag
+      nil
+      (:buffer "* dummy")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-has-tag "tmsu"))
+      => nil
+      (:buffer "* dummy                  :tmsu:")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-has-tag "tmsu"))
+      => t)
 
-  ;;   (defexamples-content org-ml-headline-get-statistics-cookie
-  ;;     nil
-  ;;     (:buffer "* statistically significant [10/10]")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-get-statistics-cookie)
-  ;;          (org-ml-to-string))
-  ;;     => "[10/10]"
-  ;;     (:buffer "* not statistically significant")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-get-statistics-cookie))
-  ;;     => nil)
+    (defexamples-content org-ml-headline-get-statistics-cookie
+      nil
+      (:buffer "* statistically significant [10/10]")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-statistics-cookie)
+           (org-ml-to-string))
+      => "[10/10]"
+      (:buffer "* not statistically significant")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-statistics-cookie))
+      => nil)
 
-  ;;   ;; TODO add the shortcut version title setter
+    ;; TODO add the shortcut version title setter
 
-  ;;   )
+    )
 
 
-  ;; ;; TODO add inlinetask
+  ;; TODO add inlinetask
 
-  ;; (def-example-subgroup "Item"
-  ;;   nil
+  (def-example-subgroup "Item"
+    nil
 
-  ;;   ;; TODO add shortcut tag setter
+    ;; TODO add shortcut tag setter
 
-  ;;   (defexamples-content org-ml-item-toggle-checkbox
-  ;;     nil
-  ;;     (:buffer "- [ ] one")
-  ;;     (->> (org-ml-parse-this-item)
-  ;;          (org-ml-item-toggle-checkbox)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "- [X] one"
-  ;;     (:buffer "- [-] one")
-  ;;     (:comment "Ignore trans state checkboxes")
-  ;;     (->> (org-ml-parse-this-item)
-  ;;          (org-ml-item-toggle-checkbox)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "- [-] one"
-  ;;     (:buffer "- one")
-  ;;     (:comment "Do nothing if there is no checkbox")
-  ;;     (->> (org-ml-parse-this-item)
-  ;;          (org-ml-item-toggle-checkbox)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "- one"))
+    (defexamples-content org-ml-item-toggle-checkbox
+      nil
+      (:buffer "- [ ] one")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-toggle-checkbox)
+           (org-ml-to-trimmed-string))
+      => "- [X] one"
+      (:buffer "- [-] one")
+      (:comment "Ignore trans state checkboxes")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-toggle-checkbox)
+           (org-ml-to-trimmed-string))
+      => "- [-] one"
+      (:buffer "- one")
+      (:comment "Do nothing if there is no checkbox")
+      (->> (org-ml-parse-this-item)
+           (org-ml-item-toggle-checkbox)
+           (org-ml-to-trimmed-string))
+      => "- one"))
 
-  ;; (def-example-subgroup "Planning"
-  ;;   nil
+  (def-example-subgroup "Planning"
+    nil
 
-  ;;   (defexamples-content org-ml-planning-set-timestamp!
-  ;;     nil
-  ;;     (:buffer "* dummy"
-  ;;              "CLOSED: [2019-01-01 Tue]")
-  ;;     (:comment "Change an existing timestamp in planning")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-get-planning)
-  ;;          (org-ml-planning-set-timestamp!
-  ;;           :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "CLOSED: [2019-01-02 Wed +2m -1d]"
-  ;;     (:comment "Add a new timestamp and remove another")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-get-planning)
-  ;;          (org-ml-planning-set-timestamp!
-  ;;           :deadline '(2112 1 1))
-  ;;          (org-ml-planning-set-timestamp!
-  ;;           :closed nil)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "DEADLINE: <2112-01-01 Fri>"))
+    (defexamples-content org-ml-planning-set-timestamp!
+      nil
+      (:buffer "* dummy"
+               "CLOSED: [2019-01-01 Tue]")
+      (:comment "Change an existing timestamp in planning")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-planning)
+           (org-ml-planning-set-timestamp!
+            :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
+           (org-ml-to-trimmed-string))
+      => "CLOSED: [2019-01-02 Wed +2m -1d]"
+      (:comment "Add a new timestamp and remove another")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-planning)
+           (org-ml-planning-set-timestamp!
+            :deadline '(2112 1 1))
+           (org-ml-planning-set-timestamp!
+            :closed nil)
+           (org-ml-to-trimmed-string))
+      => "DEADLINE: <2112-01-01 Fri>"))
 
-  ;; (def-example-subgroup "Statistics Cookie"
-  ;;   nil
-  ;;   (defexamples-content org-ml-statistics-cookie-is-complete
-  ;;     nil
-  ;;     (:buffer "* statistically significant [10/10]")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-get-statistics-cookie)
-  ;;          (org-ml-statistics-cookie-is-complete))
-  ;;     => t
-  ;;     (:buffer "* statistically significant [1/10]")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-get-statistics-cookie)
-  ;;          (org-ml-statistics-cookie-is-complete))
-  ;;     => nil
-  ;;     (:buffer "* statistically significant [100%]")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-get-statistics-cookie)
-  ;;          (org-ml-statistics-cookie-is-complete))
-  ;;     => t
-  ;;     (:buffer "* statistically significant [33%]")
-  ;;     (->> (org-ml-parse-this-headline)
-  ;;          (org-ml-headline-get-statistics-cookie)
-  ;;          (org-ml-statistics-cookie-is-complete))
-  ;;     => nil))
+  (def-example-subgroup "Statistics Cookie"
+    nil
+    (defexamples-content org-ml-statistics-cookie-is-complete
+      nil
+      (:buffer "* statistically significant [10/10]")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-statistics-cookie)
+           (org-ml-statistics-cookie-is-complete))
+      => t
+      (:buffer "* statistically significant [1/10]")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-statistics-cookie)
+           (org-ml-statistics-cookie-is-complete))
+      => nil
+      (:buffer "* statistically significant [100%]")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-statistics-cookie)
+           (org-ml-statistics-cookie-is-complete))
+      => t
+      (:buffer "* statistically significant [33%]")
+      (->> (org-ml-parse-this-headline)
+           (org-ml-headline-get-statistics-cookie)
+           (org-ml-statistics-cookie-is-complete))
+      => nil))
 
   ;; ;; TODO add these
   ;; (def-example-subgroup "Timestamp (Auxiliary)"
@@ -3131,554 +3132,560 @@
   ;; (def-example-subgroup "Timestamp (Standard)"
   ;;   nil
 
-  ;;   (defexamples-content org-ml-timestamp-get-start-time
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-start-time))
-  ;;     => '(2019 1 1 nil nil)
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-start-time))
-  ;;     => '(2019 1 1 nil nil)
-  ;;     (:buffer "[2019-01-01 Tue 00:00-12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-start-time))
-  ;;     => '(2019 1 1 0 0))
+    (defexamples-content org-ml-timestamp-get-start-time
+      nil
+      (:buffer "[2019-01-01 Tue]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-start-time))
+      => '(2019 1 1 nil nil)
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-start-time))
+      => '(2019 1 1 nil nil)
+      (:buffer "[2019-01-01 Tue 00:00-12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-start-time))
+      => '(2019 1 1 0 0))
 
-  ;;   (defexamples-content org-ml-timestamp-get-end-time
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-end-time))
-  ;;     => nil
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-end-time))
-  ;;     => '(2019 1 2 nil nil)
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-01 Tue]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-end-time))
-  ;;     => '(2019 1 1 nil nil)
-  ;;     (:buffer "[2019-01-01 Tue 00:00-12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-end-time))
-  ;;     => '(2019 1 1 12 0))
+    (defexamples-content org-ml-timestamp-get-end-time
+      nil
+      (:buffer "[2019-01-01 Tue]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-end-time))
+      => nil
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-end-time))
+      => '(2019 1 2 nil nil)
+      (:buffer "[2019-01-01 Tue]--[2019-01-01 Tue]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-end-time))
+      => '(2019 1 1 nil nil)
+      (:buffer "[2019-01-01 Tue 00:00-12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-end-time))
+      => '(2019 1 1 12 0))
 
-  ;;   (defexamples-content org-ml-timestamp-get-range
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-range))
-  ;;     => 0
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-range))
-  ;;     => 86400
-  ;;     (:buffer "[2019-01-01 Tue 00:00-12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-range))
-  ;;     => 43200)
+    (defexamples-content org-ml-timestamp-get-range
+      nil
+      (:buffer "[2019-01-01 Tue]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-range))
+      => 0
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-range))
+      => 86400
+      (:buffer "[2019-01-01 Tue 00:00-12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-range))
+      => 43200)
 
-  ;;   (defexamples-content org-ml-timestamp-is-active
-  ;;     nil
-  ;;     (:buffer "<2019-01-01 Tue>")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-is-active))
-  ;;     => t
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-is-active))
-  ;;     => nil)
+    (defexamples-content org-ml-timestamp-is-active
+      nil
+      (:buffer "<2019-01-01 Tue>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-is-active))
+      => t
+      (:buffer "[2019-01-01 Tue]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-is-active))
+      => nil)
 
-  ;;   (defexamples-content org-ml-timestamp-is-ranged
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-is-ranged))
-  ;;     => t
-  ;;     (:buffer "[2019-01-01 Tue 00:00-12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-is-ranged))
-  ;;     => t
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-is-ranged))
-  ;;     => nil)
+    (defexamples-content org-ml-timestamp-is-ranged
+      nil
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-is-ranged))
+      => t
+      (:buffer "[2019-01-01 Tue 00:00-12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-is-ranged))
+      => t
+      (:buffer "[2019-01-01 Tue]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-is-ranged))
+      => nil)
 
-  ;;   (defexamples-content org-ml-timestamp-range-contains-p
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue 00:00]")
-  ;;     (let ((ut (org-ml-time-to-unixtime '(2019 1 1 0 0))))
-  ;;       (->> (org-ml-parse-this-object)
-  ;;            (org-ml-timestamp-range-contains-p ut)))
-  ;;     => t
-  ;;     (let ((ut (org-ml-time-to-unixtime '(2019 1 1 0 30))))
-  ;;       (->> (org-ml-parse-this-object)
-  ;;            (org-ml-timestamp-range-contains-p ut)))
-  ;;     => nil
-  ;;     (:buffer "[2019-01-01 Tue 00:00-01:00]")
-  ;;     (let ((ut (org-ml-time-to-unixtime '(2019 1 1 0 30))))
-  ;;       (->> (org-ml-parse-this-object)
-  ;;            (org-ml-timestamp-range-contains-p ut)))
-  ;;     => t)
+    (defexamples-content org-ml-timestamp-range-contains-p
+      nil
+      (:buffer "[2019-01-01 Tue 00:00]")
+      (let ((ut (org-ml-timelist-to-unixtime '(2019 1 1 0 0))))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-range-contains-p ut)))
+      => t
+      (let ((ut (org-ml-timelist-to-unixtime '(2019 1 1 0 30))))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-range-contains-p ut)))
+      => nil
+      (:buffer "[2019-01-01 Tue 00:00-01:00]")
+      (let ((ut (org-ml-timelist-to-unixtime '(2019 1 1 0 30))))
+        (->> (org-ml-parse-this-object)
+             (org-ml-timestamp-range-contains-p ut)))
+      => t)
 
-  ;;   (defexamples-content org-ml-timestamp-set-collapsed
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue 12:00-13:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-collapsed nil)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
-  ;;     (:buffer "[2019-01-01 Tue 12:00-13:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-collapsed nil)
-  ;;          (org-ml-timestamp-set-collapsed t)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 12:00-13:00]"
-  ;;     (:buffer "[2019-01-01 Tue 12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-collapsed nil)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 12:00]"
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-collapsed nil)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (defexamples-content org-ml-timestamp-set-collapsed
+      nil
+      (:buffer "[2019-01-01 Tue 12:00-13:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-collapsed nil)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
+      (:buffer "[2019-01-01 Tue 12:00-13:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-collapsed nil)
+           (org-ml-timestamp-set-collapsed t)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00-13:00]"
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-collapsed nil)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00]"
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-collapsed nil)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]")
 
-  ;;   (defexamples-content org-ml-timestamp-get-warning
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue 12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-warning))
-  ;;     => '(nil nil nil)
-  ;;     (:buffer "[2019-01-01 Tue 12:00 -1d]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-warning))
-  ;;     => '(all 1 day))
+    (defexamples-content org-ml-timestamp-get-warning
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-warning))
+      => nil
+      (:buffer "[2019-01-01 Tue 12:00 -1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-warning))
+      => '(all 1 day))
 
-  ;;   (defexamples-content org-ml-timestamp-set-warning
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue 12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-warning '(nil nil nil))
-  ;;          (org-ml-to-string))
-  ;;     => "[2019-01-01 Tue 12:00]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-warning '(all 1 day))
-  ;;          (org-ml-to-string))
-  ;;     => "[2019-01-01 Tue 12:00 -1d]"
-  ;;     (:buffer "[2019-01-01 Tue 12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-warning nil)
-  ;;          (org-ml-to-string))
-  ;;     => "[2019-01-01 Tue 12:00]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-warning '(all 1 year))
-  ;;          (org-ml-to-string))
-  ;;     => "[2019-01-01 Tue 12:00 -1y]")
+    (defexamples-content org-ml-timestamp-set-warning
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-warning nil)
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-warning '(all 1 day))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 -1d]"
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-warning nil)
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-warning '(all 1 year))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 -1y]")
 
-  ;;   (defexamples-content org-ml-timestamp-map-warning
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue 12:00 -1d]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-map-warning* (-let (((y v u) it)) `(,y ,(1+ v) ,u)))
-  ;;          (org-ml-to-string))
-  ;;     => "[2019-01-01 Tue 12:00 -2d]")
+    (defexamples-content org-ml-timestamp-map-warning
+      nil
+      (:buffer "[2019-01-01 Tue 12:00 -1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-map-warning* (-let (((y v u) it)) `(,y ,(1+ v) ,u)))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 -2d]")
 
-  ;;   (defexamples-content org-ml-timestamp-get-repeater
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue 12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-repeater))
-  ;;     => '(nil nil nil)
-  ;;     (:buffer "[2019-01-01 Tue 12:00 +1d]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-repeater))
-  ;;     => '(cumulate 1 day)
-  ;;     (:buffer "[2019-01-01 Tue 12:00 +1d/3d]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-get-repeater))
-  ;;     => '(cumulate 1 day)
-  ;;     (:buffer "[2019-01-01 Tue 12:00 +1d/3d]")
-  ;;     (let ((org-ml-parse-habits t))
-  ;;       (->> (org-ml-parse-this-object)
-  ;;            (org-ml-timestamp-get-repeater)))
-  ;;     => '(cumulate 1 day 3 day))
+    (defexamples-content org-ml-timestamp-get-repeater
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-repeater))
+      => nil
+      (:buffer "[2019-01-01 Tue 12:00 +1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-repeater))
+      => '(cumulate 1 day)
+      (:buffer "[2019-01-01 Tue 12:00 +1d/3d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-repeater))
+      => '(cumulate 1 day))
 
-  ;;   (defexamples-content org-ml-timestamp-set-repeater
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue 12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-repeater nil)
-  ;;          (org-ml-to-string))
-  ;;     => "[2019-01-01 Tue 12:00]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-repeater '(restart 1 day))
-  ;;          (org-ml-to-string))
-  ;;     => "[2019-01-01 Tue 12:00 .+1d]"
-  ;;     (let ((org-ml-parse-habits t))
-  ;;       (->> (org-ml-parse-this-object)
-  ;;            (org-ml-timestamp-set-repeater '(restart 1 day nil nil))
-  ;;            (org-ml-to-string)))
-  ;;     => "[2019-01-01 Tue 12:00 .+1d]"
-  ;;     (let ((org-ml-parse-habits t))
-  ;;       (->> (org-ml-parse-this-object)
-  ;;            (org-ml-timestamp-set-repeater '(restart 1 day 3 day))
-  ;;            (org-ml-to-string)))
-  ;;     => "[2019-01-01 Tue 12:00 .+1d/3d]"
-  ;;     :begin-hidden
-  ;;     (:buffer "[2019-01-01 Tue 12:00 .+1d]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-repeater nil)
-  ;;          (org-ml-to-string))
-  ;;     => "[2019-01-01 Tue 12:00]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-repeater '(cumulate 1 day))
-  ;;          (org-ml-to-string))
-  ;;     => "[2019-01-01 Tue 12:00 +1d]"
-  ;;     (let ((org-ml-parse-habits t))
-  ;;       (->> (org-ml-parse-this-object)
-  ;;            (org-ml-timestamp-set-repeater '(cumulate 1 day nil nil))
-  ;;            (org-ml-to-string)))
-  ;;     => "[2019-01-01 Tue 12:00 +1d]"
-  ;;     (let ((org-ml-parse-habits t))
-  ;;       (->> (org-ml-parse-this-object)
-  ;;            (org-ml-timestamp-set-repeater '(cumulate 1 day 3 day))
-  ;;            (org-ml-to-string)))
-  ;;     => "[2019-01-01 Tue 12:00 +1d/3d]"
-  ;;     (:buffer "[2019-01-01 Tue 12:00 .+1d/3d]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-repeater nil)
-  ;;          (org-ml-to-string))
-  ;;     => "[2019-01-01 Tue 12:00]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-repeater '(cumulate 1 day))
-  ;;          (org-ml-to-string))
-  ;;     => "[2019-01-01 Tue 12:00 +1d]"
-  ;;     (let ((org-ml-parse-habits t))
-  ;;       (->> (org-ml-parse-this-object)
-  ;;            (org-ml-timestamp-set-repeater '(cumulate 1 day nil nil))
-  ;;            (org-ml-to-string)))
-  ;;     => "[2019-01-01 Tue 12:00 +1d]"
-  ;;     (let ((org-ml-parse-habits t))
-  ;;       (->> (org-ml-parse-this-object)
-  ;;            (org-ml-timestamp-set-repeater '(cumulate 1 day 2 day))
-  ;;            (org-ml-to-string)))
-  ;;     => "[2019-01-01 Tue 12:00 +1d/2d]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-repeater '(cumulate 1 day nil nil))
-  ;;          (org-ml-to-string))
-  ;;     !!> error
-  ;;     (let ((org-ml-parse-habits t))
-  ;;       (->> (org-ml-parse-this-object)
-  ;;            (org-ml-timestamp-set-repeater '(cumulate 1 day))
-  ;;            (org-ml-to-string)))
-  ;;     !!> error
-  ;;     :end-hidden)
+    (defexamples-content org-ml-timestamp-get-deadline
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-deadline))
+      => nil
+      (:buffer "[2019-01-01 Tue 12:00 +1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-deadline))
+      => nil
+      (:buffer "[2019-01-01 Tue 12:00 +1d/3d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-get-deadline))
+      => '(3 day))
 
-  ;;   (defexamples-content org-ml-timestamp-map-repeater
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue 12:00 +1d]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-map-repeater* (-let (((y v u) it)) `(,y ,(1+ v) ,u)))
-  ;;          (org-ml-to-string))
-  ;;     => "[2019-01-01 Tue 12:00 +2d]")
+    (defexamples-content org-ml-timestamp-set-repeater
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater nil)
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater '(restart 1 day))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 .+1d]"
+      :begin-hidden
+      (:buffer "[2019-01-01 Tue 12:00 .+1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater nil)
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater '(cumulate 1 day))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 +1d]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater '(cumulate 1 day))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 +1d]"
+      (:buffer "[2019-01-01 Tue 12:00 .+1d/3d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater nil)
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-repeater '(cumulate 1 day))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 +1d/3d]"
+      :end-hidden)
 
-  ;;   (defexamples-content org-ml-timestamp-set-start-time
-  ;;     nil
-  ;;     (:buffer "[2019-01-02 Wed]")
-  ;;     (:comment "If not a range this will turn into a range by moving only the start time.")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-start-time '(2019 1 1))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-  ;;     (:comment "Set a different time with different precision.")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-start-time '(2019 1 1 10 0))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 10:00]--[2019-01-02 Wed]"
-  ;;     (:buffer "[2019-01-02 Wed 12:00]")
-  ;;     (:comment "If not a range and set within a day, use short format")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 00:00-12:00]"
-  ;;     :begin-hidden
-  ;;     (:buffer "[2019-01-02 Wed 12:00 +1d]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 00:00-12:00 +1d]"
-  ;;     ;; disabling habit parser will obliterate the habit bit
-  ;;     (:buffer "[2019-01-02 Wed 12:00 +1d/3d]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 00:00-12:00 +1d]"
-  ;;     ;; and enabling will preserve it
-  ;;     (:buffer "[2019-01-02 Wed 12:00 +1d/3d]")
-  ;;     (let ((org-ml-parse-habits t))
-  ;;       (->> (org-ml-parse-this-object)
-  ;;            (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
-  ;;            (org-ml-to-trimmed-string)))
-  ;;     => "[2019-01-01 Tue 00:00-12:00 +1d/3d]"
-  ;;     :end-hidden)
+    (defexamples-content org-ml-timestamp-set-deadline
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-deadline nil)
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-deadline '(3 day))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00]"
+      (:buffer "[2019-01-01 Tue 12:00 .+1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-deadline nil)
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 .+1d]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-deadline '(3 day))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 .+1d/3d]"
+      :begin-hidden
+      (:buffer "[2019-01-01 Tue 12:00 .+1d/3d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-deadline nil)
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 .+1d]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-deadline '(5 day))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 .+1d/5d]"
+      :end-hidden)
 
-  ;;   (defexamples-content org-ml-timestamp-set-end-time
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (:comment "Add the end time")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-end-time '(2019 1 2))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-  ;;     (:comment "Remove the end time")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-end-time nil)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]"
-  ;;     (:buffer "[2019-01-01 Tue 12:00]")
-  ;;     (:comment "Use short range format")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-end-time '(2019 1 1 13 0))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 12:00-13:00]")
+    (defexamples-content org-ml-timestamp-map-repeater
+      nil
+      (:buffer "[2019-01-01 Tue 12:00 +1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-map-repeater* (-let (((y v u) it)) `(,y ,(1+ v) ,u)))
+           (org-ml-to-string))
+      => "[2019-01-01 Tue 12:00 +2d]")
 
-  ;;   (defexamples-content org-ml-timestamp-set-single-time
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (:comment "Don't make a range")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-single-time '(2019 1 2))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-02 Wed]"
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-  ;;     (:comment "Output is not a range despite input being ranged")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-single-time '(2019 1 3))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-03 Thu]")
+    (defexamples-content org-ml-timestamp-set-start-time
+      nil
+      (:buffer "[2019-01-02 Wed]")
+      (:comment "If not a range this will turn into a range by moving only the start time.")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-start-time '(2019 1 1))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      (:comment "Set a different time with different precision.")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-start-time '(2019 1 1 10 0))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 10:00]--[2019-01-02 Wed]"
+      (:buffer "[2019-01-02 Wed 12:00]")
+      (:comment "If not a range and set within a day, use short format")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-start-time '(2019 1 2 0 0))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-02 Wed 00:00-12:00]"
+      :begin-hidden
+      (:buffer "[2019-01-02 Wed 12:00 +1d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-start-time '(2019 1 2 0 0))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-02 Wed 00:00-12:00 +1d]"
+      (:buffer "[2019-01-02 Wed 12:00 +1d/3d]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-start-time '(2019 1 2 0 0))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-02 Wed 00:00-12:00 +1d/3d]"
+      ;; and enabling will preserve it
+      ;; (:buffer "[2019-01-02 Wed 12:00 +1d/3d]")
+      ;; (let ((org-ml-parse-habits t))
+      ;;   (->> (org-ml-parse-this-object)
+      ;;        (org-ml-timestamp-set-start-time '(2019 2 1 0 0))
+      ;;        (org-ml-to-trimmed-string)))
+      ;; => "[2019-01-02 Wed 00:00-12:00 +1d/3d]"
+      :end-hidden)
 
-  ;;   (defexamples-content org-ml-timestamp-set-double-time
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (:comment "Make a range")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-double-time '(2019 1 2) '(2019 1 3))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-02 Wed]--[2019-01-03 Thu]"
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-double-time '(2019 1 4) '(2019 1 5))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-04 Fri]--[2019-01-05 Sat]"
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-double-time '(2019 1 1 0 0) '(2019 1 1 1 0))
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 00:00-01:00]")
+    (defexamples-content org-ml-timestamp-set-end-time
+      nil
+      (:buffer "[2019-01-01 Tue]")
+      (:comment "Add the end time")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-end-time '(2019 1 2))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:comment "Remove the end time")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-end-time nil)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]"
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (:comment "Use short range format")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-end-time '(2019 1 1 13 0))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00-13:00]")
 
-  ;;   (defexamples-content org-ml-timestamp-set-range
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (:comment "Use days as the unit for short format")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-range 1)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-  ;;     (:buffer "[2019-01-01 Tue 00:00]")
-  ;;     (:comment "Use minutes as the unit for long format")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-range 3)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 00:00-00:03]"
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
-  ;;     (:comment "Set range to 0 to remove end time")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-range 0)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]")
+    (defexamples-content org-ml-timestamp-set-single-time
+      nil
+      (:buffer "[2019-01-01 Tue]")
+      (:comment "Don't make a range")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-single-time '(2019 1 2))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-02 Wed]"
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:comment "Output is not a range despite input being ranged")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-single-time '(2019 1 3))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-03 Thu]")
 
-  ;;   (defexamples-content org-ml-timestamp-set-active
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-active t)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "<2019-01-01 Tue>"
-  ;;     (:buffer "<2019-01-01 Tue>")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-set-active nil)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]")
+    (defexamples-content org-ml-timestamp-set-double-time
+      nil
+      (:buffer "[2019-01-01 Tue]")
+      (:comment "Make a range")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-double-time '(2019 1 2) '(2019 1 3))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-02 Wed]--[2019-01-03 Thu]"
+      (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-double-time '(2019 1 4) '(2019 1 5))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-04 Fri]--[2019-01-05 Sat]"
+      (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-double-time '(2019 1 1 0 0) '(2019 1 1 1 0))
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 00:00-01:00]")
 
-  ;;   (defexamples-content org-ml-timestamp-shift
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue 12:00]")
-  ;;     (:comment "Change each unit, and wrap around to the next unit as needed.")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift 30 'minute)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 12:30]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift 13 'month)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2020-02-01 Sat 12:00]"
-  ;;     :begin-hidden
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift 60 'minute)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 13:00]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift 1 'hour)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 13:00]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift 1 'day)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-02 Wed 12:00]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift 31 'day)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-02-01 Fri 12:00]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift 1 'month)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-02-01 Fri 12:00]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift 1 'year)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2020-01-01 Wed 12:00]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift 0 'year)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 12:00]"
-  ;;     :end-hidden
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (:comment "Error when shifting hour/minute in short format")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift 30 'minute)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     !!> arg-type-error
-  ;;     :begin-hidden
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift 30 'hour)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     !!> arg-type-error
-  ;;     :end-hidden)
+    (defexamples-content org-ml-timestamp-set-range
+      nil
+      (:buffer "[2019-01-01 Tue]")
+      (:comment "Use days as the unit for short format")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-range 1 'day)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      (:buffer "[2019-01-01 Tue 00:00]")
+      (:comment "Use minutes as the unit for long format")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-range 3 'minute)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 00:00-00:03]"
+      (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
+      (:comment "Set range to 0 to remove end time")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-range 0 'day)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]")
 
-  ;;   (defexamples-content org-ml-timestamp-shift-start
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue 12:00]")
-  ;;     (:comment "If not a range, change start time and leave implicit end time.")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift-start -1 'year)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2018-01-01 Mon 12:00]--[2019-01-01 Tue 12:00]"
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift-start -1 'hour)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 11:00-12:00]"
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-03 Thu]")
-  ;;     (:comment "Change only start time if a range")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift-start 1 'day)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-02 Wed]--[2019-01-03 Thu]")
+    (defexamples-content org-ml-timestamp-set-active
+      nil
+      (:buffer "[2019-01-01 Tue]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-active t)
+           (org-ml-to-trimmed-string))
+      => "<2019-01-01 Tue>"
+      (:buffer "<2019-01-01 Tue>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-set-active nil)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]")
 
-  ;;   (defexamples-content org-ml-timestamp-shift-end
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (:comment "Shift implicit end time if not a range.")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift-end 1 'day)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-  ;;     (:comment "Move only the second time if a range.")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-shift-end 1 'day)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]--[2019-01-03 Thu]")
+    (defexamples-content org-ml-timestamp-shift
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (:comment "Change each unit, and wrap around to the next unit as needed.")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift 30 'minute)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 12:30]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift 13 'month)
+           (org-ml-to-trimmed-string))
+      => "[2020-02-01 Sat 12:00]"
+      :begin-hidden
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift 60 'minute)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 13:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift 1 'hour)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 13:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift 1 'day)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-02 Wed 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift 31 'day)
+           (org-ml-to-trimmed-string))
+      => "[2019-02-01 Fri 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift 1 'month)
+           (org-ml-to-trimmed-string))
+      => "[2019-02-01 Fri 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift 1 'year)
+           (org-ml-to-trimmed-string))
+      => "[2020-01-01 Wed 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift 0 'year)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00]"
+      :end-hidden
+      (:buffer "[2019-01-01 Tue]")
+      (:comment "Error when shifting hour/minute in short format")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift 30 'minute)
+           (org-ml-to-trimmed-string))
+      !!> arg-type-error
+      :begin-hidden
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift 30 'hour)
+           (org-ml-to-trimmed-string))
+      !!> arg-type-error
+      :end-hidden)
 
-  ;;   (defexamples-content org-ml-timestamp-toggle-active
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-toggle-active)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "<2019-01-01 Tue>"
-  ;;     :begin-hidden
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-toggle-active)
-  ;;          (org-ml-timestamp-toggle-active)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]"
-  ;;     :end-hidden
-  ;;     (:buffer "<2019-01-01 Tue>--<2019-01-02 Wed>")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-toggle-active)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-  ;;     :begin-hidden
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-toggle-active)
-  ;;          (org-ml-timestamp-toggle-active)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "<2019-01-01 Tue>--<2019-01-02 Wed>"
-  ;;     :end-hidden)
+    (defexamples-content org-ml-timestamp-shift-start
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (:comment "If not a range, change start time and leave implicit end time.")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift-start -1 'year)
+           (org-ml-to-trimmed-string))
+      => "[2018-01-01 Mon 12:00]--[2019-01-01 Tue 12:00]"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift-start -1 'hour)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 11:00-12:00]"
+      (:buffer "[2019-01-01 Tue]--[2019-01-03 Thu]")
+      (:comment "Change only start time if a range")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift-start 1 'day)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-02 Wed]--[2019-01-03 Thu]")
 
-  ;;   (defexamples-content org-ml-timestamp-truncate
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-truncate)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-  ;;     (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-truncate)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (defexamples-content org-ml-timestamp-shift-end
+      nil
+      (:buffer "[2019-01-01 Tue]")
+      (:comment "Shift implicit end time if not a range.")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift-end 1 'day)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (:comment "Move only the second time if a range.")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-shift-end 1 'day)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-03 Thu]")
 
-  ;;   (defexamples-content org-ml-timestamp-truncate-start
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue 12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-truncate-start)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]"
-  ;;     (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-truncate-start)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]--[2019-01-02 Wed 12:00]"
-  ;;     (:buffer "[2019-01-01 Tue]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-truncate-start)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]")
+    (defexamples-content org-ml-timestamp-toggle-active
+      nil
+      (:buffer "[2019-01-01 Tue]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-toggle-active)
+           (org-ml-to-trimmed-string))
+      => "<2019-01-01 Tue>"
+      :begin-hidden
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-toggle-active)
+           (org-ml-timestamp-toggle-active)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]"
+      :end-hidden
+      (:buffer "<2019-01-01 Tue>--<2019-01-02 Wed>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-toggle-active)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      :begin-hidden
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-toggle-active)
+           (org-ml-timestamp-toggle-active)
+           (org-ml-to-trimmed-string))
+      => "<2019-01-01 Tue>--<2019-01-02 Wed>"
+      :end-hidden)
 
-  ;;   (defexamples-content org-ml-timestamp-truncate-end
-  ;;     nil
-  ;;     (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-truncate-end)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-  ;;     (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-truncate-end)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 12:00]--[2019-01-02 Wed]"
-  ;;     (:buffer "[2019-01-01 Tue 12:00]")
-  ;;     (->> (org-ml-parse-this-object)
-  ;;          (org-ml-timestamp-truncate-end)
-  ;;          (org-ml-to-trimmed-string))
-  ;;     => "[2019-01-01 Tue 12:00]"))
+    (defexamples-content org-ml-timestamp-truncate
+      nil
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-truncate)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-truncate)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]")
+
+    (defexamples-content org-ml-timestamp-truncate-start
+      nil
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-truncate-start)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]"
+      (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-truncate-start)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed 12:00]"
+      (:buffer "[2019-01-01 Tue]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-truncate-start)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]")
+
+    (defexamples-content org-ml-timestamp-truncate-end
+      nil
+      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-truncate-end)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+      (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-truncate-end)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00]--[2019-01-02 Wed]"
+      (:buffer "[2019-01-01 Tue 12:00]")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-truncate-end)
+           (org-ml-to-trimmed-string))
+      => "[2019-01-01 Tue 12:00]"))
 
   ;; (def-example-subgroup "Timestamp (diary)"
   ;;   nil
@@ -3812,7 +3819,6 @@
   ;;          (org-ml-set-caption! nil)
   ;;          (org-ml-to-trimmed-string))
   ;;     => "short paragraph"))
-  )
 
 ;; (def-example-group "Branch/Child Manipulation"
 ;;   "Set, get, and map the children of branch nodes."

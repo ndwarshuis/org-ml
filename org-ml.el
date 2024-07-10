@@ -79,10 +79,10 @@ The following values are understood:
   :type 'boolean
   :group 'org-ml)
 
-(defcustom org-ml-parse-habits nil
-  "Parse habits if set to t."
-  :type 'boolean
-  :group 'org-ml)
+;; (defcustom org-ml-parse-habits nil
+;;   "Parse habits if set to t."
+;;   :type 'boolean
+;;   :group 'org-ml)
 
 ;;; NODE TYPE SETS
 
@@ -1317,6 +1317,8 @@ bounds."
                                               "or `cumulate'"))
                   (:repeater-unit ,@ts-unit)
                   (:repeater-value ,@pos-int-nil)
+                  (:repeater-deadline-unit ,@ts-unit)
+                  (:repeater-deadline-value ,@pos-int-nil)
                   (:warning-type :pred org-ml--is-valid-timestamp-warning-type
                                  :type-desc ("nil or a symbol from"
                                              "`all' or `first'"))
@@ -1647,7 +1649,7 @@ system."
 
 The list will be formatted like (YEAR MONTH DAY HOUR MIN) unless
 HAS-TIME is nil, in which case HOUR and MIN will be set to nil."
-  (-let (((H M d m y) (-slice (decode-time unixtime (current-time-zone)) 1 6)))
+  (-let (((M H d m y) (-slice (decode-time unixtime (current-time-zone)) 1 6)))
     (if has-time (list y m d H M) (list y m d nil nil))))
 
 (defun org-ml-unixtime-to-datetime (unixtime)
@@ -1756,15 +1758,19 @@ DEC is a list like (TYPE VALUE UNIT) of the decorator, WARNING?
 is t if the decorator is a warning or nil if it is a repeater,
 and VALID-TYPES are the allowed values for TYPE given in DEC."
   (let ((props (if warning? org-ml--warning-keys org-ml--repeater-keys)))
-    (if (not dec) (org-ml--init-properties props)
-      (-let (((type value unit) dec))
-        (unless (or (not type) (memq type valid-types))
-          (org-ml--arg-error "Invalid decorator type: %s" type))
-        (unless (or (not value) (integerp value))
-          (org-ml--arg-error "Invalid decorator value: %s" value))
-        (unless (or (not unit) (memq unit '(year month week day hour)))
-          (org-ml--arg-error "Invalid decorator unit: %s" unit))
-        (-interleave props dec)))))
+    (pcase dec
+      (`nil
+       (org-ml--init-properties props))
+      (`(,type ,value ,unit)
+       (unless (or (not type) (memq type valid-types))
+         (org-ml--arg-error "Invalid decorator type: %s" type))
+       (unless (or (not value) (integerp value))
+         (org-ml--arg-error "Invalid decorator value: %s" value))
+       (unless (or (not unit) (memq unit '(year month week day hour)))
+         (org-ml--arg-error "Invalid decorator unit: %s" unit))
+       (-interleave props dec))
+      (_
+       (org-ml--arg-error "Invalid warning/repeater list: %s" dec)))))
 
 ;; timestamp (regular)
 
@@ -2022,10 +2028,40 @@ TIMESTAMP if possible."
   (-> (org-ml--decorator-format warning t '(all first))
       (org-ml--set-properties-nocheck timestamp)))
 
+(defun org-ml--timestamp-get-repeater (timestamp)
+  "Return the repeater component of TIMESTAMP.
+Return a list like (TYPE VALUE UNIT) or nil."
+  (-let (((&plist :repeater-type y
+                  :repeater-value v
+                  :repeater-unit u)
+          (org-ml-get-all-properties timestamp)))
+    (when (and y v u) `(,y ,v, u))))
+
 (defun org-ml--timestamp-set-repeater (repeater timestamp)
-  "Return TIMESTAMP with warning properties set to REPEATER list."
-  (-> (org-ml--decorator-format repeater nil '(catch-up restart cumulate))
-      (org-ml--set-properties-nocheck timestamp)))
+  "Return TIMESTAMP with repeater properties set to REPEATER."
+  (let* ((r (org-ml--decorator-format repeater nil '(catch-up restart cumulate)))
+         (r* (if repeater r (append r (list :repeater-deadline-value nil
+                                            :repeater-deadline-unit nil)))))
+      (org-ml--set-properties-nocheck r* timestamp)))
+
+(defun org-ml--timestamp-set-deadline (deadline timestamp)
+  "Return TIMESTAMP with repeater properties set to DEADLINE."
+  (if (not (org-ml--timestamp-get-repeater timestamp)) timestamp
+      ;; TODO not DRY
+      (let ((d (pcase deadline
+                 (`(,value ,unit)
+                  (unless (or (not value) (integerp value))
+                    (org-ml--arg-error "Invalid deadline value: %s" value))
+                  (unless (or (not unit) (memq unit '(year month week day hour)))
+                    (org-ml--arg-error "Invalid deadline unit: %s" unit))
+                  (list :repeater-deadline-value value
+                        :repeater-deadline-unit unit))
+                 (`nil
+                  (list :repeater-deadline-value nil
+                        :repeater-deadline-unit nil))
+                 (_
+                  (org-ml--arg-error "Invalid deadline list: %s" deadline)))))
+        (org-ml--set-properties-nocheck d timestamp))))
 
 ;; (defun org-ml--timestamp-shift-start (n unit timestamp)
 ;;   "Return TIMESTAMP with start time shifted N UNIT's."
@@ -2398,7 +2434,7 @@ throw an error."
       (err))))
 
 (org-ml--defun-kw org-ml-build-timestamp! (start &key end active repeater
-                                                 warning post-blank)
+                                                 deadline warning post-blank)
   "Return a new timestamp node.
 
 START specifies the start time and is a list of integers in one of
@@ -2414,8 +2450,9 @@ ACTIVE is a boolean where t signifies the type is `active', else
 `inactive' (the range suffix will be added if an end time is
 supplied).
 
-REPEATER and WARNING are lists corresponding to those required
-for `org-ml-timestamp-set-repeater' and
+REPEATER, DEADLINE, and WARNING are lists corresponding to those
+required for `org-ml-timestamp-set-repeater',
+`org-ml-timestamp-set-deadline', and
 `org-ml-timestamp-set-warning' respectively.
 
 Building a diary sexp timestamp is not possible with this function."
@@ -2427,7 +2464,8 @@ Building a diary sexp timestamp is not possible with this function."
        (org-ml--timestamp-set-active active)
        (org-ml--timestamp-update-type-ranged)
        (org-ml-timestamp-set-warning warning)
-       (org-ml-timestamp-set-repeater repeater)))
+       (org-ml-timestamp-set-repeater repeater)
+       (org-ml-timestamp-set-deadline deadline)))
 
 (org-ml--defun-kw org-ml-build-clock! (start &key end post-blank)
   "Return a new clock node.
@@ -3585,7 +3623,7 @@ Return a list like (TYPE VALUE UNIT)."
                   :warning-value v
                   :warning-unit u)
           (org-ml-get-all-properties timestamp)))
-    `(,y ,v ,u)))
+    (when (and y v u) `(,y ,v ,u))))
 
 (defun org-ml-timestamp-set-warning (warning timestamp)
   "Set the warning of TIMESTAMP to WARNING.
@@ -3606,89 +3644,19 @@ apply here."
 
 (defun org-ml-timestamp-get-repeater (timestamp)
   "Return the repeater component of TIMESTAMP.
-Return a list like (TYPE VALUE UNIT). If `org-ml-parse-habits' is
-t, return a list like (TYPE VALUE UNIT HABIT-VALUE HABIT-UNIT)."
-  (-let* (((&plist :repeater-type y
-                   :repeater-value v
-                   :repeater-unit u
-                   :raw-value r)
-           (org-ml-get-all-properties timestamp))
-          (rep `(,y ,v ,u)))
-    (if (not org-ml-parse-habits) rep
-      (-let* (((v u) (-some->> r
-                       (s-match "+[0-9]+[ymwd]/\\([0-9]+\\)\\([ymwd]\\)")
-                       (cdr)))
-              (v* (-some-> v (string-to-number)))
-              (u* (-some--> u
-                    (pcase it
-                      ("y" 'year)
-                      ("m" 'month)
-                      ("w" 'week)
-                      ("d" 'day)
-                      (_ (error "Unknown unit (this shouldn't happen)"))))))
-            `(,@rep ,v* ,u*)))))
-
-(defun org-ml--timestamp-unit-to-string (unit)
-  "Convert UNIT of time to string representation."
-  (pcase unit
-    (`year "y")
-    (`month "m")
-    (`week "w")
-    (`day "d")
-    (e (error "Invalid unit: %s" e))))
+Return a list like (TYPE VALUE UNIT) or nil."
+  (org-ml--timestamp-get-repeater timestamp))
 
 (defun org-ml-timestamp-set-repeater (repeater timestamp)
   "Set the repeater of TIMESTAMP to REPEATER.
 
-REPEATER is a list like (TYPE VALUE UNIT) or (TYPE VALUE UNIT
-HABIT-VALUE HABIT-UNIT); if `org-ml-parse-habits' is nil, only
-accept the former and error on the latter (and vice versa). TYPE
-is one of `year', `month', `week', or `day'. VALUE and
-HABIT-VALUE are integers. UNIT and HABIT-UNIT are one of `year',
-`month', `week', or `day'.
+REPEATER is a list like (TYPE VALUE UNIT); TYPE is one of
+`cumulate', `restart', or `catch-up'. VALUE is an integer. UNIT
+is one of `year', `month', `week', or `day'.
 
-In order to remove the repeater entirely, set REPEATER to nil
-or (nil nil nil). To delete just the habit (if it exists and
-`org-ml-parse-habits' is t) set REPEATER to (TYPE VALUE UNIT nil
-nil)."
-  (pcase repeater
-    (`nil
-     (->> (if org-ml-parse-habits
-              (org-ml--map-property-nocheck* :raw-value
-                (replace-regexp-in-string " [.+]?+[0-9]+[ymwd]\\(/[0-9]+[ymwd]\\)?" "" it)
-                timestamp)
-            timestamp)
-          (org-ml--timestamp-set-repeater nil)))
-    (`(,_ ,_ ,_)
-     (if org-ml-parse-habits
-         (error "Habit parsing is enabled; use a 5-membered list")
-       (org-ml--timestamp-set-repeater repeater timestamp)))
-    (`(,rt ,rv ,ru ,hv ,hu)
-     (if (not org-ml-parse-habits)
-         (error "Habit parsing is disabled; use a 3-membered list")
-       (->> (org-ml--timestamp-set-repeater (list rt rv ru) timestamp)
-            (org-ml--map-property-nocheck* :raw-value
-              (let ((r (if (not (and hv hu)) ""
-                         (->> (org-ml--timestamp-unit-to-string hu)
-                              (format "/%s%s" hv)))))
-                (save-match-data
-                  (-if-let (m (string-match "\\(+[0-9]+[ymwd]\\)\\(/[0-9]+[ymwd]\\)?" it))
-                      (-let (((b1 e1 b2 e2) (-if-let (b (match-beginning 2))
-                                                `(0 ,b ,(match-end 2) nil)
-                                              (let ((i (match-end 1)))
-                                                `(0 ,i ,i -1)))))
-                        (concat (substring it b1 e1) r (substring it b2 e2)))
-                    (if (and rt rv ru)
-                        (let* ((y* (pcase rt
-                                     (`cumulate "+")
-                                     (`catch-up "++")
-                                     (`restart ".+")
-                                     (e (error "Unknown repeater type: %s" e))))
-                               (rep (->> (org-ml--timestamp-unit-to-string ru)
-                                         (format " %s%s%s" y* rv))))
-                          (concat (substring it 0 -1) rep r (substring it -1)))
-                      it))))))))
-    (e (error "Invalid repeater definition: %s" e))))
+Setting REPEATER to nil will remove the repeater and its deadline
+if present."
+  (org-ml--timestamp-set-repeater repeater timestamp))
 
 (org-ml--defun-anaphoric* org-ml-timestamp-map-repeater (fun timestamp)
   "Apply FUN to the warning of TIMESTAMP.
@@ -3698,6 +3666,33 @@ new repeater list. The same rules that apply to
 `org-ml-timestamp-get-repeater' apply here."
   (--> (org-ml-timestamp-get-repeater timestamp)
     (org-ml-timestamp-set-repeater (funcall fun it) timestamp)))
+
+(defun org-ml-timestamp-get-deadline (timestamp)
+  "Return the repeater component of TIMESTAMP.
+Return a list like (VALUE UNIT) or nil."
+  (-let (((&plist :repeater-deadline-value dv
+                  :repeater-deadline-unit du)
+          (org-ml-get-all-properties timestamp)))
+    (when (and dv du) (list dv du))))
+
+(defun org-ml-timestamp-set-deadline (deadline timestamp)
+  "Set the repeater of TIMESTAMP to DEADLINE.
+
+DEADLINE is a list like (VALUE UNIT); VALUE is an integer. UNIT
+is one of `year', `month', `week', or `day'.
+
+Setting DEADLINE to nil will remove the deadline. Will have no effect
+if repeater is not present."
+  (org-ml--timestamp-set-deadline deadline timestamp))
+
+(org-ml--defun-anaphoric* org-ml-timestamp-map-deadline (fun timestamp)
+  "Apply FUN to the deadline of TIMESTAMP.
+FUN is a function that takes a repeater list like and returns a
+new repeater list. The same rules that apply to
+`org-ml-timestamp-set-deadline' and
+`org-ml-timestamp-get-deadline' apply here."
+  (--> (org-ml-timestamp-get-deadline timestamp)
+    (org-ml-timestamp-set-deadline (funcall fun it) timestamp)))
 
 ;; timestamp (diary)
 
@@ -5554,13 +5549,13 @@ This is a workaround for a bug.")
   "Return NODE with empty child nodes `org-ml--blank-if-empty' set to contain \"\"."
   (if (org-ml-is-childless node)
       (cond
-       ((and org-ml-parse-habits (org-ml-is-type 'timestamp node))
-        (let ((s (org-element-interpret-data node)))
-          (-if-let (h (-some->> (org-ml-get-property :raw-value node)
-                        (s-match "+[[:digit:]]+[ymwd]/\\([[:digit:]]+[ymwd]\\)")
-                        (cadr)))
-              (concat (substring s 0 -1) "/" h (s-right 1 s))
-            s)))
+       ;; ((and org-ml-parse-habits (org-ml-is-type 'timestamp node))
+       ;;  (let ((s (org-element-interpret-data node)))
+       ;;    (-if-let (h (-some->> (org-ml-get-property :raw-value node)
+       ;;                  (s-match "+[[:digit:]]+[ymwd]/\\([[:digit:]]+[ymwd]\\)")
+       ;;                  (cadr)))
+       ;;        (concat (substring s 0 -1) "/" h (s-right 1 s))
+       ;;      s)))
        ((org-ml-is-any-type org-ml--blank-if-empty node)
         (org-ml--set-blank-children node))
        (t
