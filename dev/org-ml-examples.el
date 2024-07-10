@@ -3486,7 +3486,7 @@
       (->> (org-ml-parse-this-object)
            (org-ml-timestamp-set-double-time '(2019 1 1 0 0) '(2019 1 1 1 0))
            (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 00:00-01:00]")
+      => "[2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00]")
 
     (defexamples-content org-ml-timestamp-set-range
       nil

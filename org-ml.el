@@ -3533,7 +3533,7 @@ behavior is not desired, use `org-ml-timestamp-shift'."
                   (org-ml--timelist-truncate)))
          ;; NOTE it is impossible for range-type to be 'timerange since hours
          ;; and minutes will be missing
-         (rt (if (equal t1 t2) 'daterange nil)))
+         (rt (if (equal t1 t2) nil 'daterange)))
     (->> (org-ml--timestamp-set-start-timelist t1 timestamp)
          (org-ml--timestamp-set-end-timelist t2)
          (org-ml--timestamp-set-range-type rt))))
@@ -3546,7 +3546,7 @@ Collapsed timestamps will become uncollapsed."
                   (org-ml--timelist-truncate)))
          (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
                   (org-ml--timelist-truncate)))
-         (rt (if (equal t1 t2) 'daterange nil)))
+         (rt (if (equal t1 t2) nil 'daterange)))
     (->> (org-ml--timestamp-set-start-timelist t1 timestamp)
          (org-ml--timestamp-set-range-type rt))))
 
@@ -3558,7 +3558,7 @@ Collapsed timestamps will become uncollapsed."
                   (org-ml--timelist-truncate)))
          (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
                   (org-ml--timelist-truncate)))
-         (rt (if (equal t1 t2) 'daterange nil)))
+         (rt (if (equal t1 t2) nil 'daterange)))
     (->> (org-ml--timestamp-set-end-timelist t2 timestamp)
          (org-ml--timestamp-set-range-type rt))))
 
