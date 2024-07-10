@@ -381,14 +381,13 @@ be parsed to TYPE."
   (let* ((contents-list (--map (if (consp it) (s-join "\n" it) it)
                                contents-list))
          (suffix-char (if (memq type org-ml-elements) "\n" " "))
-         ;; TODO this little conditional implies that these nodes are invalid
-         ;; if they have a space after them; not sure if this is actually true
-         ;; (but if they have spaces after they don't pass this test)
-         (contents-list-space (unless (memq type '(node-property plain-text line-break table-cell))
-                                (--map (s-append suffix-char it) contents-list)))
+         ;; Also test each string with a space after it. In some cases, this
+         ;; won't parse correctly, hence the filter.
+         (contents-list-space
+          (unless (memq type '(node-property plain-text line-break table-cell))
+            (--map (s-append suffix-char it) contents-list)))
          (test-list (append contents-list contents-list-space)))
     (--each test-list
-      ;; TODO resolve all in the temp buffer somehow?
       (-let* ((at (if prefix (1+ (length prefix)) 1))
               ((parsed parsed-type)
                (org-ml--with-org-env
@@ -397,10 +396,9 @@ be parsed to TYPE."
                 (when suffix (insert suffix))
                 (let ((p (funcall parse-fun at)))
                   (list (org-ml-to-string p) (org-ml-get-type p))))))
-        ;; TODO not DRY
-        (unless (equal type parsed-type)
+        (if (equal type parsed-type)
+            (should t)
           (print (format "%s parsed as %s" it parsed-type)))
-        (should (equal type parsed-type))
         (should (equal it parsed))))))
 
 (describe "parse and print should be perfect inverses"
@@ -460,7 +458,8 @@ be parsed to TYPE."
         (org-ml--test-contents-parse-inversion 'timestamp #'org-ml-parse-object-at
           (list "[2019-01-01 Tue]"
                 "[2019-01-01 Tue 12:00]"
-                ;; "[2019-01-01 Tue 12:00-13:00]" TODO this doesn't parse correctly
+                "[2019-01-01 Tue 12:00-13:00]"
+                "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
                 "[2019-01-01 Tue]--[2019-01-02 Wed]"
                 "<2019-01-01 Tue>"
                 "[2019-01-01 Tue +1d]"
@@ -544,8 +543,7 @@ be parsed to TYPE."
         (org-ml--test-contents-parse-inversion 'clock #'org-ml-parse-element-at
           (list "CLOCK: [2019-01-01 Tue]\n"
                 "CLOCK: [2019-01-01 Tue]--[2019-01-02 Wed] => 24:00\n"
-                ;; TODO this doesn't work
-                ;; "CLOCK: [2019-01-01 Tue 00:00-01:00] =>  1:00\n"
+                "CLOCK: [2019-01-01 Tue 00:00-01:00] =>  1:00\n"
                 )))
 
       (it "comment"
@@ -603,8 +601,8 @@ be parsed to TYPE."
       (it "keyword"
         (org-ml--test-contents-parse-inversion 'keyword #'org-ml-parse-element-at
           (list "#+key: val\n"
-                ;; TODO this randomly fails
-                ;; "#+KEY:\n"
+                ;; TODO must be lowercase and must have at least a space
+                ;; "#+KEY: \n"
                 "#+key: \n")))
 
       (it "latex-environment"
@@ -618,8 +616,8 @@ be parsed to TYPE."
       (it "node-property"
         (org-ml--test-contents-parse-inversion 'node-property #'org-ml-parse-element-at
           (list ":node:     prop\n"
-                ;; TODO this seems arbitrary
-                ;; ":node\n"
+                ;; TODO node props will always be returned with 5 spaces after
+                ;; ":node:\n"
                 ":node:     \n")
           "* dummy\n:PROPERTIES:\n"
           ":END:\n"))
@@ -696,7 +694,6 @@ be parsed to TYPE."
            "[fn:label] stuff after\n"
            )))
 
-      ;; TODO this doesn't work with spaces after
       (it "headline"
         (org-ml--test-contents-parse-inversion 'headline #'org-ml-parse-element-at
           ;; this is not exhaustive...
@@ -706,7 +703,7 @@ be parsed to TYPE."
                 "* TODO COMMENT dummy\n"
                 "* TODO dummy\n"
                 "* TODO [#A] dummy\n"
-                ;; TODO priority is supposed to be on the other side
+                ;; TODO order of comment and priority comes out reversed
                 ;; "* TODO [#A] COMMENT dummy\n"
                 ;; "* [#A] COMMENT dummy\n"
                 )))
@@ -717,8 +714,9 @@ be parsed to TYPE."
           ;; TODO not sure why these have two newlines
           (list "- \n\n"
                 "1. \n\n"
-                ;; TODO these don't work
+                ;; TODO this becomes -
                 ;; "+ \n\n"
+                ;; TODO this becomes 1.
                 ;; "1) \n\n"
                 "- thing\n"
                 "- tagged :: thing\n"
