@@ -143,39 +143,38 @@
          (car))
     => nil)
 
-  ;; TODO fixme
-  ;; (defexamples-content org-ml-parse-headline-at
-  ;;   nil
-  ;;   (:buffer "* headline")
-  ;;   (:comment "Return the headline itself")
-  ;;   (->> (org-ml-parse-headline-at 1)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => "* headline"
-  ;;   (:buffer "* headline"
-  ;;            "section crap")
-  ;;   (:comment "Return headline and section")
-  ;;   (->> (org-ml-parse-headline-at 1)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => (:result "* headline"
-  ;;               "section crap")
-  ;;   (:comment "Return headline when point is in the section")
-  ;;   (->> (org-ml-parse-headline-at 12)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => (:result "* headline"
-  ;;               "section crap")
-  ;;   (:buffer "* headline"
-  ;;            "section crap"
-  ;;            "** not parsed")
-  ;;   (:comment "Don't parse any subheadlines")
-  ;;   (->> (org-ml-parse-headline-at 1)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => (:result "* headline"
-  ;;               "section crap")
-  ;;   (:buffer "nothing nowhere")
-  ;;   (:comment "Return nil if not under a headline")
-  ;;   (->> (org-ml-parse-headline-at 1)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => "")
+  (defexamples-content org-ml-parse-headline-at
+    nil
+    (:buffer "* headline")
+    (:comment "Return the headline itself")
+    (->> (org-ml-parse-headline-at 1)
+         (org-ml-to-trimmed-string))
+    => "* headline"
+    (:buffer "* headline"
+             "section crap")
+    (:comment "Return headline and section")
+    (->> (org-ml-parse-headline-at 1)
+         (org-ml-to-trimmed-string))
+    => (:result "* headline"
+                "section crap")
+    (:comment "Return headline when point is in the section")
+    (->> (org-ml-parse-headline-at 12)
+         (org-ml-to-trimmed-string))
+    => (:result "* headline"
+                "section crap")
+    (:buffer "* headline"
+             "section crap"
+             "** not parsed")
+    (:comment "Don't parse any subheadlines")
+    (->> (org-ml-parse-headline-at 1)
+         (org-ml-to-trimmed-string))
+    => (:result "* headline"
+                "section crap")
+    (:buffer "nothing nowhere")
+    (:comment "Return nil if not under a headline")
+    (->> (org-ml-parse-headline-at 1)
+         (org-ml-to-trimmed-string))
+    => "")
 
   (defexamples-content org-ml-parse-subtree-at
     nil

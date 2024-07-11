@@ -6565,8 +6565,8 @@ t, parse the entire subtree, else just parse the top headline."
   (save-excursion
     (goto-char point)
     (when (ignore-errors (org-back-to-heading t))
-      (let ((b (point))
-            (e (if subtree
+      (let* ((b (point))
+             (e (if subtree
                    (progn
                      (org-end-of-subtree)
                      ;; skip ahead to the next headline because
@@ -6574,8 +6574,17 @@ t, parse the entire subtree, else just parse the top headline."
                      ;; any spacing after headlines
                      (or (outline-next-heading)
                          (point-max)))
-                 (or (outline-next-heading) (point-max)))))
-        (car (org-ml--parse-elements b e 'first-section))))))
+                  (or (outline-next-heading) (point-max))))
+             (tree (car (org-ml--parse-elements b e 'first-section))))
+        ;; TODO this is a hack; since org 9.6 setting the boundaries at the next headline
+        ;; will not stop the parser from parsing the entire subtree, even if
+        ;; we don't want it. Workaround is to parse the entire subtree and
+        ;; possibly throw away most of it
+        (if subtree tree
+          (let ((cs (org-ml-get-children tree)))
+            (if (< 1 (length cs))
+                (org-ml-set-children (list (car cs)) tree)
+              tree)))))))
 
 (defun org-ml-parse-headline-at (point)
   "Return headline node under POINT or nil if not on a headline.
