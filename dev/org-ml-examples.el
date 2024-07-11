@@ -1444,7 +1444,7 @@
            (org-ml-to-trimmed-string))
       => "\\gamma{}"
 
-      ;; TODO test preserve indentation...
+      ;; TODO test org-src-preserve-indentation
       (:buffer "#+begin_example"
                "#+end_example")
       (->> (org-ml-parse-this-element)
@@ -1542,7 +1542,6 @@
            (org-ml-to-trimmed-string))
       => "#+kee: vahl"
 
-      ;; TODO this is stupid, who would ever do this?
       (:buffer "\begin{env}"
                "body"
                "\end{env}")
@@ -1553,7 +1552,6 @@
                   "body"
                   "\end{vne}")
 
-      ;; TODO this is also stupid...
       (:buffer "$2+2=4$")
       (->> (org-ml-parse-this-object)
            (org-ml-set-property :value "$2+2=5$")
@@ -1612,7 +1610,7 @@
            (org-ml-set-property :value "(print 'hi)")
            (org-ml-set-property :parameters '(:cache no))
            (org-ml-set-property :switches '("-n"))
-           ;; TODO test preserver indent
+           ;; TODO test org-src-preserve-indentation
            (org-ml-to-trimmed-string))
       => (:result "#+begin_src emacs -n :cache no"
                   "  (print 'hi)"
@@ -1829,7 +1827,7 @@
            (org-ml-get-property :use-brackets-p))
       => t
 
-      ;; TODO test preserve indentation...
+      ;; TODO test org-src-preserve-indentation
       => (:buffer "#+begin_example -n"
                   "example.com"
                   "#+end_example")
@@ -2763,7 +2761,6 @@
                   "#+end_src")
       :end-hidden)
 
-    ;; TODO fixme
     ;; (defexamples-content org-ml-property-is-nil-p
     ;;   nil
     ;;   (:buffer "* TODO dummy")
@@ -2861,13 +2858,12 @@
                   :value (-partial #'s-prepend "OM_")))
            (org-ml-to-trimmed-string))
       => "#+om_key: OM_VAL"
-      ;; TODO this makes the document parser puke
-      ;; (:comment "Throw error if any of the properties are invalid")
-      ;; (->> (org-ml-parse-this-element)
-      ;;      (org-ml-map-properties*
-      ;;       (:title (s-prepend "OM_" it) :value (s-prepend "OM_" it)))
-      ;;      (org-ml-to-trimmed-string))
-      ;; !!> error
+      (:comment "Throw error if any of the properties are invalid")
+      (->> (org-ml-parse-this-element)
+           (org-ml-map-properties*
+            (:title (s-prepend "OM_" it) :value (s-prepend "OM_" it)))
+           (org-ml-to-trimmed-string))
+      !!> error
       )
 
     (defexamples-content org-ml-get-parents
@@ -5335,6 +5331,7 @@
 
       ;; make sure this works with whitespace
 
+      ;;  TODO these fail
       ;; (:buffer "* one"
       ;;          ""
       ;;          "** two"
@@ -5353,7 +5350,6 @@
       ;;             ""
       ;;             "*** four")
 
-      ;;  TODO this fails
       ;; (:buffer "* one"
       ;;          "something"
       ;;          ""
@@ -5430,35 +5426,35 @@
                   "** four"
                   "** four")))
 
-  ;; TODO why is this here?
+  ;; TODO fixme (specifically paragraph thing)
   ;; (def-example-subgroup "Item"
   ;;   nil
 
-  ;; (defexamples-content org-ml-item-get-level
-  ;;   nil
-  ;;   (:buffer "- one"
-  ;;             "  - two"
-  ;;             "    - three")
-  ;;   (->> (org-ml-parse-this-item)
-  ;;        (org-ml-)))
+  ;; ;; (defexamples-content org-ml-item-get-level
+  ;; ;;   nil
+  ;; ;;   (:buffer "- one"
+  ;; ;;             "  - two"
+  ;; ;;             "    - three")
+  ;; ;;   (->> (org-ml-parse-this-item)
+  ;; ;;        (org-ml-)))
 
-  ;; (defexamples-content org-ml-item-get-sublist
-  ;;   nil
-  ;;   (:buffer "- one"
-  ;;             "  - two"
-  ;;             "  - three"
-  ;;             "- four")
-  ;;   (->> (org-ml-parse-this-item)
-  ;;        (org-ml-item-get-sublist)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => (:result "- two"
-  ;;               "- three")
-  ;;   (:buffer "- one"
-  ;;             "- two")
-  ;;   (->> (org-ml-parse-this-item)
-  ;;        (org-ml-item-get-sublist)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => "")
+  ;; ;; (defexamples-content org-ml-item-get-sublist
+  ;; ;;   nil
+  ;; ;;   (:buffer "- one"
+  ;; ;;             "  - two"
+  ;; ;;             "  - three"
+  ;; ;;             "- four")
+  ;; ;;   (->> (org-ml-parse-this-item)
+  ;; ;;        (org-ml-item-get-sublist)
+  ;; ;;        (org-ml-to-trimmed-string))
+  ;; ;;   => (:result "- two"
+  ;; ;;               "- three")
+  ;; ;;   (:buffer "- one"
+  ;; ;;             "- two")
+  ;; ;;   (->> (org-ml-parse-this-item)
+  ;; ;;        (org-ml-item-get-sublist)
+  ;; ;;        (org-ml-to-trimmed-string))
+  ;; ;;   => "")
 
   ;; (defexamples-content org-ml-item-get-paragraph
   ;;   nil
@@ -5467,21 +5463,22 @@
   ;;        (org-ml-item-get-paragraph)
   ;;        (org-ml-to-trimmed-string))
   ;;   => "one"
-  ;;   (:buffer "- [ ] one")
-  ;;   (->> (org-ml-parse-this-item)
-  ;;        (org-ml-item-get-paragraph)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => "one"
-  ;;   (:buffer "- tmsu :: one")
-  ;;   (->> (org-ml-parse-this-item)
-  ;;        (org-ml-item-get-paragraph)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => "one"
-  ;;   (:buffer "- tmsu ::")
-  ;;   (->> (org-ml-parse-this-item)
-  ;;        (org-ml-item-get-paragraph)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => ""))
+  ;;   ;; (:buffer "- [ ] one")
+  ;;   ;; (->> (org-ml-parse-this-item)
+  ;;   ;;      (org-ml-item-get-paragraph)
+  ;;   ;;      (org-ml-to-trimmed-string))
+  ;;   ;; => "one"
+  ;;   ;; (:buffer "- tmsu :: one")
+  ;;   ;; (->> (org-ml-parse-this-item)
+  ;;   ;;      (org-ml-item-get-paragraph)
+  ;;   ;;      (org-ml-to-trimmed-string))
+  ;;   ;; => "one"
+  ;;   ;; (:buffer "- tmsu ::")
+  ;;   ;; (->> (org-ml-parse-this-item)
+  ;;   ;;      (org-ml-item-get-paragraph)
+  ;;   ;;      (org-ml-to-trimmed-string))
+  ;;   ;; => "")
+  ;;   ))
 
   (def-example-subgroup "Plain List"
     nil
