@@ -6607,15 +6607,17 @@ headline. If POINT is before the first headline (if any), return
 the section at the top of the org buffer."
   (save-excursion
     (goto-char point)
-    (org-ml--get-descendent
-     '(0)
-     (condition-case nil
-         (progn
-           (org-back-to-heading)
-           (org-ml--parse-headline-subtree-at point nil))
-       (error
-        (org-ml--parse-elements
-         (point-min) (or (outline-next-heading) (point-max)) 'first-section))))))
+    (->> (condition-case nil
+             (progn
+               (org-back-to-heading)
+               ;; TODO this suffers from the same problem as the headline parser
+               ;; (parses entire subtree and probably wastes most of it)
+               (org-ml--parse-headline-subtree-at point nil))
+           (error
+            (org-ml--parse-elements
+             (point-min) (or (outline-next-heading) (point-max)) 'first-section)))
+         (org-ml--get-descendent '(0))
+         (org-ml--filter-type 'section))))
 
 ;;; parse at current point
 

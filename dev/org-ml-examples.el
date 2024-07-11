@@ -234,31 +234,30 @@
          (org-ml-to-trimmed-string))
     => "")
   
-  ;; TODO fixme
-  ;; (defexamples-content org-ml-parse-section-at
-  ;;   nil
-  ;;   (:buffer "over headline"
-  ;;            "* headline"
-  ;;            "under headline")
-  ;;   (:comment "Return the section above the headline")
-  ;;   (->> (org-ml-parse-section-at 1)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => "over headline"
-  ;;   (:comment "Return the section under headline")
-  ;;   (->> (org-ml-parse-section-at 25)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => "under headline"
-  ;;   (:buffer "* headline"
-  ;;            "** subheadline")
-  ;;   (:comment "Return nil if no section under headline")
-  ;;   (->> (org-ml-parse-section-at 1)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => ""
-  ;;   (:buffer "")
-  ;;   (:comment "Return nil if no section at all")
-  ;;   (->> (org-ml-parse-section-at 1)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => "")
+  (defexamples-content org-ml-parse-section-at
+    nil
+    (:buffer "over headline"
+             "* headline"
+             "under headline")
+    (:comment "Return the section above the headline")
+    (->> (org-ml-parse-section-at 1)
+         (org-ml-to-trimmed-string))
+    => "over headline"
+    (:comment "Return the section under headline")
+    (->> (org-ml-parse-section-at 25)
+         (org-ml-to-trimmed-string))
+    => "under headline"
+    (:buffer "* headline"
+             "** subheadline")
+    (:comment "Return nil if no section under headline")
+    (->> (org-ml-parse-section-at 1)
+         (org-ml-to-trimmed-string))
+    => ""
+    (:buffer "")
+    (:comment "Return nil if no section at all")
+    (->> (org-ml-parse-section-at 1)
+         (org-ml-to-trimmed-string))
+    => "")
 
   (defexamples-content org-ml-parse-this-toplevel-section
     nil
