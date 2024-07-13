@@ -464,7 +464,10 @@ be parsed to TYPE."
                 "<2019-01-01 Tue>"
                 "[2019-01-01 Tue +1d]"
                 "[2019-01-01 Tue -1y]"
-                "[2019-01-01 Tue +1d -1y]")))
+                "[2019-01-01 Tue +1d -1y]"
+                "<%%(diary-float 1 3 2) 00:00>"
+                "<%%(diary-float 1 3 2) 00:00-12:00>"
+                "<%%(diary-float 1 3 2)>")))
 
       (it "verbatim"
         (org-ml--test-contents-parse-inversion 'verbatim #'org-ml-parse-object-at

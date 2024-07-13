@@ -1626,6 +1626,11 @@ If fractional cookie, return `fraction'; if percentage cookie return
 ;; type DateTime = (Y, M, D, H, M)
 ;; type TimeList = (Y, M, D, (Maybe H), (Maybe M))
 
+;; TODO also check values?
+(defun org-ml-is-time-p (time)
+  "Return t if TIME is a list like (hour min)."
+  (pcase time (`(,(pred integerp) ,(pred integerp)) t)))
+
 (defun org-ml-timelist-has-time (timelist)
   "Return t if TIMELIST has a time."
   (pcase timelist
@@ -1797,7 +1802,7 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
   "Return the start time of TIMESTAMP or nil if not set."
   (-let (((&plist :minute-start m :hour-start h)
           (org-ml-get-all-properties timestamp)))
-    (if (and m h) `(,m ,h) nil)))
+    (if (and h m) `(,h ,m) nil)))
 
 (defun org-ml--timestamp-get-end-timelist (timestamp)
   "Return the timelist of the end time in TIMESTAMP."
@@ -1816,7 +1821,7 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
   "Return the end time of TIMESTAMP or nil if not set."
   (-let (((&plist :minute-end m :hour-end h)
           (org-ml-get-all-properties timestamp)))
-    (if (and m h) `(,m ,h) nil)))
+    (if (and h m) `(,h ,m) nil)))
 
 ;; (eval-when-compile
 ;;   (defmacro org-ml--timestamp-map-start-timelist* (form timestamp)
@@ -2076,6 +2081,31 @@ Return a list like (TYPE VALUE UNIT) or nil."
 ;;                     (org-ml--timelist-shift n unit))))
 ;;     (->> (org-ml--timestamp-set-end-timelist time* timestamp)
 ;;          (org-ml--timestamp-update-type-ranged))))
+
+(defun org-ml--timestamp-set-start-time (time timestamp-diary)
+  "Set the start of TIMESTAMP-DIARY to TIME. Does not set type."
+  (unless (or (not time) (org-ml-is-time-p time))
+    (org-ml--arg-error "Invalid time given %S" time))
+  (-let (((H M) time))
+    (org-ml--set-properties-nocheck
+     (list :hour-start H :minute-start M)
+     timestamp-diary)))
+
+(defun org-ml--timestamp-set-end-time (time timestamp-diary)
+  "Set the end of TIMESTAMP-DIARY to TIME. Does not set type."
+  (unless (or (not time) (org-ml-is-time-p time))
+    (org-ml--arg-error "Invalid time given %S" time))
+  (-let (((H M) time))
+    (org-ml--set-properties-nocheck
+     (list :hour-end H :minute-end M)
+     timestamp-diary)))
+
+(defun org-ml--timestamp-update-type-ranged-timeonly (timestamp-diary)
+  "Return TIMESTAMP-DIARY with updated `:range-type'."
+  (let* ((t1 (org-ml--timestamp-get-start-time timestamp-diary))
+         (t2 (org-ml--timestamp-get-end-time timestamp-diary))
+         (rt (if (equal t1 t2) nil 'timerange)))
+    (org-ml--set-property-nocheck :range-type rt timestamp-diary)))
 
 ;; timestamp (diary sexp)
 
@@ -2376,14 +2406,19 @@ list. None of the builder functions add parent references, so
     (--dotimes n (!cons (org-ml-clone-node node) ret))
     ret))
 
-(org-ml--defun-kw org-ml-build-timestamp-diary (form &key post-blank)
+(org-ml--defun-kw org-ml-build-timestamp-diary (form &key start end post-blank)
   "Return a new diary-sexp timestamp node from FORM.
-Optionally set POST-BLANK (a positive integer)."
+
+TIME1 and TIME1 are lists like (hour min) which specify the
+time(s) of the diary timestamp. If TIME2 is provided, TIME1 must
+also be provided and the timestamp will be ranged. Optionally set
+POST-BLANK (a positive integer)."
   (->> (org-ml--build-blank-node 'timestamp)
        (org-element-put-property-2 :post-blank (or post-blank 0))
        ;; (org-ml-set-property :post-blank (or post-blank 0))
        (org-ml--set-property-nocheck :type 'diary)
-       (org-ml-timestamp-diary-set-value form)))
+       (org-ml-timestamp-diary-set-value form)
+       (org-ml-timestamp-diary-set-double-time start end)))
 
 (org-ml--defun-kw org-ml-build-table-row-hline (&key post-blank)
   "Return a new rule-typed table-row node.
@@ -3704,6 +3739,47 @@ The node must have a type `eq' to `diary'. FORM is a quoted list."
            (org-ml--set-property-nocheck :raw-value (format "<%%%%%S>" form))
            (org-ml--set-property-nocheck :diary-sexp (format "%S" form)))
     (org-ml--arg-error "Timestamp-diary node value must be a form: Got %S" form)))
+
+(defun org-ml-timestamp-diary-set-single-time (time timestamp-diary)
+  "Return TIMESTAMP-DIARY node with start/end time set to TIME.
+The node must have a type `eq' to `diary'. TIME is a list
+like (hour min). If TIME is nil remove the time."
+  (->> (org-ml--timestamp-set-start-time time timestamp-diary)
+       (org-ml--timestamp-set-end-time time)
+       (org-ml--timestamp-update-type-ranged-timeonly)))
+
+(defun org-ml-timestamp-diary-set-start-time (time timestamp-diary)
+  "Return TIMESTAMP-DIARY node with start time set to TIME.
+The node must have a type `eq' to `diary'. TIME is a list
+like (hour min). TIME may not be nil"
+  (unless time
+    (org-ml--arg-error "Time must not be nil"))
+  (let* ((start (org-ml--timestamp-get-start-time timestamp-diary))
+         (end (or (org-ml--timestamp-get-end-time timestamp-diary) start time)))
+    (->> (org-ml--timestamp-set-start-time time timestamp-diary)
+         (org-ml--timestamp-set-end-time end)
+         (org-ml--timestamp-update-type-ranged-timeonly))))
+
+(defun org-ml-timestamp-diary-set-end-time (time timestamp-diary)
+  "Return TIMESTAMP-DIARY node with end time set to TIME.
+The node must have a type `eq' to `diary'. TIME is a list
+like (hour min). If TIME is nil then remove the end time.
+If start time is not set, return node unchanged."
+  (let ((start (org-ml--timestamp-get-start-time timestamp-diary)))
+    (if (not start) timestamp-diary
+      (->> (org-ml--timestamp-set-end-time (or time start) timestamp-diary)
+           (org-ml--timestamp-update-type-ranged-timeonly)))))
+
+(defun org-ml-timestamp-diary-set-double-time (time1 time2 timestamp-diary)
+  "Return TIMESTAMP-DIARY node with time set to TIME1 and TIME2.
+The node must have a type `eq' to `diary'. TIME1 and TIME2 are
+lists like (hour min). Either time may be nil, but if TIME1 is nil
+then TIME2 must also be nil."
+  (when (and (not time1) time2)
+    (org-ml--arg-error "Time1 cannot be nil if Time2 is non-nil"))
+  (->> (org-ml--timestamp-set-start-time time1 timestamp-diary)
+       (org-ml--timestamp-set-end-time (or time2 time1))
+       (org-ml--timestamp-update-type-ranged-timeonly)))
 
 ;;; element nodes
 ;;

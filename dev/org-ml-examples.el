@@ -942,7 +942,18 @@
     (defexamples org-ml-build-timestamp-diary
       (->> (org-ml-build-timestamp-diary '(diary-float t 4 2))
            (org-ml-to-string))
-      => "<%%(diary-float t 4 2)>"))
+      => "<%%(diary-float t 4 2)>"
+      (->> (org-ml-build-timestamp-diary '(diary-float t 4 2) :start '(0 0))
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 00:00>"
+      (->> (org-ml-build-timestamp-diary '(diary-float t 4 2) :start '(0 0) :end '(1 0))
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 00:00-01:00>"
+      :begin-hidden
+      (->> (org-ml-build-timestamp-diary '(diary-float t 4 2) :end '(1 0))
+           (org-ml-to-string))
+      !!> arg-type-error
+      :end-hidden))
 
   (def-example-subgroup "Shorthand Builders"
     "Build nodes with more convenient/shorter syntax."
@@ -3683,7 +3694,93 @@
       (->> (org-ml-parse-this-object)
            (org-ml-timestamp-diary-set-value '(diary-float 1 3 2))
            (org-ml-to-string))
-      => "<%%(diary-float 1 3 2)>"))
+      => "<%%(diary-float 1 3 2)>")
+
+    (defexamples-content org-ml-timestamp-diary-set-single-time
+      nil
+      (:buffer "<%%(diary-float t 4 2)>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-single-time '(0 0))
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 00:00>"
+      (:buffer "<%%(diary-float t 4 2) 00:01>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-single-time nil)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2)>")
+
+    (defexamples-content org-ml-timestamp-diary-set-double-time
+      nil
+      (:buffer "<%%(diary-float t 4 2)>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-double-time '(0 0) '(0 1))
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 00:00-00:01>"
+      (:buffer "<%%(diary-float t 4 2) 00:00-00:01>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-double-time '(1 0) '(2 0))
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 01:00-02:00>"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-double-time '(1 0) nil)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 01:00>"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-double-time nil nil)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2)>"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-double-time nil '(2 0))
+           (org-ml-to-string))
+      !!> arg-type-error)
+
+    (defexamples-content org-ml-timestamp-diary-set-start-time
+      nil
+      (:buffer "<%%(diary-float t 4 2)>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-start-time '(0 0))
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 00:00>"
+      (:buffer "<%%(diary-float t 4 2) 12:00>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-start-time '(1 0))
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 01:00-12:00>"
+      :begin-hidden
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-start-time '(0 0))
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 00:00-12:00>"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-start-time '(12 0))
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 12:00>"
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-start-time nil)
+           (org-ml-to-string))
+      !!> arg-type-error
+      :end-hidden)
+
+    (defexamples-content org-ml-timestamp-diary-set-end-time
+      nil
+      (:buffer "<%%(diary-float t 4 2)>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-end-time '(0 0))
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2)>"
+      (:buffer "<%%(diary-float t 4 2) 12:00>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-end-time '(13 0))
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 12:00-13:00>"
+      :begin-hidden
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-end-time nil)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 12:00>"
+      :end-hidden)
+
+    )
 
   (def-example-subgroup "Affiliated Keywords"
     nil
