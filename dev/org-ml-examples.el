@@ -3734,6 +3734,17 @@
            (org-ml-to-string))
       !!> arg-type-error)
 
+    (defexamples-content org-ml-timestamp-diary-get-start-time
+      nil
+      (:buffer "<%%(diary-float t 4 2)>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-get-start-time))
+      => nil
+      (:buffer "<%%(diary-float t 4 2) 12:00-13:00>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-get-start-time))
+      => '(12 0))
+
     (defexamples-content org-ml-timestamp-diary-set-start-time
       nil
       (:buffer "<%%(diary-float t 4 2)>")
@@ -3760,6 +3771,17 @@
            (org-ml-to-string))
       !!> arg-type-error
       :end-hidden)
+
+    (defexamples-content org-ml-timestamp-diary-get-end-time
+      nil
+      (:buffer "<%%(diary-float t 4 2)>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-get-end-time))
+      => nil
+      (:buffer "<%%(diary-float t 4 2) 12:00-13:00>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-get-end-time))
+      => '(13 0))
 
     (defexamples-content org-ml-timestamp-diary-set-end-time
       nil

@@ -3740,6 +3740,14 @@ The node must have a type `eq' to `diary'. FORM is a quoted list."
            (org-ml--set-property-nocheck :diary-sexp (format "%S" form)))
     (org-ml--arg-error "Timestamp-diary node value must be a form: Got %S" form)))
 
+(defun org-ml-timestamp-diary-get-start-time (timestamp-diary)
+  "Return start time for  TIMESTAMP-DIARY or nil."
+  (org-ml--timestamp-get-start-time timestamp-diary))
+
+(defun org-ml-timestamp-diary-get-end-time (timestamp-diary)
+  "Return end time for  TIMESTAMP-DIARY or nil."
+  (org-ml--timestamp-get-end-time timestamp-diary))
+
 (defun org-ml-timestamp-diary-set-single-time (time timestamp-diary)
   "Return TIMESTAMP-DIARY node with start/end time set to TIME.
 The node must have a type `eq' to `diary'. TIME is a list
