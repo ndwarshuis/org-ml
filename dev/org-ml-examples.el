@@ -3802,6 +3802,88 @@
       => "<%%(diary-float t 4 2) 12:00>"
       :end-hidden)
 
+    (defexamples-content org-ml-timestamp-diary-set-length
+      nil
+      (:buffer "<%%(diary-float t 4 2)>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-length 1 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2)>"
+      (:buffer "<%%(diary-float t 4 2) 12:00>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-length 1 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 12:00-13:00>"
+      (:buffer "<%%(diary-float t 4 2) 12:00-13:00>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-length 0 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 12:00>"
+      :begin-hidden
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-set-length 24 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 12:00>"
+      :end-hidden)
+
+    (defexamples-content org-ml-timestamp-diary-shift
+      nil
+      (:buffer "<%%(diary-float t 4 2)>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-shift 1 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2)>"
+      (:buffer "<%%(diary-float t 4 2) 12:00>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-shift 1 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 13:00>"
+      :begin-hidden
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-shift 24 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 12:00>"
+      :end-hidden)
+
+    (defexamples-content org-ml-timestamp-diary-shift-start
+      nil
+      (:buffer "<%%(diary-float t 4 2)>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-shift-start 1 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2)>"
+      (:buffer "<%%(diary-float t 4 2) 12:00>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-shift-start -1 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 11:00-12:00>"
+      :begin-hidden
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-shift-start 24 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 12:00>"
+      :end-hidden)
+
+    (defexamples-content org-ml-timestamp-diary-shift-end
+      nil
+      (:buffer "<%%(diary-float t 4 2)>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-shift-end 1 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2)>"
+      (:buffer "<%%(diary-float t 4 2) 12:00>")
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-shift-end 1 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 12:00-13:00>"
+      :begin-hidden
+      (->> (org-ml-parse-this-object)
+           (org-ml-timestamp-diary-shift-end 24 'hour)
+           (org-ml-to-string))
+      => "<%%(diary-float t 4 2) 12:00>"
+      :end-hidden
+      )
+
     )
 
   (def-example-subgroup "Affiliated Keywords"

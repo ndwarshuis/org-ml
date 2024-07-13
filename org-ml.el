@@ -1715,6 +1715,18 @@ N is an integer."
                  (t (org-ml--arg-error "Invalid time unit: %S" unit)))))
     (org-ml--map-at* i (+ s it) timelist)))
 
+(defun org-ml--time-shift (n unit time)
+  "Return modified TIME shifted N UNITs (modulo).
+
+UNIT is `minute', or `hour'. N is an integer."
+  (-let* ((f (pcase unit
+               (`hour 60)
+               (`minute 1)
+               (_ (org-ml--arg-error "Invalid time unit: %S" unit))))
+          ((H M) time)
+          (s (+ (* n f) (* H 60) M)))
+    (list (mod (/ s 60) 24) (mod s 60))))
+
 (defconst org-ml--time-start-keys
   '(:year-start :month-start :day-start :hour-start :minute-start)
   "Properties for the starting time values of a timestamp node.")
@@ -2081,6 +2093,10 @@ Return a list like (TYPE VALUE UNIT) or nil."
 ;;                     (org-ml--timelist-shift n unit))))
 ;;     (->> (org-ml--timestamp-set-end-timelist time* timestamp)
 ;;          (org-ml--timestamp-update-type-ranged))))
+
+(defun org-ml--is-valid-time-unit (x)
+  "Return t if X is an allowed value for a time unit."
+  (memq x '(day hour)))
 
 (defun org-ml--timestamp-set-start-time (time timestamp-diary)
   "Set the start of TIMESTAMP-DIARY to TIME. Does not set type."
@@ -3788,6 +3804,73 @@ then TIME2 must also be nil."
   (->> (org-ml--timestamp-set-start-time time1 timestamp-diary)
        (org-ml--timestamp-set-end-time (or time2 time1))
        (org-ml--timestamp-update-type-ranged-timeonly)))
+
+(defun org-ml-timestamp-diary-set-length (n unit timestamp-diary)
+  "Return TIMESTAMP-DIARY node with range set to N UNITs.
+If TIMESTAMP-DIARY is ranged, keep start time the same and adjust
+the end time. If not, make a new end time."
+  (-if-let (start (org-ml--timestamp-get-start-time timestamp-diary))
+        (-> (org-ml--time-shift n unit start)
+            (org-ml--timestamp-set-end-time timestamp-diary)
+            (org-ml--timestamp-update-type-ranged-timeonly))
+    timestamp-diary))
+
+(defun org-ml-timestamp-diary-shift (n unit timestamp-diary)
+  "Return TIMESTAMP-DIARY node with time shifted by N UNITs.
+
+This function will move the start and end times together;
+therefore ranged inputs will always output ranged timestamps and
+same for non-ranged. To move the start and end time
+independently, use `org-ml-timestamp-diary-shift-start' or
+`org-ml-timestamp-shift-end'.
+
+N is a positive or negative integer and UNIT is one of `minute',
+`hour', `day', `month', or `year'. Overflows will wrap around
+transparently; for instance, supplying `minute' for UNIT and 90
+for N will increase the hour property by 1 and the minute
+property by 30."
+  (-if-let (start (org-ml--timestamp-get-start-time timestamp-diary))
+      ;; 'or' to guard against nil end time when start is set, which is not
+      ;; supposed to happen (but might)
+      (let* ((end (or (org-ml--timestamp-get-end-time timestamp-diary) start))
+             (start* (org-ml--time-shift n unit start))
+             (end* (org-ml--time-shift n unit end)))
+        (->> (org-ml--timestamp-set-start-time start* timestamp-diary)
+             (org-ml--timestamp-set-end-time end*)
+             ;; update this in case range is in undefined state
+             (org-ml--timestamp-update-type-ranged-timeonly)))
+    timestamp-diary))
+
+(defun org-ml-timestamp-diary-shift-start (n unit timestamp-diary)
+  "Return TIMESTAMP-DIARY node with start time shifted by N UNITs.
+
+N and UNIT behave the same as those in `org-ml-timestamp-diary-shift'.
+
+If TIMESTAMP-DIARY is not range, the output will be a ranged timestamp with
+the shifted start time and the end time as that of TIMESTAMP-DIARY. If this
+behavior is not desired, use `org-ml-timestamp-diary-shift'."
+  (-if-let (start (org-ml--timestamp-get-start-time timestamp-diary))
+      (let ((end (or (org-ml--timestamp-get-end-time timestamp-diary) start))
+            (start* (org-ml--time-shift n unit start)))
+        (->>  (org-ml--timestamp-set-start-time start* timestamp-diary)
+              (org-ml--timestamp-set-end-time end)
+              (org-ml--timestamp-update-type-ranged-timeonly)))
+    timestamp-diary))
+
+(defun org-ml-timestamp-diary-shift-end (n unit timestamp-diary)
+  "Return TIMESTAMP-DIARY node with end time shifted by N UNITs.
+
+N and UNIT behave the same as those in `org-ml-timestamp-diary-shift'.
+
+If TIMESTAMP-DIARY is not range, the output will be a ranged timestamp with
+the shifted end time and the start time as that of TIMESTAMP-DIARY. If this
+behavior is not desired, use `org-ml-timestamp-diary-shift'."
+  (-if-let (start (org-ml--timestamp-get-start-time timestamp-diary))
+      (let* ((end (or (org-ml--timestamp-get-end-time timestamp-diary) start)))
+        (-> (org-ml--time-shift n unit end)
+            (org-ml--timestamp-set-end-time timestamp-diary)
+            (org-ml--timestamp-update-type-ranged-timeonly)))
+    timestamp-diary))
 
 ;;; element nodes
 ;;
