@@ -854,6 +854,11 @@ HEADER is the it-header."
     (org-ml-item-toggle-checkbox it)
     )
 
+  (org-ml--test-purity "planning setters"
+    (org-ml-build-planning! :closed '(2019 1 1))
+    (org-ml-planning-set-timestamp!
+     :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month) it))
+
   )
 
 ;;; NODE PROPERTY COMPLETENESS

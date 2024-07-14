@@ -3953,7 +3953,7 @@ is the same as that described in `org-ml-build-planning!'."
     (org-ml--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
   (let* ((active (if (eq prop :closed) nil t))
          (ts (org-ml--planning-list-to-timestamp active planning-list)))
-    (org-ml-set-property prop ts planning)))
+    (org-ml-set-property prop ts (org-element-copy planning))))
 
 ;;; PUBLIC BRANCH/CHILD FUNCTIONS
 
