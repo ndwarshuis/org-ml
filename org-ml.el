@@ -5344,16 +5344,17 @@ subheadlines will not be counted)."
 (defun org-ml-plain-list-set-type (type plain-list)
   "Return PLAIN-LIST node with type property set to TYPE.
 TYPE is one of the symbols `unordered' or `ordered'."
+  ;; TODO copying probably won't be necessary once we fix -set-property
   (cond
    ((eq type 'unordered)
     (org-ml--map-children-nocheck*
-      (org-ml--map* (org-ml-set-property :bullet '- it) it)
+      (org-ml--map* (org-ml-set-property :bullet '- (org-element-copy it)) it)
       plain-list))
    ((eq type 'ordered)
     ;; NOTE the org-interpreter seems to use the correct, ordered numbers if any
     ;; number is set here. This behavior may not be reliable.
     (org-ml--map-children-nocheck*
-      (org-ml--map* (org-ml-set-property :bullet 1 it) it)
+      (org-ml--map* (org-ml-set-property :bullet 1 (org-element-copy it)) it)
       plain-list))
    (t (org-ml--arg-error "Invalid type: %s" type))))
 

@@ -988,6 +988,27 @@ HEADER is the it-header."
       (org-ml-headline-promote-subheadline 1 1 it)
       (org-ml-headline-promote-all-subheadlines 1 it))
 
+    (org-ml--test-purity "plain list"
+      (org-ml-build-plain-list
+       (org-ml-build-item! :checkbox 'off :paragraph "one")
+       (org-ml-build-item! :checkbox 'on :paragraph "two"))
+      (org-ml-plain-list-set-type 'ordered it))
+
+    (org-ml--test-purity "plain list (indentation)"
+      (org-ml-build-plain-list
+       (org-ml-build-item! :paragraph "one")
+       (org-ml-build-item!
+        :paragraph "two"
+        (org-ml-build-plain-list
+         (org-ml-build-item! :paragraph "three")
+         (org-ml-build-item! :paragraph "four")
+         (org-ml-build-item! :paragraph "five")))
+       (org-ml-build-item! :paragraph "six"))
+      (org-ml-plain-list-indent-item 1 it)
+      (org-ml-plain-list-indent-item-tree 1 it)
+      (org-ml-plain-list-outdent-item 1 0 it)
+      (org-ml-plain-list-outdent-all-items 1 it))
+
     )
   
 
