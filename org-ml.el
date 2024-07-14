@@ -1409,6 +1409,7 @@ nested element to return."
          (nth (car indices))
          (org-ml--get-descendent (cdr indices)))))
 
+;; TODO this is pure right?
 (defun org-ml--set-children-nocheck (children node)
   "Return NODE with children set to CHILDREN."
    (let ((head (org-ml--get-head node)))
@@ -2313,7 +2314,8 @@ a modified list of headlines."
 Also shift all HEADLINE node's child headline nodes by N.
 If the final shifted level is less one, set level to one (for parent
 and child nodes)."
-  (->> (org-ml--headline-shift-level n headline)
+  (->> (org-element-copy headline)
+       (org-ml--headline-shift-level n)
        (org-ml-headline-map-subheadlines*
          (org-ml--map* (org-ml--headline-subtree-shift-level n it) it))))
 
@@ -5273,9 +5275,11 @@ error."
     (-let (((first . rest) it))
       (if (not (org-ml-clock-is-running first)) it
         (let* ((time (org-ml-unixtime-to-datetime unixtime))
-               (closed (org-ml-map-property* :value
-                         (org-ml-timestamp-set-end-time time it)
-                         first))
+               ;; TODO this might not eventually be necessary
+               (closed (->> (org-element-copy first)
+                            (org-ml-map-property* :value
+                              ;; TODO this will unecessarily copy the timestamp
+                              (org-ml-timestamp-set-end-time time it))))
                (note* (-some->> note
                         (org-ml-build-paragraph)
                         (org-ml-build-item))))
@@ -5317,7 +5321,8 @@ not be considered)."
          (done (length (--filter (org-ml--property-is-eq :checkbox 'on it)
                                  items)))
          (total (length items)))
-    (org-ml--headline-set-statistics-cookie-fraction done total headline)))
+    (->> (org-element-copy headline)
+         (org-ml--headline-set-statistics-cookie-fraction done total))))
 
 (defun org-ml-headline-update-todo-statistics (headline)
   "Return HEADLINE node with updated statistics cookie via subheadlines.
@@ -5329,7 +5334,8 @@ subheadlines will not be counted)."
                        (--filter (org-ml--get-property-nocheck :todo-keyword it))))
          (done (length (-filter #'org-ml-headline-is-done subtodo)))
          (total (length subtodo)))
-    (org-ml--headline-set-statistics-cookie-fraction done total headline)))
+    (->> (org-element-copy headline)
+         (org-ml--headline-set-statistics-cookie-fraction done total))))
 
 ;;; plain-list
 
@@ -5513,7 +5519,7 @@ demoted headline node's children."
              (tgt-pb (if (org-ml-is-type 'section (car tgt-children))
                             (org-ml--get-property-nocheck :post-blank (car tgt-children))
                           (org-ml--get-property-nocheck :pre-blank it-target)))
-             (tgt-headline* (->> it-target
+             (tgt-headline* (->> (org-element-copy it-target)
                                  (org-ml-headline-set-subheadlines nil)
                                  (org-ml--headline-shift-level 1)
                                  (org-ml--set-property-nocheck :post-blank tgt-pb))))
@@ -5655,6 +5661,7 @@ The specific child headline to promote is selected by CHILD-INDEX."
     (org-ml--split-children-at-index* index
       (-let* (((head tail) (-split-at child-index (org-ml-get-children it)))
               (target (->> (car tail)
+                           (org-element-copy)
                            (org-ml--headline-shift-level -1)
                            (org-ml-headline-map-subheadlines*
                              (append it (cdr tail)))))

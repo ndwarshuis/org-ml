@@ -5180,7 +5180,6 @@
       (let ((ut (- 1546300800 (car (current-time-zone)))))
         (->> (org-ml-parse-this-headline)
              (org-ml-headline-logbook-append-item
-              
               (list :log-into-drawer t
                     :clock-into-drawer t
                     :clock-out-notes t)
@@ -5246,7 +5245,6 @@
       (:buffer "* headline")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-logbook-append-open-clock
-            
             (list :log-into-drawer t
                   :clock-into-drawer t
                   :clock-out-notes t)

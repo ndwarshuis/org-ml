@@ -805,59 +805,191 @@ HEADER is the it-header."
   ;;   (org-ml-set-property :post-blank 1 it)
   ;;   )
 
-  (org-ml--test-purity "timestamp setters"
-    (org-ml-build-timestamp! '(2024 1 1 0 0) :end '(2024 1 1 0 1))
-    (org-ml-timestamp-set-start-time '(2024 2 1 0 0) it)
-    (org-ml-timestamp-set-end-time '(2024 2 1 0 0) it)
-    (org-ml-timestamp-set-single-time '(2024 1 2 0 0) it)
-    (org-ml-timestamp-set-double-time '(2024 1 2 0 0) '(2024 1 3 0 0) it)
-    (org-ml-timestamp-set-range 1 'day it)
-    (org-ml-timestamp-set-active t it)
-    (org-ml-timestamp-shift 1 'day it)
-    (org-ml-timestamp-shift-start 1 'day it)
-    (org-ml-timestamp-shift-end 1 'day it)
-    (org-ml-timestamp-toggle-active it)
-    (org-ml-timestamp-truncate it)
-    (org-ml-timestamp-truncate-start it)
-    (org-ml-timestamp-truncate-end it)
-    (org-ml-timestamp-set-collapsed nil it)
-    (org-ml-timestamp-set-warning '(all 1 day) it)
-    (org-ml-timestamp-map-warning (lambda (it) '(all 2 day)) it)
-    (org-ml-timestamp-set-repeater '(restart 1 day) it)
-    (org-ml-timestamp-map-repeater (lambda (it) '(restart 2 day)) it)
-    (org-ml-timestamp-set-repeater '(restart 1 day) it)
-    (org-ml-timestamp-map-repeater (lambda (it) '(restart 2 day)) it))
+  (describe "leaf nodes"
+    (org-ml--test-purity "timestamp setters"
+      (org-ml-build-timestamp! '(2024 1 1 0 0) :end '(2024 1 1 0 1))
+      (org-ml-timestamp-set-start-time '(2024 2 1 0 0) it)
+      (org-ml-timestamp-set-end-time '(2024 2 1 0 0) it)
+      (org-ml-timestamp-set-single-time '(2024 1 2 0 0) it)
+      (org-ml-timestamp-set-double-time '(2024 1 2 0 0) '(2024 1 3 0 0) it)
+      (org-ml-timestamp-set-range 1 'day it)
+      (org-ml-timestamp-set-active t it)
+      (org-ml-timestamp-shift 1 'day it)
+      (org-ml-timestamp-shift-start 1 'day it)
+      (org-ml-timestamp-shift-end 1 'day it)
+      (org-ml-timestamp-toggle-active it)
+      (org-ml-timestamp-truncate it)
+      (org-ml-timestamp-truncate-start it)
+      (org-ml-timestamp-truncate-end it)
+      (org-ml-timestamp-set-collapsed nil it)
+      (org-ml-timestamp-set-warning '(all 1 day) it)
+      (org-ml-timestamp-map-warning (lambda (it) '(all 2 day)) it)
+      (org-ml-timestamp-set-repeater '(restart 1 day) it)
+      (org-ml-timestamp-map-repeater (lambda (it) '(restart 2 day)) it)
+      (org-ml-timestamp-set-repeater '(restart 1 day) it)
+      (org-ml-timestamp-map-repeater (lambda (it) '(restart 2 day)) it))
 
-  (org-ml--test-purity "timestamp diary setters"
-    (org-ml-build-timestamp-diary '(diary-float t 4 2) :start '(12 0) :end '(13 0))
-    (org-ml-timestamp-diary-set-value '(diary-float t 4 3) it)
-    (org-ml-timestamp-diary-set-start-time '(0 0) it)
-    (org-ml-timestamp-diary-set-end-time '(0 0) it)
-    (org-ml-timestamp-diary-set-single-time '(0 0) it)
-    (org-ml-timestamp-diary-set-double-time '(0 0) '(0 1) it)
-    (org-ml-timestamp-diary-set-length 2 'hour it)
-    (org-ml-timestamp-diary-shift 1 'hour it)
-    (org-ml-timestamp-diary-shift-start 1 'hour it)
-    (org-ml-timestamp-diary-shift-end 1 'hour it))
+    (org-ml--test-purity "timestamp diary setters"
+      (org-ml-build-timestamp-diary '(diary-float t 4 2) :start '(12 0) :end '(13 0))
+      (org-ml-timestamp-diary-set-value '(diary-float t 4 3) it)
+      (org-ml-timestamp-diary-set-start-time '(0 0) it)
+      (org-ml-timestamp-diary-set-end-time '(0 0) it)
+      (org-ml-timestamp-diary-set-single-time '(0 0) it)
+      (org-ml-timestamp-diary-set-double-time '(0 0) '(0 1) it)
+      (org-ml-timestamp-diary-set-length 2 'hour it)
+      (org-ml-timestamp-diary-shift 1 'hour it)
+      (org-ml-timestamp-diary-shift-start 1 'hour it)
+      (org-ml-timestamp-diary-shift-end 1 'hour it))
 
-  (org-ml--test-purity "headline setters"
-    (org-ml-build-headline! :title-text "really impressive title" :section-children (list (org-ml-build-paragraph! "hi")))
-    (org-ml-headline-set-title! "really *impressive* title" '(2 3) it)
+    (org-ml--test-purity "headline setters"
+      (org-ml-build-headline! :title-text "really impressive title" :section-children (list (org-ml-build-paragraph! "hi")))
+      (org-ml-headline-set-title! "really *impressive* title" '(2 3) it))
+
+    (org-ml--test-purity "item setters"
+      (org-ml-build-item!
+       :checkbox 'off
+       :paragraph "petulant /frenzy/"
+       (org-ml-build-plain-list
+        (org-ml-build-item! :bullet '- :paragraph "below")))
+      (org-ml-item-toggle-checkbox it))
+
+    (org-ml--test-purity "planning setters"
+      (org-ml-build-planning! :closed '(2019 1 1))
+      (org-ml-planning-set-timestamp!
+       :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month) it)))
+
+  (describe "branch nodes"
+
+  ;; TODO polymorphic branch setters
+
+
+    (org-ml--test-purity "item setters"
+      (org-ml-build-item!
+       :checkbox 'off
+       :paragraph "petulant frenzy"
+       (org-ml-build-plain-list
+        (org-ml-build-item! :bullet '- :paragraph "below")))
+      (org-ml-item-set-paragraph '("calm") it)
+      (org-ml-item-map-paragraph* (-map #'upcase it) it))
+
+    (org-ml--test-purity "headline setters"
+      (org-ml-build-headline! :title-text "really impressive title")
+      (org-ml-headline-set-section (list (org-ml-build-paragraph! "x-section")) it)
+      (org-ml-headline-map-section*
+        (cons (org-ml-build-planning! :closed '(2019 1 1)) it)
+        it)
+      (org-ml-headline-set-subheadlines
+       (list (org-ml-build-headline! :level 2 :title-text "headline x"))
+       it)
+      (org-ml-headline-map-subheadlines*
+        (cons (org-ml-build-headline! :level 2 :title-text "headline x") it)
+        it)
+      (org-ml-headline-set-planning (org-ml-build-planning! :closed '(2019 1 1)) it)
+      (org-ml-headline-map-planning
+        (lambda (_) (org-ml-build-planning! :closed '(2019 1 1)))
+        it)
+      (org-ml-headline-set-node-properties
+       (--map (apply #'org-ml-build-node-property it)
+              '(("Effort" "0:01") ("ID" "easy")))
+       it)
+      (org-ml-headline-map-node-properties*
+        (cons (org-ml-build-node-property "New" "world man") it)
+        it)
+      (org-ml-headline-set-node-property "ID" "real" it)
+      (org-ml-headline-map-node-property "ID" (lambda (_) "real") it))
+
+    (org-ml--test-purity "headline setters (logbook)"
+      (->> (org-ml-build-headline! :title-text "really impressive title")
+           (org-ml-headline-logbook-append-open-clock
+            '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+            (- 1546300800 (car (current-time-zone))))
+           (org-ml-headline-logbook-append-item
+            '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+            (org-ml-build-log-note (- 1546300800 (car (current-time-zone))) "new note")))
+      (org-ml-headline-set-logbook-items
+       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+       nil
+       it)
+      (org-ml-headline-map-logbook-items
+       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+       (lambda (_) nil)
+       it)
+      (org-ml-headline-set-logbook-clocks
+       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+       nil
+       it)
+      (org-ml-headline-map-logbook-clocks
+       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+       (lambda (_) nil)
+       it)
+      (org-ml-headline-set-supercontents
+       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+       `((:logbook nil) (:contents ,(org-ml-build-paragraph! "new contents")))
+       it)
+      (org-ml-headline-map-supercontents
+       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+        (lambda (_) `((:logbook nil) (:contents ,(org-ml-build-paragraph! "new contents"))))
+        it)
+      (org-ml-headline-logbook-append-item
+       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+       (org-ml-build-log-note (- 1546300800 (car (current-time-zone))) "new note")
+       it)
+      (org-ml-headline-logbook-append-open-clock
+       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+       (- 1546300800 (car (current-time-zone)))
+       it)
+      (org-ml-headline-logbook-close-open-clock
+       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+       (- 1546310800 (car (current-time-zone))) nil
+       it)
+      (org-ml-headline-set-contents
+       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+       (list (org-ml-build-paragraph! "I'm new"))
+       it)
+      (org-ml-headline-map-contents
+       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+        (lambda (_) (list (org-ml-build-paragraph! "I'm new")))
+        it)
+      (org-ml-headline-logbook-convert-config
+       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
+       '(:log-into-drawer "LLL" :clock-into-drawer "CCC" :clock-out-notes t)
+       it))
+      
+    ;; TODO broken
+    ;; (org-ml--test-purity "headline setters (stats cookie item)"
+    ;;   (org-ml-build-headline!
+    ;;    :title-text "really impressive title"
+    ;;    :statistics-cookie '(0 0)
+    ;;    :section-children (list
+    ;;                       (org-ml-build-plain-list
+    ;;                        (org-ml-build-item! :checkbox 'on :paragraph "the one"))))
+    ;;   (org-ml-headline-update-item-statistics it))
+    
+    ;; TODO also broken
+    ;; (org-ml--test-purity "headline setters (stats cookie todo)"
+    ;;   (org-ml-build-headline!
+    ;;    :title-text "really impressive title"
+    ;;    :statistics-cookie '(0 0)
+    ;;    (org-ml-build-headline! :title-text "the one" :todo-keyword "DONE"))
+    ;;   (org-ml-headline-update-todo-statistics it))
+
+    (org-ml--test-purity "headline setters (indentation)"
+      (org-ml-build-headline!
+       :title-text "one"
+       (org-ml-build-headline!
+        :level 2 :title-text "two")
+       (org-ml-build-headline!
+        :level 2 :title-text "three"
+        (org-ml-build-headline! :level 3 :title-text "four")
+        (org-ml-build-headline! :level 3 :title-text "five")
+        (org-ml-build-headline! :level 3 :title-text "six")))
+      (org-ml-headline-demote-subheadline 1 it)
+      (org-ml-headline-demote-subtree 1 it)
+      (org-ml-headline-promote-subheadline 1 1 it)
+      (org-ml-headline-promote-all-subheadlines 1 it))
+
     )
-
-  (org-ml--test-purity "item setters"
-    (org-ml-build-item!
-            :checkbox 'off
-            :paragraph "petulant /frenzy/"
-            (org-ml-build-plain-list
-             (org-ml-build-item! :bullet '- :paragraph "below")))
-    (org-ml-item-toggle-checkbox it)
-    )
-
-  (org-ml--test-purity "planning setters"
-    (org-ml-build-planning! :closed '(2019 1 1))
-    (org-ml-planning-set-timestamp!
-     :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month) it))
+  
 
   )
 
