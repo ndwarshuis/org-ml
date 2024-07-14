@@ -1009,10 +1009,15 @@ HEADER is the it-header."
       (org-ml-plain-list-outdent-item 1 0 it)
       (org-ml-plain-list-outdent-all-items 1 it))
 
-    )
-  
-
-  )
+    (org-ml--test-purity "table"
+      (org-ml-from-string 'table "| a | b |\n|---+---|\n| c | d |")
+      (org-ml-table-delete-column 0 it)
+      (org-ml-table-delete-row 0 it)
+      (org-ml-table-insert-column! 1 '("x" "y") it)
+      (org-ml-table-insert-row! 1 '("x" "y") it)
+      (org-ml-table-replace-cell! 0 0 "2" it)
+      (org-ml-table-replace-column! 0 '("A" "B") it)
+      (org-ml-table-replace-row! 0 '("A" "B") it))))
 
 ;;; NODE PROPERTY COMPLETENESS
 
