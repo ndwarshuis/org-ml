@@ -800,10 +800,13 @@ HEADER is the it-header."
     `(it ,header ,@it-forms)))
 
 (describe "all functions that modify nodes should be pure"
-  ;; (org-ml--test-purity "polymorphic setters"
-  ;;   (org-ml-build-timestamp! '(2024 1 1 0 0) :end '(2024 1 2 0 1))
-  ;;   (org-ml-set-property :post-blank 1 it)
-  ;;   )
+  (org-ml--test-purity "polymorphic setters"
+    (org-ml-build-headline! :title-text "hi")
+    (org-ml-set-property :level 2 it)
+    (org-ml-shift-property :level 1 it)
+    (org-ml-map-property :level (lambda (x) (1+ x)) it)
+    (org-ml-toggle-property :archivedp it)
+    )
 
   (describe "leaf nodes"
     (org-ml--test-purity "timestamp setters"

@@ -3054,10 +3054,11 @@ each type."
           (org-ml--arg-error "All attributes like '%s' must be a list of strings. Got '%S'"
            prop value))
       (let* ((value* (org-ml--property-encode prop value type))
-             (update-fun (org-ml--get-property-cis-function type prop))
-             (node* (->> node
+             (node* (->> (org-element-copy node)
                          (org-ml--set-property-nocheck prop value*))))
-        (if update-fun (funcall update-fun node*) node*)))))
+        (-if-let (update-fun (org-ml--get-property-cis-function type prop))
+            (funcall update-fun node*)
+          node*)))))
 
 (defun org-ml-set-properties (plist node)
   "Return NODE with all properties set to the values according to PLIST.
@@ -3093,6 +3094,7 @@ each type."
                (->> (--map (org-ml--get-property-cis-function type (car it)) kv)
                     (-uniq)
                     (-non-nil))))
+        ;; TODO update new properties by side effect after copying node
         (--> (org-ml-get-all-properties node)
              (if kv (--reduce-from (put-encode acc it type) it kv) it)
              (if kv-attrs (-reduce-from #'put it kv-attrs) it)
@@ -3136,6 +3138,7 @@ its values are unary functions to be mapped to these properties.
 
 See builder functions for a list of properties and their rules for
 each type."
+  ;; TODO this is slow since it will copy the node for each property iteration
   (cond
    ((not plist) node)
    ((org-ml--is-plist plist)
@@ -4525,7 +4528,7 @@ items."
         (plain-list)
         (let ((pb (org-ml-get-property :post-blank plain-list)))
           (->> (org-ml-get-children plain-list)
-               (org-ml--map-last* (org-ml-set-property :post-blank pb it))))))
+               (org-ml--map-last* (org-ml--set-property-nocheck :post-blank pb it))))))
     (--splice (org-ml-is-type 'plain-list it) (flatten it) nodes)))
 
 (defun org-ml--wrap-plain-lists (nodes)
@@ -4541,7 +4544,7 @@ This is the dual of `org-ml--flatten-plain-lists'."
                 (cdr acc)))
          ((org-ml-is-type 'item node)
           (let* ((pb (org-ml-get-property :post-blank node))
-                 (pl (->> (org-ml-set-property :post-blank 0 node)
+                 (pl (->> (org-ml--set-property-nocheck :post-blank 0 node)
                           (org-ml-build-plain-list :post-blank pb))))
             (cons pl acc)))
          (t
