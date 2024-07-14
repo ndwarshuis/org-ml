@@ -362,15 +362,15 @@ is the converse."
       (org-ml-build-verse-block) "#+begin_verse\n#+end_verse"
       (org-ml-build-verse-block "hi\n") "#+begin_verse\nhi\n#+end_verse")))
 
-;; ;;; PARSING INVERTABILITY
+;;; PARSING INVERTABILITY
 
-;; ;; For all org buffer contents, parsing and printing should be
-;; ;; perfect inverses.
+;; For all org buffer contents, parsing and printing should be
+;; perfect inverses.
 
-;; ;; These tests test/use the following:
-;; ;; - all the parse functions
-;; ;; - `org-ml-to-string'
-;; ;; - `org-ml-get-type'
+;; These tests test/use the following:
+;; - all the parse functions
+;; - `org-ml-to-string'
+;; - `org-ml-get-type'
 
 (defun org-ml--test-contents-parse-inversion (type parse-fun contents-list
                                                    &optional prefix suffix)
@@ -774,6 +774,33 @@ be parsed to TYPE."
                 ;; TODO this makes a blank string
                 ;; "| |\n"
                 ))))))
+
+;;; FUNCTIONAL PURITY
+
+(defmacro org-ml--test-purity (header node &rest forms)
+  "Test that FORMS will not modify NODE by side effect.
+HEADER is the it-header."
+  (declare (indent 1))
+  (let ((it-forms (-map
+                   (lambda (form)
+                     `(let* ((it ,node)
+                             (s0 (org-ml-to-string it))
+                             (sx (org-ml-to-string ,form))
+                             (s1 (org-ml-to-string it)))
+                        (if (and (equal s0 s1) (not (equal s0 sx)))
+                            (should t)
+                          (progn
+                            (print (format "Form %S has a side effect on node %S" ',form ,node))
+                            (expect s0 :to-equal s1)))))
+                   forms)))
+    `(it ,header ,@it-forms)))
+
+(describe "all functions should be pure"
+  (org-ml--test-purity "test"
+    (org-ml-build-timestamp! '(2024 1 1))
+    (org-ml-timestamp-set-end-time '(2024 1 2) it)
+    (org-ml-timestamp-set-active t it)
+    (org-ml-set-property :post-blank 1 it)))
 
 ;;; NODE PROPERTY COMPLETENESS
 
@@ -2064,7 +2091,7 @@ applied."
     (match-slicer-should-equal node expected (:any * item))
     (match-slicer-should-equal node expected! (:any *! item))))
 
-;; DIFF ALGORITHM
+;;; DIFF ALGORITHM
 
 (defun org-ml--diff-apply (str-a str-b)
   "Turn STR-A into STR-B using the diff algorithm.
