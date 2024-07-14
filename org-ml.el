@@ -3045,22 +3045,17 @@ each type."
     ;; Specialized code to handle :attr_X properties which can't be put in
     ;; `org-ml--property-alist'. Values for these can only be lists of strings
     ;; and have no encoder or decoder.
-  ;; (when (eq type 'headline)
-  ;;   ;; (print (org-ml-get-property :raw-value node))
-  ;;   ;; (print (plist-get (nth 1 node) :raw-value))
-  ;;   (--> (nth 1 node)
-  ;;        (plist-get it :archivedp)
-  ;;        (print it)))
     (if (and (memq type org-ml--element-nodes-with-affiliated)
              (org-ml--property-is-attribute prop))
         (if (org-ml--is-string-list value)
             (org-ml--set-property-nocheck prop value node)
           (org-ml--arg-error "All attributes like '%s' must be a list of strings. Got '%S'"
            prop value))
-      (let ((value* (org-ml--property-encode prop value type))
-            (update-fun (org-ml--get-property-cis-function type prop)))
-        (--> (org-ml--set-property-nocheck prop value* node)
-             (if update-fun (funcall update-fun it) it))))))
+      (let* ((value* (org-ml--property-encode prop value type))
+             (update-fun (org-ml--get-property-cis-function type prop))
+             (node* (->> node
+                         (org-ml--set-property-nocheck prop value*))))
+        (if update-fun (funcall update-fun node*) node*)))))
 
 (defun org-ml-set-properties (plist node)
   "Return NODE with all properties set to the values according to PLIST.
@@ -3924,11 +3919,14 @@ and STATS-COOKIE-VALUE is a list described in
 `org-ml-build-statistics-cookie'."
   (let ((ss (org-ml-build-secondary-string! title-text)))
     (if (not stats-cookie-value)
-        (org-ml-set-property :title ss headline)
+        ;; TODO this may not be necessary after we fix the property setters
+        (->> (org-element-copy headline)
+             (org-ml-set-property :title ss))
       (let ((ss* (org-ml--map-last*
                   (org-ml--set-property-nocheck :post-blank 1 it) ss))
             (sc (org-ml-build-statistics-cookie stats-cookie-value)))
-        (org-ml-set-property :title (-snoc ss* sc) headline)))))
+        (->> (org-element-copy headline)
+             (org-ml-set-property :title (-snoc ss* sc)))))))
 
 ;; item
 

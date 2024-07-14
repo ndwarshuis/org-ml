@@ -788,19 +788,27 @@ HEADER is the it-header."
                              (s0 (org-ml-to-string it))
                              (sx (org-ml-to-string ,form))
                              (s1 (org-ml-to-string it)))
-                        (if (and (equal s0 s1) (not (equal s0 sx)))
+                        (if (equal s0 s1)
                             (should t)
-                          (progn
-                            (print (format "Form %S has a side effect on node %S" ',form ,node))
-                            (expect s0 :to-equal s1)))))
+                          (let ((x (format "Form %S has a side effect on '%s'" ',form s0)))
+                            (expect x :to-be nil)))
+                        (if (not (equal s0 sx))
+                            (should t)
+                          (let ((x (format "Form %S has no effect on '%s'" ',form s0)))
+                            (expect x :to-be nil)))))
                    forms)))
     `(it ,header ,@it-forms)))
 
 (describe "all functions that modify nodes should be pure"
+  ;; (org-ml--test-purity "polymorphic setters"
+  ;;   (org-ml-build-timestamp! '(2024 1 1 0 0) :end '(2024 1 2 0 1))
+  ;;   (org-ml-set-property :post-blank 1 it)
+  ;;   )
+
   (org-ml--test-purity "timestamp setters"
-    (org-ml-build-timestamp! '(2024 1 1 0 0) :end '(2024 1 2 0 1))
-    (org-ml-timestamp-set-start-time '(2024 1 2 0 0) it)
-    (org-ml-timestamp-set-end-time '(2024 1 2 0 0) it)
+    (org-ml-build-timestamp! '(2024 1 1 0 0) :end '(2024 1 1 0 1))
+    (org-ml-timestamp-set-start-time '(2024 2 1 0 0) it)
+    (org-ml-timestamp-set-end-time '(2024 2 1 0 0) it)
     (org-ml-timestamp-set-single-time '(2024 1 2 0 0) it)
     (org-ml-timestamp-set-double-time '(2024 1 2 0 0) '(2024 1 3 0 0) it)
     (org-ml-timestamp-set-range 1 'day it)
@@ -812,7 +820,7 @@ HEADER is the it-header."
     (org-ml-timestamp-truncate it)
     (org-ml-timestamp-truncate-start it)
     (org-ml-timestamp-truncate-end it)
-    (org-ml-timestamp-set-collapsed t it)
+    (org-ml-timestamp-set-collapsed nil it)
     (org-ml-timestamp-set-warning '(all 1 day) it)
     (org-ml-timestamp-map-warning (lambda (it) '(all 2 day)) it)
     (org-ml-timestamp-set-repeater '(restart 1 day) it)
@@ -827,10 +835,16 @@ HEADER is the it-header."
     (org-ml-timestamp-diary-set-end-time '(0 0) it)
     (org-ml-timestamp-diary-set-single-time '(0 0) it)
     (org-ml-timestamp-diary-set-double-time '(0 0) '(0 1) it)
-    (org-ml-timestamp-diary-set-length 1 'hour it)
+    (org-ml-timestamp-diary-set-length 2 'hour it)
     (org-ml-timestamp-diary-shift 1 'hour it)
     (org-ml-timestamp-diary-shift-start 1 'hour it)
     (org-ml-timestamp-diary-shift-end 1 'hour it))
+
+  (org-ml--test-purity "headline setters"
+    (org-ml-build-headline! :title-text "really impressive title" :section-children (list (org-ml-build-paragraph! "hi")))
+    (org-ml-headline-set-title! "really *impressive* title" '(2 3) it)
+    )
+
   )
 
 ;;; NODE PROPERTY COMPLETENESS
