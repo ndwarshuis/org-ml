@@ -542,6 +542,7 @@ be parsed to TYPE."
                 "#+call: name[:x y]() :a b\n"
                 "#+call: name[]() :a b\n")))
 
+      ;; TODO this doesn't work
       (it "clock"
         (org-ml--test-contents-parse-inversion 'clock #'org-ml-parse-element-at
           (list "CLOCK: [2019-01-01 Tue]\n"
@@ -795,12 +796,42 @@ HEADER is the it-header."
                    forms)))
     `(it ,header ,@it-forms)))
 
-(describe "all functions should be pure"
-  (org-ml--test-purity "test"
-    (org-ml-build-timestamp! '(2024 1 1))
-    (org-ml-timestamp-set-end-time '(2024 1 2) it)
+(describe "all functions that modify nodes should be pure"
+  (org-ml--test-purity "timestamp setters"
+    (org-ml-build-timestamp! '(2024 1 1 0 0) :end '(2024 1 2 0 1))
+    (org-ml-timestamp-set-start-time '(2024 1 2 0 0) it)
+    (org-ml-timestamp-set-end-time '(2024 1 2 0 0) it)
+    (org-ml-timestamp-set-single-time '(2024 1 2 0 0) it)
+    (org-ml-timestamp-set-double-time '(2024 1 2 0 0) '(2024 1 3 0 0) it)
+    (org-ml-timestamp-set-range 1 'day it)
     (org-ml-timestamp-set-active t it)
-    (org-ml-set-property :post-blank 1 it)))
+    (org-ml-timestamp-shift 1 'day it)
+    (org-ml-timestamp-shift-start 1 'day it)
+    (org-ml-timestamp-shift-end 1 'day it)
+    (org-ml-timestamp-toggle-active it)
+    (org-ml-timestamp-truncate it)
+    (org-ml-timestamp-truncate-start it)
+    (org-ml-timestamp-truncate-end it)
+    (org-ml-timestamp-set-collapsed t it)
+    (org-ml-timestamp-set-warning '(all 1 day) it)
+    (org-ml-timestamp-map-warning (lambda (it) '(all 2 day)) it)
+    (org-ml-timestamp-set-repeater '(restart 1 day) it)
+    (org-ml-timestamp-map-repeater (lambda (it) '(restart 2 day)) it)
+    (org-ml-timestamp-set-repeater '(restart 1 day) it)
+    (org-ml-timestamp-map-repeater (lambda (it) '(restart 2 day)) it))
+
+  (org-ml--test-purity "timestamp diary setters"
+    (org-ml-build-timestamp-diary '(diary-float t 4 2) :start '(12 0) :end '(13 0))
+    (org-ml-timestamp-diary-set-value '(diary-float t 4 3) it)
+    (org-ml-timestamp-diary-set-start-time '(0 0) it)
+    (org-ml-timestamp-diary-set-end-time '(0 0) it)
+    (org-ml-timestamp-diary-set-single-time '(0 0) it)
+    (org-ml-timestamp-diary-set-double-time '(0 0) '(0 1) it)
+    (org-ml-timestamp-diary-set-length 1 'hour it)
+    (org-ml-timestamp-diary-shift 1 'hour it)
+    (org-ml-timestamp-diary-shift-start 1 'hour it)
+    (org-ml-timestamp-diary-shift-end 1 'hour it))
+  )
 
 ;;; NODE PROPERTY COMPLETENESS
 

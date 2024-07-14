@@ -3470,25 +3470,25 @@ interpreted according to the localtime of the operating system."
   "Return TIMESTAMP node with start time set to TIME.
 TIME is a list analogous to the same argument specified in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-set-start-timelist time timestamp))
+  (org-ml--timestamp-set-start-timelist time (org-element-copy timestamp)))
 
 (defun org-ml-timestamp-set-end-time (time timestamp)
   "Return TIMESTAMP node with end time set to TIME.
 TIME is a list analogous to the same argument specified in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-set-end-timelist time timestamp))
+  (org-ml--timestamp-set-end-timelist time (org-element-copy timestamp)))
 
 (defun org-ml-timestamp-set-single-time (time timestamp)
   "Return TIMESTAMP node with start and end times set to TIME.
 TIME is a list analogous to the same argument specified in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-set-single-timelist time timestamp))
+  (org-ml--timestamp-set-single-timelist time (org-element-copy timestamp)))
 
 (defun org-ml-timestamp-set-double-time (time1 time2 timestamp)
   "Return TIMESTAMP node with start/end times set to TIME1/TIME2 respectively.
 TIME1 and TIME2 are lists analogous to the TIME argument specified in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-set-double-timelist time1 time2 timestamp))
+  (org-ml--timestamp-set-double-timelist time1 time2 (org-element-copy timestamp)))
 
 ;; TODO this should be ""-set-length
 (defun org-ml-timestamp-set-range (n unit timestamp)
@@ -3497,11 +3497,11 @@ If TIMESTAMP is ranged, keep start time the same and adjust the end
 time. If not, make a new end time. The units for RANGE are in minutes
 if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format."
-  (org-ml--timestamp-set-range n unit timestamp))
+  (org-ml--timestamp-set-range n unit (org-element-copy timestamp)))
 
 (defun org-ml-timestamp-set-active (flag timestamp)
   "Return TIMESTAMP node with active type if FLAG is t."
-  (org-ml--timestamp-set-active flag timestamp))
+  (org-ml--timestamp-set-active flag (org-element-copy timestamp)))
 
 (defun org-ml-timestamp-shift (n unit timestamp)
   "Return TIMESTAMP node with time shifted by N UNIT's.
@@ -3518,11 +3518,12 @@ will increase the hour property by 1 and the minute property by 30."
   ;; if not ranged, simply need to shift start and end (which are the same);
   ;; otherwise need to shift both, set both, and update the timerange depending
   ;; on if we straddle a day boundary after the shift
-  (let ((rt (org-ml--get-property-nocheck :range-type timestamp)))
+  (let ((rt (org-ml--get-property-nocheck :range-type timestamp))
+        (timestamp* (org-element-copy timestamp)))
     (if (not rt)
         (let ((t1 (->> (org-ml--timestamp-get-start-timelist timestamp)
                        (org-ml--timelist-shift n unit))))
-          (->> (org-ml--timestamp-set-start-timelist t1 timestamp)
+          (->> (org-ml--timestamp-set-start-timelist t1 timestamp*)
                (org-ml--timestamp-set-end-timelist t1)))
       (-let* ((s1 (->> (org-ml--timestamp-get-start-timelist timestamp)
                        (org-ml--timelist-shift n unit)))
@@ -3534,7 +3535,7 @@ will increase the hour property by 1 and the minute property by 30."
               (rt* (if (and (not (equal t1 t2)) (equal d1 d2))
                        (or rt 'timerange)
                      'daterange)))
-        (->> (org-ml--timestamp-set-start-timelist s1 timestamp)
+        (->> (org-ml--timestamp-set-start-timelist s1 timestamp*)
              (org-ml--timestamp-set-end-timelist s2)
              (org-ml--timestamp-set-range-type rt*))))))
 
@@ -3551,7 +3552,8 @@ behavior is not desired, use `org-ml-timestamp-shift'."
          (t2 (org-ml--timestamp-get-end-timelist timestamp))
          (rt (->> (org-ml--get-property-nocheck :range-type timestamp)
                   (org-ml--timelists-get-range-type t1 t2))))
-    (->> (org-ml--timestamp-set-start-timelist t1 timestamp)
+    (->> (org-element-copy timestamp)
+         (org-ml--timestamp-set-start-timelist t1)
          (org-ml--timestamp-set-range-type rt))))
 
 (defun org-ml-timestamp-shift-end (n unit timestamp)
@@ -3567,14 +3569,15 @@ behavior is not desired, use `org-ml-timestamp-shift'."
                   (org-ml--timelist-shift n unit)))
          (rt (->> (org-ml--get-property-nocheck :range-type timestamp)
                   (org-ml--timelists-get-range-type t1 t2))))
-    (->> (org-ml--timestamp-set-end-timelist t2 timestamp)
+    (->> (org-element-copy timestamp)
+         (org-ml--timestamp-set-end-timelist t2)
          (org-ml--timestamp-set-range-type rt))))
 
 (defun org-ml-timestamp-toggle-active (timestamp)
   "Return TIMESTAMP node with its active/inactive type flipped."
   (-> (org-ml--timestamp-is-active timestamp)
       (not)
-      (org-ml--timestamp-set-active timestamp)))
+      (org-ml--timestamp-set-active (org-element-copy timestamp))))
 
 (defun org-ml-timestamp-truncate (timestamp)
   "Return TIMESTAMP node with start/end times forced to short format."
@@ -3585,7 +3588,8 @@ behavior is not desired, use `org-ml-timestamp-shift'."
          ;; NOTE it is impossible for range-type to be 'timerange since hours
          ;; and minutes will be missing
          (rt (if (equal t1 t2) nil 'daterange)))
-    (->> (org-ml--timestamp-set-start-timelist t1 timestamp)
+    (->> (org-element-copy timestamp)
+         (org-ml--timestamp-set-start-timelist t1)
          (org-ml--timestamp-set-end-timelist t2)
          (org-ml--timestamp-set-range-type rt))))
 
@@ -3598,7 +3602,8 @@ Collapsed timestamps will become uncollapsed."
          (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
                   (org-ml--timelist-truncate)))
          (rt (if (equal t1 t2) nil 'daterange)))
-    (->> (org-ml--timestamp-set-start-timelist t1 timestamp)
+    (->> (org-element-copy timestamp)
+         (org-ml--timestamp-set-start-timelist t1)
          (org-ml--timestamp-set-range-type rt))))
 
 (defun org-ml-timestamp-truncate-end (timestamp)
@@ -3610,7 +3615,8 @@ Collapsed timestamps will become uncollapsed."
          (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
                   (org-ml--timelist-truncate)))
          (rt (if (equal t1 t2) nil 'daterange)))
-    (->> (org-ml--timestamp-set-end-timelist t2 timestamp)
+    (->> (org-element-copy timestamp)
+         (org-ml--timestamp-set-end-timelist t2)
          (org-ml--timestamp-set-range-type rt))))
 
 (defun org-ml-timestamp-set-collapsed (flag timestamp)
@@ -3642,7 +3648,8 @@ be ignored."
     ;; collapsed
     (`timerange
      (if flag timestamp
-       (org-ml--set-property-nocheck :range-type 'daterange timestamp)))
+       (->> (org-element-copy timestamp)
+            (org-ml--set-property-nocheck :range-type 'daterange))))
     ;; uncollapsed
     (`daterange
      (if (and (org-ml--timestamp-get-start-time timestamp)
@@ -3652,7 +3659,8 @@ be ignored."
            (org-ml--set-property-nocheck :range-type 'timerange timestamp))
           ((and (eq flag 'force))
            (let ((s (org-ml--timestamp-get-start-timelist timestamp)))
-             (->> (org-ml--timestamp-set-end-timelist-nocheck s timestamp)
+             (->> (org-element-copy timestamp)
+                  (org-ml--timestamp-set-end-timelist-nocheck s)
                   (org-ml--set-property-nocheck :range-type 'timerange))))
           (t
            timestamp))
@@ -3662,10 +3670,6 @@ be ignored."
      timestamp)
     (e
      (error "Invalid range-type %s" e))))
-  ;; (if (and (not (org-ml--timestamp-is-ranged-lowres timestamp))
-  ;;          (org-ml--timestamp-is-ranged timestamp))
-  ;;     (org-ml--timestamp-set-type-ranged (not flag) timestamp)
-  ;;   timestamp))
 
 (defun org-ml-timestamp-get-warning (timestamp)
   "Return the warning component of TIMESTAMP.
@@ -3679,10 +3683,11 @@ Return a list like (TYPE VALUE UNIT)."
 (defun org-ml-timestamp-set-warning (warning timestamp)
   "Set the warning of TIMESTAMP to WARNING.
 
-WARNING is a list like (TYPE VALUE UNIT). TYPE is one of `year',
-`month', `week', or `day'. VALUE and is an integer. UNIT is one
-of `year', `month', `week', or `day'."
-  (org-ml--timestamp-set-warning warning timestamp))
+WARNING is a list like (TYPE VALUE UNIT). TYPE is `all' or
+'first' VALUE and is an integer. UNIT is one of `year', `month',
+`week', or `day'."
+  (->> (org-element-copy timestamp)
+       (org-ml--timestamp-set-warning warning)))
 
 (org-ml--defun-anaphoric* org-ml-timestamp-map-warning (fun timestamp)
   "Apply FUN to the warning of TIMESTAMP.
@@ -3690,8 +3695,9 @@ FUN is a function that takes a warning list like and returns a
 new warning list. The same rules that apply to
 `org-ml-timestamp-set-warning' and `org-ml-timestamp-get-warning'
 apply here."
-  (--> (org-ml-timestamp-get-warning timestamp)
-    (org-ml-timestamp-set-warning (funcall fun it) timestamp)))
+  (let ((w (org-ml-timestamp-get-warning timestamp)))
+    (->> (org-element-copy timestamp)
+         (org-ml-timestamp-set-warning (funcall fun w)))))
 
 (defun org-ml-timestamp-get-repeater (timestamp)
   "Return the repeater component of TIMESTAMP.
@@ -3707,7 +3713,8 @@ is one of `year', `month', `week', or `day'.
 
 Setting REPEATER to nil will remove the repeater and its deadline
 if present."
-  (org-ml--timestamp-set-repeater repeater timestamp))
+  (->> (org-element-copy timestamp)
+       (org-ml--timestamp-set-repeater repeater)))
 
 (org-ml--defun-anaphoric* org-ml-timestamp-map-repeater (fun timestamp)
   "Apply FUN to the warning of TIMESTAMP.
@@ -3715,8 +3722,9 @@ FUN is a function that takes a repeater list like and returns a
 new repeater list. The same rules that apply to
 `org-ml-timestamp-set-repeater' and
 `org-ml-timestamp-get-repeater' apply here."
-  (--> (org-ml-timestamp-get-repeater timestamp)
-    (org-ml-timestamp-set-repeater (funcall fun it) timestamp)))
+  (let ((r (org-ml-timestamp-get-repeater timestamp)))
+    (->> (org-element-copy timestamp)
+         (org-ml-timestamp-set-repeater (funcall fun r)))))
 
 (defun org-ml-timestamp-get-deadline (timestamp)
   "Return the repeater component of TIMESTAMP.
@@ -3734,7 +3742,8 @@ is one of `year', `month', `week', or `day'.
 
 Setting DEADLINE to nil will remove the deadline. Will have no effect
 if repeater is not present."
-  (org-ml--timestamp-set-deadline deadline timestamp))
+  (->> (org-element-copy timestamp)
+       (org-ml--timestamp-set-deadline deadline)))
 
 (org-ml--defun-anaphoric* org-ml-timestamp-map-deadline (fun timestamp)
   "Apply FUN to the deadline of TIMESTAMP.
@@ -3742,8 +3751,9 @@ FUN is a function that takes a repeater list like and returns a
 new repeater list. The same rules that apply to
 `org-ml-timestamp-set-deadline' and
 `org-ml-timestamp-get-deadline' apply here."
-  (--> (org-ml-timestamp-get-deadline timestamp)
-    (org-ml-timestamp-set-deadline (funcall fun it) timestamp)))
+  (let ((d (org-ml-timestamp-get-deadline timestamp)))
+    (->> (org-element-copy timestamp)
+         (org-ml-timestamp-set-deadline (funcall fun d)))))
 
 ;; timestamp (diary)
 
@@ -3751,7 +3761,7 @@ new repeater list. The same rules that apply to
   "Return TIMESTAMP-DIARY node with value set to FORM.
 The node must have a type `eq' to `diary'. FORM is a quoted list."
   (if (listp form)
-      (->> timestamp-diary
+      (->> (org-element-copy timestamp-diary)
            (org-ml--set-property-nocheck :raw-value (format "<%%%%%S>" form))
            (org-ml--set-property-nocheck :diary-sexp (format "%S" form)))
     (org-ml--arg-error "Timestamp-diary node value must be a form: Got %S" form)))
@@ -3768,7 +3778,8 @@ The node must have a type `eq' to `diary'. FORM is a quoted list."
   "Return TIMESTAMP-DIARY node with start/end time set to TIME.
 The node must have a type `eq' to `diary'. TIME is a list
 like (hour min). If TIME is nil remove the time."
-  (->> (org-ml--timestamp-set-start-time time timestamp-diary)
+  (->> (org-element-copy timestamp-diary)
+       (org-ml--timestamp-set-start-time time)
        (org-ml--timestamp-set-end-time time)
        (org-ml--timestamp-update-type-ranged-timeonly)))
 
@@ -3780,7 +3791,8 @@ like (hour min). TIME may not be nil"
     (org-ml--arg-error "Time must not be nil"))
   (let* ((start (org-ml--timestamp-get-start-time timestamp-diary))
          (end (or (org-ml--timestamp-get-end-time timestamp-diary) start time)))
-    (->> (org-ml--timestamp-set-start-time time timestamp-diary)
+    (->> (org-element-copy timestamp-diary)
+         (org-ml--timestamp-set-start-time time)
          (org-ml--timestamp-set-end-time end)
          (org-ml--timestamp-update-type-ranged-timeonly))))
 
@@ -3791,7 +3803,8 @@ like (hour min). If TIME is nil then remove the end time.
 If start time is not set, return node unchanged."
   (let ((start (org-ml--timestamp-get-start-time timestamp-diary)))
     (if (not start) timestamp-diary
-      (->> (org-ml--timestamp-set-end-time (or time start) timestamp-diary)
+      (->> (org-element-copy timestamp-diary)
+           (org-ml--timestamp-set-end-time (or time start))
            (org-ml--timestamp-update-type-ranged-timeonly)))))
 
 (defun org-ml-timestamp-diary-set-double-time (time1 time2 timestamp-diary)
@@ -3801,7 +3814,8 @@ lists like (hour min). Either time may be nil, but if TIME1 is nil
 then TIME2 must also be nil."
   (when (and (not time1) time2)
     (org-ml--arg-error "Time1 cannot be nil if Time2 is non-nil"))
-  (->> (org-ml--timestamp-set-start-time time1 timestamp-diary)
+  (->> (org-element-copy timestamp-diary)
+       (org-ml--timestamp-set-start-time time1)
        (org-ml--timestamp-set-end-time (or time2 time1))
        (org-ml--timestamp-update-type-ranged-timeonly)))
 
@@ -3810,9 +3824,10 @@ then TIME2 must also be nil."
 If TIMESTAMP-DIARY is ranged, keep start time the same and adjust
 the end time. If not, make a new end time."
   (-if-let (start (org-ml--timestamp-get-start-time timestamp-diary))
-        (-> (org-ml--time-shift n unit start)
-            (org-ml--timestamp-set-end-time timestamp-diary)
-            (org-ml--timestamp-update-type-ranged-timeonly))
+      (let ((s (org-ml--time-shift n unit start)))
+        (->> (org-element-copy timestamp-diary)
+             (org-ml--timestamp-set-end-time s)
+             (org-ml--timestamp-update-type-ranged-timeonly)))
     timestamp-diary))
 
 (defun org-ml-timestamp-diary-shift (n unit timestamp-diary)
@@ -3835,7 +3850,8 @@ property by 30."
       (let* ((end (or (org-ml--timestamp-get-end-time timestamp-diary) start))
              (start* (org-ml--time-shift n unit start))
              (end* (org-ml--time-shift n unit end)))
-        (->> (org-ml--timestamp-set-start-time start* timestamp-diary)
+        (->> (org-element-copy timestamp-diary)
+             (org-ml--timestamp-set-start-time start*)
              (org-ml--timestamp-set-end-time end*)
              ;; update this in case range is in undefined state
              (org-ml--timestamp-update-type-ranged-timeonly)))
@@ -3852,9 +3868,10 @@ behavior is not desired, use `org-ml-timestamp-diary-shift'."
   (-if-let (start (org-ml--timestamp-get-start-time timestamp-diary))
       (let ((end (or (org-ml--timestamp-get-end-time timestamp-diary) start))
             (start* (org-ml--time-shift n unit start)))
-        (->>  (org-ml--timestamp-set-start-time start* timestamp-diary)
-              (org-ml--timestamp-set-end-time end)
-              (org-ml--timestamp-update-type-ranged-timeonly)))
+        (->> (org-element-copy timestamp-diary)
+             (org-ml--timestamp-set-start-time start*)
+             (org-ml--timestamp-set-end-time end)
+             (org-ml--timestamp-update-type-ranged-timeonly)))
     timestamp-diary))
 
 (defun org-ml-timestamp-diary-shift-end (n unit timestamp-diary)
@@ -3868,7 +3885,7 @@ behavior is not desired, use `org-ml-timestamp-diary-shift'."
   (-if-let (start (org-ml--timestamp-get-start-time timestamp-diary))
       (let* ((end (or (org-ml--timestamp-get-end-time timestamp-diary) start)))
         (-> (org-ml--time-shift n unit end)
-            (org-ml--timestamp-set-end-time timestamp-diary)
+            (org-ml--timestamp-set-end-time (org-element-copy timestamp-diary))
             (org-ml--timestamp-update-type-ranged-timeonly)))
     timestamp-diary))
 
