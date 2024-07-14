@@ -5627,60 +5627,6 @@
                   "** four"
                   "** four")))
 
-  ;; TODO fixme (specifically paragraph thing)
-  ;; (def-example-subgroup "Item"
-  ;;   nil
-
-  ;; ;; (defexamples-content org-ml-item-get-level
-  ;; ;;   nil
-  ;; ;;   (:buffer "- one"
-  ;; ;;             "  - two"
-  ;; ;;             "    - three")
-  ;; ;;   (->> (org-ml-parse-this-item)
-  ;; ;;        (org-ml-)))
-
-  ;; ;; (defexamples-content org-ml-item-get-sublist
-  ;; ;;   nil
-  ;; ;;   (:buffer "- one"
-  ;; ;;             "  - two"
-  ;; ;;             "  - three"
-  ;; ;;             "- four")
-  ;; ;;   (->> (org-ml-parse-this-item)
-  ;; ;;        (org-ml-item-get-sublist)
-  ;; ;;        (org-ml-to-trimmed-string))
-  ;; ;;   => (:result "- two"
-  ;; ;;               "- three")
-  ;; ;;   (:buffer "- one"
-  ;; ;;             "- two")
-  ;; ;;   (->> (org-ml-parse-this-item)
-  ;; ;;        (org-ml-item-get-sublist)
-  ;; ;;        (org-ml-to-trimmed-string))
-  ;; ;;   => "")
-
-  ;; (defexamples-content org-ml-item-get-paragraph
-  ;;   nil
-  ;;   (:buffer "- one")
-  ;;   (->> (org-ml-parse-this-item)
-  ;;        (org-ml-item-get-paragraph)
-  ;;        (org-ml-to-trimmed-string))
-  ;;   => "one"
-  ;;   ;; (:buffer "- [ ] one")
-  ;;   ;; (->> (org-ml-parse-this-item)
-  ;;   ;;      (org-ml-item-get-paragraph)
-  ;;   ;;      (org-ml-to-trimmed-string))
-  ;;   ;; => "one"
-  ;;   ;; (:buffer "- tmsu :: one")
-  ;;   ;; (->> (org-ml-parse-this-item)
-  ;;   ;;      (org-ml-item-get-paragraph)
-  ;;   ;;      (org-ml-to-trimmed-string))
-  ;;   ;; => "one"
-  ;;   ;; (:buffer "- tmsu ::")
-  ;;   ;; (->> (org-ml-parse-this-item)
-  ;;   ;;      (org-ml-item-get-paragraph)
-  ;;   ;;      (org-ml-to-trimmed-string))
-  ;;   ;; => "")
-  ;;   ))
-
   (def-example-subgroup "Plain List"
     nil
     
