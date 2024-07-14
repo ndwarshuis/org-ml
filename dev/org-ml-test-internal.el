@@ -845,6 +845,15 @@ HEADER is the it-header."
     (org-ml-headline-set-title! "really *impressive* title" '(2 3) it)
     )
 
+  (org-ml--test-purity "item setters"
+    (org-ml-build-item!
+            :checkbox 'off
+            :paragraph "petulant /frenzy/"
+            (org-ml-build-plain-list
+             (org-ml-build-item! :bullet '- :paragraph "below")))
+    (org-ml-item-toggle-checkbox it)
+    )
+
   )
 
 ;;; NODE PROPERTY COMPLETENESS

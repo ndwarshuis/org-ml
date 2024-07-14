@@ -3935,11 +3935,12 @@ and STATS-COOKIE-VALUE is a list described in
 This only affects item nodes with checkboxes in the `on' or `off'
 states; return ITEM node unchanged if the checkbox property is `trans'
 or nil."
-  (pcase (org-ml-get-property :checkbox item)
-    ('on (org-ml-set-property :checkbox 'off item))
-    ('off (org-ml-set-property :checkbox 'on item))
-    ((or `trans `nil) item)
-    (_ (error "This should not happen"))))
+  (let ((item* (org-element-copy item)))
+    (pcase (org-ml-get-property :checkbox item)
+      ('on (org-ml-set-property :checkbox 'off item*))
+      ('off (org-ml-set-property :checkbox 'on item*))
+      ((or `trans `nil) item)
+      (_ (error "This should not happen")))))
 
 ;; planning
 
