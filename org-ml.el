@@ -546,6 +546,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
   "Set all properties in NODE to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that correspond to the
 property list in NODE."
+  ;; TODO remove plist check? (it says "nocheck" after all...)
   (if (org-ml--is-plist plist)
       (-let (((prop . (value . rest)) plist))
         (while prop
@@ -560,10 +561,11 @@ property list in NODE."
 
 (defun org-ml--set-properties-nocheck-nil (props node)
   "Set all PROPS to new in NODE."
-  ;; TODO this currently doesn't work with plain-text
-  (-let (((type . (nprops . children)) node))
-    (--> (--reduce-from (plist-put acc it nil) nprops props)
-         (org-ml--construct type it children))))
+  (-let (((prop . rest) props))
+    (while prop
+      (-setq node (org-element-put-property node prop nil)
+             (prop . rest) rest))
+    node))
 
 (eval-when-compile
   (defmacro org-ml--map-property-nocheck* (prop form node)
