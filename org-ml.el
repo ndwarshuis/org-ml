@@ -546,11 +546,12 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
   "Set all properties in NODE to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that correspond to the
 property list in NODE."
-  ;; TODO this currently doesn't work with plain-text
   (if (org-ml--is-plist plist)
-      (-let (((type . (props . children)) node))
-        (--> (org-ml--reduce2-from* (plist-put acc it-key it) props plist)
-             (org-ml--construct type it children)))
+      (-let (((prop . (value . rest)) plist))
+        (while prop
+          (-setq node (org-element-put-property node prop value)
+                 (prop . (value . rest)) rest))
+        node)
     (org-ml--arg-error "Not a plist: %S" plist)))
 
 (defun org-ml--set-property-nocheck-nil (prop node)

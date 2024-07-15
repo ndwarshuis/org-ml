@@ -6574,7 +6574,7 @@
       nil
       (:buffer "#+call: ktulu()")
       (org-ml-update-element-at* (point)
-        (org-ml-set-properties 
+        (org-ml-set-properties
          (list :call "cthulhu"
                :inside-header '(:cache no)
                :arguments '("x=4")
