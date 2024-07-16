@@ -4028,8 +4028,10 @@ of its children and return children as a secondary string."
   (if (org-ml-is-type 'plain-text object-node)
       (list object-node)
     (let ((post-blank (org-ml--get-property-nocheck :post-blank object-node)))
-      (org-ml--map-last* (org-ml-map-property* :post-blank (+ it post-blank) it)
-        (org-ml-get-children object-node)))))
+      (->> (org-element-copy object-node t)
+           (org-ml-get-children)
+           (org-ml--map-last*
+            (org-ml--map-property-nocheck* :post-blank (+ it post-blank) it))))))
 
 (defun org-ml-unwrap-types-deep (types object-node)
   "Return the children of OBJECT-NODE as a secondary string.
@@ -4043,8 +4045,10 @@ return the result as a secondary string."
    ((org-ml-is-any-type types object-node)
     (let ((post-blank (org-ml--get-property-nocheck :post-blank object-node)))
       (->> (org-ml-get-children object-node)
-           (org-ml--mapcat-normalize (org-ml-unwrap-types-deep types it))
-           (org-ml--map-last* (org-ml-map-property* :post-blank
+           (org-ml--mapcat-normalize
+            (->> (org-element-copy it)
+                 (org-ml-unwrap-types-deep types)))
+           (org-ml--map-last* (org-ml--map-property-nocheck* :post-blank
                             (+ it post-blank) it)))))
    (t
     (->> object-node

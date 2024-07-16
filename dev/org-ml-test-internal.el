@@ -790,7 +790,7 @@ HEADER is the it-header."
                              (s1 (org-ml-to-string it)))
                         (if (equal s0 s1)
                             (should t)
-                          (let ((x (format "Form %S has a side effect on '%s'" ',form s0)))
+                          (let ((x (format "Form %S has a side effect on '%s', making '%s'" ',form s0 s1)))
                             (expect x :to-be nil)))
                         (if (not (equal s0 sx))
                             (should t)
@@ -879,6 +879,29 @@ HEADER is the it-header."
 
   ;; TODO polymorphic branch setters
 
+    (org-ml--test-purity "polymorphic"
+      (org-ml-build-paragraph! "/this/ is a *paragraph*")
+      (org-ml-set-children (list "this is lame") it)
+      (org-ml-map-children (lambda (_) (list "this is lame")) it))
+
+    (org-ml--test-purity "objects"
+      (org-ml-from-string 'underline "_1 *2* 3 */4/* 5 /6/_ ")
+      (apply #'org-ml-build-paragraph (org-ml-unwrap it))
+      (apply #'org-ml-build-paragraph (org-ml-unwrap-types-deep '(bold) it))
+      (apply #'org-ml-build-paragraph (org-ml-unwrap-deep it)))
+
+    (org-ml--test-purity "secondary strings"
+      (org-ml-build-paragraph! "This (1 *2* 3 */4/* 5 /6/) is randomly formatted ")
+      (->> (org-ml-get-children it)
+           (org-ml-flatten)
+           (apply #'org-ml-build-paragraph))
+      (->> (org-ml-get-children it)
+           (org-ml-flatten-types-deep '(italic))
+           (apply #'org-ml-build-paragraph))
+      (->> (org-ml-get-children it)
+           (org-ml-flatten-deep)
+           (apply #'org-ml-build-paragraph))
+      )
 
     (org-ml--test-purity "item setters"
       (org-ml-build-item!
