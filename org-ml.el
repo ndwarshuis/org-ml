@@ -542,6 +542,7 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
     ;;              (org-element-put-property-2 :post-blank value)))
     ;;     (org-ml--construct type (plist-put props prop value) children)))))
 
+;; TODO maybe inline would make this faster, iterate once at compile-time
 (defun org-ml--set-properties-nocheck (plist node)
   "Set all properties in NODE to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that correspond to the
@@ -3078,31 +3079,23 @@ each type."
             (list keyvals nil)
           (--> keyvals
                (--group-by (org-ml--property-is-attribute (car it)) it)
-               (list (alist-get nil it) (alist-get t it)))))
-       (put
-        (acc keyval)
-        (plist-put acc (car keyval) (cadr keyval)))
-       (put-encode
-        (acc keyval type)
-        (-let* (((prop value) keyval))
-          (plist-put acc prop (org-ml--property-encode prop value type)))))
+               (list (alist-get nil it) (alist-get t it))))))
     (if (not (org-ml--is-plist plist))
         (org-ml--arg-error "Not a plist: %S" plist)
       (-let* ((type (org-ml-get-type node))
-              (keyvals (-partition 2 plist))
               ;; this will divide the keywords to those that are of the form
               ;; :attr_X which must be set differently
-              ((kv kv-attrs) (split-keyvals-maybe type keyvals))
+              ((kv kv-attrs) (split-keyvals-maybe type (-partition 2 plist)))
               (update-funs
                (->> (--map (org-ml--get-property-cis-function type (car it)) kv)
                     (-uniq)
-                    (-non-nil))))
-        ;; TODO update new properties by side effect after copying node
-        (--> (org-ml-get-all-properties node)
-             (if kv (--reduce-from (put-encode acc it type) it kv) it)
-             (if kv-attrs (-reduce-from #'put it kv-attrs) it)
-             (org-ml--construct type it (org-ml-get-children node))
-             (if update-funs (--reduce-from (funcall it acc) it update-funs) it))))))
+                    (-non-nil)))
+              (node* (org-element-copy node)))
+        (--each kv (->> (org-ml--property-encode (car it) (cadr it) type)
+                        (org-element-put-property node* (car it))))
+        (--each kv-attrs (org-element-put-property node* (car it) (cadr it)))
+        (--each update-funs (funcall it node*))
+        node*))))
 
 (defun org-ml-get-property (prop node)
   "Return the value of PROP of NODE."
