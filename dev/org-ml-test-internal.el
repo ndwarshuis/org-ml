@@ -801,12 +801,20 @@ HEADER is the it-header."
 
 (describe "all functions that modify nodes should be pure"
   (org-ml--test-purity "polymorphic setters"
-    (org-ml-build-headline! :title-text "hi")
+    (org-ml-build-headline! :title-text "hi" :tags '("stuff"))
     (org-ml-set-property :level 2 it)
+    (org-ml-set-properties '(:level 2 :archivedp t) it)
     (org-ml-shift-property :level 1 it)
     (org-ml-map-property :level (lambda (x) (1+ x)) it)
+    (org-ml-map-properties '(:level (lambda (_) 2) :archivedp (lambda (_) t)) it)
     (org-ml-toggle-property :archivedp it)
-    )
+    (org-ml-insert-into-property :tags 0 "stfu" it)
+    (org-ml-remove-from-property :tags "stuff" it))
+
+  (org-ml--test-purity "polymorphic setters (plist)"
+    (org-ml-from-string 'inline-call "#+call: ktulu[:cache no]()")
+    (org-ml-plist-put-property :end-header :results 'html it)
+    (org-ml-plist-remove-property :inside-header :cache it))
 
   (describe "leaf nodes"
     (org-ml--test-purity "timestamp setters"
