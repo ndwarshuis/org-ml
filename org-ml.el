@@ -497,10 +497,24 @@ TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
 
 ;;; INTERNAL NODE PROPERTY FUNCTIONS
 
-;; TODO update this to resolve all deferred properties on the fly
+(defun org-ml--get-nonstandard-properties (node)
+  "Return the non-standard properties list of NODE."
+  (if (stringp node) (text-properties-at 0 node) (cddr (nth 1 node))))
+
 (defun org-ml-get-all-properties (node)
   "Return the properties list of NODE."
-  (if (stringp node) (text-properties-at 0 node) (nth 1 node)))
+  (if (stringp node) (text-properties-at 0 node)
+    (let ((arr-props (->> org-element--standard-properties
+                          (--map (list it (org-element-property it node)))
+                          (-flatten-n 1)))
+          (plist-props (->> (nth 1 node)
+                            (cddr)
+                            (org-ml--plist-get-keys)
+                            (--map (list it (org-element-property it node)))
+                            (-flatten-n 1))))
+      (append arr-props plist-props))))
+      
+  ;;   (nth 1 node)))
 
 (defun org-ml--get-property-nocheck (prop node)
   "Return PROP from NODE."
@@ -1807,38 +1821,38 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
   "Return the timelist of the start time in TIMESTAMP."
   (-let (((&plist :minute-start n :hour-start h :day-start d
                   :month-start m :year-start y)
-          (org-ml-get-all-properties timestamp)))
+          (org-ml--get-nonstandard-properties timestamp)))
     `(,y ,m ,d ,h ,n)))
 
 (defun org-ml--timestamp-get-start-date (timestamp)
   "Return the start date of TIMESTAMP."
   (-let (((&plist :year-start y :month-start m :day-start d)
-          (org-ml-get-all-properties timestamp)))
+          (org-ml--get-nonstandard-properties timestamp)))
     `(,y ,m ,d)))
 
 (defun org-ml--timestamp-get-start-time (timestamp)
   "Return the start time of TIMESTAMP or nil if not set."
   (-let (((&plist :minute-start m :hour-start h)
-          (org-ml-get-all-properties timestamp)))
+          (org-ml--get-nonstandard-properties timestamp)))
     (if (and h m) `(,h ,m) nil)))
 
 (defun org-ml--timestamp-get-end-timelist (timestamp)
   "Return the timelist of the end time in TIMESTAMP."
   (-let (((&plist :minute-end n :hour-end h :day-end d
                   :month-end m :year-end y)
-          (org-ml-get-all-properties timestamp)))
+          (org-ml--get-nonstandard-properties timestamp)))
     `(,y ,m ,d ,h ,n)))
 
 (defun org-ml--timestamp-get-end-date (timestamp)
   "Return the end date of TIMESTAMP."
   (-let (((&plist :year-end y :month-end m :day-end d)
-          (org-ml-get-all-properties timestamp)))
+          (org-ml--get-nonstandard-properties timestamp)))
     `(,y ,m ,d)))
 
 (defun org-ml--timestamp-get-end-time (timestamp)
   "Return the end time of TIMESTAMP or nil if not set."
   (-let (((&plist :minute-end m :hour-end h)
-          (org-ml-get-all-properties timestamp)))
+          (org-ml--get-nonstandard-properties timestamp)))
     (if (and h m) `(,h ,m) nil)))
 
 ;; (eval-when-compile
@@ -2057,7 +2071,7 @@ Return a list like (TYPE VALUE UNIT) or nil."
   (-let (((&plist :repeater-type y
                   :repeater-value v
                   :repeater-unit u)
-          (org-ml-get-all-properties timestamp)))
+          (org-ml--get-nonstandard-properties timestamp)))
     (when (and y v u) `(,y ,v, u))))
 
 (defun org-ml--timestamp-set-repeater (repeater timestamp)
@@ -3112,7 +3126,7 @@ each type."
   "Return all the values of PROPS from NODE.
 PROPS is a list of all the properties desired, and the returned
 list will be the values of these properties in the order
-requested. To get the raw plist of NODE, use
+requested. To get all properties of NODE, use
 `org-ml--get-all-properties'."
   (org-ml--map* (org-ml-get-property it node) props))
 
@@ -3674,7 +3688,7 @@ Return a list like (TYPE VALUE UNIT)."
   (-let (((&plist :warning-type y
                   :warning-value v
                   :warning-unit u)
-          (org-ml-get-all-properties timestamp)))
+          (org-ml--get-nonstandard-properties timestamp)))
     (when (and y v u) `(,y ,v ,u))))
 
 (defun org-ml-timestamp-set-warning (warning timestamp)
@@ -3728,7 +3742,7 @@ new repeater list. The same rules that apply to
 Return a list like (VALUE UNIT) or nil."
   (-let (((&plist :repeater-deadline-value dv
                   :repeater-deadline-unit du)
-          (org-ml-get-all-properties timestamp)))
+          (org-ml--get-nonstandard-properties timestamp)))
     (when (and dv du) (list dv du))))
 
 (defun org-ml-timestamp-set-deadline (deadline timestamp)

@@ -2828,15 +2828,32 @@
            (org-ml-get-properties '(:call :inside-header :arguments :end-header)))
       => '("ktulu" (:cache no) ("x=4") (:exports results)))
 
-    ;; TODO fixme
-    ;; (defexamples-content org-ml-get-all-properties
-    ;;   nil
+    (defexamples-content org-ml-get-all-properties
+      nil
 
-    ;;   (:buffer "*bold*")
-    ;;   (--> (org-ml-parse-this-object)
-    ;;        (org-ml-get-all-properties it)
-    ;;        (plist-put it :parent nil))
-    ;;   => '(:begin 1 :end 7 :post-blank 0 :contents-begin 2 :contents-end 6 :parent nil))
+      (:buffer "*bold*")
+      (--> (org-ml-parse-this-object)
+           (org-ml-get-all-properties it)
+           (plist-put it :buffer nil)
+           (plist-put it :parent nil))
+      => (list :begin 1
+               :post-affiliated nil
+               :contents-begin 2
+               :contents-end 6
+               :end 7
+               :post-blank 0
+               :secondary nil
+               :mode nil
+               :granularity nil
+               :cached nil
+               :org-element--cache-sync-key nil
+               :robust-begin nil
+               :robust-end nil
+               :true-level nil
+               :buffer nil
+               :deferred nil
+               :structure nil
+               :parent nil))
 
     (defexamples-content org-ml-set-properties
       nil
