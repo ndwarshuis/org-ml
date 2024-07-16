@@ -7155,8 +7155,8 @@ applied to the buffer."
 DIFF-MODE, FUN, and NODE have the same meaning. The only
 difference is this function does not save the point's position"
   ;; if node is of type 'org-data' it will have no props
-  (let* ((begin (org-ml--get-property-nocheck :begin node))
-         (end (org-ml--get-property-nocheck :end node))
+  (let* ((begin (org-element-property :begin node))
+         (end (org-element-property :end node))
          (ov-cmd (-some->> (overlays-in begin end)
                    (--filter (eq 'outline (overlay-get it 'invisible)))
                    (org-ml--map* (list :start (overlay-start it)
@@ -7171,8 +7171,9 @@ difference is this function does not save the point's position"
          ;; In 99.9999% of cases, this is probably false, so just assume
          ;; the node has changed and update it
          ;;
-         ;; (node0 (org-ml-clone-node node))
-         (node* (funcall fun node)))
+         ;; NOTE force resolution so that we can convert back to string after
+         ;; potentially deleting the entire node from the buffer
+         (node* (funcall fun (org-element-properties-resolve node))))
     ;; (unless (org-ml--equal node0 node*)
     ;; hacky way to add overlays to undo tree
     (when ov-cmd
