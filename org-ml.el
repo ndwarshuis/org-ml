@@ -453,6 +453,7 @@ STRING and ARGS are analogous to `error'."
   "Return the type and properties cells of NODE."
   (if (stringp node) node (list (car node) (cadr node))))
 
+;; TODO obsolete this function eventually
 (defun org-ml--construct (type props children)
   "Make a new node list structure of TYPE, PROPS, and CHILDREN.
 TYPE is a symbol, PROPS is a plist, and CHILDREN is a list or nil."
@@ -7633,11 +7634,8 @@ future major revision. Its functionality has been merged with
     (org-ml--arg-error
      "Node type '%s' does not allow affiliated keywords"
      (org-ml-get-type node)))
-  (let ((props
-         (if value
-             (plist-put (org-ml-get-all-properties node) key value)
-           (org-ml--plist-remove key (org-ml-get-all-properties node)))))
-    (org-ml--construct (org-ml-get-type node) props (org-ml-get-children node))))
+  (->> (org-element-copy node)
+       (org-element-put-property-2 key value)))
 
 (org-ml--defun-anaphoric* org-ml-map-affiliated-keyword (key fun node)
   "Apply FUN to value of affiliated keyword KEY in NODE.
