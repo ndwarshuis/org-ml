@@ -43,7 +43,7 @@
        (--map (->> (org-ml-headline-get-planning it)
                    (org-ml-get-property :scheduled)
                    (org-ml-timestamp-get-start-time)
-                   (org-ml-time-to-unixtime)))))
+                   (org-ml-timelist-to-unixtime)))))
 
 (org-ml-defbench "TODO -> DONE" 1000
   "* TODO headline"
@@ -55,7 +55,7 @@
       (org-todo 'done)
       (setq next (outline-next-heading))))
 
-  (let ((planning (->> (org-ml-unixtime-to-time-long (float-time))
+  (let ((planning (->> (org-ml-unixtime-to-timelist t (float-time))
                        (org-ml-build-planning! :closed))))
     (org-ml-update-headlines* 'all
       (->> (org-ml-set-property :todo-keyword "DONE" it)
