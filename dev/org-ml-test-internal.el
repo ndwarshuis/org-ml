@@ -995,23 +995,21 @@ HEADER is the it-header."
        '(:log-into-drawer "LLL" :clock-into-drawer "CCC" :clock-out-notes t)
        it))
       
-    ;; TODO broken
-    ;; (org-ml--test-purity "headline setters (stats cookie item)"
-    ;;   (org-ml-build-headline!
-    ;;    :title-text "really impressive title"
-    ;;    :statistics-cookie '(0 0)
-    ;;    :section-children (list
-    ;;                       (org-ml-build-plain-list
-    ;;                        (org-ml-build-item! :checkbox 'on :paragraph "the one"))))
-    ;;   (org-ml-headline-update-item-statistics it))
+    (org-ml--test-purity "headline setters (stats cookie item)"
+      (org-ml-build-headline!
+       :title-text "really impressive title"
+       :statistics-cookie '(0 0)
+       :section-children (list
+                          (org-ml-build-plain-list
+                           (org-ml-build-item! :checkbox 'on :paragraph "the one"))))
+      (org-ml-headline-update-item-statistics it))
     
-    ;; TODO also broken
-    ;; (org-ml--test-purity "headline setters (stats cookie todo)"
-    ;;   (org-ml-build-headline!
-    ;;    :title-text "really impressive title"
-    ;;    :statistics-cookie '(0 0)
-    ;;    (org-ml-build-headline! :title-text "the one" :todo-keyword "DONE"))
-    ;;   (org-ml-headline-update-todo-statistics it))
+    (org-ml--test-purity "headline setters (stats cookie todo)"
+      (org-ml-build-headline!
+       :title-text "really impressive title"
+       :statistics-cookie '(0 0)
+       (org-ml-build-headline! :title-text "the one" :todo-keyword "DONE"))
+      (org-ml-headline-update-todo-statistics it))
 
     (org-ml--test-purity "headline setters (indentation)"
       (org-ml-build-headline!

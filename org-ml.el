@@ -2227,7 +2227,7 @@ or nil to erase the statistics cookie if present."
    (let ((last? (org-ml-is-type 'statistics-cookie (-last-item it))))
      (cond
       ((and last? value)
-       (org-ml--map-last* (org-ml-set-property :value value it) it))
+       (org-ml--map-last* (org-ml-set-property :value value it) (org-element-copy it)))
       ((and last? (not value))
        (-drop-last 1 it))
       (value
