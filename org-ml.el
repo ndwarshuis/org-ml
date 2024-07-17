@@ -3695,7 +3695,7 @@ Return a list like (TYPE VALUE UNIT)."
   "Set the warning of TIMESTAMP to WARNING.
 
 WARNING is a list like (TYPE VALUE UNIT). TYPE is `all' or
-'first' VALUE and is an integer. UNIT is one of `year', `month',
+`first' VALUE and is an integer. UNIT is one of `year', `month',
 `week', or `day'."
   (->> (org-element-copy timestamp)
        (org-ml--timestamp-set-warning warning)))
@@ -3707,8 +3707,7 @@ new warning list. The same rules that apply to
 `org-ml-timestamp-set-warning' and `org-ml-timestamp-get-warning'
 apply here."
   (let ((w (org-ml-timestamp-get-warning timestamp)))
-    (->> (org-element-copy timestamp)
-         (org-ml-timestamp-set-warning (funcall fun w)))))
+    (org-ml-timestamp-set-warning (funcall fun w) timestamp)))
 
 (defun org-ml-timestamp-get-repeater (timestamp)
   "Return the repeater component of TIMESTAMP.
@@ -3734,8 +3733,7 @@ new repeater list. The same rules that apply to
 `org-ml-timestamp-set-repeater' and
 `org-ml-timestamp-get-repeater' apply here."
   (let ((r (org-ml-timestamp-get-repeater timestamp)))
-    (->> (org-element-copy timestamp)
-         (org-ml-timestamp-set-repeater (funcall fun r)))))
+    (org-ml-timestamp-set-repeater (funcall fun r) timestamp)))
 
 (defun org-ml-timestamp-get-deadline (timestamp)
   "Return the repeater component of TIMESTAMP.
@@ -3763,8 +3761,7 @@ new repeater list. The same rules that apply to
 `org-ml-timestamp-set-deadline' and
 `org-ml-timestamp-get-deadline' apply here."
   (let ((d (org-ml-timestamp-get-deadline timestamp)))
-    (->> (org-element-copy timestamp)
-         (org-ml-timestamp-set-deadline (funcall fun d)))))
+    (org-ml-timestamp-set-deadline (funcall fun d) timestamp)))
 
 ;; timestamp (diary)
 
@@ -3935,14 +3932,11 @@ and STATS-COOKIE-VALUE is a list described in
 `org-ml-build-statistics-cookie'."
   (let ((ss (org-ml-build-secondary-string! title-text)))
     (if (not stats-cookie-value)
-        ;; TODO this may not be necessary after we fix the property setters
-        (->> (org-element-copy headline)
-             (org-ml-set-property :title ss))
+        (org-ml-set-property :title ss headline)
       (let ((ss* (org-ml--map-last*
                   (org-ml--set-property-nocheck :post-blank 1 it) ss))
             (sc (org-ml-build-statistics-cookie stats-cookie-value)))
-        (->> (org-element-copy headline)
-             (org-ml-set-property :title (-snoc ss* sc)))))))
+        (org-ml-set-property :title (-snoc ss* sc) headline)))))
 
 ;; item
 
@@ -3951,12 +3945,11 @@ and STATS-COOKIE-VALUE is a list described in
 This only affects item nodes with checkboxes in the `on' or `off'
 states; return ITEM node unchanged if the checkbox property is `trans'
 or nil."
-  (let ((item* (org-element-copy item)))
-    (pcase (org-ml-get-property :checkbox item)
-      ('on (org-ml-set-property :checkbox 'off item*))
-      ('off (org-ml-set-property :checkbox 'on item*))
-      ((or `trans `nil) item)
-      (_ (error "This should not happen")))))
+  (pcase (org-ml-get-property :checkbox item)
+    ('on (org-ml-set-property :checkbox 'off item))
+    ('off (org-ml-set-property :checkbox 'on item))
+    ((or `trans `nil) item)
+    (_ (error "This should not happen"))))
 
 ;; planning
 
@@ -3969,7 +3962,7 @@ is the same as that described in `org-ml-build-planning!'."
     (org-ml--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
   (let* ((active (if (eq prop :closed) nil t))
          (ts (org-ml--planning-list-to-timestamp active planning-list)))
-    (org-ml-set-property prop ts (org-element-copy planning))))
+    (org-ml-set-property prop ts planning)))
 
 ;;; PUBLIC BRANCH/CHILD FUNCTIONS
 
@@ -5293,8 +5286,7 @@ error."
     (-let (((first . rest) it))
       (if (not (org-ml-clock-is-running first)) it
         (let* ((time (org-ml-unixtime-to-datetime unixtime))
-               ;; TODO this might not eventually be necessary
-               (closed (->> (org-element-copy first)
+               (closed (->> first
                             (org-ml-map-property* :value
                               ;; TODO this will unecessarily copy the timestamp
                               (org-ml-timestamp-set-end-time time it))))
