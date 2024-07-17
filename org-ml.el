@@ -4149,13 +4149,13 @@ first paragraph and returns modified secondary-string."
      ((and planning (eq first-type 'planning))
       (org-ml-headline-set-section (cons planning (cdr children)) headline))
      (planning
-      (let ((pb (org-ml-get-property :pre-blank headline)))
-        (--> (org-ml-map-property* :post-blank (+ pb it) planning)
+      (let ((pb (org-ml--get-property-nocheck :pre-blank headline)))
+        (--> (org-ml--map-property-nocheck* :post-blank (+ pb it) planning)
              (org-ml-headline-set-section (cons it children) headline)
-             (org-ml-set-property :pre-blank 0 it))))
+             (org-ml--set-property-nocheck :pre-blank 0 it))))
      ((eq first-type 'planning)
-      (--> (org-ml-get-property :post-blank (car children))
-           (org-ml-set-property :pre-blank it headline)
+      (--> (org-ml--get-property-nocheck :post-blank (car children))
+           (org-ml--set-property-nocheck :pre-blank it headline)
            (org-ml-headline-set-section (cdr children) it)))
      (t
       headline))))
