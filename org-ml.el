@@ -579,8 +579,8 @@ property list in NODE."
   "Set all PROPS to new in NODE."
   (-let (((prop . rest) props))
     (while prop
-      (-setq node (org-element-put-property node prop nil)
-             (prop . rest) rest))
+      (org-element-put-property node prop nil)
+      (-setq (prop . rest) rest))
     node))
 
 (eval-when-compile
@@ -1129,12 +1129,6 @@ bounds."
          (ts-unit (list :pred #'org-ml--is-valid-timestamp-unit
                         :type-desc '("nil or a symbol from `year' `month'"
                                      "`week' `day', or `hour'"))))
-         ;; (post-blank `(:post-blank ,@nn-int
-         ;;                           :shift org-ml--shift-non-neg-integer))
-         ;; (robust `((:robust-begin ,@nn-int-nil
-         ;;                          :shift org-ml--shift-non-neg-integer)
-         ;;           (:robust-end ,@nn-int-nil
-         ;;                        :shift org-ml--shift-non-neg-integer))))
     (->>
      `((babel-call (:call ,@ol-str :require t)
                    (:inside-header ,@plist)
