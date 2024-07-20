@@ -529,8 +529,6 @@ STRING and ARGS are analogous to `error'."
                             (--map (list it (org-element-property it node)))
                             (-flatten-n 1))))
       (append arr-props plist-props))))
-      
-  ;;   (nth 1 node)))
 
 (defun org-ml--get-property-nocheck (prop node)
   "Return PROP from NODE."
