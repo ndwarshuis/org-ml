@@ -555,9 +555,9 @@ STRING and ARGS are analogous to `error'."
        (org-add-props node nil prop value)))
     (`headline
      (org-element-properties-resolve node)
-     (org-element-put-property-2 prop value node))
+     (org-element-put-property node prop value))
     (_
-     (org-element-put-property-2 prop value node))))
+     (org-element-put-property node prop value))))
 
 (defun org-ml--set-properties-nocheck (plist node)
   "Set all properties in NODE to the values corresponding to PLIST.
@@ -570,6 +570,18 @@ property list in NODE."
       (-setq node (org-element-put-property node prop value)
              (prop . (value . rest)) rest))
     node))
+
+(defmacro org-ml--set-properties-raw (node &rest plist)
+  "Set all properties in NODE to the values corresponding to PLIST.
+PLIST is a list of property-value pairs that correspond to the
+property list in NODE.
+
+This is not meant for plain-text."
+  (declare (indent 1))
+  (let ((forms (->> (-partition 2 plist)
+                    (--map `(org-element-put-property it-node ,(car it) ,(cadr it))))))
+    `(let ((it-node ,node))
+       ,@forms)))
 
 (defun org-ml--set-property-nocheck-nil (prop node)
   "Set PROP to nil in NODE."
@@ -1005,19 +1017,20 @@ INTERNAL-CAPTION stored in a node."
 (defun org-ml--update-macro-value (macro)
   "Return MACRO node with its value property updated.
 This will be based on MACRO's key and value properties."
-  (let* ((k (org-ml--get-property-nocheck :key macro))
-         (as (org-ml--get-property-nocheck :args macro))
+  (let* ((k (org-element-property :key macro))
+         (as (org-element-property :args macro))
          (v (if as (format "%s(%s)" k (s-join "," as)) k)))
-    (org-ml--set-property-nocheck :value (format "{{{%s}}}" v) macro)))
+    (org-element-put-property-2 :value (format "{{{%s}}}" v) macro)))
 
 (defun org-ml--update-clock-duration-and-status (clock)
   "Return CLOCK node with its duration and status properties updated.
 This will be based on CLOCK's value property."
-  (let* ((ts (org-ml--get-property-nocheck :value clock))
+  (let* ((ts (org-element-property :value clock))
          (seconds (org-ml--timestamp-get-length ts)))
     (if (= seconds 0)
-        (->> (org-ml--set-property-nocheck :duration nil clock)
-             (org-ml--set-property-nocheck :status 'running))
+        (org-ml--set-properties-raw clock
+          :duration nil
+          :status 'running)
       (let* ((h (-> seconds (/ 3600) (floor)))
              (m (-> seconds (- (* h 3600)) (/ 60) (floor)))
              ;; if the clock is going from non-ranged to ranged, it may not be
@@ -1030,28 +1043,28 @@ This will be based on CLOCK's value property."
              ;;
              ;; TODO this function is probably doing too much here
              (ts* (org-ml-timestamp-set-collapsed nil ts)))
-        (->> clock
-             (org-ml--set-property-nocheck :duration (format "%2d:%02d" h m))
-             (org-ml--set-property-nocheck :status 'closed)
-             (org-ml--set-property-nocheck :value ts*))))))
+        (org-ml--set-properties-raw clock
+          :duration (format "%2d:%02d" h m)
+          :status 'closed
+          :value ts*)))))
 
 (defun org-ml--update-headline-tags (headline)
   "Return HEADLINE node with its tags updated.
 This will be based on HEADLINE's archivedp property."
   (org-ml--map-property-nocheck* :tags
     (let ((tags* (remove org-archive-tag it)))
-      (if (org-ml--get-property-nocheck :archivedp headline)
+      (if (org-element-property :archivedp headline)
           (-snoc tags* org-archive-tag)
         tags*))
     headline))
 
 (defun org-ml--link-update-type-explicit (link)
   "Return LINK with `:type-explicit-p' updated."
-  (let ((x (-> (org-ml--get-property-nocheck :type link)
+  (let ((x (-> (org-element-property :type link)
                (member (org-link-types))
                (null)
                (not))))
-    (org-ml--set-property-nocheck :type-explicit-p x link)))
+    (org-element-put-property-2 :type-explicit-p x link)))
 
 ;;; shifters
 
@@ -1625,7 +1638,7 @@ symbol for the rest argument."
   "Return format of STATISTICS-COOKIE as a symbol.
 If fractional cookie, return `fraction'; if percentage cookie return
 `percent', else throw error (which should never happen)."
-  (let ((value (org-ml--get-property-nocheck :value statistics-cookie)))
+  (let ((value (org-element-property :value statistics-cookie)))
     (cond ((s-contains? "/" value) 'fraction)
           ((s-contains? "%" value) 'percent)
           (t (org-ml--arg-error "Unparsable statistics cookie: %s" value)))))
@@ -1841,11 +1854,11 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
 
 (defun org-ml--timestamp-is-active (timestamp)
   "Return t if TIMESTAMP is an active type."
-  (memq (org-ml--get-property-nocheck :type timestamp) '(active active-range)))
+  (memq (org-element-property :type timestamp) '(active active-range)))
 
 (defun org-ml--timestamp-is-range-type (timestamp)
   "Return t if TIMESTAMP has a range type."
-  (memq (org-ml--get-property-nocheck :type timestamp)
+  (memq (org-element-property :type timestamp)
         '(active-range inactive-range)))
 
 (defun org-ml--timestamp-is-ranged (timestamp)
@@ -1855,13 +1868,12 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
 (defun org-ml--timestamp-set-start-timelist-nocheck (timelist timestamp)
   "Set the start of TIMESTAMP using TIMELIST. Does not set type."
   (-let (((y m d H M) timelist))
-    (org-ml--set-properties-nocheck
-     (list :year-start y
-           :month-start m
-           :day-start d
-           :hour-start H
-           :minute-start M)
-     timestamp)))
+    (org-ml--set-properties-raw timestamp
+      :year-start y
+      :month-start m
+      :day-start d
+      :hour-start H
+      :minute-start M)))
 
 (defun org-ml--timestamp-set-start-timelist (timelist timestamp)
   "Return TIMESTAMP with start time set according to TIMELIST."
@@ -1874,13 +1886,12 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
 Set end to start if TIMELIST is nil."
   (-let (((y m d H M)
           (or timelist (org-ml--timestamp-get-start-timelist timestamp))))
-    (org-ml--set-properties-nocheck
-     (list :year-end y
-           :month-end m
-           :day-end d
-           :hour-end H
-           :minute-end M)
-     timestamp)))
+    (org-ml--set-properties-raw timestamp
+      :year-end y
+      :month-end m
+      :day-end d
+      :hour-end H
+      :minute-end M)))
 
 (defun org-ml--timestamp-set-end-timelist (timelist timestamp)
   "Return TIMESTAMP with end set according to TIMELIST."
@@ -1914,7 +1925,7 @@ Set end to start if TIMELIST is nil."
   "Return TIMESTAMP updated to reflect RANGE-TYPE.
 Specifically update `:range-type' and `:type'."
   (->> (org-ml--timestamp-set-type-ranged range-type timestamp)
-       (org-ml--set-property-nocheck :range-type range-type)))
+       (org-element-put-property-2 :range-type range-type)))
 
 (defun org-ml--timestamp-set-range (n unit timestamp)
   "Return TIMESTAMP with end time shifted to N UNITs from start time."
@@ -1924,7 +1935,7 @@ Specifically update `:range-type' and `:type'."
          (t2 (->> (org-ml--timelist-shift n unit t1)
                   (org-ml-timelist-to-unixtime)
                   (org-ml-unixtime-to-timelist has-time)))
-         (rt (->> (org-ml--get-property-nocheck :range-type timestamp)
+         (rt (->> (org-element-property :range-type timestamp)
                   (org-ml--timelists-get-range-type t1 t2))))
     (->> (org-ml--timestamp-set-end-timelist-nocheck t2 timestamp)
          (org-ml--timestamp-update-type-ranged)
@@ -1941,16 +1952,16 @@ TIMESTAMP if possible."
   ;; TODO this smells repetitive
   (let* ((t1 (org-ml--timestamp-get-start-timelist timestamp))
          (t2 (org-ml--timestamp-get-end-timelist timestamp))
-         (rt (->> (org-ml--get-property-nocheck :range-type timestamp)
+         (rt (->> (org-element-property :range-type timestamp)
                   (org-ml--timelists-get-range-type t1 t2))))
     (org-ml--timestamp-set-range-type rt timestamp)))
 
 (defun org-ml--timestamp-set-active (flag timestamp)
   "Return TIMESTAMP with active type if FLAG is t."
-  (let ((type (if (org-ml--get-property-nocheck :range-type timestamp)
+  (let ((type (if (org-element-property :range-type timestamp)
                   (if flag 'active-range 'inactive-range)
                 (if flag 'active 'inactive))))
-    (org-ml--set-property-nocheck :type type timestamp)))
+    (org-element-put-property-2 :type type timestamp)))
 
 (defun org-ml--timestamp-set-warning (warning timestamp)
   "Return TIMESTAMP with warning properties set to WARNING list."
@@ -2000,25 +2011,25 @@ Return a list like (TYPE VALUE UNIT) or nil."
   (unless (or (not time) (org-ml-is-time-p time))
     (org-ml--arg-error "Invalid time given %S" time))
   (-let (((H M) time))
-    (org-ml--set-properties-nocheck
-     (list :hour-start H :minute-start M)
-     timestamp-diary)))
+    (org-ml--set-properties-raw timestamp-diary
+      :hour-start H
+      :minute-start M)))
 
 (defun org-ml--timestamp-set-end-time (time timestamp-diary)
   "Set the end of TIMESTAMP-DIARY to TIME. Does not set type."
   (unless (or (not time) (org-ml-is-time-p time))
     (org-ml--arg-error "Invalid time given %S" time))
   (-let (((H M) time))
-    (org-ml--set-properties-nocheck
-     (list :hour-end H :minute-end M)
-     timestamp-diary)))
+    (org-ml--set-properties-raw timestamp-diary
+      :hour-end H
+      :minute-end M)))
 
 (defun org-ml--timestamp-update-type-ranged-timeonly (timestamp-diary)
   "Return TIMESTAMP-DIARY with updated `:range-type'."
   (let* ((t1 (org-ml--timestamp-get-start-time timestamp-diary))
          (t2 (org-ml--timestamp-get-end-time timestamp-diary))
          (rt (if (equal t1 t2) nil 'timerange)))
-    (org-ml--set-property-nocheck :range-type rt timestamp-diary)))
+    (org-element-put-property-2 :range-type rt timestamp-diary)))
 
 ;; timestamp (diary sexp)
 
@@ -2036,7 +2047,7 @@ REST will be everything after the plain-list (which should be nil
 for all sensible items)."
   (-let* (((h (s . r)) (->> (org-ml-get-children item)
                             (--split-with (not (org-ml--is-type 'plain-list it)))))
-          (pb (if s (org-ml--get-property-nocheck :post-blank s) 0))
+          (pb (if s (org-element-property :post-blank s) 0))
           (i (org-ml-get-children s)))
     (list h i pb r)))
 
@@ -2047,20 +2058,20 @@ SUBCOMPONENTS is a list like that returned by
   (-let* (((head subitems sub-pb rest) subcomponents))
     (-when-let (pb (cond
                     (rest (-some->> (-last-item rest)
-                            (org-ml--get-property-nocheck :post-blank)))
+                            (org-element-property :post-blank)))
                     (subitems sub-pb)
                     (head (-some->> (-last-item head)
-                            (org-ml--get-property-nocheck :post-blank)))))
+                            (org-element-property :post-blank)))))
       (let ((rest* (-some->> rest
                      (org-ml--map-last*
-                      (org-ml--set-property-nocheck :post-blank 0 it))))
+                      (org-element-put-property-2 :post-blank 0 it))))
             (sublist (-some->> subitems
                        (apply #'org-ml-build-plain-list
                               :post-blank (if rest sub-pb 0))
                        (list)))
             (head* (-some->> head
                      (org-ml--map-last*
-                      (org-ml--set-property-nocheck :post-blank 0 it)))))
+                      (org-element-put-property-2 :post-blank 0 it)))))
         (->> (org-ml--set-children-nocheck (append head* sublist rest*) item)
              (org-ml--map-property-nocheck* :post-blank (+ pb it)))))))
 
@@ -2330,7 +2341,7 @@ also be provided and the timestamp will be ranged. Optionally set
 POST-BLANK (a positive integer)."
   ;; TODO this isn't very efficient
   (->> (org-ml--build-blank-node 'timestamp post-blank)
-       (org-ml--set-property-nocheck :type 'diary)
+       (org-element-put-property-2 :type 'diary)
        (org-ml-timestamp-diary-set-value form)
        (org-ml-timestamp-diary-set-double-time start end)))
 
@@ -2338,7 +2349,7 @@ POST-BLANK (a positive integer)."
   "Return a new rule-typed table-row node.
 Optionally set POST-BLANK (a positive integer)."
   (->> (org-ml--build-blank-node 'table-row post-blank)
-       (org-ml--set-property-nocheck :type 'rule)))
+       (org-element-put-property-2 :type 'rule)))
 
 ;;; shorthand builders
 
@@ -3216,7 +3227,7 @@ the issue."
   ;; TODO this will check if node is s string twice
   (if (stringp node)
       (progn (remove-text-properties 0 (length node) '(:parent) node) node)
-    (org-ml--set-property-nocheck-nil :parent node)))
+    (org-element-put-property-2 :parent nil node)))
 
 (defun org-ml--caption-remove-parents (node)
   "Remove parents from CAPTION property in NODE if present."
@@ -3533,19 +3544,19 @@ be ignored."
     (`timerange
      (if flag timestamp
        (->> (org-element-copy timestamp)
-            (org-ml--set-property-nocheck :range-type 'daterange))))
+            (org-element-put-property-2 :range-type 'daterange))))
     ;; uncollapsed
     (`daterange
      (if (and (org-ml--timestamp-get-start-time timestamp)
               (org-ml--timestamp-get-end-time timestamp))
          (cond
           ((and (eq flag t) (org-ml--timestamp-has-equal-dates-p timestamp))
-           (org-ml--set-property-nocheck :range-type 'timerange timestamp))
+           (org-element-put-property-2 :range-type 'timerange timestamp))
           ((and (eq flag 'force))
            (let ((s (org-ml--timestamp-get-start-timelist timestamp)))
              (->> (org-element-copy timestamp)
                   (org-ml--timestamp-set-end-timelist-nocheck s)
-                  (org-ml--set-property-nocheck :range-type 'timerange))))
+                  (org-element-put-property-2 :range-type 'timerange))))
           (t
            timestamp))
        timestamp))
@@ -3643,8 +3654,8 @@ new repeater list. The same rules that apply to
 The node must have a type `eq' to `diary'. FORM is a quoted list."
   (if (listp form)
       (->> (org-element-copy timestamp-diary)
-           (org-ml--set-property-nocheck :raw-value (format "<%%%%%S>" form))
-           (org-ml--set-property-nocheck :diary-sexp (format "%S" form)))
+           (org-element-put-property-2 :raw-value (format "<%%%%%S>" form))
+           (org-element-put-property-2 :diary-sexp (format "%S" form)))
     (org-ml--arg-error "Timestamp-diary node value must be a form: Got %S" form)))
 
 (defun org-ml-timestamp-diary-get-start-time (timestamp-diary)
@@ -3807,7 +3818,7 @@ and STATS-COOKIE-VALUE is a list described in
     (if (not stats-cookie-value)
         (org-ml-set-property :title ss headline)
       (let ((ss* (org-ml--map-last*
-                  (org-ml--set-property-nocheck :post-blank 1 it) ss))
+                  (org-element-put-property-2 :post-blank 1 it) ss))
             (sc (org-ml-build-statistics-cookie stats-cookie-value)))
         (org-ml-set-property :title (-snoc ss* sc) headline)))))
 
@@ -4018,10 +4029,10 @@ first paragraph and returns modified secondary-string."
       (let ((pb (org-ml--get-property-nocheck :pre-blank headline)))
         (--> (org-ml--map-property-nocheck* :post-blank (+ pb it) planning)
              (org-ml-headline-set-section (cons it children) headline)
-             (org-ml--set-property-nocheck :pre-blank 0 it))))
+             (org-element-put-property-2 :pre-blank 0 it))))
      ((eq first-type 'planning)
       (--> (org-ml--get-property-nocheck :post-blank (car children))
-           (org-ml--set-property-nocheck :pre-blank it headline)
+           (org-element-put-property-2 :pre-blank it headline)
            (org-ml-headline-set-section (cdr children) it)))
      (t
       headline))))
@@ -4410,7 +4421,7 @@ items."
         (plain-list)
         (let ((pb (org-ml-get-property :post-blank plain-list)))
           (->> (org-ml-get-children plain-list)
-               (org-ml--map-last* (org-ml--set-property-nocheck :post-blank pb it))))))
+               (org-ml--map-last* (org-element-put-property-2 :post-blank pb it))))))
     (--splice (org-ml--is-type 'plain-list it) (flatten it) nodes)))
 
 (defun org-ml--wrap-plain-lists (nodes)
@@ -4426,7 +4437,7 @@ This is the dual of `org-ml--flatten-plain-lists'."
                 (cdr acc)))
          ((org-ml--is-type 'item node)
           (let* ((pb (org-ml-get-property :post-blank node))
-                 (pl (->> (org-ml--set-property-nocheck :post-blank 0 node)
+                 (pl (->> (org-element-put-property-2 :post-blank 0 node)
                           (org-ml-build-plain-list :post-blank pb))))
             (cons pl acc)))
          (t
@@ -5407,7 +5418,7 @@ demoted headline node's children."
              (tgt-headline* (->> (org-element-copy it-target)
                                  (org-ml-headline-set-subheadlines nil)
                                  (org-ml--headline-shift-level 1)
-                                 (org-ml--set-property-nocheck :post-blank tgt-pb))))
+                                 (org-element-put-property-2 :post-blank tgt-pb))))
         (org-ml--map-children-nocheck*
          (append it (list tgt-headline*) headlines-in-target)
          it))
@@ -5802,7 +5813,7 @@ parsed into TYPE this function will return nil."
                                 (t '(0)))))
                     (-some->> (org-ml--from-string string)
                       (org-ml--get-descendent level)))))
-      (org-ml--set-property-nocheck :parent nil))))
+      (org-element-put-property-2 :parent nil))))
 
 ;;; PATTERN MATCHING
 
