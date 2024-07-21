@@ -80,10 +80,13 @@ The following values are understood:
   :type 'boolean
   :group 'org-ml)
 
-;; (defcustom org-ml-parse-habits nil
-;;   "Parse habits if set to t."
-;;   :type 'boolean
-;;   :group 'org-ml)
+(defcustom org-ml-use-impure nil
+  "Run functions in impure mode.
+
+For now this means that no function will make a copy of a node,
+so all changes will be via side effect."
+  :type 'boolean
+  :group 'org-ml)
 
 ;;; NODE TYPE SETS
 
@@ -475,6 +478,12 @@ STRING and ARGS are analogous to `error'."
     (insert string)
     (-> (org-ml-parse-this-buffer) (org-ml-get-children) (car))))
 
+(defun org-ml-copy (node &optional keep)
+  "Copy NODE if running in pure mode.
+
+KEEP is passed to `org-element-copy'."
+  (if org-ml-use-impure node (org-element-copy node keep)))
+
 ;;; INTERNAL PREDICATES
 
 (defun org-ml--is-oneline-string (x)
@@ -569,11 +578,12 @@ property list in NODE.
 
 This is not meant for plain-text."
   (declare (indent 1))
-  (let ((forms (->> (-partition 2 plist)
-                    (--map `(org-element-put-property it-node ,(car it) ,(cadr it))))))
-    `(let ((it-node ,node))
+  (let* ((n (make-symbol "it-node"))
+         (forms (->> (-partition 2 plist)
+                     (--map `(org-element-put-property ,n ,(car it) ,(cadr it))))))
+    `(let ((,n ,node))
        ,@forms
-       it-node)))
+       ,n)))
 
 (defun org-ml--set-property-nocheck-nil (prop node)
   "Set PROP to nil in NODE."
@@ -1578,20 +1588,13 @@ TYPE is a symbol and POST-BLANK is a positive integer."
       ;; TODO could use a faster function here
       (if children (org-ml-set-children children node) node))))
 
-;; (defalias 'org-ml--build-leaf-node #'org-ml--build-bare-node)
-
-;; (defun org-ml--build-branch-node (type post-blank children)
-;;   "Return a new branch object-typed node from TYPE, POST-BLANK, and CHILDREN."
-;;   (->> (org-ml--build-bare-node type post-blank)
-;;        (org-ml-set-children children)))
-
 (defmacro org-ml--build-blank-node (type post-blank)
   "Return new node of TYPE with POST-BLANK and all properties set to nil."
   (let ((ips (->> (alist-get type org-ml--property-alist)
                   (-map #'car)
-                  (--mapcat (list it nil)))))
-    `(org-ml--build-bare-node ',type ,post-blank ',ips nil)))
-         ;; (org-ml--set-properties-nocheck-nil ips))))
+                  (--mapcat (list it nil))
+                  (cons 'list))))
+    `(org-ml--build-bare-node ',type ,post-blank ,ips nil)))
 
 ;;; base builders
 
@@ -2208,7 +2211,7 @@ or nil to erase the statistics cookie if present."
      (cond
       ((and last? value)
        ;; NOTE use full property setter here since this will call the encoder
-       (org-ml--map-last* (org-ml-set-property :value value it) (org-element-copy it)))
+       (org-ml--map-last* (org-ml-set-property :value value it) (org-ml-copy it)))
       ((and last? (not value))
        (-drop-last 1 it))
       (value
@@ -2300,7 +2303,7 @@ a modified list of headlines."
 Also shift all HEADLINE node's child headline nodes by N.
 If the final shifted level is less one, set level to one (for parent
 and child nodes)."
-  (->> (org-element-copy headline)
+  (->> (org-ml-copy headline)
        (org-ml--headline-shift-level n)
        (org-ml-headline-map-subheadlines*
          (org-ml--map* (org-ml--headline-subtree-shift-level n it) it))))
@@ -2494,15 +2497,16 @@ required for `org-ml-timestamp-set-repeater',
 `org-ml-timestamp-set-warning' respectively.
 
 Building a diary sexp timestamp is not possible with this function."
-  ;; TOOD not very efficient (multiple copies and checks)
+  ;; TODO add back checks to this, right now it won't give me any useful
+  ;; error messages
   (->> (org-ml--build-blank-node timestamp post-blank)
        (org-ml--timestamp-set-start-timelist-nocheck start)
        (org-ml--timestamp-set-end-timelist-nocheck end)
        (org-ml--timestamp-set-active active)
        (org-ml--timestamp-update-type-ranged)
-       (org-ml-timestamp-set-warning warning)
-       (org-ml-timestamp-set-repeater repeater)
-       (org-ml-timestamp-set-deadline deadline)
+       (org-ml--timestamp-set-warning warning)
+       (org-ml--timestamp-set-repeater repeater)
+       (org-ml--timestamp-set-deadline deadline)
        (org-ml-timestamp-set-collapsed (or collapsed t))))
 
 (org-ml--defun-kw org-ml-build-clock! (start &key end post-blank)
@@ -3018,7 +3022,7 @@ each type."
           (org-ml--arg-error "All attributes like '%s' must be a list of strings. Got '%S'"
            prop value))
       (let* ((value* (org-ml--property-encode prop value type))
-             (node* (->> (org-element-copy node)
+             (node* (->> (org-ml-copy node)
                          (org-ml--set-property-nocheck prop value*))))
         (-if-let (update-fun (org-ml--get-property-updater type prop))
             (funcall update-fun node*)
@@ -3050,7 +3054,7 @@ each type."
                (->> (--map (org-ml--get-property-updater type (car it)) kv)
                     (-uniq)
                     (-non-nil)))
-              (node* (org-element-copy node)))
+              (node* (org-ml-copy node)))
         (--each kv (->> (org-ml--property-encode (car it) (cadr it) type)
                         (org-element-put-property node* (car it))))
         (--each kv-attrs (org-element-put-property node* (car it) (cadr it)))
@@ -3424,25 +3428,25 @@ interpreted according to the localtime of the operating system."
   "Return TIMESTAMP node with start time set to TIME.
 TIME is a list analogous to the same argument specified in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-set-start-timelist time (org-element-copy timestamp)))
+  (org-ml--timestamp-set-start-timelist time (org-ml-copy timestamp)))
 
 (defun org-ml-timestamp-set-end-time (time timestamp)
   "Return TIMESTAMP node with end time set to TIME.
 TIME is a list analogous to the same argument specified in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-set-end-timelist time (org-element-copy timestamp)))
+  (org-ml--timestamp-set-end-timelist time (org-ml-copy timestamp)))
 
 (defun org-ml-timestamp-set-single-time (time timestamp)
   "Return TIMESTAMP node with start and end times set to TIME.
 TIME is a list analogous to the same argument specified in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-set-single-timelist time (org-element-copy timestamp)))
+  (org-ml--timestamp-set-single-timelist time (org-ml-copy timestamp)))
 
 (defun org-ml-timestamp-set-double-time (time1 time2 timestamp)
   "Return TIMESTAMP node with start/end times set to TIME1/TIME2 respectively.
 TIME1 and TIME2 are lists analogous to the TIME argument specified in
 `org-ml-build-timestamp!'."
-  (org-ml--timestamp-set-double-timelist time1 time2 (org-element-copy timestamp)))
+  (org-ml--timestamp-set-double-timelist time1 time2 (org-ml-copy timestamp)))
 
 ;; TODO this should be ""-set-length
 (defun org-ml-timestamp-set-range (n unit timestamp)
@@ -3451,11 +3455,11 @@ If TIMESTAMP is ranged, keep start time the same and adjust the end
 time. If not, make a new end time. The units for RANGE are in minutes
 if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format."
-  (org-ml--timestamp-set-range n unit (org-element-copy timestamp)))
+  (org-ml--timestamp-set-range n unit (org-ml-copy timestamp)))
 
 (defun org-ml-timestamp-set-active (flag timestamp)
   "Return TIMESTAMP node with active type if FLAG is t."
-  (org-ml--timestamp-set-active flag (org-element-copy timestamp)))
+  (org-ml--timestamp-set-active flag (org-ml-copy timestamp)))
 
 (defun org-ml-timestamp-shift (n unit timestamp)
   "Return TIMESTAMP node with time shifted by N UNIT's.
@@ -3473,7 +3477,7 @@ will increase the hour property by 1 and the minute property by 30."
   ;; otherwise need to shift both, set both, and update the timerange depending
   ;; on if we straddle a day boundary after the shift
   (let ((rt (org-ml--get-property-nocheck :range-type timestamp))
-        (timestamp* (org-element-copy timestamp)))
+        (timestamp* (org-ml-copy timestamp)))
     (if (not rt)
         (let ((t1 (->> (org-ml--timestamp-get-start-timelist timestamp)
                        (org-ml--timelist-shift n unit))))
@@ -3506,7 +3510,7 @@ behavior is not desired, use `org-ml-timestamp-shift'."
          (t2 (org-ml--timestamp-get-end-timelist timestamp))
          (rt (->> (org-ml--get-property-nocheck :range-type timestamp)
                   (org-ml--timelists-get-range-type t1 t2))))
-    (->> (org-element-copy timestamp)
+    (->> (org-ml-copy timestamp)
          (org-ml--timestamp-set-start-timelist t1)
          (org-ml--timestamp-set-range-type rt))))
 
@@ -3523,7 +3527,7 @@ behavior is not desired, use `org-ml-timestamp-shift'."
                   (org-ml--timelist-shift n unit)))
          (rt (->> (org-ml--get-property-nocheck :range-type timestamp)
                   (org-ml--timelists-get-range-type t1 t2))))
-    (->> (org-element-copy timestamp)
+    (->> (org-ml-copy timestamp)
          (org-ml--timestamp-set-end-timelist t2)
          (org-ml--timestamp-set-range-type rt))))
 
@@ -3531,7 +3535,7 @@ behavior is not desired, use `org-ml-timestamp-shift'."
   "Return TIMESTAMP node with its active/inactive type flipped."
   (-> (org-ml--timestamp-is-active timestamp)
       (not)
-      (org-ml--timestamp-set-active (org-element-copy timestamp))))
+      (org-ml--timestamp-set-active (org-ml-copy timestamp))))
 
 (defun org-ml-timestamp-truncate (timestamp)
   "Return TIMESTAMP node with start/end times forced to short format."
@@ -3542,7 +3546,7 @@ behavior is not desired, use `org-ml-timestamp-shift'."
          ;; NOTE it is impossible for range-type to be 'timerange since hours
          ;; and minutes will be missing
          (rt (if (equal t1 t2) nil 'daterange)))
-    (->> (org-element-copy timestamp)
+    (->> (org-ml-copy timestamp)
          (org-ml--timestamp-set-start-timelist t1)
          (org-ml--timestamp-set-end-timelist t2)
          (org-ml--timestamp-set-range-type rt))))
@@ -3556,7 +3560,7 @@ Collapsed timestamps will become uncollapsed."
          (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
                   (org-ml--timelist-truncate)))
          (rt (if (equal t1 t2) nil 'daterange)))
-    (->> (org-element-copy timestamp)
+    (->> (org-ml-copy timestamp)
          (org-ml--timestamp-set-start-timelist t1)
          (org-ml--timestamp-set-range-type rt))))
 
@@ -3569,7 +3573,7 @@ Collapsed timestamps will become uncollapsed."
          (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
                   (org-ml--timelist-truncate)))
          (rt (if (equal t1 t2) nil 'daterange)))
-    (->> (org-element-copy timestamp)
+    (->> (org-ml-copy timestamp)
          (org-ml--timestamp-set-end-timelist t2)
          (org-ml--timestamp-set-range-type rt))))
 
@@ -3602,7 +3606,7 @@ be ignored."
     ;; collapsed
     (`timerange
      (if flag timestamp
-       (->> (org-element-copy timestamp)
+       (->> (org-ml-copy timestamp)
             (org-element-put-property-2 :range-type 'daterange))))
     ;; uncollapsed
     (`daterange
@@ -3613,7 +3617,7 @@ be ignored."
            (org-element-put-property-2 :range-type 'timerange timestamp))
           ((and (eq flag 'force))
            (let ((s (org-ml--timestamp-get-start-timelist timestamp)))
-             (->> (org-element-copy timestamp)
+             (->> (org-ml-copy timestamp)
                   (org-ml--timestamp-set-end-timelist-nocheck s)
                   (org-element-put-property-2 :range-type 'timerange))))
           (t
@@ -3640,7 +3644,7 @@ Return a list like (TYPE VALUE UNIT)."
 WARNING is a list like (TYPE VALUE UNIT). TYPE is `all' or
 `first' VALUE and is an integer. UNIT is one of `year', `month',
 `week', or `day'."
-  (->> (org-element-copy timestamp)
+  (->> (org-ml-copy timestamp)
        (org-ml--timestamp-set-warning warning)))
 
 (org-ml--defun-anaphoric* org-ml-timestamp-map-warning (fun timestamp)
@@ -3666,7 +3670,7 @@ is one of `year', `month', `week', or `day'.
 
 Setting REPEATER to nil will remove the repeater and its deadline
 if present."
-  (->> (org-element-copy timestamp)
+  (->> (org-ml-copy timestamp)
        (org-ml--timestamp-set-repeater repeater)))
 
 (org-ml--defun-anaphoric* org-ml-timestamp-map-repeater (fun timestamp)
@@ -3694,7 +3698,7 @@ is one of `year', `month', `week', or `day'.
 
 Setting DEADLINE to nil will remove the deadline. Will have no effect
 if repeater is not present."
-  (->> (org-element-copy timestamp)
+  (->> (org-ml-copy timestamp)
        (org-ml--timestamp-set-deadline deadline)))
 
 (org-ml--defun-anaphoric* org-ml-timestamp-map-deadline (fun timestamp)
@@ -3712,7 +3716,7 @@ new repeater list. The same rules that apply to
   "Return TIMESTAMP-DIARY node with value set to FORM.
 The node must have a type `eq' to `diary'. FORM is a quoted list."
   (if (listp form)
-      (->> (org-element-copy timestamp-diary)
+      (->> (org-ml-copy timestamp-diary)
            (org-element-put-property-2 :raw-value (format "<%%%%%S>" form))
            (org-element-put-property-2 :diary-sexp (format "%S" form)))
     (org-ml--arg-error "Timestamp-diary node value must be a form: Got %S" form)))
@@ -3729,7 +3733,7 @@ The node must have a type `eq' to `diary'. FORM is a quoted list."
   "Return TIMESTAMP-DIARY node with start/end time set to TIME.
 The node must have a type `eq' to `diary'. TIME is a list
 like (hour min). If TIME is nil remove the time."
-  (->> (org-element-copy timestamp-diary)
+  (->> (org-ml-copy timestamp-diary)
        (org-ml--timestamp-set-start-time time)
        (org-ml--timestamp-set-end-time time)
        (org-ml--timestamp-update-type-ranged-timeonly)))
@@ -3742,7 +3746,7 @@ like (hour min). TIME may not be nil"
     (org-ml--arg-error "Time must not be nil"))
   (let* ((start (org-ml--timestamp-get-start-time timestamp-diary))
          (end (or (org-ml--timestamp-get-end-time timestamp-diary) start time)))
-    (->> (org-element-copy timestamp-diary)
+    (->> (org-ml-copy timestamp-diary)
          (org-ml--timestamp-set-start-time time)
          (org-ml--timestamp-set-end-time end)
          (org-ml--timestamp-update-type-ranged-timeonly))))
@@ -3754,7 +3758,7 @@ like (hour min). If TIME is nil then remove the end time.
 If start time is not set, return node unchanged."
   (let ((start (org-ml--timestamp-get-start-time timestamp-diary)))
     (if (not start) timestamp-diary
-      (->> (org-element-copy timestamp-diary)
+      (->> (org-ml-copy timestamp-diary)
            (org-ml--timestamp-set-end-time (or time start))
            (org-ml--timestamp-update-type-ranged-timeonly)))))
 
@@ -3765,7 +3769,7 @@ lists like (hour min). Either time may be nil, but if TIME1 is nil
 then TIME2 must also be nil."
   (when (and (not time1) time2)
     (org-ml--arg-error "Time1 cannot be nil if Time2 is non-nil"))
-  (->> (org-element-copy timestamp-diary)
+  (->> (org-ml-copy timestamp-diary)
        (org-ml--timestamp-set-start-time time1)
        (org-ml--timestamp-set-end-time (or time2 time1))
        (org-ml--timestamp-update-type-ranged-timeonly)))
@@ -3776,7 +3780,7 @@ If TIMESTAMP-DIARY is ranged, keep start time the same and adjust
 the end time. If not, make a new end time."
   (-if-let (start (org-ml--timestamp-get-start-time timestamp-diary))
       (let ((s (org-ml--time-shift n unit start)))
-        (->> (org-element-copy timestamp-diary)
+        (->> (org-ml-copy timestamp-diary)
              (org-ml--timestamp-set-end-time s)
              (org-ml--timestamp-update-type-ranged-timeonly)))
     timestamp-diary))
@@ -3801,7 +3805,7 @@ property by 30."
       (let* ((end (or (org-ml--timestamp-get-end-time timestamp-diary) start))
              (start* (org-ml--time-shift n unit start))
              (end* (org-ml--time-shift n unit end)))
-        (->> (org-element-copy timestamp-diary)
+        (->> (org-ml-copy timestamp-diary)
              (org-ml--timestamp-set-start-time start*)
              (org-ml--timestamp-set-end-time end*)
              ;; update this in case range is in undefined state
@@ -3819,7 +3823,7 @@ behavior is not desired, use `org-ml-timestamp-diary-shift'."
   (-if-let (start (org-ml--timestamp-get-start-time timestamp-diary))
       (let ((end (or (org-ml--timestamp-get-end-time timestamp-diary) start))
             (start* (org-ml--time-shift n unit start)))
-        (->> (org-element-copy timestamp-diary)
+        (->> (org-ml-copy timestamp-diary)
              (org-ml--timestamp-set-start-time start*)
              (org-ml--timestamp-set-end-time end)
              (org-ml--timestamp-update-type-ranged-timeonly)))
@@ -3836,7 +3840,7 @@ behavior is not desired, use `org-ml-timestamp-diary-shift'."
   (-if-let (start (org-ml--timestamp-get-start-time timestamp-diary))
       (let* ((end (or (org-ml--timestamp-get-end-time timestamp-diary) start)))
         (-> (org-ml--time-shift n unit end)
-            (org-ml--timestamp-set-end-time (org-element-copy timestamp-diary))
+            (org-ml--timestamp-set-end-time (org-ml-copy timestamp-diary))
             (org-ml--timestamp-update-type-ranged-timeonly)))
     timestamp-diary))
 
@@ -3978,7 +3982,7 @@ of its children and return children as a secondary string."
   (if (org-ml--is-type 'plain-text object-node)
       (list object-node)
     (let ((post-blank (org-ml--get-property-nocheck :post-blank object-node)))
-      (->> (org-element-copy object-node t)
+      (->> (org-ml-copy object-node t)
            (org-ml-get-children)
            (org-ml--map-last*
             (org-ml--map-property-nocheck* :post-blank (+ it post-blank) it))))))
@@ -3996,7 +4000,7 @@ return the result as a secondary string."
     (let ((post-blank (org-ml--get-property-nocheck :post-blank object-node)))
       (->> (org-ml-get-children object-node)
            (org-ml--mapcat-normalize
-            (->> (org-element-copy it)
+            (->> (org-ml-copy it)
                  (org-ml-unwrap-types-deep types)))
            (org-ml--map-last* (org-ml--map-property-nocheck* :post-blank
                             (+ it post-blank) it)))))
@@ -5273,7 +5277,7 @@ not be considered)."
          (done (length (--filter (org-ml--property-is-eq :checkbox 'on it)
                                  items)))
          (total (length items)))
-    (->> (org-element-copy headline)
+    (->> (org-ml-copy headline)
          (org-ml--headline-set-statistics-cookie-fraction done total))))
 
 (defun org-ml-headline-update-todo-statistics (headline)
@@ -5286,7 +5290,7 @@ subheadlines will not be counted)."
                        (--filter (org-ml--get-property-nocheck :todo-keyword it))))
          (done (length (-filter #'org-ml-headline-is-done subtodo)))
          (total (length subtodo)))
-    (->> (org-element-copy headline)
+    (->> (org-ml-copy headline)
          (org-ml--headline-set-statistics-cookie-fraction done total))))
 
 ;;; plain-list
@@ -5300,13 +5304,13 @@ TYPE is one of the symbols `unordered' or `ordered'."
   (cond
    ((eq type 'unordered)
     (org-ml--map-children-nocheck*
-      (org-ml--map* (org-ml-set-property :bullet '- (org-element-copy it)) it)
+      (org-ml--map* (org-ml-set-property :bullet '- (org-ml-copy it)) it)
       plain-list))
    ((eq type 'ordered)
     ;; NOTE the org-interpreter seems to use the correct, ordered numbers if any
     ;; number is set here. This behavior may not be reliable.
     (org-ml--map-children-nocheck*
-      (org-ml--map* (org-ml-set-property :bullet 1 (org-element-copy it)) it)
+      (org-ml--map* (org-ml-set-property :bullet 1 (org-ml-copy it)) it)
       plain-list))
    (t (org-ml--arg-error "Invalid type: %s" type))))
 
@@ -5472,7 +5476,7 @@ demoted headline node's children."
              (tgt-pb (if (org-ml--is-type 'section (car tgt-children))
                             (org-ml--get-property-nocheck :post-blank (car tgt-children))
                           (org-element-property-raw :pre-blank it-target)))
-             (tgt-headline* (->> (org-element-copy it-target)
+             (tgt-headline* (->> (org-ml-copy it-target)
                                  (org-ml-headline-set-subheadlines nil)
                                  (org-ml--headline-shift-level 1)
                                  (org-element-put-property-2 :post-blank tgt-pb))))
@@ -5614,7 +5618,7 @@ The specific child headline to promote is selected by CHILD-INDEX."
     (org-ml--split-children-at-index* index
       (-let* (((head tail) (-split-at child-index (org-ml-get-children it)))
               (target (->> (car tail)
-                           (org-element-copy)
+                           (org-ml-copy)
                            (org-ml--headline-shift-level -1)
                            (org-ml-headline-map-subheadlines*
                              (append it (cdr tail)))))
@@ -7571,7 +7575,7 @@ future major revision. Its functionality has been merged with
     (org-ml--arg-error
      "Node type '%s' does not allow affiliated keywords"
      (org-ml-get-type node)))
-  (->> (org-element-copy node)
+  (->> (org-ml-copy node)
        (org-element-put-property-2 key value)))
 
 (org-ml--defun-anaphoric* org-ml-map-affiliated-keyword (key fun node)

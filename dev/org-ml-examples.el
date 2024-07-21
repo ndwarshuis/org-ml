@@ -23,6 +23,9 @@
 (require 'dash)
 (require 'org-ml)
 
+;; (org-ml-build-planning! :closed '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
+(org-ml-build-planning! :closed '(2019 1 1) :scheduled '(2018 1 1))
+
 (def-example-group "String Conversion"
   "Convert nodes to strings."
 
