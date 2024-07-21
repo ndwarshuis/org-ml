@@ -81,6 +81,16 @@
 
   ;; these are more thoroughly tested in `org-ml-dev-test.el'
 
+  (defexamples-content org-ml-parse-this-buffer
+    nil
+    (:buffer "text")
+    (->> (org-ml-parse-this-buffer)
+         (org-ml-get-property :begin))
+    => 1
+    (->> (org-ml-parse-this-buffer)
+         (org-ml-get-property :end))
+    => 5)
+
   (defexamples-content org-ml-parse-object-at
     nil
     (:buffer "*text*")

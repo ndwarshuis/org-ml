@@ -6734,10 +6734,7 @@ If there is no such section, return nil."
   "Return org-data document tree for the current buffer.
 Contrary to the org-element specification, the org-data element
 returned from this function will have :begin and :end properties."
-  (let* ((c (org-ml-get-children (org-element-parse-buffer)))
-         (b (if c (org-ml--get-property-nocheck :begin (-first-item c)) 1))
-         (e (if c (org-ml--get-property-nocheck :end (-last-item c)) 1)))
-    (org-element-create 'org-data `(:begin ,b :end ,e) c)))
+  (org-element-parse-buffer))
 
 (defun org-ml-this-buffer-has-headlines ()
   "Return t if the current buffer has headlines, else return nil."
