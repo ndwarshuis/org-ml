@@ -635,6 +635,8 @@ property value."
 ;;      modifies the value of PROP in NODE and is like:
 ;;      f(VALUE) -> VALUE'
 
+;; Get -> 'read', Set -> 'write', Map -> 'read/write'
+
 ;; `org-element.el' doesn't always store values as their native types (like some
 ;; strings look like plists converted to strings). Here, we make a distinction
 ;; between VALUE and its internal representation IVALUE (which is actually the
@@ -657,9 +659,10 @@ property value."
 ;;     - :pred - a predicate function that returns t if VALUE is the correct
 ;;       type for PROP
 ;;     - :type-desc - a string describing the data type for PROP
-;;     - :encode - a unary function that converts VALUE to IVALUE; if this not
-;;       given then VALUE and IVALUE are `equal'
-;;     - :decode - a function that inverts the function at :encode
+;;     - :encode - a unary function that converts VALUE to IVALUE; if not given
+;;       this is the identity function
+;;     - :decode - a function that inverts the function at :encode, if not given
+;;       this is the identity function
 ;;     - :cis - a unary function that takes NODE and returns a modified NODE;
 ;;       the point of this it to "update" other properties when PROP is changed
 ;;     - :const - a value that PROP should always have
@@ -682,7 +685,7 @@ property value."
 ;;    from NODE
 
 ;; set: SET(PROP VALUE NODE) -> NODE
-;; 1) if PROP(VALUE) -> t, proceed to 2), else throw error
+;; 1) if PRED(VALUE) -> t, proceed to 2), else throw error
 ;; 2) ISET(PROP, ENCODE(VALUE), NODE)) -> NODE' where ISET sets the PROP of NODE
 ;;    to IVALUE
 ;; 3) If CIS is non-nil, run CIS(NODE') -> NODE'', else return NODE'
@@ -692,6 +695,16 @@ property value."
 ;; 2) FUN(VALUE) -> VALUE'
 ;; 3) if PRED(VALUE') -> t proceed to 4), else throw error
 ;; 4) SET(PROP VALUE' NODE) -> NODE'
+
+;; Thus GET only requires that the property exist in the type (which may be
+;; nil, in which case GET returns nil). The decoder doesn't need to be present
+;; as the identity function will be used if it isn't present.
+;;
+;; SET requires that the :pred attribute exists, since it needs to check that
+;; the incoming value to assign is valid. If :encoder or :cis are unspecified
+;; then these will be identity.
+;;
+;; MAP obviously requires both.
 
 ;;; property value predicates (type specific)
 
@@ -1385,57 +1398,105 @@ bounds."
 
 ;; alist functions
 
-(defmacro org-ml--get-property-attribute (attr type prop)
-  "Return ATTR for PROP of node TYPE.
-Signal an error if PROP in TYPE does not have ATTR."
-  (unless (memq attr '(:encode :decode :pred :cis :type-desc :toggle :shift :string-list :plist))
-    (error "Invalid attribute %s" attr))
-  (let* ((type-prop-alist
-          (--map (cons (car it)
-                       (--map (cons (car it) (plist-get (cdr it) attr))
-                              (cdr it)))
-                 org-ml--property-alist))
-         (default-form
-          `(-if-let (prop-alist (alist-get it-type ',type-prop-alist))
-               (-if-let (prop-cell (assq it-prop prop-alist))
-                   (cdr prop-cell)
-                 (org-ml--arg-error "Type '%s' does not have property '%s'" it-type it-prop))
-             (org-ml--arg-error "Tried to query '%s' for non-existent '%s'" it-prop it-type)))
-         ;; post-blank is special, since this makes sense to expose as a
-         ;; modifiable property yet it is in the standard-properties array; all
-         ;; the other properties in this array are not modifiable (ie we
-         ;; shouldn't change :begin and :end or set them upon node creation)
-         (inner-form
-          (cond
-           ((eq attr :shift)
-            `(if (eq it-prop :post-blank) #'org-ml--shift-non-neg-integer
-               ,default-form))
-           ((eq attr :pred)
-            `(if (eq it-prop :post-blank) #'org-ml--is-non-neg-integer
-               ,default-form))
-           (t
-            `(unless (eq it-prop :post-blank)
-               ,default-form)))))
-    `(let ((it-prop ,prop)
-           (it-type ,type))
-       ,inner-form)))
+(eval-when-compile
+  (defun org-ml--flatten-attribute (attr)
+    (->> org-ml--property-alist
+         (--map (cons (car it)
+                      (->> (cdr it)
+                           (--map (cons (car it) (plist-get (cdr it) attr)))
+                           (-filter #'cdr))))
+         (-filter #'cdr)))
+
+  (defun org-ml--flatten-attribute-boolean (attr)
+    (->> org-ml--property-alist
+         (--map (cons (car it)
+                      (->> (cdr it)
+                           (--filter (plist-get (cdr it) attr))
+                           (-map #'car))))
+         (-filter #'cdr))))
+
+(org-ml--defconst org-ml--property-decoder-functions
+  (--map (cons (car it)
+               (--map (cons (car it) (plist-get (cdr it) :decode))
+                      (cdr it)))
+         org-ml--property-alist))
+
+(org-ml--defconst org-ml--property-encoder-functions
+  (org-ml--flatten-attribute :encode))
+
+(org-ml--defconst org-ml--property-predicate-functions
+  (org-ml--flatten-attribute :pred))
+
+(org-ml--defconst org-ml--property-shifter-functions
+  (org-ml--flatten-attribute :shift))
+
+(org-ml--defconst org-ml--property-updater-functions
+  (org-ml--flatten-attribute :cis))
+
+(org-ml--defconst org-ml--property-type-descriptions
+  (cl-flet
+      ((map-cdr
+         (cell f)
+         (cons (car cell) (funcall f (cdr cell)))))
+    (->> (org-ml--flatten-attribute :type-desc)
+         (--map (map-cdr it (lambda (props)
+                              (--map (map-cdr it
+                                              (lambda (desc)
+                                                (if (listp desc)
+                                                    (s-join " " desc)
+                                                  desc)))
+                                     props)))))))
+
+(org-ml--defconst org-ml--properties-with-toggle
+  (org-ml--flatten-attribute-boolean :toggle))
+
+(org-ml--defconst org-ml--properties-with-string-list
+  (org-ml--flatten-attribute-boolean :string-list))
+
+(org-ml--defconst org-ml--properties-with-plist
+  (org-ml--flatten-attribute-boolean :plist))
 
 (defun org-ml--get-property-encoder (type prop)
-  "Return the encoder function for PROP of node TYPE."
-  (org-ml--get-property-attribute :encode type prop))
+  "Return the encoder for PROP of node TYPE."
+  (->> (alist-get type org-ml--property-encoder-functions)
+       (alist-get prop)))
 
 (defun org-ml--get-property-decoder (type prop)
-  "Return the decoder function for PROP of node TYPE."
-  (org-ml--get-property-attribute :decode type prop))
+  "Return the decoder function for PROP of node TYPE.
+If TYPE does not exist, return error. If PROP does not exist for
+TYPE, also return error. If type does exist, return the decoder
+function or nil if there is none."
+    (-if-let (ps (alist-get type org-ml--property-decoder-functions))
+        (-if-let (f (assq prop ps))
+            (cdr f)
+          (org-ml--arg-error "Type '%s' does not have property '%s'" type prop))
+      (org-ml--arg-error "Tried to query '%s' for non-existent '%s'" prop type)))
 
-(defun org-ml--get-property-cis-function (type prop)
-  "Return the cis function for PROP of node TYPE."
-  (org-ml--get-property-attribute :cis type prop))
+(defun org-ml--get-property-updater (type prop)
+  "Return the updater for PROP of node TYPE."
+  (->> (alist-get type org-ml--property-updater-functions)
+       (alist-get prop)))
 
 (defun org-ml--get-property-type-desc (type prop)
-  "Return the type-description string for PROP of node TYPE."
-  (let ((desc (org-ml--get-property-attribute :type-desc type prop)))
-    (if (listp desc) (s-join " " desc) desc)))
+  "Return the description for PROP of node TYPE."
+  (->> (alist-get type org-ml--property-type-descriptions)
+       (alist-get prop)))
+
+(defun org-ml--get-property-shifter (type prop)
+  "Lookup shifter function for TYPE and PROP."
+  (if (eq prop :post-blank) #'org-ml--shift-non-neg-integer
+    (->> (alist-get type org-ml--property-shifter-functions)
+         (alist-get prop))))
+
+(defun org-ml--get-property-predicate (type prop)
+  "Lookup shifter function for TYPE and PROP."
+  (if (eq prop :post-blank) #'org-ml--is-non-neg-integer
+    (->> (alist-get type org-ml--property-predicate-functions)
+         (alist-get prop))))
+
+(defun org-ml--property-memq (alist type prop)
+  "Return t if PROP is in the cdr of TYPE in ALIST."
+  (memq prop (alist-get type alist)))
 
 ;;; INTERNAL BRANCH/CHILD MANIPULATION
 
@@ -2923,7 +2984,7 @@ elements may have other elements as children."
 
 (defun org-ml--property-encode (prop value type)
   "Given TYPE and PROP, return encoded VALUE."
-  (-if-let (pred (org-ml--get-property-attribute :pred type prop))
+  (-if-let (pred (org-ml--get-property-predicate type prop))
       (if (funcall pred value)
           (-if-let (encode-fun (org-ml--get-property-encoder type prop))
               (funcall encode-fun value)
@@ -2949,7 +3010,7 @@ each type."
       (let* ((value* (org-ml--property-encode prop value type))
              (node* (->> (org-element-copy node)
                          (org-ml--set-property-nocheck prop value*))))
-        (-if-let (update-fun (org-ml--get-property-cis-function type prop))
+        (-if-let (update-fun (org-ml--get-property-updater type prop))
             (funcall update-fun node*)
           node*)))))
 
@@ -2976,7 +3037,7 @@ each type."
               ;; :attr_X which must be set differently
               ((kv kv-attrs) (split-keyvals-maybe type (-partition 2 plist)))
               (update-funs
-               (->> (--map (org-ml--get-property-cis-function type (car it)) kv)
+               (->> (--map (org-ml--get-property-updater type (car it)) kv)
                     (-uniq)
                     (-non-nil)))
               (node* (org-element-copy node)))
@@ -3046,7 +3107,7 @@ its values are forms to be mapped to these properties."
 
 This function only applies to properties that are booleans."
   (let ((type (org-ml-get-type node)))
-    (if (org-ml--get-property-attribute :toggle type prop)
+    (if (org-ml--property-memq org-ml--properties-with-toggle type prop)
         (org-ml-map-property prop #'not node)
       (org-ml--arg-error "Not a toggle-able property"))))
 
@@ -3055,10 +3116,9 @@ This function only applies to properties that are booleans."
 
 This only applies the properties that are represented as integers."
   (let* ((type (org-ml-get-type node))
-         (fun (org-ml--get-property-attribute :shift type prop)))
-    (if fun
-        (org-ml-map-property* prop (funcall fun n it) node)
-      (org-ml--arg-error "Not a shiftable property"))))
+         (fun (org-ml--get-property-shifter type prop)))
+    (if fun (org-ml-map-property* prop (funcall fun n it) node)
+      (org-ml--arg-error "'%s' not a shiftable for '%s'" prop type))))
 
 (defun org-ml-insert-into-property (prop index string node)
   "Return NODE with STRING inserted at INDEX into PROP.
@@ -3066,7 +3126,7 @@ This only applies the properties that are represented as integers."
 This only applies to properties that are represented as lists of
 strings."
   (let ((type (org-ml-get-type node)))
-    (if (org-ml--get-property-attribute :string-list type prop)
+    (if (org-ml--property-memq org-ml--properties-with-string-list type prop)
         (org-ml-map-property* prop
           (if (member string it) it (org-ml--insert-at index string it))
           node)
@@ -3082,7 +3142,7 @@ strings.
 See `org-ml-insert-into-property' for a list of supported elements
 and properties that may be used with this function."
   (let ((type (org-ml-get-type node)))
-    (if (org-ml--get-property-attribute :string-list type prop)
+    (if (org-ml--property-memq org-ml--properties-with-string-list type prop)
         (org-ml-map-property* prop (-remove-item string it) node)
       (org-ml--arg-error "Property '%s' in node of type '%s' is not a string-list"
                      prop type))))
@@ -3092,7 +3152,7 @@ and properties that may be used with this function."
 
 KEY is a keyword and VALUE is a symbol. This only applies to
 properties that are represented as plists."
-  (if (org-ml--get-property-attribute :plist (org-ml-get-type node) prop)
+  (if (org-ml--property-memq org-ml--properties-with-plist (org-ml-get-type node) prop)
       (org-ml-map-property* prop (plist-put it key value) node)
     (org-ml--arg-error "Not a plist property")))
 
@@ -3104,7 +3164,7 @@ represented as plists.
 
 See `org-ml-plist-put-property' for a list of supported elements
 and properties that may be used with this function."
-  (if (org-ml--get-property-attribute :plist (org-ml-get-type node) prop)
+  (if (org-ml--property-memq org-ml--properties-with-plist (org-ml-get-type node) prop)
       (org-ml-map-property* prop (org-ml--plist-remove key it) node)
     (org-ml--arg-error "Not a plist property")))
 
