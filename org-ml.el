@@ -1552,9 +1552,10 @@ nested element to return."
 FORM is a form with `it' bound to the list of children and
 returns a modified list of children."
     (declare (debug (form form)))
-    `(let* ((node ,node)
-            (it (org-ml-get-children node)))
-       (org-ml--set-children-nocheck ,form node))))
+    (let ((n (make-symbol "--node")))
+    `(let* ((,n ,node)
+            (it (org-ml-get-children ,n)))
+       (org-ml--set-children-nocheck ,form ,n)))))
 
 (defun org-ml--set-children-throw-error (type child-types illegal)
   "Throw an `arg-type-error' for TYPE.
@@ -4767,15 +4768,16 @@ to the current state. FORM must return a list like
 and accumulator on the next iteration. INITIAL-STATE is bound to
 `it-state' on the first iteration."
   (declare (indent 1))
-  `(let ((it-state ,initial-state)
-         (rest ,list)
-         acc it)
-     (while (and it-state rest)
-       (setq it (car rest))
-       (-setq (it-state acc) ,form)
-       (when it-state
-         (setq rest (cdr rest))))
-     (list acc rest)))
+  (let ((r (make-symbol "--rest")))
+    `(let ((it-state ,initial-state)
+           (,r ,list)
+           acc it)
+       (while (and it-state ,r)
+         (setq it (car ,r))
+         (-setq (it-state acc) ,form)
+         (when it-state
+           (setq ,r (cdr ,r))))
+       (list acc ,r))))
 
 (defun org-ml--supercontents-from-nodes (config nodes)
   "Return a supercontents object based on NODES.
@@ -7229,8 +7231,10 @@ use OFFSET to calculated the beginning fold boundary beginning.
 OFFSET can either be an integer or a form that evaluates to an
 integer."
     (declare (indent 1) (debug (form form)))
-    `(or (org-ml--fold-get-contents-begin-maybe ,node)
-         (+ ,offset (org-element-begin ,node)))))
+    (let ((n (make-symbol "--node")))
+      `(let ((,n ,node))
+         (or (org-ml--fold-get-contents-begin-maybe ,n)
+             (+ ,offset (org-element-begin ,n)))))))
 
 (defun org-ml--fold-get-begin-boundary (node)
   "Return integer for point at the beginning of fold region for NODE."
