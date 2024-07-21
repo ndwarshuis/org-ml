@@ -425,7 +425,7 @@ See `org-ml--convert-intra-index' for the meaning of N and USE-OOR."
 (defun org-ml--arg-error (string &rest args)
   "Signal an `arg-type-error'.
 STRING and ARGS are analogous to `error'."
-    (signal 'arg-type-error `(,(apply #'format-message string args))))
+  (signal 'arg-type-error `(,(apply #'format-message string args))))
 
 (defun org-ml--is-any-type (types node)
   "Return t if the type of NODE is in TYPES (a list of symbols)."
@@ -1498,6 +1498,26 @@ function or nil if there is none."
   "Return t if PROP is in the cdr of TYPE in ALIST."
   (memq prop (alist-get type alist)))
 
+(defun org-ml--property-error-unsettable (prop type)
+  "Throw error signifying that PROP is unsettable of node TYPE."
+  (org-ml--arg-error "Property '%s' is unsettable for type '%s'" prop type))
+
+(defun org-ml--property-error-wrong-type (prop type value)
+  "Throw error signifying that VALUE is wrong for PROP of node TYPE."
+  (let ((msg "Property '%s' in node of type '%s' must be %s. Got '%S'")
+        (correct-type (org-ml--get-property-type-desc type prop)))
+    (org-ml--arg-error msg prop type correct-type value)))
+
+(defun org-ml--property-encode (prop value type)
+  "Given TYPE and PROP, return encoded VALUE."
+  (-if-let (pred (org-ml--get-property-predicate type prop))
+      (if (funcall pred value)
+          (-if-let (encode-fun (org-ml--get-property-encoder type prop))
+              (funcall encode-fun value)
+            value)
+        (org-ml--property-error-wrong-type prop type value))
+    (org-ml--property-error-unsettable prop type)))
+
 ;;; INTERNAL BRANCH/CHILD MANIPULATION
 
 (defun org-ml--get-descendent (indices node)
@@ -1548,24 +1568,30 @@ and ILLEGAL types were attempted to be set."
 
 ;; TODO could probably make this faster if I set all the properties in one
 ;; fell swoop
-(defun org-ml--build-bare-node (type post-blank)
-  "Return a new node assembled from TYPE with POST-BLANK.
+(eval-and-compile
+  (defun org-ml--build-bare-node (type post-blank props children)
+    "Return new node of TYPE with POST-BLANK, PROPS and CHILDREN.
 TYPE is a symbol and POST-BLANK is a positive integer."
-  (org-element-create type `(:post-blank ,(or post-blank 0))))
+    ;; don't set children in the function itself a) so I can check for valid
+    ;; types and b) because `org-element-create' will add :parent
+    (let ((node (org-element-create type `(:post-blank ,(or post-blank 0) ,@props))))
+      ;; TODO could use a faster function here
+      (if children (org-ml-set-children children node) node))))
 
-(defalias 'org-ml--build-leaf-node #'org-ml--build-bare-node)
+;; (defalias 'org-ml--build-leaf-node #'org-ml--build-bare-node)
 
-(defun org-ml--build-branch-node (type post-blank children)
-  "Return a new branch object-typed node from TYPE, POST-BLANK, and CHILDREN."
-  (->> (org-ml--build-bare-node type post-blank)
-       (org-ml-set-children children)))
+;; (defun org-ml--build-branch-node (type post-blank children)
+;;   "Return a new branch object-typed node from TYPE, POST-BLANK, and CHILDREN."
+;;   (->> (org-ml--build-bare-node type post-blank)
+;;        (org-ml-set-children children)))
 
-(defun org-ml--build-blank-node (type post-blank)
+(defmacro org-ml--build-blank-node (type post-blank)
   "Return new node of TYPE with POST-BLANK and all properties set to nil."
   (let ((ips (->> (alist-get type org-ml--property-alist)
-                  (-map #'car))))
-    (->> (org-ml--build-bare-node type post-blank)
-         (org-ml--set-properties-nocheck-nil ips))))
+                  (-map #'car)
+                  (--mapcat (list it nil)))))
+    `(org-ml--build-bare-node ',type ,post-blank ',ips nil)))
+         ;; (org-ml--set-properties-nocheck-nil ips))))
 
 ;;; base builders
 
@@ -1663,32 +1689,34 @@ symbol for the rest argument."
                       ((memq type org-element-object-containers) 'object-nodes)))
            (args (let ((a `(,@pos-args &key ,@kw-args post-blank)))
                    (if rest-arg `(,@a &rest ,rest-arg) a)))
-           (const-props (-some->> (alist-get 'const props)
-                                  (--mapcat (list (car it)
-                                                  (plist-get (cdr it) :const)))
-                                  (org-ml--autodef-prop-form 2
-                                    #'org-ml--set-property-nocheck
-                                    #'org-ml--set-properties-nocheck)))
-           (nil-props (-some->> (alist-get 'null props)
-                                (-map #'car)
-                                (org-ml--autodef-prop-form 1
-                                  #'org-ml--set-property-nocheck-nil
-                                  #'org-ml--set-properties-nocheck-nil)))
-           (strict-props (-some->> (append (alist-get 'key props)
-                                           (alist-get 'req props))
-                                   (-map #'car)
-                                   (--mapcat (list it (org-ml--autodef-kwd-to-sym it)))
-                                   (org-ml--autodef-prop-form 2
-                                     #'org-ml-set-property
-                                     #'org-ml-set-properties)))
+           (const-props (->> (alist-get 'const props)
+                             (--mapcat (list (car it)
+                                             (plist-get (cdr it) :const)))))
+           (nil-props (->> (alist-get 'null props)
+                           (-map #'car)
+                           (--mapcat (list it nil))))
+           (strict-props
+            (->> (append (alist-get 'key props)
+                         (alist-get 'req props))
+                 (-map #'car)
+                 (--mapcat (list it
+                                 `(org-ml--property-encode
+                                   ,it ,(org-ml--autodef-kwd-to-sym it) ',type)))))
+           (all-props (-some->> (append strict-props nil-props const-props)
+                       (cons 'list)))
+           (updaters (->> (alist-get type org-ml--property-updater-functions)
+                          (-map #'cdr)
+                          (-uniq)))
            (doc (org-ml--autodef-make-docstring type rest-arg props))
-           (builder (let ((a `(',type post-blank)))
-                      (if rest-arg `(org-ml--build-branch-node ,@a ,rest-arg)
-                        `(org-ml--build-leaf-node ,@a))))
-           (body (if (or strict-props nil-props const-props)
-                     `(->> ,@(-non-nil (list builder const-props
-                                             nil-props strict-props)))
-                   builder)))
+           (inner-body `(org-ml--build-bare-node
+                         ',type post-blank
+                         ,all-props
+                         ,rest-arg))
+           (body (if updaters
+                     (let ((us (--map `(funcall #',it node) updaters)))
+                       `(let ((node ,inner-body))
+                          ,@us))
+                   inner-body)))
       (macroexpand `(org-ml--defun-kw ,name ,args ,doc ,body))))
 
   (defmacro org-ml--autodef-build-node-functions ()
@@ -2391,7 +2419,7 @@ time(s) of the diary timestamp. If TIME2 is provided, TIME1 must
 also be provided and the timestamp will be ranged. Optionally set
 POST-BLANK (a positive integer)."
   ;; TODO this isn't very efficient
-  (->> (org-ml--build-blank-node 'timestamp post-blank)
+  (->> (org-ml--build-blank-node timestamp post-blank)
        (org-element-put-property-2 :type 'diary)
        (org-ml-timestamp-diary-set-value form)
        (org-ml-timestamp-diary-set-double-time start end)))
@@ -2399,7 +2427,7 @@ POST-BLANK (a positive integer)."
 (org-ml--defun-kw org-ml-build-table-row-hline (&key post-blank)
   "Return a new rule-typed table-row node.
 Optionally set POST-BLANK (a positive integer)."
-  (->> (org-ml--build-blank-node 'table-row post-blank)
+  (->> (org-ml--build-blank-node table-row post-blank)
        (org-element-put-property-2 :type 'rule)))
 
 ;;; shorthand builders
@@ -2443,7 +2471,8 @@ throw an error."
       (err))))
 
 (org-ml--defun-kw org-ml-build-timestamp! (start &key end active repeater
-                                                 deadline warning post-blank)
+                                                 deadline warning collapsed
+                                                 post-blank)
   "Return a new timestamp node.
 
 START specifies the start time and is a list of integers in one of
@@ -2466,21 +2495,22 @@ required for `org-ml-timestamp-set-repeater',
 
 Building a diary sexp timestamp is not possible with this function."
   ;; TOOD not very efficient (multiple copies and checks)
-  (->> (org-ml--build-blank-node 'timestamp post-blank)
+  (->> (org-ml--build-blank-node timestamp post-blank)
        (org-ml--timestamp-set-start-timelist-nocheck start)
        (org-ml--timestamp-set-end-timelist-nocheck end)
        (org-ml--timestamp-set-active active)
        (org-ml--timestamp-update-type-ranged)
        (org-ml-timestamp-set-warning warning)
        (org-ml-timestamp-set-repeater repeater)
-       (org-ml-timestamp-set-deadline deadline)))
+       (org-ml-timestamp-set-deadline deadline)
+       (org-ml-timestamp-set-collapsed (or collapsed t))))
 
 (org-ml--defun-kw org-ml-build-clock! (start &key end post-blank)
   "Return a new clock node.
 
 START and END follow the same rules as their respective arguments in
 `org-ml-build-timestamp!'."
-  (let ((ts (org-ml-build-timestamp! start :end end)))
+  (let ((ts (org-ml-build-timestamp! start :end end :collapsed nil)))
     (org-ml-build-clock ts :post-blank post-blank)))
 
 (org-ml--defun-kw org-ml-build-planning! (&key closed deadline scheduled
@@ -2633,7 +2663,7 @@ All other arguments follow the same rules as `org-ml-build-table'."
 (defun org-ml-build-org-data (&rest nodes)
   "Return a new org-data node using NODES.
 NODES should be either headline or section nodes."
-  (->> (org-ml--build-blank-node 'org-data nil)
+  (->> (org-ml--build-blank-node org-data nil)
        (org-ml-set-children nodes)))
 
 ;;; logbook items
@@ -2971,26 +3001,6 @@ elements may have other elements as children."
 (defun org-ml--property-is-attribute (prop)
   "Return t if PROP is of the form :attr_X where X is anything."
   (and (keywordp prop) (s-prefix-p ":attr_" (symbol-name prop) t)))
-
-(defun org-ml--property-error-unsettable (prop type)
-  "Throw error signifying that PROP is unsettable of node TYPE."
-  (org-ml--arg-error "Property '%s' is unsettable for type '%s'" prop type))
-
-(defun org-ml--property-error-wrong-type (prop type value)
-  "Throw error signifying that VALUE is wrong for PROP of node TYPE."
-  (let ((msg "Property '%s' in node of type '%s' must be %s. Got '%S'")
-        (correct-type (org-ml--get-property-type-desc type prop)))
-    (org-ml--arg-error msg prop type correct-type value)))
-
-(defun org-ml--property-encode (prop value type)
-  "Given TYPE and PROP, return encoded VALUE."
-  (-if-let (pred (org-ml--get-property-predicate type prop))
-      (if (funcall pred value)
-          (-if-let (encode-fun (org-ml--get-property-encoder type prop))
-              (funcall encode-fun value)
-            value)
-        (org-ml--property-error-wrong-type prop type value))
-    (org-ml--property-error-unsettable prop type)))
 
 (defun org-ml-set-property (prop value node)
   "Return NODE with PROP set to VALUE.

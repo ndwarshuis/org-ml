@@ -288,13 +288,19 @@ is a boolean that determines if rest arguments are to be considered."
                         "after positional arguments. These keywords"
                         "were interpreted as rest arguments")))
          (tests
-          ;; ensure that all keywords are valid
-          `((->> (-difference ,y ',kws)
-                 (org-ml--throw-kw-error ,inv-msg))
-            ;; ensure keywords are only used once per call
-            (->> (-group-by #'identity ,y)
-                 (--filter (< 2 (length it)))
-                 (org-ml--throw-kw-error ,dup-msg))
+          `((let (invalid unique dups)
+              (--each ,y
+                (if (memq it ',kws)
+                    (if (memq it unique)
+                        (!cons it dups)
+                      (!cons it unique))
+                  (if (memq it invalid)
+                      (!cons it dups)
+                    (!cons it invalid))))
+              (when invalid
+                (org-ml--throw-kw-error ,inv-msg invalid))
+              (when dups
+                (org-ml--throw-kw-error ,dup-msg dups)))
             ;; ensure that keyword pairs are only used
             ;; immediately after positional arguments
             (->> (-filter #'keywordp ,r)
