@@ -1472,11 +1472,6 @@ and ILLEGAL types were attempted to be set."
 
 ;;; build helpers
 
-;; TODO this function shouldn't be necessary
-(defun org-ml--init-properties (props)
-  "Return a plist where the keys are PROPS and all values are nil."
-  (apply #'append (org-ml--map* (list it nil) props)))
-
 ;; TODO could probably make this faster if I set all the properties in one
 ;; fell swoop
 (defun org-ml--build-bare-node (type post-blank)
@@ -1756,27 +1751,6 @@ UNIT is `minute', or `hour'. N is an integer."
           (s (+ (* n f) (* H 60) M)))
     (list (mod (/ s 60) 24) (mod s 60))))
 
-;; (defun org-ml--decorator-format (dec warning? valid-types)
-;;   "Return plist representing a timestamp warning or repeater (decorators).
-
-;; DEC is a list like (TYPE VALUE UNIT) of the decorator, WARNING?
-;; is t if the decorator is a warning or nil if it is a repeater,
-;; and VALID-TYPES are the allowed values for TYPE given in DEC."
-;;   (let ((props (if warning? org-ml--warning-keys org-ml--repeater-keys)))
-;;     (pcase dec
-;;       (`nil
-;;        (org-ml--init-properties props))
-;;       (`(,type ,value ,unit)
-;;        (unless (or (not type) (memq type valid-types))
-;;          (org-ml--arg-error "Invalid decorator type: %s" type))
-;;        (unless (or (not value) (integerp value))
-;;          (org-ml--arg-error "Invalid decorator value: %s" value))
-;;        (unless (or (not unit) (memq unit '(year month week day hour)))
-;;          (org-ml--arg-error "Invalid decorator unit: %s" unit))
-;;        (-interleave props dec))
-;;       (_
-;;        (org-ml--arg-error "Invalid warning/repeater list: %s" dec)))))
-
 ;; timestamp (regular)
 
 ;; ASSUME the source of truth for if a timestamp is ranged or not is in the
@@ -1784,8 +1758,6 @@ UNIT is `minute', or `hour'. N is an integer."
 ;; timestamp and inferring if it is ranged or not. It also is less ambiguous for
 ;; in cases where the timestamp may be collapsed.
 
-;; TODO use native element getters here since we know the type, slightly faster
-;; TODO inline all these property getters
 (defun org-ml--timestamp-get-start-timelist (timestamp)
   "Return the timelist of the start time in TIMESTAMP."
   (-let (((&plist :minute-start n :hour-start h :day-start d
@@ -2052,7 +2024,7 @@ REST will be everything after the plain-list (which should be nil
 for all sensible items)."
   (-let* (((h (s . r)) (->> (org-ml-get-children item)
                             (--split-with (not (org-ml--is-type 'plain-list it)))))
-          (pb (if s (org-element-property :post-blank s) 0))
+          (pb (if s (org-element-post-blank s) 0))
           (i (org-ml-get-children s)))
     (list h i pb r)))
 
@@ -2063,10 +2035,10 @@ SUBCOMPONENTS is a list like that returned by
   (-let* (((head subitems sub-pb rest) subcomponents))
     (-when-let (pb (cond
                     (rest (-some->> (-last-item rest)
-                            (org-element-property :post-blank)))
+                            (org-element-post-blank)))
                     (subitems sub-pb)
                     (head (-some->> (-last-item head)
-                            (org-element-property :post-blank)))))
+                            (org-element-post-blank)))))
       (let ((rest* (-some->> rest
                      (org-ml--map-last*
                       (org-element-put-property-2 :post-blank 0 it))))
@@ -2916,8 +2888,8 @@ elements may have other elements as children."
 
 (defun org-ml-contains-point-p (point node)
   "Return t if POINT is within the boundaries of NODE."
-  (-let ((b (org-element-property :begin node))
-         (e (org-element-property :end node)))
+  (-let ((b (org-element-begin node))
+         (e (org-element-end node)))
     (if (and (integerp b) (integerp e))
         (<= b point e)
       (error "Node boundaries are not defined"))))
@@ -3185,7 +3157,7 @@ will be the rightmost member."
       ((get-parents
         (acc node)
         (if (or (null node) (eq 'org-data (car node))) acc
-          (get-parents (cons node acc) (org-ml-get-property :parent node)))))
+          (get-parents (cons node acc) (org-element-parent node)))))
     (get-parents nil node)))
 
 (defun org-ml-remove-parent (node)
@@ -3229,7 +3201,6 @@ dealing with circular lists and will complain about infinite
 recursion. If this is happening, the :parent property is likely
 to blame, and setting it to nil has a high probability of fixing
 the issue."
-  ;; TODO this will check if node is s string twice
   (if (stringp node)
       (progn (remove-text-properties 0 (length node) '(:parent) node) node)
     (org-element-put-property-2 :parent nil node)))
@@ -3859,8 +3830,8 @@ is the same as that described in `org-ml-build-planning!'."
 
 (defun org-ml-children-contain-point (point branch-node)
   "Return t if POINT is within the boundaries of BRANCH-NODE's children."
-  (-let ((b (org-ml-get-property :contents-begin branch-node))
-         (e (org-ml-get-property :contents-end branch-node)))
+  (-let ((b (org-element-contents-begin branch-node))
+         (e (org-element-contents-end branch-node)))
     (if (and (integerp b) (integerp e))
         (<= b point e)
       (error "Node boundaries are not defined"))))
@@ -3983,9 +3954,9 @@ plain-lists, join the two lists together."
         (first (car nodes2)))
     (if (and (org-ml--is-type 'plain-list last)
              (org-ml--is-type 'plain-list first))
-        (let ((pb (org-ml-get-property :post-blank last)))
+        (let ((pb (org-element-post-blank last)))
           (--> (org-ml-get-children last)
-               (org-ml--map-last* (org-ml-set-property :post-blank pb it) it)
+               (org-ml--map-last* (org-element-put-property-2 :post-blank pb it) it)
                (append it (org-ml-get-children first))
                (org-ml--set-children-nocheck it last)
                (cons it (cdr nodes2))
@@ -4031,12 +4002,12 @@ first paragraph and returns modified secondary-string."
      ((and planning (eq first-type 'planning))
       (org-ml-headline-set-section (cons planning (cdr children)) headline))
      (planning
-      (let ((pb (org-ml--get-property-nocheck :pre-blank headline)))
+      (let ((pb (org-element-property-raw :pre-blank headline)))
         (--> (org-ml--map-property-raw* :post-blank (+ pb it) planning)
              (org-ml-headline-set-section (cons it children) headline)
              (org-element-put-property-2 :pre-blank 0 it))))
      ((eq first-type 'planning)
-      (--> (org-ml--get-property-nocheck :post-blank (car children))
+      (--> (org-element-post-blank (car children))
            (org-element-put-property-2 :pre-blank it headline)
            (org-ml-headline-set-section (cdr children) it)))
      (t
@@ -4075,24 +4046,23 @@ NODE-PROPERTIES is a list of node-property nodes."
      ((and node-properties (eq t1 'property-drawer))
       (--> (org-ml-set-children node-properties first)
            (org-ml-headline-set-section (cons it r1) headline)))
-     ;; TODO there is probably a way to make these setters more simple
      ((and node-properties (eq t1 'planning))
-      (--> (org-ml-get-property :post-blank first)
+      (--> (org-element-post-blank first)
            (apply #'org-ml-build-property-drawer :post-blank it node-properties)
-           `(,(org-ml-set-property :post-blank 0 first) ,it ,@r1)
+           `(,(org-element-put-property-2 :post-blank 0 first) ,it ,@r1)
            (org-ml-headline-set-section it headline)))
      (node-properties
-      (--> (org-ml-get-property :pre-blank headline)
+      (--> (org-element-property-raw :pre-blank headline)
            (apply #'org-ml-build-property-drawer :post-blank it node-properties)
            (org-ml-headline-set-section (cons it children) headline)
-           (org-ml-set-property :pre-blank 0 it)))
+           (org-element-put-property-2 :pre-blank 0 it)))
      ((eq t2 'property-drawer)
-      (let ((pb (org-ml-get-property :post-blank second)))
-        (--> (org-ml-map-property* :post-blank (+ pb it) first)
+      (let ((pb (org-element-post-blank second)))
+        (--> (org-ml--map-property-raw* :post-blank (+ pb it) first)
              (org-ml-headline-set-section (cons it r2) headline))))
      ((eq t1 'property-drawer)
-      (let ((pb (org-ml-get-property :post-blank first)))
-        (--> (org-ml-map-property* :pre-blank (+ pb it) headline)
+      (let ((pb (org-element-post-blank first)))
+        (--> (org-ml--map-property-raw* :pre-blank (+ pb it) headline)
              (org-ml-headline-set-section r1 it))))
      (t
       headline))))
@@ -4424,7 +4394,7 @@ items."
   (cl-flet
       ((flatten
         (plain-list)
-        (let ((pb (org-ml-get-property :post-blank plain-list)))
+        (let ((pb (org-element-post-blank plain-list)))
           (->> (org-ml-get-children plain-list)
                (org-ml--map-last* (org-element-put-property-2 :post-blank pb it))))))
     (--splice (org-ml--is-type 'plain-list it) (flatten it) nodes)))
@@ -4441,7 +4411,7 @@ This is the dual of `org-ml--flatten-plain-lists'."
           (cons (org-ml-map-children* (cons node it) (car acc))
                 (cdr acc)))
          ((org-ml--is-type 'item node)
-          (let* ((pb (org-ml-get-property :post-blank node))
+          (let* ((pb (org-element-post-blank node))
                  (pl (->> (org-element-put-property-2 :post-blank 0 node)
                           (org-ml-build-plain-list :post-blank pb))))
             (cons pl acc)))
@@ -4739,9 +4709,8 @@ CONFIG is a plist parsable by `org-ml--scc-encode'."
                  (1+)))
             ((nodes-before-space nodes-after-space)
              (if i (-split-at i flat) (list flat nil)))
-            (first-space-post-blank (-some->>
-                                        (-last-item nodes-before-space)
-                                      (org-ml-get-property :post-blank)))
+            (first-space-post-blank (-some->> (-last-item nodes-before-space)
+                                      (org-element-post-blank)))
             ((logbook-nodes contents-nodes-before-space)
              (org-ml--reduce-state init-state
                (-let (((next-state logbook-nodes) (try-test-funs scc it-state it)))
@@ -5419,7 +5388,7 @@ demoted headline node's children."
              (tgt-children (org-ml-get-children it-target))
              (tgt-pb (if (org-ml--is-type 'section (car tgt-children))
                             (org-ml--get-property-nocheck :post-blank (car tgt-children))
-                          (org-ml--get-property-nocheck :pre-blank it-target)))
+                          (org-element-property-raw :pre-blank it-target)))
              (tgt-headline* (->> (org-element-copy it-target)
                                  (org-ml-headline-set-subheadlines nil)
                                  (org-ml--headline-shift-level 1)
@@ -5581,23 +5550,23 @@ The specific child item to outdent is selected by CHILD-INDEX."
      (-let* (((h i pb r) (org-ml--item-get-subcomponents it))
              ((parent-i (tgt . tgt-i)) (-split-at child-index i))
              (parent-pb (-some->> (-last-item parent-i)
-                          (org-ml-get-property :post-blank)))
-             (parent (->> (org-ml-set-property :post-blank 0 it)
+                          (org-element-post-blank)))
+             (parent (->> (org-element-put-property-2 :post-blank 0 it)
                           (org-ml--item-set-subcomponents
                            `(,h ,parent-i ,parent-pb nil))))
-             (tgt-pb (-some->> tgt (org-ml-get-property :post-blank)))
+             (tgt-pb (-some->> tgt (org-element-post-blank)))
              (tgt* (-some->> tgt
                      (org-ml--item-map-subcomponents*
                       (-let* (((h* i* pb* r*) it)
                               (h** (org-ml--map-last*
-                                    (org-ml-set-property :post-blank tgt-pb it)
+                                    (org-element-put-property-2 :post-blank tgt-pb it)
                                     h*)))
                         (if (not r*) (list h** (append i* tgt-i) pb* r)
                           (--> (apply #'org-ml-build-plain-list tgt-i)
                                (list it)
                                (append r* it r)
                                (list h** i* pb* it)))))
-                     (org-ml-set-property :post-blank pb)
+                     (org-element-put-property-2 :post-blank pb)
                      (list))))
        (list parent tgt*))
      it)
@@ -5670,7 +5639,7 @@ This is a workaround for a bug.")
         ;; the newlines back in the case of section nodes
         (let ((pb (->> (org-ml-get-children node)
                        (-last-item)
-                       (org-element-property :post-blank))))
+                       (org-element-post-blank))))
           (concat s (make-string pb ?\n))))))
    (t
     (org-ml--arg-error "Can only stringify node or nil, got %s" node))))
@@ -5692,16 +5661,12 @@ parsed into TYPE this function will return nil."
           (if (not (and b e)) 0
             (let ((d (- e b)))
               (if (= 1 d) 0 d)))))
-       ;; TODO these all smell like something that should just be in the
-       ;; public API...except that I don't really mess around with the bounds
-       ;; anywhere except here (mostly because they already exist when the
-       ;; string is parsed
        (shift-property
         (prop n node)
-        (org-ml--map-property-nocheck* prop (+ n it) node))
+        (org-ml--map-property-raw* prop (+ n it) node))
        (shift-property-maybe
         (prop n node)
-        (org-ml--map-property-nocheck* prop (when it (+ n it)) node))
+        (org-ml--map-property-raw* prop (when it (+ n it)) node))
        (shift-object-node
         (n node)
         (->> (shift-property :begin n node)
@@ -5722,7 +5687,7 @@ parsed into TYPE this function will return nil."
              (shift-property-maybe :contents-end n)))
        (shift-property-node
         (prop n node)
-        (org-ml--map-property-nocheck* prop
+        (org-ml--map-property-raw* prop
           (-some->> it (shift-object-node n))
           node))
        (decrement-object-node
@@ -6559,8 +6524,8 @@ TYPE is the type of the node to be parsed."
                                 ((or `superscript `subscript) '(-1 (0 1)))
                                 (`table-cell '(-1 (0 0 0)))
                                 (_ '(0 (0 0)))))
-            (begin (org-element-property :begin context))
-            (end (org-element-property :end context))
+            (begin (org-element-begin context))
+            (end (org-element-end context))
             (tree (org-ml--parse-objects type (+ begin offset) end)))
       (->> (car tree)
            (org-ml--get-descendent nesting)
@@ -6588,8 +6553,8 @@ elements vs item elements."
       (if (not (memq node-type org-ml-branch-nodes)) node
         ;; need to parse again if branch-node since
         ;; `org-element-at-point' does not parse children
-        (-let* ((begin (org-element-property :begin node))
-                (end (org-element-property :end node))
+        (-let* ((begin (org-element-begin node))
+                (end (org-element-end node))
                 (contents-end (org-element-property :contents-end node))
                 (tree (car (org-ml--parse-elements begin end 'first-section)))
                 (nesting (pcase node-type
@@ -6610,7 +6575,7 @@ elements vs item elements."
           ;; some elements will always have post-blank set to 0, so no need to
           ;; update it
           (--> (if (memq node-type '(section table-row)) node*
-                 (let ((pb (org-element-property :post-blank node)))
+                 (let ((pb (org-element-post-blank node)))
                    (org-element-put-property-2 :post-blank pb node*)))
                (if type (org-ml--filter-type type it) it)))))))
 
@@ -7027,8 +6992,8 @@ applied to the buffer."
 DIFF-MODE, FUN, and NODE have the same meaning. The only
 difference is this function does not save the point's position"
   ;; if node is of type 'org-data' it will have no props
-  (let* ((begin (org-element-property :begin node))
-         (end (org-element-property :end node))
+  (let* ((begin (org-element-begin node))
+         (end (org-element-end node))
          (ov-cmd (-some->> (overlays-in begin end)
                    (--filter (eq 'outline (overlay-get it 'invisible)))
                    (org-ml--map* (list :start (overlay-start it)
@@ -7167,7 +7132,7 @@ returns a modified node."
 
 (defun org-ml--fold-get-contents-begin-maybe (node)
   "Return :contents-begin minus one or nil if not found for NODE."
-  (-some-> (org-ml-get-property :contents-begin node) (1-)))
+  (-some-> (org-element-contents-begin node) (1-)))
 
 (eval-when-compile
   (defmacro org-ml--fold-get-contents-begin-offset (node offset)
@@ -7178,7 +7143,7 @@ OFFSET can either be an integer or a form that evaluates to an
 integer."
     (declare (indent 1) (debug (form form)))
     `(or (org-ml--fold-get-contents-begin-maybe ,node)
-         (+ ,offset (org-ml-get-property :begin ,node)))))
+         (+ ,offset (org-element-begin ,node)))))
 
 (defun org-ml--fold-get-begin-boundary (node)
   "Return integer for point at the beginning of fold region for NODE."
@@ -7213,18 +7178,18 @@ integer."
                             (s-split "\n")
                             (-first-item)
                             (length)))))
-         (+ offset (org-ml-get-property :contents-begin node)))))
+         (+ offset (org-element-contents-begin node)))))
     ;; These elements are not branch types and thus don't have child boundaries,
     ;; so will need to manually calculated where the boundaries should be
     ((comment-block example-block)
-     (+ 15 (org-ml-get-property :begin node)))
+     (+ 15 (org-element-begin node)))
     (export-block
-     (+ (org-ml-get-property :begin node)
+     (+ (org-element-begin node)
         (-if-let (type (org-ml-get-property :type node))
             (1+ (length type)) 0)
         14))
     (src-block
-     (+ (org-ml-get-property :begin node)
+     (+ (org-element-begin node)
         (-if-let (meta (-some->
                         (list
                          (org-ml-get-property :language node)
@@ -7250,9 +7215,7 @@ only be used for block elements."
 (defun org-ml--fold-flag-node (flag node)
   "Set folding of buffer contents in NODE to FLAG."
   (-when-let (begin (org-ml--fold-get-begin-boundary node))
-    (let ((end (- (org-ml-get-property :end node)
-                  (org-ml-get-property :post-blank node)
-                  1)))
+    (let ((end (- (org-element-end node) (org-element-post-blank node) 1)))
       (cl-case (org-ml-get-type node)
         ((drawer headline item property-drawer)
          (outline-flag-region begin end flag))
