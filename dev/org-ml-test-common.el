@@ -57,6 +57,7 @@
            (error "Invalid test case: %S" `(,actual ,sym ,expected))))))
 
 (defmacro defexamples (cmd &rest examples)
+  (declare (indent 1))
   (let ((tests (->> examples
                     (remove :begin-hidden)
                     (remove :end-hidden)
@@ -66,6 +67,7 @@
       `(it ,(format "%S" cmd) (org-ml--with-org-env ,@tests)))))
 
 (defmacro defexamples-content (cmd _docstring &rest args)
+  (declare (indent 1))
   (cl-flet*
       ((make-test-form
         (test contents)
@@ -93,10 +95,12 @@
         `(it ,(format "%S" cmd) ,@body)))))
 
 (defmacro def-example-subgroup (title _subtitle &rest specs)
+  (declare (indent 1))
   (when specs
     `(describe ,title ,@specs)))
 
 (defmacro def-example-group (title _subtitle &rest specs)
+  (declare (indent 1))
   (when specs
     `(describe ,title ,@specs)))
 

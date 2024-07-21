@@ -489,10 +489,40 @@ KEEP is passed to `org-element-copy'."
   `(let ((org-ml-use-impure t))
      ,@body))
 
+(defmacro org-ml-> (&rest forms)
+  "Thread FORMS using `->' and run in impure mode."
+  (declare (indent 1))
+  `(org-ml-wrap-impure (-> ,@forms)))
+
 (defmacro org-ml->> (&rest forms)
   "Thread FORMS using `->>' and run in impure mode."
   (declare (indent 1))
   `(org-ml-wrap-impure (->> ,@forms)))
+
+(defmacro org-ml--> (&rest forms)
+  "Thread FORMS using `-->' and run in impure mode."
+  (declare (indent 1))
+  `(org-ml-wrap-impure (--> ,@forms)))
+
+(defmacro org-ml-some-> (&rest forms)
+  "Thread FORMS using `-some->' and run in impure mode."
+  (declare (indent 1))
+  `(org-ml-wrap-impure (-some-> ,@forms)))
+
+(defmacro org-ml-some->> (&rest forms)
+  "Thread FORMS using `-some->>' and run in impure mode."
+  (declare (indent 1))
+  `(org-ml-wrap-impure (-some->> ,@forms)))
+
+(defmacro org-ml-some--> (&rest forms)
+  "Thread FORMS using `-some-->' and run in impure mode."
+  (declare (indent 1))
+  `(org-ml-wrap-impure (-some--> ,@forms)))
+
+(defmacro org-ml-as-> (&rest forms)
+  "Thread FORMS using `-some-->' and run in impure mode."
+  (declare (indent 1))
+  `(org-ml-wrap-impure (-some--> ,@forms)))
 
 ;;; INTERNAL PREDICATES
 
