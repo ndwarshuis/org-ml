@@ -173,17 +173,18 @@ is the converse."
 
 ;;; FROM STRING CONVERSTION
 
-(defun org-ml--plist-equal-p (exclude-props plist1 plist2)
+(defun org-ml--plist-nonequal-p (exclude-props plist1 plist2)
   (cl-flet
       ((partition-plist
         (props plist)
         (->> (-partition 2 plist)
              (--remove (memq (car it) props)))))
-    (let ((a (partition-plist exclude-props plist1))
-          (b (partition-plist exclude-props plist2)))
-      (and (equal (length a) (length b))
-           (cl-subsetp a b :test #'equal)
-           (cl-subsetp b a :test #'equal)))))
+    (let* ((a (partition-plist exclude-props plist1))
+           (b (partition-plist exclude-props plist2))
+           (suba (-difference a b))
+           (subb (-difference b a)))
+      (when (or suba subb)
+        (list suba subb)))))
 
 (defun org-ml--equal~ (exclude-props node1 node2)
   (if (and (stringp node1) (stringp node2))
@@ -202,7 +203,7 @@ is the converse."
         `(progn
            (expect ',type1 :to-be ',type2)
            (expect ,pb1 :to-be ,pb2)
-           (expect (org-ml--plist-equal-p ',xs ',props1 ',props2))
+           (expect (org-ml--plist-nonequal-p ',xs ',props1 ',props2) :to-be nil)
            (and (eq ',type1 ',type2)
                 (->> (-zip-fill nil ',children1 ',children2)
                      (--all? (org-ml--equal~ ',xs (car it) (cdr it))))))))))
