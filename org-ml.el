@@ -51,6 +51,7 @@
 (require 'org-element)
 (require 'dash)
 (require 's)
+(require 'inline)
 
 (eval-when-compile
   (require 'org-ml-macs))
@@ -536,16 +537,6 @@ STRING and ARGS are analogous to `error'."
       (length (car (s-match "[ ]*$" node)))
     (org-element-property prop node)))
 
-(defun org-ml--get-parent (node)
-  "Return the parent of NODE."
-  (org-element-property :parent node))
-
-(defun org-ml--get-parent-headline (node)
-  "Return the most immediate parent headline node of NODE."
-  (-when-let (parent (org-ml--get-parent node))
-    (if (org-ml--is-type 'headline parent) parent
-      (org-ml--get-parent-headline parent))))
-
 (defun org-ml--set-property-nocheck (prop value node)
   "Set PROP in NODE to VALUE."
   (pcase (org-ml-get-type node)
@@ -581,7 +572,8 @@ This is not meant for plain-text."
   (let ((forms (->> (-partition 2 plist)
                     (--map `(org-element-put-property it-node ,(car it) ,(cadr it))))))
     `(let ((it-node ,node))
-       ,@forms)))
+       ,@forms
+       ,node)))
 
 (defun org-ml--set-property-nocheck-nil (prop node)
   "Set PROP to nil in NODE."
@@ -604,15 +596,25 @@ bound to the property value."
     (let ((node* (make-symbol "node")))
       `(let ((,node* ,node))
          (let ((it (org-ml--get-property-nocheck ,prop ,node*)))
-           (org-ml--set-property-nocheck ,prop ,form ,node*))))))
+           (org-ml--set-property-nocheck ,prop ,form ,node*)))))
 
-(defun org-ml--property-is-nil (prop node)
+  (defmacro org-ml--map-property-raw* (prop form node)
+    "Return NODE with FUN applied to the value in PROP.
+FUN is a form that returns a modified value and contains `it'
+bound to the property value."
+    (declare (indent 1))
+    (let ((node* (make-symbol "node")))
+      `(let ((,node* ,node))
+         (let ((it (org-element-property-raw ,prop ,node*)))
+           (org-element-put-property-2 ,prop ,form ,node*))))))
+
+(define-inline org-ml--property-is-nil (prop node)
   "Return t if PROP in NODE is nil."
-  (not (org-ml--get-property-nocheck prop node)))
+  (inline-quote (not (org-element-property ,prop ,node))))
 
-(defun org-ml--property-is-eq (prop val node)
+(define-inline org-ml--property-is-eq (prop val node)
   "Return t if PROP in NODE is `eq' to VAL."
-  (eq val (org-ml--get-property-nocheck prop node)))
+  (inline-quote (eq ,val (org-element-property ,prop ,node))))
 
 (eval-when-compile
   (defmacro org-ml--property-is-predicate* (prop form node)
@@ -1017,15 +1019,15 @@ INTERNAL-CAPTION stored in a node."
 (defun org-ml--update-macro-value (macro)
   "Return MACRO node with its value property updated.
 This will be based on MACRO's key and value properties."
-  (let* ((k (org-element-property :key macro))
-         (as (org-element-property :args macro))
+  (let* ((k (org-element-property-raw :key macro))
+         (as (org-element-property-raw :args macro))
          (v (if as (format "%s(%s)" k (s-join "," as)) k)))
     (org-element-put-property-2 :value (format "{{{%s}}}" v) macro)))
 
 (defun org-ml--update-clock-duration-and-status (clock)
   "Return CLOCK node with its duration and status properties updated.
 This will be based on CLOCK's value property."
-  (let* ((ts (org-element-property :value clock))
+  (let* ((ts (org-element-property-raw :value clock))
          (seconds (org-ml--timestamp-get-length ts)))
     (if (= seconds 0)
         (org-ml--set-properties-raw clock
@@ -1060,7 +1062,7 @@ This will be based on HEADLINE's archivedp property."
 
 (defun org-ml--link-update-type-explicit (link)
   "Return LINK with `:type-explicit-p' updated."
-  (let ((x (-> (org-element-property :type link)
+  (let ((x (-> (org-element-property-raw :type link)
                (member (org-link-types))
                (null)
                (not))))
@@ -1638,7 +1640,7 @@ symbol for the rest argument."
   "Return format of STATISTICS-COOKIE as a symbol.
 If fractional cookie, return `fraction'; if percentage cookie return
 `percent', else throw error (which should never happen)."
-  (let ((value (org-element-property :value statistics-cookie)))
+  (let ((value (org-element-property-raw :value statistics-cookie)))
     (cond ((s-contains? "/" value) 'fraction)
           ((s-contains? "%" value) 'percent)
           (t (org-ml--arg-error "Unparsable statistics cookie: %s" value)))))
@@ -1754,36 +1756,26 @@ UNIT is `minute', or `hour'. N is an integer."
           (s (+ (* n f) (* H 60) M)))
     (list (mod (/ s 60) 24) (mod s 60))))
 
-;; TODO these shouldn't be necessary
-(defconst org-ml--warning-keys
-  '(:warning-type :warning-value :warning-unit)
-  "Properties for timestamp warning.")
+;; (defun org-ml--decorator-format (dec warning? valid-types)
+;;   "Return plist representing a timestamp warning or repeater (decorators).
 
-(defconst org-ml--repeater-keys
-  '(:repeater-type :repeater-value :repeater-unit)
-  "Properties for timestamp repeater.")
-
-;; TODO this function is weird
-(defun org-ml--decorator-format (dec warning? valid-types)
-  "Return plist representing a timestamp warning or repeater (decorators).
-
-DEC is a list like (TYPE VALUE UNIT) of the decorator, WARNING?
-is t if the decorator is a warning or nil if it is a repeater,
-and VALID-TYPES are the allowed values for TYPE given in DEC."
-  (let ((props (if warning? org-ml--warning-keys org-ml--repeater-keys)))
-    (pcase dec
-      (`nil
-       (org-ml--init-properties props))
-      (`(,type ,value ,unit)
-       (unless (or (not type) (memq type valid-types))
-         (org-ml--arg-error "Invalid decorator type: %s" type))
-       (unless (or (not value) (integerp value))
-         (org-ml--arg-error "Invalid decorator value: %s" value))
-       (unless (or (not unit) (memq unit '(year month week day hour)))
-         (org-ml--arg-error "Invalid decorator unit: %s" unit))
-       (-interleave props dec))
-      (_
-       (org-ml--arg-error "Invalid warning/repeater list: %s" dec)))))
+;; DEC is a list like (TYPE VALUE UNIT) of the decorator, WARNING?
+;; is t if the decorator is a warning or nil if it is a repeater,
+;; and VALID-TYPES are the allowed values for TYPE given in DEC."
+;;   (let ((props (if warning? org-ml--warning-keys org-ml--repeater-keys)))
+;;     (pcase dec
+;;       (`nil
+;;        (org-ml--init-properties props))
+;;       (`(,type ,value ,unit)
+;;        (unless (or (not type) (memq type valid-types))
+;;          (org-ml--arg-error "Invalid decorator type: %s" type))
+;;        (unless (or (not value) (integerp value))
+;;          (org-ml--arg-error "Invalid decorator value: %s" value))
+;;        (unless (or (not unit) (memq unit '(year month week day hour)))
+;;          (org-ml--arg-error "Invalid decorator unit: %s" unit))
+;;        (-interleave props dec))
+;;       (_
+;;        (org-ml--arg-error "Invalid warning/repeater list: %s" dec)))))
 
 ;; timestamp (regular)
 
@@ -1854,11 +1846,11 @@ and VALID-TYPES are the allowed values for TYPE given in DEC."
 
 (defun org-ml--timestamp-is-active (timestamp)
   "Return t if TIMESTAMP is an active type."
-  (memq (org-element-property :type timestamp) '(active active-range)))
+  (memq (org-element-property-raw :type timestamp) '(active active-range)))
 
 (defun org-ml--timestamp-is-range-type (timestamp)
   "Return t if TIMESTAMP has a range type."
-  (memq (org-element-property :type timestamp)
+  (memq (org-element-property-raw :type timestamp)
         '(active-range inactive-range)))
 
 (defun org-ml--timestamp-is-ranged (timestamp)
@@ -1912,7 +1904,7 @@ Set end to start if TIMELIST is nil."
 
 (defun org-ml--timestamp-set-type-ranged (is-ranged timestamp)
   "Return TIMESTAMP with `:type' set according to IS-RANGED."
-  (org-ml--map-property-nocheck* :type
+  (org-ml--map-property-raw* :type
     (pcase it
       ((or `active `active-range)
        (if is-ranged 'active-range 'active))
@@ -1935,7 +1927,7 @@ Specifically update `:range-type' and `:type'."
          (t2 (->> (org-ml--timelist-shift n unit t1)
                   (org-ml-timelist-to-unixtime)
                   (org-ml-unixtime-to-timelist has-time)))
-         (rt (->> (org-element-property :range-type timestamp)
+         (rt (->> (org-element-property-raw :range-type timestamp)
                   (org-ml--timelists-get-range-type t1 t2))))
     (->> (org-ml--timestamp-set-end-timelist-nocheck t2 timestamp)
          (org-ml--timestamp-update-type-ranged)
@@ -1952,21 +1944,24 @@ TIMESTAMP if possible."
   ;; TODO this smells repetitive
   (let* ((t1 (org-ml--timestamp-get-start-timelist timestamp))
          (t2 (org-ml--timestamp-get-end-timelist timestamp))
-         (rt (->> (org-element-property :range-type timestamp)
+         (rt (->> (org-element-property-raw :range-type timestamp)
                   (org-ml--timelists-get-range-type t1 t2))))
     (org-ml--timestamp-set-range-type rt timestamp)))
 
 (defun org-ml--timestamp-set-active (flag timestamp)
   "Return TIMESTAMP with active type if FLAG is t."
-  (let ((type (if (org-element-property :range-type timestamp)
+  (let ((type (if (org-element-property-raw :range-type timestamp)
                   (if flag 'active-range 'inactive-range)
                 (if flag 'active 'inactive))))
     (org-element-put-property-2 :type type timestamp)))
 
 (defun org-ml--timestamp-set-warning (warning timestamp)
   "Return TIMESTAMP with warning properties set to WARNING list."
-  (-> (org-ml--decorator-format warning t '(all first))
-      (org-ml--set-properties-nocheck timestamp)))
+  (-let (((type value unit) warning))
+    (org-ml--set-properties-raw timestamp
+      :warning-type type
+      :warning-value value
+      :warning-unit unit)))
 
 (defun org-ml--timestamp-get-repeater (timestamp)
   "Return the repeater component of TIMESTAMP.
@@ -1979,37 +1974,47 @@ Return a list like (TYPE VALUE UNIT) or nil."
 
 (defun org-ml--timestamp-set-repeater (repeater timestamp)
   "Return TIMESTAMP with repeater properties set to REPEATER."
-  (let* ((r (org-ml--decorator-format repeater nil '(catch-up restart cumulate)))
-         (r* (if repeater r (append r (list :repeater-deadline-value nil
-                                            :repeater-deadline-unit nil)))))
-      (org-ml--set-properties-nocheck r* timestamp)))
+  (unless repeater
+    (org-ml--set-properties-raw timestamp
+      :repeater-deadline-value nil
+      :repeater-deadline-unit nil))
+  (-let (((type value unit) repeater))
+    (org-ml--set-properties-raw timestamp
+      :repeater-type type
+      :repeater-value value
+      :repeater-unit unit)))
 
 (defun org-ml--timestamp-set-deadline (deadline timestamp)
   "Return TIMESTAMP with repeater properties set to DEADLINE."
+  ;; TODO check type at the public level
   (if (not (org-ml--timestamp-get-repeater timestamp)) timestamp
-      ;; TODO not DRY
-      (let ((d (pcase deadline
-                 (`(,value ,unit)
-                  (unless (or (not value) (integerp value))
-                    (org-ml--arg-error "Invalid deadline value: %s" value))
-                  (unless (or (not unit) (memq unit '(year month week day hour)))
-                    (org-ml--arg-error "Invalid deadline unit: %s" unit))
-                  (list :repeater-deadline-value value
-                        :repeater-deadline-unit unit))
-                 (`nil
-                  (list :repeater-deadline-value nil
-                        :repeater-deadline-unit nil))
-                 (_
-                  (org-ml--arg-error "Invalid deadline list: %s" deadline)))))
-        (org-ml--set-properties-nocheck d timestamp))))
+    (-let (((value unit) deadline))
+      (org-ml--set-properties-raw timestamp
+        :repeater-deadline-value value
+        :repeater-deadline-unit unit))))
+  ;; (if (not (org-ml--timestamp-get-repeater timestamp)) timestamp
+  ;;     (let ((d (pcase deadline
+  ;;                (`(,value ,unit)
+  ;;                 (unless (or (not value) (integerp value))
+  ;;                   (org-ml--arg-error "Invalid deadline value: %s" value))
+  ;;                 (unless (or (not unit) (memq unit '(year month week day hour)))
+  ;;                   (org-ml--arg-error "Invalid deadline unit: %s" unit))
+  ;;                 (list :repeater-deadline-value value
+  ;;                       :repeater-deadline-unit unit))
+  ;;                (`nil
+  ;;                 (list :repeater-deadline-value nil
+  ;;                       :repeater-deadline-unit nil))
+  ;;                (_
+  ;;                 (org-ml--arg-error "Invalid deadline list: %s" deadline)))))
+  ;;       (org-ml--set-properties-nocheck d timestamp))))
 
 ;; TODO don't check timelist format in these private functions since I might end
 ;; up checking them multiple times if I do so; check once in public functions
 ;; instead (or not at all)
 (defun org-ml--timestamp-set-start-time (time timestamp-diary)
   "Set the start of TIMESTAMP-DIARY to TIME. Does not set type."
-  (unless (or (not time) (org-ml-is-time-p time))
-    (org-ml--arg-error "Invalid time given %S" time))
+  ;; (unless (or (not time) (org-ml-is-time-p time))
+  ;;   (org-ml--arg-error "Invalid time given %S" time))
   (-let (((H M) time))
     (org-ml--set-properties-raw timestamp-diary
       :hour-start H
@@ -2017,8 +2022,8 @@ Return a list like (TYPE VALUE UNIT) or nil."
 
 (defun org-ml--timestamp-set-end-time (time timestamp-diary)
   "Set the end of TIMESTAMP-DIARY to TIME. Does not set type."
-  (unless (or (not time) (org-ml-is-time-p time))
-    (org-ml--arg-error "Invalid time given %S" time))
+  ;; (unless (or (not time) (org-ml-is-time-p time))
+  ;;   (org-ml--arg-error "Invalid time given %S" time))
   (-let (((H M) time))
     (org-ml--set-properties-raw timestamp-diary
       :hour-end H
@@ -2073,7 +2078,7 @@ SUBCOMPONENTS is a list like that returned by
                      (org-ml--map-last*
                       (org-element-put-property-2 :post-blank 0 it)))))
         (->> (org-ml--set-children-nocheck (append head* sublist rest*) item)
-             (org-ml--map-property-nocheck* :post-blank (+ pb it)))))))
+             (org-ml--map-property-raw* :post-blank (+ pb it)))))))
 
 (defmacro org-ml--item-map-subcomponents* (form item)
   "Return ITEM with subcomponents modified.
@@ -4027,7 +4032,7 @@ first paragraph and returns modified secondary-string."
       (org-ml-headline-set-section (cons planning (cdr children)) headline))
      (planning
       (let ((pb (org-ml--get-property-nocheck :pre-blank headline)))
-        (--> (org-ml--map-property-nocheck* :post-blank (+ pb it) planning)
+        (--> (org-ml--map-property-raw* :post-blank (+ pb it) planning)
              (org-ml-headline-set-section (cons it children) headline)
              (org-element-put-property-2 :pre-blank 0 it))))
      ((eq first-type 'planning)
@@ -5453,7 +5458,7 @@ item node's children."
                           (list))))
                 (list h* i* pb* (append r* pl r)))
             (--> (org-ml--map-last*
-                  (org-ml--map-property-nocheck* :post-blank (+ it pb*) it)
+                  (org-ml--map-property-raw* :post-blank (+ it pb*) it)
                   i*)
                  (list h* (append it (list tgt-item*) i) pb r))))
         it))
@@ -5519,7 +5524,7 @@ CHILDREN nodes after PARENT at the same level as PARENT."
      (-let* (((h i pb r) (org-ml--item-get-subcomponents it))
              (parent (org-ml--item-set-subcomponents `(,h nil nil nil) it))
              (i* (org-ml--map-last*
-                  (org-ml--map-property-nocheck* :post-blank (+ pb it) it)
+                  (org-ml--map-property-raw* :post-blank (+ pb it) it)
                   i)))
        (list parent (append i* r)))
      it)
@@ -5755,11 +5760,12 @@ parsed into TYPE this function will return nil."
                 (let* ((pb (string-to-post-blank string))
                        (e (1+ (length string)))
                        (ce (- e pb)))
-                  (-some->> (org-ml-build-paragraph! string :post-blank pb)
-                    (org-ml--set-properties-nocheck (list :begin 1
-                                                          :contents-begin 1
-                                                          :end e
-                                                          :contents-end ce)))))
+                  (-some-> (org-ml-build-paragraph! string :post-blank pb)
+                    (org-ml--set-properties-raw
+                        :begin 1
+                        :contents-begin 1
+                        :end e
+                        :contents-end ce))))
                ((and (eq type 'section) (s-matches-p "^\\*" string))
                 (-some->> (concat " " string)
                   (org-ml--from-string)
