@@ -484,6 +484,16 @@ STRING and ARGS are analogous to `error'."
 KEEP is passed to `org-element-copy'."
   (if org-ml-use-impure node (org-element-copy node keep)))
 
+(defmacro org-ml-wrap-impure (&rest body)
+  "Run BODY in impure mode."
+  `(let ((org-ml-use-impure t))
+     ,@body))
+
+(defmacro org-ml->> (&rest forms)
+  "Thread FORMS using `->>' and run in impure mode."
+  (declare (indent 1))
+  `(org-ml-wrap-impure (->> ,@forms)))
+
 ;;; INTERNAL PREDICATES
 
 (defun org-ml--is-oneline-string (x)

@@ -23,9 +23,6 @@
 (require 'dash)
 (require 'org-ml)
 
-;; (org-ml-build-planning! :closed '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
-(org-ml-build-planning! :closed '(2019 1 1) :scheduled '(2018 1 1))
-
 (def-example-group "String Conversion"
   "Convert nodes to strings."
 
@@ -735,8 +732,8 @@
 
     (defexamples org-ml-build-org-data
       (->> (org-ml-build-headline :title '("dummy"))
-        (org-ml-build-org-data)
-        (org-ml-to-trimmed-string))
+           (org-ml-build-org-data)
+           (org-ml-to-trimmed-string))
       => "* dummy")
 
     (defexamples org-ml-build-center-block
@@ -1400,384 +1397,384 @@
       nil
 
       (:buffer "#+call: ktulu()")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :call "cthulhu")
-           (org-ml-set-property :inside-header '(:cache no))
-           (org-ml-set-property :arguments '("x=4"))
-           (org-ml-set-property :end-header '(:exports results))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :call "cthulhu")
+        (org-ml-set-property :inside-header '(:cache no))
+        (org-ml-set-property :arguments '("x=4"))
+        (org-ml-set-property :end-header '(:exports results))
+        (org-ml-to-trimmed-string))
       => "#+call: cthulhu[:cache no](x=4) :exports results"
 
       :begin-hidden
       (:buffer "CLOCK: [2019-01-01 Tue]")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property
-            :value (org-ml-build-timestamp! '(2019 1 1) :end '(2019 1 2)))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property
+         :value (org-ml-build-timestamp! '(2019 1 1) :end '(2019 1 2)))
+        (org-ml-to-trimmed-string))
       => "CLOCK: [2019-01-01 Tue]--[2019-01-02 Wed] => 24:00"
 
       (:buffer "~learn to~")
-      (->> (org-ml-parse-this-object)
-           (org-ml-set-property :value "why?")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-set-property :value "why?")
+        (org-ml-to-trimmed-string))
       => "~why?~"
 
       (:buffer "# not here")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :value "still not here")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :value "still not here")
+        (org-ml-to-trimmed-string))
       => "# still not here"
 
       (:buffer "#+begin_comment"
                "not here"
                "#+end_comment")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :value "still not here")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :value "still not here")
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_comment"
                   "still not here"
                   "#+end_comment")
 
       (:buffer "%%(print :valueble)")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :value '(print :invaluble))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :value '(print :invaluble))
+        (org-ml-to-trimmed-string))
       => "%%(print :invaluble)"
 
       (:buffer ":LOGBOOK:"
                ":END:")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :drawer-name "BOOKOFSOULS")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :drawer-name "BOOKOFSOULS")
+        (org-ml-to-trimmed-string))
       => (:result ":BOOKOFSOULS:"
                   ":END:")
 
       (:buffer "#+begin: blockhead"
                "#+end:")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :block-name "blockfoot")
-           (org-ml-set-property :arguments '(:cache no))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :block-name "blockfoot")
+        (org-ml-set-property :arguments '(:cache no))
+        (org-ml-to-trimmed-string))
       => (:result "#+begin: blockfoot :cache no"
                   "#+end:")
 
       (:buffer "\\pi")
-      (->> (org-ml-parse-this-object)
-           (org-ml-set-property :name "gamma")
-           (org-ml-set-property :use-brackets-p t)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-set-property :name "gamma")
+        (org-ml-set-property :use-brackets-p t)
+        (org-ml-to-trimmed-string))
       => "\\gamma{}"
 
       ;; TODO test org-src-preserve-indentation
       (:buffer "#+begin_example"
                "#+end_example")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :switches '("-n"))
-           (org-ml-set-property :value "example.com")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :switches '("-n"))
+        (org-ml-set-property :value "example.com")
+        (org-ml-to-trimmed-string))
       => (:buffer "#+begin_example -n"
                   "  example.com"
                   "#+end_example")
 
       (:buffer "#+begin_export latex"
                "#+end_export")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :type "domestic")
-           (org-ml-set-property :value "bullets, bombs, and bigotry")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :type "domestic")
+        (org-ml-set-property :value "bullets, bombs, and bigotry")
+        (org-ml-to-trimmed-string))
       => (:buffer "#+begin_export domestic"
                   "bullets, bombs, and bigotry"
                   "#+end_export")
 
       (:buffer "@@back-end:value@@")
-      (->> (org-ml-parse-this-object)
-           (org-ml-set-property :back-end "latex")
-           (org-ml-set-property :value "new-value")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-set-property :back-end "latex")
+        (org-ml-set-property :value "new-value")
+        (org-ml-to-trimmed-string))
       => "@@latex:new-value@@"
 
       (:buffer ": fixed")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :value "unfixed")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :value "unfixed")
+        (org-ml-to-trimmed-string))
       => ": unfixed"
 
       (:buffer "[fn:whitelabel] society")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :label "blacklabel")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :label "blacklabel")
+        (org-ml-to-trimmed-string))
       => "[fn:blacklabel] society"
 
       (:buffer "* dummy"
                "stuff")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :archivedp t)
-           (org-ml-set-property :commentedp t)
-           (org-ml-set-property :level 2)
-           (org-ml-set-property :pre-blank 1)
-           (org-ml-set-property :priority ?A)
-           (org-ml-set-property :tags '("tmsu"))
-           (org-ml-set-property :title '("smartie"))
-           (org-ml-set-property :todo-keyword "TODO")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :archivedp t)
+        (org-ml-set-property :commentedp t)
+        (org-ml-set-property :level 2)
+        (org-ml-set-property :pre-blank 1)
+        (org-ml-set-property :priority ?A)
+        (org-ml-set-property :tags '("tmsu"))
+        (org-ml-set-property :title '("smartie"))
+        (org-ml-set-property :todo-keyword "TODO")
+        (org-ml-to-trimmed-string))
       => (:result "** TODO COMMENT [#A] smartie :tmsu:ARCHIVE:"
                   ""
                   "stuff")
       :begin-hidden
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :footnote-section-p t)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :footnote-section-p t)
+        (org-ml-to-trimmed-string))
       => (:result "* Footnotes"
                   "stuff")
       :end-hidden
 
       (:buffer "call_kthulu()")
-      (->> (org-ml-parse-this-object)
-           (org-ml-set-property :call "cthulhu")
-           (org-ml-set-property :inside-header '(:cache no))
-           (org-ml-set-property :arguments '("x=4"))
-           (org-ml-set-property :end-header '(:exports results))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-set-property :call "cthulhu")
+        (org-ml-set-property :inside-header '(:cache no))
+        (org-ml-set-property :arguments '("x=4"))
+        (org-ml-set-property :end-header '(:exports results))
+        (org-ml-to-trimmed-string))
       => "call_cthulhu[:cache no](x=4)[:exports results]"
 
       (:buffer "src_emacs{(print 'yeah-boi)}")
-      (->> (org-ml-parse-this-object)
-           (org-ml-set-property :language "python")
-           (org-ml-set-property :parameters '(:cache no))
-           (org-ml-set-property :value "print \"yeah boi\"")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-set-property :language "python")
+        (org-ml-set-property :parameters '(:cache no))
+        (org-ml-set-property :value "print \"yeah boi\"")
+        (org-ml-to-trimmed-string))
       => "src_python[:cache no]{print \"yeah boi\"}"
       :end-hidden
 
       (:buffer "- thing")
-      (->> (org-ml-parse-this-item)
-           (org-ml-set-property :bullet 1)
-           (org-ml-set-property :checkbox 'on)
-           (org-ml-set-property :counter 2)
-           (org-ml-set-property :tag '("tmsu"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-set-property :bullet 1)
+        (org-ml-set-property :checkbox 'on)
+        (org-ml-set-property :counter 2)
+        (org-ml-set-property :tag '("tmsu"))
+        (org-ml-to-trimmed-string))
       => "1. [@2] [X] tmsu :: thing"
 
       :begin-hidden
       (:buffer "#+KEY: VAL")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :key "kee")
-           (org-ml-set-property :value "vahl")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :key "kee")
+        (org-ml-set-property :value "vahl")
+        (org-ml-to-trimmed-string))
       => "#+kee: vahl"
 
       (:buffer "\begin{env}"
                "body"
                "\end{env}")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :value "\begin{vne}\nbody\end{vne}")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :value "\begin{vne}\nbody\end{vne}")
+        (org-ml-to-trimmed-string))
       => (:buffer "\begin{vne}"
                   "body"
                   "\end{vne}")
 
       (:buffer "$2+2=4$")
-      (->> (org-ml-parse-this-object)
-           (org-ml-set-property :value "$2+2=5$")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-set-property :value "$2+2=5$")
+        (org-ml-to-trimmed-string))
       => "$2+2=5$"
 
       (:buffer "https://example.com")
-      (->> (org-ml-parse-this-object)
-           (org-ml-set-property :path "/dev/null")
-           (org-ml-set-property :type "file")
-           (org-ml-set-property :format 'bracket)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-set-property :path "/dev/null")
+        (org-ml-set-property :type "file")
+        (org-ml-set-property :format 'bracket)
+        (org-ml-to-trimmed-string))
       => "[[file:/dev/null]]"
 
       (:buffer "{{{economics}}}")
-      (->> (org-ml-parse-this-object)
-           (org-ml-set-property :key "freakonomics")
-           (org-ml-set-property :args '("x=4" "y=2"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-set-property :key "freakonomics")
+        (org-ml-set-property :args '("x=4" "y=2"))
+        (org-ml-to-trimmed-string))
       => "{{{freakonomics(x=4,y=2)}}}"
 
       (:buffer "* dummy"
                ":PROPERTIES:"
                ":KEY: VAL"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-node-properties)
-           (-first-item)
-           (org-ml-set-property :key "kee")
-           (org-ml-set-property :value "vahl")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-get-node-properties)
+        (-first-item)
+        (org-ml-set-property :key "kee")
+        (org-ml-set-property :value "vahl")
+        (org-ml-to-trimmed-string))
       => ":kee:      vahl"
 
       (:buffer "* dummy"
                "CLOSED: <2019-01-01 Tue>")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-planning)
-           (org-ml-set-property
-            :closed (org-ml-build-timestamp! '(2019 1 2) :active nil))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-get-planning)
+        (org-ml-set-property
+         :closed (org-ml-build-timestamp! '(2019 1 2) :active nil))
+        (org-ml-to-trimmed-string))
       => "CLOSED: [2019-01-02 Wed]"
 
       (:buffer "#+begin_special"
                "#+end_special")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :type "talent")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :type "talent")
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_talent"
                   "#+end_talent")
 
       (:buffer "#+begin_src"
                "something amorphous"
                "#+end_src")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :language "emacs")
-           (org-ml-set-property :value "(print 'hi)")
-           (org-ml-set-property :parameters '(:cache no))
-           (org-ml-set-property :switches '("-n"))
-           ;; TODO test org-src-preserve-indentation
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :language "emacs")
+        (org-ml-set-property :value "(print 'hi)")
+        (org-ml-set-property :parameters '(:cache no))
+        (org-ml-set-property :switches '("-n"))
+        ;; TODO test org-src-preserve-indentation
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_src emacs -n :cache no"
                   "  (print 'hi)"
                   "#+end_src")
 
       (:buffer "* dummy [50%]")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-statistics-cookie)
-           (org-ml-set-property :value '(0 5))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-get-statistics-cookie)
+        (org-ml-set-property :value '(0 5))
+        (org-ml-to-trimmed-string))
       => "[0/5]"
 
       (:buffer "sub_woofer")
-      (->> (org-ml-parse-object-at 5)
-           (org-ml-set-property :use-brackets-p t)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-object-at 5)
+        (org-ml-set-property :use-brackets-p t)
+        (org-ml-to-trimmed-string))
       => "_{woofer}"
 
       (:buffer "super^woofer")
-      (->> (org-ml-parse-object-at 7)
-           (org-ml-set-property :use-brackets-p t)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-object-at 7)
+        (org-ml-set-property :use-brackets-p t)
+        (org-ml-to-trimmed-string))
       => "^{woofer}"
 
       (:buffer "| a |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :tblfm '("x=$2"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :tblfm '("x=$2"))
+        (org-ml-to-trimmed-string))
       => (:result "| a |"
                   "#+TBLFM: x=$2")
 
       (:buffer "<<found>>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-set-property :value "lost")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-set-property :value "lost")
+        (org-ml-to-trimmed-string))
       => "<<lost>>"
 
       (:buffer "[2019-01-01 Tue]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-set-property :year-start 2020)
-           (org-ml-set-property :month-start 2)
-           (org-ml-set-property :day-start 2)
-           (org-ml-set-property :hour-start 12)
-           (org-ml-set-property :minute-start 0)
-           (org-ml-set-property :year-end 2020)
-           (org-ml-set-property :month-end 2)
-           (org-ml-set-property :day-end 3)
-           (org-ml-set-property :hour-end 12)
-           (org-ml-set-property :minute-end 0)
-           (org-ml-set-property :type 'active-range)
-           (org-ml-set-property :warning-type 'all)
-           (org-ml-set-property :warning-unit 'day)
-           (org-ml-set-property :warning-value 1)
-           (org-ml-set-property :repeater-type 'cumulate)
-           (org-ml-set-property :repeater-unit 'day)
-           (org-ml-set-property :repeater-value 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-set-property :year-start 2020)
+        (org-ml-set-property :month-start 2)
+        (org-ml-set-property :day-start 2)
+        (org-ml-set-property :hour-start 12)
+        (org-ml-set-property :minute-start 0)
+        (org-ml-set-property :year-end 2020)
+        (org-ml-set-property :month-end 2)
+        (org-ml-set-property :day-end 3)
+        (org-ml-set-property :hour-end 12)
+        (org-ml-set-property :minute-end 0)
+        (org-ml-set-property :type 'active-range)
+        (org-ml-set-property :warning-type 'all)
+        (org-ml-set-property :warning-unit 'day)
+        (org-ml-set-property :warning-value 1)
+        (org-ml-set-property :repeater-type 'cumulate)
+        (org-ml-set-property :repeater-unit 'day)
+        (org-ml-set-property :repeater-value 1)
+        (org-ml-to-trimmed-string))
       => "<2020-02-02 Sun 12:00 +1d -1d>--<2020-02-03 Mon 12:00 +1d -1d>"
 
       (:buffer "=I am not a crook=")
-      (->> (org-ml-parse-this-object)
-           (org-ml-set-property :value "You totally are")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-set-property :value "You totally are")
+        (org-ml-to-trimmed-string))
       => "=You totally are="
 
       (:buffer "plain")
-      (->> (org-ml-set-property :post-blank 1 "plain")
-           (org-ml-to-string))
+      (org-ml->> (org-ml-set-property :post-blank 1 "plain")
+        (org-ml-to-string))
       => "plain "
 
       (:buffer "*not plain*")
-      (->> (org-ml-parse-this-object)
-           (org-ml-set-property :post-blank 1)
-           (org-ml-to-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-set-property :post-blank 1)
+        (org-ml-to-string))
       => "*not plain* "
 
       ;; affiliated keywords
 
       (:buffer "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :name "foo")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :name "foo")
+        (org-ml-to-trimmed-string))
       => (:result "#+name: foo"
                   "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :attr_bar '("foo"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :attr_bar '("foo"))
+        (org-ml-to-trimmed-string))
       => (:result "#+attr_bar: foo"
                   "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :header '((:k1 "h1") (:k2 "h2")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :header '((:k1 "h1") (:k2 "h2")))
+        (org-ml-to-trimmed-string))
       => (:result "#+header: :k1 h1"
                   "#+header: :k2 h2"
                   "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :results '("bar" "foo"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :results '("bar" "foo"))
+        (org-ml-to-trimmed-string))
       => (:result "#+results[bar]: foo"
                   "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :caption '("cap"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :caption '("cap"))
+        (org-ml-to-trimmed-string))
       => (:result "#+caption: cap"
                   "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :caption '(("foo" "cap")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :caption '(("foo" "cap")))
+        (org-ml-to-trimmed-string))
       => (:result "#+caption[foo]: cap"
                   "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :caption '(("FOO" "CAP") ("foo" "cap")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :caption '(("FOO" "CAP") ("foo" "cap")))
+        (org-ml-to-trimmed-string))
       => (:result "#+caption[FOO]: CAP"
                   "#+caption[foo]: cap"
                   "short paragraph")
       
       (:buffer "#+caption: cap"
                "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :caption nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :caption nil)
+        (org-ml-to-trimmed-string))
       => "short paragraph"
       (:buffer "#+name: deleteme"
                "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-property :name nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-property :name nil)
+        (org-ml-to-trimmed-string))
       => "short paragraph"
 
       :end-hidden
 
       (:buffer "* not valuable")
       (:comment "Throw error when setting a property that doesn't exist")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-set-property :value "wtf")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-set-property :value "wtf")
+        (org-ml-to-trimmed-string))
       !!> arg-type-error
 
       (:comment "Throw error when setting to an improper type")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-set-property :title 666)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-set-property :title 666)
+        (org-ml-to-trimmed-string))
       !!> arg-type-error)
 
     (defexamples-content org-ml-get-property
@@ -2210,72 +2207,72 @@
       :begin-hidden
 
       (:buffer "#+call: ktulu()")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property :call #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property :call #'s-upcase)
+        (org-ml-to-trimmed-string))
       => "#+call: KTULU()"
 
       (:buffer "CLOCK: [2019-01-01 Tue 12:00]")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property* :value (org-ml-timestamp-shift-end 1 'hour it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property* :value (org-ml-timestamp-shift-end 1 'hour it))
+        (org-ml-to-trimmed-string))
       => "CLOCK: [2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00] =>  1:00"
 
       :end-hidden
       
       (:buffer "~learn to~")
-      (->> (org-ml-parse-this-object)
-           (org-ml-map-property :value #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-map-property :value #'s-upcase)
+        (org-ml-to-trimmed-string))
       => "~LEARN TO~"
       (:comment "Throw error if property doesn't exist")
-      (->> (org-ml-parse-this-object)
-           (org-ml-map-property :title #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-map-property :title #'s-upcase)
+        (org-ml-to-trimmed-string))
       !!> arg-type-error
       (:comment "Throw error if function doesn't return proper type")
-      (->> (org-ml-parse-this-object)
-           (org-ml-map-property* :value (if it 1 0))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-map-property* :value (if it 1 0))
+        (org-ml-to-trimmed-string))
       !!> arg-type-error
 
       :begin-hidden
 
       (:buffer "# not here")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property :value #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property :value #'s-upcase)
+        (org-ml-to-trimmed-string))
       => "# NOT HERE"
 
       (:buffer "#+begin_comment"
                "not here"
                "#+end_comment")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property :value #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property :value #'s-upcase)
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_comment"
                   "NOT HERE"
                   "#+end_comment")
 
       (:buffer "%%(diary-float t 1 -1)")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property :value (org-ml--map-last* (+ 2 it) it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property :value (org-ml--map-last* (+ 2 it) it))
+        (org-ml-to-trimmed-string))
       => (:buffer "%%(diary-float t 1 1)")
 
       (:buffer ":LOGBOOK:"
                ":END:")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property :drawer-name #'s-capitalize)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property :drawer-name #'s-capitalize)
+        (org-ml-to-trimmed-string))
       => (:result ":Logbook:"
                   ":END:")
 
       (:buffer "#+begin: blockhead"
                "#+end:")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property :block-name #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property :block-name #'s-upcase)
+        (org-ml-to-trimmed-string))
       => (:result "#+begin: BLOCKHEAD"
                   "#+end:")
 
@@ -2284,9 +2281,9 @@
       (:buffer "#+begin_example"
                "example.com"
                "#+end_example")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property* :value (concat "https://" it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property* :value (concat "https://" it))
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_example"
                   "  https://example.com"
                   "#+end_example")
@@ -2294,97 +2291,97 @@
       (:buffer "#+begin_export domestic"
                "bullets, bombs, and bigotry"
                "#+end_export")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property :type #'s-upcase)
-           (org-ml-map-property :value #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property :type #'s-upcase)
+        (org-ml-map-property :value #'s-upcase)
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_export DOMESTIC"
                   "BULLETS, BOMBS, AND BIGOTRY"
                   "#+end_export")
 
       (:buffer "@@back-end:value@@")
-      (->> (org-ml-parse-this-object)
-           (org-ml-map-property :back-end #'s-upcase)
-           (org-ml-map-property :value #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-map-property :back-end #'s-upcase)
+        (org-ml-map-property :value #'s-upcase)
+        (org-ml-to-trimmed-string))
       => "@@BACK-END:VALUE@@"
 
       (:buffer ": fixed")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property :value #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property :value #'s-upcase)
+        (org-ml-to-trimmed-string))
       => ": FIXED"
 
       (:buffer "[fn:blacklabel] society")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property :label #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property :label #'s-upcase)
+        (org-ml-to-trimmed-string))
       => "[fn:BLACKLABEL] society"
 
       (:buffer "* headline")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-map-property* :title (-map #'s-upcase it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-map-property* :title (-map #'s-upcase it))
+        (org-ml-to-trimmed-string))
       => "* HEADLINE"
 
       (:buffer "call_ktulu()")
-      (->> (org-ml-parse-this-object)
-           (org-ml-map-property :call #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-map-property :call #'s-upcase)
+        (org-ml-to-trimmed-string))
       => "call_KTULU()"
 
       (:buffer "src_python{print \"hi\"}")
-      (->> (org-ml-parse-this-object)
-           (org-ml-map-property* :value (s-replace-regexp "\".*\"" #'s-upcase it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-map-property* :value (s-replace-regexp "\".*\"" #'s-upcase it))
+        (org-ml-to-trimmed-string))
       => "src_python{print \"HI\"}"
 
       (:buffer "- tag :: thing")
-      (->> (org-ml-parse-this-item)
-           (org-ml-map-property :tag (lambda (it) (-map #'s-upcase it)))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-map-property :tag (lambda (it) (-map #'s-upcase it)))
+        (org-ml-to-trimmed-string))
       => "- TAG :: thing"
 
       (:buffer "#+key: VAL")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property :key (-partial #'s-prepend "OM_"))
-           (org-ml-map-property :value (-partial #'s-prepend "OM_"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property :key (-partial #'s-prepend "OM_"))
+        (org-ml-map-property :value (-partial #'s-prepend "OM_"))
+        (org-ml-to-trimmed-string))
       => "#+om_key: OM_VAL"
 
       ;; TODO add examples for latex frag/env
 
       (:buffer "[[https://downloadmoreram.org][legit]]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-map-property* :path (s-replace ".org" ".com" it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-map-property* :path (s-replace ".org" ".com" it))
+        (org-ml-to-trimmed-string))
       => "[[https://downloadmoreram.com][legit]]"
 
       (:buffer "{{{economics}}}")
-      (->> (org-ml-parse-this-object)
-           (org-ml-map-property :key #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-map-property :key #'s-upcase)
+        (org-ml-to-trimmed-string))
       => "{{{ECONOMICS}}}"
 
       (:buffer "* dummy"
                ":PROPERTIES:"
                ":KEY: VAL"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-node-properties)
-           (-first-item)
-           (org-ml-map-property :key (-partial #'s-prepend "OM_"))
-           (org-ml-map-property :value (-partial #'s-prepend "OM_"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-get-node-properties)
+        (-first-item)
+        (org-ml-map-property :key (-partial #'s-prepend "OM_"))
+        (org-ml-map-property :value (-partial #'s-prepend "OM_"))
+        (org-ml-to-trimmed-string))
       => ":OM_KEY:   OM_VAL"
 
       ;; TODO add example for planning
 
       (:buffer "#+begin_special"
                "#+end_special")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-property :type #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-property :type #'s-upcase)
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_SPECIAL"
                   "#+end_SPECIAL")
 
@@ -2393,15 +2390,15 @@
       ;; TODO add example for statistics cookie
 
       (:buffer "<<found>>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-map-property :value #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-map-property :value #'s-upcase)
+        (org-ml-to-trimmed-string))
       => "<<FOUND>>"
 
       (:buffer "=I am not a crook=")
-      (->> (org-ml-parse-this-object)
-           (org-ml-map-property :value #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-map-property :value #'s-upcase)
+        (org-ml-to-trimmed-string))
       => "=I AM NOT A CROOK="
       :end-hidden)
 
@@ -2409,9 +2406,9 @@
       nil
 
       (:buffer "\\pi")
-      (->> (org-ml-parse-this-object)
-           (org-ml-toggle-property :use-brackets-p)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-toggle-property :use-brackets-p)
+        (org-ml-to-trimmed-string))
       => "\\pi{}"
 
       ;; TODO test src/example block preserve indent
@@ -2419,39 +2416,39 @@
       :begin-hidden
       
       (:buffer "* headline")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-toggle-property :archivedp)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-toggle-property :archivedp)
+        (org-ml-to-trimmed-string))
       => "* headline          :ARCHIVE:"
-      (->> (org-ml-parse-this-headline)
-           (org-ml-toggle-property :commentedp)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-toggle-property :commentedp)
+        (org-ml-to-trimmed-string))
       => "* COMMENT headline"
-      (->> (org-ml-parse-this-headline)
-           (org-ml-toggle-property :footnote-section-p)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-toggle-property :footnote-section-p)
+        (org-ml-to-trimmed-string))
       => "* Footnotes"
 
 
       (:buffer "sub_woofer")
-      (->> (org-ml-parse-object-at 5)
-           (org-ml-toggle-property :use-brackets-p)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-object-at 5)
+        (org-ml-toggle-property :use-brackets-p)
+        (org-ml-to-trimmed-string))
       => "_{woofer}"
 
       (:buffer "super^woofer")
-      (->> (org-ml-parse-object-at 7)
-           (org-ml-toggle-property :use-brackets-p)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-object-at 7)
+        (org-ml-toggle-property :use-brackets-p)
+        (org-ml-to-trimmed-string))
       => "^{woofer}"
 
       :end-hidden
 
       (:buffer "- [ ] nope")
       (:comment "Throw an error when trying to toggle a non-boolean property")
-      (->> (org-ml-parse-this-item)
-           (org-ml-toggle-property :checkbox)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-toggle-property :checkbox)
+        (org-ml-to-trimmed-string))
       !!> arg-type-error)
 
     (defexamples-content org-ml-shift-property
@@ -2459,89 +2456,89 @@
 
       (:buffer "* no priorities")
       (:comment "Do nothing if there is nothing to shift.")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-shift-property :priority 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-shift-property :priority 1)
+        (org-ml-to-trimmed-string))
       => "* no priorities"
 
       (:buffer "* [#A] priorities")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-shift-property :priority -1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-shift-property :priority -1)
+        (org-ml-to-trimmed-string))
       => "* [#B] priorities"
       (:comment "Wrap priority around when crossing the min or max")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-shift-property :priority 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-shift-property :priority 1)
+        (org-ml-to-trimmed-string))
       => "* [#C] priorities"
 
       :begin-hidden
 
-      (->> (org-ml-parse-this-headline)
-           (org-ml-shift-property :priority -2)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-shift-property :priority -2)
+        (org-ml-to-trimmed-string))
       => "* [#C] priorities"
 
       :end-hidden
 
       (:buffer "* TODO or not todo")
       (:comment "Throw error when shifting an unshiftable property")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-shift-property :todo-keyword 1)
-           (org-ml-to-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-shift-property :todo-keyword 1)
+        (org-ml-to-string))
       !!> arg-type-error
 
       :begin-hidden
 
       (:buffer "*bold*")
-      (->> (org-ml-parse-this-object)
-           (org-ml-shift-property :post-blank 1)
-           (org-ml-to-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-shift-property :post-blank 1)
+        (org-ml-to-string))
       => "*bold* "
-      (->> (org-ml-parse-this-object)
-           (org-ml-shift-property :post-blank -1)
-           (org-ml-to-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-shift-property :post-blank -1)
+        (org-ml-to-string))
       => "*bold*"
 
       (:buffer "1. thing")
-      (->> (org-ml-parse-this-item)
-           (org-ml-shift-property :counter 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-shift-property :counter 1)
+        (org-ml-to-trimmed-string))
       => "1. thing"
 
       (:buffer "1. [@1] thing")
-      (->> (org-ml-parse-this-item)
-           (org-ml-shift-property :counter 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-shift-property :counter 1)
+        (org-ml-to-trimmed-string))
       => "1. [@2] thing"
-      (->> (org-ml-parse-this-item)
-           (org-ml-shift-property :counter -1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-shift-property :counter -1)
+        (org-ml-to-trimmed-string))
       => "1. [@1] thing"
 
       (:buffer "* noob level")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-shift-property :level 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-shift-property :level 1)
+        (org-ml-to-trimmed-string))
       => "** noob level"
 
       (:comment "Do nothing when final value is less than one.")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-shift-property :level -1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-shift-property :level -1)
+        (org-ml-to-trimmed-string))
       => "* noob level"
 
       (:buffer "* headline"
                "stuff")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-shift-property :pre-blank 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-shift-property :pre-blank 1)
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ""
                   "stuff")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-shift-property :pre-blank -1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-shift-property :pre-blank -1)
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "stuff")
       :end-hidden)
@@ -2550,64 +2547,64 @@
       nil
 
       (:buffer "#+call: ktulu(y=1)")
-      (->> (org-ml-parse-this-element)
-           (org-ml-insert-into-property :arguments 0 "x=4")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-insert-into-property :arguments 0 "x=4")
+        (org-ml-to-trimmed-string))
       => "#+call: ktulu(x=4,y=1)"
 
       (:comment "Do nothing if the string is already in the list")
-      (->> (org-ml-parse-this-element)
-           (org-ml-insert-into-property :arguments 0 "y=1")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-insert-into-property :arguments 0 "y=1")
+        (org-ml-to-trimmed-string))
       => "#+call: ktulu(y=1)"
 
       (:comment "Throw error when inserting into a property that is not a list of strings")
-      (->> (org-ml-parse-this-element)
-           (org-ml-insert-into-property :end-header 0 "html")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-insert-into-property :end-header 0 "html")
+        (org-ml-to-trimmed-string))
       !!> arg-type-error
 
       :begin-hidden
 
       (:buffer "* headline          :tag1:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-insert-into-property :tags 0 "tag0")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-insert-into-property :tags 0 "tag0")
+        (org-ml-to-trimmed-string))
       => "* headline          :tag0:tag1:"
 
       (:buffer "#+begin_example -n"
                "#+end_example")
-      (->> (org-ml-parse-this-element)
-           (org-ml-insert-into-property :switches -1 "-r")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-insert-into-property :switches -1 "-r")
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_example -n -r"
                   "#+end_example")
 
       (:buffer "call_ktulu(y=1)")
-      (->> (org-ml-parse-this-object)
-           (org-ml-insert-into-property :arguments 0 "x=4")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-insert-into-property :arguments 0 "x=4")
+        (org-ml-to-trimmed-string))
       => "call_ktulu(x=4,y=1)"
 
       (:buffer "{{{economics(x=4)}}}")
-      (->> (org-ml-parse-this-object)
-           (org-ml-insert-into-property :args 0 "z=2")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-insert-into-property :args 0 "z=2")
+        (org-ml-to-trimmed-string))
       => "{{{economics(z=2,x=4)}}}"
       
       (:buffer "#+begin_src emacs-lisp -n"
                "#+end_src")
-      (->> (org-ml-parse-this-element)
-           (org-ml-insert-into-property :switches -1 "-r")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-insert-into-property :switches -1 "-r")
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_src emacs-lisp -n -r"
                   "#+end_src")
 
       (:buffer "| a |"
                "#+TBLFM: x=$2")
-      (->> (org-ml-parse-this-element)
-           (org-ml-insert-into-property :tblfm -1 "y=$3")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-insert-into-property :tblfm -1 "y=$3")
+        (org-ml-to-trimmed-string))
       => (:result "| a |"
                   "#+TBLFM: y=$3"
                   "#+TBLFM: x=$2")
@@ -2617,64 +2614,64 @@
       nil
 
       (:buffer "#+call: ktulu(y=1)")
-      (->> (org-ml-parse-this-element)
-           (org-ml-remove-from-property :arguments "y=1")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-remove-from-property :arguments "y=1")
+        (org-ml-to-trimmed-string))
       => "#+call: ktulu()"
 
       (:comment "Do nothing if the string does not exist")
-      (->> (org-ml-parse-this-element)
-           (org-ml-remove-from-property :arguments "d=666")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-remove-from-property :arguments "d=666")
+        (org-ml-to-trimmed-string))
       => "#+call: ktulu(y=1)"
 
       (:comment "Throw error when removing from property that is not a string list")
-      (->> (org-ml-parse-this-element)
-           (org-ml-remove-from-property :end-header ":results")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-remove-from-property :end-header ":results")
+        (org-ml-to-trimmed-string))
       !!> arg-type-error
 
       :begin-hidden
 
       (:buffer "* headline       :tag1:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-remove-from-property :tags "tag1")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-remove-from-property :tags "tag1")
+        (org-ml-to-trimmed-string))
       => "* headline"
 
       (:buffer "#+begin_example -n"
                "#+end_example")
-      (->> (org-ml-parse-this-element)
-           (org-ml-remove-from-property :switches "-n")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-remove-from-property :switches "-n")
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_example"
                   "#+end_example")
 
       (:buffer "call_ktulu(y=1)")
-      (->> (org-ml-parse-this-object)
-           (org-ml-remove-from-property :arguments "y=1")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-remove-from-property :arguments "y=1")
+        (org-ml-to-trimmed-string))
       => "call_ktulu()"
 
       (:buffer "{{{economics(x=4)}}}")
-      (->> (org-ml-parse-this-object)
-           (org-ml-remove-from-property :args "x=4")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-remove-from-property :args "x=4")
+        (org-ml-to-trimmed-string))
       => "{{{economics}}}"
       
       (:buffer "#+begin_src emacs-lisp -n"
                "#+end_src")
-      (->> (org-ml-parse-this-element)
-           (org-ml-remove-from-property :switches "-n")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-remove-from-property :switches "-n")
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_src emacs-lisp"
                   "#+end_src")
 
       (:buffer "| a |"
                "#+TBLFM: x=$2")
-      (->> (org-ml-parse-this-element)
-           (org-ml-remove-from-property :tblfm "x=$2")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-remove-from-property :tblfm "x=$2")
+        (org-ml-to-trimmed-string))
       => "| a |"
       :end-header)
 
@@ -2682,54 +2679,54 @@
       nil
 
       (:buffer "#+call: ktulu[:cache no]()")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plist-put-property :end-header :results 'html)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plist-put-property :end-header :results 'html)
+        (org-ml-to-trimmed-string))
       => "#+call: ktulu[:cache no]() :results html"
       (:comment "Change the value of key if it already is present")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plist-put-property :inside-header :cache 'yes)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plist-put-property :inside-header :cache 'yes)
+        (org-ml-to-trimmed-string))
       => "#+call: ktulu[:cache yes]()"
       (:comment "Do nothing if the key and value already exist")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plist-put-property :inside-header :cache 'no)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plist-put-property :inside-header :cache 'no)
+        (org-ml-to-trimmed-string))
       => "#+call: ktulu[:cache no]()"
       (:comment "Throw error if setting property that isn't a plist")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plist-put-property :arguments :cache 'no)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plist-put-property :arguments :cache 'no)
+        (org-ml-to-trimmed-string))
       !!> arg-type-error
 
       :begin-hidden
 
       (:buffer "#+begin: blockhead :format \"[%s]\""
                "#+end:")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plist-put-property :arguments :format "<%s>")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plist-put-property :arguments :format "<%s>")
+        (org-ml-to-trimmed-string))
       => (:result "#+begin: blockhead :format \"<%s>\""
                   "#+end:")
 
       (:buffer "call_ktulu[:cache no]()")
-      (->> (org-ml-parse-this-object)
-           (org-ml-plist-put-property :inside-header :cache 'yes)
-           (org-ml-plist-put-property :end-header :results 'html)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-plist-put-property :inside-header :cache 'yes)
+        (org-ml-plist-put-property :end-header :results 'html)
+        (org-ml-to-trimmed-string))
       => "call_ktulu[:cache yes]()[:results html]"
 
       (:buffer "src_emacs-lisp[:exports results]{}")
-      (->> (org-ml-parse-this-object)
-           (org-ml-plist-put-property :parameters :exports 'both)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-plist-put-property :parameters :exports 'both)
+        (org-ml-to-trimmed-string))
       => "src_emacs-lisp[:exports both]{}"
 
       (:buffer "#+begin_src emacs-lisp -n :exports results"
                "#+end_src")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plist-put-property :parameters :exports 'both)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plist-put-property :parameters :exports 'both)
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_src emacs-lisp -n :exports both"
                   "#+end_src")
       :end-hidden)
@@ -2738,49 +2735,49 @@
       nil
 
       (:buffer "#+call: ktulu() :results html")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plist-remove-property :end-header :results)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plist-remove-property :end-header :results)
+        (org-ml-to-trimmed-string))
       => "#+call: ktulu()"
       (:comment "Do nothing if the key is not present")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plist-remove-property :inside-header :cache)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plist-remove-property :inside-header :cache)
+        (org-ml-to-trimmed-string))
       => "#+call: ktulu() :results html"
       (:comment "Throw error if trying to remove key from non-plist property")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plist-remove-property :arguments :cache)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plist-remove-property :arguments :cache)
+        (org-ml-to-trimmed-string))
       !!> arg-type-error
 
       :begin-hidden
 
       (:buffer "#+begin: blockhead :format \"[%s]\""
                "#+end:")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plist-remove-property :arguments :format)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plist-remove-property :arguments :format)
+        (org-ml-to-trimmed-string))
       => (:result "#+begin: blockhead"
                   "#+end:")
 
       (:buffer "call_ktulu[:cache no]()[:results html]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-plist-remove-property :inside-header :cache)
-           (org-ml-plist-remove-property :end-header :results)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-plist-remove-property :inside-header :cache)
+        (org-ml-plist-remove-property :end-header :results)
+        (org-ml-to-trimmed-string))
       => "call_ktulu()"
 
       (:buffer "src_emacs-lisp[:exports results]{}")
-      (->> (org-ml-parse-this-object)
-           (org-ml-plist-remove-property :parameters :exports)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-plist-remove-property :parameters :exports)
+        (org-ml-to-trimmed-string))
       => "src_emacs-lisp{}"
 
       (:buffer "#+begin_src emacs-lisp -n :exports results"
                "#+end_src")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plist-remove-property :parameters :exports)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plist-remove-property :parameters :exports)
+        (org-ml-to-trimmed-string))
       => (:result "#+begin_src emacs-lisp -n"
                   "#+end_src")
       :end-hidden)
@@ -2872,19 +2869,19 @@
       nil
       
       (:buffer "- thing")
-      (->> (org-ml-parse-this-item)
-           (org-ml-set-properties (list :bullet 1
-                                        :checkbox 'on
-                                        :counter 2
-                                        :tag '("tmsu")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-set-properties (list :bullet 1
+                                     :checkbox 'on
+                                     :counter 2
+                                     :tag '("tmsu")))
+        (org-ml-to-trimmed-string))
       => "1. [@2] [X] tmsu :: thing"
 
       (:buffer "- plain")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-properties (list :name "plain name"
-                                        :attr_XXX '("tmsu")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-properties (list :name "plain name"
+                                     :attr_XXX '("tmsu")))
+        (org-ml-to-trimmed-string))
       => (:result "#+name: plain name"
                   "#+attr_xxx: tmsu"
                   "- plain"))
@@ -2893,17 +2890,17 @@
       nil
 
       (:buffer "#+KEY: VAL")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-properties
-            (list :key (-partial #'s-prepend "OM_")
-                  :value (-partial #'s-prepend "OM_")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-properties
+         (list :key (-partial #'s-prepend "OM_")
+               :value (-partial #'s-prepend "OM_")))
+        (org-ml-to-trimmed-string))
       => "#+om_key: OM_VAL"
       (:comment "Throw error if any of the properties are invalid")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-properties*
-            (:title (s-prepend "OM_" it) :value (s-prepend "OM_" it)))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-properties*
+         (:title (s-prepend "OM_" it) :value (s-prepend "OM_" it)))
+        (org-ml-to-trimmed-string))
       !!> error
       )
 
@@ -2931,31 +2928,31 @@
       (:comment "This is actually a paragraph node, but parsing the object"
                 "will directly return a plain-text node with the :parent"
                 "pointing to the paragraph")
-      (->> (org-ml-parse-this-object)
-           (org-ml-remove-parent))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-remove-parent))
       => "one"
 
-    (defexamples-content org-ml-remove-parents
-      nil
-      (:buffer "one")
-      (->> (org-ml-parse-this-element)
-           (org-ml-remove-parents))
-      => '(paragraph
-           (:begin 1 :end 4 :contents-begin 1 :contents-end 4 :post-blank 0 :post-affiliated 1 :parent nil)
-           "one"))
+      (defexamples-content org-ml-remove-parents
+        nil
+        (:buffer "one")
+        (org-ml->> (org-ml-parse-this-element)
+          (org-ml-remove-parents))
+        => '(paragraph
+             (:begin 1 :end 4 :contents-begin 1 :contents-end 4 :post-blank 0 :post-affiliated 1 :parent nil)
+             "one"))
 
       (:buffer "* headline")
-      (->> (org-ml-parse-this-element)
-           (org-ml-remove-parents)
-           (org-ml-get-property :parent))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-remove-parents)
+        (org-ml-get-property :parent))
       => nil
 
       (:buffer "- tag :: thingy")
-      (->> (org-ml-parse-this-item)
-           (org-ml-remove-parents)
-           (org-ml-get-children)
-           (car)
-           (org-ml-get-property :parent))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-remove-parents)
+        (org-ml-get-children)
+        (car)
+        (org-ml-get-property :parent))
       nil
 
       :begin-hidden
@@ -2968,7 +2965,7 @@
            (org-ml-get-property :scheduled)
            ;; (org-ml-remove-parents)
            (org-ml-get-property :parent)
-      => nil)
+           => nil)
 
       ;; same thing with clocks...
       (:buffer "* headline"
@@ -2978,10 +2975,10 @@
            (car)
            (org-ml-get-property :value)
            (org-ml-get-property :parent)
-      => nil)
+           => nil)
 
       :end-hidden
-    ))
+      ))
 
   (def-example-subgroup "Clock"
     nil
@@ -3028,9 +3025,9 @@
     (defexamples-content org-ml-headline-set-title!
       nil
       (:buffer "* really impressive title")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-title! "really *impressive* title" '(2 3))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-title! "really *impressive* title" '(2 3))
+        (org-ml-to-trimmed-string))
       => "* really *impressive* title [2/3]")
 
     (defexamples-content org-ml-headline-is-done
@@ -3082,21 +3079,21 @@
     (defexamples-content org-ml-item-toggle-checkbox
       nil
       (:buffer "- [ ] one")
-      (->> (org-ml-parse-this-item)
-           (org-ml-item-toggle-checkbox)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-item-toggle-checkbox)
+        (org-ml-to-trimmed-string))
       => "- [X] one"
       (:buffer "- [-] one")
       (:comment "Ignore trans state checkboxes")
-      (->> (org-ml-parse-this-item)
-           (org-ml-item-toggle-checkbox)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-item-toggle-checkbox)
+        (org-ml-to-trimmed-string))
       => "- [-] one"
       (:buffer "- one")
       (:comment "Do nothing if there is no checkbox")
-      (->> (org-ml-parse-this-item)
-           (org-ml-item-toggle-checkbox)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-item-toggle-checkbox)
+        (org-ml-to-trimmed-string))
       => "- one"))
 
   (def-example-subgroup "Planning"
@@ -3107,20 +3104,20 @@
       (:buffer "* dummy"
                "CLOSED: [2019-01-01 Tue]")
       (:comment "Change an existing timestamp in planning")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-planning)
-           (org-ml-planning-set-timestamp!
-            :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-get-planning)
+        (org-ml-planning-set-timestamp!
+         :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
+        (org-ml-to-trimmed-string))
       => "CLOSED: [2019-01-02 Wed +2m -1d]"
       (:comment "Add a new timestamp and remove another")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-planning)
-           (org-ml-planning-set-timestamp!
-            :deadline '(2112 1 1))
-           (org-ml-planning-set-timestamp!
-            :closed nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-get-planning)
+        (org-ml-planning-set-timestamp!
+         :deadline '(2112 1 1))
+        (org-ml-planning-set-timestamp!
+         :closed nil)
+        (org-ml-to-trimmed-string))
       => "DEADLINE: <2112-01-01 Fri>"))
 
   (def-example-subgroup "Statistics Cookie"
@@ -3151,7 +3148,7 @@
   ;; ;; TODO add these
   ;; (def-example-subgroup "Timestamp (Auxiliary)"
   ;;   "Functions to work with timestamp data"
-    
+  
   ;;   (defexamples-content org-ml-time-is-long
   ;;     nil)
 
@@ -3167,875 +3164,875 @@
   ;; (def-example-subgroup "Timestamp (Standard)"
   ;;   nil
 
-    (defexamples-content org-ml-timestamp-get-start-time
-      nil
-      (:buffer "[2019-01-01 Tue]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-start-time))
-      => '(2019 1 1 nil nil)
-      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-start-time))
-      => '(2019 1 1 nil nil)
-      (:buffer "[2019-01-01 Tue 00:00-12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-start-time))
-      => '(2019 1 1 0 0))
-
-    (defexamples-content org-ml-timestamp-get-end-time
-      nil
-      (:buffer "[2019-01-01 Tue]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-end-time))
-      => nil
-      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-end-time))
-      => '(2019 1 2 nil nil)
-      (:buffer "[2019-01-01 Tue]--[2019-01-01 Tue]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-end-time))
-      => '(2019 1 1 nil nil)
-      (:buffer "[2019-01-01 Tue 00:00-12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-end-time))
-      => '(2019 1 1 12 0))
-
-    (defexamples-content org-ml-timestamp-get-range
-      nil
-      (:buffer "[2019-01-01 Tue]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-range))
-      => 0
-      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-range))
-      => 86400
-      (:buffer "[2019-01-01 Tue 00:00-12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-range))
-      => 43200)
-
-    (defexamples-content org-ml-timestamp-is-active
-      nil
-      (:buffer "<2019-01-01 Tue>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-is-active))
-      => t
-      (:buffer "[2019-01-01 Tue]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-is-active))
-      => nil)
-
-    (defexamples-content org-ml-timestamp-is-ranged
-      nil
-      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-is-ranged))
-      => t
-      (:buffer "[2019-01-01 Tue 00:00-12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-is-ranged))
-      => t
-      (:buffer "[2019-01-01 Tue]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-is-ranged))
-      => nil)
-
-    (defexamples-content org-ml-timestamp-range-contains-p
-      nil
-      (:buffer "[2019-01-01 Tue 00:00]")
-      (let ((ut (org-ml-timelist-to-unixtime '(2019 1 1 0 0))))
-        (->> (org-ml-parse-this-object)
-             (org-ml-timestamp-range-contains-p ut)))
-      => t
-      (let ((ut (org-ml-timelist-to-unixtime '(2019 1 1 0 30))))
-        (->> (org-ml-parse-this-object)
-             (org-ml-timestamp-range-contains-p ut)))
-      => nil
-      (:buffer "[2019-01-01 Tue 00:00-01:00]")
-      (let ((ut (org-ml-timelist-to-unixtime '(2019 1 1 0 30))))
-        (->> (org-ml-parse-this-object)
-             (org-ml-timestamp-range-contains-p ut)))
-      => t)
-
-    (defexamples-content org-ml-timestamp-set-collapsed
-      nil
-      (:buffer "[2019-01-01 Tue 12:00-13:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-collapsed nil)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
-      (:buffer "[2019-01-01 Tue 12:00-13:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-collapsed nil)
-           (org-ml-timestamp-set-collapsed t)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 12:00-13:00]"
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-collapsed nil)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 12:00]"
-      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-collapsed nil)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]")
-
-    (defexamples-content org-ml-timestamp-get-warning
-      nil
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-warning))
-      => nil
-      (:buffer "[2019-01-01 Tue 12:00 -1d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-warning))
-      => '(all 1 day))
-
-    (defexamples-content org-ml-timestamp-set-warning
-      nil
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-warning nil)
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-warning '(all 1 day))
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00 -1d]"
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-warning nil)
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-warning '(all 1 year))
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00 -1y]")
-
-    (defexamples-content org-ml-timestamp-map-warning
-      nil
-      (:buffer "[2019-01-01 Tue 12:00 -1d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-map-warning* (-let (((y v u) it)) `(,y ,(1+ v) ,u)))
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00 -2d]")
-
-    (defexamples-content org-ml-timestamp-get-repeater
-      nil
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-repeater))
-      => nil
-      (:buffer "[2019-01-01 Tue 12:00 +1d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-repeater))
-      => '(cumulate 1 day)
-      (:buffer "[2019-01-01 Tue 12:00 +1d/3d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-repeater))
-      => '(cumulate 1 day))
-
-    (defexamples-content org-ml-timestamp-get-deadline
-      nil
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-deadline))
-      => nil
-      (:buffer "[2019-01-01 Tue 12:00 +1d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-deadline))
-      => nil
-      (:buffer "[2019-01-01 Tue 12:00 +1d/3d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-get-deadline))
-      => '(3 day))
-
-    (defexamples-content org-ml-timestamp-set-repeater
-      nil
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-repeater nil)
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-repeater '(restart 1 day))
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00 .+1d]"
-      :begin-hidden
-      (:buffer "[2019-01-01 Tue 12:00 .+1d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-repeater nil)
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-repeater '(cumulate 1 day))
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00 +1d]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-repeater '(cumulate 1 day))
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00 +1d]"
-      (:buffer "[2019-01-01 Tue 12:00 .+1d/3d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-repeater nil)
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-repeater '(cumulate 1 day))
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00 +1d/3d]"
-      :end-hidden)
-
-    (defexamples-content org-ml-timestamp-set-deadline
-      nil
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-deadline nil)
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-deadline '(3 day))
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00]"
-      (:buffer "[2019-01-01 Tue 12:00 .+1d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-deadline nil)
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00 .+1d]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-deadline '(3 day))
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00 .+1d/3d]"
-      :begin-hidden
-      (:buffer "[2019-01-01 Tue 12:00 .+1d/3d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-deadline nil)
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00 .+1d]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-deadline '(5 day))
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00 .+1d/5d]"
-      :end-hidden)
-
-    (defexamples-content org-ml-timestamp-map-repeater
-      nil
-      (:buffer "[2019-01-01 Tue 12:00 +1d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-map-repeater* (-let (((y v u) it)) `(,y ,(1+ v) ,u)))
-           (org-ml-to-string))
-      => "[2019-01-01 Tue 12:00 +2d]")
-
-    (defexamples-content org-ml-timestamp-set-start-time
-      nil
-      (:buffer "[2019-01-02 Wed]")
-      (:comment "If not a range this will turn into a range by moving only the start time.")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-start-time '(2019 1 1))
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-      (:comment "Set a different time with different precision.")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-start-time '(2019 1 1 10 0))
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 10:00]--[2019-01-02 Wed]"
-      (:buffer "[2019-01-02 Wed 12:00]")
-      (:comment "If not a range and set within a day, use short format")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-start-time '(2019 1 2 0 0))
-           (org-ml-to-trimmed-string))
-      => "[2019-01-02 Wed 00:00-12:00]"
-      :begin-hidden
-      (:buffer "[2019-01-02 Wed 12:00 +1d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-start-time '(2019 1 2 0 0))
-           (org-ml-to-trimmed-string))
-      => "[2019-01-02 Wed 00:00-12:00 +1d]"
-      (:buffer "[2019-01-02 Wed 12:00 +1d/3d]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-start-time '(2019 1 2 0 0))
-           (org-ml-to-trimmed-string))
-      => "[2019-01-02 Wed 00:00-12:00 +1d/3d]"
-      :end-hidden)
-
-    (defexamples-content org-ml-timestamp-set-end-time
-      nil
-      (:buffer "[2019-01-01 Tue]")
-      (:comment "Add the end time")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-end-time '(2019 1 2))
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-      (:comment "Remove the end time")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-end-time nil)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]"
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (:comment "Use short range format")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-end-time '(2019 1 1 13 0))
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 12:00-13:00]")
-
-    (defexamples-content org-ml-timestamp-set-single-time
-      nil
-      (:buffer "[2019-01-01 Tue]")
-      (:comment "Don't make a range")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-single-time '(2019 1 2))
-           (org-ml-to-trimmed-string))
-      => "[2019-01-02 Wed]"
-      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-      (:comment "Output is not a range despite input being ranged")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-single-time '(2019 1 3))
-           (org-ml-to-trimmed-string))
-      => "[2019-01-03 Thu]")
-
-    (defexamples-content org-ml-timestamp-set-double-time
-      nil
-      (:buffer "[2019-01-01 Tue]")
-      (:comment "Make a range")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-double-time '(2019 1 2) '(2019 1 3))
-           (org-ml-to-trimmed-string))
-      => "[2019-01-02 Wed]--[2019-01-03 Thu]"
-      (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-double-time '(2019 1 4) '(2019 1 5))
-           (org-ml-to-trimmed-string))
-      => "[2019-01-04 Fri]--[2019-01-05 Sat]"
-      (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-double-time '(2019 1 1 0 0) '(2019 1 1 1 0))
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00]")
-
-    (defexamples-content org-ml-timestamp-set-range
-      nil
-      (:buffer "[2019-01-01 Tue]")
-      (:comment "Use days as the unit for short format")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-range 1 'day)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-      (:buffer "[2019-01-01 Tue 00:00]")
-      (:comment "Use minutes as the unit for long format")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-range 3 'minute)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 00:00-00:03]"
-      (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
-      (:comment "Set range to 0 to remove end time")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-range 0 'day)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]")
-
-    (defexamples-content org-ml-timestamp-set-active
-      nil
-      (:buffer "[2019-01-01 Tue]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-active t)
-           (org-ml-to-trimmed-string))
-      => "<2019-01-01 Tue>"
-      (:buffer "<2019-01-01 Tue>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-set-active nil)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]")
-
-    (defexamples-content org-ml-timestamp-shift
-      nil
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (:comment "Change each unit, and wrap around to the next unit as needed.")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift 30 'minute)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 12:30]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift 13 'month)
-           (org-ml-to-trimmed-string))
-      => "[2020-02-01 Sat 12:00]"
-      :begin-hidden
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift 60 'minute)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 13:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift 1 'hour)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 13:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift 1 'day)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-02 Wed 12:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift 31 'day)
-           (org-ml-to-trimmed-string))
-      => "[2019-02-01 Fri 12:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift 1 'month)
-           (org-ml-to-trimmed-string))
-      => "[2019-02-01 Fri 12:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift 1 'year)
-           (org-ml-to-trimmed-string))
-      => "[2020-01-01 Wed 12:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift 0 'year)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 12:00]"
-      :end-hidden
-      (:buffer "[2019-01-01 Tue]")
-      (:comment "Error when shifting hour/minute in short format")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift 30 'minute)
-           (org-ml-to-trimmed-string))
-      !!> arg-type-error
-      :begin-hidden
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift 30 'hour)
-           (org-ml-to-trimmed-string))
-      !!> arg-type-error
-      :end-hidden)
-
-    (defexamples-content org-ml-timestamp-shift-start
-      nil
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (:comment "If not a range, change start time and leave implicit end time.")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift-start -1 'year)
-           (org-ml-to-trimmed-string))
-      => "[2018-01-01 Mon 12:00]--[2019-01-01 Tue 12:00]"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift-start -1 'hour)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 11:00-12:00]"
-      (:buffer "[2019-01-01 Tue]--[2019-01-03 Thu]")
-      (:comment "Change only start time if a range")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift-start 1 'day)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-02 Wed]--[2019-01-03 Thu]")
-
-    (defexamples-content org-ml-timestamp-shift-end
-      nil
-      (:buffer "[2019-01-01 Tue]")
-      (:comment "Shift implicit end time if not a range.")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift-end 1 'day)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-      (:comment "Move only the second time if a range.")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-shift-end 1 'day)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-03 Thu]")
-
-    (defexamples-content org-ml-timestamp-toggle-active
-      nil
-      (:buffer "[2019-01-01 Tue]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-toggle-active)
-           (org-ml-to-trimmed-string))
-      => "<2019-01-01 Tue>"
-      :begin-hidden
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-toggle-active)
-           (org-ml-timestamp-toggle-active)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]"
-      :end-hidden
-      (:buffer "<2019-01-01 Tue>--<2019-01-02 Wed>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-toggle-active)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-      :begin-hidden
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-toggle-active)
-           (org-ml-timestamp-toggle-active)
-           (org-ml-to-trimmed-string))
-      => "<2019-01-01 Tue>--<2019-01-02 Wed>"
-      :end-hidden)
-
-    (defexamples-content org-ml-timestamp-truncate
-      nil
-      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-truncate)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-      (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-truncate)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]")
-
-    (defexamples-content org-ml-timestamp-truncate-start
-      nil
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-truncate-start)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]"
-      (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-truncate-start)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed 12:00]"
-      (:buffer "[2019-01-01 Tue]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-truncate-start)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]")
-
-    (defexamples-content org-ml-timestamp-truncate-end
-      nil
-      (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-truncate-end)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue]--[2019-01-02 Wed]"
-      (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-truncate-end)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 12:00]--[2019-01-02 Wed]"
-      (:buffer "[2019-01-01 Tue 12:00]")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-truncate-end)
-           (org-ml-to-trimmed-string))
-      => "[2019-01-01 Tue 12:00]"))
-
-  (def-example-subgroup "Timestamp (diary)"
+  (defexamples-content org-ml-timestamp-get-start-time
     nil
+    (:buffer "[2019-01-01 Tue]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-start-time))
+    => '(2019 1 1 nil nil)
+    (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-start-time))
+    => '(2019 1 1 nil nil)
+    (:buffer "[2019-01-01 Tue 00:00-12:00]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-start-time))
+    => '(2019 1 1 0 0))
 
-    (defexamples-content org-ml-timestamp-diary-set-value
-      nil
-      (:buffer "<%%(diary-float t 4 2)>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-value '(diary-float 1 3 2))
-           (org-ml-to-string))
-      => "<%%(diary-float 1 3 2)>")
+  (defexamples-content org-ml-timestamp-get-end-time
+    nil
+    (:buffer "[2019-01-01 Tue]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-end-time))
+    => nil
+    (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-end-time))
+    => '(2019 1 2 nil nil)
+    (:buffer "[2019-01-01 Tue]--[2019-01-01 Tue]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-end-time))
+    => '(2019 1 1 nil nil)
+    (:buffer "[2019-01-01 Tue 00:00-12:00]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-end-time))
+    => '(2019 1 1 12 0))
 
-    (defexamples-content org-ml-timestamp-diary-set-single-time
-      nil
-      (:buffer "<%%(diary-float t 4 2)>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-single-time '(0 0))
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 00:00>"
-      (:buffer "<%%(diary-float t 4 2) 00:01>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-single-time nil)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2)>")
+  (defexamples-content org-ml-timestamp-get-range
+    nil
+    (:buffer "[2019-01-01 Tue]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-range))
+    => 0
+    (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-range))
+    => 86400
+    (:buffer "[2019-01-01 Tue 00:00-12:00]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-range))
+    => 43200)
 
-    (defexamples-content org-ml-timestamp-diary-set-double-time
-      nil
-      (:buffer "<%%(diary-float t 4 2)>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-double-time '(0 0) '(0 1))
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 00:00-00:01>"
-      (:buffer "<%%(diary-float t 4 2) 00:00-00:01>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-double-time '(1 0) '(2 0))
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 01:00-02:00>"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-double-time '(1 0) nil)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 01:00>"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-double-time nil nil)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2)>"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-double-time nil '(2 0))
-           (org-ml-to-string))
-      !!> arg-type-error)
+  (defexamples-content org-ml-timestamp-is-active
+    nil
+    (:buffer "<2019-01-01 Tue>")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-is-active))
+    => t
+    (:buffer "[2019-01-01 Tue]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-is-active))
+    => nil)
 
-    (defexamples-content org-ml-timestamp-diary-get-start-time
-      nil
-      (:buffer "<%%(diary-float t 4 2)>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-get-start-time))
-      => nil
-      (:buffer "<%%(diary-float t 4 2) 12:00-13:00>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-get-start-time))
-      => '(12 0))
+  (defexamples-content org-ml-timestamp-is-ranged
+    nil
+    (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-is-ranged))
+    => t
+    (:buffer "[2019-01-01 Tue 00:00-12:00]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-is-ranged))
+    => t
+    (:buffer "[2019-01-01 Tue]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-is-ranged))
+    => nil)
 
-    (defexamples-content org-ml-timestamp-diary-set-start-time
-      nil
-      (:buffer "<%%(diary-float t 4 2)>")
+  (defexamples-content org-ml-timestamp-range-contains-p
+    nil
+    (:buffer "[2019-01-01 Tue 00:00]")
+    (let ((ut (org-ml-timelist-to-unixtime '(2019 1 1 0 0))))
       (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-start-time '(0 0))
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 00:00>"
-      (:buffer "<%%(diary-float t 4 2) 12:00>")
+           (org-ml-timestamp-range-contains-p ut)))
+    => t
+    (let ((ut (org-ml-timelist-to-unixtime '(2019 1 1 0 30))))
       (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-start-time '(1 0))
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 01:00-12:00>"
-      :begin-hidden
+           (org-ml-timestamp-range-contains-p ut)))
+    => nil
+    (:buffer "[2019-01-01 Tue 00:00-01:00]")
+    (let ((ut (org-ml-timelist-to-unixtime '(2019 1 1 0 30))))
       (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-start-time '(0 0))
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 00:00-12:00>"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-start-time '(12 0))
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 12:00>"
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-start-time nil)
-           (org-ml-to-string))
-      !!> arg-type-error
-      :end-hidden)
+           (org-ml-timestamp-range-contains-p ut)))
+    => t)
 
-    (defexamples-content org-ml-timestamp-diary-get-end-time
-      nil
-      (:buffer "<%%(diary-float t 4 2)>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-get-end-time))
-      => nil
-      (:buffer "<%%(diary-float t 4 2) 12:00-13:00>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-get-end-time))
-      => '(13 0))
+  (defexamples-content org-ml-timestamp-set-collapsed
+    nil
+    (:buffer "[2019-01-01 Tue 12:00-13:00]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-collapsed nil)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
+    (:buffer "[2019-01-01 Tue 12:00-13:00]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-collapsed nil)
+      (org-ml-timestamp-set-collapsed t)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 12:00-13:00]"
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-collapsed nil)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 12:00]"
+    (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-collapsed nil)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]--[2019-01-02 Wed]")
 
-    (defexamples-content org-ml-timestamp-diary-set-end-time
-      nil
-      (:buffer "<%%(diary-float t 4 2)>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-end-time '(0 0))
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2)>"
-      (:buffer "<%%(diary-float t 4 2) 12:00>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-end-time '(13 0))
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 12:00-13:00>"
-      :begin-hidden
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-end-time nil)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 12:00>"
-      :end-hidden)
+  (defexamples-content org-ml-timestamp-get-warning
+    nil
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-warning))
+    => nil
+    (:buffer "[2019-01-01 Tue 12:00 -1d]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-warning))
+    => '(all 1 day))
 
-    (defexamples-content org-ml-timestamp-diary-set-length
-      nil
-      (:buffer "<%%(diary-float t 4 2)>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-length 1 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2)>"
-      (:buffer "<%%(diary-float t 4 2) 12:00>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-length 1 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 12:00-13:00>"
-      (:buffer "<%%(diary-float t 4 2) 12:00-13:00>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-length 0 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 12:00>"
-      :begin-hidden
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-set-length 24 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 12:00>"
-      :end-hidden)
+  (defexamples-content org-ml-timestamp-set-warning
+    nil
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-warning nil)
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-warning '(all 1 day))
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00 -1d]"
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-warning nil)
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-warning '(all 1 year))
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00 -1y]")
 
-    (defexamples-content org-ml-timestamp-diary-shift
-      nil
-      (:buffer "<%%(diary-float t 4 2)>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-shift 1 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2)>"
-      (:buffer "<%%(diary-float t 4 2) 12:00>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-shift 1 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 13:00>"
-      :begin-hidden
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-shift 24 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 12:00>"
-      :end-hidden)
+  (defexamples-content org-ml-timestamp-map-warning
+    nil
+    (:buffer "[2019-01-01 Tue 12:00 -1d]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-map-warning* (-let (((y v u) it)) `(,y ,(1+ v) ,u)))
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00 -2d]")
 
-    (defexamples-content org-ml-timestamp-diary-shift-start
-      nil
-      (:buffer "<%%(diary-float t 4 2)>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-shift-start 1 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2)>"
-      (:buffer "<%%(diary-float t 4 2) 12:00>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-shift-start -1 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 11:00-12:00>"
-      :begin-hidden
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-shift-start 24 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 12:00>"
-      :end-hidden)
+  (defexamples-content org-ml-timestamp-get-repeater
+    nil
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-repeater))
+    => nil
+    (:buffer "[2019-01-01 Tue 12:00 +1d]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-repeater))
+    => '(cumulate 1 day)
+    (:buffer "[2019-01-01 Tue 12:00 +1d/3d]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-repeater))
+    => '(cumulate 1 day))
 
-    (defexamples-content org-ml-timestamp-diary-shift-end
-      nil
-      (:buffer "<%%(diary-float t 4 2)>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-shift-end 1 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2)>"
-      (:buffer "<%%(diary-float t 4 2) 12:00>")
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-shift-end 1 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 12:00-13:00>"
-      :begin-hidden
-      (->> (org-ml-parse-this-object)
-           (org-ml-timestamp-diary-shift-end 24 'hour)
-           (org-ml-to-string))
-      => "<%%(diary-float t 4 2) 12:00>"
-      :end-hidden
-      )
+  (defexamples-content org-ml-timestamp-get-deadline
+    nil
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-deadline))
+    => nil
+    (:buffer "[2019-01-01 Tue 12:00 +1d]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-deadline))
+    => nil
+    (:buffer "[2019-01-01 Tue 12:00 +1d/3d]")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-get-deadline))
+    => '(3 day))
 
+  (defexamples-content org-ml-timestamp-set-repeater
+    nil
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-repeater nil)
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-repeater '(restart 1 day))
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00 .+1d]"
+    :begin-hidden
+    (:buffer "[2019-01-01 Tue 12:00 .+1d]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-repeater nil)
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-repeater '(cumulate 1 day))
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00 +1d]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-repeater '(cumulate 1 day))
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00 +1d]"
+    (:buffer "[2019-01-01 Tue 12:00 .+1d/3d]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-repeater nil)
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-repeater '(cumulate 1 day))
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00 +1d/3d]"
+    :end-hidden)
+
+  (defexamples-content org-ml-timestamp-set-deadline
+    nil
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-deadline nil)
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-deadline '(3 day))
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00]"
+    (:buffer "[2019-01-01 Tue 12:00 .+1d]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-deadline nil)
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00 .+1d]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-deadline '(3 day))
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00 .+1d/3d]"
+    :begin-hidden
+    (:buffer "[2019-01-01 Tue 12:00 .+1d/3d]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-deadline nil)
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00 .+1d]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-deadline '(5 day))
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00 .+1d/5d]"
+    :end-hidden)
+
+  (defexamples-content org-ml-timestamp-map-repeater
+    nil
+    (:buffer "[2019-01-01 Tue 12:00 +1d]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-map-repeater* (-let (((y v u) it)) `(,y ,(1+ v) ,u)))
+      (org-ml-to-string))
+    => "[2019-01-01 Tue 12:00 +2d]")
+
+  (defexamples-content org-ml-timestamp-set-start-time
+    nil
+    (:buffer "[2019-01-02 Wed]")
+    (:comment "If not a range this will turn into a range by moving only the start time.")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-start-time '(2019 1 1))
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+    (:comment "Set a different time with different precision.")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-start-time '(2019 1 1 10 0))
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 10:00]--[2019-01-02 Wed]"
+    (:buffer "[2019-01-02 Wed 12:00]")
+    (:comment "If not a range and set within a day, use short format")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-start-time '(2019 1 2 0 0))
+      (org-ml-to-trimmed-string))
+    => "[2019-01-02 Wed 00:00-12:00]"
+    :begin-hidden
+    (:buffer "[2019-01-02 Wed 12:00 +1d]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-start-time '(2019 1 2 0 0))
+      (org-ml-to-trimmed-string))
+    => "[2019-01-02 Wed 00:00-12:00 +1d]"
+    (:buffer "[2019-01-02 Wed 12:00 +1d/3d]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-start-time '(2019 1 2 0 0))
+      (org-ml-to-trimmed-string))
+    => "[2019-01-02 Wed 00:00-12:00 +1d/3d]"
+    :end-hidden)
+
+  (defexamples-content org-ml-timestamp-set-end-time
+    nil
+    (:buffer "[2019-01-01 Tue]")
+    (:comment "Add the end time")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-end-time '(2019 1 2))
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+    (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (:comment "Remove the end time")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-end-time nil)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]"
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (:comment "Use short range format")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-end-time '(2019 1 1 13 0))
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 12:00-13:00]")
+
+  (defexamples-content org-ml-timestamp-set-single-time
+    nil
+    (:buffer "[2019-01-01 Tue]")
+    (:comment "Don't make a range")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-single-time '(2019 1 2))
+      (org-ml-to-trimmed-string))
+    => "[2019-01-02 Wed]"
+    (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (:comment "Output is not a range despite input being ranged")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-single-time '(2019 1 3))
+      (org-ml-to-trimmed-string))
+    => "[2019-01-03 Thu]")
+
+  (defexamples-content org-ml-timestamp-set-double-time
+    nil
+    (:buffer "[2019-01-01 Tue]")
+    (:comment "Make a range")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-double-time '(2019 1 2) '(2019 1 3))
+      (org-ml-to-trimmed-string))
+    => "[2019-01-02 Wed]--[2019-01-03 Thu]"
+    (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-double-time '(2019 1 4) '(2019 1 5))
+      (org-ml-to-trimmed-string))
+    => "[2019-01-04 Fri]--[2019-01-05 Sat]"
+    (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-double-time '(2019 1 1 0 0) '(2019 1 1 1 0))
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00]")
+
+  (defexamples-content org-ml-timestamp-set-range
+    nil
+    (:buffer "[2019-01-01 Tue]")
+    (:comment "Use days as the unit for short format")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-range 1 'day)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+    (:buffer "[2019-01-01 Tue 00:00]")
+    (:comment "Use minutes as the unit for long format")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-range 3 'minute)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 00:00-00:03]"
+    (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
+    (:comment "Set range to 0 to remove end time")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-range 0 'day)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]")
+
+  (defexamples-content org-ml-timestamp-set-active
+    nil
+    (:buffer "[2019-01-01 Tue]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-active t)
+      (org-ml-to-trimmed-string))
+    => "<2019-01-01 Tue>"
+    (:buffer "<2019-01-01 Tue>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-set-active nil)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]")
+
+  (defexamples-content org-ml-timestamp-shift
+    nil
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (:comment "Change each unit, and wrap around to the next unit as needed.")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift 30 'minute)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 12:30]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift 13 'month)
+      (org-ml-to-trimmed-string))
+    => "[2020-02-01 Sat 12:00]"
+    :begin-hidden
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift 60 'minute)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 13:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift 1 'hour)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 13:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift 1 'day)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-02 Wed 12:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift 31 'day)
+      (org-ml-to-trimmed-string))
+    => "[2019-02-01 Fri 12:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift 1 'month)
+      (org-ml-to-trimmed-string))
+    => "[2019-02-01 Fri 12:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift 1 'year)
+      (org-ml-to-trimmed-string))
+    => "[2020-01-01 Wed 12:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift 0 'year)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 12:00]"
+    :end-hidden
+    (:buffer "[2019-01-01 Tue]")
+    (:comment "Error when shifting hour/minute in short format")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift 30 'minute)
+      (org-ml-to-trimmed-string))
+    !!> arg-type-error
+    :begin-hidden
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift 30 'hour)
+      (org-ml-to-trimmed-string))
+    !!> arg-type-error
+    :end-hidden)
+
+  (defexamples-content org-ml-timestamp-shift-start
+    nil
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (:comment "If not a range, change start time and leave implicit end time.")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift-start -1 'year)
+      (org-ml-to-trimmed-string))
+    => "[2018-01-01 Mon 12:00]--[2019-01-01 Tue 12:00]"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift-start -1 'hour)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 11:00-12:00]"
+    (:buffer "[2019-01-01 Tue]--[2019-01-03 Thu]")
+    (:comment "Change only start time if a range")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift-start 1 'day)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-02 Wed]--[2019-01-03 Thu]")
+
+  (defexamples-content org-ml-timestamp-shift-end
+    nil
+    (:buffer "[2019-01-01 Tue]")
+    (:comment "Shift implicit end time if not a range.")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift-end 1 'day)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+    (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (:comment "Move only the second time if a range.")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-shift-end 1 'day)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]--[2019-01-03 Thu]")
+
+  (defexamples-content org-ml-timestamp-toggle-active
+    nil
+    (:buffer "[2019-01-01 Tue]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-toggle-active)
+      (org-ml-to-trimmed-string))
+    => "<2019-01-01 Tue>"
+    :begin-hidden
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-toggle-active)
+      (org-ml-timestamp-toggle-active)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]"
+    :end-hidden
+    (:buffer "<2019-01-01 Tue>--<2019-01-02 Wed>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-toggle-active)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+    :begin-hidden
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-toggle-active)
+      (org-ml-timestamp-toggle-active)
+      (org-ml-to-trimmed-string))
+    => "<2019-01-01 Tue>--<2019-01-02 Wed>"
+    :end-hidden)
+
+  (defexamples-content org-ml-timestamp-truncate
+    nil
+    (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-truncate)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+    (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-truncate)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]--[2019-01-02 Wed]")
+
+  (defexamples-content org-ml-timestamp-truncate-start
+    nil
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-truncate-start)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]"
+    (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 12:00]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-truncate-start)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]--[2019-01-02 Wed 12:00]"
+    (:buffer "[2019-01-01 Tue]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-truncate-start)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]")
+
+  (defexamples-content org-ml-timestamp-truncate-end
+    nil
+    (:buffer "[2019-01-01 Tue]--[2019-01-02 Wed]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-truncate-end)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue]--[2019-01-02 Wed]"
+    (:buffer "[2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-truncate-end)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 12:00]--[2019-01-02 Wed]"
+    (:buffer "[2019-01-01 Tue 12:00]")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-truncate-end)
+      (org-ml-to-trimmed-string))
+    => "[2019-01-01 Tue 12:00]"))
+
+(def-example-subgroup "Timestamp (diary)"
+  nil
+
+  (defexamples-content org-ml-timestamp-diary-set-value
+    nil
+    (:buffer "<%%(diary-float t 4 2)>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-value '(diary-float 1 3 2))
+      (org-ml-to-string))
+    => "<%%(diary-float 1 3 2)>")
+
+  (defexamples-content org-ml-timestamp-diary-set-single-time
+    nil
+    (:buffer "<%%(diary-float t 4 2)>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-single-time '(0 0))
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 00:00>"
+    (:buffer "<%%(diary-float t 4 2) 00:01>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-single-time nil)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2)>")
+
+  (defexamples-content org-ml-timestamp-diary-set-double-time
+    nil
+    (:buffer "<%%(diary-float t 4 2)>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-double-time '(0 0) '(0 1))
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 00:00-00:01>"
+    (:buffer "<%%(diary-float t 4 2) 00:00-00:01>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-double-time '(1 0) '(2 0))
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 01:00-02:00>"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-double-time '(1 0) nil)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 01:00>"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-double-time nil nil)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2)>"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-double-time nil '(2 0))
+      (org-ml-to-string))
+    !!> arg-type-error)
+
+  (defexamples-content org-ml-timestamp-diary-get-start-time
+    nil
+    (:buffer "<%%(diary-float t 4 2)>")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-diary-get-start-time))
+    => nil
+    (:buffer "<%%(diary-float t 4 2) 12:00-13:00>")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-diary-get-start-time))
+    => '(12 0))
+
+  (defexamples-content org-ml-timestamp-diary-set-start-time
+    nil
+    (:buffer "<%%(diary-float t 4 2)>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-start-time '(0 0))
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 00:00>"
+    (:buffer "<%%(diary-float t 4 2) 12:00>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-start-time '(1 0))
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 01:00-12:00>"
+    :begin-hidden
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-start-time '(0 0))
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 00:00-12:00>"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-start-time '(12 0))
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 12:00>"
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-start-time nil)
+      (org-ml-to-string))
+    !!> arg-type-error
+    :end-hidden)
+
+  (defexamples-content org-ml-timestamp-diary-get-end-time
+    nil
+    (:buffer "<%%(diary-float t 4 2)>")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-diary-get-end-time))
+    => nil
+    (:buffer "<%%(diary-float t 4 2) 12:00-13:00>")
+    (->> (org-ml-parse-this-object)
+         (org-ml-timestamp-diary-get-end-time))
+    => '(13 0))
+
+  (defexamples-content org-ml-timestamp-diary-set-end-time
+    nil
+    (:buffer "<%%(diary-float t 4 2)>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-end-time '(0 0))
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2)>"
+    (:buffer "<%%(diary-float t 4 2) 12:00>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-end-time '(13 0))
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 12:00-13:00>"
+    :begin-hidden
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-end-time nil)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 12:00>"
+    :end-hidden)
+
+  (defexamples-content org-ml-timestamp-diary-set-length
+    nil
+    (:buffer "<%%(diary-float t 4 2)>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-length 1 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2)>"
+    (:buffer "<%%(diary-float t 4 2) 12:00>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-length 1 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 12:00-13:00>"
+    (:buffer "<%%(diary-float t 4 2) 12:00-13:00>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-length 0 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 12:00>"
+    :begin-hidden
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-set-length 24 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 12:00>"
+    :end-hidden)
+
+  (defexamples-content org-ml-timestamp-diary-shift
+    nil
+    (:buffer "<%%(diary-float t 4 2)>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-shift 1 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2)>"
+    (:buffer "<%%(diary-float t 4 2) 12:00>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-shift 1 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 13:00>"
+    :begin-hidden
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-shift 24 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 12:00>"
+    :end-hidden)
+
+  (defexamples-content org-ml-timestamp-diary-shift-start
+    nil
+    (:buffer "<%%(diary-float t 4 2)>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-shift-start 1 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2)>"
+    (:buffer "<%%(diary-float t 4 2) 12:00>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-shift-start -1 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 11:00-12:00>"
+    :begin-hidden
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-shift-start 24 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 12:00>"
+    :end-hidden)
+
+  (defexamples-content org-ml-timestamp-diary-shift-end
+    nil
+    (:buffer "<%%(diary-float t 4 2)>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-shift-end 1 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2)>"
+    (:buffer "<%%(diary-float t 4 2) 12:00>")
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-shift-end 1 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 12:00-13:00>"
+    :begin-hidden
+    (org-ml->> (org-ml-parse-this-object)
+      (org-ml-timestamp-diary-shift-end 24 'hour)
+      (org-ml-to-string))
+    => "<%%(diary-float t 4 2) 12:00>"
+    :end-hidden
     )
 
-  (def-example-subgroup "Affiliated Keywords"
+  )
+
+(def-example-subgroup "Affiliated Keywords"
+  nil
+
+  (defexamples-content org-ml-get-affiliated-keyword
+    nil
+    (:buffer "#+name: name"
+             "#+attr_foo: bar"
+             "#+attr_foo: BAR"
+             "#+plot: poo"
+             "#+results[hash]: res"
+             "#+header: h1"
+             "#+begin_src"
+             "echo test for echo"
+             "#+end_src")
+    (:comment "Simply return NAME and PLOT")
+    (->> (org-ml-parse-this-element)
+         (org-ml-get-affiliated-keyword :name))
+    => "name"
+    (->> (org-ml-parse-this-element)
+         (org-ml-get-affiliated-keyword :plot))
+    => "poo"
+    (:comment "Attribute FOO has multiple entries so return a list of all")
+    (->> (org-ml-parse-this-element)
+         (org-ml-get-affiliated-keyword :attr_foo))
+    => '("bar" "BAR")
+    (:comment "HEADER may have multiple values so return a singleton list")
+    (->> (org-ml-parse-this-element)
+         (org-ml-get-affiliated-keyword :header))
+    => '("h1")
+    (:comment "RESULTS returns a cons cell with the optional part")
+    (->> (org-ml-parse-this-element)
+         (org-ml-get-affiliated-keyword :results))
+    => '("res" . "hash")
+    )
+
+  (defexamples-content org-ml-set-affiliated-keyword
     nil
 
-    (defexamples-content org-ml-get-affiliated-keyword
-      nil
-      (:buffer "#+name: name"
-               "#+attr_foo: bar"
-               "#+attr_foo: BAR"
-               "#+plot: poo"
-               "#+results[hash]: res"
-               "#+header: h1"
-               "#+begin_src"
-               "echo test for echo"
-               "#+end_src")
-      (:comment "Simply return NAME and PLOT")
-      (->> (org-ml-parse-this-element)
-           (org-ml-get-affiliated-keyword :name))
-      => "name"
-      (->> (org-ml-parse-this-element)
-           (org-ml-get-affiliated-keyword :plot))
-      => "poo"
-      (:comment "Attribute FOO has multiple entries so return a list of all")
-      (->> (org-ml-parse-this-element)
-           (org-ml-get-affiliated-keyword :attr_foo))
-      => '("bar" "BAR")
-      (:comment "HEADER may have multiple values so return a singleton list")
-      (->> (org-ml-parse-this-element)
-           (org-ml-get-affiliated-keyword :header))
-      => '("h1")
-      (:comment "RESULTS returns a cons cell with the optional part")
-      (->> (org-ml-parse-this-element)
-           (org-ml-get-affiliated-keyword :results))
-      => '("res" . "hash")
-      )
+    (:buffer "short paragraph")
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-set-affiliated-keyword :name "foo")
+      (org-ml-to-trimmed-string))
+    => (:result "#+name: foo"
+                "short paragraph")
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-set-affiliated-keyword :attr_bar '("foo"))
+      (org-ml-to-trimmed-string))
+    => (:result "#+attr_bar: foo"
+                "short paragraph")
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-set-affiliated-keyword :header '("h1" "h2"))
+      (org-ml-to-trimmed-string))
+    => (:result "#+header: h1"
+                "#+header: h2"
+                "short paragraph")
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-set-affiliated-keyword :results '("foo" . "bar"))
+      (org-ml-to-trimmed-string))
+    => (:result "#+results[bar]: foo"
+                "short paragraph")
 
-    (defexamples-content org-ml-set-affiliated-keyword
-      nil
+    (:buffer "#+name: deleteme"
+             "short paragraph")
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-set-affiliated-keyword :name nil)
+      (org-ml-to-trimmed-string))
+    => "short paragraph")
 
-      (:buffer "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-affiliated-keyword :name "foo")
-           (org-ml-to-trimmed-string))
-      => (:result "#+name: foo"
-                  "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-affiliated-keyword :attr_bar '("foo"))
-           (org-ml-to-trimmed-string))
-      => (:result "#+attr_bar: foo"
-                  "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-affiliated-keyword :header '("h1" "h2"))
-           (org-ml-to-trimmed-string))
-      => (:result "#+header: h1"
-                  "#+header: h2"
-                  "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-affiliated-keyword :results '("foo" . "bar"))
-           (org-ml-to-trimmed-string))
-      => (:result "#+results[bar]: foo"
-                  "short paragraph")
+  (defexamples-content org-ml-map-affiliated-keyword
+    nil
 
-      (:buffer "#+name: deleteme"
-               "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-affiliated-keyword :name nil)
-           (org-ml-to-trimmed-string))
-      => "short paragraph")
+    (:buffer "#+name: foo"
+             "short paragraph")
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-map-affiliated-keyword :name #'upcase)
+      (org-ml-to-trimmed-string))
+    => (:result "#+name: FOO"
+                "short paragraph")
 
-    (defexamples-content org-ml-map-affiliated-keyword
-      nil
+    (:buffer "#+header: foo"
+             "short paragraph")
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-map-affiliated-keyword* :header (cons "bar" it))
+      (org-ml-to-trimmed-string))
+    => (:result "#+header: bar"
+                "#+header: foo"
+                "short paragraph"))
 
-      (:buffer "#+name: foo"
-               "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-affiliated-keyword :name #'upcase)
-           (org-ml-to-trimmed-string))
-      => (:result "#+name: FOO"
-                  "short paragraph")
+  (defexamples-content org-ml-set-caption!
+    nil
 
-      (:buffer "#+header: foo"
-               "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-affiliated-keyword* :header (cons "bar" it))
-           (org-ml-to-trimmed-string))
-      => (:result "#+header: bar"
-                  "#+header: foo"
-                  "short paragraph"))
+    (:buffer "short paragraph")
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-set-caption! "cap")
+      (org-ml-to-trimmed-string))
+    => (:result "#+caption: cap"
+                "short paragraph")
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-set-caption! '("foo" "cap"))
+      (org-ml-to-trimmed-string))
+    => (:result "#+caption[foo]: cap"
+                "short paragraph")
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-set-caption! '("foo" "cap"))
+      (org-ml-to-trimmed-string))
+    => (:result "#+caption[foo]: cap"
+                "short paragraph")
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-set-caption! '(("foo" "cap") ("FOO" "CAP")))
+      (org-ml-to-trimmed-string))
+    => (:result "#+caption[foo]: cap"
+                "#+caption[FOO]: CAP"
+                "short paragraph")
 
-    (defexamples-content org-ml-set-caption!
-      nil
-
-      (:buffer "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-caption! "cap")
-           (org-ml-to-trimmed-string))
-      => (:result "#+caption: cap"
-                  "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-caption! '("foo" "cap"))
-           (org-ml-to-trimmed-string))
-      => (:result "#+caption[foo]: cap"
-                  "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-caption! '("foo" "cap"))
-           (org-ml-to-trimmed-string))
-      => (:result "#+caption[foo]: cap"
-                  "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-caption! '(("foo" "cap") ("FOO" "CAP")))
-           (org-ml-to-trimmed-string))
-      => (:result "#+caption[foo]: cap"
-                  "#+caption[FOO]: CAP"
-                  "short paragraph")
-      
-      (:buffer "#+caption: cap"
-               "short paragraph")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-caption! nil)
-           (org-ml-to-trimmed-string))
-      => "short paragraph"))
+    (:buffer "#+caption: cap"
+             "short paragraph")
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-set-caption! nil)
+      (org-ml-to-trimmed-string))
+    => "short paragraph"))
 
 (def-example-group "Branch/Child Manipulation"
   "Set, get, and map the children of branch nodes."
@@ -4178,16 +4175,16 @@
 
       (:buffer "/this/ is a *paragraph*")
       (:comment "Set children for branch object")
-      (->> (org-ml-parse-this-element)
-           (org-ml-set-children (list "this is lame"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-set-children (list "this is lame"))
+        (org-ml-to-trimmed-string))
       => "this is lame"
 
       (:buffer "* headline")
       (:comment "Set children for branch element nodes")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-set-children (list (org-ml-build-headline! :title-text "only me" :level 2)))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-set-children (list (org-ml-build-headline! :title-text "only me" :level 2)))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "** only me")
 
@@ -4208,17 +4205,17 @@
       nil
 
       (:buffer "/this/ is a *paragraph*")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-children
-             (lambda (objs) (append objs (list " ...yeah"))))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-children
+          (lambda (objs) (append objs (list " ...yeah"))))
+        (org-ml-to-trimmed-string))
       => "/this/ is a *paragraph* ...yeah"
 
       (:buffer "* headline"
                "** subheadline")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-map-children* (--map (org-ml-shift-property :level 1 it) it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-map-children* (--map (org-ml-shift-property :level 1 it) it))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "*** subheadline")
 
@@ -4261,30 +4258,30 @@
       nil
       (:buffer "_1 *2* 3 */4/* 5 /6/_")
       (:comment "Remove the outer underline formatting")
-      (->> (org-ml-parse-this-object)
-           (org-ml-unwrap)
-           (apply #'org-ml-build-paragraph)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-unwrap)
+        (apply #'org-ml-build-paragraph)
+        (org-ml-to-trimmed-string))
       => "1 *2* 3 */4/* 5 /6/")
     
     (defexamples-content org-ml-unwrap-types-deep
       nil
       (:buffer "_1 *2* 3 */4/* 5 /6/_")
       (:comment "Remove bold formatting at any level")
-      (->> (org-ml-parse-this-object)
-           (org-ml-unwrap-types-deep '(bold))
-           (apply #'org-ml-build-paragraph)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-unwrap-types-deep '(bold))
+        (apply #'org-ml-build-paragraph)
+        (org-ml-to-trimmed-string))
       => "_1 2 3 /4/ 5 /6/_")
 
     (defexamples-content org-ml-unwrap-deep
       nil
       (:buffer "_1 *2* 3 */4/* 5 /6/_")
       (:comment "Remove all formatting")
-      (->> (org-ml-parse-this-object)
-           (org-ml-unwrap-deep)
-           (apply #'org-ml-build-paragraph)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-object)
+        (org-ml-unwrap-deep)
+        (apply #'org-ml-build-paragraph)
+        (org-ml-to-trimmed-string))
       => "1 2 3 4 5 6"))
 
   (def-example-subgroup "Secondary Strings"
@@ -4294,27 +4291,27 @@
       nil
       (:buffer "This (1 *2* 3 */4/* 5 /6/) is randomly formatted")
       (:comment "Remove first level of formatting")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-children #'org-ml-flatten)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-children #'org-ml-flatten)
+        (org-ml-to-trimmed-string))
       => "This (1 2 3 /4/ 5 6) is randomly formatted")
 
     (defexamples-content org-ml-flatten-types-deep
       nil
       (:buffer "This (1 *2* 3 */4/* 5 /6/) is randomly formatted")
       (:comment "Remove italic formatting at any level")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-children* (org-ml-flatten-types-deep '(italic) it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-children* (org-ml-flatten-types-deep '(italic) it))
+        (org-ml-to-trimmed-string))
       => "This (1 *2* 3 *4* 5 6) is randomly formatted")
 
     (defexamples-content org-ml-flatten-deep
       nil
       (:buffer "This (1 *2* 3 */4/* 5 /6/) is randomly formatted")
       (:comment "Remove italic formatting at any level")
-      (->> (org-ml-parse-this-element)
-           (org-ml-map-children #'org-ml-flatten-deep)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-map-children #'org-ml-flatten-deep)
+        (org-ml-to-trimmed-string))
       => "This (1 2 3 4 5 6) is randomly formatted"))
 
   (def-example-subgroup "Item"
@@ -4334,22 +4331,22 @@
     (defexamples-content org-ml-item-set-paragraph
       nil
       (:buffer "- one")
-      (->> (org-ml-parse-this-item)
-           (org-ml-item-set-paragraph '("two"))
-           (org-ml-to-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-item-set-paragraph '("two"))
+        (org-ml-to-string))
       => "- two\n"
       (:buffer "- one")
-      (->> (org-ml-parse-this-item)
-           (org-ml-item-set-paragraph nil)
-           (org-ml-to-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-item-set-paragraph nil)
+        (org-ml-to-string))
       => "- \n")
 
     (defexamples-content org-ml-item-map-paragraph
       nil
       (:buffer "- one")
-      (->> (org-ml-parse-this-item)
-           (org-ml-item-map-paragraph* (-map #'upcase it))
-           (org-ml-to-string))
+      (org-ml->> (org-ml-parse-this-item)
+        (org-ml-item-map-paragraph* (-map #'upcase it))
+        (org-ml-to-string))
       => "- ONE\n"))
 
   (def-example-subgroup "Headline"
@@ -4376,30 +4373,30 @@
     (defexamples-content org-ml-headline-set-section
       nil
       (:buffer "* headline")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-set-section (list (org-ml-build-paragraph! "x-section")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-headline-set-section (list (org-ml-build-paragraph! "x-section")))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "x-section")
       (:buffer "* headline"
                "x-section")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-set-section (list (org-ml-build-paragraph! "x-guard")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-headline-set-section (list (org-ml-build-paragraph! "x-guard")))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "x-guard")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-set-section nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-headline-set-section nil)
+        (org-ml-to-trimmed-string))
       => "* headline")
 
     (defexamples-content org-ml-headline-map-section
       nil
       (:buffer "* headline"
                "x-section")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-map-section* (cons (org-ml-build-planning! :closed '(2019 1 1)) it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-headline-map-section* (cons (org-ml-build-planning! :closed '(2019 1 1)) it))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "CLOSED: [2019-01-01 Tue]"
                   "x-section"))
@@ -4410,15 +4407,15 @@
                "sectional stuff"
                "** headline 2"
                "** headline 3")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-get-subheadlines)
-           (-map #'org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-headline-get-subheadlines)
+        (-map #'org-ml-to-trimmed-string))
       => '("** headline 2" "** headline 3")
       (:buffer "* headline 1"
                "sectional stuff")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-get-subheadlines)
-           (-map #'org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-headline-get-subheadlines)
+        (-map #'org-ml-to-trimmed-string))
       => nil)
 
     (defexamples-content org-ml-headline-set-subheadlines
@@ -4427,15 +4424,15 @@
                "sectional stuff"
                "** headline 2"
                "** headline 3")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-set-subheadlines (list (org-ml-build-headline! :level 2 :title-text "headline x")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-headline-set-subheadlines (list (org-ml-build-headline! :level 2 :title-text "headline x")))
+        (org-ml-to-trimmed-string))
       => (:result "* headline 1"
                   "sectional stuff"
                   "** headline x")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-set-subheadlines nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-headline-set-subheadlines nil)
+        (org-ml-to-trimmed-string))
       => (:result "* headline 1"
                   "sectional stuff"))
 
@@ -4444,9 +4441,9 @@
       (:buffer "* headline 1"
                "** headline 2"
                "** headline 3")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-map-subheadlines* (--map (org-ml-set-property :todo-keyword "TODO" it) it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-headline-map-subheadlines* (--map (org-ml-set-property :todo-keyword "TODO" it) it))
+        (org-ml-to-trimmed-string))
       => (:result "* headline 1"
                   "** TODO headline 2"
                   "** TODO headline 3")))
@@ -4471,31 +4468,31 @@
     (defexamples-content org-ml-headline-set-planning
       nil
       (:buffer "* headline")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-planning (org-ml-build-planning! :closed '(2019 1 1)))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-planning (org-ml-build-planning! :closed '(2019 1 1)))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "CLOSED: [2019-01-01 Tue]")
       (:buffer "* headline"
                "CLOSED: [2019-01-01 Tue]")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "SCHEDULED: <2019-01-01 Tue>")
       (:buffer "* headline"
                "CLOSED: [2019-01-01 Tue]")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-planning nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-planning nil)
+        (org-ml-to-trimmed-string))
       => "* headline"
       :begin-hidden
       (:buffer "* headline"
                ""
                "rest")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "SCHEDULED: <2019-01-01 Tue>"
                   ""
@@ -4504,9 +4501,9 @@
                "SCHEDULED: <2019-01-01 Tue>"
                ""
                "rest")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-planning nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-planning nil)
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ""
                   "rest")
@@ -4517,11 +4514,11 @@
       nil
       (:buffer "* headline"
                "CLOSED: [2019-01-01 Tue]")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-map-planning*
-             (org-ml-map-property* :closed
-               (org-ml-timestamp-shift 1 'day it) it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-map-planning*
+          (org-ml-map-property* :closed
+            (org-ml-timestamp-shift 1 'day it) it))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "CLOSED: [2019-01-02 Wed]"))
 
@@ -4561,19 +4558,19 @@
                ":Effort:   1:00"
                ":ID:       minesfake"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-node-properties
-            (--map (apply #'org-ml-build-node-property it)
-                   '(("Effort" "0:01") ("ID" "easy"))))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-node-properties
+         (--map (apply #'org-ml-build-node-property it)
+                '(("Effort" "0:01") ("ID" "easy"))))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":PROPERTIES:"
                   ":Effort:   0:01"
                   ":ID:       easy"
                   ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-node-properties nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-node-properties nil)
+        (org-ml-to-trimmed-string))
       => "* headline"
       :begin-hidden
       (:buffer "* headline"
@@ -4582,28 +4579,28 @@
                ":Effort:   1:00"
                ":ID:       minesfake"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-node-properties
-            (--map (apply #'org-ml-build-node-property it)
-                   '(("Effort" "0:01") ("ID" "easy"))))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-node-properties
+         (--map (apply #'org-ml-build-node-property it)
+                '(("Effort" "0:01") ("ID" "easy"))))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "CLOSED: <2019-01-01 Tue>"
                   ":PROPERTIES:"
                   ":Effort:   0:01"
                   ":ID:       easy"
                   ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-node-properties nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-node-properties nil)
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "CLOSED: <2019-01-01 Tue>")
       (:buffer "* headline"
                ""
                "section")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":PROPERTIES:"
                   ":New:      world man"
@@ -4614,9 +4611,9 @@
                "CLOSED: <2019-01-01 Tue>"
                ""
                "section")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "CLOSED: <2019-01-01 Tue>"
                   ":PROPERTIES:"
@@ -4632,9 +4629,9 @@
                ":END:"
                ""
                "section")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-node-properties nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-node-properties nil)
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "CLOSED: <2019-01-01 Tue>"
                   ""
@@ -4647,10 +4644,10 @@
                ":Effort:   1:00"
                ":ID:       minesfake"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-map-node-properties*
-             (cons (org-ml-build-node-property "New" "world man") it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-map-node-properties*
+          (cons (org-ml-build-node-property "New" "world man") it))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":PROPERTIES:"
                   ":New:      world man"
@@ -4688,32 +4685,32 @@
                ":PROPERTIES:"
                ":ID:       fake"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-node-property "ID" "real")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-node-property "ID" "real")
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":PROPERTIES:"
                   ":ID:       real"
                   ":END:")
       (:buffer "* headline")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-node-property "ID" "real")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-node-property "ID" "real")
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":PROPERTIES:"
                   ":ID:       real"
                   ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-node-property "ID" nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-node-property "ID" nil)
+        (org-ml-to-trimmed-string))
       => "* headline"
-     (:buffer "* headline"
-              ":PROPERTIES:"
-              ":ID:       real"
-              ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-node-property "ID" nil)
-           (org-ml-to-trimmed-string))
+      (:buffer "* headline"
+               ":PROPERTIES:"
+               ":ID:       real"
+               ":END:")
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-node-property "ID" nil)
+        (org-ml-to-trimmed-string))
       => "* headline")
 
     (defexamples-content org-ml-headline-map-node-property
@@ -4722,9 +4719,9 @@
                ":PROPERTIES:"
                ":ID:       fake"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-map-node-property "ID" #'s-upcase)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-map-node-property "ID" #'s-upcase)
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":PROPERTIES:"
                   ":ID:       FAKE"
@@ -4805,10 +4802,10 @@
 
       (let ((config (list :log-into-drawer "LOGGING"
                           :clock-into-drawer "CLOCKING")))
-        (->> (org-ml-parse-this-headline)
-             (org-ml-headline-set-supercontents
-              config `((:logbook nil) (:contents ,(org-ml-build-paragraph! "new contents"))))
-             (org-ml-to-trimmed-string)))
+        (org-ml->> (org-ml-parse-this-headline)
+          (org-ml-headline-set-supercontents
+           config `((:logbook nil) (:contents ,(org-ml-build-paragraph! "new contents"))))
+          (org-ml-to-trimmed-string)))
       => (:result "* headline"
                   "CLOSED: [2019-01-01 Tue 00:00]"
                   ":PROPERTIES:"
@@ -4835,11 +4832,11 @@
 
       (let ((config (list :log-into-drawer "LOGGING"
                           :clock-into-drawer "CLOCKING")))
-        (->> (org-ml-parse-this-headline)
-             (org-ml-headline-map-supercontents*
-                 config (org-ml-supercontents-map-contents*
-                          (cons (org-ml-build-paragraph! "new contents") it) it))
-             (org-ml-to-trimmed-string)))
+        (org-ml->> (org-ml-parse-this-headline)
+          (org-ml-headline-map-supercontents*
+              config (org-ml-supercontents-map-contents*
+                       (cons (org-ml-build-paragraph! "new contents") it) it))
+          (org-ml-to-trimmed-string)))
       => (:result "* headline"
                   "CLOSED: [2019-01-01 Tue 00:00]"
                   ":PROPERTIES:"
@@ -4894,9 +4891,9 @@
                "contents")
       (let ((config (list :log-into-drawer "LOGGING"
                           :clock-into-drawer "CLOCKING")))
-        (->> (org-ml-parse-this-headline)
-             (org-ml-headline-set-logbook-items config nil)
-             (org-ml-to-trimmed-string)))
+        (org-ml->> (org-ml-parse-this-headline)
+          (org-ml-headline-set-logbook-items config nil)
+          (org-ml-to-trimmed-string)))
       =>  (:result "* headline"
                    "CLOSED: [2019-01-01 Tue 00:00]"
                    ":PROPERTIES:"
@@ -4920,9 +4917,9 @@
                "contents")
       (let ((config (list :log-into-drawer "LOGGING"
                           :clock-into-drawer "CLOCKING")))
-        (->> (org-ml-parse-this-headline)
-             (org-ml-headline-set-logbook-items config nil)
-             (org-ml-to-trimmed-string)))
+        (org-ml->> (org-ml-parse-this-headline)
+          (org-ml-headline-set-logbook-items config nil)
+          (org-ml-to-trimmed-string)))
       =>  (:result "* headline"
                    "CLOSED: [2019-01-01 Tue 00:00]"
                    ":PROPERTIES:"
@@ -4949,18 +4946,18 @@
                "contents")
       (let ((config (list :log-into-drawer "LOGGING"
                           :clock-into-drawer "CLOCKING")))
-        (->> (org-ml-parse-this-headline)
-             (org-ml-headline-map-logbook-items* config
-               (--map (org-ml-map-children*
-                        (--map (org-ml-map-children*
-                                 (--map-when (org-ml-is-type 'plain-text it)
-                                             (upcase it)
-                                             it)
-                                 it)
-                               it)
-                        it)
-                      it))
-             (org-ml-to-trimmed-string)))
+        (org-ml->> (org-ml-parse-this-headline)
+          (org-ml-headline-map-logbook-items* config
+            (--map (org-ml-map-children*
+                     (--map (org-ml-map-children*
+                              (--map-when (org-ml-is-type 'plain-text it)
+                                          (upcase it)
+                                          it)
+                              it)
+                            it)
+                     it)
+                   it))
+          (org-ml-to-trimmed-string)))
       =>  (:result "* headline"
                    "CLOSED: [2019-01-01 Tue 00:00]"
                    ":PROPERTIES:"
@@ -5014,9 +5011,9 @@
                "contents")
       (let ((config (list :log-into-drawer "LOGGING"
                           :clock-into-drawer "CLOCKING")))
-        (->> (org-ml-parse-this-headline)
-             (org-ml-headline-set-logbook-clocks config nil)
-             (org-ml-to-trimmed-string)))
+        (org-ml->> (org-ml-parse-this-headline)
+          (org-ml-headline-set-logbook-clocks config nil)
+          (org-ml-to-trimmed-string)))
       =>  (:result "* headline"
                    "CLOSED: [2019-01-01 Tue 00:00]"
                    ":PROPERTIES:"
@@ -5045,13 +5042,13 @@
                "contents")
       (let ((config (list :log-into-drawer "LOGGING"
                           :clock-into-drawer "CLOCKING")))
-        (->> (org-ml-parse-this-headline)
-             (org-ml-headline-map-logbook-clocks* config
-               (--map (org-ml-map-property* :value
-                        (org-ml-timestamp-shift 1 'day it)
-                        it)
-                      it))
-             (org-ml-to-trimmed-string)))
+        (org-ml->> (org-ml-parse-this-headline)
+          (org-ml-headline-map-logbook-clocks* config
+            (--map (org-ml-map-property* :value
+                     (org-ml-timestamp-shift 1 'day it)
+                     it)
+                   it))
+          (org-ml-to-trimmed-string)))
       =>  (:result "* headline"
                    "CLOSED: [2019-01-01 Tue 00:00]"
                    ":PROPERTIES:"
@@ -5127,25 +5124,25 @@
       nil
 
       (:buffer "* headline")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-contents
-            (list :log-into-drawer t
-                  :clock-into-drawer t
-                  :clock-out-notes t)
-            (list (org-ml-build-paragraph! "I'm new")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-contents
+         (list :log-into-drawer t
+               :clock-into-drawer t
+               :clock-out-notes t)
+         (list (org-ml-build-paragraph! "I'm new")))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "I'm new")
 
       (:buffer "* headline"
                "something")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-contents
-            (list :log-into-drawer t
-                  :clock-into-drawer t
-                  :clock-out-notes t)
-            (list (org-ml-build-paragraph! "I'm new")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-contents
+         (list :log-into-drawer t
+               :clock-into-drawer t
+               :clock-out-notes t)
+         (list (org-ml-build-paragraph! "I'm new")))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "I'm new")
 
@@ -5155,13 +5152,13 @@
                "  log1"
                ":END:"
                "something")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-contents
-            (list :log-into-drawer t
-                  :clock-into-drawer t
-                  :clock-out-notes t)
-            (list (org-ml-build-paragraph! "I'm new")))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-contents
+         (list :log-into-drawer t
+               :clock-into-drawer t
+               :clock-out-notes t)
+         (list (org-ml-build-paragraph! "I'm new")))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
                   "- Note taken on [2018-12-31 Mon 00:00] \\\\"
@@ -5175,13 +5172,13 @@
                "  log1"
                ":END:"
                "something")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-set-contents
-            (list :log-into-drawer t
-                  :clock-into-drawer t
-                  :clock-out-notes t)
-            nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-contents
+         (list :log-into-drawer t
+               :clock-into-drawer t
+               :clock-out-notes t)
+         nil)
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
                   "- Note taken on [2018-12-31 Mon 00:00] \\\\"
@@ -5193,13 +5190,13 @@
 
       (:buffer "* headline"
                "something")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-map-contents*
-               (list :log-into-drawer t
-                     :clock-into-drawer t
-                     :clock-out-notes t)
-             (cons (org-ml-build-paragraph! "I'm new") it))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-map-contents*
+            (list :log-into-drawer t
+                  :clock-into-drawer t
+                  :clock-out-notes t)
+          (cons (org-ml-build-paragraph! "I'm new") it))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "I'm new"
                   "something"))
@@ -5208,13 +5205,13 @@
       nil
       (:buffer "* headline")
       (let ((ut (- 1546300800 (car (current-time-zone)))))
-        (->> (org-ml-parse-this-headline)
-             (org-ml-headline-logbook-append-item
-              (list :log-into-drawer t
-                    :clock-into-drawer t
-                    :clock-out-notes t)
-              (org-ml-build-log-note ut "new note"))
-             (org-ml-to-trimmed-string)))
+        (org-ml->> (org-ml-parse-this-headline)
+          (org-ml-headline-logbook-append-item
+           (list :log-into-drawer t
+                 :clock-into-drawer t
+                 :clock-out-notes t)
+           (org-ml-build-log-note ut "new note"))
+          (org-ml-to-trimmed-string)))
       => (:result "* headline"
                   ":LOGBOOK:"
                   "- Note taken on [2019-01-01 Tue 00:00] \\\\"
@@ -5227,14 +5224,14 @@
                "  old note"
                ":END:")
       (let ((ut (- 1546300800 (car (current-time-zone)))))
-        (->> (org-ml-parse-this-headline)
-             (org-ml-headline-logbook-append-item
-              
-              (list :log-into-drawer t
-                    :clock-into-drawer t
-                    :clock-out-notes t)
-              (org-ml-build-log-note ut "new note"))
-             (org-ml-to-trimmed-string)))
+        (org-ml->> (org-ml-parse-this-headline)
+          (org-ml-headline-logbook-append-item
+           
+           (list :log-into-drawer t
+                 :clock-into-drawer t
+                 :clock-out-notes t)
+           (org-ml-build-log-note ut "new note"))
+          (org-ml-to-trimmed-string)))
       => (:result "* headline"
                   ":LOGBOOK:"
                   "- Note taken on [2019-01-01 Tue 00:00] \\\\"
@@ -5252,12 +5249,12 @@
                "CLOCK: [2112-01-01 Fri]"
                ":END:")
       (let ((ut (- 1546300800 (car (current-time-zone)))))
-        (->> (org-ml-parse-this-headline)
-             (org-ml-headline-logbook-append-item
-              (list :log-into-drawer "LOGGING"
-                    :clock-into-drawer "CLOCKING")
-              (org-ml-build-log-note ut "new note"))
-             (org-ml-to-trimmed-string)))
+        (org-ml->> (org-ml-parse-this-headline)
+          (org-ml-headline-logbook-append-item
+           (list :log-into-drawer "LOGGING"
+                 :clock-into-drawer "CLOCKING")
+           (org-ml-build-log-note ut "new note"))
+          (org-ml-to-trimmed-string)))
       => (:result "* headline"
                   ":LOGGING:"
                   "- Note taken on [2019-01-01 Tue 00:00] \\\\"
@@ -5273,13 +5270,13 @@
       nil
 
       (:buffer "* headline")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-append-open-clock
-            (list :log-into-drawer t
-                  :clock-into-drawer t
-                  :clock-out-notes t)
-            (- 1546300800 (car (current-time-zone))))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-logbook-append-open-clock
+         (list :log-into-drawer t
+               :clock-into-drawer t
+               :clock-out-notes t)
+         (- 1546300800 (car (current-time-zone))))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
                   "CLOCK: [2019-01-01 Tue 00:00]"
@@ -5289,14 +5286,13 @@
                ":LOGBOOK:"
                "- note taken on [2018-12-30 Sun 00:00]"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-append-open-clock
-            
-            (list :log-into-drawer t
-                  :clock-into-drawer t
-                  :clock-out-notes t)
-            (- 1546300800 (car (current-time-zone))))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-logbook-append-open-clock
+         (list :log-into-drawer t
+               :clock-into-drawer t
+               :clock-out-notes t)
+         (- 1546300800 (car (current-time-zone))))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
                   "CLOCK: [2019-01-01 Tue 00:00]"
@@ -5307,12 +5303,12 @@
                ":LOGGING:"
                "- note taken on [2018-12-30 Sun 00:00]"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-append-open-clock
-            (list :log-into-drawer "LOGGING"
-                  :clock-into-drawer "CLOCKING")
-            (- 1546300800 (car (current-time-zone))))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-logbook-append-open-clock
+         (list :log-into-drawer "LOGGING"
+               :clock-into-drawer "CLOCKING")
+         (- 1546300800 (car (current-time-zone))))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGGING:"
                   "- note taken on [2018-12-30 Sun 00:00]"
@@ -5327,13 +5323,13 @@
                ":LOGBOOK:"
                "- note taken on [2018-12-30 Sun 00:00]"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-close-open-clock
-            (list :log-into-drawer t
-                  :clock-into-drawer t
-                  :clock-out-notes t)
-            (- 1546300800 (car (current-time-zone))) nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-logbook-close-open-clock
+         (list :log-into-drawer t
+               :clock-into-drawer t
+               :clock-out-notes t)
+         (- 1546300800 (car (current-time-zone))) nil)
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
                   "- note taken on [2018-12-30 Sun 00:00]"
@@ -5344,26 +5340,26 @@
                "CLOCK: [2018-12-31 Mon 00:00]"
                "- note taken on [2018-12-30 Sun 00:00]"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-close-open-clock
-            (list :log-into-drawer t
-                  :clock-into-drawer t
-                  :clock-out-notes t)
-            (- 1546300800 (car (current-time-zone))) nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-logbook-close-open-clock
+         (list :log-into-drawer t
+               :clock-into-drawer t
+               :clock-out-notes t)
+         (- 1546300800 (car (current-time-zone))) nil)
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
                   "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
                   "- note taken on [2018-12-30 Sun 00:00]"
                   ":END:")
 
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-close-open-clock
-            (list :log-into-drawer t
-                  :clock-into-drawer t
-                  :clock-out-notes t)
-            (- 1546300800 (car (current-time-zone))) "new note")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-logbook-close-open-clock
+         (list :log-into-drawer t
+               :clock-into-drawer t
+               :clock-out-notes t)
+         (- 1546300800 (car (current-time-zone))) "new note")
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
                   "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
@@ -5378,10 +5374,10 @@
                ":CLOCKING:"
                "CLOCK: [2018-12-31 Mon 00:00]"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-close-open-clock
-            '(:log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING" :clock-out-notes t) (- 1546300800 (car (current-time-zone))) nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-logbook-close-open-clock
+         '(:log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING" :clock-out-notes t) (- 1546300800 (car (current-time-zone))) nil)
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGGING:"
                   "- note taken on [2018-12-30 Sun 00:00]"
@@ -5395,20 +5391,20 @@
       (:buffer "* headline"
                "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
                "- note taken on [2018-12-30 Sun 00:00]")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-convert-config nil
-                                                   (list :log-into-drawer t :clock-into-drawer t))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-logbook-convert-config nil
+                                                (list :log-into-drawer t :clock-into-drawer t))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
                   "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
                   "- note taken on [2018-12-30 Sun 00:00]"
                   ":END:")
 
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-convert-config nil
-                                                   (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-logbook-convert-config nil
+                                                (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING"))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGGING:"
                   "- note taken on [2018-12-30 Sun 00:00]"
@@ -5422,13 +5418,13 @@
                "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
                "- note taken on [2018-12-30 Sun 00:00]"
                ":END:")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-logbook-convert-config
-            (list :log-into-drawer t
-                  :clock-into-drawer t)
-            (list :log-into-drawer "LOGGING"
-                  :clock-into-drawer "CLOCKING"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-logbook-convert-config
+         (list :log-into-drawer t
+               :clock-into-drawer t)
+         (list :log-into-drawer "LOGGING"
+               :clock-into-drawer "CLOCKING"))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGGING:"
                   "- note taken on [2018-12-30 Sun 00:00]"
@@ -5462,9 +5458,9 @@
                "- irrelevant data"
                "- [ ] good data"
                "- [X] bad data")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-update-item-statistics)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-update-item-statistics)
+        (org-ml-to-trimmed-string))
       => (:result "* statistically significant [1/2]"
                   "- irrelevant data"
                   "- [ ] good data"
@@ -5475,9 +5471,9 @@
                "- irrelevant data"
                "- [ ] good data"
                "- [X] bad data")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-update-item-statistics)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-update-item-statistics)
+        (org-ml-to-trimmed-string))
       => (:result "* statistically significant [50%]"
                   "- irrelevant data"
                   "- [ ] good data"
@@ -5489,9 +5485,9 @@
                "- [ ] good data"
                "- [X] bad data")
       (:comment "Do nothing if nothing to update")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-headline-update-item-statistics)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-update-item-statistics)
+        (org-ml-to-trimmed-string))
       => (:result "* statistically significant"
                   "- irrelevant data"
                   "- [ ] good data"
@@ -5503,9 +5499,9 @@
                "** irrelevant data"
                "** TODO good data"
                "** DONE bad data")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-update-todo-statistics)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-headline-update-todo-statistics)
+        (org-ml-to-trimmed-string))
       => (:result "* statistically significant [1/2]"
                   "** irrelevant data"
                   "** TODO good data"
@@ -5516,9 +5512,9 @@
                "** irrelevant data"
                "** TODO good data"
                "** DONE bad data")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-update-todo-statistics)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-headline-update-todo-statistics)
+        (org-ml-to-trimmed-string))
       => (:result "* statistically significant [50%]"
                   "** irrelevant data"
                   "** TODO good data"
@@ -5530,9 +5526,9 @@
                "** TODO good data"
                "** DONE bad data")
       (:comment "Do nothing if nothing to update")
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-headline-update-todo-statistics)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-headline-update-todo-statistics)
+        (org-ml-to-trimmed-string))
       => (:result "* statistically significant"
                   "** irrelevant data"
                   "** TODO good data"
@@ -5544,13 +5540,13 @@
                "** two"
                "** three"
                "*** four")
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-headline-demote-subheadline 0)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-headline-demote-subheadline 0)
+        (org-ml-to-trimmed-string))
       !!> error
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-headline-demote-subheadline 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-headline-demote-subheadline 1)
+        (org-ml-to-trimmed-string))
       => (:result "* one"
                   "** two"
                   "*** three"
@@ -5611,9 +5607,9 @@
                "** two"
                "** three"
                "*** four")
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-headline-demote-subtree 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-headline-demote-subtree 1)
+        (org-ml-to-trimmed-string))
       => (:result "* one"
                   "** two"
                   "*** three"
@@ -5627,9 +5623,9 @@
                "*** four"
                "*** four"
                "*** four")
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-headline-promote-subheadline 1 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-headline-promote-subheadline 1 1)
+        (org-ml-to-trimmed-string))
       => (:result "* one"
                   "** two"
                   "** three"
@@ -5645,9 +5641,9 @@
                "*** four"
                "*** four"
                "*** four")
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-headline-promote-all-subheadlines 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-headline-promote-all-subheadlines 1)
+        (org-ml-to-trimmed-string))
       => (:result "* one"
                   "** two"
                   "** three"
@@ -5662,16 +5658,16 @@
       nil
       (:buffer "- [ ] one"
                "- [X] two")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plain-list-set-type 'ordered)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plain-list-set-type 'ordered)
+        (org-ml-to-trimmed-string))
       => (:result "1. [ ] one"
                   "2. [X] two")
       (:buffer "1. [ ] one"
                "2. [X] two")
-      (->> (org-ml-parse-this-element)
-           (org-ml-plain-list-set-type 'unordered)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-plain-list-set-type 'unordered)
+        (org-ml-to-trimmed-string))
       => (:result "- [ ] one"
                   "- [X] two"))
 
@@ -5682,20 +5678,20 @@
                "  - three"
                "- four")
       (:comment "It makes no sense to indent the first item")
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-indent-item 0)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-indent-item 0)
+        (org-ml-to-trimmed-string))
       !!> error
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-indent-item 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-indent-item 1)
+        (org-ml-to-trimmed-string))
       => (:result "- one"
                   "  - two"
                   "  - three"
                   "- four")
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-indent-item 2)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-indent-item 2)
+        (org-ml-to-trimmed-string))
       => (:result "- one"
                   "- two"
                   "  - three"
@@ -5707,9 +5703,9 @@
                "- two"
                "  - three"
                "- four")
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-indent-item-tree 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-indent-item-tree 1)
+        (org-ml-to-trimmed-string))
       => (:result "- one"
                   "  - two"
                   "    - three"
@@ -5723,27 +5719,27 @@
                "  - three"
                "  - three"
                "- four")
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-outdent-item 1 0)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-item 1 0)
+        (org-ml-to-trimmed-string))
       => (:result "- one"
                   "- two"
                   "- three"
                   "  - three"
                   "  - three"
                   "- four")
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-outdent-item 1 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-item 1 1)
+        (org-ml-to-trimmed-string))
       => (:result "- one"
                   "- two"
                   "  - three"
                   "- three"
                   "  - three"
                   "- four")
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-outdent-item 2 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-item 2 1)
+        (org-ml-to-trimmed-string))
       => (:result "- one"
                   "- two"
                   "  - three"
@@ -5759,18 +5755,18 @@
                "  - three"
                "  - three"
                "- four")
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-outdent-all-items 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-all-items 1)
+        (org-ml-to-trimmed-string))
       => (:result "- one"
                   "- two"
                   "- three"
                   "- three"
                   "- three"
                   "- four")
-      (->> (org-ml-parse-element-at 1)
-           (org-ml-plain-list-outdent-all-items 2)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-all-items 2)
+        (org-ml-to-trimmed-string))
       => (:result "- one"
                   "- two"
                   "  - three"
@@ -5814,21 +5810,21 @@
       (:buffer "| a | b |"
                "|---+---|"
                "| c | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-delete-column 0)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-delete-column 0)
+        (org-ml-to-trimmed-string))
       => (:result "| b |"
                   "|---|"
                   "| d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-delete-column 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-delete-column 1)
+        (org-ml-to-trimmed-string))
       => (:result "| a |"
                   "|---|"
                   "| c |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-delete-column -1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-delete-column -1)
+        (org-ml-to-trimmed-string))
       => (:result "| a |"
                   "|---|"
                   "| c |"))
@@ -5838,19 +5834,19 @@
       (:buffer "| a | b |"
                "|---+---|"
                "| c | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-delete-row 0)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-delete-row 0)
+        (org-ml-to-trimmed-string))
       => (:result "|---+---|"
                   "| c | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-delete-row 1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-delete-row 1)
+        (org-ml-to-trimmed-string))
       => (:result "| a | b |"
                   "| c | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-delete-row -1)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-delete-row -1)
+        (org-ml-to-trimmed-string))
       => (:result "| a | b |"
                   "|---+---|"))
 
@@ -5859,15 +5855,15 @@
       (:buffer "| a | b |"
                "|---+---|"
                "| c | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-insert-column! 1 '("x" "y"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-insert-column! 1 '("x" "y"))
+        (org-ml-to-trimmed-string))
       => (:result "| a | x | b |"
                   "|---+---+---|"
                   "| c | y | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-insert-column! -1 '("x" "y"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-insert-column! -1 '("x" "y"))
+        (org-ml-to-trimmed-string))
       => (:result "| a | b | x |"
                   "|---+---+---|"
                   "| c | d | y |"))
@@ -5877,23 +5873,23 @@
       (:buffer "| a | b |"
                "|---+---|"
                "| c | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-insert-row! 1 '("x" "y"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-insert-row! 1 '("x" "y"))
+        (org-ml-to-trimmed-string))
       => (:result "| a | b |"
                   "| x | y |"
                   "|---+---|"
                   "| c | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-insert-row! 2 '("x" "y"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-insert-row! 2 '("x" "y"))
+        (org-ml-to-trimmed-string))
       => (:result "| a | b |"
                   "|---+---|"
                   "| x | y |"
                   "| c | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-insert-row! -1 '("x" "y"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-insert-row! -1 '("x" "y"))
+        (org-ml-to-trimmed-string))
       => (:result "| a | b |"
                   "|---+---|"
                   "| c | d |"
@@ -5904,21 +5900,21 @@
       (:buffer "| 1 | 2 |"
                "|---+---|"
                "| a | b |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-replace-cell! 0 0 "2")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-replace-cell! 0 0 "2")
+        (org-ml-to-trimmed-string))
       => (:result "| 2 | 2 |"
                   "|---+---|"
                   "| a | b |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-replace-cell! 0 0 nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-replace-cell! 0 0 nil)
+        (org-ml-to-trimmed-string))
       => (:result "|   | 2 |"
                   "|---+---|"
                   "| a | b |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-replace-cell! -1 -1 "B")
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-replace-cell! -1 -1 "B")
+        (org-ml-to-trimmed-string))
       => (:result "| 1 | 2 |"
                   "|---+---|"
                   "| a | B |"))
@@ -5928,21 +5924,21 @@
       (:buffer "| a | b |"
                "|---+---|"
                "| c | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-replace-column! 0 '("A" "B"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-replace-column! 0 '("A" "B"))
+        (org-ml-to-trimmed-string))
       => (:result "| A | b |"
                   "|---+---|"
                   "| B | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-replace-column! 0 nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-replace-column! 0 nil)
+        (org-ml-to-trimmed-string))
       => (:result "|   | b |"
                   "|---+---|"
                   "|   | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-replace-column! -1 '("A" "B"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-replace-column! -1 '("A" "B"))
+        (org-ml-to-trimmed-string))
       => (:result "| a | A |"
                   "|---+---|"
                   "| c | B |"))
@@ -5952,21 +5948,21 @@
       (:buffer "| a | b |"
                "|---+---|"
                "| c | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-replace-row! 0 '("A" "B"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-replace-row! 0 '("A" "B"))
+        (org-ml-to-trimmed-string))
       => (:result "| A | B |"
                   "|---+---|"
                   "| c | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-replace-row! 0 nil)
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-replace-row! 0 nil)
+        (org-ml-to-trimmed-string))
       => (:result "|   |   |"
                   "|---+---|"
                   "| c | d |")
-      (->> (org-ml-parse-this-element)
-           (org-ml-table-replace-row! -1 '("A" "B"))
-           (org-ml-to-trimmed-string))
+      (org-ml->> (org-ml-parse-this-element)
+        (org-ml-table-replace-row! -1 '("A" "B"))
+        (org-ml-to-trimmed-string))
       => (:result "| a | b |"
                   "|---+---|"
                   "| A | B |"))))
@@ -6274,19 +6270,19 @@
              "** headline three"
              "** headline four")
     (:comment "Selectively delete headlines")
-    (->> (org-ml-parse-this-subtree)
-         (org-ml-match-delete '(headline))
-         (org-ml-to-trimmed-string))
+    (org-ml->> (org-ml-parse-this-subtree)
+      (org-ml-match-delete '(headline))
+      (org-ml-to-trimmed-string))
     => "* headline one"
-    (->> (org-ml-parse-this-subtree)
-         (org-ml-match-delete '(:first headline))
-         (org-ml-to-trimmed-string))
+    (org-ml->> (org-ml-parse-this-subtree)
+      (org-ml-match-delete '(:first headline))
+      (org-ml-to-trimmed-string))
     => (:result "* headline one"
                 "** headline three"
                 "** headline four")
-    (->> (org-ml-parse-this-subtree)
-         (org-ml-match-delete '(:last headline))
-         (org-ml-to-trimmed-string))
+    (org-ml->> (org-ml-parse-this-subtree)
+      (org-ml-match-delete '(:last headline))
+      (org-ml-to-trimmed-string))
     => (:result "* headline one"
                 "** headline two"
                 "** headline three"))
@@ -6309,26 +6305,26 @@
              "** headline four")
 
     (:comment "Selectively mark headlines as DONE")
-    (->> (org-ml-parse-this-subtree)
-         (org-ml-match-map '(headline)
-           (lambda (it) (org-ml-set-property :todo-keyword "DONE" it)))
-         (org-ml-to-trimmed-string))
+    (org-ml->> (org-ml-parse-this-subtree)
+      (org-ml-match-map '(headline)
+        (lambda (it) (org-ml-set-property :todo-keyword "DONE" it)))
+      (org-ml-to-trimmed-string))
     => (:result "* headline one"
                 "** DONE headline two"
                 "** DONE headline three"
                 "** DONE headline four")
-    (->> (org-ml-parse-this-subtree)
-         (org-ml-match-map* '(:first headline)
-           (org-ml-set-property :todo-keyword "DONE" it))
-         (org-ml-to-trimmed-string))
+    (org-ml->> (org-ml-parse-this-subtree)
+      (org-ml-match-map* '(:first headline)
+        (org-ml-set-property :todo-keyword "DONE" it))
+      (org-ml-to-trimmed-string))
     => (:result "* headline one"
                 "** DONE headline two"
                 "** headline three"
                 "** headline four")
-    (->> (org-ml-parse-this-subtree)
-         (org-ml-match-map '(:last headline)
-           (-partial #'org-ml-set-property :todo-keyword "DONE"))
-         (org-ml-to-trimmed-string))
+    (org-ml->> (org-ml-parse-this-subtree)
+      (org-ml-match-map '(:last headline)
+        (-partial #'org-ml-set-property :todo-keyword "DONE"))
+      (org-ml-to-trimmed-string))
     => (:result "* headline one"
                 "** TODO headline two"
                 "** headline three"
@@ -6357,10 +6353,10 @@
 
     (:buffer "* one"
              "** two")
-    (->> (org-ml-parse-this-subtree)
-         (org-ml-match-mapcat* '(:first headline)
-           (list (org-ml-build-headline! :title-text "1.5" :level 2) it))
-         (org-ml-to-trimmed-string))
+    (org-ml->> (org-ml-parse-this-subtree)
+      (org-ml-match-mapcat* '(:first headline)
+        (list (org-ml-build-headline! :title-text "1.5" :level 2) it))
+      (org-ml-to-trimmed-string))
     => (:result "* one"
                 "** 1.5"
                 "** two"))
@@ -6368,10 +6364,10 @@
   (defexamples-content org-ml-match-replace
     nil
     (:buffer "*1* 2 *3* 4 *5* 6 *7* 8 *9* 10")
-    (->> (org-ml-parse-this-element)
-         (org-ml-match-replace '(:any * bold)
-           (org-ml-build-bold :post-blank 1 "0"))
-         (org-ml-to-trimmed-string))
+    (org-ml->> (org-ml-parse-this-element)
+      (org-ml-match-replace '(:any * bold)
+        (org-ml-build-bold :post-blank 1 "0"))
+      (org-ml-to-trimmed-string))
     => "*0* 2 *0* 4 *0* 6 *0* 8 *0* 10")
 
   (defexamples-content org-ml-match-insert-before
@@ -6379,10 +6375,10 @@
     (:buffer "* one"
              "** two"
              "** three")
-    (->> (org-ml-parse-this-subtree)
-         (org-ml-match-insert-before '(headline)
-           (org-ml-build-headline! :title-text "new" :level 2))
-         (org-ml-to-trimmed-string))
+    (org-ml->> (org-ml-parse-this-subtree)
+      (org-ml-match-insert-before '(headline)
+        (org-ml-build-headline! :title-text "new" :level 2))
+      (org-ml-to-trimmed-string))
     => (:result "* one"
                 "** new"
                 "** two"
@@ -6394,10 +6390,10 @@
     (:buffer "* one"
              "** two"
              "** three")
-    (->> (org-ml-parse-this-subtree)
-         (org-ml-match-insert-after '(headline)
-           (org-ml-build-headline! :title-text "new" :level 2))
-         (org-ml-to-trimmed-string))
+    (org-ml->> (org-ml-parse-this-subtree)
+      (org-ml-match-insert-after '(headline)
+        (org-ml-build-headline! :title-text "new" :level 2))
+      (org-ml-to-trimmed-string))
     => (:result "* one"
                 "** two"
                 "** new"
@@ -6409,20 +6405,20 @@
     (:buffer "* one"
              "** two"
              "** three")
-    (->> (org-ml-parse-this-subtree)
-         (org-ml-match-insert-within '(headline) 0
-           (org-ml-build-headline! :title-text "new" :level 3))
-         (org-ml-to-trimmed-string))
+    (org-ml->> (org-ml-parse-this-subtree)
+      (org-ml-match-insert-within '(headline) 0
+        (org-ml-build-headline! :title-text "new" :level 3))
+      (org-ml-to-trimmed-string))
     => (:result "* one"
                 "** two"
                 "*** new"
                 "** three"
                 "*** new")
     (:comment "The nil pattern denotes top-level element")
-    (->> (org-ml-parse-this-subtree)
-         (org-ml-match-insert-within nil 1
-           (org-ml-build-headline! :title-text "new" :level 2))
-         (org-ml-to-trimmed-string))
+    (org-ml->> (org-ml-parse-this-subtree)
+      (org-ml-match-insert-within nil 1
+        (org-ml-build-headline! :title-text "new" :level 2))
+      (org-ml-to-trimmed-string))
     => (:result "* one"
                 "** two"
                 "** new"
@@ -6436,9 +6432,9 @@
     (let ((L (list
               (org-ml-build-headline! :title-text "new0" :level 2)
               (org-ml-build-headline! :title-text "new1" :level 2))))
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-match-splice '(0) L)
-           (org-ml-to-trimmed-string)))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-match-splice '(0) L)
+        (org-ml-to-trimmed-string)))
     => (:result "* one"
                 "** new0"
                 "** new1"
@@ -6452,9 +6448,9 @@
     (let ((L (list
               (org-ml-build-headline! :title-text "new0" :level 2)
               (org-ml-build-headline! :title-text "new1" :level 2))))
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-match-splice-before '(0) L)
-           (org-ml-to-trimmed-string)))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-match-splice-before '(0) L)
+        (org-ml-to-trimmed-string)))
     => (:result "* one"
                 "** new0"
                 "** new1"
@@ -6469,9 +6465,9 @@
     (let ((L (list
               (org-ml-build-headline! :title-text "new0" :level 2)
               (org-ml-build-headline! :title-text "new1" :level 2))))
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-match-splice-after '(0) L)
-           (org-ml-to-trimmed-string)))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-match-splice-after '(0) L)
+        (org-ml-to-trimmed-string)))
     => (:result "* one"
                 "** two"
                 "** new0"
@@ -6487,9 +6483,9 @@
     (let ((L (list
               (org-ml-build-headline! :title-text "new0" :level 3)
               (org-ml-build-headline! :title-text "new1" :level 3))))
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-match-splice-within '(headline) 0 L)
-           (org-ml-to-trimmed-string)))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-match-splice-within '(headline) 0 L)
+        (org-ml-to-trimmed-string)))
     => (:result "* one"
                 "** two"
                 "*** new0"
@@ -6501,9 +6497,9 @@
     (let ((L (list
               (org-ml-build-headline! :title-text "new0" :level 2)
               (org-ml-build-headline! :title-text "new1" :level 2))))
-      (->> (org-ml-parse-this-subtree)
-           (org-ml-match-splice-within nil 1 L)
-           (org-ml-to-trimmed-string)))
+      (org-ml->> (org-ml-parse-this-subtree)
+        (org-ml-match-splice-within nil 1 L)
+        (org-ml-to-trimmed-string)))
     => (:result "* one"
                 "** two"
                 "** new0"
@@ -6575,19 +6571,19 @@
       nil
       
       (:buffer "* TODO win grammy")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-update
-             (lambda (hl) (org-ml-set-property :todo-keyword "DONE" hl))))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-update
+          (lambda (hl) (org-ml-set-property :todo-keyword "DONE" hl))))
       $> "* DONE win grammy"
 
       (:buffer "* win grammy [0/0]"
                "- [ ] write punk song"
                "- [ ] get new vocalist"
                "- [ ] sell 2 singles")
-      (->> (org-ml-parse-this-headline)
-           (org-ml-update*
-             (->> (org-ml-match-map '(:any * item) #'org-ml-item-toggle-checkbox it)
-                  (org-ml-headline-update-item-statistics))))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-update*
+          (->> (org-ml-match-map '(:any * item) #'org-ml-item-toggle-checkbox it)
+               (org-ml-headline-update-item-statistics))))
       $> (:result "* win grammy [3/3]"
                   "- [X] write punk song"
                   "- [X] get new vocalist"
@@ -6743,7 +6739,7 @@
                "** DONE _one"
                "** DONE _two")
       (org-ml-do-subtrees* 'all
-        (org-ml-headline-update-todo-statistics))
+                           (org-ml-headline-update-todo-statistics))
       $> (:buffer "* one [2/2]"
                   "** DONE _one"
                   "** DONE _two"
