@@ -1385,27 +1385,40 @@ bounds."
 
 ;; alist functions
 
-;; TODO this might be faster as a macro that precalcs the plist for the props
-;; to look up
-(defun org-ml--get-property-attribute (attribute type prop)
-  "Return ATTRIBUTE for PROP of node TYPE.
-Signal an error if PROP in TYPE does not have ATTRIBUTE."
-  ;; post-blank is special, since this makes sense to expose as a
-  ;; modifiable property yet it is in the standard-properties array; all
-  ;; the other properties in this array are not modifiable (ie we shouldn't
-  ;; change :begin and :end or set them upon node creation)
-  (if (eq prop :post-blank)
-      (cond
-       ((eq attribute :shift) #'org-ml--shift-non-neg-integer)
-       ((eq attribute :pred) #'org-ml--is-non-neg-integer))
-    (-if-let (type-list (alist-get type org-ml--property-alist))
-        (cond
-         ((assq prop type-list)
-          (-when-let (plist (alist-get prop type-list))
-            (plist-get plist attribute)))
-         (t
-          (org-ml--arg-error "Type '%s' does not have property '%s'" type prop)))
-      (org-ml--arg-error "Tried to query property '%s' for non-existent type '%s'" prop type))))
+(defmacro org-ml--get-property-attribute (attr type prop)
+  "Return ATTR for PROP of node TYPE.
+Signal an error if PROP in TYPE does not have ATTR."
+  (unless (memq attr '(:encode :decode :pred :cis :type-desc :toggle :shift :string-list :plist))
+    (error "Invalid attribute %s" attr))
+  (let* ((type-prop-alist
+          (--map (cons (car it)
+                       (--map (cons (car it) (plist-get (cdr it) attr))
+                              (cdr it)))
+                 org-ml--property-alist))
+         (default-form
+          `(-if-let (prop-alist (alist-get it-type ',type-prop-alist))
+               (-if-let (prop-cell (assq it-prop prop-alist))
+                   (cdr prop-cell)
+                 (org-ml--arg-error "Type '%s' does not have property '%s'" it-type it-prop))
+             (org-ml--arg-error "Tried to query '%s' for non-existent '%s'" it-prop it-type)))
+         ;; post-blank is special, since this makes sense to expose as a
+         ;; modifiable property yet it is in the standard-properties array; all
+         ;; the other properties in this array are not modifiable (ie we
+         ;; shouldn't change :begin and :end or set them upon node creation)
+         (inner-form
+          (cond
+           ((eq attr :shift)
+            `(if (eq it-prop :post-blank) #'org-ml--shift-non-neg-integer
+               ,default-form))
+           ((eq attr :pred)
+            `(if (eq it-prop :post-blank) #'org-ml--is-non-neg-integer
+               ,default-form))
+           (t
+            `(unless (eq it-prop :post-blank)
+               ,default-form)))))
+    `(let ((it-prop ,prop)
+           (it-type ,type))
+       ,inner-form)))
 
 (defun org-ml--get-property-encoder (type prop)
   "Return the encoder function for PROP of node TYPE."
