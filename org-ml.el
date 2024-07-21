@@ -573,7 +573,7 @@ This is not meant for plain-text."
                     (--map `(org-element-put-property it-node ,(car it) ,(cadr it))))))
     `(let ((it-node ,node))
        ,@forms
-       ,node)))
+       it-node)))
 
 (defun org-ml--set-property-nocheck-nil (prop node)
   "Set PROP to nil in NODE."
