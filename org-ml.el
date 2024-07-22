@@ -2354,7 +2354,7 @@ and child nodes)."
 Additionally set all child headline nodes to be (+ 1 level) for
 first layer, (+ 2 level) for second, and so on."
   ;; NOTE full setter needed since this is called from the headline builder
-  (->> (org-ml-set-property :level level headline)
+  (->> (org-element-put-property-2 :level level headline)
        (org-ml-headline-map-subheadlines*
          (org-ml--map* (org-ml--headline-set-level (1+ level) it) it))))
 
@@ -2500,7 +2500,7 @@ throw an error."
             (-let* ((i (org-ml--get-descendent '(0) d))
                     ((first . rest) (->> (org-ml--get-descendent '(0) i)
                                        (org-ml-get-children)))
-                    (bullet (org-ml--get-property-nocheck :bullet i)))
+                    (bullet (org-element-property-raw :bullet i)))
               (if (org-ml--is-type 'plain-text first)
                   `(,(concat bullet first) ,@rest)
                 `(,bullet ,first ,@rest)))
@@ -3351,7 +3351,7 @@ the issue."
           ;; TODO error here?
           (_ caption))))
     (if (and (org-ml--is-any-type org-ml--element-nodes-with-affiliated node)
-             (org-ml--get-property-nocheck :caption node))
+             (org-element-property-raw :caption node))
         (org-ml--map-property-nocheck* :caption
           (-map #'remove-from-caption it)
           node)
@@ -3409,7 +3409,7 @@ Any other keys will trigger an error."
 
 (defun org-ml-statistics-cookie-is-complete (statistics-cookie)
   "Return t is STATISTICS-COOKIE node is complete."
-  (let ((val (org-ml--get-property-nocheck :value statistics-cookie)))
+  (let ((val (org-element-property-raw :value statistics-cookie)))
     (or (-some->>
          (s-match "\\([[:digit:]]+\\)%" val)
          (nth 1)
@@ -3517,7 +3517,7 @@ will increase the hour property by 1 and the minute property by 30."
   ;; if not ranged, simply need to shift start and end (which are the same);
   ;; otherwise need to shift both, set both, and update the timerange depending
   ;; on if we straddle a day boundary after the shift
-  (let ((rt (org-ml--get-property-nocheck :range-type timestamp))
+  (let ((rt (org-element-property-raw :range-type timestamp))
         (timestamp* (org-ml-copy timestamp)))
     (if (not rt)
         (let ((t1 (->> (org-ml--timestamp-get-start-timelist timestamp)
@@ -3549,7 +3549,7 @@ behavior is not desired, use `org-ml-timestamp-shift'."
   (let* ((t1 (->> (org-ml--timestamp-get-start-timelist timestamp)
                   (org-ml--timelist-shift n unit)))
          (t2 (org-ml--timestamp-get-end-timelist timestamp))
-         (rt (->> (org-ml--get-property-nocheck :range-type timestamp)
+         (rt (->> (org-element-property-raw :range-type timestamp)
                   (org-ml--timelists-get-range-type t1 t2))))
     (->> (org-ml-copy timestamp)
          (org-ml--timestamp-set-start-timelist t1)
@@ -3566,7 +3566,7 @@ behavior is not desired, use `org-ml-timestamp-shift'."
   (let* ((t1 (org-ml--timestamp-get-start-timelist timestamp))
          (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
                   (org-ml--timelist-shift n unit)))
-         (rt (->> (org-ml--get-property-nocheck :range-type timestamp)
+         (rt (->> (org-element-property-raw :range-type timestamp)
                   (org-ml--timelists-get-range-type t1 t2))))
     (->> (org-ml-copy timestamp)
          (org-ml--timestamp-set-end-timelist t2)
@@ -3897,19 +3897,19 @@ behavior is not desired, use `org-ml-timestamp-diary-shift'."
 
 (defun org-ml-headline-get-statistics-cookie (headline)
   "Return the statistics cookie node from HEADLINE if it exists."
-  (->> (org-ml--get-property-nocheck :title headline)
+  (->> (org-element-property :title headline)
        (-last-item)
        (org-ml--filter-type 'statistics-cookie)))
 
 (defun org-ml-headline-is-done (headline)
   "Return t if HEADLINE node has a done todo-keyword."
-  (-> (org-ml--get-property-nocheck :todo-keyword headline)
+  (-> (org-element-property :todo-keyword headline)
       (member org-done-keywords)
       (and t)))
 
 (defun org-ml-headline-has-tag (tag headline)
   "Return t if HEADLINE node is tagged with TAG."
-  (if (member tag (org-ml--get-property-nocheck :tags headline)) t))
+  (if (member tag (org-element-property :tags headline)) t))
 
 (defun org-ml-headline-set-title! (title-text stats-cookie-value headline)
   "Return HEADLINE node with new title.
@@ -3933,9 +3933,10 @@ and STATS-COOKIE-VALUE is a list described in
 This only affects item nodes with checkboxes in the `on' or `off'
 states; return ITEM node unchanged if the checkbox property is `trans'
 or nil."
-  (pcase (org-ml-get-property :checkbox item)
-    ('on (org-ml-set-property :checkbox 'off item))
-    ('off (org-ml-set-property :checkbox 'on item))
+  ;; TODO check type here
+  (pcase (org-element-property-raw :checkbox item)
+    ('on (org-element-put-property-2 :checkbox 'off (org-ml-copy item)))
+    ('off (org-element-put-property-2 :checkbox 'on (org-ml-copy item)))
     ((or `trans `nil) item)
     (_ (error "This should not happen"))))
 
@@ -3948,9 +3949,11 @@ PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
 is the same as that described in `org-ml-build-planning!'."
   (unless (memq prop '(:closed :deadline :scheduled))
     (org-ml--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
-  (let* ((active (if (eq prop :closed) nil t))
+  (let* ((active (not (eq prop :closed)))
          (ts (org-ml--planning-list-to-timestamp active planning-list)))
-    (org-ml-set-property prop ts planning)))
+    ;; ASSUME any timestamp given above will be valid for the given property
+    ;; TODO need to check that planning is actually a planning node now
+    (org-element-put-property-2 prop ts (org-ml-copy planning))))
 
 ;;; PUBLIC BRANCH/CHILD FUNCTIONS
 
@@ -5061,7 +5064,7 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
            (e (error "This shouldn't happen: %s" e))))))
     (let ((pb (org-ml-logbook-get-post-blank logbook)))
       (->> (to-nodes config logbook)
-           (org-ml--map-last* (org-ml-set-property :post-blank pb it))))))
+           (org-ml--map-last* (org-element-put-property-2 :post-blank pb it))))))
 
 (defun org-ml--supercontents-to-nodes (config supercontents)
   "Return SUPERCONTENTS as a list of nodes.
@@ -5123,12 +5126,12 @@ and the structure of the SUPERCONTENTS list."
   (cl-flet
       ((set-blank
         (new-logbook? config headline prop node)
-        (if new-logbook? (org-ml-set-property prop 0 node)
+        (if new-logbook? (org-element-put-property-2 prop 0 node)
           (-if-let (pb (-some->> headline
                          (org-ml-headline-get-supercontents config)
                          (org-ml-supercontents-get-logbook)
                          (org-ml-logbook-get-post-blank)))
-              (org-ml-set-property prop pb node)
+              (org-element-put-property-2 prop pb node)
             node))))
     (-let* (((first . (second . _)) (org-ml-headline-get-section headline))
             (t1 (org-ml-get-type first))
@@ -5275,8 +5278,8 @@ error."
       (if (not (org-ml-clock-is-running first)) it
         (let* ((time (org-ml-unixtime-to-datetime unixtime))
                (closed (->> first
+                            ;; NOTE making copies here is necessary
                             (org-ml-map-property* :value
-                              ;; TODO this will unecessarily copy the timestamp
                               (org-ml-timestamp-set-end-time time it))))
                (note* (-some->> note
                         (org-ml-build-paragraph)
