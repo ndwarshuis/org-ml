@@ -5349,13 +5349,13 @@ TYPE is one of the symbols `unordered' or `ordered'."
   (cond
    ((eq type 'unordered)
     (org-ml--map-children-nocheck*
-      (org-ml--map* (org-ml-set-property :bullet '- (org-ml-copy it)) it)
+      (org-ml--map* (org-ml-set-property :bullet '- it) it)
       plain-list))
    ((eq type 'ordered)
     ;; NOTE the org-interpreter seems to use the correct, ordered numbers if any
     ;; number is set here. This behavior may not be reliable.
     (org-ml--map-children-nocheck*
-      (org-ml--map* (org-ml-set-property :bullet 1 (org-ml-copy it)) it)
+      (org-ml--map* (org-ml-set-property :bullet 1 it) it)
       plain-list))
    (t (org-ml--arg-error "Invalid type: %s" type))))
 
