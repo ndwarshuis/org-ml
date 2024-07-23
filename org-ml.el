@@ -4128,19 +4128,23 @@ first paragraph and returns modified secondary-string."
 (defun org-ml-headline-set-planning (planning headline)
   "Return HEADLINE node with planning components set to PLANNING node."
   (-let* ((children (org-ml-headline-get-section headline))
-          (first-type (org-ml-get-type (car children))))
+          (first-child (car children))
+          (first-is-planning (eq (org-ml-get-type first-child) 'planning)))
     (cond
-     ((and planning (eq first-type 'planning))
+     ((and planning first-is-planning)
       (org-ml-headline-set-section (cons planning (cdr children)) headline))
      (planning
-      (let ((pb (org-element-property-raw :pre-blank headline)))
-        (--> (org-ml--map-property-raw* :post-blank (+ pb it) planning)
-             (org-ml-headline-set-section (cons it children) headline)
-             (org-element-put-property-2 :pre-blank 0 it))))
-     ((eq first-type 'planning)
-      (--> (org-element-post-blank (car children))
-           (org-element-put-property-2 :pre-blank it headline)
-           (org-ml-headline-set-section (cdr children) it)))
+      (let* ((pb (org-element-property-raw :pre-blank headline))
+             (sec (-> (org-ml--map-property-raw* :post-blank (+ pb it) planning)
+                      (cons children))))
+        (->> (org-ml-copy headline)
+             (org-ml-headline-set-section sec)
+             (org-element-put-property-2 :pre-blank 0))))
+     (first-is-planning
+      (let ((pb (org-element-post-blank first-child)))
+        (->> (org-ml-copy headline)
+             (org-element-put-property-2 :pre-blank pb)
+             (org-ml-headline-set-section (cdr children)))))
      (t
       headline))))
 
@@ -4162,6 +4166,7 @@ modified planning node."
       (when (org-ml--is-type 'property-drawer (cadr it)) (cadr it)))
     (org-ml-get-children it)))
 
+;; TODO why not just use string . string cells for this?
 (defun org-ml-headline-set-node-properties (node-properties headline)
   "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
 NODE-PROPERTIES is a list of node-property nodes."
@@ -4175,26 +4180,31 @@ NODE-PROPERTIES is a list of node-property nodes."
       (--> (org-ml-set-children node-properties second)
            (org-ml-headline-set-section `(,first ,it ,@r2) headline)))
      ((and node-properties (eq t1 'property-drawer))
-      (--> (org-ml-set-children node-properties first)
-           (org-ml-headline-set-section (cons it r1) headline)))
+      (-> (org-ml-set-children node-properties first)
+          (cons r1)
+          (org-ml-headline-set-section headline)))
      ((and node-properties (eq t1 'planning))
       (--> (org-element-post-blank first)
            (apply #'org-ml-build-property-drawer :post-blank it node-properties)
            `(,(org-element-put-property-2 :post-blank 0 first) ,it ,@r1)
            (org-ml-headline-set-section it headline)))
      (node-properties
-      (--> (org-element-property-raw :pre-blank headline)
-           (apply #'org-ml-build-property-drawer :post-blank it node-properties)
-           (org-ml-headline-set-section (cons it children) headline)
-           (org-element-put-property-2 :pre-blank 0 it)))
+      (let* ((pb (org-element-property-raw :pre-blank headline))
+             (drwr (apply #'org-ml-build-property-drawer
+                          :post-blank pb node-properties)))
+        (->> (org-ml-copy headline)
+             (org-element-put-property-2 :pre-blank 0)
+             (org-ml-headline-set-section (cons drwr children)))))
      ((eq t2 'property-drawer)
       (let ((pb (org-element-post-blank second)))
-        (--> (org-ml--map-property-raw* :post-blank (+ pb it) first)
-             (org-ml-headline-set-section (cons it r2) headline))))
+        (-> (org-ml--map-property-raw* :post-blank (+ pb it) first)
+            (cons r2)
+            (org-ml-headline-set-section headline))))
      ((eq t1 'property-drawer)
       (let ((pb (org-element-post-blank first)))
-        (--> (org-ml--map-property-raw* :pre-blank (+ pb it) headline)
-             (org-ml-headline-set-section r1 it))))
+        (->> (org-ml-copy headline)
+             (org-ml--map-property-raw* :pre-blank (+ pb it))
+             (org-ml-headline-set-section r1))))
      (t
       headline))))
 

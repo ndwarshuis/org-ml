@@ -914,7 +914,10 @@ HEADER is the it-header."
       (org-ml-item-map-paragraph* (-map #'upcase it) it))
 
     (org-ml--test-purity "headline setters"
-      (org-ml-build-headline! :title-text "really impressive title")
+      (org-ml-build-headline!
+       :title-text "really impressive title"
+       :pre-blank 1
+       :section-children (list (org-ml-build-paragraph! "something useful")))
       (org-ml-headline-set-section (list (org-ml-build-paragraph! "x-section")) it)
       (org-ml-headline-map-section*
         (cons (org-ml-build-planning! :closed '(2019 1 1)) it)
