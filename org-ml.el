@@ -4272,7 +4272,7 @@ a modified node-property value."
 ;;   idea). Note this also implies that any log item must have a timestamp
 ;;   regardless of `org-log-note-headings', which makes sense for a log note to
 ;;   have...
-;; - any clock not are defined as any item that is not a log item but after a
+;; - any clock notes are defined as any item that is not a log item but after a
 ;;   clock
 ;;
 ;; The first node that breaks any of the above conditions will be the dividing
@@ -4437,7 +4437,7 @@ logbook."
 ;; `org-clock-into-drawer', and `org-log-note-clock-out' respectively.
 
 ;; The options :log/clock-into-drawer control the "drawer configuration". Eight
-;; possible configurations are possible:
+;; configurations are possible:
 ;; 
 ;; | log    | clock   | result                                                                  |
 ;; |----------+----------+----------------------------------------------------------------------|
