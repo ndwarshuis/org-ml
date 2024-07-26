@@ -295,6 +295,7 @@ FUN is a unary function that returns a modified value."
 
 (defun org-ml--is-plist (x)
   "Return t if X is a plist."
+  (declare (pure t) (side-effect-free t))
   (when (listp x)
     (let ((is-plist t))
       (while (and is-plist (cdr x))
@@ -432,44 +433,45 @@ STRING and ARGS are analogous to `error'."
 
 (defun org-ml--is-any-type (types node)
   "Return t if the type of NODE is in TYPES (a list of symbols)."
-  (declare (pure t))
+  (declare (pure t) (side-effect-free t))
   (if (memq (org-ml-get-type node) types) t))
 
 (defun org-ml--is-node (list)
   "Return t if LIST is a node."
-  (declare (pure t))
+  (declare (pure t) (side-effect-free t))
   (org-ml--is-any-type org-ml-nodes list))
 
 (defun org-ml--is-type (type node)
   "Return t if the type of NODE is TYPE (a symbol)."
-  (declare (pure t))
+  (declare (pure t) (side-effect-free t))
   (eq (org-ml-get-type node) type))
 
 (defun org-ml--is-table-row (node)
   "Return t if NODE is a standard table-row node."
-  (declare (pure t))
+  (declare (pure t) (side-effect-free t))
   (and (org-ml--is-type 'table-row node)
        (org-ml--property-is-eq :type 'standard node)))
 
 (defun org-ml--filter-type (type node)
   "Return NODE if it is TYPE or nil otherwise."
-  (declare (pure t))
+  (declare (pure t) (side-effect-free t))
   (and (org-ml--is-type type node) node))
 
 (defun org-ml--filter-types (types node)
   "Return NODE if it is one of TYPES or nil otherwise."
-  (declare (pure t))
+  (declare (pure t) (side-effect-free t))
   (and (org-ml-is-any-type types node) node))
 
 (defun org-ml--is-secondary-string (list)
   "Return t if LIST is a secondary string."
-  (declare (pure t))
+  (declare (pure t) (side-effect-free t))
   (--none? (org-ml--is-any-type org-ml-elements it) list))
 
 ;;; MISC HELPER FUNCTIONS
 
 (defun org-ml--get-head (node)
   "Return the type and properties cells of NODE."
+  (declare (pure t) (side-effect-free t))
   (if (stringp node) node (list (car node) (cadr node))))
 
 (defun org-ml--from-string (string)
@@ -478,11 +480,13 @@ STRING and ARGS are analogous to `error'."
     (insert string)
     (-> (org-ml-parse-this-buffer) (org-ml-get-children) (car))))
 
-(defun org-ml-copy (node &optional keep)
+(define-inline org-ml-copy (node &optional keep)
   "Copy NODE if running in pure mode.
 
 KEEP is passed to `org-element-copy'."
-  (if org-ml-use-impure node (org-element-copy node keep)))
+  (inline-letevals (node)
+    (inline-quote
+     (if org-ml-use-impure ,node (org-element-copy ,node ,keep)))))
 
 (defmacro org-ml-wrap-impure (&rest body)
   "Run BODY in impure mode."
