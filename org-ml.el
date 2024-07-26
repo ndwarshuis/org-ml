@@ -629,18 +629,6 @@ This is not meant for plain-text."
        ,@forms
        ,n)))
 
-(defun org-ml--set-property-nocheck-nil (prop node)
-  "Set PROP to nil in NODE."
-  (org-ml--set-property-nocheck prop nil node))
-
-(defun org-ml--set-properties-nocheck-nil (props node)
-  "Set all PROPS to new in NODE."
-  (-let (((prop . rest) props))
-    (while prop
-      (org-element-put-property node prop nil)
-      (-setq (prop . rest) rest))
-    node))
-
 (eval-when-compile
   (defmacro org-ml--map-property-nocheck* (prop form node)
     "Return NODE with FUN applied to the value in PROP.
