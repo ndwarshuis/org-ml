@@ -4437,24 +4437,25 @@ new list of clocks."
 ;; NOTE: this is a structure that the user may interact with, so some of these
 ;; functions are public
 
-(defun org-ml--supercontents-init-from-lb (logbook contents)
+(define-inline org-ml--supercontents-init-from-lb (logbook contents)
   "Create a supercontents alist.
 LOGBOOK is a logbook as given by `org-ml--logbook-init' and
 CONTENTS is a list of nodes corresponding to the headline
 contents (the stuff after the logbook)."
-  `((:logbook ,@logbook) (:contents ,@contents)))
+  (inline-quote (list (cons :logbook ,logbook) (cons :contents ,contents))))
 
-(defun org-ml--supercontents-init (items clocks unknown post-blank contents)
+(define-inline org-ml--supercontents-init (items clocks unknown post-blank contents)
   "Create a supercontents alist.
 ITEMS, CLOCKS, UNKNOWN, and POST-BLANK are lists corresponding to
 the arguments in `org-ml--logbook-init' and CONTENTS has the same
 meaning as `org-ml--supercontents-init-from-lb'."
-  (let ((lb (org-ml--logbook-init items clocks unknown post-blank)))
-    (org-ml--supercontents-init-from-lb lb contents)))
+  (inline-quote
+   (let ((lb (org-ml--logbook-init ,items ,clocks ,unknown ,post-blank)))
+     (org-ml--supercontents-init-from-lb lb ,contents))))
 
-(defun org-ml-supercontents-get-contents (supercontents)
+(define-inline org-ml-supercontents-get-contents (supercontents)
   "Return the :contents slot of SUPERCONTENTS."
-  (alist-get :contents supercontents))
+  (inline-quote (alist-get :contents ,supercontents)))
 
 (defun org-ml-supercontents-set-contents (contents supercontents)
   "Set the :contents slot of SUPERCONTENTS to CONTENTS."
@@ -4468,9 +4469,10 @@ new list of nodes."
   (--> (org-ml-supercontents-get-contents supercontents)
        (org-ml-supercontents-set-contents (funcall fun it) supercontents)))
 
-(defun org-ml-supercontents-get-logbook (supercontents)
+(define-inline org-ml-supercontents-get-logbook (supercontents)
   "Return the :logbook slot of SUPERCONTENTS."
-  (alist-get :logbook supercontents))
+  (inline-quote
+   (alist-get :logbook ,supercontents)))
 
 (defun org-ml-supercontents-set-logbook (logbook supercontents)
   "Set the :logbook slot of SUPERCONTENTS to LOGBOOK."
@@ -4564,13 +4566,15 @@ logbook."
   (-let (((&alist :drawers) scc))
     (plist-get drawers key)))
 
-(defun org-ml--scc-get-clock-notes (scc)
+(define-inline org-ml--scc-get-clock-notes (scc)
   "Return the :clock-notes slot from SCC."
-  (alist-get :clock-notes scc))
+  (inline-quote
+   (alist-get :clock-notes ,scc)))
 
-(defun org-ml--scc-get-log-item-fun (scc)
+(define-inline org-ml--scc-get-log-item-fun (scc)
   "Return the :is-log-item-fun slot from SCC."
-  (alist-get :is-log-item-fun scc))
+  (inline-quote
+   (alist-get :is-log-item-fun ,scc)))
 
 ;; logbook separation (nodes -> supercontents)
 
