@@ -4378,43 +4378,57 @@ a modified node-property value."
 
 ;; alist to store the separated nodes from a logbook
 
-(defun org-ml--logbook-init (items clocks unknown post-blank)
+(define-inline org-ml--logbook-init (items clocks unknown post-blank)
   "Create a new logbook alist.
 ITEMS, CLOCKS, and UNKNOWN correspond to a list of item nodes,
 clock notes (which may contain item nodes for notes) and other
 nodes. POST-BLANK corresponds to the number of extra newlines
 between the logbook and the contents."
-  `((:items ,@items)
-    (:clocks ,@clocks)
-    (:unknown ,@unknown)
-    (:post-blank . ,(or post-blank 0))))
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (list (cons :items ,items)
+         (cons :clocks ,clocks)
+         (cons :unknown ,unknown)
+         (cons :post-blank (or ,post-blank 0)))))
 
-(defun org-ml-logbook-get-items (logbook)
+(define-inline org-ml-logbook-get-items (logbook)
   "Return the :items slot from LOGBOOK."
-  (alist-get :items logbook))
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (alist-get :items ,logbook)))
 
-(defun org-ml-logbook-get-clocks (logbook)
+(define-inline org-ml-logbook-get-clocks (logbook)
   "Return the :clocks slot from LOGBOOK."
-  (alist-get :clocks logbook))
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (alist-get :clocks ,logbook)))
 
-(defun org-ml-logbook-get-post-blank (logbook)
+(define-inline org-ml-logbook-get-post-blank (logbook)
   "Return the :clocks slot from LOGBOOK."
-  (alist-get :post-blank logbook))
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (alist-get :post-blank ,logbook)))
 
-(defun org-ml-logbook-set-items (items logbook)
+(define-inline org-ml-logbook-set-items (items logbook)
   "Set the :items slot in LOGBOOK to ITEMS."
-  (-let (((&alist :clocks :unknown :post-blank) logbook))
-    (org-ml--logbook-init items clocks unknown post-blank)))
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (-let (((&alist :clocks :unknown :post-blank) ,logbook))
+     (org-ml--logbook-init ,items clocks unknown post-blank))))
 
-(defun org-ml-logbook-set-clocks (clocks logbook)
+(define-inline org-ml-logbook-set-clocks (clocks logbook)
   "Set the :clocks slot in LOGBOOK to CLOCKS."
-  (-let (((&alist :items :unknown :post-blank) logbook))
-    (org-ml--logbook-init items clocks unknown post-blank)))
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (-let (((&alist :items :unknown :post-blank) ,logbook))
+     (org-ml--logbook-init items ,clocks unknown post-blank))))
 
-(defun org-ml-logbook-set-post-blank (post-blank logbook)
+(define-inline org-ml-logbook-set-post-blank (post-blank logbook)
   "Set the :post-blank slot in LOGBOOK to POST-BLANK."
-  (-let (((&alist :items :clocks :unknown) logbook))
-    (org-ml--logbook-init items clocks unknown post-blank)))
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (-let (((&alist :items :clocks :unknown) ,logbook))
+     (org-ml--logbook-init items clocks unknown ,post-blank))))
 
 (org-ml--defun-anaphoric* org-ml-logbook-map-items (fun logbook)
   "Apply function to :item slot in LOGBOOK.
@@ -4442,25 +4456,31 @@ new list of clocks."
 LOGBOOK is a logbook as given by `org-ml--logbook-init' and
 CONTENTS is a list of nodes corresponding to the headline
 contents (the stuff after the logbook)."
-  (inline-quote (list (cons :logbook ,logbook) (cons :contents ,contents))))
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (list (cons :logbook ,logbook) (cons :contents ,contents))))
 
 (define-inline org-ml--supercontents-init (items clocks unknown post-blank contents)
   "Create a supercontents alist.
 ITEMS, CLOCKS, UNKNOWN, and POST-BLANK are lists corresponding to
 the arguments in `org-ml--logbook-init' and CONTENTS has the same
 meaning as `org-ml--supercontents-init-from-lb'."
+  (declare (pure t) (side-effect-free t))
   (inline-quote
    (let ((lb (org-ml--logbook-init ,items ,clocks ,unknown ,post-blank)))
      (org-ml--supercontents-init-from-lb lb ,contents))))
 
 (define-inline org-ml-supercontents-get-contents (supercontents)
   "Return the :contents slot of SUPERCONTENTS."
+  (declare (pure t) (side-effect-free t))
   (inline-quote (alist-get :contents ,supercontents)))
 
-(defun org-ml-supercontents-set-contents (contents supercontents)
+(define-inline org-ml-supercontents-set-contents (contents supercontents)
   "Set the :contents slot of SUPERCONTENTS to CONTENTS."
-  (-let (((&alist :logbook) supercontents))
-    (org-ml--supercontents-init-from-lb logbook contents)))
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (-let (((&alist :logbook) ,supercontents))
+     (org-ml--supercontents-init-from-lb logbook ,contents))))
 
 (org-ml--defun-anaphoric* org-ml-supercontents-map-contents (fun supercontents)
   "Apply function to :contents slot in SUPERCONTENTS.
@@ -4471,13 +4491,16 @@ new list of nodes."
 
 (define-inline org-ml-supercontents-get-logbook (supercontents)
   "Return the :logbook slot of SUPERCONTENTS."
+  (declare (pure t) (side-effect-free t))
   (inline-quote
    (alist-get :logbook ,supercontents)))
 
-(defun org-ml-supercontents-set-logbook (logbook supercontents)
+(define-inline org-ml-supercontents-set-logbook (logbook supercontents)
   "Set the :logbook slot of SUPERCONTENTS to LOGBOOK."
-  (-let (((&alist :contents) supercontents))
-    (org-ml--supercontents-init-from-lb logbook contents)))
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (-let (((&alist :contents) ,supercontents))
+     (org-ml--supercontents-init-from-lb ,logbook contents))))
 
 (org-ml--defun-anaphoric* org-ml-supercontents-map-logbook (fun supercontents)
   "Apply function to :logbook slot in SUPERCONTENTS.
