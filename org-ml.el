@@ -917,7 +917,7 @@ property value."
 
 (defun org-ml--encode-plist (plist)
   "Return PLIST as string joined by spaces."
-  (-some->> (org-ml--map* (format "%S" it) plist) (s-join " ")))
+  (-some->> (--map (format "%S" it) plist) (s-join " ")))
 
 (defun org-ml--decode-plist (string)
   "Return STRING as plist split by spaces."
@@ -1016,16 +1016,16 @@ Return value will conform to `org-ml--is-valid-diary-sexp-value'."
 
 (defun org-ml--encode-header (plists)
   "Return PLISTS as a list of strings."
-  (org-ml--map*
+  (--map
    (-some->> it
      (-partition 2)
-     (org-ml--map* (format "%S %s" (car it) (cadr it)))
+     (--map (format "%S %s" (car it) (cadr it)))
      (s-join " "))
    plists))
 
 (defun org-ml--decode-header (headers)
   "Return HEADERS (a list of strings) as a list of plists."
-  (org-ml--map*
+  (--map
    (->> (org-ml--decode-string-list-space-delim it)
         (--map-indexed (if (cl-evenp it-index) (intern it) it)))
    headers))
@@ -2339,7 +2339,7 @@ and child nodes)."
   (->> (org-ml-copy headline)
        (org-ml--headline-shift-level n)
        (org-ml-headline-map-subheadlines*
-         (org-ml--map* (org-ml--headline-subtree-shift-level n it) it))))
+         (--map (org-ml--headline-subtree-shift-level n it) it))))
 
 (defun org-ml--headline-set-level (level headline)
   "Return HEADLINE node with its level set to LEVEL.
@@ -2348,7 +2348,7 @@ first layer, (+ 2 level) for second, and so on."
   ;; NOTE full setter needed since this is called from the headline builder
   (->> (org-element-put-property-2 :level level headline)
        (org-ml-headline-map-subheadlines*
-         (org-ml--map* (org-ml--headline-set-level (1+ level) it) it))))
+         (--map (org-ml--headline-set-level (1+ level) it) it))))
 
 ;;; table
 
@@ -2356,7 +2356,7 @@ first layer, (+ 2 level) for second, and so on."
   "Return the width of TABLE as an integer.
 This effectively is the maximum of all table-row lengths."
   (->> (org-ml-get-children table)
-       (org-ml--map* (length (org-ml-get-children it)))
+       (--map (length (org-ml-get-children it)))
        (-max)))
 
 (defun org-ml--table-pad-or-truncate (length list)
@@ -2579,9 +2579,9 @@ Each member in KEYVALS is a list like (KEY VAL) where KEY and VAL
 are both strings, where each list will generate a node-property
 node in the property-drawer node like \":key: val\"."
   (->> keyvals
-       (org-ml--map* (let ((key (car it))
-                           (val (cadr it)))
-                       (org-ml-build-node-property key val)))
+       (--map (let ((key (car it))
+                    (val (cadr it)))
+                (org-ml-build-node-property key val)))
        (apply #'org-ml-build-property-drawer :post-blank post-blank)))
 
 (org-ml--defun-kw org-ml-build-headline! (&key (level 1) title-text
@@ -2617,8 +2617,7 @@ All arguments not mentioned here follow the same rules as
          (section (-some->>  (if planning (cons planning section-children)
                                section-children)
                     (apply #'org-ml-build-section)))
-         (shls (org-ml--map* (org-ml--headline-set-level (1+ level) it)
-                             subheadlines))
+         (shls (--map (org-ml--headline-set-level (1+ level) it) subheadlines))
          (nodes (--> shls (if section (cons section it) it))))
     (->> (apply #'org-ml-build-headline
                 :todo-keyword todo-keyword
@@ -3110,7 +3109,7 @@ PROPS is a list of all the properties desired, and the returned
 list will be the values of these properties in the order
 requested. To get all properties of NODE, use
 `org-ml--get-all-properties'."
-  (org-ml--map* (org-ml-get-property it node) props))
+  (--map (org-ml-get-property it node) props))
 
 (org-ml--defun-anaphoric* org-ml-map-property (prop fun node)
   "Return NODE with FUN applied to the value of PROP.
@@ -4006,7 +4005,7 @@ returns a modified list of children."
     "Return mapped, concatenated, and normalized SECONDARY-STRING.
 FORM is a form supplied to `--mapcat'."
     (declare (debug (def-form form)))
-    `(->> (org-ml--map* ,form ,secondary-string)
+    `(->> (--map ,form ,secondary-string)
           (apply #'append)
           (org-ml--normalize-secondary-string))))
 
@@ -5405,7 +5404,7 @@ for the structure of both config lists."
 The return value is a list of headline titles (including that from
 HEADLINE) leading to the root node."
   (->> (org-ml-get-parents headline)
-       (org-ml--map* (org-ml-get-property :raw-value it))))
+       (--map (org-ml-get-property :raw-value it))))
 
 (defun org-ml-headline-update-item-statistics (headline)
   "Return HEADLINE node with updated statistics cookie via items.
@@ -5449,13 +5448,13 @@ TYPE is one of the symbols `unordered' or `ordered'."
   (cond
    ((eq type 'unordered)
     (org-ml--map-children-nocheck*
-      (org-ml--map* (org-ml-set-property :bullet '- it) it)
+      (--map (org-ml-set-property :bullet '- it) it)
       plain-list))
    ((eq type 'ordered)
     ;; NOTE the org-interpreter seems to use the correct, ordered numbers if any
     ;; number is set here. This behavior may not be reliable.
     (org-ml--map-children-nocheck*
-      (org-ml--map* (org-ml-set-property :bullet 1 it) it)
+      (--map (org-ml-set-property :bullet 1 it) it)
       plain-list))
    (t (org-ml--arg-error "Invalid type: %s" type))))
 
@@ -5475,7 +5474,7 @@ Rule-type rows do not count toward row indices."
 (defun org-ml-table-delete-column (column-index table)
   "Return TABLE node with column at COLUMN-INDEX deleted."
   (org-ml--map-children-nocheck*
-   (org-ml--map*
+   (--map
     (if (org-ml--property-is-eq :type 'rule it) it
       (org-ml--map-children-nocheck* (org-ml--remove-at column-index it) it))
     it)
@@ -5710,7 +5709,7 @@ CHILDREN nodes after PARENT at the same level as PARENT."
   (org-ml-headline-map-subheadlines*
     (org-ml--split-children-at-index* index
       (let ((children (->> (org-ml-get-children it)
-                           (org-ml--map* (org-ml--headline-subtree-shift-level -1 it))))
+                           (--map (org-ml--headline-subtree-shift-level -1 it))))
             (parent (org-ml--set-children-nocheck nil it)))
         (list parent children))
       it)
@@ -6248,8 +6247,8 @@ be deduplicated."
                        (-split-on '| p)
                        (-replace '(nil) nil)
                        (-mapcat #'org-ml--match-pattern-expand-alternations))))
-              (-mapcat (lambda (a) (org-ml--map* (append a it) p*)) acc))
-          (org-ml--map* (append it (list p)) acc))))
+              (-mapcat (lambda (a) (--map (append a it) p*)) acc))
+          (--map (append it (list p)) acc))))
     (-uniq (-reduce-from #'add-subpattern '(()) pattern))))
 
 (defun org-ml--match-pattern-process-alternations (end? limit alt-patterns)
@@ -6260,7 +6259,7 @@ alternations in the original pattern.
 See `org-ml--match-pattern-make-inner-form' for the meaning of
 END? and LIMIT."
   (->> (if end? alt-patterns (reverse alt-patterns))
-       (org-ml--map* (org-ml--match-pattern-make-inner-form end? limit it))
+       (--map (org-ml--match-pattern-make-inner-form end? limit it))
        ;; use nested let statements to keep track of accumulator
        ;; note the comma usage to make this extra confusing :)
        (--reduce `(let ((acc ,it)) ,acc))))
@@ -6525,7 +6524,7 @@ and the variable `it' is bound to the original children."
            (node)
            (if (not (org-ml-is-branch-node node)) node
              (org-ml-map-children*
-               (let ((it (org-ml--map* (rec it) it)))
+               (let ((it (--map (rec it) it)))
                  ,form)
                node))))
        (rec ,node))))
@@ -7228,9 +7227,9 @@ difference is this function does not save the point's position"
          (end (org-element-end node))
          (ov-cmd (-some->> (overlays-in begin end)
                    (--filter (eq 'outline (overlay-get it 'invisible)))
-                   (org-ml--map* (list :start (overlay-start it)
-                                       :end (overlay-end it)
-                                       :props (overlay-properties it)))
+                   (--map (list :start (overlay-start it)
+                                :end (overlay-end it)
+                                :props (overlay-properties it)))
                    (list 'apply 'org-ml--apply-overlays)))
          ;; do all computation before modifying buffer
          ;;
