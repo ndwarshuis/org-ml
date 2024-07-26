@@ -4118,35 +4118,93 @@ first paragraph and returns modified secondary-string."
 
 ;;; headline (metadata)
 
+(defun org-ml-headline-get-supersection (headline)
+  "Return supersection list for the section in HEADLINE."
+  (list :pre-blank (org-element-property :pre-blank headline)
+        :meta (org-ml-headline-get-section headline)))
+
+(defun org-ml-headline-set-supersection (supersection headline)
+  "Return SUPERSECTION for the section in HEADLINE."
+  (-let* (((&plist :pre-blank p :meta m) supersection)
+          (headline* (if p (->> (org-ml-copy headline)
+                                (org-element-put-property-2 :pre-blank p))
+                       headline)))
+    (if (eq m t) headline* (org-ml-headline-set-section m headline*))))
+
+(org-ml--defun-anaphoric* org-ml-headline-map-supersection (fun headline)
+  "Apply FUN to HEADLINE supersection."
+  (let ((it (org-ml-headline-get-supersection headline)))
+    (org-ml-headline-set-supersection (funcall fun it) headline)))
+
+(defun org-ml-supersection-to-metasection (supersection)
+  (-let* (((&plist :pre-blank :meta) supersection)
+          ((first . rest1) meta)
+          ((second . rest2) rest1)
+          ((planning node-props rest)
+           (pcase `(,(org-ml-get-type first) ,(org-ml-get-type second))
+             (`(planning property-drawer) `(,first  ,second  ,rest2))
+             (`(planning ,_)              `(,first  nil      ,rest1))
+             (`(property-drawer ,_)       `(nil     ,first   ,rest1))
+             (_                           `(nil     nil      ,meta)))))
+    (list :pre-blank pre-blank
+          :meta (list :planning planning
+                      :node-props node-props
+                      :supercontents rest))))
+
+(defun org-ml-metasection-to-supersection (metasection)
+  (-let (((&plist :pre-blank
+                  :meta (&plist :planning :node-props :supercontents))
+          metasection))
+    (let ((x (if node-props (cons node-props supercontents) supercontents)))
+      `(:pre-blank ,pre-blank :meta ,(if planning (cons planning x) x)))))
+
+(org-ml--defun-anaphoric* org-ml-headline-map-supersection-maybe (fun headline)
+  "Apply FUN to supersection of HEADLINE."
+  (let ((it (org-ml-headline-get-supersection headline)))
+    (org-ml-headline-set-supersection (funcall fun it) headline)))
+
+(org-ml--defun-anaphoric* org-ml-headline-map-metasection-maybe (fun headline)
+  "Apply FUN to SUPERSECTION metasection."
+  (let ((it (->> (org-ml-headline-get-supersection headline)
+                 (org-ml-supersection-to-metasection))))
+    (-> (funcall fun it)
+        (org-ml-metasection-to-supersection)
+        (org-ml-headline-set-supersection headline))))
+
 ;; planning
 
 (defun org-ml-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
-  (-some--> (car (org-ml-headline-get-section headline))
-    (when (org-ml--is-type 'planning it) it)))
+  (->> (org-ml-headline-get-section headline)
+       (car)
+       (org-ml--filter-type 'planning)))
+
+(defun org-ml-supersection-set-preblank (pre-blank supersection)
+  (plist-put supersection :pre-blank pre-blank))
+
+;; TODO need a way to denote which things shouldn't be updated, which will
+;; save some speed
+(defun org-ml-metasection-set-planning (planning metasection)
+  (-let* (((&plist :pre-blank pb :meta (&plist :planning p)) metasection)
+          ((pb* planning*)
+           (cond
+            ((and planning p)
+             (list pb planning))
+            (planning
+             (list 0 (org-ml--map-property-raw* :post-blank (+ pb it) planning)))
+            (p
+             (list (org-element-property-raw :post-blank p) nil))
+            (t
+             (list pb p)))))
+    (-> (plist-get metasection :meta)
+        (plist-put :planning planning*))
+    (plist-put metasection :pre-blank pb*)))
 
 (defun org-ml-headline-set-planning (planning headline)
   "Return HEADLINE node with planning components set to PLANNING node."
-  (-let* ((children (org-ml-headline-get-section headline))
-          (first-child (car children))
-          (first-is-planning (eq (org-ml-get-type first-child) 'planning)))
-    (cond
-     ((and planning first-is-planning)
-      (org-ml-headline-set-section (cons planning (cdr children)) headline))
-     (planning
-      (let* ((pb (org-element-property-raw :pre-blank headline))
-             (sec (-> (org-ml--map-property-raw* :post-blank (+ pb it) planning)
-                      (cons children))))
-        (->> (org-ml-copy headline)
-             (org-ml-headline-set-section sec)
-             (org-element-put-property-2 :pre-blank 0))))
-     (first-is-planning
-      (let ((pb (org-element-post-blank first-child)))
-        (->> (org-ml-copy headline)
-             (org-element-put-property-2 :pre-blank pb)
-             (org-ml-headline-set-section (cdr children)))))
-     (t
-      headline))))
+  (org-ml-headline-map-metasection-maybe*
+    (org-ml-metasection-set-planning planning it)
+    headline))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-planning (fun headline)
   "Return HEADLINE node with planning node modified by FUN.
@@ -4167,46 +4225,43 @@ modified planning node."
     (org-ml-get-children it)))
 
 ;; TODO why not just use string . string cells for this?
+(defun org-ml-metasection-set-node-properties (node-properties metasection)
+  (-let* (((&plist :pre-blank pb
+                   :meta (&plist :planning p :node-props n))
+           metasection)
+          ((pb* planning* node-props*)
+           (cond
+            ((and node-properties p n)
+             (list pb p (org-ml-set-children node-properties n)))
+            ((and node-properties n)
+             (list pb nil (org-ml-set-children node-properties n)))
+            ((and node-properties p)
+             (let ((x (org-element-post-blank p)))
+               (list pb
+                     (org-element-put-property-2 :post-blank 0 p)
+                     (apply #'org-ml-build-property-drawer :post-blank x node-properties))))
+            (node-properties
+             (list 0 nil (apply #'org-ml-build-property-drawer
+                                :post-blank pb node-properties)))
+            ((and p n)
+             (let ((x (org-element-post-blank n)))
+               (list pb (org-ml--map-property-raw* :post-blank (+ x it) p) nil)))
+            (n
+             (let ((pb (org-element-post-blank n)))
+               (list pb nil nil)))
+            (t
+             (list pb p n)))))
+    (-> (plist-get metasection :meta)
+        (plist-put :planning planning*)
+        (plist-put :node-props node-props*))
+    (plist-put metasection :pre-blank pb*)))
+
 (defun org-ml-headline-set-node-properties (node-properties headline)
   "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
 NODE-PROPERTIES is a list of node-property nodes."
-  (-let* ((children (org-ml-headline-get-section headline))
-          ((first . r1) children)
-          ((second . r2) r1)
-          (t1 (org-ml-get-type first))
-          (t2 (org-ml-get-type second)))
-    (cond
-     ((and node-properties (eq t1 'planning) (eq t2 'property-drawer))
-      (--> (org-ml-set-children node-properties second)
-           (org-ml-headline-set-section `(,first ,it ,@r2) headline)))
-     ((and node-properties (eq t1 'property-drawer))
-      (-> (org-ml-set-children node-properties first)
-          (cons r1)
-          (org-ml-headline-set-section headline)))
-     ((and node-properties (eq t1 'planning))
-      (--> (org-element-post-blank first)
-           (apply #'org-ml-build-property-drawer :post-blank it node-properties)
-           `(,(org-element-put-property-2 :post-blank 0 first) ,it ,@r1)
-           (org-ml-headline-set-section it headline)))
-     (node-properties
-      (let* ((pb (org-element-property-raw :pre-blank headline))
-             (drwr (apply #'org-ml-build-property-drawer
-                          :post-blank pb node-properties)))
-        (->> (org-ml-copy headline)
-             (org-element-put-property-2 :pre-blank 0)
-             (org-ml-headline-set-section (cons drwr children)))))
-     ((eq t2 'property-drawer)
-      (let ((pb (org-element-post-blank second)))
-        (-> (org-ml--map-property-raw* :post-blank (+ pb it) first)
-            (cons r2)
-            (org-ml-headline-set-section headline))))
-     ((eq t1 'property-drawer)
-      (let ((pb (org-element-post-blank first)))
-        (->> (org-ml-copy headline)
-             (org-ml--map-property-raw* :pre-blank (+ pb it))
-             (org-ml-headline-set-section r1))))
-     (t
-      headline))))
+  (org-ml-headline-map-metasection-maybe*
+    (org-ml-metasection-set-node-properties node-properties it)
+    headline))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-node-properties (fun headline)
   "Return HEADLINE node with property-drawer node modified by FUN.
