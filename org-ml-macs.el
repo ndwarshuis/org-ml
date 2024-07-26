@@ -481,18 +481,6 @@ NEW-ALIAS, BASE-VARIABLE, and DOCSTRING have the same meaning as `defconst'."
 
 ;; FUNCTORS
 
-;; (defmacro org-ml--map* (form list)
-;;   "Like `--map' but doesn't create closures (and is therefore faster).
-;; FORM and LIST have the same meaning."
-;;   (let ((l (make-symbol "list")))
-;;     `(let ((,l ,list)
-;;            acc it)
-;;        (while ,l
-;;          (setq it (car ,l)
-;;                acc (cons ,form acc)
-;;                ,l (cdr ,l)))
-;;        (nreverse acc))))
-
 (defmacro org-ml--map-first* (form list)
   "Return LIST with FORM applied to the first member.
 The first element is `it' in FORM which returns the modified member."
