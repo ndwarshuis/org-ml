@@ -5184,39 +5184,55 @@ this plist is set according to your desired target configuration."
          (drop-if-type 'property-drawer)
          (org-ml--supercontents-from-nodes config))))
 
+(define-inline org-ml--set-post-blank (post-blank node)
+  (inline-quote (org-element-put-property-2 :post-blank ,post-blank ,node)))
+
+(defun org-ml-metasection-set-supercontents (config supercontents metasection)
+  (cl-flet
+      ((get-logbook-post-blank
+         (nodes)
+         (-some-> (org-ml--supercontents-from-nodes config nodes)
+           (org-ml-supercontents-get-logbook)
+           (org-ml-logbook-get-post-blank))))
+    (-let* (((&plist :pre-blank hpb0
+                     :meta (&plist :planning p0 :node-props n0 :supercontents sc0))
+             metasection)
+            (logbook1 (org-ml-supercontents-get-logbook supercontents))
+            (new-logbook? (or (org-ml-logbook-get-items logbook1)
+                              (org-ml-logbook-get-clocks logbook1)))
+            ;; TODO need to move the post-blank onto the end of the logbook
+            ((hpb1 p1 n1)
+             (cond
+              (n0
+               (let ((node-props (if new-logbook?
+                                     (org-ml--set-post-blank 0 n0)
+                                   (-if-let (lp0 (get-logbook-post-blank sc0))
+                                       (org-ml--set-post-blank lp0 n0)
+                                     n0))))
+                 (list hpb0 p0 node-props)))
+              (p0
+               (let ((planning (if new-logbook?
+                                   (org-ml--set-post-blank 0 p0)
+                                 (-if-let (lp0 (get-logbook-post-blank sc0))
+                                     (org-ml--set-post-blank lp0 p0)
+                                   p0))))
+                 (list hpb0 planning n0)))
+              (t
+               (let ((pre-blank (if new-logbook? 0
+                             (or (get-logbook-post-blank sc0) hpb0))))
+                 (list pre-blank p0 n0))))))
+      (list :pre-blank hpb1
+            :meta (list :planning p1
+                        :node-props n1
+                        :supercontents (org-ml--supercontents-to-nodes config supercontents))))))
+
 (defun org-ml-headline-set-supercontents (config supercontents headline)
   "Set logbook and contents of HEADLINE according to SUPERCONTENTS.
 See `org-ml-headline-get-supercontents' for the meaning of CONFIG
 and the structure of the SUPERCONTENTS list."
-  (cl-flet
-      ((set-blank
-        (new-logbook? config headline prop node)
-        (if new-logbook? (org-element-put-property-2 prop 0 node)
-          (-if-let (pb (-some->> headline
-                         (org-ml-headline-get-supercontents config)
-                         (org-ml-supercontents-get-logbook)
-                         (org-ml-logbook-get-post-blank)))
-              (org-element-put-property-2 prop pb node)
-            node))))
-    (-let* (((first . (second . _)) (org-ml-headline-get-section headline))
-            (t1 (org-ml-get-type first))
-            (t2 (org-ml-get-type second))
-            (nodes (org-ml--supercontents-to-nodes config supercontents))
-            (new-logbook? (--> (org-ml-supercontents-get-logbook supercontents)
-                               (or (org-ml-logbook-get-items it)
-                                   (org-ml-logbook-get-clocks it)))))
-      (cond
-       ((and (eq t1 'planning) (eq t2 'property-drawer))
-        (--> (set-blank new-logbook? config headline :post-blank second)
-             `(,first ,it ,@nodes)
-             (org-ml-headline-set-section it headline)))
-       ((or (eq t1 'planning) (eq t1 'property-drawer))
-        (--> (set-blank new-logbook? config headline :post-blank first)
-             (cons it nodes)
-             (org-ml-headline-set-section it headline)))
-       (t
-        (->> (set-blank new-logbook? config headline :pre-blank headline)
-             (org-ml-headline-set-section nodes)))))))
+  (org-ml-headline-map-metasection-maybe*
+    (org-ml-metasection-set-supercontents config supercontents it)
+    headline))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-supercontents (config fun headline)
   "Map a function over the supercontents of HEADLINE.
