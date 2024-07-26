@@ -7705,8 +7705,8 @@ future major revision. Its functionality has been merged with
 
 (defun org-ml-set-affiliated-keyword (key value node)
   "Set affiliated keyword KEY in NODE to VALUE.
-This is just like `org-ml--set-property-nocheck' except it will
-delete KEY from the plist if VALUE is nil.
+This is just like `org-ml-set-property' except it will delete KEY
+from the plist if VALUE is nil.
 
 NOTE that VALUE should reflect the required value of affiliated
 keyword given by KEY. The format for each keyword is given below:
