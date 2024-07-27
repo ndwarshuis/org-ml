@@ -589,17 +589,12 @@ KEEP is passed to `org-element-copy'."
   (inline-quote
    (length (car (s-match "[ ]*$" ,plain-text)))))
 
-(define-inline org-ml--get-post-blank (node)
-  "Return number of trailing spaces in PLAIN-TEXT."
-  (inline-quote
-   (org-element-property-raw :post-blank ,node)))
-
 (define-inline org-ml--get-post-blank-textsafe (node)
   "Return number of trailing spaces in PLAIN-TEXT."
   (inline-letevals (node)
     (inline-quote
      (if (stringp ,node) (org-ml--get-post-blank-text ,node)
-       (org-ml--get-post-blank ,node)))))
+       (org-element-post-blank ,node)))))
 
 (define-inline org-ml--set-post-blank (post-blank node)
   (inline-quote (org-element-put-property-2 :post-blank ,post-blank ,node)))
@@ -2155,21 +2150,19 @@ SUBCOMPONENTS is a list like that returned by
 `org-ml--item-get-subcomponents'."
   (-let* (((head subitems sub-pb rest) subcomponents))
     (-when-let (pb (cond
-                    (rest (-some->> (-last-item rest)
-                            (org-element-post-blank)))
+                    (rest (org-element-post-blank (-last-item rest)))
                     (subitems sub-pb)
-                    (head (-some->> (-last-item head)
-                            (org-element-post-blank)))))
-      (let ((rest* (-some->> rest
-                     (org-ml--map-last*
-                      (org-element-put-property-2 :post-blank 0 it))))
-            (sublist (-some->> subitems
-                       (apply #'org-ml-build-plain-list
-                              :post-blank (if rest sub-pb 0))
+                    (head (org-element-post-blank (-last-item head)))))
+      (let ((rest* (org-ml--map-last*
+                    (org-ml--set-post-blank 0 it)
+                    rest))
+            (sublist (-some->> (apply #'org-ml-build-plain-list
+                                      :post-blank (if rest sub-pb 0)
+                                      subitems)
                        (list)))
-            (head* (-some->> head
-                     (org-ml--map-last*
-                      (org-element-put-property-2 :post-blank 0 it)))))
+            (head* (org-ml--map-last*
+                    (org-ml--set-post-blank 0 it)
+                    head)))
         (->> (org-ml--set-children-nocheck (append head* sublist rest*) item)
              (org-ml--shift-post-blank-textsafe pb))))))
 
@@ -2274,8 +2267,8 @@ ACTIVE is a flag denoting if the timestamp is to be active."
 
 (defun org-ml-headline-get-section (headline)
   "Return children of section node in HEADLINE node or nil if none."
-  (-some--> (car (org-ml-get-children headline))
-    (when (org-ml--is-type 'section it) (org-ml-get-children it))))
+  (--> (car (org-ml-get-children headline))
+       (when (org-ml--is-type 'section it) (org-ml-get-children it))))
 
 (defun org-ml-headline-set-section (children headline)
   "Return HEADLINE with section node containing CHILDREN.
@@ -2370,9 +2363,9 @@ a modified table-cell node."
 (defun org-ml--table-get-row (row-index table)
   "Return the table-row node at ROW-INDEX within TABLE.
 Rule-type table-row nodes do not factor when counting the index."
-  (-some->> (org-ml-get-children table)
-            (--filter (org-ml--property-is-eq :type 'standard it))
-            (org-ml--nth row-index)))
+  (->> (org-ml-get-children table)
+       (--filter (org-ml--property-is-eq :type 'standard it))
+       (org-ml--nth row-index)))
 
 (defun org-ml--table-replace-column (column-index column-cells table)
   "Return TABLE with COLUMN-CELLS in place of original cells at COLUMN-INDEX."
@@ -3909,7 +3902,7 @@ and STATS-COOKIE-VALUE is a list described in
     (if (not stats-cookie-value)
         (org-ml-set-property :title ss headline)
       (let ((ss* (org-ml--map-last*
-                  (org-element-put-property-2 :post-blank 1 it) ss))
+                  (org-ml--set-post-blank 1 it) ss))
             (sc (org-ml-build-statistics-cookie stats-cookie-value)))
         (org-ml-set-property :title (-snoc ss* sc) headline)))))
 
@@ -4073,7 +4066,7 @@ plain-lists, join the two lists together."
              (org-ml--is-type 'plain-list first))
         (let ((pb (org-element-post-blank last)))
           (--> (org-ml-get-children last)
-               (org-ml--map-last* (org-element-put-property-2 :post-blank pb it) it)
+               (org-ml--map-last* (org-ml--set-post-blank pb it) it)
                (append it (org-ml-get-children first))
                (org-ml--set-children-nocheck it last)
                (cons it (cdr nodes2))
@@ -4118,7 +4111,7 @@ first paragraph and returns modified secondary-string."
 (defun org-ml-headline-get-supersection (headline)
   "Return supersection list for the section in HEADLINE."
   (org-ml--supersection-init
-   (org-element-property :pre-blank headline)
+   (org-element-property-raw :pre-blank headline)
    (org-ml-headline-get-section headline)))
 
 (defun org-ml-headline-set-supersection (supersection headline)
@@ -4147,11 +4140,11 @@ first paragraph and returns modified secondary-string."
     (org-ml--metasection-init pre-blank planning node-props rest)))
 
 (defun org-ml-metasection-to-supersection (metasection)
-  (-let (((&plist :pre-blank
-                  :meta (&plist :planning :node-props :supercontents))
+  (-let (((&plist :pre-blank b
+                  :meta (&plist :planning p :node-props n :supercontents s))
           metasection))
-    (let ((x (if node-props (cons node-props supercontents) supercontents)))
-      (org-ml--supersection-init pre-blank (if planning (cons planning x) x)))))
+    (let ((x (if n (cons n s) s)))
+      (org-ml--supersection-init b (if p (cons p x) x)))))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-supersection-maybe (fun headline)
   "Apply FUN to supersection of HEADLINE."
@@ -4233,7 +4226,7 @@ modified planning node."
             ((and node-properties p)
              (let ((x (org-element-post-blank p)))
                (list pb
-                     (org-element-put-property-2 :post-blank 0 p)
+                     (org-ml--set-post-blank 0 p)
                      (apply #'org-ml-build-property-drawer :post-blank x node-properties))))
             (node-properties
              (list 0 nil (apply #'org-ml-build-property-drawer
@@ -4267,9 +4260,9 @@ a modified property-drawer node."
 (defun org-ml-headline-get-node-property (key headline)
   "Return value of property with KEY in HEADLINE or nil if not found.
 If multiple properties with KEY are present, only return the first."
-  (-some->> (org-ml-headline-get-node-properties headline)
-    (--first (equal key (org-ml-get-property :key it)))
-    (org-ml-get-property :value)))
+  (->> (org-ml-headline-get-node-properties headline)
+       (--first (equal key (org-ml-get-property :key it)))
+       (org-element-property-raw :value)))
 
 (defun org-ml-headline-set-node-property (key value headline)
   "Return HEADLINE with node property matching KEY set to VALUE.
@@ -4610,7 +4603,7 @@ items."
         (plain-list)
         (let ((pb (org-element-post-blank plain-list)))
           (->> (org-ml-get-children plain-list)
-               (org-ml--map-last* (org-element-put-property-2 :post-blank pb it))))))
+               (org-ml--map-last* (org-ml--set-post-blank pb it))))))
     (--splice (org-ml--is-type 'plain-list it) (flatten it) nodes)))
 
 (defun org-ml--wrap-plain-lists (nodes)
@@ -4626,7 +4619,7 @@ This is the dual of `org-ml--flatten-plain-lists'."
                 (cdr acc)))
          ((org-ml--is-type 'item node)
           (let* ((pb (org-element-post-blank node))
-                 (pl (->> (org-element-put-property-2 :post-blank 0 node)
+                 (pl (->> (org-ml--set-post-blank 0 node)
                           (org-ml-build-plain-list :post-blank pb))))
             (cons pl acc)))
          (t
@@ -4924,8 +4917,8 @@ CONFIG is a plist parsable by `org-ml--scc-encode'."
                  (1+)))
             ((nodes-before-space nodes-after-space)
              (if i (-split-at i flat) (list flat nil)))
-            (first-space-post-blank (-some->> (-last-item nodes-before-space)
-                                      (org-element-post-blank)))
+            (first-space-post-blank (->> (-last-item nodes-before-space)
+                                         (org-element-post-blank)))
             ((logbook-nodes contents-nodes-before-space)
              (org-ml--reduce-state init-state
                (-let (((next-state logbook-nodes) (try-test-funs scc it-state it)))
@@ -5147,7 +5140,7 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
            (e (error "This shouldn't happen: %s" e))))))
     (let ((pb (org-ml-logbook-get-post-blank logbook)))
       (->> (to-nodes config logbook)
-           (org-ml--map-last* (org-element-put-property-2 :post-blank pb it))))))
+           (org-ml--map-last* (org-ml--set-post-blank pb it))))))
 
 (defun org-ml--supercontents-to-nodes (config supercontents)
   "Return SUPERCONTENTS as a list of nodes.
@@ -5462,9 +5455,9 @@ TYPE is one of the symbols `unordered' or `ordered'."
 (defun org-ml-table-get-cell (row-index column-index table)
   "Return table-cell node at ROW-INDEX and COLUMN-INDEX in TABLE node.
 Rule-type rows do not count toward row indices."
-  (-some->> (org-ml--table-get-row row-index table)
-            (org-ml-get-children)
-            (org-ml--nth column-index)))
+  (->> (org-ml--table-get-row row-index table)
+       (org-ml-get-children)
+       (org-ml--nth column-index)))
 
 (defun org-ml-table-delete-row (row-index table)
   "Return TABLE node with row at ROW-INDEX deleted."
@@ -5622,7 +5615,7 @@ demoted headline node's children."
              (tgt-headline* (->> (org-ml-copy it-target)
                                  (org-ml-headline-set-subheadlines nil)
                                  (org-ml--headline-shift-level 1)
-                                 (org-element-put-property-2 :post-blank tgt-pb))))
+                                 (org-ml--set-post-blank tgt-pb))))
         (org-ml--map-children-nocheck*
          (append it (list tgt-headline*) headlines-in-target)
          it))
@@ -5779,24 +5772,23 @@ The specific child item to outdent is selected by CHILD-INDEX."
    (org-ml--split-children-at-index* index
      (-let* (((h i pb r) (org-ml--item-get-subcomponents it))
              ((parent-i (tgt . tgt-i)) (-split-at child-index i))
-             (parent-pb (-some->> (-last-item parent-i)
-                          (org-element-post-blank)))
-             (parent (->> (org-element-put-property-2 :post-blank 0 it)
+             (parent-pb (org-element-post-blank (-last-item parent-i)))
+             (parent (->> (org-ml--set-post-blank 0 it)
                           (org-ml--item-set-subcomponents
                            `(,h ,parent-i ,parent-pb nil))))
-             (tgt-pb (-some->> tgt (org-element-post-blank)))
+             (tgt-pb (org-element-post-blank tgt))
              (tgt* (-some->> tgt
                      (org-ml--item-map-subcomponents*
                       (-let* (((h* i* pb* r*) it)
                               (h** (org-ml--map-last*
-                                    (org-element-put-property-2 :post-blank tgt-pb it)
+                                    (org-ml--set-post-blank tgt-pb it)
                                     h*)))
                         (if (not r*) (list h** (append i* tgt-i) pb* r)
                           (--> (apply #'org-ml-build-plain-list tgt-i)
                                (list it)
                                (append r* it r)
                                (list h** i* pb* it)))))
-                     (org-element-put-property-2 :post-blank pb)
+                     (org-ml--set-post-blank pb)
                      (list))))
        (list parent tgt*))
      it)
@@ -5945,11 +5937,11 @@ parsed into TYPE this function will return nil."
          node))
        (from-prefixed-string
         (prefix level string)
-        (-some->> (concat prefix string)
-          (org-ml--from-string)
-          (org-ml--get-descendent level)
-          (shift-branch-object-node -1)
-          (org-ml-match-map '((:not plain-text) *) #'decrement-object-node))))
+        (-if-let (x (->> (concat prefix string)
+                         (org-ml--from-string)
+                         (org-ml--get-descendent level)))
+            (->> (shift-branch-object-node -1 x)
+                 (org-ml-match-map '((:not plain-text) *) #'decrement-object-node)))))
     (-some->> (cond
                ((eq type 'paragraph)
                 (let* ((pb (string-to-post-blank string))
@@ -5962,18 +5954,18 @@ parsed into TYPE this function will return nil."
                         :end e
                         :contents-end ce))))
                ((and (eq type 'section) (s-matches-p "^\\*" string))
-                (-some->> (concat " " string)
-                  (org-ml--from-string)
-                  (remove-leading-space-maybe)
-                  (shift-property :end -1)
-                  (shift-property-maybe :contents-end -1)
-                  (org-ml-match-map '((:and 0 (:not plain-text)) *)
-                    (lambda (node)
-                      (->> (if (not (org-ml-is-branch-node node)) node
-                             (shift-property :contents-end -1 node))
-                           (shift-property :end -1))))
-                  (org-ml-match-map '((:and (> 0) (:not plain-text)) *)
-                    #'decrement-node)))
+                (->> (concat " " string)
+                     (org-ml--from-string)
+                     (remove-leading-space-maybe)
+                     (shift-property :end -1)
+                     (shift-property-maybe :contents-end -1)
+                     (org-ml-match-map '((:and 0 (:not plain-text)) *)
+                       (lambda (node)
+                         (->> (if (not (org-ml-is-branch-node node)) node
+                                (shift-property :contents-end -1 node))
+                              (shift-property :end -1))))
+                     (org-ml-match-map '((:and (> 0) (:not plain-text)) *)
+                       #'decrement-node)))
                ((eq type 'node-property)
                 (let* ((pb (string-to-post-blank string))
                        (e (1+ (- (length string) pb))))
@@ -5986,20 +5978,20 @@ parsed into TYPE this function will return nil."
                         :post-blank pb
                         :end e))))
                ((eq type 'property-drawer)
-                (-some->> (concat "* dummy\n" string)
-                  (org-ml--from-string)
-                  (org-ml--get-descendent '(0 0))
-                  (shift-branch-element-node -8)
-                  (org-ml--map-children-nocheck*
-                   (--map (shift-element-node -8 it) it))))
+                (-if-let (x (->> (concat "* dummy\n" string)
+                                 (org-ml--from-string)
+                                 (org-ml--get-descendent '(0 0))))
+                    (->> (shift-branch-element-node -8 x)
+                         (org-ml--map-children-nocheck*
+                          (--map (shift-element-node -8 it) it)))))
                ((eq type 'planning)
-                (-some->> (concat "* dummy\n" string)
-                  (org-ml--from-string)
-                  (org-ml--get-descendent '(0 0))
-                  (shift-element-node -8)
-                  (shift-property-node :scheduled -8)
-                  (shift-property-node :deadline -8)
-                  (shift-property-node :closed -8)))
+                (-if-let (x (->> (concat "* dummy\n" string)
+                                 (org-ml--from-string)
+                                 (org-ml--get-descendent '(0 0))))
+                    (->> (shift-element-node -8 x)
+                         (shift-property-node :scheduled -8)
+                         (shift-property-node :deadline -8)
+                         (shift-property-node :closed -8))))
                ((eq type 'bold)
                 (from-prefixed-string " " '(0 1) string))
                ((memq type '(superscript subscript))
@@ -6013,8 +6005,8 @@ parsed into TYPE this function will return nil."
                                 ((eq type 'table-row) '(0 0))
                                 ((memq type org-ml-objects) '(0 0))
                                 (t '(0)))))
-                    (-some->> (org-ml--from-string string)
-                      (org-ml--get-descendent level)))))
+                    (->> (org-ml--from-string string)
+                         (org-ml--get-descendent level)))))
       (org-element-put-property-2 :parent nil))))
 
 ;;; PATTERN MATCHING
@@ -6786,7 +6778,7 @@ elements vs item elements."
         ;; `org-element-at-point' does not parse children
         (-let* ((begin (org-element-begin node))
                 (end (org-element-end node))
-                (contents-end (org-element-property :contents-end node))
+                (contents-end (org-element-property-raw :contents-end node))
                 (tree (car (org-ml--parse-elements begin end 'first-section)))
                 (nesting (pcase node-type
                            (`headline nil)
@@ -6807,7 +6799,7 @@ elements vs item elements."
           ;; update it
           (--> (if (memq node-type '(section table-row)) node*
                  (let ((pb (org-element-post-blank node)))
-                   (org-element-put-property-2 :post-blank pb node*)))
+                   (org-ml--set-post-blank pb node*)))
                (if type (org-ml--filter-type type it) it)))))))
 
 (defun org-ml-parse-element-at (point)
@@ -7225,12 +7217,12 @@ difference is this function does not save the point's position"
   ;; if node is of type 'org-data' it will have no props
   (let* ((begin (org-element-begin node))
          (end (org-element-end node))
-         (ov-cmd (-some->> (overlays-in begin end)
-                   (--filter (eq 'outline (overlay-get it 'invisible)))
-                   (--map (list :start (overlay-start it)
-                                :end (overlay-end it)
-                                :props (overlay-properties it)))
-                   (list 'apply 'org-ml--apply-overlays)))
+         (ov-cmd (-if-let (x (->> (overlays-in begin end)
+                                  (--filter (eq 'outline (overlay-get it 'invisible)))
+                                  (--map (list :start (overlay-start it)
+                                               :end (overlay-end it)
+                                               :props (overlay-properties it)))))
+                     (list 'apply 'org-ml--apply-overlays x)))
          ;; do all computation before modifying buffer
          ;;
          ;; TODO it might be useful to add this as a switch for cases where
@@ -7477,11 +7469,10 @@ FOLD-STATE may be one of:
       ((fold-drawers
         (headline)
         (-when-let (section (org-ml-headline-get-section headline))
-          (-some->> section
-                    (--first (org-ml--is-type 'property-drawer it))
-                    (org-ml-fold))
-          (let ((drawers (-some->> (org-ml-get-children section)
-                                   (--filter (org-ml--is-type 'drawer it)))))
+          (-some->> (--first (org-ml--is-type 'property-drawer it) section)
+            (org-ml-fold))
+          (let ((drawers (->> (org-ml-get-children section)
+                              (--filter (org-ml--is-type 'drawer it)))))
             (--each drawers (org-ml-fold it))))))
     (cl-case fold-state
       (none
