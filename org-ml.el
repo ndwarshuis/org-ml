@@ -601,6 +601,9 @@ KEEP is passed to `org-element-copy'."
      (if (stringp ,node) (org-ml--get-post-blank-text ,node)
        (org-ml--get-post-blank ,node)))))
 
+(define-inline org-ml--set-post-blank (post-blank node)
+  (inline-quote (org-element-put-property-2 :post-blank ,post-blank ,node)))
+
 (defmacro org-ml--set-properties-raw (node &rest plist)
   "Set all properties in NODE to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that correspond to the
@@ -4101,10 +4104,22 @@ first paragraph and returns modified secondary-string."
 
 ;;; headline (metadata)
 
+(define-inline org-ml--supersection-init (pre-blank meta)
+  (inline-quote (list :pre-blank ,pre-blank :meta ,meta)))
+
+(define-inline org-ml--metasection-init (pre-blank planning node-props rest)
+  (inline-quote
+   (list :pre-blank ,pre-blank
+         :meta (list :planning ,planning
+                     :node-props ,node-props
+                     :supercontents ,rest))))
+
+
 (defun org-ml-headline-get-supersection (headline)
   "Return supersection list for the section in HEADLINE."
-  (list :pre-blank (org-element-property :pre-blank headline)
-        :meta (org-ml-headline-get-section headline)))
+  (org-ml--supersection-init
+   (org-element-property :pre-blank headline)
+   (org-ml-headline-get-section headline)))
 
 (defun org-ml-headline-set-supersection (supersection headline)
   "Return SUPERSECTION for the section in HEADLINE."
@@ -4112,7 +4127,7 @@ first paragraph and returns modified secondary-string."
           (headline* (if p (->> (org-ml-copy headline)
                                 (org-element-put-property-2 :pre-blank p))
                        headline)))
-    (if (eq m t) headline* (org-ml-headline-set-section m headline*))))
+    (org-ml-headline-set-section m headline*)))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-supersection (fun headline)
   "Apply FUN to HEADLINE supersection."
@@ -4129,17 +4144,14 @@ first paragraph and returns modified secondary-string."
              (`(planning ,_)              `(,first  nil      ,rest1))
              (`(property-drawer ,_)       `(nil     ,first   ,rest1))
              (_                           `(nil     nil      ,meta)))))
-    (list :pre-blank pre-blank
-          :meta (list :planning planning
-                      :node-props node-props
-                      :supercontents rest))))
+    (org-ml--metasection-init pre-blank planning node-props rest)))
 
 (defun org-ml-metasection-to-supersection (metasection)
   (-let (((&plist :pre-blank
                   :meta (&plist :planning :node-props :supercontents))
           metasection))
     (let ((x (if node-props (cons node-props supercontents) supercontents)))
-      `(:pre-blank ,pre-blank :meta ,(if planning (cons planning x) x)))))
+      (org-ml--supersection-init pre-blank (if planning (cons planning x) x)))))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-supersection-maybe (fun headline)
   "Apply FUN to supersection of HEADLINE."
@@ -4168,20 +4180,20 @@ first paragraph and returns modified secondary-string."
 ;; TODO need a way to denote which things shouldn't be updated, which will
 ;; save some speed
 (defun org-ml-metasection-set-planning (planning metasection)
-  (-let* (((&plist :pre-blank pb :meta (&plist :planning p)) metasection)
+  (-let* (((&plist :pre-blank pb
+                   :meta (&plist :planning p :node-props n :supercontents s))
+           metasection)
           ((pb* planning*)
            (cond
             ((and planning p)
-             (list pb planning))
+             (list nil planning))
             (planning
-             (list 0 (org-ml--map-property-raw* :post-blank (+ pb it) planning)))
+             (list 0 (org-ml--shift-post-blank pb planning)))
             (p
              (list (org-element-property-raw :post-blank p) nil))
             (t
-             (list pb p)))))
-    (-> (plist-get metasection :meta)
-        (plist-put :planning planning*))
-    (plist-put metasection :pre-blank pb*)))
+             (list nil p)))))
+    (org-ml--metasection-init pb* planning* n s)))
 
 (defun org-ml-headline-set-planning (planning headline)
   "Return HEADLINE node with planning components set to PLANNING node."
@@ -4210,14 +4222,14 @@ modified planning node."
 ;; TODO why not just use string . string cells for this?
 (defun org-ml-metasection-set-node-properties (node-properties metasection)
   (-let* (((&plist :pre-blank pb
-                   :meta (&plist :planning p :node-props n))
+                   :meta (&plist :planning p :node-props n :supercontents s))
            metasection)
           ((pb* planning* node-props*)
            (cond
             ((and node-properties p n)
-             (list pb p (org-ml-set-children node-properties n)))
+             (list nil p (org-ml-set-children node-properties n)))
             ((and node-properties n)
-             (list pb nil (org-ml-set-children node-properties n)))
+             (list nil nil (org-ml-set-children node-properties n)))
             ((and node-properties p)
              (let ((x (org-element-post-blank p)))
                (list pb
@@ -4228,16 +4240,12 @@ modified planning node."
                                 :post-blank pb node-properties)))
             ((and p n)
              (let ((x (org-element-post-blank n)))
-               (list pb (org-ml--map-property-raw* :post-blank (+ x it) p) nil)))
+               (list nil (org-ml--shift-post-blank x p) nil)))
             (n
-             (let ((pb (org-element-post-blank n)))
-               (list pb nil nil)))
+             (list (org-element-post-blank n) nil nil))
             (t
-             (list pb p n)))))
-    (-> (plist-get metasection :meta)
-        (plist-put :planning planning*)
-        (plist-put :node-props node-props*))
-    (plist-put metasection :pre-blank pb*)))
+             (list nil p n)))))
+    (org-ml--metasection-init pb* planning* node-props* s)))
 
 (defun org-ml-headline-set-node-properties (node-properties headline)
   "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
@@ -5194,17 +5202,14 @@ this plist is set according to your desired target configuration."
          (drop-if-type 'property-drawer)
          (org-ml--supercontents-from-nodes config))))
 
-(define-inline org-ml--set-post-blank (post-blank node)
-  (inline-quote (org-element-put-property-2 :post-blank ,post-blank ,node)))
-
 (defun org-ml-metasection-set-supercontents (config supercontents metasection)
   (cl-flet
       ((get-logbook-post-blank
          (nodes)
-         (-some-> (org-ml--supercontents-from-nodes config nodes)
-           (org-ml-supercontents-get-logbook)
-           (org-ml-logbook-get-post-blank))))
-    (-let* (((&plist :pre-blank hpb0
+         (-> (org-ml--supercontents-from-nodes config nodes)
+             (org-ml-supercontents-get-logbook)
+             (org-ml-logbook-get-post-blank))))
+    (-let* (((&plist :pre-blank _
                      :meta (&plist :planning p0 :node-props n0 :supercontents sc0))
              metasection)
             (logbook1 (org-ml-supercontents-get-logbook supercontents))
@@ -5219,22 +5224,24 @@ this plist is set according to your desired target configuration."
                                    (-if-let (lp0 (get-logbook-post-blank sc0))
                                        (org-ml--set-post-blank lp0 n0)
                                      n0))))
-                 (list hpb0 p0 node-props)))
+                 (list nil p0 node-props)))
               (p0
                (let ((planning (if new-logbook?
                                    (org-ml--set-post-blank 0 p0)
                                  (-if-let (lp0 (get-logbook-post-blank sc0))
                                      (org-ml--set-post-blank lp0 p0)
                                    p0))))
-                 (list hpb0 planning n0)))
+                 (list nil planning n0)))
               (t
                (let ((pre-blank (if new-logbook? 0
-                             (or (get-logbook-post-blank sc0) hpb0))))
+                                  ;; this may return nil, in which case
+                                  ;; pre-blank won't be updated (which is what
+                                  ;; we want)
+                                  (get-logbook-post-blank sc0))))
                  (list pre-blank p0 n0))))))
-      (list :pre-blank hpb1
-            :meta (list :planning p1
-                        :node-props n1
-                        :supercontents (org-ml--supercontents-to-nodes config supercontents))))))
+      (org-ml--metasection-init
+       hpb1 p1 n1
+       (org-ml--supercontents-to-nodes config supercontents)))))
 
 (defun org-ml-headline-set-supercontents (config supercontents headline)
   "Set logbook and contents of HEADLINE according to SUPERCONTENTS.
