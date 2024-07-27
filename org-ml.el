@@ -584,36 +584,22 @@ KEEP is passed to `org-element-copy'."
                             (-flatten-n 1))))
       (append arr-props plist-props))))
 
-(defun org-ml--get-property-nocheck (prop node)
-  "Return PROP from NODE."
-  (if (and (stringp node) (eq prop :post-blank))
-      (length (car (s-match "[ ]*$" node)))
-    (org-element-property prop node)))
+(define-inline org-ml--get-post-blank-text (plain-text)
+  "Return number of trailing spaces in PLAIN-TEXT."
+  (inline-quote
+   (length (car (s-match "[ ]*$" ,plain-text)))))
 
-(defun org-ml--set-property-nocheck (prop value node)
-  "Set PROP in NODE to VALUE."
-  (pcase (org-ml-get-type node)
-    (`plain-text
-     (if (eq prop :post-blank)
-         (->> (s-trim-right node) (s-append (s-repeat value " ")))
-       (org-add-props node nil prop value)))
-    (`headline
-     (org-element-properties-resolve node)
-     (org-element-put-property node prop value))
-    (_
-     (org-element-put-property node prop value))))
+(define-inline org-ml--get-post-blank (node)
+  "Return number of trailing spaces in PLAIN-TEXT."
+  (inline-quote
+   (org-element-property-raw :post-blank ,node)))
 
-(defun org-ml--set-properties-nocheck (plist node)
-  "Set all properties in NODE to the values corresponding to PLIST.
-PLIST is a list of property-value pairs that correspond to the
-property list in NODE."
-  ;; TODO this is actually wrong because it won't work on plain text, make
-  ;; an analogous version to the above (ideally as a macro)
-  (-let (((prop . (value . rest)) plist))
-    (while prop
-      (-setq node (org-element-put-property node prop value)
-             (prop . (value . rest)) rest))
-    node))
+(define-inline org-ml--get-post-blank-textsafe (node)
+  "Return number of trailing spaces in PLAIN-TEXT."
+  (inline-letevals (node)
+    (inline-quote
+     (if (stringp ,node) (org-ml--get-post-blank-text ,node)
+       (org-ml--get-post-blank ,node)))))
 
 (defmacro org-ml--set-properties-raw (node &rest plist)
   "Set all properties in NODE to the values corresponding to PLIST.
@@ -630,16 +616,6 @@ This is not meant for plain-text."
        ,n)))
 
 (eval-when-compile
-  (defmacro org-ml--map-property-nocheck* (prop form node)
-    "Return NODE with FUN applied to the value in PROP.
-FUN is a form that returns a modified value and contains `it'
-bound to the property value."
-    (declare (indent 1))
-    (let ((node* (make-symbol "node")))
-      `(let ((,node* ,node))
-         (let ((it (org-ml--get-property-nocheck ,prop ,node*)))
-           (org-ml--set-property-nocheck ,prop ,form ,node*)))))
-
   (defmacro org-ml--map-property-raw* (prop form node)
     "Return NODE with FUN applied to the value in PROP.
 FUN is a form that returns a modified value and contains `it'
@@ -650,20 +626,25 @@ bound to the property value."
          (let ((it (org-element-property-raw ,prop ,node*)))
            (org-element-put-property-2 ,prop ,form ,node*))))))
 
-(define-inline org-ml--property-is-nil (prop node)
-  "Return t if PROP in NODE is nil."
-  (inline-quote (not (org-element-property ,prop ,node))))
+(define-inline org-ml--shift-post-blank (n node)
+  "ADD N spaces to the end of NODE.
+
+This will not work if NODE is a string."
+  (inline-quote
+   (org-ml--map-property-raw* :post-blank (+ it ,n) ,node)))
+
+(defun org-ml--shift-post-blank-textsafe (n node)
+  "ADD N spaces to the end of NODE.
+
+This will work if NODE is a string."
+  (if (stringp node)
+      (let ((pb (org-ml--get-post-blank-text node)))
+        (concat (substring node (- pb)) (make-string (+ pb n) ?\ )))
+    (org-ml--shift-post-blank n node)))
 
 (define-inline org-ml--property-is-eq (prop val node)
   "Return t if PROP in NODE is `eq' to VAL."
-  (inline-quote (eq ,val (org-element-property ,prop ,node))))
-
-(eval-when-compile
-  (defmacro org-ml--property-is-predicate* (prop form node)
-    "Return t if FUN applied to the value of PROP in NODE results not nil.
-FORM is a predicate form that takes one with `it' bound to the
-property value."
-    `(let ((it (org-ml--get-property-nocheck ,prop ,node))) (and ,form t))))
+  (inline-quote (eq ,val (org-element-property-raw ,prop ,node))))
 
 ;;; NODE PROPERTY TRANSLATION AND CHECKING FRAMEWORK
 
@@ -780,9 +761,8 @@ property value."
 (defun org-ml--is-valid-clock-timestamp (x)
   "Return t if X is an allowed value for a clock node value property."
   (and (org-ml--is-type 'timestamp x)
-       (org-ml--property-is-predicate* :type
-         (memq it '(inactive inactive-range)) x)
-       (org-ml--property-is-nil :repeater-type x)))
+       (memq (org-element-property-raw :type x) '(inactive inactive-range))
+       (not (org-element-property-raw :repeater-type x))))
 
 (defun org-ml--is-valid-planning-unclosed-timestamp (x)
   "Return t if X is an allowed value for a planning node timestamp property."
@@ -1108,12 +1088,12 @@ This will be based on CLOCK's value property."
 (defun org-ml--update-headline-tags (headline)
   "Return HEADLINE node with its tags updated.
 This will be based on HEADLINE's archivedp property."
-  (org-ml--map-property-nocheck* :tags
+  (org-ml--map-property-raw* :tags
     (let ((tags* (remove org-archive-tag it)))
       (if (org-element-property :archivedp headline)
           (-snoc tags* org-archive-tag)
         tags*))
-    headline))
+    (org-element-properties-resolve headline)))
 
 (defun org-ml--link-update-type-explicit (link)
   "Return LINK with `:type-explicit-p' updated."
@@ -2188,7 +2168,7 @@ SUBCOMPONENTS is a list like that returned by
                      (org-ml--map-last*
                       (org-element-put-property-2 :post-blank 0 it)))))
         (->> (org-ml--set-children-nocheck (append head* sublist rest*) item)
-             (org-ml--map-property-raw* :post-blank (+ pb it)))))))
+             (org-ml--shift-post-blank-textsafe pb))))))
 
 (defmacro org-ml--item-map-subcomponents* (form item)
   "Return ITEM with subcomponents modified.
@@ -2232,13 +2212,14 @@ items."
 (defun org-ml--headline-shift-level (n headline)
   "Return HEADLINE node with the level property shifted by N.
 If the level is less then one after shifting, set level to one."
-  (org-ml--map-property-nocheck* :level (org-ml--shift-pos-integer n it) headline))
+  (->> (org-element-properties-resolve headline)
+       (org-ml--map-property-raw* :level (org-ml--shift-pos-integer n it))))
 
 (defun org-ml--headline-set-statistics-cookie (value headline)
   "Return HEADLINE node with statistics cookie set by VALUE.
 VALUE is a list conforming to `org-ml--is-valid-statistics-cookie-value'
 or nil to erase the statistics cookie if present."
-  (org-ml--map-property-nocheck*
+  (org-ml--map-property-raw*
    :title
    (let ((last? (org-ml--is-type 'statistics-cookie (-last-item it))))
      (cond
@@ -2250,7 +2231,7 @@ or nil to erase the statistics cookie if present."
       (value
        (-snoc it (org-ml-build-statistics-cookie value)))
       (t it)))
-   headline))
+   (org-element-properties-resolve headline)))
 
 (defun org-ml--headline-set-statistics-cookie-fraction (done total headline)
   "Return HEADLINE node with statistics cookie set by DONE and TOTAL.
@@ -3047,18 +3028,27 @@ each type."
     ;; Specialized code to handle :attr_X properties which can't be put in
     ;; `org-ml--property-alist'. Values for these can only be lists of strings
     ;; and have no encoder or decoder.
-    (if (and (memq type org-ml--element-nodes-with-affiliated)
-             (org-ml--property-is-attribute prop))
-        (if (org-ml--is-string-list value)
-            (org-ml--set-property-nocheck prop value node)
-          (org-ml--arg-error "All attributes like '%s' must be a list of strings. Got '%S'"
-           prop value))
+    (cond
+     ((and (memq type org-ml--element-nodes-with-affiliated)
+           (org-ml--property-is-attribute prop))
+      (if (org-ml--is-string-list value)
+          (org-element-put-property-2 prop value node)
+        (org-ml--arg-error "All attributes like '%s' must be a list of strings. Got '%S'"
+                           prop value)))
+     ((eq type 'plain-text)
+      (if (eq prop :post-blank)
+          (concat (s-trim-right node) (make-string value ?\ ))
+        (org-add-props node nil prop value)))
+     (t
       (let* ((value* (org-ml--property-encode prop value type))
-             (node* (->> (org-ml-copy node)
-                         (org-ml--set-property-nocheck prop value*))))
+             (node* (->> (if (eq type 'headline)
+                             (org-element-properties-resolve node)
+                           node)
+                         (org-ml-copy)
+                         (org-element-put-property-2 prop value*))))
         (-if-let (update-fun (org-ml--get-property-updater type prop))
             (funcall update-fun node*)
-          node*)))))
+          node*))))))
 
 (defun org-ml-set-properties (plist node)
   "Return NODE with all properties set to the values according to PLIST.
@@ -3095,13 +3085,15 @@ each type."
 
 (defun org-ml-get-property (prop node)
   "Return the value of PROP of NODE."
-  (let* ((type (org-ml-get-type node))
-         (decoder-fun (unless (or (and (memq type org-ml--element-nodes-with-affiliated)
-                                       (org-ml--property-is-attribute prop))
-                                  (memq prop org-element--standard-properties))
-                        (org-ml--get-property-decoder type prop)))
-         (value (org-ml--get-property-nocheck prop node)))
-    (if decoder-fun (funcall decoder-fun value) value)))
+  (let ((type (org-ml-get-type node)))
+    (if (and (eq type 'plain-text) (eq prop :post-blank))
+        (org-ml--get-post-blank-text node)
+      (let ((decoder-fun (unless (or (and (memq type org-ml--element-nodes-with-affiliated)
+                                          (org-ml--property-is-attribute prop))
+                                     (memq prop org-element--standard-properties))
+                           (org-ml--get-property-decoder type prop)))
+            (value (org-element-property prop node)))
+        (if decoder-fun (funcall decoder-fun value) value)))))
 
 (defun org-ml-get-properties (props node)
   "Return all the values of PROPS from NODE.
@@ -3343,7 +3335,7 @@ the issue."
           (_ caption))))
     (if (and (org-ml--is-any-type org-ml--element-nodes-with-affiliated node)
              (org-element-property-raw :caption node))
-        (org-ml--map-property-nocheck* :caption
+        (org-ml--map-property-raw* :caption
           (-map #'remove-from-caption it)
           node)
       node)))
@@ -3358,13 +3350,14 @@ See `org-ml-remove-parent' for why you might want this."
         (--map (org-ml-remove-parents it) nodes))
        (remove-within-prop
         (prop node)
-        (org-ml--map-property-nocheck* prop
+        (org-ml--map-property-raw* prop
           (remove-recursive it)
           node)))
     (->>
      ;; remove parents from secondary strings (if necessary)
      (pcase (org-ml-get-type node)
-       (`headline (remove-within-prop :title node))
+       (`headline (->> (org-element-properties-resolve node)
+                       (remove-within-prop :title)))
        (`item (remove-within-prop :tag node))
        (_ node))
      (org-ml--caption-remove-parents)
@@ -4016,11 +4009,11 @@ Else add the post-blank property of OBJECT-NODE to the last member
 of its children and return children as a secondary string."
   (if (org-ml--is-type 'plain-text object-node)
       (list object-node)
-    (let ((post-blank (org-ml--get-property-nocheck :post-blank object-node)))
+    (let ((post-blank (org-ml--get-post-blank-textsafe object-node)))
       (->> (org-ml-copy object-node t)
            (org-ml-get-children)
            (org-ml--map-last*
-            (org-ml--map-property-nocheck* :post-blank (+ it post-blank) it))))))
+            (org-ml--shift-post-blank-textsafe post-blank it))))))
 
 (defun org-ml-unwrap-types-deep (types object-node)
   "Return the children of OBJECT-NODE as a secondary string.
@@ -4032,13 +4025,12 @@ return the result as a secondary string."
    ((org-ml--is-type 'plain-text object-node)
     (list object-node))
    ((org-ml-is-any-type types object-node)
-    (let ((post-blank (org-ml--get-property-nocheck :post-blank object-node)))
+    (let ((post-blank (org-ml--get-post-blank-textsafe object-node)))
       (->> (org-ml-get-children object-node)
            (org-ml--mapcat-normalize
             (->> (org-ml-copy it)
                  (org-ml-unwrap-types-deep types)))
-           (org-ml--map-last* (org-ml--map-property-nocheck* :post-blank
-                            (+ it post-blank) it)))))
+           (org-ml--map-last* (org-ml--shift-post-blank-textsafe post-blank it)))))
    (t
     (->> object-node
          (org-ml-map-children*
@@ -5417,7 +5409,7 @@ not be considered)."
                (org-ml-get-children)
                (--filter (org-ml--is-type 'plain-list it))
                (-mapcat #'org-ml-get-children)
-               (--remove (org-ml--property-is-nil :checkbox it))))
+               (--filter (org-element-property-raw :checkbox it))))
          (done (length (--filter (org-ml--property-is-eq :checkbox 'on it)
                                  items)))
          (total (length items)))
@@ -5431,7 +5423,7 @@ The percent/fraction will be computed as the number of done
 subheadlines over the number of todo subheadlines (eg non-todo
 subheadlines will not be counted)."
   (let* ((subtodo (->> (org-ml-headline-get-subheadlines headline)
-                       (--filter (org-ml--get-property-nocheck :todo-keyword it))))
+                       (--filter (org-element-property :todo-keyword it))))
          (done (length (-filter #'org-ml-headline-is-done subtodo)))
          (total (length subtodo)))
     (->> (org-ml-copy headline)
@@ -5618,8 +5610,8 @@ demoted headline node's children."
       (let* ((headlines-in-target (org-ml-headline-get-subheadlines it-target))
              (tgt-children (org-ml-get-children it-target))
              (tgt-pb (if (org-ml--is-type 'section (car tgt-children))
-                            (org-ml--get-property-nocheck :post-blank (car tgt-children))
-                          (org-element-property-raw :pre-blank it-target)))
+                         (org-ml--get-post-blank-textsafe (car tgt-children))
+                       (org-element-property-raw :pre-blank it-target)))
              (tgt-headline* (->> (org-ml-copy it-target)
                                  (org-ml-headline-set-subheadlines nil)
                                  (org-ml--headline-shift-level 1)
@@ -5956,7 +5948,7 @@ parsed into TYPE this function will return nil."
                 (let* ((pb (string-to-post-blank string))
                        (e (1+ (length string)))
                        (ce (- e pb)))
-                  (-some-> (org-ml-build-paragraph! string :post-blank pb)
+                  (-> (org-ml-build-paragraph! string :post-blank pb)
                     (org-ml--set-properties-raw
                         :begin 1
                         :contents-begin 1
@@ -5978,13 +5970,14 @@ parsed into TYPE this function will return nil."
                ((eq type 'node-property)
                 (let* ((pb (string-to-post-blank string))
                        (e (1+ (- (length string) pb))))
-                  (-some->> (format "* dummy\n:PROPERTIES:\n%s\n:END:" string)
-                    (org-ml--from-string)
-                    (org-ml--get-descendent '(0 0 0))
-                    (org-ml--set-properties-nocheck (list :post-affiliated 1
-                                                          :begin 1
-                                                          :post-blank pb
-                                                          :end e)))))
+                  (-if-let (x (->> (format "* dummy\n:PROPERTIES:\n%s\n:END:" string)
+                                   (org-ml--from-string)
+                                   (org-ml--get-descendent '(0 0 0))))
+                      (org-ml--set-properties-raw x
+                        :post-affiliated 1
+                        :begin 1
+                        :post-blank pb
+                        :end e))))
                ((eq type 'property-drawer)
                 (-some->> (concat "* dummy\n" string)
                   (org-ml--from-string)
@@ -6147,7 +6140,7 @@ of NODE (starting at -1 on the rightmost side of the children list)."
       ;; NOTE: this must go last if we don't want :pred/:and/:or/:not
       ;; to be interpreted as a property
       (`(,(and (pred keywordp) prop) . (,val . nil))
-       `(equal (org-ml--get-property-nocheck ,prop ,it-node) ,val))
+       `(equal (org-ml-get-property ,prop ,it-node) ,val))
       ;;
       ;; :any
       (:any t)
@@ -7423,11 +7416,11 @@ integer."
         14))
     (src-block
      (+ (org-element-begin node)
-        (-if-let (meta (-some->
+        (-if-let (meta (->
                         (list
-                         (org-ml-get-property :language node)
-                         (org-ml--get-property-nocheck :switches node)
-                         (org-ml--get-property-nocheck :parameters node))
+                         (org-element-property-raw :language node)
+                         (org-element-property-raw :switches node)
+                         (org-element-property-raw :parameters node))
                         (-non-nil)))
             (1+ (length (s-join " " meta))) 0)
         11))))
@@ -7688,7 +7681,7 @@ future major revision. Its functionality has been merged with
   (unless (or (memq key '(:caption :header :name :plot :results))
               (s-starts-with? ":attr_" (symbol-name key)))
     (org-ml--arg-error "Invalid affiliated keyword requested: %s" key))
-  (org-ml--get-property-nocheck key node))
+  (org-element-property-raw key node))
 
 (defun org-ml-set-affiliated-keyword (key value node)
   "Set affiliated keyword KEY in NODE to VALUE.
