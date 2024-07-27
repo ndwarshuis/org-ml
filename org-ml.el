@@ -3379,7 +3379,7 @@ KEY is one of:
 Any other keys will trigger an error."
   (-if-let (index (-elem-index key (list :latex :latex-math-p :html
                                          :ascii :latin1 :utf-8)))
-      (->> (org-ml-get-property :name entity)
+      (->> (org-element-property-raw :name entity)
            (org-entity-get)
            (cdr)
            (nth index))
@@ -3428,12 +3428,12 @@ a negative integer."
 
 (defun org-ml-timestamp-is-active (timestamp)
   "Return t if TIMESTAMP node is active."
-  (let ((y (org-ml-get-property :type timestamp)))
+  (let ((y (org-element-property-raw :type timestamp)))
     (if (memq y '(active active-range)) t)))
 
 (defun org-ml-timestamp-is-ranged (timestamp)
   "Return t if TIMESTAMP node is ranged."
-  (let ((y (org-ml-get-property :type timestamp)))
+  (let ((y (org-element-property-raw :type timestamp)))
     (if (memq y '(active-ranged inactive-range)) t)))
 
 (defun org-ml-timestamp-range-contains-p (unixtime timestamp)
@@ -3623,7 +3623,7 @@ conditions are not met.
 If `force', ignore condition 1 above. The date in the collapsed
 timestamp will be taken from the start date and the end date will
 be ignored."
-  (pcase (org-ml-get-property :range-type timestamp)
+  (pcase (org-element-property-raw :range-type timestamp)
     ;; collapsed
     (`timerange
      (if flag timestamp
@@ -4261,7 +4261,7 @@ a modified property-drawer node."
   "Return value of property with KEY in HEADLINE or nil if not found.
 If multiple properties with KEY are present, only return the first."
   (->> (org-ml-headline-get-node-properties headline)
-       (--first (equal key (org-ml-get-property :key it)))
+       (--first (equal key (org-element-property-raw :key it)))
        (org-element-property-raw :value)))
 
 (defun org-ml-headline-set-node-property (key value headline)
@@ -4270,10 +4270,10 @@ If a property matching KEY is present, set it to VALUE. If multiple
 properties matching KEY are present, only set the first."
   (org-ml-headline-map-node-properties*
     (-if-let (np (-some->> value (org-ml-build-node-property key)))
-        (-if-let (i (--find-index (equal key (org-ml-get-property :key it)) it))
+        (-if-let (i (--find-index (equal key (org-element-property-raw :key it)) it))
             (-replace-at i np it)
           (cons np it))
-      (--remove-first (equal key (org-ml-get-property :key it)) it))
+      (--remove-first (equal key (org-element-property-raw :key it)) it))
     headline))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-node-property (key fun headline)
@@ -4587,12 +4587,12 @@ logbook."
 
 (defun org-ml--node-has-trailing-space (node)
   "Return t if NODE has at least one newline after it."
-  (and (< 0 (org-ml-get-property :post-blank node)) t))
+  (and (< 0 (org-ml--get-post-blank-textsafe node)) t))
 
 (defun org-ml--node-is-drawer-with-name (drawer-name node)
   "Return t if NODE is a drawer with DRAWER-NAME."
   (and (org-ml--is-type 'drawer node)
-       (equal drawer-name (org-ml-get-property :drawer-name node))))
+       (equal drawer-name (org-element-property-raw :drawer-name node))))
 
 (defun org-ml--flatten-plain-lists (nodes)
   "Return NODES with unwrapped plain-list nodes.
@@ -4953,7 +4953,7 @@ or :clocks depending on what is intended to be sorted."
           (node)
           (cl-case (org-ml-get-type node)
             (clock
-             (-some->> (org-ml-get-property :value node)
+             (-some->> (org-element-property-raw :value node)
                (org-ml--timestamp-get-start-unixtime)))
             (item
              (funcall f node))))
@@ -5396,7 +5396,7 @@ for the structure of both config lists."
 The return value is a list of headline titles (including that from
 HEADLINE) leading to the root node."
   (->> (org-ml-get-parents headline)
-       (--map (org-ml-get-property :raw-value it))))
+       (--map (org-element-property :raw-value it))))
 
 (defun org-ml-headline-update-item-statistics (headline)
   "Return HEADLINE node with updated statistics cookie via items.
@@ -6778,7 +6778,7 @@ elements vs item elements."
         ;; `org-element-at-point' does not parse children
         (-let* ((begin (org-element-begin node))
                 (end (org-element-end node))
-                (contents-end (org-element-property-raw :contents-end node))
+                (contents-end (org-element-contents-end node))
                 (tree (car (org-ml--parse-elements begin end 'first-section)))
                 (nesting (pcase node-type
                            (`headline nil)
@@ -7378,17 +7378,17 @@ integer."
      (org-ml--fold-get-contents-begin-offset node 14))
     (dynamic-block
      (org-ml--fold-get-contents-begin-offset node
-       (+ 9 (length (org-ml-get-property :block-name node)))))
+       (+ 9 (length (org-element-property-raw :block-name node)))))
     (drawer
      (org-ml--fold-get-contents-begin-offset node
-       (+ 2 (length (org-ml-get-property :drawer-name node)))))
+       (+ 2 (length (org-element-property-raw :drawer-name node)))))
     (property-drawer
      (org-ml--fold-get-contents-begin-offset node 12))
     ((quote-block verse-block)
      (org-ml--fold-get-contents-begin-offset node 13))
     (special-block
      (org-ml--fold-get-contents-begin-offset node
-       (+ 9 (length (org-ml-get-property :type node)))))
+       (+ 9 (length (org-element-property-raw :type node)))))
     ;; Headlines should only be folded if they have children
     (headline
      (org-ml--fold-get-contents-begin-maybe node))
@@ -7410,7 +7410,7 @@ integer."
      (+ 15 (org-element-begin node)))
     (export-block
      (+ (org-element-begin node)
-        (-if-let (type (org-ml-get-property :type node))
+        (-if-let (type (org-element-property-raw :type node))
             (1+ (length type)) 0)
         14))
     (src-block
