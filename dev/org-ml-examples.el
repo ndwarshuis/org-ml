@@ -6700,47 +6700,46 @@
                "* three [/]"
                "** DONE _one")
       (org-ml-update-subtrees* 0
-        (org-ml-headline-update-todo-statistics))
-      $> (:buffer "* one [1/1]"
+        (org-ml-headline-update-todo-statistics it))
+      $> (:result "* one [1/1]"
                   "** DONE _one"
                   "* two [/]"
                   "** DONE _one"
                   "* three [/]"
                   "** DONE _one")
       (org-ml-update-subtrees* '(0 1)
-        (org-ml-headline-update-todo-statistics))
-      $> (:buffer "* one [1/1]"
+        (org-ml-headline-update-todo-statistics it))
+      $> (:result "* one [1/1]"
                   "** DONE _one"
                   "* two [1/1]"
                   "** DONE _one"
                   "* three [/]"
                   "** DONE _one")
       (org-ml-update-subtrees* [2 nil]
-        (org-ml-headline-update-todo-statistics))
-      $> (:buffer "* one [/]"
+        (org-ml-headline-update-todo-statistics it))
+      $> (:result "* one [/]"
                   "** DONE _one"
                   "* two [1/1]"
                   "** DONE _one"
                   "* three [1/1]"
                   "** DONE _one")
       (org-ml-update-subtrees* [nil 5]
-        (org-ml-headline-update-todo-statistics))
-      $> (:buffer "* one [1/1]"
+        (org-ml-headline-update-todo-statistics it))
+      $> (:result "* one [1/1]"
                   "** DONE _one"
                   "* two [/]"
                   "** DONE _one"
                   "* three [/]"
                   "** DONE _one")
-
       (:buffer "* one [/]"
                "** DONE _one"
                "** DONE _two"
                "* two [/]"
                "** DONE _one"
                "** DONE _two")
-      (org-ml-do-subtrees* 'all
-                           (org-ml-headline-update-todo-statistics))
-      $> (:buffer "* one [2/2]"
+      (org-ml-do-subtrees*
+        (org-ml-headline-update-todo-statistics it))
+      $> (:result "* one [2/2]"
                   "** DONE _one"
                   "** DONE _two"
                   "* two [2/2]"
