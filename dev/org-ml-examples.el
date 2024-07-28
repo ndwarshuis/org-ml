@@ -6744,7 +6744,41 @@
                   "** DONE _two"
                   "* two [2/2]"
                   "** DONE _one"
-                  "** DONE _two")))
+                  "** DONE _two"))
+
+    (defexamples-content org-ml-update-metasections
+      nil
+      (:buffer "* one"
+               "** two")
+      (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-metasections* 'all
+           (org-ml-metasection-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  "** two"
+                  "SCHEDULED: <2000-01-01 Sat>")
+      (:buffer "* one"
+               "** two"
+               "stuff")
+      (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-metasections* 'all
+           (org-ml-metasection-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  "** two"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  "stuff")
+      (:buffer "* one"
+               "stuff")
+      (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-metasections* 'all
+           (org-ml-metasection-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  "stuff")))
 
   (def-example-subgroup "Misc"
     nil

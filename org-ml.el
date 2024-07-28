@@ -7210,40 +7210,40 @@ applied to the buffer."
 ;;                        p2 (cdr (cdr p2))))
 ;;                (and (not p2) plist-matches))))))))
 
-(org-ml--defun-anaphoric* org-ml--update (diff-mode fun node)
-  "Internal version of `org-ml~update'.
-DIFF-MODE, FUN, and NODE have the same meaning. The only
-difference is this function does not save the point's position"
-  ;; if node is of type 'org-data' it will have no props
-  (let* ((begin (org-element-begin node))
-         (end (org-element-end node))
-         (ov-cmd (-if-let (x (->> (overlays-in begin end)
-                                  (--filter (eq 'outline (overlay-get it 'invisible)))
-                                  (--map (list :start (overlay-start it)
-                                               :end (overlay-end it)
-                                               :props (overlay-properties it)))))
-                     (list 'apply 'org-ml--apply-overlays x)))
-         ;; do all computation before modifying buffer
-         ;;
-         ;; TODO it might be useful to add this as a switch for cases where
-         ;; `FUN' almost never changes anything, in which case it would be
-         ;; much cheaper to check if the node is equal before inserting it.
-         ;; In 99.9999% of cases, this is probably false, so just assume
-         ;; the node has changed and update it
-         ;;
-         ;; NOTE force resolution so that we can convert back to string after
-         ;; potentially deleting the entire node from the buffer
-         (node* (funcall fun (org-element-properties-resolve node))))
-    ;; (unless (org-ml--equal node0 node*)
+(defun org-ml--replace-bounds (diff-mode begin end node)
+  "Replace text between BEGIN and END with NODE1 in current buffer.
+See `org-ml~update' for meaning of DIFF-MODE."
+  (let ((ov-cmd (-if-let (x (->> (overlays-in begin end)
+                                 (--filter (eq 'outline (overlay-get it 'invisible)))
+                                 (--map (list :start (overlay-start it)
+                                              :end (overlay-end it)
+                                              :props (overlay-properties it)))))
+                    (list 'apply 'org-ml--apply-overlays x))))
     ;; hacky way to add overlays to undo tree
     (when ov-cmd
       (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list)))
     (if diff-mode
-        (org-ml--diff-region begin end (org-ml-to-string node*))
-      (progn
+        (org-ml--diff-region begin end (org-ml-to-string node))
+      ;; convert node to string before deleting so deferred properties can get
+      ;; what they need from the buffer
+      (let ((s (org-ml-to-string node)))
         (delete-region begin end)
-        (org-ml--insert begin node*)))
+        (goto-char begin)
+        (insert s)))
     nil))
+
+(org-ml--defun-anaphoric* org-ml--update (diff-mode fun node)
+  "Internal version of `org-ml~update'.
+DIFF-MODE, FUN, and NODE have the same meaning. The only
+difference is this function does not save the point's position"
+  ;; do all computation before modifying buffer
+  ;;
+  ;; NOTE force resolution so that we can convert back to string after
+  ;; deleting the node from the buffer
+  (let* ((begin (org-element-begin node))
+         (end (org-element-end node)))
+    (->> (funcall fun node)
+         (org-ml--replace-bounds diff-mode begin end))))
 
 (org-ml--defun* org-ml~update (diff-mode fun node)
   "Replace NODE in the current buffer with a new one.
@@ -7663,6 +7663,62 @@ nil (see this for use and meaning of FUN)."
     (--> (org-ml--parse-patterns-where which "^\\* ")
          (nreverse it)
          (--each it (org-ml~update nil fun it)))))
+
+(org-ml--defun* org-ml-update-supersections (which fun)
+  "Update some headline supersections in the current using FUN.
+
+See `org-ml-parse-headlines' for the meaning of WHICH.
+
+Headlines are updated using `org-ml~update' with DIFF-ARG set to
+nil (see this for use and meaning of FUN)."
+  ;; don't use the myers diff algorithm here, since these functions are meant
+  ;; for batch processing.
+  (save-excursion
+    (cl-labels
+        ((map-to-subheadlines
+           (headline)
+           (-each (nreverse (org-ml-headline-get-subheadlines headline))
+             #'map-to-subheadlines)
+           (-let* (((ss0 &as &plist :pre-blank pb0 :meta m0)
+                    (org-ml-headline-get-supersection headline))
+                   ((ss1 &as &plist :pre-blank pb1 :meta m1) (funcall fun ss0)))
+             (if (or (not pb1) (= pb0 pb1))
+                 (if m0
+                     (let ((begin (org-element-begin (-first-item m0)))
+                           (end (org-element-end (-last-item m0))))
+                       (->> (apply #'org-ml-build-section m1)
+                            (org-ml--replace-bounds nil begin end)))
+                   (let* ((begin (or (org-element-contents-begin headline)
+                                     (org-element-end headline)))
+                          ;; If this headline is the last in the buffer and it
+                          ;; has no contents, the "end" will be the end of the
+                          ;; headline itself, so we need to add a newline before
+                          ;; insertion so that the new contents will go
+                          ;; underneath instead of being appended to the
+                          ;; headline itself
+                          (begin* (if (/= begin (point-max)) begin
+                                    (goto-char begin)
+                                    (insert-char ?\n)
+                                    (1+ begin))))
+                     (org-ml--insert (+ begin* pb0) m1)))
+               ;; TODO this is going to be inefficient if we have subheadlines
+               (let ((begin (org-element-begin headline))
+                     (end (org-element-end headline)))
+                 (org-ml--replace-bounds nil begin end headline))))))
+      (-each (nreverse (org-ml--parse-patterns-where which "^\\* "))
+        #'map-to-subheadlines))))
+
+(org-ml--defun* org-ml-update-metasections (which fun)
+  "Update some headline metasections in the current using FUN.
+
+See `org-ml-parse-headlines' for the meaning of WHICH.
+
+Headlines are updated using `org-ml~update' with DIFF-ARG set to
+nil (see this for use and meaning of FUN)."
+  (org-ml-update-supersections* which
+    (->> (org-ml-supersection-to-metasection it)
+         (funcall fun)
+         (org-ml-metasection-to-supersection))))
 
 ;;; depreciated functions
 

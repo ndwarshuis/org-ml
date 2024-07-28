@@ -111,6 +111,19 @@
      (org-ml-update-headlines* 'all
        (org-ml-headline-set-planning pl it)))))
 
+(org-ml-defbench "schedule headline (supersection)" 1000
+  "* headline"
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (org-schedule nil "2000-01-01")
+      (setq next (outline-next-heading))))
+
+  (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+    (org-ml-wrap-impure
+     (org-ml-update-metasections* 'all
+       (org-ml-metasection-set-planning pl it)))))
+
 (org-ml-defbench "reschedule headline" 1000
   (list "* headline"
         "SCHEDULED: <2020-01-01 Wed>")
