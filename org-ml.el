@@ -7698,7 +7698,7 @@ nil (see this for use and meaning of FUN)."
                                        (progn
                                          (goto-char (org-element-begin headline))
                                          (forward-line)
-                                         (if (not (eolp)) (point)
+                                         (if (bolp) (point)
                                            ;; use this since this plays nice
                                            ;; with evil mode
                                            (when (re-search-forward "$" nil t)
