@@ -6748,6 +6748,24 @@
 
     (defexamples-content org-ml-update-metasections
       nil
+      (:buffer "* one")
+      (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-metasections* 'all
+           (org-ml-metasection-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>")
+      (:buffer "* one"
+               ""
+               "something")
+      (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-metasections* 'all
+           (org-ml-metasection-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  ""
+                  "something")
       (:buffer "* one"
                "** two")
       (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))

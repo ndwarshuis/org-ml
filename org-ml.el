@@ -4170,8 +4170,6 @@ first paragraph and returns modified secondary-string."
 (defun org-ml-supersection-set-preblank (pre-blank supersection)
   (plist-put supersection :pre-blank pre-blank))
 
-;; TODO need a way to denote which things shouldn't be updated, which will
-;; save some speed
 (defun org-ml-metasection-set-planning (planning metasection)
   (-let* (((&plist :pre-blank pb
                    :meta (&plist :planning p :node-props n :supercontents s))
@@ -7210,6 +7208,11 @@ applied to the buffer."
 ;;                        p2 (cdr (cdr p2))))
 ;;                (and (not p2) plist-matches))))))))
 
+(defun org-ml--replace-region (begin end text)
+  (delete-region begin end)
+  (goto-char begin)
+  (insert text))
+
 (defun org-ml--replace-bounds (diff-mode begin end node)
   "Replace text between BEGIN and END with NODE1 in current buffer.
 See `org-ml~update' for meaning of DIFF-MODE."
@@ -7226,10 +7229,7 @@ See `org-ml~update' for meaning of DIFF-MODE."
         (org-ml--diff-region begin end (org-ml-to-string node))
       ;; convert node to string before deleting so deferred properties can get
       ;; what they need from the buffer
-      (let ((s (org-ml-to-string node)))
-        (delete-region begin end)
-        (goto-char begin)
-        (insert s)))
+      (org-ml--replace-region begin end (org-ml-to-string node)))
     nil))
 
 (org-ml--defun-anaphoric* org-ml--update (diff-mode fun node)
@@ -7683,28 +7683,36 @@ nil (see this for use and meaning of FUN)."
                     (org-ml-headline-get-supersection headline))
                    ((ss1 &as &plist :pre-blank pb1 :meta m1) (funcall fun ss0)))
              (if (or (not pb1) (= pb0 pb1))
-                 (if m0
-                     (let ((begin (org-element-begin (-first-item m0)))
-                           (end (org-element-end (-last-item m0))))
-                       (->> (apply #'org-ml-build-section m1)
-                            (org-ml--replace-bounds nil begin end)))
-                   (let* ((begin (or (org-element-contents-begin headline)
-                                     (org-element-end headline)))
-                          ;; If this headline is the last in the buffer and it
-                          ;; has no contents, the "end" will be the end of the
-                          ;; headline itself, so we need to add a newline before
-                          ;; insertion so that the new contents will go
-                          ;; underneath instead of being appended to the
-                          ;; headline itself
-                          (begin* (if (/= begin (point-max)) begin
-                                    (goto-char begin)
-                                    (insert-char ?\n)
-                                    (1+ begin))))
-                     (org-ml--insert (+ begin* pb0) m1)))
-               ;; TODO this is going to be inefficient if we have subheadlines
-               (let ((begin (org-element-begin headline))
-                     (end (org-element-end headline)))
-                 (org-ml--replace-bounds nil begin end headline))))))
+                 (let ((s (->> (-map #'org-ml-to-string m1)
+                               (s-join "")
+                               (concat (make-string pb0 ?\n)))))
+                   (if m0
+                       (let ((begin (org-element-begin (-first-item m0)))
+                             (end (org-element-end (-last-item m0))))
+                         (org-ml--replace-region begin end s))
+                     (let* ((begin (or (org-element-contents-begin headline)
+                                       ;; If there are no contents, go to
+                                       ;; headline start, try to go to next
+                                       ;; line, and insert new line if we can't
+                                       ;; (which means we are at the end)
+                                       (progn
+                                         (goto-char (org-element-begin headline))
+                                         (forward-line)
+                                         (if (not (eolp)) (point)
+                                           ;; use this since this plays nice
+                                           ;; with evil mode
+                                           (when (re-search-forward "$" nil t)
+                                             (replace-match "\n" nil nil))
+                                           (forward-line)
+                                           (point))))))
+                       (goto-char begin)
+                       (insert s))))
+               (let ((headline* (->> (org-ml-copy headline)
+                                     (org-ml-headline-set-subheadlines nil)
+                                     (org-ml-headline-set-supersection ss1)))
+                     (begin (org-element-begin headline))
+                     (end (or (outline-next-heading) (point-max))))
+                 (org-ml--replace-bounds nil begin end headline*))))))
       (-each (nreverse (org-ml--parse-patterns-where which "^\\* "))
         #'map-to-subheadlines))))
 
