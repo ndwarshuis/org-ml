@@ -2096,6 +2096,35 @@ Return a list like (TYPE VALUE UNIT) or nil."
   ;;                 (org-ml--arg-error "Invalid deadline list: %s" deadline)))))
   ;;       (org-ml--set-properties-nocheck d timestamp))))
 
+(defun org-ml--timestamp-set-collapsed (flag timestamp)
+  "Return TIMESTAMP with collapsed set to FLAG."
+  (pcase (org-element-property-raw :range-type timestamp)
+    ;; collapsed
+    (`timerange
+     (if flag timestamp
+       (->> (org-ml-copy timestamp)
+            (org-element-put-property-2 :range-type 'daterange))))
+    ;; uncollapsed
+    (`daterange
+     (if (and (org-ml--timestamp-get-start-time timestamp)
+              (org-ml--timestamp-get-end-time timestamp))
+         (cond
+          ((and (eq flag t) (org-ml--timestamp-has-equal-dates-p timestamp))
+           (org-element-put-property-2 :range-type 'timerange timestamp))
+          ((and (eq flag 'force))
+           (let ((s (org-ml--timestamp-get-start-timelist timestamp)))
+             (->> (org-ml-copy timestamp)
+                  (org-ml--timestamp-set-end-timelist-nocheck s)
+                  (org-element-put-property-2 :range-type 'timerange))))
+          (t
+           timestamp))
+       timestamp))
+    ;; neither
+    (`nil
+     timestamp)
+    (e
+     (error "Invalid range-type %s" e))))
+
 ;; TODO don't check timelist format in these private functions since I might end
 ;; up checking them multiple times if I do so; check once in public functions
 ;; instead (or not at all)
@@ -2517,7 +2546,7 @@ Building a diary sexp timestamp is not possible with this function."
        (org-ml--timestamp-set-warning warning)
        (org-ml--timestamp-set-repeater repeater)
        (org-ml--timestamp-set-deadline deadline)
-       (org-ml-timestamp-set-collapsed (or collapsed t))))
+       (org-ml--timestamp-set-collapsed (or collapsed t))))
 
 (org-ml--defun-kw org-ml-build-clock! (start &key end post-blank)
   "Return a new clock node.
@@ -3623,32 +3652,7 @@ conditions are not met.
 If `force', ignore condition 1 above. The date in the collapsed
 timestamp will be taken from the start date and the end date will
 be ignored."
-  (pcase (org-element-property-raw :range-type timestamp)
-    ;; collapsed
-    (`timerange
-     (if flag timestamp
-       (->> (org-ml-copy timestamp)
-            (org-element-put-property-2 :range-type 'daterange))))
-    ;; uncollapsed
-    (`daterange
-     (if (and (org-ml--timestamp-get-start-time timestamp)
-              (org-ml--timestamp-get-end-time timestamp))
-         (cond
-          ((and (eq flag t) (org-ml--timestamp-has-equal-dates-p timestamp))
-           (org-element-put-property-2 :range-type 'timerange timestamp))
-          ((and (eq flag 'force))
-           (let ((s (org-ml--timestamp-get-start-timelist timestamp)))
-             (->> (org-ml-copy timestamp)
-                  (org-ml--timestamp-set-end-timelist-nocheck s)
-                  (org-element-put-property-2 :range-type 'timerange))))
-          (t
-           timestamp))
-       timestamp))
-    ;; neither
-    (`nil
-     timestamp)
-    (e
-     (error "Invalid range-type %s" e))))
+  (org-ml--timestamp-set-collapsed flag timestamp))
 
 (defun org-ml-timestamp-get-warning (timestamp)
   "Return the warning component of TIMESTAMP.
