@@ -479,6 +479,13 @@ STRING and ARGS are analogous to `error'."
       (unless (equal y type)
         (org-ml--arg-error "Node must be a %s, got a %s" type y)))))
 
+(defun org-ml--check-types (types node)
+  "Check that NODE is one of TYPES; throw error if not."
+  (unless org-ml-disable-checks
+    (let ((y (org-ml-get-type node)))
+      (unless (memq y types)
+        (org-ml--arg-error "Node must be one of %s, got a %s" types y)))))
+
 ;;; MISC HELPER FUNCTIONS
 
 (defun org-ml--get-head (node)
@@ -490,7 +497,7 @@ STRING and ARGS are analogous to `error'."
   "Convert STRING to org-element representation."
   (with-temp-buffer
     (insert string)
-    (-> (org-ml-parse-this-buffer) (org-ml-get-children) (car))))
+    (-> (org-ml-parse-this-buffer) (org-element-contents) (car))))
 
 (define-inline org-ml-copy (node &optional keep)
   "Copy NODE if running in pure mode.
@@ -503,6 +510,11 @@ KEEP is passed to `org-element-copy'."
 (defmacro org-ml-wrap-impure (&rest body)
   "Run BODY in impure mode."
   `(let ((org-ml-use-impure t))
+     ,@body))
+
+(defmacro org-ml-wrap-check (&rest body)
+  "Run BODY without node type checking."
+  `(let ((org-ml-disable-checks t))
      ,@body))
 
 (defmacro org-ml-> (&rest forms)
@@ -1555,7 +1567,7 @@ function or nil if there is none."
 INDICES is a list of integers specifying the index and level of the
 nested element to return."
   (if (not indices) node
-    (->> (org-ml-get-children node)
+    (->> (org-element-contents node)
          (nth (car indices))
          (org-ml--get-descendent (cdr indices)))))
 
@@ -1574,7 +1586,7 @@ returns a modified list of children."
     (declare (debug (form form)))
     (let ((n (make-symbol "--node")))
     `(let* ((,n ,node)
-            (it (org-ml-get-children ,n)))
+            (it (org-element-contents ,n)))
        (org-ml--set-children-nocheck ,form ,n)))))
 
 (defun org-ml--set-children-throw-error (type child-types illegal)
@@ -2177,10 +2189,10 @@ plain-list, SUBITEMS will be all items in the nested plain-list,
 POST-BLANK will be the post-blank of the nested plain-list, and
 REST will be everything after the plain-list (which should be nil
 for all sensible items)."
-  (-let* (((h (s . r)) (->> (org-ml-get-children item)
+  (-let* (((h (s . r)) (->> (org-element-contents item)
                             (--split-with (not (org-ml--is-type 'plain-list it)))))
           (pb (if s (org-element-post-blank s) 0))
-          (i (org-ml-get-children s)))
+          (i (org-element-contents s)))
     (list h i pb r)))
 
 (defun org-ml--item-set-subcomponents (subcomponents item)
@@ -2306,8 +2318,8 @@ ACTIVE is a flag denoting if the timestamp is to be active."
 
 (defun org-ml-headline-get-section (headline)
   "Return children of section node in HEADLINE node or nil if none."
-  (--> (car (org-ml-get-children headline))
-       (when (org-ml--is-type 'section it) (org-ml-get-children it))))
+  (--> (car (org-element-contents headline))
+       (when (org-ml--is-type 'section it) (org-element-contents it))))
 
 (defun org-ml-headline-set-section (children headline)
   "Return HEADLINE with section node containing CHILDREN.
@@ -2328,7 +2340,7 @@ returns a modified child list."
 
 (defun org-ml-headline-get-subheadlines (headline)
   "Return list of child headline nodes in HEADLINE node or nil if none."
-  (let ((children (org-ml-get-children headline)))
+  (let ((children (org-element-contents headline)))
     (if (org-ml--is-type 'section (car children)) (cdr children) children)))
 
 (defun org-ml-headline-set-subheadlines (subheadlines headline)
@@ -2371,8 +2383,8 @@ first layer, (+ 2 level) for second, and so on."
 (defun org-ml--table-get-width (table)
   "Return the width of TABLE as an integer.
 This effectively is the maximum of all table-row lengths."
-  (->> (org-ml-get-children table)
-       (--map (length (org-ml-get-children it)))
+  (->> (org-element-contents table)
+       (--map (length (org-element-contents it)))
        (-max)))
 
 (defun org-ml--table-pad-or-truncate (length list)
@@ -2402,7 +2414,7 @@ a modified table-cell node."
 (defun org-ml--table-get-row (row-index table)
   "Return the table-row node at ROW-INDEX within TABLE.
 Rule-type table-row nodes do not factor when counting the index."
-  (->> (org-ml-get-children table)
+  (->> (org-element-contents table)
        (--filter (org-ml--property-is-eq :type 'standard it))
        (org-ml--nth row-index)))
 
@@ -2507,12 +2519,12 @@ throw an error."
         (if (org-ml--is-type 'plain-list d)
             (-let* ((i (org-ml--get-descendent '(0) d))
                     ((first . rest) (->> (org-ml--get-descendent '(0) i)
-                                       (org-ml-get-children)))
+                                       (org-element-contents)))
                     (bullet (org-element-property-raw :bullet i)))
               (if (org-ml--is-type 'plain-text first)
                   `(,(concat bullet first) ,@rest)
                 `(,bullet ,first ,@rest)))
-          (if-let (ss (org-ml-get-children d))
+          (if-let (ss (org-element-contents d))
               (cond
                ((not (org-ml--is-secondary-string ss))
                 (org-ml--arg-error "Secondary string must only contain objects"))
@@ -3416,6 +3428,7 @@ KEY is one of:
 - `:utf-8' (the entity's utf8 representation)
 
 Any other keys will trigger an error."
+  (org-ml--check-type 'entity entity)
   (-if-let (index (-elem-index key (list :latex :latex-math-p :html
                                          :ascii :latin1 :utf-8)))
       (->> (org-element-property-raw :name entity)
@@ -3428,6 +3441,7 @@ Any other keys will trigger an error."
 
 (defun org-ml-statistics-cookie-is-complete (statistics-cookie)
   "Return t is STATISTICS-COOKIE node is complete."
+  (org-ml--check-type 'statistics-cookie statistics-cookie)
   (let ((val (org-element-property-raw :value statistics-cookie)))
     (or (-some->>
          (s-match "\\([[:digit:]]+\\)%" val)
@@ -3923,24 +3937,28 @@ behavior is not desired, use `org-ml-timestamp-diary-shift'."
 
 (defun org-ml-clock-is-running (clock)
   "Return t if CLOCK element is running (eg is open)."
+  (org-ml--check-type 'clock clock)
   (org-ml--property-is-eq :status 'running clock))
 
 ;; headline
 
 (defun org-ml-headline-get-statistics-cookie (headline)
   "Return the statistics cookie node from HEADLINE if it exists."
+  (org-ml--check-type 'headline headline)
   (->> (org-element-property :title headline)
        (-last-item)
        (org-ml--filter-type 'statistics-cookie)))
 
 (defun org-ml-headline-is-done (headline)
   "Return t if HEADLINE node has a done todo-keyword."
+  (org-ml--check-type 'headline headline)
   (-> (org-element-property :todo-keyword headline)
       (member org-done-keywords)
       (and t)))
 
 (defun org-ml-headline-has-tag (tag headline)
   "Return t if HEADLINE node is tagged with TAG."
+  (org-ml--check-type 'headline headline)
   (if (member tag (org-element-property :tags headline)) t))
 
 (defun org-ml-headline-set-title! (title-text stats-cookie-value headline)
@@ -3950,6 +3968,7 @@ TITLE-TEXT is a string to be parsed into object nodes for the title
 via `org-ml-build-secondary-string!' (see that function for restrictions)
 and STATS-COOKIE-VALUE is a list described in
 `org-ml-build-statistics-cookie'."
+  (org-ml--check-type 'headline headline)
   (let ((ss (org-ml-build-secondary-string! title-text)))
     (if (not stats-cookie-value)
         (org-ml-set-property :title ss headline)
@@ -3965,7 +3984,7 @@ and STATS-COOKIE-VALUE is a list described in
 This only affects item nodes with checkboxes in the `on' or `off'
 states; return ITEM node unchanged if the checkbox property is `trans'
 or nil."
-  ;; TODO check type here
+  (org-ml--check-type 'item item)
   (pcase (org-element-property-raw :checkbox item)
     ('on (org-element-put-property-2 :checkbox 'off (org-ml-copy item)))
     ('off (org-element-put-property-2 :checkbox 'on (org-ml-copy item)))
@@ -3979,6 +3998,7 @@ or nil."
 
 PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
 is the same as that described in `org-ml-build-planning!'."
+  (org-ml--check-type 'planning planning)
   (unless (memq prop '(:closed :deadline :scheduled))
     (org-ml--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
   (let* ((active (not (eq prop :closed)))
@@ -3993,14 +4013,14 @@ is the same as that described in `org-ml-build-planning!'."
 
 (defun org-ml-children-contain-point (point branch-node)
   "Return t if POINT is within the boundaries of BRANCH-NODE's children."
+  (org-ml--check-types org-ml-branch-nodes branch-node)
   (-let ((b (org-element-contents-begin branch-node))
          (e (org-element-contents-end branch-node)))
-    (if (and (integerp b) (integerp e))
-        (<= b point e)
-      (error "Node boundaries are not defined"))))
+    (<= b point e)))
 
 (defun org-ml-get-children (branch-node)
   "Return the children of BRANCH-NODE as a list."
+  (org-ml--check-types org-ml-branch-nodes branch-node)
   (org-element-contents branch-node))
 
 (defun org-ml-set-children (children branch-node)
@@ -4055,11 +4075,12 @@ FORM is a form supplied to `--mapcat'."
 If OBJECT-NODE is a plain-text node, wrap it in a list and return.
 Else add the post-blank property of OBJECT-NODE to the last member
 of its children and return children as a secondary string."
+  (org-ml--check-types org-ml-objects object-node)
   (if (org-ml--is-type 'plain-text object-node)
       (list object-node)
     (let ((post-blank (org-ml--get-post-blank-textsafe object-node)))
       (->> (org-ml-copy object-node t)
-           (org-ml-get-children)
+           (org-element-contents)
            (org-ml--map-last*
             (org-ml--shift-post-blank-textsafe post-blank it))))))
 
@@ -4069,12 +4090,14 @@ If OBJECT-NODE is a plain-text node, wrap it in a list and return.
 Else recursively descend into the children of OBJECT-NODE and splice
 the children of nodes with type in TYPES in place of said node and
 return the result as a secondary string."
+  ;; TODO this will check for object nodes in nested levels which is redundant
+  (org-ml--check-types org-ml-objects object-node)
   (cond
    ((org-ml--is-type 'plain-text object-node)
     (list object-node))
    ((org-ml-is-any-type types object-node)
     (let ((post-blank (org-ml--get-post-blank-textsafe object-node)))
-      (->> (org-ml-get-children object-node)
+      (->> (org-element-contents object-node)
            (org-ml--mapcat-normalize
             (->> (org-ml-copy it)
                  (org-ml-unwrap-types-deep types)))
@@ -4117,9 +4140,9 @@ plain-lists, join the two lists together."
     (if (and (org-ml--is-type 'plain-list last)
              (org-ml--is-type 'plain-list first))
         (let ((pb (org-element-post-blank last)))
-          (--> (org-ml-get-children last)
+          (--> (org-element-contents last)
                (org-ml--map-last* (org-ml--set-post-blank pb it) it)
-               (append it (org-ml-get-children first))
+               (append it (org-element-contents first))
                (org-ml--set-children-nocheck it last)
                (cons it (cdr nodes2))
                (append (-drop-last 1 nodes1) it)))
@@ -4127,12 +4150,14 @@ plain-lists, join the two lists together."
 
 (defun org-ml-item-get-paragraph (item)
   "Return the first paragraph's children of ITEM or nil if none."
-  (-when-let (first-child (car (org-ml-get-children item)))
+  (org-ml--check-type 'item item)
+  (-when-let (first-child (car (org-element-contents item)))
     (when (org-ml--is-type 'paragraph first-child)
-      (org-ml-get-children first-child))))
+      (org-element-contents first-child))))
 
 (defun org-ml-item-set-paragraph (secondary-string item)
   "Set the first paragraph's children of ITEM to SECONDARY-STRING."
+  (org-ml--check-type 'item item)
   (org-ml-map-children*
     (if (org-ml--is-type 'paragraph (car it))
         (if (not secondary-string) (cdr it)
@@ -4162,12 +4187,14 @@ first paragraph and returns modified secondary-string."
 
 (defun org-ml-headline-get-supersection (headline)
   "Return supersection list for the section in HEADLINE."
+  (org-ml--check-type 'headline headline)
   (org-ml--supersection-init
    (org-element-property-raw :pre-blank headline)
    (org-ml-headline-get-section headline)))
 
 (defun org-ml-headline-set-supersection (supersection headline)
   "Return SUPERSECTION for the section in HEADLINE."
+  (org-ml--check-type 'headline headline)
   (-let* (((&plist :pre-blank p :meta m) supersection)
           (headline* (if p (->> (org-ml-copy headline)
                                 (org-element-put-property-2 :pre-blank p))
@@ -4215,12 +4242,10 @@ first paragraph and returns modified secondary-string."
 
 (defun org-ml-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
+  (org-ml--check-type 'headline headline)
   (->> (org-ml-headline-get-section headline)
        (car)
        (org-ml--filter-type 'planning)))
-
-(defun org-ml-supersection-set-preblank (pre-blank supersection)
-  (plist-put supersection :pre-blank pre-blank))
 
 (defun org-ml-metasection-set-planning (planning metasection)
   (-let* (((&plist :pre-blank pb
@@ -4240,6 +4265,7 @@ first paragraph and returns modified secondary-string."
 
 (defun org-ml-headline-set-planning (planning headline)
   "Return HEADLINE node with planning components set to PLANNING node."
+  (org-ml--check-type 'headline headline)
   (org-ml-headline-map-metasection-maybe*
     (org-ml-metasection-set-planning planning it)
     headline))
@@ -4257,10 +4283,11 @@ modified planning node."
 (defun org-ml-headline-get-node-properties (headline)
   "Return a list of node-properties nodes in HEADLINE or nil if none."
   ;; assume the property drawer is the first or second child of section
+  (org-ml--check-type 'headline headline)
   (-some--> (org-ml-headline-get-section headline)
     (if (org-ml--is-type 'property-drawer (car it)) (car it)
       (when (org-ml--is-type 'property-drawer (cadr it)) (cadr it)))
-    (org-ml-get-children it)))
+    (org-element-contents it)))
 
 ;; TODO why not just use string . string cells for this?
 (defun org-ml-metasection-set-node-properties (node-properties metasection)
@@ -4293,6 +4320,7 @@ modified planning node."
 (defun org-ml-headline-set-node-properties (node-properties headline)
   "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
 NODE-PROPERTIES is a list of node-property nodes."
+  (org-ml--check-type 'headline headline)
   (org-ml-headline-map-metasection-maybe*
     (org-ml-metasection-set-node-properties node-properties it)
     headline))
@@ -4584,9 +4612,9 @@ logbook."
                  (equal "\n" node))))
        (get-paragraph-children
         (item)
-        (-when-let (first-child (car (org-ml-get-children item)))
+        (-when-let (first-child (car (org-element-contents item)))
           (when (org-ml--is-type 'paragraph first-child)
-            (org-ml-get-children first-child)))))
+            (org-element-contents first-child)))))
     (when (org-ml--is-type 'item item)
       (let ((pchildren (get-paragraph-children item)))
         (-if-let (i (-find-index #'is-line-break pchildren))
@@ -4652,7 +4680,7 @@ items."
       ((flatten
         (plain-list)
         (let ((pb (org-element-post-blank plain-list)))
-          (->> (org-ml-get-children plain-list)
+          (->> (org-element-contents plain-list)
                (org-ml--map-last* (org-ml--set-post-blank pb it))))))
     (--splice (org-ml--is-type 'plain-list it) (flatten it) nodes)))
 
@@ -4802,7 +4830,7 @@ SCC is given by `org-ml--scc-encode' and STATE is given by
 `org-ml--state-init'. STATE will be updated by called
 `org-ml--state-tick'."
   (when (org-ml--node-is-drawer-with-name name node)
-    (let ((drawer-nodes (->> (org-ml-get-children node)
+    (let ((drawer-nodes (->> (org-element-contents node)
                              (org-ml--separate-logbook scc mode)))
                              ;; (reverse)))
           (key (cl-case mode
@@ -5416,7 +5444,7 @@ clock-note when it is not allowed by CONFIG will trigger an
 error."
   (org-ml-headline-map-logbook-clocks* config
     (-let (((first . rest) it))
-      (if (not (org-ml-clock-is-running first)) it
+      (if (not (and first (org-ml-clock-is-running first))) it
         (let* ((time (org-ml-unixtime-to-datetime unixtime))
                (closed (->> first
                             ;; NOTE making copies here is necessary
@@ -5445,6 +5473,7 @@ for the structure of both config lists."
 
 The return value is a list of headline titles (including that from
 HEADLINE) leading to the root node."
+  (org-ml--check-type 'headline headline)
   (->> (org-ml-get-parents headline)
        (--map (org-element-property :raw-value it))))
 
@@ -5456,9 +5485,9 @@ over the number of items with checkboxes (non-checkbox items will
 not be considered)."
   (let* ((items
           (->> (org-ml-headline-get-section headline)
-               (org-ml-get-children)
+               (org-element-contents)
                (--filter (org-ml--is-type 'plain-list it))
-               (-mapcat #'org-ml-get-children)
+               (-mapcat #'org-element-contents)
                (--filter (org-element-property-raw :checkbox it))))
          (done (length (--filter (org-ml--property-is-eq :checkbox 'on it)
                                  items)))
@@ -5486,7 +5515,7 @@ subheadlines will not be counted)."
 (defun org-ml-plain-list-set-type (type plain-list)
   "Return PLAIN-LIST node with type property set to TYPE.
 TYPE is one of the symbols `unordered' or `ordered'."
-  ;; TODO copying probably won't be necessary once we fix -set-property
+  (org-ml--check-type 'plain-list plain-list)
   (cond
    ((eq type 'unordered)
     (org-ml--map-children-nocheck*
@@ -5505,16 +5534,19 @@ TYPE is one of the symbols `unordered' or `ordered'."
 (defun org-ml-table-get-cell (row-index column-index table)
   "Return table-cell node at ROW-INDEX and COLUMN-INDEX in TABLE node.
 Rule-type rows do not count toward row indices."
+  (org-ml--check-type 'table table)
   (->> (org-ml--table-get-row row-index table)
-       (org-ml-get-children)
+       (org-element-contents)
        (org-ml--nth column-index)))
 
 (defun org-ml-table-delete-row (row-index table)
   "Return TABLE node with row at ROW-INDEX deleted."
+  (org-ml--check-type 'table table)
   (org-ml--map-children-nocheck* (org-ml--remove-at row-index it) table))
 
 (defun org-ml-table-delete-column (column-index table)
   "Return TABLE node with column at COLUMN-INDEX deleted."
+  (org-ml--check-type 'table table)
   (org-ml--map-children-nocheck*
    (--map
     (if (org-ml--property-is-eq :type 'rule it) it
@@ -5528,6 +5560,7 @@ Rule-type rows do not count toward row indices."
 COLUMN-INDEX is the index of the column and COLUMN-TEXT is a list of
 strings to be made into table-cells to be inserted following the same
 syntax as `org-ml-build-table-cell!'."
+  (org-ml--check-type 'table table)
   (let ((column (-map #'org-ml-build-table-cell! column-text)))
     (org-ml--column-map-down-rows
      (lambda (new-cell cells) (org-ml--insert-at column-index new-cell cells))
@@ -5540,6 +5573,7 @@ syntax as `org-ml-build-table-cell!'."
 ROW-INDEX is the index of the column and ROW-TEXT is a list of strings
 to be made into table-cells to be inserted following the same syntax
 as `org-ml-build-table-row!'."
+  (org-ml--check-type 'table table)
   (if (not row-text) (org-ml--table-clear-row row-index table)
     (let ((row (->> (org-ml-build-table-row! row-text)
                     (org-ml--table-row-pad-maybe table))))
@@ -5555,6 +5589,7 @@ table-cell at ROW-INDEX and COLUMN-INDEX in TABLE. CELL-TEXT will be
 processed the same as the argument given to `org-ml-build-table-cell!'.
 
 If CELL-TEXT is nil, it will set the cell to an empty string."
+  (org-ml--check-type 'table table)
   (let* ((cell (if cell-text (org-ml-build-table-cell! cell-text)
                  (org-ml-build-table-cell "")))
          (row (->> (org-ml--table-get-row row-index table)
@@ -5570,6 +5605,7 @@ at COLUMN-INDEX. Each member of COLUMN-TEXT will be processed the
 same as the argument given to `org-ml-build-table-cell!'.
 
 If COLUMN-TEXT is nil, it will clear all cells at COLUMN-INDEX."
+  (org-ml--check-type 'table table)
   (if (not column-text) (org-ml--table-clear-column column-index table)
     (let ((column-cells (-map #'org-ml-build-table-cell! column-text)))
       (org-ml--table-replace-column column-index column-cells table))))
@@ -5582,6 +5618,7 @@ ROW-INDEX. Each member of ROW-TEXT will be processed the same as
 the argument given to `org-ml-build-table-row!'.
 
 If ROW-TEXT is nil, it will clear all cells at ROW-INDEX."
+  (org-ml--check-type 'table table)
   (let ((row-cells (org-ml-build-table-row! row-text)))
     (org-ml--table-replace-row row-index row-cells table)))
 
@@ -5658,7 +5695,7 @@ demoted headline node's children."
   (org-ml-headline-map-subheadlines*
     (org-ml--tree-set-child* index
       (let* ((headlines-in-target (org-ml-headline-get-subheadlines it-target))
-             (tgt-children (org-ml-get-children it-target))
+             (tgt-children (org-element-contents it-target))
              (tgt-pb (if (org-ml--is-type 'section (car tgt-children))
                          (org-ml--get-post-blank-textsafe (car tgt-children))
                        (org-element-property-raw :pre-blank it-target)))
@@ -5678,6 +5715,7 @@ demoted headline node's children."
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `org-ml-item-indent-item' this will also indent the indented item
 node's children."
+  (org-ml--check-type 'plain-list plain-list)
   (org-ml--map-children-nocheck*
    (org-ml--tree-set-child* index
      (org-ml--item-map-subitems* (-snoc it it-target) it)
@@ -5688,6 +5726,7 @@ node's children."
   "Return PLAIN-LIST node with child item at INDEX indented.
 Unlike `org-ml-item-indent-item-tree' this will not indent the indented
 item node's children."
+  (org-ml--check-type 'plain-list plain-list)
   (org-ml--map-children-nocheck*
    (org-ml--tree-set-child* index
      (-let* (((h i pb r) (org-ml--item-get-subcomponents it-target))
@@ -5750,7 +5789,7 @@ CHILDREN nodes after PARENT at the same level as PARENT."
   "Return HEADLINE node with all child headlines under INDEX promoted."
   (org-ml-headline-map-subheadlines*
     (org-ml--split-children-at-index* index
-      (let ((children (->> (org-ml-get-children it)
+      (let ((children (->> (org-element-contents it)
                            (--map (org-ml--headline-subtree-shift-level -1 it))))
             (parent (org-ml--set-children-nocheck nil it)))
         (list parent children))
@@ -5761,6 +5800,7 @@ CHILDREN nodes after PARENT at the same level as PARENT."
 
 (defun org-ml-plain-list-outdent-all-items (index plain-list)
   "Return PLAIN-LIST node with all child items under INDEX outdented."
+  (org-ml--check-type 'plain-list plain-list)
   (org-ml--map-children-nocheck*
    (org-ml--split-children-at-index* index
      (-let* (((h i pb r) (org-ml--item-get-subcomponents it))
@@ -5802,7 +5842,7 @@ CHILDREN nodes after PARENT at the same level as PARENT."
 The specific child headline to promote is selected by CHILD-INDEX."
   (org-ml-headline-map-subheadlines*
     (org-ml--split-children-at-index* index
-      (-let* (((head tail) (-split-at child-index (org-ml-get-children it)))
+      (-let* (((head tail) (-split-at child-index (org-element-contents it)))
               (target (->> (car tail)
                            (org-ml-copy)
                            (org-ml--headline-shift-level -1)
@@ -5818,6 +5858,7 @@ The specific child headline to promote is selected by CHILD-INDEX."
 (defun org-ml-plain-list-outdent-item (index child-index plain-list)
   "Return PLAIN-LIST node with a child item under INDEX outdented.
 The specific child item to outdent is selected by CHILD-INDEX."
+  (org-ml--check-type 'plain-list plain-list)
   (org-ml--map-children-nocheck*
    (org-ml--split-children-at-index* index
      (-let* (((h i pb r) (org-ml--item-get-subcomponents it))
@@ -5879,7 +5920,7 @@ This is a workaround for a bug.")
 ;; TODO do I still need this in 9.7?
 (defun org-ml--blank (node)
   "Return NODE with empty child nodes `org-ml--blank-if-empty' set to contain \"\"."
-  (if (org-ml-is-childless node)
+  (if (not (org-element-contents node))
       (cond
        ((org-ml--is-any-type org-ml--blank-if-empty node)
         (org-ml--set-blank-children node))
@@ -5909,7 +5950,7 @@ This is a workaround for a bug.")
         ;; normalize the underlying contents (as a string) to only have one
         ;; newline regardless of post-blank. This workaround will manually add
         ;; the newlines back in the case of section nodes
-        (let ((pb (->> (org-ml-get-children node)
+        (let ((pb (->> (org-element-contents node)
                        (-last-item)
                        (org-element-post-blank))))
           (concat s (make-string pb ?\n))))))
@@ -6115,7 +6156,7 @@ FORM and LIST carry the same meaning."
 (defmacro org-ml--get-children-indexed (reverse? node)
   "Return list of children from NODE (if any) with index annotations.
 If REVERSE is t, reverse the final result."
-  `(let* ((children (org-ml-get-children ,node))
+  `(let* ((children (org-element-contents ,node))
           (len (- (length children))))
      (org-ml--map-indexed ,reverse?
        (cons `(,it-index . ,(+ len it-index)) it) children)))
@@ -6903,7 +6944,7 @@ t, parse the entire subtree, else just parse the top headline."
         ;; we don't want it. Workaround is to parse the entire subtree and
         ;; possibly throw away most of it
         (if subtree tree
-          (let ((cs (org-ml-get-children tree)))
+          (let ((cs (org-element-contents tree)))
             (if (< 1 (length cs))
                 (org-ml-set-children (list (car cs)) tree)
               tree)))))))
@@ -7449,7 +7490,7 @@ integer."
     ;; line is and add that to :contents-begin. Do nothing if there are no
     ;; children
     (item
-     (-when-let (first (-first-item (org-ml-get-children node)))
+     (-when-let (first (-first-item (org-element-contents node)))
        (let ((offset (if (not (org-ml--is-type 'paragraph first)) -1
                        (->> (org-ml-to-string first)
                             (s-split "\n")
@@ -7523,7 +7564,7 @@ FOLD-STATE may be one of:
         (-when-let (section (org-ml-headline-get-section headline))
           (-some->> (--first (org-ml--is-type 'property-drawer it) section)
             (org-ml-fold))
-          (let ((drawers (->> (org-ml-get-children section)
+          (let ((drawers (->> (org-element-contents section)
                               (--filter (org-ml--is-type 'drawer it)))))
             (--each drawers (org-ml-fold it))))))
     (cl-case fold-state
