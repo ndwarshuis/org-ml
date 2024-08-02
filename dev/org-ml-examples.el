@@ -5556,25 +5556,27 @@
 
       ;; make sure this works with whitespace
 
-      ;;  TODO these fail
-      ;; (:buffer "* one"
-      ;;          ""
-      ;;          "** two"
-      ;;          ""
-      ;;          "** three"
-      ;;          ""
-      ;;          "*** four")
-      ;; (->> (org-ml-parse-element-at 1)
-      ;;      (org-ml-headline-demote-subheadline 1)
-      ;;      (org-ml-to-trimmed-string))
-      ;; => (:result "* one"
-      ;;             ""
-      ;;             "** two"
-      ;;             ""
-      ;;             "*** three"
-      ;;             ""
-      ;;             "*** four")
+      (:buffer "* one"
+               ""
+               "** two"
+               ""
+               "** three"
+               ""
+               "*** four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-headline-demote-subheadline 1)
+           (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  ""
+                  "** two"
+                  ""
+                  "*** three"
+                  ""
+                  "*** four")
 
+      ;; TODO this is a bug in the interpreter that squishes whichspace from
+      ;; internal nodes underneath headlines and section
+      ;;
       ;; (:buffer "* one"
       ;;          "something"
       ;;          ""
