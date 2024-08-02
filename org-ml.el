@@ -2458,22 +2458,22 @@ performed. TABLE is used to get the table width."
 ;; functions because they are too weird
 
 ;; ...and this is here because I can't think of where else to put it
-(defun org-ml-clone-node (node)
-  "Return copy of NODE, which may be a circular tree.
+;; (defun org-ml-clone-node (node)
+;;   "Return copy of NODE, which may be a circular tree.
 
-This is only necessary to copy nodes parsed using any of parsing
-functions from this package (for example, `org-ml-parse-this-headline')
-because these retain parent references which makes the node a circular
-list. None of the builder functions add parent references, so
-`copy-tree' will be a faster alternative to this function."
-  (let ((print-circle t))
-    (read (format "%S" node))))
+;; This is only necessary to copy nodes parsed using any of parsing
+;; functions from this package (for example, `org-ml-parse-this-headline')
+;; because these retain parent references which makes the node a circular
+;; list. None of the builder functions add parent references, so
+;; `copy-tree' will be a faster alternative to this function."
+;;   (let ((print-circle t))
+;;     (read (format "%S" node))))
 
-(defun org-ml-clone-node-n (n node)
-  "Like `org-ml-clone-node' but make N copies of NODE."
-  (let ((ret))
-    (--dotimes n (!cons (org-ml-clone-node node) ret))
-    ret))
+;; (defun org-ml-clone-node-n (n node)
+;;   "Like `org-ml-clone-node' but make N copies of NODE."
+;;   (let ((ret))
+;;     (--dotimes n (!cons (org-ml-clone-node node) ret))
+;;     ret))
 
 (org-ml--defun-kw org-ml-build-timestamp-diary (form &key start end post-blank)
   "Return a new diary-sexp timestamp node from FORM.
