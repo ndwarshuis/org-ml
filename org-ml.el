@@ -2188,7 +2188,15 @@ REST) where HEAD consists of all nodes before the first nested
 plain-list, SUBITEMS will be all items in the nested plain-list,
 POST-BLANK will be the post-blank of the nested plain-list, and
 REST will be everything after the plain-list (which should be nil
-for all sensible items)."
+for all sensible items).
+
+Example item showing how this breaks down:
+
+- HEAD
+  - SUBITEM1
+  - SUBITEM2 (with POST-BLANK 1 below)
+
+  REST"
   (-let* (((h (s . r)) (->> (org-element-contents item)
                             (--split-with (not (org-ml--is-type 'plain-list it)))))
           (pb (if s (org-element-post-blank s) 0))
@@ -2204,17 +2212,14 @@ SUBCOMPONENTS is a list like that returned by
                     (rest (org-element-post-blank (-last-item rest)))
                     (subitems sub-pb)
                     (head (org-element-post-blank (-last-item head)))))
+      ;; TODO why did I do this?
       (let ((rest* (org-ml--map-last*
                     (org-ml--set-post-blank 0 it)
                     rest))
-            (sublist (-some->> (apply #'org-ml-build-plain-list
-                                      :post-blank (if rest sub-pb 0)
-                                      subitems)
-                       (list)))
-            (head* (org-ml--map-last*
-                    (org-ml--set-post-blank 0 it)
-                    head)))
-        (->> (org-ml--set-children-nocheck (append head* sublist rest*) item)
+            (sublist (apply #'org-ml-build-plain-list
+                            :post-blank (if rest sub-pb 0)
+                            subitems)))
+        (->> (org-ml--set-children-nocheck `(,@head ,sublist ,@rest*) item)
              (org-ml--shift-post-blank-textsafe pb))))))
 
 (defmacro org-ml--item-map-subcomponents* (form item)
@@ -5747,17 +5752,42 @@ item node's children."
   (org-ml--check-type 'plain-list plain-list)
   (org-ml--map-children-nocheck*
    (org-ml--tree-set-child* index
-     (-let* (((h i pb r) (org-ml--item-get-subcomponents it-target))
-             (tgt-item* (org-ml--item-set-subcomponents `(,h nil nil nil) it-target)))
+     ;; Get the target item (the one to be indented) and set its children
+     ;; to nil. Assume that its subitems and anything after it (including the
+     ;; post-blank) will not change.
+     (-let* (((tgt-head tgt-subitems tgt-rest-pb tgt-rest)
+              (org-ml--item-get-subcomponents it-target))
+             (indented-target (org-ml--item-set-subcomponents
+                               `(,tgt-head nil nil nil) it-target))
+             ;; NOTE: this is the post-blank of the *topmost* item in front of
+             ;; the one to be indented. Any space after the the last subitem (if
+             ;; any) are reflected in this (more to come below).
+             (parent-pb (org-element-post-blank it)))
        (org-ml--item-map-subcomponents*
-        (-let (((h* i* pb* r*) it))
-          (if r*
-              (let ((pl (-some->> (cons tgt-item* i)
-                          (apply #'org-ml-build-plain-list :post-blank pb)
-                          (list))))
-                (list h* i* pb* (append r* pl r)))
-            (--> (org-ml--map-last* (org-ml--shift-post-blank pb* it) i*)
-                 (list h* (append it (list tgt-item*) i) pb r))))
+        (-let* (((parent-head parent-subitems parent-rest-pb parent-rest) it)
+                ((parent-subitems* parent-pb* parent-rest*)
+                 ;; If the parent has "extra stuff" underneath its subitems (ie
+                 ;; "rest") then we need to append the indented item after
+                 ;; this "extra stuff." Make a new list with the indented item
+                 ;; and its children (which will be at the same level after
+                 ;; the target is indented)
+                 (if parent-rest
+                     (let ((rest*
+                            (->> (cons indented-target tgt-subitems)
+                                 (apply #'org-ml-build-plain-list :post-blank tgt-rest-pb)
+                                 (cons parent-rest))))
+                       (list parent-subitems parent-rest-pb (append rest* tgt-rest)))
+                   ;; Otherwise, add the indented target and its children to the
+                   ;; subitems under the parent, and set the rest to be that of
+                   ;; the target (if anything). The only tricky part here is to
+                   ;; most the post-blank of the toplevel parent into the last
+                   ;; subitem of the parent (otherwise the post blank would move
+                   ;; to the end of the entire new list after indentation)
+                   (let ((psub (org-ml--map-last*
+                                (org-ml--shift-post-blank parent-pb it)
+                                parent-subitems)))
+                     (list `(,@psub ,indented-target ,@tgt-subitems) tgt-rest-pb tgt-rest)))))
+          (list parent-head parent-subitems* parent-pb* parent-rest*))
         it))
      it)
    plain-list))

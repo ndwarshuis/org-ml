@@ -5759,30 +5759,30 @@
       => (:result "- one"
                   "- two"
                   "  - three"
-                  "  - four"))
-      ;; :begin-hidden
-      ;; (:buffer "- one"
-      ;;          ""
-      ;;          "- two"
-      ;;          ""
-      ;;          "  - three"
-      ;;          ""
-      ;;          "- four"
-      ;;          ""
-      ;;          "  - five")
-      ;; (org-ml->> (org-ml-parse-element-at 1)
-      ;;   (org-ml-plain-list-indent-item 2)
-      ;;   (org-ml-to-trimmed-string))
-      ;; => (:result "- one"
-      ;;             ""
-      ;;             "- two"
-      ;;             ""
-      ;;             "  - three"
-      ;;             ""
-      ;;             "  - four"
-      ;;             ""
-      ;;             "  - five")
-      ;; :end-hidden)
+                  "  - four")
+      :begin-hidden
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "- four"
+               ""
+               "  - five")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-indent-item 2)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "  - three"
+                  ""
+                  "  - four"
+                  ""
+                  "  - five")
+      :end-hidden)
 
     (defexamples-content org-ml-plain-list-indent-item-tree
       nil
