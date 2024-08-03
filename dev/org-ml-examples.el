@@ -5554,8 +5554,6 @@
 
       :begin-hidden
 
-      ;; make sure this works with whitespace
-
       (:buffer "* one"
                ""
                "** two"
@@ -5615,7 +5613,26 @@
       => (:result "* one"
                   "** two"
                   "*** three"
-                  "**** four"))
+                  "**** four")
+      :begin-hidden
+      (:buffer "* one"
+               ""
+               "** two"
+               ""
+               "** three"
+               ""
+               "*** four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-headline-demote-subtree 1)
+        (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  ""
+                  "** two"
+                  ""
+                  "*** three"
+                  ""
+                  "**** four")
+      :end-hidden)
 
     (defexamples-content org-ml-headline-promote-subheadline
       nil
@@ -5633,7 +5650,52 @@
                   "** three"
                   "*** four"
                   "** four"
-                  "*** four"))
+                  "*** four")
+      :begin-hidden
+      (:buffer "* one"
+               "** two"
+               "** three"
+               "*** four"
+               "*** four"
+               "**** five"
+               "*** four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-headline-promote-subheadline 1 1)
+        (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  "** two"
+                  "** three"
+                  "*** four"
+                  "** four"
+                  "*** five"
+                  "*** four")
+      ;; TODO this is a whitespace bug in 9.7
+      ;; (:buffer "* one"
+      ;;          ""
+      ;;          "** two"
+      ;;          ""
+      ;;          "** three"
+      ;;          ""
+      ;;          "*** four"
+      ;;          ""
+      ;;          "*** four"
+      ;;          ""
+      ;;          "*** four")
+      ;; (org-ml->> (org-ml-parse-element-at 1)
+      ;;   (org-ml-headline-promote-subheadline 1 1)
+      ;;   (org-ml-to-trimmed-string))
+      ;; => (:result "* one"
+      ;;             ""
+      ;;             "** two"
+      ;;             ""
+      ;;             "** three"
+      ;;             ""
+      ;;             "*** four"
+      ;;             ""
+      ;;             "** four"
+      ;;             ""
+      ;;             "*** four")
+      :end-hidden)
 
     (defexamples-content org-ml-headline-promote-all-subheadlines
       nil
@@ -5698,6 +5760,29 @@
                   "- two"
                   "  - three"
                   "  - four"))
+      ;; :begin-hidden
+      ;; (:buffer "- one"
+      ;;          ""
+      ;;          "- two"
+      ;;          ""
+      ;;          "  - three"
+      ;;          ""
+      ;;          "- four"
+      ;;          ""
+      ;;          "  - five")
+      ;; (org-ml->> (org-ml-parse-element-at 1)
+      ;;   (org-ml-plain-list-indent-item 2)
+      ;;   (org-ml-to-trimmed-string))
+      ;; => (:result "- one"
+      ;;             ""
+      ;;             "- two"
+      ;;             ""
+      ;;             "  - three"
+      ;;             ""
+      ;;             "  - four"
+      ;;             ""
+      ;;             "  - five")
+      ;; :end-hidden)
 
     (defexamples-content org-ml-plain-list-indent-item-tree
       nil

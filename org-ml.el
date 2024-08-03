@@ -5682,9 +5682,20 @@ Unlike `org-ml-headline-demote-subheadline' this will also demote the
 demoted headline node's children."
   (org-ml-headline-map-subheadlines*
     (org-ml--tree-set-child* index
-      (org-ml--map-children-nocheck*
-       (-snoc it (org-ml--headline-subtree-shift-level 1 it-target))
-       it)
+      (let ((parent-headline (if (org-element-contents it) it
+                               ;; special case, if the parent headline has
+                               ;; nothing underneath it, set the post blank to
+                               ;; the pre blank so that any spacing will be
+                               ;; preserved when we set the target as its
+                               ;; subheadline
+                               (let ((pre (org-element-property :pre-blank it))
+                                     (post (org-element-post-blank  it)))
+                                 (org-ml--set-properties-raw (org-ml-copy it)
+                                   :pre-blank (+ pre post)
+                                   :post-blank 0)))))
+        (org-ml--map-children-nocheck*
+         (-snoc it (org-ml--headline-subtree-shift-level 1 it-target))
+         parent-headline))
       it)
     headline))
 
@@ -5702,10 +5713,17 @@ demoted headline node's children."
              (tgt-headline* (->> (org-ml-copy it-target)
                                  (org-ml-headline-set-subheadlines nil)
                                  (org-ml--headline-shift-level 1)
-                                 (org-ml--set-post-blank tgt-pb))))
+                                 (org-ml--set-post-blank tgt-pb)))
+             ;; TODO not DRY
+             (parent-headline (if (org-element-contents it) it
+                                (let ((pre (org-element-property :pre-blank it))
+                                      (post (org-element-post-blank  it)))
+                                  (org-ml--set-properties-raw (org-ml-copy it)
+                                    :pre-blank (+ pre post)
+                                    :post-blank 0)))))
         (org-ml--map-children-nocheck*
          (append it (list tgt-headline*) headlines-in-target)
-         it))
+         parent-headline))
       it)
     headline))
 
@@ -5738,9 +5756,7 @@ item node's children."
                           (apply #'org-ml-build-plain-list :post-blank pb)
                           (list))))
                 (list h* i* pb* (append r* pl r)))
-            (--> (org-ml--map-last*
-                  (org-ml--map-property-raw* :post-blank (+ it pb*) it)
-                  i*)
+            (--> (org-ml--map-last* (org-ml--shift-post-blank pb* it) i*)
                  (list h* (append it (list tgt-item*) i) pb r))))
         it))
      it)
@@ -5789,10 +5805,17 @@ CHILDREN nodes after PARENT at the same level as PARENT."
   "Return HEADLINE node with all child headlines under INDEX promoted."
   (org-ml-headline-map-subheadlines*
     (org-ml--split-children-at-index* index
-      (let ((children (->> (org-element-contents it)
-                           (--map (org-ml--headline-subtree-shift-level -1 it))))
-            (parent (org-ml--set-children-nocheck nil it)))
-        (list parent children))
+      (let* ((children (->> (org-element-contents it)
+                            (--map (org-ml--headline-subtree-shift-level -1 it))))
+             (parent (org-ml--set-children-nocheck nil it))
+             ;; TODO not DRY
+             (parent* (if children parent
+                        (let ((pre (org-element-property :pre-blank parent))
+                              (post (org-element-post-blank  parent)))
+                          (org-ml--set-properties-raw (org-ml-copy parent)
+                            :pre-blank (+ pre post)
+                            :post-blank 0)))))
+        (list parent* children))
       it)
     headline))
 
@@ -5845,7 +5868,7 @@ The specific child headline to promote is selected by CHILD-INDEX."
       (-let* (((head tail) (-split-at child-index (org-element-contents it)))
               (target (->> (car tail)
                            (org-ml-copy)
-                           (org-ml--headline-shift-level -1)
+                           (org-ml--headline-subtree-shift-level -1)
                            (org-ml-headline-map-subheadlines*
                              (append it (cdr tail)))))
               (parent (org-ml--set-children-nocheck head it)))
