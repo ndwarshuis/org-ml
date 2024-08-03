@@ -5741,7 +5741,49 @@ node's children."
   (org-ml--check-type 'plain-list plain-list)
   (org-ml--map-children-nocheck*
    (org-ml--tree-set-child* index
-     (org-ml--item-map-subitems* (-snoc it it-target) it)
+     (let ((parent-pb (org-element-post-blank it))
+           (indented-target (org-ml--set-post-blank 0 it-target)))
+       (org-ml--item-map-subcomponents*
+        (-let* (((parent-head parent-subitems parent-rest-pb parent-rest) it))
+          ;; ASSUME parent-head will always be present
+          (cond
+           ;; If rest present, append indented item tree to the end of rest.
+           ;; Add the post-blank from parent to the end the last node in rest
+           (parent-rest
+            (list
+             parent-head
+             parent-subitems
+             parent-rest-pb
+             (cons
+              (org-ml--map-last*
+               (org-ml--shift-post-blank parent-pb it)
+               parent-rest)
+              (org-ml-build-plain-list indented-target))))
+           ;; If rest not present but subitems present, append indented tree
+           ;; to the end of these subitems. Put the parent post-blank at the
+           ;; end of the list of subitems.
+           (parent-subitems
+            (list
+             parent-head
+             (-snoc
+              (org-ml--map-last*
+               (org-ml--shift-post-blank parent-pb it)
+               parent-subitems)
+              indented-target)
+             parent-rest-pb
+             parent-rest))
+           ;; If neither subitems nor rest present, add indented tree as new
+           ;; subitem under parent. Put the parent post-blank at the end of
+           ;; the header material.
+           (t
+            (list
+             (org-ml--map-last*
+              (org-ml--shift-post-blank parent-pb it)
+              parent-head)
+             (list indented-target)
+             parent-rest-pb
+             parent-rest))))
+        it))
      it)
    plain-list))
 

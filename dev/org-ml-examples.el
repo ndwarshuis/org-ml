@@ -5787,6 +5787,7 @@
     (defexamples-content org-ml-plain-list-indent-item-tree
       nil
       (:buffer "- one"
+               "  - one-ish"
                "- two"
                "  - three"
                "- four")
@@ -5794,9 +5795,50 @@
         (org-ml-plain-list-indent-item-tree 1)
         (org-ml-to-trimmed-string))
       => (:result "- one"
+                  "  - one-ish"
                   "  - two"
                   "    - three"
-                  "- four"))
+                  "- four")
+      :begin-hidden
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-indent-item-tree 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "  - two"
+                  ""
+                  "    - three"
+                  ""
+                  "- four")
+      (:buffer "- one"
+               ""
+               "  - one-ish"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-indent-item-tree 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "  - one-ish"
+                  ""
+                  "  - two"
+                  ""
+                  "    - three"
+                  ""
+                  "- four")
+      :end-hidden)
 
     (defexamples-content org-ml-plain-list-outdent-item
       nil
