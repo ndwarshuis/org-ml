@@ -655,6 +655,10 @@ This will not work if NODE is a string."
   (inline-quote
    (org-ml--map-property-raw* :post-blank (+ it ,n) ,node)))
 
+(define-inline org-ml--shift-last-post-blank (pb nodes)
+  "Shift post-blank of last of NODES by PB."
+  (inline-quote (org-ml--map-last* (org-ml--shift-post-blank ,pb it) ,nodes)))
+
 (defun org-ml--shift-post-blank-textsafe (n node)
   "ADD N spaces to the end of NODE.
 
@@ -5761,9 +5765,7 @@ node's children."
              parent-subitems
              parent-rest-pb
              (cons
-              (org-ml--map-last*
-               (org-ml--shift-post-blank parent-pb it)
-               parent-rest)
+              (org-ml--shift-last-post-blank parent-pb parent-rest)
               (org-ml-build-plain-list indented-target))))
            ;; If rest not present but subitems present, append indented tree
            ;; to the end of these subitems. Put the parent post-blank at the
@@ -5772,9 +5774,7 @@ node's children."
             (list
              parent-head
              (-snoc
-              (org-ml--map-last*
-               (org-ml--shift-post-blank parent-pb it)
-               parent-subitems)
+              (org-ml--shift-last-post-blank parent-pb parent-subitems)
               indented-target)
              parent-rest-pb
              parent-rest))
@@ -5783,9 +5783,7 @@ node's children."
            ;; the header material.
            (t
             (list
-             (org-ml--map-last*
-              (org-ml--shift-post-blank parent-pb it)
-              parent-head)
+             (org-ml--shift-last-post-blank parent-pb parent-head)
              (list indented-target)
              parent-rest-pb
              parent-rest))))
@@ -5835,9 +5833,7 @@ item node's children."
            ;; parent (otherwise the post blank would move to the end of the
            ;; entire new list after indentation)
            (parent-subitems
-            (let ((psub (org-ml--map-last*
-                         (org-ml--shift-post-blank parent-pb it)
-                         parent-subitems)))
+            (let ((psub (org-ml--shift-last-post-blank parent-pb parent-subitems)))
               (list
                parent-head
                `(,@psub ,indented-target ,@tgt-subitems)
@@ -5845,9 +5841,7 @@ item node's children."
                tgt-rest)))
            (t
             (list
-             (org-ml--map-last*
-              (org-ml--shift-post-blank parent-pb it)
-              parent-head)
+             (org-ml--shift-last-post-blank parent-pb parent-head)
              (cons indented-target tgt-subitems)
              tgt-rest-pb
              tgt-rest))))
@@ -5919,12 +5913,23 @@ CHILDREN nodes after PARENT at the same level as PARENT."
   (org-ml--check-type 'plain-list plain-list)
   (org-ml--map-children-nocheck*
    (org-ml--split-children-at-index* index
-     (-let* (((h i pb r) (org-ml--item-get-subcomponents it))
-             (parent (org-ml--item-set-subcomponents `(,h nil nil nil) it))
-             (i* (org-ml--map-last*
-                  (org-ml--map-property-raw* :post-blank (+ pb it) it)
-                  i)))
-       (list parent (append i* r)))
+     (-let* (((tgt-head tgt-subitems tgt-rest-pb tgt-rest)
+              (org-ml--item-get-subcomponents it))
+             (parent-pb (or (org-element-post-blank (-last-item tgt-head)) 0))
+             (parent (->> (org-ml--item-set-subcomponents `(,tgt-head nil nil nil) it)
+                          (org-ml--set-post-blank parent-pb)))
+             (outdent-pb (org-element-post-blank it))
+             (outdented
+              (cond
+               (tgt-rest
+                (append
+                 (org-ml--shift-last-post-blank tgt-rest-pb tgt-subitems)
+                 (org-ml--shift-last-post-blank outdent-pb tgt-rest)))
+               (tgt-subitems
+                (org-ml--shift-last-post-blank outdent-pb tgt-subitems))
+               (t
+                nil))))
+       `(,parent ,outdented))
      it)
    plain-list))
 
@@ -5995,28 +6000,29 @@ The specific child item to outdent is selected by CHILD-INDEX."
                  (-let (((tgt-head tgt-subitems tgt-rest-pb tgt-rest) it))
                    (cond
                     (tgt-rest
-                     (let ((psub (apply #'org-ml-build-plain-list outdent-subitems
-                                        :post-blank parent-rest-pb)))
+                     (let ((psub (apply #'org-ml-build-plain-list
+                                        :post-blank parent-rest-pb
+                                        outdent-subitems)))
+                                        
                        (list
                         tgt-head
                         tgt-subitems
                         tgt-rest-pb
                         `(,@tgt-rest ,psub ,@parent-rest))))
                     (tgt-subitems
-                     (let ((psub (org-ml--map-last*
-                                  (org-ml--shift-post-blank tgt-pb it)
-                                  tgt-subitems)))
-                       (list
-                        tgt-head
-                        (append psub outdent-subitems)
-                        tgt-rest-pb
-                        tgt-rest)))
+                     (list
+                      tgt-head
+                      (append
+                       (org-ml--shift-list-post-blank tgt-pb tgt-subitems)
+                       outdent-subitems)
+                      tgt-rest-pb
+                      tgt-rest))
                     (t
                      (list
                       (org-ml--map-last*
                        (org-ml--set-post-blank tgt-pb it)
                        tgt-head)
-                      (append tgt-subitems outdent-subitems)
+                      outdent-subitems
                       tgt-rest-pb
                       tgt-rest))))
                  to-outdent)))

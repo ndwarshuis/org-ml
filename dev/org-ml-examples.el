@@ -5969,9 +5969,7 @@
                   "  - three"
                   ""
                   "- four")
-      :end-hidden
-
-      )
+      :end-hidden)
     
     (defexamples-content org-ml-plain-list-outdent-all-items
       nil
@@ -5998,7 +5996,132 @@
                   "  - three"
                   "  - three"
                   "  - three"
-                  "- four")))
+                  "- four")
+
+      (:buffer "- one"
+               "- two"
+               "  - three"
+               "  - three"
+               "  - three"
+               "    - three-ish"
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-all-items 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  "- two"
+                  "- three"
+                  "- three"
+                  "- three"
+                  "  - three-ish"
+                  "- four")
+
+      :begin-hidden
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-all-items 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "- three"
+                  ""
+                  "- three"
+                  ""
+                  "- three"
+                  ""
+                  "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-all-items 2)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "  - three"
+                  ""
+                  "  - three"
+                  ""
+                  "  - three"
+                  ""
+                  "- four")
+
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "    - three-ish"
+               ""
+               "    rest"
+               ""
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-all-items 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "- three"
+                  ""
+                  "- three"
+                  ""
+                  "- three"
+                  ""
+                  "  - three-ish"
+                  ""
+                  "  rest"
+                  ""
+                  "- four")
+
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "  rest"
+               ""
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-all-items 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "- three"
+                  ""
+                  "- three"
+                  ""
+                  "- three"
+                  ""
+                  "rest"
+                  ""
+                  "- four")
+      :end-hidden
+      ))
 
   (def-example-subgroup "Table"
     nil
