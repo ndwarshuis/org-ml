@@ -623,6 +623,10 @@ KEEP is passed to `org-element-copy'."
 (define-inline org-ml--set-post-blank (post-blank node)
   (inline-quote (org-element-put-property-2 :post-blank ,post-blank ,node)))
 
+(define-inline org-ml--set-last-post-blank (pb nodes)
+  "Set post-blank of last of NODES by PB."
+  (inline-quote (org-ml--map-last* (org-ml--set-post-blank ,pb it) ,nodes)))
+
 (defmacro org-ml--set-properties-raw (node &rest plist)
   "Set all properties in NODE to the values corresponding to PLIST.
 PLIST is a list of property-value pairs that correspond to the
@@ -2223,9 +2227,7 @@ SUBCOMPONENTS is a list like that returned by
                     (subitems sub-pb)
                     (head (org-element-post-blank (-last-item head)))))
       ;; TODO why did I do this?
-      (let ((rest* (org-ml--map-last*
-                    (org-ml--set-post-blank 0 it)
-                    rest))
+      (let ((rest* (org-ml--set-last-post-blank 0 rest))
             (sublist (apply #'org-ml-build-plain-list
                             :post-blank (if rest sub-pb 0)
                             subitems)))
@@ -2242,6 +2244,42 @@ will conform to those given in `org-ml--item-get-subcomponents'."
     `(let ((,i ,item))
        (let ((it (org-ml--item-get-subcomponents ,i)))
          (org-ml--item-set-subcomponents ,form ,i)))))
+
+(defmacro org-ml--item-map-subcomponents-cond*
+    (head-form subitem-form rest-form item)
+  "Return ITEM with subcomponents modified.
+
+First, split ITEM using `org-ml--item-get-subcomponents' and
+assign each of the four outputs to `it-head', `it-subitems',
+`it-rest-blank', and `it-rest' respectively.
+
+REST-FORM will run with all `it' variables are non-nil.
+This should return a modified `it-rest' analogue.
+
+SUBITEM-FORM will run if `it-rest' is nil and the rest are
+non-nil. This should return a list (SUBITEMS REST-BLANK REST).
+
+HEAD-FORM will run if `it-rest' and `it-subitems' are nil and the
+others are non-nil. This should return a list to be fed into
+`org-ml--item-set-subcomponents'."
+  (declare (indent 3))
+  (let ((h (make-symbol "--head"))
+        (s (make-symbol "--subitems"))
+        (b (make-symbol "--blank"))
+        (r (make-symbol "--rest")))
+  `(org-ml--item-map-subcomponents*
+    (-let (((,h ,s ,b ,r) it))
+      (cond
+       (,r
+        (let ((it-rest ,r))
+          (list ,h ,s ,b ,rest-form)))
+       (,s
+        (let ((it-subitems ,s))
+          (cons ,h ,subitem-form)))
+       (t
+        (let ((it-head ,h))
+          ,head-form))))
+    ,item)))
 
 (defun org-ml--item-get-subitems (item)
   "Return the subitems of ITEM."
@@ -3987,8 +4025,7 @@ and STATS-COOKIE-VALUE is a list described in
   (let ((ss (org-ml-build-secondary-string! title-text)))
     (if (not stats-cookie-value)
         (org-ml-set-property :title ss headline)
-      (let ((ss* (org-ml--map-last*
-                  (org-ml--set-post-blank 1 it) ss))
+      (let ((ss* (org-ml--set-last-post-blank 1 ss))
             (sc (org-ml-build-statistics-cookie stats-cookie-value)))
         (org-ml-set-property :title (-snoc ss* sc) headline)))))
 
@@ -4156,7 +4193,7 @@ plain-lists, join the two lists together."
              (org-ml--is-type 'plain-list first))
         (let ((pb (org-element-post-blank last)))
           (--> (org-element-contents last)
-               (org-ml--map-last* (org-ml--set-post-blank pb it) it)
+               (org-ml--set-last-post-blank pb it)
                (append it (org-element-contents first))
                (org-ml--set-children-nocheck it last)
                (cons it (cdr nodes2))
@@ -4696,7 +4733,7 @@ items."
         (plain-list)
         (let ((pb (org-element-post-blank plain-list)))
           (->> (org-element-contents plain-list)
-               (org-ml--map-last* (org-ml--set-post-blank pb it))))))
+               (org-ml--set-last-post-blank pb)))))
     (--splice (org-ml--is-type 'plain-list it) (flatten it) nodes)))
 
 (defun org-ml--wrap-plain-lists (nodes)
@@ -5233,7 +5270,7 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
            (e (error "This shouldn't happen: %s" e))))))
     (let ((pb (org-ml-logbook-get-post-blank logbook)))
       (->> (to-nodes config logbook)
-           (org-ml--map-last* (org-ml--set-post-blank pb it))))))
+           (org-ml--set-last-post-blank pb)))))
 
 (defun org-ml--supercontents-to-nodes (config supercontents)
   "Return SUPERCONTENTS as a list of nodes.
@@ -5753,40 +5790,24 @@ node's children."
    (org-ml--tree-set-child* index
      (let ((parent-pb (org-element-post-blank it))
            (indented-target (org-ml--set-post-blank 0 it-target)))
-       (org-ml--item-map-subcomponents*
-        (-let* (((parent-head parent-subitems parent-rest-pb parent-rest) it))
-          ;; ASSUME parent-head will always be present
-          (cond
-           ;; If rest present, append indented item tree to the end of rest.
-           ;; Add the post-blank from parent to the end the last node in rest
-           (parent-rest
-            (list
-             parent-head
-             parent-subitems
-             parent-rest-pb
-             (cons
-              (org-ml--shift-last-post-blank parent-pb parent-rest)
-              (org-ml-build-plain-list indented-target))))
-           ;; If rest not present but subitems present, append indented tree
-           ;; to the end of these subitems. Put the parent post-blank at the
-           ;; end of the list of subitems.
-           (parent-subitems
-            (list
-             parent-head
-             (-snoc
-              (org-ml--shift-last-post-blank parent-pb parent-subitems)
-              indented-target)
-             parent-rest-pb
-             parent-rest))
+       (org-ml--item-map-subcomponents-cond*
            ;; If neither subitems nor rest present, add indented tree as new
            ;; subitem under parent. Put the parent post-blank at the end of
            ;; the header material.
-           (t
-            (list
-             (org-ml--shift-last-post-blank parent-pb parent-head)
-             (list indented-target)
-             parent-rest-pb
-             parent-rest))))
+           (list (org-ml--shift-last-post-blank parent-pb it-head)
+                 `(,indented-target) 0 nil)
+           ;; If rest not present but subitems present, append indented tree
+           ;; to the end of these subitems. Put the parent post-blank at the
+           ;; end of the list of subitems.
+           (list (-snoc
+                  (org-ml--shift-last-post-blank parent-pb it-subitems)
+                  indented-target)
+                 0 nil)
+           ;; If rest present, append indented item tree to the end of rest.
+           ;; Add the post-blank from parent to the end the last node in rest
+             (cons
+              (org-ml--shift-last-post-blank parent-pb it-rest)
+              (org-ml-build-plain-list indented-target))
         it))
      it)
    plain-list))
@@ -5809,43 +5830,29 @@ item node's children."
              ;; the one to be indented. Any space after the the last subitem (if
              ;; any) are reflected in this (more to come below).
              (parent-pb (org-element-post-blank it)))
-       (org-ml--item-map-subcomponents*
-        (-let* (((parent-head parent-subitems parent-rest-pb parent-rest) it))
-          ;; TODO this cond thingy isn't DRY
-          (cond
-           ;; If the parent has "extra stuff" underneath its subitems (ie
-           ;; "rest") then we need to append the indented item after this "extra
-           ;; stuff." Make a new list with the indented item and its children
-           ;; (which will be at the same level after the target is indented)
-           (parent-rest
-            (let ((rest*
-                   (->> (cons indented-target tgt-subitems)
-                        (apply #'org-ml-build-plain-list :post-blank tgt-rest-pb)
-                        (cons parent-rest))))
-              (list parent-head
-                    parent-subitems
-                    parent-rest-pb
-                    (append rest* tgt-rest))))
+       (org-ml--item-map-subcomponents-cond*
+           (list
+            (org-ml--shift-last-post-blank parent-pb it-head)
+            (cons indented-target tgt-subitems)
+            0 nil)
            ;; Otherwise, add the indented target and its children to the
            ;; subitems under the parent, and set the rest to be that of the
            ;; target (if anything). The only tricky part here is to most the
            ;; post-blank of the toplevel parent into the last subitem of the
            ;; parent (otherwise the post blank would move to the end of the
            ;; entire new list after indentation)
-           (parent-subitems
-            (let ((psub (org-ml--shift-last-post-blank parent-pb parent-subitems)))
-              (list
-               parent-head
-               `(,@psub ,indented-target ,@tgt-subitems)
-               tgt-rest-pb
-               tgt-rest)))
-           (t
-            (list
-             (org-ml--shift-last-post-blank parent-pb parent-head)
-             (cons indented-target tgt-subitems)
-             tgt-rest-pb
-             tgt-rest))))
-        it))
+           (let ((psub (org-ml--shift-last-post-blank parent-pb it-subitems)))
+             `((,@psub ,indented-target ,@tgt-subitems) 0 nil))
+           ;; If the parent has "extra stuff" underneath its subitems (ie
+           ;; "rest") then we need to append the indented item after this "extra
+           ;; stuff." Make a new list with the indented item and its children
+           ;; (which will be at the same level after the target is indented)
+           (let ((rest*
+                  (->> (cons indented-target tgt-subitems)
+                       (apply #'org-ml-build-plain-list :post-blank tgt-rest-pb)
+                       (cons it-rest))))
+             `(,@rest* ,@tgt-rest))
+         it))
      it)
    plain-list))
 
@@ -5996,35 +6003,17 @@ The specific child item to outdent is selected by CHILD-INDEX."
              (tgt-pb (org-element-post-blank to-outdent)))
        (if (not to-outdent) `(,parent nil)
          (let ((outdented
-                (org-ml--item-map-subcomponents*
-                 (-let (((tgt-head tgt-subitems tgt-rest-pb tgt-rest) it))
-                   (cond
-                    (tgt-rest
-                     (let ((psub (apply #'org-ml-build-plain-list
-                                        :post-blank parent-rest-pb
-                                        outdent-subitems)))
-                                        
-                       (list
-                        tgt-head
-                        tgt-subitems
-                        tgt-rest-pb
-                        `(,@tgt-rest ,psub ,@parent-rest))))
-                    (tgt-subitems
-                     (list
-                      tgt-head
-                      (append
-                       (org-ml--shift-list-post-blank tgt-pb tgt-subitems)
-                       outdent-subitems)
-                      tgt-rest-pb
-                      tgt-rest))
-                    (t
-                     (list
-                      (org-ml--map-last*
-                       (org-ml--set-post-blank tgt-pb it)
-                       tgt-head)
-                      outdent-subitems
-                      tgt-rest-pb
-                      tgt-rest))))
+                (org-ml--item-map-subcomponents-cond*
+                    (list (org-ml--set-last-post-blank tgt-pb it-head)
+                          outdent-subitems
+                          0 nil)
+                    (-> (org-ml--shift-last-post-blank tgt-pb it-subitems)
+                        (append outdent-subitems)
+                        (list 0 nil))
+                    (let ((psub (apply #'org-ml-build-plain-list
+                                       :post-blank parent-rest-pb
+                                       outdent-subitems)))
+                      `(,@it-rest ,psub ,@parent-rest))
                  to-outdent)))
            `(,parent (,outdented)))))
      it)
