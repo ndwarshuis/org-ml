@@ -5765,6 +5765,23 @@
                ""
                "- two"
                ""
+               "- four"
+               ""
+               "  - five")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-indent-item 2)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "  - four"
+                  ""
+                  "  - five")
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
                "  - three"
                ""
                "- four"

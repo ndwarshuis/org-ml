@@ -5806,30 +5806,48 @@ item node's children."
              ;; any) are reflected in this (more to come below).
              (parent-pb (org-element-post-blank it)))
        (org-ml--item-map-subcomponents*
-        (-let* (((parent-head parent-subitems parent-rest-pb parent-rest) it)
-                ((parent-subitems* parent-pb* parent-rest*)
-                 ;; If the parent has "extra stuff" underneath its subitems (ie
-                 ;; "rest") then we need to append the indented item after
-                 ;; this "extra stuff." Make a new list with the indented item
-                 ;; and its children (which will be at the same level after
-                 ;; the target is indented)
-                 (if parent-rest
-                     (let ((rest*
-                            (->> (cons indented-target tgt-subitems)
-                                 (apply #'org-ml-build-plain-list :post-blank tgt-rest-pb)
-                                 (cons parent-rest))))
-                       (list parent-subitems parent-rest-pb (append rest* tgt-rest)))
-                   ;; Otherwise, add the indented target and its children to the
-                   ;; subitems under the parent, and set the rest to be that of
-                   ;; the target (if anything). The only tricky part here is to
-                   ;; most the post-blank of the toplevel parent into the last
-                   ;; subitem of the parent (otherwise the post blank would move
-                   ;; to the end of the entire new list after indentation)
-                   (let ((psub (org-ml--map-last*
-                                (org-ml--shift-post-blank parent-pb it)
-                                parent-subitems)))
-                     (list `(,@psub ,indented-target ,@tgt-subitems) tgt-rest-pb tgt-rest)))))
-          (list parent-head parent-subitems* parent-pb* parent-rest*))
+        (-let* (((parent-head parent-subitems parent-rest-pb parent-rest) it))
+          ;; TODO this cond thingy isn't DRY
+          (cond
+           ;; If the parent has "extra stuff" underneath its subitems (ie
+           ;; "rest") then we need to append the indented item after this "extra
+           ;; stuff." Make a new list with the indented item and its children
+           ;; (which will be at the same level after the target is indented)
+           (parent-rest
+            (let ((rest*
+                   (->> (cons indented-target tgt-subitems)
+                        (apply #'org-ml-build-plain-list :post-blank tgt-rest-pb)
+                        (cons parent-rest))))
+              (list parent-head
+                    parent-subitems
+                    parent-rest-pb
+                    (append rest* tgt-rest))))
+           ;; Otherwise, add the indented target and its children to the
+           ;; subitems under the parent, and set the rest to be that of the
+           ;; target (if anything). The only tricky part here is to most the
+           ;; post-blank of the toplevel parent into the last subitem of the
+           ;; parent (otherwise the post blank would move to the end of the
+           ;; entire new list after indentation)
+           (parent-subitems
+            (let ((psub (org-ml--map-last*
+                         (org-ml--shift-post-blank parent-pb it)
+                         parent-subitems)))
+              (list
+               parent-head
+               `(,@psub ,indented-target ,@tgt-subitems)
+               tgt-rest-pb
+               tgt-rest)))
+           (t
+            (let ((psub (org-ml--map-last*
+                         (org-ml--shift-post-blank parent-pb it)
+                         parent-subitems)))
+              (list
+               (org-ml--map-last*
+                (org-ml--shift-post-blank parent-pb it)
+                parent-head)
+               (cons indented-target tgt-subitems)
+               tgt-rest-pb
+               tgt-rest)))))
         it))
      it)
    plain-list))
