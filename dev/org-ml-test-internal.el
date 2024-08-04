@@ -708,7 +708,16 @@ be parsed to TYPE."
                 "* TODO COMMENT dummy\n"
                 "* TODO dummy\n"
                 "* TODO [#A] dummy\n"
-                ;; TODO order of comment and priority comes out reversed
+                "* dummy\n\n"
+
+                ;; BUG extra space added to the end of this (no section seems fine)
+                ;; "* dummy\nsomething\n"
+                ;; "* dummy\n\n** dummy\n"
+
+                ;; BUG additionally, the space after "something" gets taken out
+                ;; "* dummy\nsomething\n\n** dummy\n"
+
+                ;; BUG order of comment and priority comes out reversed
                 ;; "* TODO [#A] COMMENT dummy\n"
                 ;; "* [#A] COMMENT dummy\n"
                 )))
@@ -733,7 +742,12 @@ be parsed to TYPE."
           (list "- thing\n"
                 "1. thing\n"
                 '("- thing"
-                  "- more thing\n"))))
+                  "- more thing\n")
+                "- one\n- two\n"
+                "- one\n  - two\n"
+                "- one\n\n  - two\n"
+                "- one\n  - two\n\n"
+                )))
 
 
       (it "property-drawer"

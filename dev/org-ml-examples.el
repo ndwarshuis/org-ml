@@ -5572,6 +5572,28 @@
                   ""
                   "*** four")
 
+      (:buffer "* one"
+               ""
+               "** two"
+               ""
+               "*** two-ish"
+               ""
+               "** three"
+               ""
+               "*** four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-headline-demote-subheadline 1)
+           (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  ""
+                  "** two"
+                  ""
+                  "*** two-ish"
+                  ""
+                  "*** three"
+                  ""
+                  "*** four")
+
       ;; TODO this is a bug in the interpreter that squishes whichspace from
       ;; internal nodes underneath headlines and section
       ;;
