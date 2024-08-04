@@ -2196,7 +2196,13 @@ Example item showing how this breaks down:
   - SUBITEM1
   - SUBITEM2 (with POST-BLANK 1 below)
 
-  REST"
+  REST
+
+REST may itself contain more plain lists, but (for now at least)
+let's consider these cases extremely rare. This function will
+still do the right thing, but any plain list in REST will be
+off-limits for the indent/outdent functions that use this
+function."
   (-let* (((h (s . r)) (->> (org-element-contents item)
                             (--split-with (not (org-ml--is-type 'plain-list it)))))
           (pb (if s (org-element-post-blank s) 0))
@@ -5838,16 +5844,13 @@ item node's children."
                tgt-rest-pb
                tgt-rest)))
            (t
-            (let ((psub (org-ml--map-last*
-                         (org-ml--shift-post-blank parent-pb it)
-                         parent-subitems)))
-              (list
-               (org-ml--map-last*
-                (org-ml--shift-post-blank parent-pb it)
-                parent-head)
-               (cons indented-target tgt-subitems)
-               tgt-rest-pb
-               tgt-rest)))))
+            (list
+             (org-ml--map-last*
+              (org-ml--shift-post-blank parent-pb it)
+              parent-head)
+             (cons indented-target tgt-subitems)
+             tgt-rest-pb
+             tgt-rest))))
         it))
      it)
    plain-list))
@@ -5974,27 +5977,50 @@ The specific child item to outdent is selected by CHILD-INDEX."
   (org-ml--check-type 'plain-list plain-list)
   (org-ml--map-children-nocheck*
    (org-ml--split-children-at-index* index
-     (-let* (((h i pb r) (org-ml--item-get-subcomponents it))
-             ((parent-i (tgt . tgt-i)) (-split-at child-index i))
-             (parent-pb (org-element-post-blank (-last-item parent-i)))
-             (parent (->> (org-ml--set-post-blank 0 it)
+     (-let* (((parent-head parent-subitems parent-rest-pb parent-rest)
+              (org-ml--item-get-subcomponents it))
+             ((above-outdent (to-outdent . outdent-subitems))
+              (-split-at child-index parent-subitems))
+             (parent-pb (or (org-element-post-blank (-last-item above-outdent)) 0))
+             ;; Make new parent with the subitems that are above the item to
+             ;; be outdented (if any) and remove its rest component since this
+             ;; will become part of the outdented item's children
+             (parent (->> (org-ml--set-post-blank parent-pb it)
                           (org-ml--item-set-subcomponents
-                           `(,h ,parent-i ,parent-pb nil))))
-             (tgt-pb (org-element-post-blank tgt))
-             (tgt* (-some->> tgt
-                     (org-ml--item-map-subcomponents*
-                      (-let* (((h* i* pb* r*) it)
-                              (h** (org-ml--map-last*
-                                    (org-ml--set-post-blank tgt-pb it)
-                                    h*)))
-                        (if (not r*) (list h** (append i* tgt-i) pb* r)
-                          (--> (apply #'org-ml-build-plain-list tgt-i)
-                               (list it)
-                               (append r* it r)
-                               (list h** i* pb* it)))))
-                     (org-ml--set-post-blank pb)
-                     (list))))
-       (list parent tgt*))
+                           `(,parent-head ,above-outdent 0 nil))))
+             (tgt-pb (org-element-post-blank to-outdent)))
+       (if (not to-outdent) `(,parent nil)
+         (let ((outdented
+                (org-ml--item-map-subcomponents*
+                 (-let (((tgt-head tgt-subitems tgt-rest-pb tgt-rest) it))
+                   (cond
+                    (tgt-rest
+                     (let ((psub (apply #'org-ml-build-plain-list outdent-subitems
+                                        :post-blank parent-rest-pb)))
+                       (list
+                        tgt-head
+                        tgt-subitems
+                        tgt-rest-pb
+                        `(,@tgt-rest ,psub ,@parent-rest))))
+                    (tgt-subitems
+                     (let ((psub (org-ml--map-last*
+                                  (org-ml--shift-post-blank tgt-pb it)
+                                  tgt-subitems)))
+                       (list
+                        tgt-head
+                        (append psub outdent-subitems)
+                        tgt-rest-pb
+                        tgt-rest)))
+                    (t
+                     (list
+                      (org-ml--map-last*
+                       (org-ml--set-post-blank tgt-pb it)
+                       tgt-head)
+                      (append tgt-subitems outdent-subitems)
+                      tgt-rest-pb
+                      tgt-rest))))
+                 to-outdent)))
+           `(,parent (,outdented)))))
      it)
    plain-list))
 

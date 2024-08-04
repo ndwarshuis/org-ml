@@ -5913,7 +5913,65 @@
                   "  - three"
                   "  - three"
                   "  - three"
-                  "- four"))
+                  "- four")
+
+      :begin-hidden
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-item 1 0)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "- three"
+                  ""
+                  "  - three"
+                  ""
+                  "  - three"
+                  ""
+                  "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-item 1 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "  - three"
+                  ""
+                  "- three"
+                  ""
+                  "  - three"
+                  ""
+                  "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-item 2 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "  - three"
+                  ""
+                  "  - three"
+                  ""
+                  "  - three"
+                  ""
+                  "- four")
+      :end-hidden
+
+      )
     
     (defexamples-content org-ml-plain-list-outdent-all-items
       nil
