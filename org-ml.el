@@ -1617,6 +1617,8 @@ and ILLEGAL types were attempted to be set."
 
 ;;; build helpers
 
+;; TODO could probably make this faster if I set all the properties in one
+;; fell swoop
 (eval-and-compile
   (defun org-ml--build-bare-node (type post-blank props children)
     "Return new node of TYPE with POST-BLANK, PROPS and CHILDREN.
@@ -5314,18 +5316,14 @@ this controls how the logbook will be parsed; this means it also
 determines which nodes will be returned in the :items/:clocks
 slots and which will be deemed :unknown (see above) so be sure
 this plist is set according to your desired target configuration."
-  (-let (((&plist :pre-blank pb
-                  :meta (&plist :planning p :node-props n :supercontents sc0))
-          (->> (org-ml-headline-get-supersection headline)
-               (org-ml-supersection-to-metasection)))))
-  ;; (cl-flet
-  ;;     ((drop-if-type
-  ;;       (type children)
-  ;;       (if (org-ml-is-type type (car children)) (cdr children) children)))
-  ;;   (->> (org-ml-headline-get-section headline)
-  ;;        (drop-if-type 'planning)
-  ;;        (drop-if-type 'property-drawer)
-  ;;        (org-ml--supercontents-from-nodes config))))
+  (cl-flet
+      ((drop-if-type
+        (type children)
+        (if (org-ml-is-type type (car children)) (cdr children) children)))
+    (->> (org-ml-headline-get-section headline)
+         (drop-if-type 'planning)
+         (drop-if-type 'property-drawer)
+         (org-ml--supercontents-from-nodes config))))
 
 (defun org-ml-metasection-set-supercontents (config supercontents metasection)
   (cl-flet
