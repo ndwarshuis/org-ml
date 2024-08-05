@@ -1617,8 +1617,6 @@ and ILLEGAL types were attempted to be set."
 
 ;;; build helpers
 
-;; TODO could probably make this faster if I set all the properties in one
-;; fell swoop
 (eval-and-compile
   (defun org-ml--build-bare-node (type post-blank props children)
     "Return new node of TYPE with POST-BLANK, PROPS and CHILDREN.

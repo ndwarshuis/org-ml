@@ -5376,7 +5376,10 @@
                ":END:")
       (org-ml->> (org-ml-parse-this-headline)
         (org-ml-headline-logbook-close-open-clock
-         '(:log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING" :clock-out-notes t) (- 1546300800 (car (current-time-zone))) nil)
+         (list :log-into-drawer "LOGGING"
+               :clock-into-drawer "CLOCKING"
+               :clock-out-notes t)
+         (- 1546300800 (car (current-time-zone))) nil)
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGGING:"
@@ -5392,8 +5395,9 @@
                "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
                "- note taken on [2018-12-30 Sun 00:00]")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-logbook-convert-config nil
-                                                (list :log-into-drawer t :clock-into-drawer t))
+        (org-ml-headline-logbook-convert-config
+         nil
+         (list :log-into-drawer t :clock-into-drawer t))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
@@ -5402,8 +5406,9 @@
                   ":END:")
 
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-logbook-convert-config nil
-                                                (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING"))
+        (org-ml-headline-logbook-convert-config
+         nil
+         (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING"))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGGING:"
@@ -6120,8 +6125,7 @@
                   "rest"
                   ""
                   "- four")
-      :end-hidden
-      ))
+      :end-hidden))
 
   (def-example-subgroup "Table"
     nil
