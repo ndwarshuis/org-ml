@@ -7124,58 +7124,57 @@
                   "** DONE _one"
                   "** DONE _two"))
 
-    ;; (defexamples-content org-ml-update-metasections
-    ;;   nil
-    ;;   (:buffer "* one")
-    ;;   (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-    ;;     (org-ml-wrap-impure
-    ;;      (org-ml-update-metasections* 'all
-    ;;        (org-ml-metasection-set-planning pl it))))
-    ;;   $> (:result "* one"
-    ;;               "SCHEDULED: <2000-01-01 Sat>")
-    ;;   (:buffer "* one"
-    ;;            ""
-    ;;            "something")
-    ;;   (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-    ;;     (org-ml-wrap-impure
-    ;;      (org-ml-update-metasections* 'all
-    ;;        (org-ml-metasection-set-planning pl it))))
-    ;;   $> (:result "* one"
-    ;;               "SCHEDULED: <2000-01-01 Sat>"
-    ;;               ""
-    ;;               "something")
-    ;;   (:buffer "* one"
-    ;;            "** two")
-    ;;   (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-    ;;     (org-ml-wrap-impure
-    ;;      (org-ml-update-metasections* 'all
-    ;;        (org-ml-metasection-set-planning pl it))))
-    ;;   $> (:result "* one"
-    ;;               "SCHEDULED: <2000-01-01 Sat>"
-    ;;               "** two"
-    ;;               "SCHEDULED: <2000-01-01 Sat>")
-    ;;   (:buffer "* one"
-    ;;            "** two"
-    ;;            "stuff")
-    ;;   (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-    ;;     (org-ml-wrap-impure
-    ;;      (org-ml-update-metasections* 'all
-    ;;        (org-ml-metasection-set-planning pl it))))
-    ;;   $> (:result "* one"
-    ;;               "SCHEDULED: <2000-01-01 Sat>"
-    ;;               "** two"
-    ;;               "SCHEDULED: <2000-01-01 Sat>"
-    ;;               "stuff")
-    ;;   (:buffer "* one"
-    ;;            "stuff")
-    ;;   (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-    ;;     (org-ml-wrap-impure
-    ;;      (org-ml-update-metasections* 'all
-    ;;        (org-ml-metasection-set-planning pl it))))
-    ;;   $> (:result "* one"
-    ;;               "SCHEDULED: <2000-01-01 Sat>"
-    ;;               "stuff"))
-    )
+    (defexamples-content org-ml-update-supercontents
+      nil
+      (:buffer "* one")
+      (let ((pl '(:scheduled (2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-supercontents* nil 'all
+           (org-ml-supercontents-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>")
+      (:buffer "* one"
+               ""
+               "something")
+      (let ((pl '(:scheduled (2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-supercontents* nil 'all
+           (org-ml-supercontents-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  ""
+                  "something")
+      (:buffer "* one"
+               "** two")
+      (let ((pl '(:scheduled (2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-supercontents* nil 'all
+           (org-ml-supercontents-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  "** two"
+                  "SCHEDULED: <2000-01-01 Sat>")
+      (:buffer "* one"
+               "** two"
+               "stuff")
+      (let ((pl '(:scheduled (2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-supercontents* nil 'all
+           (org-ml-supercontents-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  "** two"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  "stuff")
+      (:buffer "* one"
+               "stuff")
+      (let ((pl '(:scheduled (2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-supercontents* nil 'all
+           (org-ml-supercontents-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  "stuff")))
 
   (def-example-subgroup "Misc"
     nil

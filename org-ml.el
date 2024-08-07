@@ -7913,69 +7913,69 @@ nil (see this for use and meaning of FUN)."
          (nreverse it)
          (--each it (org-ml~update nil fun it)))))
 
-;; (org-ml--defun* org-ml-update-supersections (which fun)
-;;   "Update some headline supersections in the current using FUN.
+(org-ml--defun* org-ml-update-supersections (which fun)
+  "Update some headline supersections in the current using FUN.
 
-;; See `org-ml-parse-headlines' for the meaning of WHICH.
+See `org-ml-parse-headlines' for the meaning of WHICH.
 
-;; Headlines are updated using `org-ml~update' with DIFF-ARG set to
-;; nil (see this for use and meaning of FUN)."
-;;   ;; don't use the myers diff algorithm here, since these functions are meant
-;;   ;; for batch processing.
-;;   (save-excursion
-;;     (cl-labels
-;;         ((map-to-subheadlines
-;;            (headline)
-;;            (-each (nreverse (org-ml-headline-get-subheadlines headline))
-;;              #'map-to-subheadlines)
-;;            (-let* (((ss0 &as &plist :pre-blank pb0 :meta m0)
-;;                     (org-ml-headline-get-supersection headline))
-;;                    ((ss1 &as &plist :pre-blank pb1 :meta m1) (funcall fun ss0)))
-;;              (if (or (not pb1) (= pb0 pb1))
-;;                  (let ((s (->> (-map #'org-ml-to-string m1)
-;;                                (s-join "")
-;;                                (concat (make-string pb0 ?\n)))))
-;;                    (if m0
-;;                        (let ((begin (org-element-begin (-first-item m0)))
-;;                              (end (org-element-end (-last-item m0))))
-;;                          (org-ml--replace-region begin end s))
-;;                      (let* ((begin (or (org-element-contents-begin headline)
-;;                                        ;; If there are no contents, go to
-;;                                        ;; headline start, try to go to next
-;;                                        ;; line, and insert new line if we can't
-;;                                        ;; (which means we are at the end)
-;;                                        (progn
-;;                                          (goto-char (org-element-begin headline))
-;;                                          (forward-line)
-;;                                          (if (bolp) (point)
-;;                                            ;; use this since this plays nice
-;;                                            ;; with evil mode
-;;                                            (when (re-search-forward "$" nil t)
-;;                                              (replace-match "\n" nil nil))
-;;                                            (forward-line)
-;;                                            (point))))))
-;;                        (goto-char begin)
-;;                        (insert s))))
-;;                (let ((headline* (->> (org-ml-copy headline)
-;;                                      (org-ml-headline-set-subheadlines nil)
-;;                                      (org-ml-headline-set-supersection ss1)))
-;;                      (begin (org-element-begin headline))
-;;                      (end (or (outline-next-heading) (point-max))))
-;;                  (org-ml--replace-bounds nil begin end headline*))))))
-;;       (-each (nreverse (org-ml--parse-patterns-where which "^\\* "))
-;;         #'map-to-subheadlines))))
+Headlines are updated using `org-ml~update' with DIFF-ARG set to
+nil (see this for use and meaning of FUN)."
+  ;; don't use the myers diff algorithm here, since these functions are meant
+  ;; for batch processing.
+  (save-excursion
+    (cl-labels
+        ((map-to-subheadlines
+           (headline)
+           (-each (nreverse (org-ml-headline-get-subheadlines headline))
+             #'map-to-subheadlines)
+           (-let* (((ss0 &as &plist :pre-blank pb0 :section m0)
+                    (org-ml-headline-get-supersection headline))
+                   ((ss1 &as &plist :pre-blank pb1 :section m1) (funcall fun ss0)))
+             (if (or (not pb1) (= pb0 pb1))
+                 (let ((s (->> (-map #'org-ml-to-string m1)
+                               (s-join "")
+                               (concat (make-string pb0 ?\n)))))
+                   (if m0
+                       (let ((begin (org-element-begin (-first-item m0)))
+                             (end (org-element-end (-last-item m0))))
+                         (org-ml--replace-region begin end s))
+                     (let* ((begin (or (org-element-contents-begin headline)
+                                       ;; If there are no contents, go to
+                                       ;; headline start, try to go to next
+                                       ;; line, and insert new line if we can't
+                                       ;; (which means we are at the end)
+                                       (progn
+                                         (goto-char (org-element-begin headline))
+                                         (forward-line)
+                                         (if (bolp) (point)
+                                           ;; use this since this plays nice
+                                           ;; with evil mode
+                                           (when (re-search-forward "$" nil t)
+                                             (replace-match "\n" nil nil))
+                                           (forward-line)
+                                           (point))))))
+                       (goto-char begin)
+                       (insert s))))
+               (let ((headline* (->> (org-ml-copy headline)
+                                     (org-ml-headline-set-subheadlines nil)
+                                     (org-ml-headline-set-supersection ss1)))
+                     (begin (org-element-begin headline))
+                     (end (or (outline-next-heading) (point-max))))
+                 (org-ml--replace-bounds nil begin end headline*))))))
+      (-each (nreverse (org-ml--parse-patterns-where which "^\\* "))
+        #'map-to-subheadlines))))
 
-;; (org-ml--defun* org-ml-update-metasections (which fun)
-;;   "Update some headline metasections in the current using FUN.
+(org-ml--defun* org-ml-update-supercontents (config which fun)
+  "Update some headline supercontents in the current using FUN.
 
-;; See `org-ml-parse-headlines' for the meaning of WHICH.
+See `org-ml-parse-headlines' for the meaning of WHICH.
 
-;; Headlines are updated using `org-ml~update' with DIFF-ARG set to
-;; nil (see this for use and meaning of FUN)."
-;;   (org-ml-update-supersections* which
-;;     (->> (org-ml-supersection-to-metasection it)
-;;          (funcall fun)
-;;          (org-ml-metasection-to-supersection))))
+Headlines are updated using `org-ml~update' with DIFF-ARG set to
+nil (see this for use and meaning of FUN)."
+  (org-ml-update-supersections* which
+    (->> (org-ml--supersection-to-supercontents config it)
+         (funcall fun)
+         (org-ml--supercontents-to-supersection config))))
 
 ;;; depreciated functions
 

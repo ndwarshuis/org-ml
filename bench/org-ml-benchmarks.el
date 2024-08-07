@@ -40,9 +40,7 @@
       (setq next (outline-next-heading))))
   
   (->> (org-ml-parse-headlines 'all)
-       (--map (->> (org-ml-headline-get-planning it)
-                   (org-ml-get-property :scheduled)
-                   (org-ml-timestamp-get-start-time)
+       (--map (->> (plist-get (org-ml-headline-get-planning it) :scheduled)
                    (org-ml-timelist-to-unixtime)))))
 
 (org-ml-defbench "TODO -> DONE" 1000
@@ -55,8 +53,7 @@
       (org-todo 'done)
       (setq next (outline-next-heading))))
 
-  (let ((planning (->> (org-ml-unixtime-to-timelist t (float-time))
-                       (org-ml-build-planning! :closed))))
+  (let ((planning `(:closed ,(org-ml-unixtime-to-timelist t (float-time)))))
     (org-ml-wrap-impure
      (org-ml-update-headlines* 'all
        (->> (org-ml-set-property :todo-keyword "DONE" it)
@@ -106,7 +103,7 @@
       (org-schedule nil "2000-01-01")
       (setq next (outline-next-heading))))
 
-  (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+  (let ((pl '(:scheduled (2000 1 1))))
     (org-ml-wrap-impure
      (org-ml-update-headlines* 'all
        (org-ml-headline-set-planning pl it)))))
@@ -119,10 +116,10 @@
       (org-schedule nil "2000-01-01")
       (setq next (outline-next-heading))))
 
-  (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+  (let ((pl '(:scheduled (2000 1 1))))
     (org-ml-wrap-impure
-     (org-ml-update-metasections* 'all
-       (org-ml-metasection-set-planning pl it)))))
+     (org-ml-update-supercontents* nil 'all
+       (org-ml-supercontents-set-planning pl it)))))
 
 (org-ml-defbench "reschedule headline" 1000
   (list "* headline"
@@ -141,7 +138,10 @@
   (org-ml-wrap-impure
    (org-ml-update-headlines* 'all
      (org-ml-headline-map-planning*
-       (org-ml-map-property* :scheduled (org-ml-timestamp-shift 1 'day it) it) it))))
+       (->> (plist-get it :scheduled)
+            (org-ml-timelist-shift 1 'day)
+            (list :scheduled))
+       it))))
 
 (org-ml-defbench "set headline effort" 1000
   "* headline"
@@ -197,7 +197,7 @@
       (org-todo 'todo)
       (setq next (outline-next-heading))))
 
-  (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+  (let ((pl '(:scheduled (2000 1 1))))
     (org-ml-update-headlines* 'all
       (org-ml->> (org-ml-set-property :todo-keyword "TODO" it)
         (org-ml-headline-set-node-property "Effort" "0:05")
