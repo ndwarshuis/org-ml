@@ -2360,19 +2360,41 @@ be greater than zero, and DONE must be less than or equal to TOTAL."
 
 ;; planning
 
-(defun org-ml--planning-list-to-timestamp (active planning-list)
+(defun org-ml--build-planning-timestamp (active timelist)
+  (-let (((y m d H M) timelist))
+    (unless (and (integerp y)
+                 (integerp m)
+                 (integerp d)
+                 (or (not H) (integerp H))
+                 (or (not M) (integerp M)))
+      (org-ml--arg-error "Invalid timelist %s" timelist))
+    (org-ml--set-properties-raw (org-ml--build-blank-node timestamp 0)
+      :year-start y
+      :month-start m
+      :day-start d
+      :hour-start H
+      :minute-start M
+      :year-end y
+      :month-end m
+      :day-end d
+      :hour-end H
+      :minute-end M
+      :type (if active 'active 'inactive))))
+
+(defun org-ml--planning-list-to-timestamp (planning-list)
   "Return timestamp node from PLANNING-LIST.
 See `org-ml-build-planning!' for syntax of PLANNING-LIST.
 ACTIVE is a flag denoting if the timestamp is to be active."
   (when planning-list
-    (let* ((p (-partition-before-pred
-               (lambda (it) (memq it '(&warning &repeater)))
-               planning-list)))
-      (org-ml-build-timestamp!
-       (car p)
-       :active active
-       :warning (alist-get '&warning p)
-       :repeater (alist-get '&repeater p)))))
+    (-let* ((p (-partition-before-pred
+                (lambda (it) (memq it '(&warning &repeater)))
+                planning-list))
+            (ts (org-ml--build-planning-timestamp t (car p))))
+      (-when-let (w (alist-get '&warning p))
+        (org-ml--timestamp-set-warning w ts))
+      (-when-let (r (alist-get '&repeater p))
+        (org-ml--timestamp-set-repeater r ts))
+      ts)))
 
 (defun org-ml--timestamp-to-planning-list (timestamp)
   "Return TIMESTAMP as planning list.
@@ -2671,12 +2693,10 @@ matter.
 
 CLOSED is a similar list to above but does not have &warning or
 &repeater."
-  (org-ml-build-planning
-   ;; TODO change this to just a timestamp builder
-   :closed (org-ml--planning-list-to-timestamp nil closed)
-   :deadline (org-ml--planning-list-to-timestamp t deadline)
-   :scheduled (org-ml--planning-list-to-timestamp t scheduled)
-   :post-blank post-blank))
+  (org-ml--set-properties-raw (org-ml--build-blank-node planning post-blank)
+   :closed (and closed (org-ml--build-planning-timestamp nil closed))
+   :deadline (org-ml--planning-list-to-timestamp deadline)
+   :scheduled (org-ml--planning-list-to-timestamp scheduled)))
 
 (org-ml--defun-kw org-ml-build-property-drawer! (&key post-blank &rest keyvals)
   "Return a new property-drawer node.
@@ -4070,19 +4090,19 @@ or nil."
 
 ;; planning
 
-(defun org-ml-planning-set-timestamp! (prop planning-list planning)
-  "Return PLANNING node with PROP set to PLANNING-LIST.
+;; (defun org-ml-planning-set-timestamp! (prop planning-list planning)
+;;   "Return PLANNING node with PROP set to PLANNING-LIST.
 
-PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
-is the same as that described in `org-ml-build-planning!'."
-  (org-ml--check-type 'planning planning)
-  (unless (memq prop '(:closed :deadline :scheduled))
-    (org-ml--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
-  (let* ((active (not (eq prop :closed)))
-         (ts (org-ml--planning-list-to-timestamp active planning-list)))
-    ;; ASSUME any timestamp given above will be valid for the given property
-    ;; TODO need to check that planning is actually a planning node now
-    (org-element-put-property-2 prop ts (org-ml-copy planning))))
+;; PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
+;; is the same as that described in `org-ml-build-planning!'."
+;;   (org-ml--check-type 'planning planning)
+;;   (unless (memq prop '(:closed :deadline :scheduled))
+;;     (org-ml--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
+;;   (let* ((active (not (eq prop :closed)))
+;;          (ts (org-ml--planning-list-to-timestamp active planning-list)))
+;;     ;; ASSUME any timestamp given above will be valid for the given property
+;;     ;; TODO need to check that planning is actually a planning node now
+;;     (org-element-put-property-2 prop ts (org-ml-copy planning))))
 
 ;;; PUBLIC BRANCH/CHILD FUNCTIONS
 
@@ -4927,46 +4947,47 @@ and accumulator on the next iteration. INITIAL-STATE is bound to
 (defun org-ml--split-logbook (config nodes)
   "Return NODES split to logbook components.
 CONFIG is a plist parsable by `org-ml--scc-encode'."
-  (cl-flet
-      ((map-cdr
-        (list)
-        (-map #'cdr list))
-       (try-test-funs
-        (scc state node)
-        (-let ((test-funs (--map (plist-get (cdr it) :next) (cdr state))))
-          (--reduce-from (if acc acc (funcall it scc state node)) nil test-funs))))
-    (-let* ((scc (org-ml--scc-encode config))
-            (init-state (org-ml--init-state scc))
-            (flat (org-ml--flatten-plain-lists nodes))
-            (i (-some->> flat
-                 (-find-index #'org-ml--node-has-trailing-space)
-                 (1+)))
-            ((nodes-before-space nodes-after-space)
-             (if i (-split-at i flat) (list flat nil)))
-            (first-space-post-blank (->> (-last-item nodes-before-space)
-                                         (org-element-post-blank)))
-            ((logbook-nodes contents-nodes-before-space)
-             (org-ml--reduce-state init-state
-               (-let (((next-state logbook-nodes) (try-test-funs scc it-state it)))
-                 (if logbook-nodes
-                     (list next-state (append logbook-nodes acc))
-                   (list nil acc)))
-               nodes-before-space))
-            ((&alist 'items 'clocks 'unknown) (->> (reverse logbook-nodes)
-                                                   (-group-by #'car)))
-            (post-blank
-             (if logbook-nodes
-                 (if contents-nodes-before-space 0 first-space-post-blank)
-               0))
-            (contents (->> nodes-after-space
-                           (append contents-nodes-before-space)
-                           (org-ml--wrap-plain-lists))))
-      (list (org-ml--logbook-init
-             (map-cdr items)
-             (map-cdr clocks)
-             (map-cdr unknown))
-            post-blank
-            contents))))
+  (if (not nodes) (list (org-ml--logbook-init nil nil nil) 0 nil)
+    (cl-flet
+        ((map-cdr
+           (list)
+           (-map #'cdr list))
+         (try-test-funs
+           (scc state node)
+           (-let ((test-funs (--map (plist-get (cdr it) :next) (cdr state))))
+             (--reduce-from (if acc acc (funcall it scc state node)) nil test-funs))))
+      (-let* ((scc (org-ml--scc-encode config))
+              (init-state (org-ml--init-state scc))
+              (flat (org-ml--flatten-plain-lists nodes))
+              (i (-some->> flat
+                   (-find-index #'org-ml--node-has-trailing-space)
+                   (1+)))
+              ((nodes-before-space nodes-after-space)
+               (if i (-split-at i flat) (list flat nil)))
+              (first-space-post-blank (->> (-last-item nodes-before-space)
+                                           (org-element-post-blank)))
+              ((logbook-nodes contents-nodes-before-space)
+               (org-ml--reduce-state init-state
+                 (-let (((next-state logbook-nodes) (try-test-funs scc it-state it)))
+                   (if logbook-nodes
+                       (list next-state (append logbook-nodes acc))
+                     (list nil acc)))
+                 nodes-before-space))
+              ((&alist 'items 'clocks 'unknown) (->> (reverse logbook-nodes)
+                                                     (-group-by #'car)))
+              (post-blank
+               (if logbook-nodes
+                   (if contents-nodes-before-space 0 first-space-post-blank)
+                 0))
+              (contents (->> nodes-after-space
+                             (append contents-nodes-before-space)
+                             (org-ml--wrap-plain-lists))))
+        (list (org-ml--logbook-init
+               (map-cdr items)
+               (map-cdr clocks)
+               (map-cdr unknown))
+              post-blank
+              contents)))))
 
 ;; logbook merging (supercontents -> nodes)
 
@@ -5085,97 +5106,100 @@ SCC is a supercontents-config as returned by
 Anything in the UNKNOWN slot will be ignored. The exact
 nodes (drawers, loose items, etc) will be determined by the SCC.
 CONFIG is a config plist to be given to `org-ml--scc-encode'."
-  (cl-flet*
-      ((build-drawer
-        (name children)
-        (apply #'org-ml-build-drawer name children))
-       (build-drawer-maybe
-        (name children)
-        (-some->> children (build-drawer name)))
-       (cons-drawer-maybe
-        (name drawer-nodes loose-nodes)
-        (let ((drawer (-some->> drawer-nodes (build-drawer name))))
-          (if drawer (cons drawer loose-nodes) loose-nodes)))
-       (below-limit
-        (limit logbook)
-        (->> (org-ml-logbook-get-clocks logbook)
-             (--count (org-ml--is-type 'clock it))
-             (>= limit)))
-       (merge-nodes
-        (enconf logbook)
-        (-let (((&plist :items :clocks) logbook))
-          (org-ml--merge-logbook enconf items clocks)))
-       (build-mixed-drawer-maybe
-        (enconf m logbook)
-        (-some->> (merge-nodes enconf logbook)
-          (build-drawer m)
-          (list)))
-       (to-item-clock-nodes
-        (enconf logbook)
-        (list (org-ml--logbook-items-to-nodes enconf logbook)
-              (org-ml--logbook-clocks-to-nodes enconf logbook))))
-    (-let (((enconf &as &alist :drawers d) (org-ml--scc-encode config)))
-      (pcase d
+  ;; TODO clean this up
+  (-let (((&plist :items :clocks) logbook))
+    (when (or items clocks)
+      (cl-flet*
+          ((build-drawer
+             (name children)
+             (apply #'org-ml-build-drawer name children))
+           (build-drawer-maybe
+             (name children)
+             (-some->> children (build-drawer name)))
+           (cons-drawer-maybe
+             (name drawer-nodes loose-nodes)
+             (let ((drawer (-some->> drawer-nodes (build-drawer name))))
+               (if drawer (cons drawer loose-nodes) loose-nodes)))
+           (below-limit
+             (limit lb)
+             (->> (org-ml-logbook-get-clocks lb)
+                  (--count (org-ml--is-type 'clock it))
+                  (>= limit)))
+           (merge-nodes
+             (enconf lb)
+             (-let (((&plist :items :clocks) lb))
+               (org-ml--merge-logbook enconf items clocks)))
+           (build-mixed-drawer-maybe
+             (enconf m lb)
+             (-some->> (merge-nodes enconf lb)
+               (build-drawer m)
+               (list)))
+           (to-item-clock-nodes
+             (enconf lb)
+             (list (org-ml--logbook-items-to-nodes enconf lb)
+                   (org-ml--logbook-clocks-to-nodes enconf lb))))
+        (-let (((enconf &as &alist :drawers d) (org-ml--scc-encode config)))
+          (pcase d
 
-        ;; items not in drawer, clocks not in drawer
-        (`(:items nil :clocks nil :mixed nil :clock-limit nil)
-         (merge-nodes enconf logbook))
+            ;; items not in drawer, clocks not in drawer
+            (`(:items nil :clocks nil :mixed nil :clock-limit nil)
+             (merge-nodes enconf logbook))
 
-        ;; items and clocks in the same drawer
-        (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
-         (build-mixed-drawer-maybe enconf m logbook))
+            ;; items and clocks in the same drawer
+            (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
+             (build-mixed-drawer-maybe enconf m logbook))
 
-        ;; items in drawer, clocks not in drawer
-        (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
-         (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
-           (cons-drawer-maybe i items clocks)))
-
-        ;; items not in drawer, clocks in drawer
-        (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
-         (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
-           (cons-drawer-maybe c clocks items)))
-
-        ;; items in drawer, clocks might be in the same drawer
-        (`(:items nil :clocks nil :mixed ,m :clock-limit ,l)
-         (if (below-limit l logbook)
+            ;; items in drawer, clocks not in drawer
+            (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
              (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
-               (cons-drawer-maybe m items clocks))
-           (build-mixed-drawer-maybe enconf m logbook)))
-        
-        ;; items not in drawer, clocks might be in a drawer
-        (`(:items nil :clocks ,c :mixed nil :clock-limit ,l)
-         (if (below-limit l logbook) (merge-nodes enconf logbook)
-           (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
-             (cons-drawer-maybe c clocks items))))
+               (cons-drawer-maybe i items clocks)))
 
-        ;; items in drawer, clocks in a different drawer
-        (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
-         (-let* (((items clocks) (to-item-clock-nodes enconf logbook))
-                 (items-drawer (build-drawer-maybe i items))
-                 (clocks-drawer (build-drawer-maybe c clocks)))
-           (-non-nil (list items-drawer clocks-drawer))))
+            ;; items not in drawer, clocks in drawer
+            (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
+             (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
+               (cons-drawer-maybe c clocks items)))
 
-        ;; items in drawer, clocks either loose or in a different drawer
-        (`(:items ,i :clocks ,c :mixed nil :clock-limit ,l)
-         (-let* (((items clocks) (to-item-clock-nodes enconf logbook))
-                 (items-drawer (build-drawer-maybe i items)))
-           (if (below-limit l logbook)
-               (if items-drawer (cons items-drawer clocks) clocks)
-             (->> (build-drawer-maybe c clocks)
-                  (list items-drawer)
-                  (-non-nil)))))
+            ;; items in drawer, clocks might be in the same drawer
+            (`(:items nil :clocks nil :mixed ,m :clock-limit ,l)
+             (if (below-limit l logbook)
+                 (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
+                   (cons-drawer-maybe m items clocks))
+               (build-mixed-drawer-maybe enconf m logbook)))
+            
+            ;; items not in drawer, clocks might be in a drawer
+            (`(:items nil :clocks ,c :mixed nil :clock-limit ,l)
+             (if (below-limit l logbook) (merge-nodes enconf logbook)
+               (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
+                 (cons-drawer-maybe c clocks items))))
 
-        (e (error "This shouldn't happen: %s" e))))))
+            ;; items in drawer, clocks in a different drawer
+            (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
+             (-let* (((items clocks) (to-item-clock-nodes enconf logbook))
+                     (items-drawer (build-drawer-maybe i items))
+                     (clocks-drawer (build-drawer-maybe c clocks)))
+               (-non-nil (list items-drawer clocks-drawer))))
 
-(defun org-ml--supercontents-to-nodes (config supercontents)
-  "Return SUPERCONTENTS as a list of nodes.
-The exact configuration of the returned nodes will depend on
-CONFIG. POST-BLANK is the blank space to put between the logbook
-and the contents."
-  (let* ((logbook (->> (org-ml-supercontents-get-logbook supercontents)
-                       (org-ml--logbook-to-nodes config)))
-         (contents (org-ml-supercontents-get-contents supercontents)))
-    (org-ml--append-join-plain-lists logbook contents)))
+            ;; items in drawer, clocks either loose or in a different drawer
+            (`(:items ,i :clocks ,c :mixed nil :clock-limit ,l)
+             (-let* (((items clocks) (to-item-clock-nodes enconf logbook))
+                     (items-drawer (build-drawer-maybe i items)))
+               (if (below-limit l logbook)
+                   (if items-drawer (cons items-drawer clocks) clocks)
+                 (->> (build-drawer-maybe c clocks)
+                      (list items-drawer)
+                      (-non-nil)))))
+
+            (e (error "This shouldn't happen: %s" e))))))))
+
+;; (defun org-ml--supercontents-to-nodes (config supercontents)
+;;   "Return SUPERCONTENTS as a list of nodes.
+;; The exact configuration of the returned nodes will depend on
+;; CONFIG. POST-BLANK is the blank space to put between the logbook
+;; and the contents."
+;;   (let* ((logbook (->> (org-ml-supercontents-get-logbook supercontents)
+;;                        (org-ml--logbook-to-nodes config)))
+;;          (contents (org-ml-supercontents-get-contents supercontents)))
+;;     (org-ml--append-join-plain-lists logbook contents)))
 
 ;; public supercontents functions
 
@@ -5259,14 +5283,12 @@ this plist is set according to your desired target configuration."
   (cl-flet
       ((to-planning
          (planning-list post-blank)
-         (-some->> planning-list
-           (apply #'org-ml-build-planning! :post-blank post-blank)
-           (list)))
+         (when planning-list
+           (list (apply #'org-ml-build-planning! :post-blank post-blank planning-list))))
        (to-prop-drawer
          (node-props post-blank)
-         (-some->> node-props
-           (apply #'org-ml-build-property-drawer! :post-blank post-blank)
-           (list))))
+         (when node-props
+           (list (apply #'org-ml-build-property-drawer! :post-blank post-blank node-props)))))
     (-let* (((&plist :planning p :node-props n :logbook lb :blank b :contents c)
              supercontents)
             (lb-nodes (org-ml--logbook-to-nodes config lb)))

@@ -1001,9 +1001,9 @@
                                    :scheduled '(2018 1 1))
            (org-ml-to-trimmed-string))
       => "SCHEDULED: <2018-01-01 Mon> CLOSED: [2019-01-01 Tue]"
-      (->> (org-ml-build-planning! :closed '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
+      (->> (org-ml-build-planning! :scheduled '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
            (org-ml-to-trimmed-string))
-      => "CLOSED: [2019-01-01 Tue +1m -1d]")
+      => "SCHEDULED: <2019-01-01 Tue +1m -1d>")
 
     (defexamples org-ml-build-property-drawer!
       (->> (org-ml-build-property-drawer! '("key" "val"))
@@ -3105,34 +3105,6 @@
         (org-ml-item-toggle-checkbox)
         (org-ml-to-trimmed-string))
       => "- one"))
-
-  (def-example-subgroup "Planning"
-    nil
-
-    ;; TODO this isn't very useful anymore since planning is now part of
-    ;; headline manipulation
-    (defexamples-content org-ml-planning-set-timestamp!
-      nil
-      (:buffer "* dummy"
-               "CLOSED: [2019-01-01 Tue]")
-      (:comment "Change an existing timestamp in planning")
-      (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-get-section)
-        (-first-item)
-        (org-ml-planning-set-timestamp!
-         :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
-        (org-ml-to-trimmed-string))
-      => "CLOSED: [2019-01-02 Wed +2m -1d]"
-      (:comment "Add a new timestamp and remove another")
-      (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-get-section)
-        (-first-item)
-        (org-ml-planning-set-timestamp!
-         :deadline '(2112 1 1))
-        (org-ml-planning-set-timestamp!
-         :closed nil)
-        (org-ml-to-trimmed-string))
-      => "DEADLINE: <2112-01-01 Fri>"))
 
   (def-example-subgroup "Statistics Cookie"
     nil

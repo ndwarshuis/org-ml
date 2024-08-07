@@ -883,12 +883,7 @@ HEADER is the it-header."
        :paragraph "petulant /frenzy/"
        (org-ml-build-plain-list
         (org-ml-build-item! :bullet '- :paragraph "below")))
-      (org-ml-item-toggle-checkbox it))
-
-    (org-ml--test-purity "planning setters"
-      (org-ml-build-planning! :deadline '(2019 1 1))
-      (org-ml-planning-set-timestamp!
-       :deadline '(2019 1 2 &warning all 1 day &repeater cumulate 2 month) it)))
+      (org-ml-item-toggle-checkbox it)))
 
   (describe "branch nodes"
 
@@ -943,7 +938,7 @@ HEADER is the it-header."
         (cons (org-ml-build-headline! :level 2 :title-text "headline x") it)
         it)
       (org-ml-headline-set-planning '(:closed (2019 1 1)) it)
-      (org-ml-headline-map-planning (lambda (_) '(:closed '(2019 1 1))) it)
+      (org-ml-headline-map-planning (lambda (_) '(:closed (2019 1 1))) it)
       (org-ml-headline-set-node-properties '(("Effort" "0:01") ("ID" "easy")) it)
       (org-ml-headline-map-node-properties*
         (cons (list "New" "world man") it)
