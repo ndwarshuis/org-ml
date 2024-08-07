@@ -2692,7 +2692,7 @@ matter.
 
 CLOSED is a similar list to above but does not have &warning or
 &repeater."
-  (let ((node (org-ml--build-blank-node planning post-blank)))
+  (let ((node (org-ml--build-blank-node planning (or post-blank 0))))
     (when closed
       (org-element-put-property
        node :closed (org-ml--build-planning-timestamp nil closed)))
@@ -5222,33 +5222,38 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
        (--map (list (org-element-property-raw :key it)
                     (org-element-property-raw :value it)))))
 
+(defun org-ml--from-first-second-rest
+    (config planning prop-drawer blank-node children)
+  (-let* ((pb (org-element-post-blank blank-node))
+          ((logbook blank contents) (if (< 0 pb)
+                                        `(nil ,pb ,children)
+                                      (org-ml--split-logbook config children))))
+    (org-ml--supercontents-init-from-lb
+     (and planning (org-ml--planning-project planning))
+     (and prop-drawer (org-ml--property-drawer-project prop-drawer))
+     logbook
+     blank
+     contents)))
+
 (defun org-ml--supersection-to-supercontents (config supersection)
-  (cl-flet
-      ((go-init
-         (planning prop-drawer blank-node children)
-         (-let* ((pb (org-element-post-blank blank-node))
-                 ((logbook blank contents)
-                  (if (< 0 pb) `(nil ,pb ,children)
-                    (org-ml--split-logbook config children))))
-           (org-ml--supercontents-init-from-lb
-            (and planning (org-ml--planning-project planning))
-            (and prop-drawer (org-ml--property-drawer-project prop-drawer))
-            logbook
-            blank
-            contents))))
-    (-let (((&plist :pre-blank pb :section children) supersection))
-      ;; If pre-blank is >0, by definition there is no planning,
-      ;; property-drawer, or logbook
-      (if (< 0 pb) (org-ml--supercontents-init nil nil nil nil nil pb children)
-        (-let* (((first . rest1) children)
-                ((second . rest2) rest1))
-          (pcase `(,(org-ml-get-type first) ,(org-ml-get-type second))
-            (`(planning property-drawer) (go-init first second second rest2))
-            (`(planning ,_)              (go-init first nil    first  rest1))
-            (`(property-drawer ,_)       (go-init nil   first  first  rest1))
-            (_
-             (->> (org-ml--split-logbook config children)
-                  (apply #'org-ml--supercontents-init-from-lb nil nil)))))))))
+  (-let (((&plist :pre-blank pb :section children) supersection))
+    ;; If pre-blank is >0, by definition there is no planning,
+    ;; property-drawer, or logbook
+    (if (< 0 pb) (org-ml--supercontents-init nil nil nil nil nil pb children)
+      (-let* (((first . rest1) children)
+              ((second . rest2) rest1)
+              (t1 (org-ml-get-type first))
+              (t2 (org-ml-get-type second)))
+        (cond
+         ((and (eq t1 'planning) (eq t2 'property-drawer))
+          (org-ml--from-first-second-rest config first second second rest2))
+         ((eq t1 'planning)
+          (org-ml--from-first-second-rest config first nil first rest1))
+         ((eq t1 'property-drawer)
+          (org-ml--from-first-second-rest config nil first first rest1))
+         (t
+          (->> (org-ml--split-logbook config children)
+               (apply #'org-ml--supercontents-init-from-lb nil nil))))))))
 
 (defun org-ml-headline-get-supercontents (config headline)
   "Return the supercontents of HEADLINE node.
@@ -5286,34 +5291,26 @@ this plist is set according to your desired target configuration."
        (org-ml--supersection-to-supercontents config)))
 
 (defun org-ml--supercontents-to-supersection (config supercontents)
-  (cl-flet
-      ((to-planning
-         (planning-list post-blank)
-         (when planning-list
-           (list (apply #'org-ml-build-planning! :post-blank post-blank planning-list))))
-       (to-prop-drawer
-         (node-props post-blank)
-         (when node-props
-           (list (apply #'org-ml-build-property-drawer! :post-blank post-blank node-props)))))
-    (-let* (((&plist :planning p :node-props n :logbook lb :blank b :contents c)
-             supercontents)
-            (lb-nodes (org-ml--logbook-to-nodes config lb)))
-      (cond
-       (lb-nodes
-        (org-ml--supersection-init
-         0 `(,@(to-planning p 0)
-             ,@(to-prop-drawer n 0)
-             ,@(org-ml--set-last-post-blank b lb-nodes)
-             ,@c)))
-       (n
-        (org-ml--supersection-init
-         0 `(,@(to-planning p 0)
-             ,@(to-prop-drawer n b)
-             ,@c)))
-       (p
-        (org-ml--supersection-init 0 (append (to-planning p b) c)))
-       (t
-        (org-ml--supersection-init b c))))))
+  (-let* (((&plist :planning p :node-props n :logbook lb :blank b :contents c)
+           supercontents)
+          (lb-nodes (org-ml--logbook-to-nodes config lb)))
+    (cond
+     (lb-nodes
+      (org-ml--supersection-init
+       0 `(,@(when p (list (apply #'org-ml-build-planning! p)))
+           ,@(when n (list (apply #'org-ml-build-property-drawer! n)))
+           ,@(org-ml--set-last-post-blank b lb-nodes)
+           ,@c)))
+     (n
+      (org-ml--supersection-init
+       0 `(,@(when p (list (apply #'org-ml-build-planning! p)))
+           ,(apply #'org-ml-build-property-drawer! :post-blank b n)
+           ,@c)))
+     (p
+      (org-ml--supersection-init
+       0 (cons (apply #'org-ml-build-planning! :post-blank b p) c)))
+     (t
+      (org-ml--supersection-init b c)))))
      
 (defun org-ml-headline-set-supercontents (config supercontents headline)
   "Set logbook and contents of HEADLINE according to SUPERCONTENTS.
