@@ -2383,18 +2383,17 @@ be greater than zero, and DONE must be less than or equal to TOTAL."
 
 (defun org-ml--planning-list-to-timestamp (planning-list)
   "Return timestamp node from PLANNING-LIST.
-See `org-ml-build-planning!' for syntax of PLANNING-LIST.
-ACTIVE is a flag denoting if the timestamp is to be active."
-  (when planning-list
-    (-let* ((p (-partition-before-pred
-                (lambda (it) (memq it '(&warning &repeater)))
-                planning-list))
-            (ts (org-ml--build-planning-timestamp t (car p))))
-      (-when-let (w (alist-get '&warning p))
-        (org-ml--timestamp-set-warning w ts))
-      (-when-let (r (alist-get '&repeater p))
-        (org-ml--timestamp-set-repeater r ts))
-      ts)))
+See `org-ml-build-planning!' for syntax of PLANNING-LIST."
+  (-let* ((p (-partition-before-pred
+              (lambda (it) (memq it '(&warning &repeater)))
+              planning-list))
+          (ts (org-ml--build-planning-timestamp t (car p))))
+    ;; TODO make sure warning and repeater are valid here
+    (-when-let (w (alist-get '&warning p))
+      (org-ml--timestamp-set-warning w ts))
+    (-when-let (r (alist-get '&repeater p))
+      (org-ml--timestamp-set-repeater r ts))
+    ts))
 
 (defun org-ml--timestamp-to-planning-list (timestamp)
   "Return TIMESTAMP as planning list.
@@ -2693,10 +2692,17 @@ matter.
 
 CLOSED is a similar list to above but does not have &warning or
 &repeater."
-  (org-ml--set-properties-raw (org-ml--build-blank-node planning post-blank)
-   :closed (and closed (org-ml--build-planning-timestamp nil closed))
-   :deadline (org-ml--planning-list-to-timestamp deadline)
-   :scheduled (org-ml--planning-list-to-timestamp scheduled)))
+  (let ((node (org-ml--build-blank-node planning post-blank)))
+    (when closed
+      (org-element-put-property
+       node :closed (org-ml--build-planning-timestamp nil closed)))
+    (when deadline
+      (org-element-put-property
+       node :deadline (org-ml--planning-list-to-timestamp deadline)))
+    (when scheduled
+      (org-element-put-property
+       node :scheduled (org-ml--planning-list-to-timestamp scheduled)))
+    node))
 
 (org-ml--defun-kw org-ml-build-property-drawer! (&key post-blank &rest keyvals)
   "Return a new property-drawer node.
