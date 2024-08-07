@@ -39,9 +39,9 @@
       (org-2ft (org-entry-get (point) "SCHEDULED"))
       (setq next (outline-next-heading))))
   
-  (->> (org-ml-parse-headlines 'all)
-       (--map (->> (plist-get (org-ml-headline-get-planning it) :scheduled)
-                   (org-ml-timelist-to-unixtime)))))
+  (--each (org-ml-parse-headlines 'all)
+    (->> (plist-get (org-ml-headline-get-planning it) :scheduled)
+         (org-ml-timelist-to-unixtime))))
 
 (org-ml-defbench "TODO -> DONE" 1000
   "* TODO headline"
