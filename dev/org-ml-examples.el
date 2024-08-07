@@ -1599,7 +1599,9 @@
                ":KEY: VAL"
                ":END:")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-get-node-properties)
+        (org-ml-headline-get-section)
+        (-first-item)
+        (org-ml-get-children)
         (-first-item)
         (org-ml-set-property :key "kee")
         (org-ml-set-property :value "vahl")
@@ -1609,7 +1611,8 @@
       (:buffer "* dummy"
                "CLOSED: <2019-01-01 Tue>")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-get-planning)
+        (org-ml-headline-get-section)
+        (-first-item)
         (org-ml-set-property
          :closed (org-ml-build-timestamp! '(2019 1 2) :active nil))
         (org-ml-to-trimmed-string))
@@ -2007,12 +2010,16 @@
                ":KEY: VAL"
                ":END:")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-node-properties)
+           (org-ml-headline-get-section)
+           (-first-item)
+           (org-ml-get-children)
            (-first-item)
            (org-ml-get-property :key))
       => "KEY"
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-node-properties)
+           (org-ml-headline-get-section)
+           (-first-item)
+           (org-ml-get-children)
            (-first-item)
            (org-ml-get-property :value))
       => "VAL"
@@ -2020,7 +2027,8 @@
       (:buffer "* dummy"
                "CLOSED: [2019-01-01 Tue]")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-planning)
+           (org-ml-headline-get-section)
+           (-first-item)
            (org-ml-get-property :closed)
            (org-ml-to-string))
       => "[2019-01-01 Tue]"
@@ -2368,7 +2376,9 @@
                ":KEY: VAL"
                ":END:")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-get-node-properties)
+        (org-ml-headline-get-section)
+        (-first-item)
+        (org-ml-get-children)
         (-first-item)
         (org-ml-map-property :key (-partial #'s-prepend "OM_"))
         (org-ml-map-property :value (-partial #'s-prepend "OM_"))
@@ -3099,20 +3109,24 @@
   (def-example-subgroup "Planning"
     nil
 
+    ;; TODO this isn't very useful anymore since planning is now part of
+    ;; headline manipulation
     (defexamples-content org-ml-planning-set-timestamp!
       nil
       (:buffer "* dummy"
                "CLOSED: [2019-01-01 Tue]")
       (:comment "Change an existing timestamp in planning")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-get-planning)
+        (org-ml-headline-get-section)
+        (-first-item)
         (org-ml-planning-set-timestamp!
          :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
         (org-ml-to-trimmed-string))
       => "CLOSED: [2019-01-02 Wed +2m -1d]"
       (:comment "Add a new timestamp and remove another")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-get-planning)
+        (org-ml-headline-get-section)
+        (-first-item)
         (org-ml-planning-set-timestamp!
          :deadline '(2112 1 1))
         (org-ml-planning-set-timestamp!
@@ -4141,7 +4155,9 @@
                ":TWO: two"
                ":END:")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-node-properties)
+           (org-ml-headline-get-section)
+           (-first-item)
+           (org-ml-get-children)
            (-map #'org-ml-get-type))
       => '(node-property node-property)
 
@@ -4456,27 +4472,25 @@
       (:buffer "* headline"
                "CLOSED: [2019-01-01 Tue]")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-planning)
-           (org-ml-to-trimmed-string))
-      => "CLOSED: [2019-01-01 Tue]"
+           (org-ml-headline-get-planning))
+      => '(:closed (2019 1 1 nil nil) :scheduled nil :deadline nil)
       (:buffer "* headline")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-planning)
-           (org-ml-to-trimmed-string))
-      => "")
+           (org-ml-headline-get-planning))
+      => nil)
 
     (defexamples-content org-ml-headline-set-planning
       nil
       (:buffer "* headline")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-planning (org-ml-build-planning! :closed '(2019 1 1)))
+        (org-ml-headline-set-planning '(:closed (2019 1 1)))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "CLOSED: [2019-01-01 Tue]")
       (:buffer "* headline"
                "CLOSED: [2019-01-01 Tue]")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
+        (org-ml-headline-set-planning '(:scheduled (2019 1 1)))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "SCHEDULED: <2019-01-01 Tue>")
@@ -4491,7 +4505,7 @@
                ""
                "rest")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
+        (org-ml-headline-set-planning '(:scheduled (2019 1 1)))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "SCHEDULED: <2019-01-01 Tue>"
@@ -4516,8 +4530,7 @@
                "CLOSED: [2019-01-01 Tue]")
       (org-ml->> (org-ml-parse-this-headline)
         (org-ml-headline-map-planning*
-          (org-ml-map-property* :closed
-            (org-ml-timestamp-shift 1 'day it) it))
+          (list :closed (org-ml-timelist-shift 1 'day (plist-get it :closed))))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "CLOSED: [2019-01-02 Wed]"))
@@ -4530,9 +4543,8 @@
                ":ID:       minesfake"
                ":END:")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-node-properties)
-           (-map #'org-ml-to-trimmed-string))
-      => '(":Effort:   1:00" ":ID:       minesfake")
+           (org-ml-headline-get-node-properties))
+      => '(("Effort" "1:00") ("ID" "minesfake"))
       (:buffer "* headline")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-get-node-properties)
@@ -4540,15 +4552,14 @@
       => nil
       :begin-hidden
       (:buffer "* headline"
-               "CLOSED: <2019-01-01 Tue>"
+               "CLOSED: [2019-01-01 Tue]"
                ":PROPERTIES:"
                ":Effort:   1:00"
                ":ID:       minesfake"
                ":END:")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-node-properties)
-           (-map #'org-ml-to-trimmed-string))
-      => '(":Effort:   1:00" ":ID:       minesfake")
+           (org-ml-headline-get-node-properties))
+      => '(("Effort" "1:00") ("ID" "minesfake"))
       :end-hidden)
 
     (defexamples-content org-ml-headline-set-node-properties
@@ -4559,9 +4570,7 @@
                ":ID:       minesfake"
                ":END:")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-node-properties
-         (--map (apply #'org-ml-build-node-property it)
-                '(("Effort" "0:01") ("ID" "easy"))))
+        (org-ml-headline-set-node-properties '(("Effort" "0:01") ("ID" "easy")))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":PROPERTIES:"
@@ -4574,18 +4583,16 @@
       => "* headline"
       :begin-hidden
       (:buffer "* headline"
-               "CLOSED: <2019-01-01 Tue>"
+               "CLOSED: [2019-01-01 Tue]"
                ":PROPERTIES:"
                ":Effort:   1:00"
                ":ID:       minesfake"
                ":END:")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-node-properties
-         (--map (apply #'org-ml-build-node-property it)
-                '(("Effort" "0:01") ("ID" "easy"))))
+        (org-ml-headline-set-node-properties '(("Effort" "0:01") ("ID" "easy")))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
-                  "CLOSED: <2019-01-01 Tue>"
+                  "CLOSED: [2019-01-01 Tue]"
                   ":PROPERTIES:"
                   ":Effort:   0:01"
                   ":ID:       easy"
@@ -4594,12 +4601,12 @@
         (org-ml-headline-set-node-properties nil)
         (org-ml-to-trimmed-string))
       => (:result "* headline"
-                  "CLOSED: <2019-01-01 Tue>")
+                  "CLOSED: [2019-01-01 Tue]")
       (:buffer "* headline"
                ""
                "section")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
+        (org-ml-headline-set-node-properties '(("New" "world man")))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":PROPERTIES:"
@@ -4608,21 +4615,21 @@
                   ""
                   "section")
       (:buffer "* headline"
-               "CLOSED: <2019-01-01 Tue>"
+               "CLOSED: [2019-01-01 Tue]"
                ""
                "section")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
+        (org-ml-headline-set-node-properties '(("New" "world man")))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
-                  "CLOSED: <2019-01-01 Tue>"
+                  "CLOSED: [2019-01-01 Tue]"
                   ":PROPERTIES:"
                   ":New:      world man"
                   ":END:"
                   ""
                   "section")
       (:buffer "* headline"
-               "CLOSED: <2019-01-01 Tue>"
+               "CLOSED: [2019-01-01 Tue]"
                ":PROPERTIES:"
                ":Effort:   0:01"
                ":ID:       easy"
@@ -4633,7 +4640,7 @@
         (org-ml-headline-set-node-properties nil)
         (org-ml-to-trimmed-string))
       => (:result "* headline"
-                  "CLOSED: <2019-01-01 Tue>"
+                  "CLOSED: [2019-01-01 Tue]"
                   ""
                   "section"))
 
@@ -4646,7 +4653,7 @@
                ":END:")
       (org-ml->> (org-ml-parse-this-headline)
         (org-ml-headline-map-node-properties*
-          (cons (org-ml-build-node-property "New" "world man") it))
+          (cons (list "New" "world man") it))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":PROPERTIES:"
@@ -4804,13 +4811,9 @@
                           :clock-into-drawer "CLOCKING")))
         (org-ml->> (org-ml-parse-this-headline)
           (org-ml-headline-set-supercontents
-           config `((:logbook nil) (:contents ,(org-ml-build-paragraph! "new contents"))))
+           config `(:blank 0 :contents ,(list (org-ml-build-paragraph! "new contents"))))
           (org-ml-to-trimmed-string)))
       => (:result "* headline"
-                  "CLOSED: [2019-01-01 Tue 00:00]"
-                  ":PROPERTIES:"
-                  ":Effort:   0:30"
-                  ":END:"
                   "new contents"))
 
     (defexamples-content org-ml-headline-map-supercontents
@@ -5264,7 +5267,29 @@
                   ":END:"
                   ":CLOCKING:"
                   "CLOCK: [2112-01-01 Fri]"
-                  ":END:"))
+                  ":END:")
+
+      ;; :begin-hidden
+      ;; (:buffer "* headline"
+      ;;          ""
+      ;;          "something")
+      ;; (let ((ut (- 1546300800 (car (current-time-zone)))))
+      ;;   (org-ml->> (org-ml-parse-this-headline)
+      ;;     (org-ml-headline-logbook-append-item
+      ;;      (list :log-into-drawer t
+      ;;            :clock-into-drawer t
+      ;;            :clock-out-notes t)
+      ;;      (org-ml-build-log-note ut "new note"))
+      ;;     (org-ml-to-trimmed-string)))
+      ;; => (:result "* headline"
+      ;;             ":LOGBOOK:"
+      ;;             "- Note taken on [2019-01-01 Tue 00:00] \\\\"
+      ;;             "  new note"
+      ;;             ":END:"
+      ;;             ""
+      ;;             "something")
+      ;; :end-hidden
+      )
 
     (defexamples-content org-ml-headline-logbook-append-open-clock
       nil
@@ -7099,57 +7124,58 @@
                   "** DONE _one"
                   "** DONE _two"))
 
-    (defexamples-content org-ml-update-metasections
-      nil
-      (:buffer "* one")
-      (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-        (org-ml-wrap-impure
-         (org-ml-update-metasections* 'all
-           (org-ml-metasection-set-planning pl it))))
-      $> (:result "* one"
-                  "SCHEDULED: <2000-01-01 Sat>")
-      (:buffer "* one"
-               ""
-               "something")
-      (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-        (org-ml-wrap-impure
-         (org-ml-update-metasections* 'all
-           (org-ml-metasection-set-planning pl it))))
-      $> (:result "* one"
-                  "SCHEDULED: <2000-01-01 Sat>"
-                  ""
-                  "something")
-      (:buffer "* one"
-               "** two")
-      (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-        (org-ml-wrap-impure
-         (org-ml-update-metasections* 'all
-           (org-ml-metasection-set-planning pl it))))
-      $> (:result "* one"
-                  "SCHEDULED: <2000-01-01 Sat>"
-                  "** two"
-                  "SCHEDULED: <2000-01-01 Sat>")
-      (:buffer "* one"
-               "** two"
-               "stuff")
-      (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-        (org-ml-wrap-impure
-         (org-ml-update-metasections* 'all
-           (org-ml-metasection-set-planning pl it))))
-      $> (:result "* one"
-                  "SCHEDULED: <2000-01-01 Sat>"
-                  "** two"
-                  "SCHEDULED: <2000-01-01 Sat>"
-                  "stuff")
-      (:buffer "* one"
-               "stuff")
-      (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-        (org-ml-wrap-impure
-         (org-ml-update-metasections* 'all
-           (org-ml-metasection-set-planning pl it))))
-      $> (:result "* one"
-                  "SCHEDULED: <2000-01-01 Sat>"
-                  "stuff")))
+    ;; (defexamples-content org-ml-update-metasections
+    ;;   nil
+    ;;   (:buffer "* one")
+    ;;   (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+    ;;     (org-ml-wrap-impure
+    ;;      (org-ml-update-metasections* 'all
+    ;;        (org-ml-metasection-set-planning pl it))))
+    ;;   $> (:result "* one"
+    ;;               "SCHEDULED: <2000-01-01 Sat>")
+    ;;   (:buffer "* one"
+    ;;            ""
+    ;;            "something")
+    ;;   (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+    ;;     (org-ml-wrap-impure
+    ;;      (org-ml-update-metasections* 'all
+    ;;        (org-ml-metasection-set-planning pl it))))
+    ;;   $> (:result "* one"
+    ;;               "SCHEDULED: <2000-01-01 Sat>"
+    ;;               ""
+    ;;               "something")
+    ;;   (:buffer "* one"
+    ;;            "** two")
+    ;;   (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+    ;;     (org-ml-wrap-impure
+    ;;      (org-ml-update-metasections* 'all
+    ;;        (org-ml-metasection-set-planning pl it))))
+    ;;   $> (:result "* one"
+    ;;               "SCHEDULED: <2000-01-01 Sat>"
+    ;;               "** two"
+    ;;               "SCHEDULED: <2000-01-01 Sat>")
+    ;;   (:buffer "* one"
+    ;;            "** two"
+    ;;            "stuff")
+    ;;   (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+    ;;     (org-ml-wrap-impure
+    ;;      (org-ml-update-metasections* 'all
+    ;;        (org-ml-metasection-set-planning pl it))))
+    ;;   $> (:result "* one"
+    ;;               "SCHEDULED: <2000-01-01 Sat>"
+    ;;               "** two"
+    ;;               "SCHEDULED: <2000-01-01 Sat>"
+    ;;               "stuff")
+    ;;   (:buffer "* one"
+    ;;            "stuff")
+    ;;   (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+    ;;     (org-ml-wrap-impure
+    ;;      (org-ml-update-metasections* 'all
+    ;;        (org-ml-metasection-set-planning pl it))))
+    ;;   $> (:result "* one"
+    ;;               "SCHEDULED: <2000-01-01 Sat>"
+    ;;               "stuff"))
+    )
 
   (def-example-subgroup "Misc"
     nil

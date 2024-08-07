@@ -886,9 +886,9 @@ HEADER is the it-header."
       (org-ml-item-toggle-checkbox it))
 
     (org-ml--test-purity "planning setters"
-      (org-ml-build-planning! :closed '(2019 1 1))
+      (org-ml-build-planning! :deadline '(2019 1 1))
       (org-ml-planning-set-timestamp!
-       :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month) it)))
+       :deadline '(2019 1 2 &warning all 1 day &repeater cumulate 2 month) it)))
 
   (describe "branch nodes"
 
@@ -942,16 +942,11 @@ HEADER is the it-header."
       (org-ml-headline-map-subheadlines*
         (cons (org-ml-build-headline! :level 2 :title-text "headline x") it)
         it)
-      (org-ml-headline-set-planning (org-ml-build-planning! :closed '(2019 1 1)) it)
-      (org-ml-headline-map-planning
-        (lambda (_) (org-ml-build-planning! :closed '(2019 1 1)))
-        it)
-      (org-ml-headline-set-node-properties
-       (--map (apply #'org-ml-build-node-property it)
-              '(("Effort" "0:01") ("ID" "easy")))
-       it)
+      (org-ml-headline-set-planning '(:closed (2019 1 1)) it)
+      (org-ml-headline-map-planning (lambda (_) '(:closed '(2019 1 1))) it)
+      (org-ml-headline-set-node-properties '(("Effort" "0:01") ("ID" "easy")) it)
       (org-ml-headline-map-node-properties*
-        (cons (org-ml-build-node-property "New" "world man") it)
+        (cons (list "New" "world man") it)
         it)
       (org-ml-headline-set-node-property "ID" "real" it)
       (org-ml-headline-map-node-property "ID" (lambda (_) "real") it))
@@ -982,11 +977,11 @@ HEADER is the it-header."
        it)
       (org-ml-headline-set-supercontents
        '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
-       `((:logbook nil) (:contents ,(org-ml-build-paragraph! "new contents")))
+       `(:blank 0 :contents (,(org-ml-build-paragraph! "new contents")))
        it)
       (org-ml-headline-map-supercontents
        '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
-        (lambda (_) `((:logbook nil) (:contents ,(org-ml-build-paragraph! "new contents"))))
+        (lambda (_) `(:blank 0 :contents (,(org-ml-build-paragraph! "new contents"))))
         it)
       (org-ml-headline-logbook-append-item
        '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
@@ -1598,7 +1593,7 @@ HEADER is the it-header."
         "clock with item and note" nil `(,c1) `(,n1 ,i1) `(,c1 ,p1n1)))))
 
 (defmacro org-ml--test-logbook-to-nodes (c out items clocks)
-  `(->> (org-ml--logbook-init ,items ,clocks nil 0)
+  `(->> (org-ml--logbook-init ,items ,clocks nil)
         (org-ml--logbook-to-nodes ,c)
         (equal ,out)
         (should)))
@@ -1678,290 +1673,290 @@ HEADER is the it-header."
 ;; - L = string, C = int: 'single-items-or-dual'
 ;; - L = "LOGBOOK", C = int: 'single-mixed-or-single-items'
 
-(defmacro expect-supercontents (config nodes items clocks unknown
-                                               post-blank rest)
-  (declare (indent 2))
-  `(expect (org-ml--supercontents-from-nodes ,config ,nodes)
-           :to-equal
-           (org-ml--supercontents-init ,items ,clocks ,unknown ,post-blank ,rest)))
+;; (defmacro expect-supercontents (config nodes items clocks unknown
+;;                                                blank rest)
+;;   (declare (indent 2))
+;;   `(expect (org-ml--supersection-to-supercontents ,config (list :pre-blank 0 :contents ,nodes))
+;;            :to-equal
+;;            (org-ml--supercontents-init nil nil ,items ,clocks ,unknown ,blank ,rest)))
 
-(defmacro org-ml--test-supercontents-specs (config &rest specs)
-  (declare (indent 1))
-  (let ((forms
-         (->> (-partition 7 specs)
-              (--map
-               (-let (((title input items clocks unknown post-blank contents) it))
-                 `(it ,title (expect-supercontents ,config ,input
-                               ,items ,clocks ,unknown ,post-blank ,contents)))))))
-    `(progn ,@forms)))
+;; (defmacro org-ml--test-supercontents-specs (config &rest specs)
+;;   (declare (indent 1))
+;;   (let ((forms
+;;          (->> (-partition 7 specs)
+;;               (--map
+;;                (-let (((title input items clocks unknown post-blank contents) it))
+;;                  `(it ,title (expect-supercontents ,config ,input
+;;                                ,items ,clocks ,unknown ,post-blank ,contents)))))))
+;;     `(progn ,@forms)))
 
-(describe "org-ml--supercontents-mixed"
-  (before-all
-    (setq config nil
-          config-notes '(:clock-out-notes t)
-          i1 (org-ml-build-log-note 1603767576 "i1")
-          i2 (org-ml-build-item! :paragraph "clock note")
-          p1 (org-ml-build-plain-list i1)
-          p2 (org-ml-build-plain-list i2)
-          p12 (org-ml-build-plain-list i1 i2)
-          p21 (org-ml-build-plain-list i2 i1)
-          c1 (org-ml-build-clock (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0)))
-          r1 (org-ml-build-paragraph! "foo")))
-  (describe "with clock notes"
-    (org-ml--test-supercontents-specs config-notes
-      "nothing" nil nil nil nil nil nil
-      "no logbook" (list r1) nil nil nil nil `(,r1)
-      "item clock note rest" (list p1 c1 p2 r1) `(,i1) `(,c1 ,i2) nil 0 `(,r1)
-      "item note clock rest" (list p1 p2 c1 r1) `(,i1) nil nil 0 `(,p2 ,c1 ,r1)
-      "clock item note rest" (list c1 p2 p1 r1) `(,i1) `(,c1 ,i2) nil 0 `(,r1)
-      "clock note item rest" (list c1 p1 p2 r1) `(,i1) `(,c1) nil 0 `(,p2 ,r1)
-      "note item clock rest" (list p2 p1 c1 r1) nil nil nil nil `(,p21 ,c1 ,r1)
-      "note clock item rest" (list p2 c1 p1 r1) nil nil nil nil `(,p2 ,c1 ,p1 ,r1)
-      "item clock note" (list p1 c1 p2) `(,i1) `(,c1 ,i2) nil 0 nil
-      "item note clock" (list p1 p2 c1) `(,i1) nil nil 0 `(,p2 ,c1)
-      "clock item note" (list c1 p2 p1) `(,i1) `(,c1 ,i2) nil 0 nil
-      "clock note item" (list c1 p1 p2) `(,i1) `(,c1) nil 0 `(,p2)
-      "note item clock" (list p2 p1 c1) nil nil nil nil `(,p21 ,c1)
-      "note clock item" (list p2 c1 p1) nil nil nil nil `(,p2 ,c1 ,p1)
-      "item clock" (list p1 c1) `(,i1) `(,c1) nil 0 nil
-      "item note" (list p1 p2) `(,i1) nil nil 0 `(,p2)
-      "clock note" (list c1 p2) nil `(,c1 ,i2) nil 0 nil
-      "clock item" (list c1 p1) `(,i1) `(,c1) nil 0 nil
-      "note item" (list p2 p1) nil nil nil nil `(,p21)
-      "note clock" (list p2 c1) nil nil nil nil `(,p2 ,c1)
-      "rest list" (list r1 p1) nil nil nil nil `(,r1 ,p1)))
+;; (describe "org-ml--supercontents-mixed"
+;;   (before-all
+;;     (setq config nil
+;;           config-notes '(:clock-out-notes t)
+;;           i1 (org-ml-build-log-note 1603767576 "i1")
+;;           i2 (org-ml-build-item! :paragraph "clock note")
+;;           p1 (org-ml-build-plain-list i1)
+;;           p2 (org-ml-build-plain-list i2)
+;;           p12 (org-ml-build-plain-list i1 i2)
+;;           p21 (org-ml-build-plain-list i2 i1)
+;;           c1 (org-ml-build-clock (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0)))
+;;           r1 (org-ml-build-paragraph! "foo")))
+;;   (describe "with clock notes"
+;;     (org-ml--test-supercontents-specs config-notes
+;;       "nothing" nil nil nil nil nil nil
+;;       "no logbook" (list r1) nil nil nil nil `(,r1)
+;;       "item clock note rest" (list p1 c1 p2 r1) `(,i1) `(,c1 ,i2) nil 0 `(,r1)
+;;       "item note clock rest" (list p1 p2 c1 r1) `(,i1) nil nil 0 `(,p2 ,c1 ,r1)
+;;       "clock item note rest" (list c1 p2 p1 r1) `(,i1) `(,c1 ,i2) nil 0 `(,r1)
+;;       "clock note item rest" (list c1 p1 p2 r1) `(,i1) `(,c1) nil 0 `(,p2 ,r1)
+;;       "note item clock rest" (list p2 p1 c1 r1) nil nil nil nil `(,p21 ,c1 ,r1)
+;;       "note clock item rest" (list p2 c1 p1 r1) nil nil nil nil `(,p2 ,c1 ,p1 ,r1)
+;;       "item clock note" (list p1 c1 p2) `(,i1) `(,c1 ,i2) nil 0 nil
+;;       "item note clock" (list p1 p2 c1) `(,i1) nil nil 0 `(,p2 ,c1)
+;;       "clock item note" (list c1 p2 p1) `(,i1) `(,c1 ,i2) nil 0 nil
+;;       "clock note item" (list c1 p1 p2) `(,i1) `(,c1) nil 0 `(,p2)
+;;       "note item clock" (list p2 p1 c1) nil nil nil nil `(,p21 ,c1)
+;;       "note clock item" (list p2 c1 p1) nil nil nil nil `(,p2 ,c1 ,p1)
+;;       "item clock" (list p1 c1) `(,i1) `(,c1) nil 0 nil
+;;       "item note" (list p1 p2) `(,i1) nil nil 0 `(,p2)
+;;       "clock note" (list c1 p2) nil `(,c1 ,i2) nil 0 nil
+;;       "clock item" (list c1 p1) `(,i1) `(,c1) nil 0 nil
+;;       "note item" (list p2 p1) nil nil nil nil `(,p21)
+;;       "note clock" (list p2 c1) nil nil nil nil `(,p2 ,c1)
+;;       "rest list" (list r1 p1) nil nil nil nil `(,r1 ,p1)))
 
-  (describe "without clock notes"
-    (org-ml--test-supercontents-specs config
-      "nothing" nil nil nil nil nil nil
-      "no logbook" (list r1) nil nil nil nil `(,r1)
-      "item clock note rest" (list p1 c1 p2 r1) `(,i1) `(,c1) nil 0 `(,p2 ,r1)
-      "item note clock rest" (list p1 p2 c1 r1) `(,i1) nil nil 0 `(,p2 ,c1 ,r1)
-      "clock item note rest" (list c1 p2 p1 r1) nil `(,c1) nil 0 `(,p21 ,r1)
-      "clock note item rest" (list c1 p1 p2 r1) `(,i1) `(,c1) nil 0 `(,p2 ,r1)
-      "note item clock rest" (list p2 p1 c1 r1) nil nil nil nil `(,p21 ,c1 ,r1)
-      "note clock item rest" (list p2 c1 p1 r1) nil nil nil nil `(,p2 ,c1 ,p1 ,r1)
-      "item clock note" (list p1 c1 p2) `(,i1) `(,c1) nil 0 `(,p2)
-      "item note clock" (list p1 p2 c1) `(,i1) nil nil 0 `(,p2 ,c1)
-      "clock item note" (list c1 p2 p1) nil `(,c1) nil 0 `(,p21)
-      "clock note item" (list c1 p1 p2) `(,i1) `(,c1) nil 0 `(,p2)
-      "note item clock" (list p2 p1 c1) nil nil nil nil `(,p21 ,c1)
-      "note clock item" (list p2 c1 p1) nil nil nil nil `(,p2 ,c1 ,p1)
-      "item note" (list p1 c1) `(,i1) `(,c1) nil 0 nil
-      "clock note" (list p1 p2) `(,i1) nil nil 0 `(,p2)
-      "clock item" (list c1 p2) nil `(,c1) nil 0 `(,p2)
-      "note item" (list c1 p1) `(,i1) `(,c1) nil 0 nil
-      "note clock" (list p2 p1) nil nil nil nil `(,p21)
-      "rest list" (list p2 c1) nil nil nil nil `(,p2 ,c1))))
+;;   (describe "without clock notes"
+;;     (org-ml--test-supercontents-specs config
+;;       "nothing" nil nil nil nil nil nil
+;;       "no logbook" (list r1) nil nil nil nil `(,r1)
+;;       "item clock note rest" (list p1 c1 p2 r1) `(,i1) `(,c1) nil 0 `(,p2 ,r1)
+;;       "item note clock rest" (list p1 p2 c1 r1) `(,i1) nil nil 0 `(,p2 ,c1 ,r1)
+;;       "clock item note rest" (list c1 p2 p1 r1) nil `(,c1) nil 0 `(,p21 ,r1)
+;;       "clock note item rest" (list c1 p1 p2 r1) `(,i1) `(,c1) nil 0 `(,p2 ,r1)
+;;       "note item clock rest" (list p2 p1 c1 r1) nil nil nil nil `(,p21 ,c1 ,r1)
+;;       "note clock item rest" (list p2 c1 p1 r1) nil nil nil nil `(,p2 ,c1 ,p1 ,r1)
+;;       "item clock note" (list p1 c1 p2) `(,i1) `(,c1) nil 0 `(,p2)
+;;       "item note clock" (list p1 p2 c1) `(,i1) nil nil 0 `(,p2 ,c1)
+;;       "clock item note" (list c1 p2 p1) nil `(,c1) nil 0 `(,p21)
+;;       "clock note item" (list c1 p1 p2) `(,i1) `(,c1) nil 0 `(,p2)
+;;       "note item clock" (list p2 p1 c1) nil nil nil nil `(,p21 ,c1)
+;;       "note clock item" (list p2 c1 p1) nil nil nil nil `(,p2 ,c1 ,p1)
+;;       "item note" (list p1 c1) `(,i1) `(,c1) nil 0 nil
+;;       "clock note" (list p1 p2) `(,i1) nil nil 0 `(,p2)
+;;       "clock item" (list c1 p2) nil `(,c1) nil 0 `(,p2)
+;;       "note item" (list c1 p1) `(,i1) `(,c1) nil 0 nil
+;;       "note clock" (list p2 p1) nil nil nil nil `(,p21)
+;;       "rest list" (list p2 c1) nil nil nil nil `(,p2 ,c1))))
 
-(describe "org-ml--supercontents-single-items"
-  (before-all
-    (setq id-name "LOGGING"
-          config `(:log-into-drawer ,id-name)
-          config-notes `(:log-into-drawer ,id-name :clock-out-notes t)
-          i1 (org-ml-build-item! :paragraph "i1")
-          i2 (org-ml-build-log-note 1603767576 "log note")
-          i3 (org-ml-build-log-note 1603767576 "log note in drawer")
-          p1 (org-ml-build-plain-list i1)
-          p2 (org-ml-build-plain-list i2)
-          p3 (org-ml-build-plain-list i3)
-          p4 (org-ml-build-plain-list i1 i2)
-          drwr (org-ml-build-drawer id-name p3)
-          ts1 (org-ml-build-timestamp! '(2112 1 1 0 0
-                                              :end '(2112 1 2 0 0)))
-          c1 (org-ml-build-clock ts1)
-          r1 (org-ml-build-paragraph! "foo")))
-  (describe "without clock notes"
-    (org-ml--test-supercontents-specs config
-      "nothing" nil nil nil nil nil nil
-      "no logbook" (list r1) nil nil nil nil `(,r1)
-      "clock note (no notes)" (list c1 p1 r1) nil `(,c1) nil 0 `(,p1 ,r1)
-      "clock note item (no notes)" (list c1 p4 r1) nil `(,c1) nil 0 `(,p4 ,r1)
-      ;; ASSUME the code that stops splitting after finding an invalid item is
-      ;; fully tested with this example and will therefore do the same in the
-      ;; permutations below
-      "item clock (store none)" (list p1 c1 r1) nil nil nil nil `(,p1 ,c1 ,r1)
-      "drawer clock (store both)" (list drwr c1 r1) `(,i3) `(,c1) nil 0 `(,r1)
-      "clock drawer (store both)" (list c1 drwr r1) `(,i3) `(,c1) nil 0 `(,r1)
-      "clock item drawer (don't store note)" (list c1 p1 drwr r1) nil `(,c1) nil 0 `(,p1 ,drwr ,r1)))
-  (describe "with clock notes"
-    (org-ml--test-supercontents-specs config-notes
-      "clock item drawer (store all)" (list c1 p1 drwr r1) `(,i3) `(,c1 ,i1) nil 0 `(,r1)
-      "clock note item" (list c1 p4 r1) nil `(,c1 ,i1) nil 0 `(,p2 ,r1)
-      "clock note" (list c1 p1 r1) nil `(,c1 ,i1) nil 0 `(,r1)
-      "clock item" (list c1 p2 r1) nil `(,c1) nil 0 `(,p2 ,r1))))
+;; (describe "org-ml--supercontents-single-items"
+;;   (before-all
+;;     (setq id-name "LOGGING"
+;;           config `(:log-into-drawer ,id-name)
+;;           config-notes `(:log-into-drawer ,id-name :clock-out-notes t)
+;;           i1 (org-ml-build-item! :paragraph "i1")
+;;           i2 (org-ml-build-log-note 1603767576 "log note")
+;;           i3 (org-ml-build-log-note 1603767576 "log note in drawer")
+;;           p1 (org-ml-build-plain-list i1)
+;;           p2 (org-ml-build-plain-list i2)
+;;           p3 (org-ml-build-plain-list i3)
+;;           p4 (org-ml-build-plain-list i1 i2)
+;;           drwr (org-ml-build-drawer id-name p3)
+;;           ts1 (org-ml-build-timestamp! '(2112 1 1 0 0
+;;                                               :end '(2112 1 2 0 0)))
+;;           c1 (org-ml-build-clock ts1)
+;;           r1 (org-ml-build-paragraph! "foo")))
+;;   (describe "without clock notes"
+;;     (org-ml--test-supercontents-specs config
+;;       "nothing" nil nil nil nil nil nil
+;;       "no logbook" (list r1) nil nil nil nil `(,r1)
+;;       "clock note (no notes)" (list c1 p1 r1) nil `(,c1) nil 0 `(,p1 ,r1)
+;;       "clock note item (no notes)" (list c1 p4 r1) nil `(,c1) nil 0 `(,p4 ,r1)
+;;       ;; ASSUME the code that stops splitting after finding an invalid item is
+;;       ;; fully tested with this example and will therefore do the same in the
+;;       ;; permutations below
+;;       "item clock (store none)" (list p1 c1 r1) nil nil nil nil `(,p1 ,c1 ,r1)
+;;       "drawer clock (store both)" (list drwr c1 r1) `(,i3) `(,c1) nil 0 `(,r1)
+;;       "clock drawer (store both)" (list c1 drwr r1) `(,i3) `(,c1) nil 0 `(,r1)
+;;       "clock item drawer (don't store note)" (list c1 p1 drwr r1) nil `(,c1) nil 0 `(,p1 ,drwr ,r1)))
+;;   (describe "with clock notes"
+;;     (org-ml--test-supercontents-specs config-notes
+;;       "clock item drawer (store all)" (list c1 p1 drwr r1) `(,i3) `(,c1 ,i1) nil 0 `(,r1)
+;;       "clock note item" (list c1 p4 r1) nil `(,c1 ,i1) nil 0 `(,p2 ,r1)
+;;       "clock note" (list c1 p1 r1) nil `(,c1 ,i1) nil 0 `(,r1)
+;;       "clock item" (list c1 p2 r1) nil `(,c1) nil 0 `(,p2 ,r1))))
 
-(describe "org-ml--supercontents-single-clocks"
-  (before-all
-    (setq cd-name "CLOCKING"
-          config `(:clock-into-drawer ,cd-name)
-          config-notes `(:clock-into-drawer ,cd-name :clock-out-notes t)
-          i1 (org-ml-build-log-note 1603767576 "note 1")
-          i2 (org-ml-build-log-note 1603767576 "note 2")
-          i3 (org-ml-build-item! :paragraph "clock note")
-          p1 (org-ml-build-plain-list i1)
-          p2 (org-ml-build-plain-list i2)
-          p3 (org-ml-build-plain-list i3)
-          ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
-          c1 (org-ml-build-clock ts1)
-          drwr1 (org-ml-build-drawer cd-name c1)
-          drwr2 (org-ml-build-drawer cd-name c1 p3)
-          r1 (org-ml-build-paragraph! "foo")))
-  (describe "without clock notes"
-    (org-ml--test-supercontents-specs config
-      "nothing" nil nil nil nil nil nil
-      "no logbook" (list r1) nil nil nil nil `(,r1)
-      ;; this only has five valid combinations
-      ;;
-      "item, drawer, item" (list p1 drwr1 p2 r1) `(,i1 ,i2) `(,c1) nil 0 `(,r1)
-      "item, drawer" (list p1 drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)
-      "item" (list p1 r1) `(,i1) nil nil 0 `(,r1)
-      "drawer, item" (list drwr1 p1 r1) `(,i1) `(,c1) nil 0 `(,r1)
-      "drawer" (list drwr1 r1) nil `(,c1) nil 0 `(,r1)
-      ;; invalid
-      "loose clock anywhere" (list c1 p1 r1) nil nil nil nil `(,c1 ,p1 ,r1)))
-  (describe "with clock notes"
-    (org-ml--test-supercontents-specs config-notes
-      "drawer with clock notes" (list drwr2 r1) nil `(,c1 ,i3) nil 0 `(,r1))))
+;; (describe "org-ml--supercontents-single-clocks"
+;;   (before-all
+;;     (setq cd-name "CLOCKING"
+;;           config `(:clock-into-drawer ,cd-name)
+;;           config-notes `(:clock-into-drawer ,cd-name :clock-out-notes t)
+;;           i1 (org-ml-build-log-note 1603767576 "note 1")
+;;           i2 (org-ml-build-log-note 1603767576 "note 2")
+;;           i3 (org-ml-build-item! :paragraph "clock note")
+;;           p1 (org-ml-build-plain-list i1)
+;;           p2 (org-ml-build-plain-list i2)
+;;           p3 (org-ml-build-plain-list i3)
+;;           ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
+;;           c1 (org-ml-build-clock ts1)
+;;           drwr1 (org-ml-build-drawer cd-name c1)
+;;           drwr2 (org-ml-build-drawer cd-name c1 p3)
+;;           r1 (org-ml-build-paragraph! "foo")))
+;;   (describe "without clock notes"
+;;     (org-ml--test-supercontents-specs config
+;;       "nothing" nil nil nil nil nil nil
+;;       "no logbook" (list r1) nil nil nil nil `(,r1)
+;;       ;; this only has five valid combinations
+;;       ;;
+;;       "item, drawer, item" (list p1 drwr1 p2 r1) `(,i1 ,i2) `(,c1) nil 0 `(,r1)
+;;       "item, drawer" (list p1 drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+;;       "item" (list p1 r1) `(,i1) nil nil 0 `(,r1)
+;;       "drawer, item" (list drwr1 p1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+;;       "drawer" (list drwr1 r1) nil `(,c1) nil 0 `(,r1)
+;;       ;; invalid
+;;       "loose clock anywhere" (list c1 p1 r1) nil nil nil nil `(,c1 ,p1 ,r1)))
+;;   (describe "with clock notes"
+;;     (org-ml--test-supercontents-specs config-notes
+;;       "drawer with clock notes" (list drwr2 r1) nil `(,c1 ,i3) nil 0 `(,r1))))
 
-(describe "org-ml--supercontents-dual"
-  (before-all
-    (setq cd-name "CLOCKING"
-          id-name "LOGGING"
-          config `(:log-into-drawer ,id-name :clock-into-drawer ,cd-name)
-          i1 (org-ml-build-log-note 1603767576 "note")
-          p1 (org-ml-build-plain-list i1)
-          ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
-          c1 (org-ml-build-clock ts1)
-          drwr1 (org-ml-build-drawer cd-name c1)
-          drwr2 (org-ml-build-drawer id-name p1)
-          r1 (org-ml-build-paragraph! "foo")))
-  (org-ml--test-supercontents-specs config
-    "nothing" nil nil nil nil nil nil
-    "no logbook" (list r1) nil nil nil nil `(,r1)
-    "one drawer" (list drwr1 r1) nil `(,c1) nil 0 `(,r1)
-    "one drawer (other one)" (list drwr2 r1) `(,i1) nil nil 0 `(,r1)
-    "two drawers" (list drwr1 drwr2 r1) `(,i1) `(,c1) nil 0 `(,r1)
-    "two drawers (other order)" (list drwr2 drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)
-    "clock outside (invalid)" (list c1 drwr2 r1) nil nil nil nil `(,c1 ,drwr2 ,r1)
-    "item outside (invalid)" (list p1 drwr1 r1) nil nil nil nil `(,p1 ,drwr1 ,r1)))
+;; (describe "org-ml--supercontents-dual"
+;;   (before-all
+;;     (setq cd-name "CLOCKING"
+;;           id-name "LOGGING"
+;;           config `(:log-into-drawer ,id-name :clock-into-drawer ,cd-name)
+;;           i1 (org-ml-build-log-note 1603767576 "note")
+;;           p1 (org-ml-build-plain-list i1)
+;;           ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
+;;           c1 (org-ml-build-clock ts1)
+;;           drwr1 (org-ml-build-drawer cd-name c1)
+;;           drwr2 (org-ml-build-drawer id-name p1)
+;;           r1 (org-ml-build-paragraph! "foo")))
+;;   (org-ml--test-supercontents-specs config
+;;     "nothing" nil nil nil nil nil nil
+;;     "no logbook" (list r1) nil nil nil nil `(,r1)
+;;     "one drawer" (list drwr1 r1) nil `(,c1) nil 0 `(,r1)
+;;     "one drawer (other one)" (list drwr2 r1) `(,i1) nil nil 0 `(,r1)
+;;     "two drawers" (list drwr1 drwr2 r1) `(,i1) `(,c1) nil 0 `(,r1)
+;;     "two drawers (other order)" (list drwr2 drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+;;     "clock outside (invalid)" (list c1 drwr2 r1) nil nil nil nil `(,c1 ,drwr2 ,r1)
+;;     "item outside (invalid)" (list p1 drwr1 r1) nil nil nil nil `(,p1 ,drwr1 ,r1)))
 
-(describe "org-ml--supercontents-single-mixed"
-  (before-all
-    (setq d-name "LOGBOOK"
-          config '(:log-into-drawer t :clock-into-drawer t)
-          config-notes (list :log-into-drawer t
-                             :clock-into-drawer t
-                             :clock-out-notes t)
-          i1 (org-ml-build-log-note 1603767576 "note 2")
-          i2 (org-ml-build-item! :paragraph "clock note")
-          p1 (org-ml-build-plain-list i1)
-          p2 (org-ml-build-plain-list i2)
-          ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
-          c1 (org-ml-build-clock ts1)
-          drwr1 (org-ml-build-drawer d-name c1 p1)
-          drwr2 (org-ml-build-drawer d-name c1 p2 p1)
-          r1 (org-ml-build-paragraph! "foo")))
-  (describe "without clock notes"
-    (org-ml--test-supercontents-specs config
-      "nothing" nil nil nil nil nil nil
-      "no logging" (list r1) nil nil nil nil `(,r1)
-      "single drawer" (list drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)
-      "clock outside (invalid)" (list c1 drwr1 r1) nil nil nil nil `(,c1 ,drwr1 ,r1)
-      "item outside (invalid)" (list p1 drwr1 r1) nil nil nil nil `(,p1 ,drwr1 ,r1)))
-  (describe "with clock notes"
-    (org-ml--test-supercontents-specs config-notes
-      "single drawer with notes" (list drwr2 r1) `(,i1) `(,c1 ,i2) nil 0 `(,r1))))
+;; (describe "org-ml--supercontents-single-mixed"
+;;   (before-all
+;;     (setq d-name "LOGBOOK"
+;;           config '(:log-into-drawer t :clock-into-drawer t)
+;;           config-notes (list :log-into-drawer t
+;;                              :clock-into-drawer t
+;;                              :clock-out-notes t)
+;;           i1 (org-ml-build-log-note 1603767576 "note 2")
+;;           i2 (org-ml-build-item! :paragraph "clock note")
+;;           p1 (org-ml-build-plain-list i1)
+;;           p2 (org-ml-build-plain-list i2)
+;;           ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
+;;           c1 (org-ml-build-clock ts1)
+;;           drwr1 (org-ml-build-drawer d-name c1 p1)
+;;           drwr2 (org-ml-build-drawer d-name c1 p2 p1)
+;;           r1 (org-ml-build-paragraph! "foo")))
+;;   (describe "without clock notes"
+;;     (org-ml--test-supercontents-specs config
+;;       "nothing" nil nil nil nil nil nil
+;;       "no logging" (list r1) nil nil nil nil `(,r1)
+;;       "single drawer" (list drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+;;       "clock outside (invalid)" (list c1 drwr1 r1) nil nil nil nil `(,c1 ,drwr1 ,r1)
+;;       "item outside (invalid)" (list p1 drwr1 r1) nil nil nil nil `(,p1 ,drwr1 ,r1)))
+;;   (describe "with clock notes"
+;;     (org-ml--test-supercontents-specs config-notes
+;;       "single drawer with notes" (list drwr2 r1) `(,i1) `(,c1 ,i2) nil 0 `(,r1))))
 
-(describe "org-ml--supercontents-single-clocks-or-mixed"
-  ;; ASSUME clock notes are tested using the mixed and single-clocks tests
-  (before-all
-    (setq clock-limit 1
-          config `(:clock-into-drawer ,clock-limit)
-          i1 (org-ml-build-log-note 1603767576 "note 1")
-          i2 (org-ml-build-log-note 1603767576 "note 2")
-          p1 (org-ml-build-plain-list i1)
-          p2 (org-ml-build-plain-list i2)
-          ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
-          c1 (org-ml-build-clock ts1)
-          ts2 (org-ml-build-timestamp! '(2112 1 2 0 0) :end '(2112 1 3 0 0))
-          c2 (org-ml-build-clock ts1)
-          drwr (org-ml-build-drawer "LOGBOOK" c1)
-          r1 (org-ml-build-paragraph! "foo")))
-  (org-ml--test-supercontents-specs config
-    "nothing" nil nil nil nil nil nil
-    "no logbook" (list r1) nil nil nil nil `(,r1)
-    ;; same tests as single-clocks when over clock limit
-    ;;
-    "plain-list, drawer, plain-list" (list p1 drwr p2 r1) `(,i1 ,i2) `(,c1) nil 0 `(,r1)
-    "plain-list, drawer" (list p1 drwr r1) `(,i1) `(,c1) nil 0 `(,r1)
-    "plain-list" (list p1 r1) `(,i1) nil nil 0 `(,r1)
-    "drawer, plain-list" (list drwr p1 r1) `(,i1) `(,c1) nil 0 `(,r1)
-    "drawer" (list drwr r1) nil `(,c1) nil 0 `(,r1)
-    ;; same as mixed
-    ;;
-    "loose clock under clock limit" (list c1 p1 r1) `(,i1) `(,c1) nil 0 `(,r1)
-    "too many clocks" (list c1 c2 p1 r1) nil `(,c1) nil 0 `(,c2 ,p1 ,r1)))
+;; (describe "org-ml--supercontents-single-clocks-or-mixed"
+;;   ;; ASSUME clock notes are tested using the mixed and single-clocks tests
+;;   (before-all
+;;     (setq clock-limit 1
+;;           config `(:clock-into-drawer ,clock-limit)
+;;           i1 (org-ml-build-log-note 1603767576 "note 1")
+;;           i2 (org-ml-build-log-note 1603767576 "note 2")
+;;           p1 (org-ml-build-plain-list i1)
+;;           p2 (org-ml-build-plain-list i2)
+;;           ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
+;;           c1 (org-ml-build-clock ts1)
+;;           ts2 (org-ml-build-timestamp! '(2112 1 2 0 0) :end '(2112 1 3 0 0))
+;;           c2 (org-ml-build-clock ts1)
+;;           drwr (org-ml-build-drawer "LOGBOOK" c1)
+;;           r1 (org-ml-build-paragraph! "foo")))
+;;   (org-ml--test-supercontents-specs config
+;;     "nothing" nil nil nil nil nil nil
+;;     "no logbook" (list r1) nil nil nil nil `(,r1)
+;;     ;; same tests as single-clocks when over clock limit
+;;     ;;
+;;     "plain-list, drawer, plain-list" (list p1 drwr p2 r1) `(,i1 ,i2) `(,c1) nil 0 `(,r1)
+;;     "plain-list, drawer" (list p1 drwr r1) `(,i1) `(,c1) nil 0 `(,r1)
+;;     "plain-list" (list p1 r1) `(,i1) nil nil 0 `(,r1)
+;;     "drawer, plain-list" (list drwr p1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+;;     "drawer" (list drwr r1) nil `(,c1) nil 0 `(,r1)
+;;     ;; same as mixed
+;;     ;;
+;;     "loose clock under clock limit" (list c1 p1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+;;     "too many clocks" (list c1 c2 p1 r1) nil `(,c1) nil 0 `(,c2 ,p1 ,r1)))
 
-(describe "org-ml--supercontents-single-items-or-dual"
-  (before-all
-    (setq id-name "LOGGING"
-          clock-limit 1
-          config `(:log-into-drawer ,id-name :clock-into-drawer ,clock-limit)
-          i1 (org-ml-build-log-note 1603767576 "note 1")
-          i2 (org-ml-build-log-note 1603767576 "note 2")
-          i3 (org-ml-build-log-note 1603767576 "note 3")
-          p1 (org-ml-build-plain-list i1)
-          p2 (org-ml-build-plain-list i1 i2)
-          p3 (org-ml-build-plain-list i3)
-          drwr1 (org-ml-build-drawer id-name p3)
-          ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
-          c1 (org-ml-build-clock ts1)
-          ts2 (org-ml-build-timestamp! '(2112 1 2 0 0) :end '(2112 1 3 0 0))
-          c2 (org-ml-build-clock ts2)
-          drwr2 (org-ml-build-drawer "LOGBOOK" c1)
-          r1 (org-ml-build-paragraph! "foo")))
-  (org-ml--test-supercontents-specs config
-    "nothing" nil nil nil nil nil nil
-    "no logbook" (list r1) nil nil nil nil `(,r1)
-    ;; same as single-items
-    ;;
-    "clock item (don't store note)" (list c1 p1 r1) nil `(,c1) nil 0 `(,p1 ,r1)
-    "clock items (store only clock)" (list c1 p2 r1) nil `(,c1) nil 0 `(,p2 ,r1)
-    ;; ASSUME the code that stops splitting
-    ;; after finding an invalid item is fully tested with this example and will
-    ;; therefore do the same in the permutations below
-    "item clock (store none)" (list p1 c1 r1) nil nil nil nil `(,p1 ,c1 ,r1)
-    "drawer clock (store both)" (list drwr1 c1 r1) `(,i3) `(,c1) nil 0 `(,r1)
-    "clock drawer (store both)" (list c1 drwr1 r1) `(,i3) `(,c1) nil 0 `(,r1)
-    "drawer clock item (store only clock)" (list drwr1 c1 p1 r1) `(,i3) `(,c1) nil 0 `(,p1 ,r1)
-    "clock item drawer (don't store note)" (list c1 p1 drwr1 r1) nil `(,c1) nil 0 `(,p1 ,drwr1 ,r1)
-    "too many clocks" (list c1 c2 p1 drwr1 r1) nil `(,c1) nil 0 `(,c2 ,p1 ,drwr1 ,r1)
-    "dual drawer (clock only)" (list drwr2 r1) nil `(,c1) nil 0 `(,r1)
-    "dual drawer (item only)" (list drwr1 r1) `(,i3) nil nil 0 `(,r1)
-    "dual drawer (both)" (list drwr1 drwr2 r1) `(,i3) `(,c1) nil 0 `(,r1)))
+;; (describe "org-ml--supercontents-single-items-or-dual"
+;;   (before-all
+;;     (setq id-name "LOGGING"
+;;           clock-limit 1
+;;           config `(:log-into-drawer ,id-name :clock-into-drawer ,clock-limit)
+;;           i1 (org-ml-build-log-note 1603767576 "note 1")
+;;           i2 (org-ml-build-log-note 1603767576 "note 2")
+;;           i3 (org-ml-build-log-note 1603767576 "note 3")
+;;           p1 (org-ml-build-plain-list i1)
+;;           p2 (org-ml-build-plain-list i1 i2)
+;;           p3 (org-ml-build-plain-list i3)
+;;           drwr1 (org-ml-build-drawer id-name p3)
+;;           ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
+;;           c1 (org-ml-build-clock ts1)
+;;           ts2 (org-ml-build-timestamp! '(2112 1 2 0 0) :end '(2112 1 3 0 0))
+;;           c2 (org-ml-build-clock ts2)
+;;           drwr2 (org-ml-build-drawer "LOGBOOK" c1)
+;;           r1 (org-ml-build-paragraph! "foo")))
+;;   (org-ml--test-supercontents-specs config
+;;     "nothing" nil nil nil nil nil nil
+;;     "no logbook" (list r1) nil nil nil nil `(,r1)
+;;     ;; same as single-items
+;;     ;;
+;;     "clock item (don't store note)" (list c1 p1 r1) nil `(,c1) nil 0 `(,p1 ,r1)
+;;     "clock items (store only clock)" (list c1 p2 r1) nil `(,c1) nil 0 `(,p2 ,r1)
+;;     ;; ASSUME the code that stops splitting
+;;     ;; after finding an invalid item is fully tested with this example and will
+;;     ;; therefore do the same in the permutations below
+;;     "item clock (store none)" (list p1 c1 r1) nil nil nil nil `(,p1 ,c1 ,r1)
+;;     "drawer clock (store both)" (list drwr1 c1 r1) `(,i3) `(,c1) nil 0 `(,r1)
+;;     "clock drawer (store both)" (list c1 drwr1 r1) `(,i3) `(,c1) nil 0 `(,r1)
+;;     "drawer clock item (store only clock)" (list drwr1 c1 p1 r1) `(,i3) `(,c1) nil 0 `(,p1 ,r1)
+;;     "clock item drawer (don't store note)" (list c1 p1 drwr1 r1) nil `(,c1) nil 0 `(,p1 ,drwr1 ,r1)
+;;     "too many clocks" (list c1 c2 p1 drwr1 r1) nil `(,c1) nil 0 `(,c2 ,p1 ,drwr1 ,r1)
+;;     "dual drawer (clock only)" (list drwr2 r1) nil `(,c1) nil 0 `(,r1)
+;;     "dual drawer (item only)" (list drwr1 r1) `(,i3) nil nil 0 `(,r1)
+;;     "dual drawer (both)" (list drwr1 drwr2 r1) `(,i3) `(,c1) nil 0 `(,r1)))
 
-(describe "org-ml--supercontents-single-mixed-or-single-items"
-  (before-all
-    (setq clock-limit 1
-          config `(:log-into-drawer t :clock-into-drawer ,clock-limit)
-          i1 (org-ml-build-log-note 1603767576 "note 1")
-          p1 (org-ml-build-plain-list i1)
-          ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
-          c1 (org-ml-build-clock ts1)
-          ts2 (org-ml-build-timestamp! '(2112 1 2 0 0) :end '(2112 1 3 0 0))
-          c2 (org-ml-build-clock ts2)
-          drwr1 (org-ml-build-drawer "LOGBOOK" c1 p1)
-          drwr2 (org-ml-build-drawer "LOGBOOK" p1)
-          r1 (org-ml-build-paragraph! "foo")))
-  (org-ml--test-supercontents-specs config
-    "nothing" nil nil nil nil nil nil
-    "no logging" (list r1) nil nil nil nil `(,r1)
-    "single drawer" (list drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)
-    "clock outside and inside" (list c1 drwr1 r1) `(,i1) `(,c1) `(,c1) 0 `(,r1)
-    "clocks outside and not inside" (list c1 drwr2 r1) `(,i1) `(,c1) nil 0 `(,r1)
-    "too many clocks outside" (list c1 c2 drwr2 r1) nil `(,c1) nil 0 `(,c2 ,drwr2 ,r1)
-    "item outside (invalid)" (list p1 drwr1 r1) nil nil nil nil `(,p1 ,drwr1 ,r1)))
+;; (describe "org-ml--supercontents-single-mixed-or-single-items"
+;;   (before-all
+;;     (setq clock-limit 1
+;;           config `(:log-into-drawer t :clock-into-drawer ,clock-limit)
+;;           i1 (org-ml-build-log-note 1603767576 "note 1")
+;;           p1 (org-ml-build-plain-list i1)
+;;           ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
+;;           c1 (org-ml-build-clock ts1)
+;;           ts2 (org-ml-build-timestamp! '(2112 1 2 0 0) :end '(2112 1 3 0 0))
+;;           c2 (org-ml-build-clock ts2)
+;;           drwr1 (org-ml-build-drawer "LOGBOOK" c1 p1)
+;;           drwr2 (org-ml-build-drawer "LOGBOOK" p1)
+;;           r1 (org-ml-build-paragraph! "foo")))
+;;   (org-ml--test-supercontents-specs config
+;;     "nothing" nil nil nil nil nil nil
+;;     "no logging" (list r1) nil nil nil nil `(,r1)
+;;     "single drawer" (list drwr1 r1) `(,i1) `(,c1) nil 0 `(,r1)
+;;     "clock outside and inside" (list c1 drwr1 r1) `(,i1) `(,c1) `(,c1) 0 `(,r1)
+;;     "clocks outside and not inside" (list c1 drwr2 r1) `(,i1) `(,c1) nil 0 `(,r1)
+;;     "too many clocks outside" (list c1 c2 drwr2 r1) nil `(,c1) nil 0 `(,c2 ,drwr2 ,r1)
+;;     "item outside (invalid)" (list p1 drwr1 r1) nil nil nil nil `(,p1 ,drwr1 ,r1)))
 
 ;; logbook blank line testing
 ;;
@@ -1970,47 +1965,47 @@ HEADER is the it-header."
 ;; - in the case of clocks with notes, clocks followed by plain lists where the
 ;;   first item has a blank after it
 
-(describe "org-ml--supercontents-mixed-blank-line"
-  (before-all
-    (setq config nil
-          config-notes '(:clock-out-notes t)
-          config-drawer '(:log-into-drawer t)
-          i1 (->> (org-ml-build-log-note 1603767576 "note 1")
-                  (org-ml-set-property :post-blank 1))
-          i2 (org-ml-build-log-note 1603767576 "note 2")
-          i3 (org-ml-build-item! :post-blank 1 :paragraph "clock note")
-          p1 (org-ml-build-plain-list i1 i2)
-          p2 (org-ml-build-plain-list i1)
-          p3 (org-ml-build-plain-list i2)
-          p4 (org-ml-build-plain-list :post-blank 1 i1 i2)
-          p5 (org-ml-build-plain-list :post-blank 1 i2)
-          p6 (org-ml-build-plain-list i3 i2)
-          p66 (org-ml-build-plain-list i2)
-          ;; (p6 (org-ml-build-plain-list i1)
-          p7 (org-ml-build-plain-list :post-blank 1 i2)
-          ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
-          c1 (org-ml-build-clock ts1)
-          c2 (org-ml-build-clock ts1 :post-blank 1)
-          drwr (org-ml-build-drawer "LOGBOOK" :post-blank 1 p2)
-          r1 (org-ml-build-paragraph! "foo")))
-  (describe "with clock notes"
-    (org-ml--test-supercontents-specs config-notes
-      "item space item" (list p1 c1 r1) `(,i1) nil nil 1 `(,p3 ,c1 ,r1)
-      "clock item space item" (list c1 p1 r1) `(,i1) `(,c1) nil 1 `(,p3 ,r1)
-      "clock note space item" (list c1 p6 r1) nil `(,c1 ,i3) nil 1 `(,p66 ,r1)
-      "clock space item" (list c2 p1 r1) nil `(,c2) nil 1 `(,p1 ,r1)
-      "item space item space" (list p4 r1) `(,i1) nil nil 1 `(,p7 ,r1)))
-  (describe "without clock notes"
-    (org-ml--test-supercontents-specs config
-      "item space item" (list p1 c1 r1) `(,i1) nil nil 1 `(,p3 ,c1 ,r1)
-      "clock item space item" (list c1 p1 r1) `(,i1) `(,c1) nil 1 `(,p3 ,r1)
-      "clock note space item" (list c1 p6 r1) nil `(,c1) nil 0 `(,p6 ,r1)
-      "clock space item" (list c2 p1 r1) nil `(,c2) nil 1 `(,p1 ,r1)
-      "item space item space" (list p4 r1) `(,i1) nil nil 1 `(,p7 ,r1)))
-  (describe "with drawer"
-    ;; TODO this has side effects :(
-    (org-ml--test-supercontents-specs config-drawer
-      "single drawer" (list drwr r1) `(,i1) nil nil 1 `(,r1))))
+;; (describe "org-ml--supercontents-mixed-blank-line"
+;;   (before-all
+;;     (setq config nil
+;;           config-notes '(:clock-out-notes t)
+;;           config-drawer '(:log-into-drawer t)
+;;           i1 (->> (org-ml-build-log-note 1603767576 "note 1")
+;;                   (org-ml-set-property :post-blank 1))
+;;           i2 (org-ml-build-log-note 1603767576 "note 2")
+;;           i3 (org-ml-build-item! :post-blank 1 :paragraph "clock note")
+;;           p1 (org-ml-build-plain-list i1 i2)
+;;           p2 (org-ml-build-plain-list i1)
+;;           p3 (org-ml-build-plain-list i2)
+;;           p4 (org-ml-build-plain-list :post-blank 1 i1 i2)
+;;           p5 (org-ml-build-plain-list :post-blank 1 i2)
+;;           p6 (org-ml-build-plain-list i3 i2)
+;;           p66 (org-ml-build-plain-list i2)
+;;           ;; (p6 (org-ml-build-plain-list i1)
+;;           p7 (org-ml-build-plain-list :post-blank 1 i2)
+;;           ts1 (org-ml-build-timestamp! '(2112 1 1 0 0) :end '(2112 1 2 0 0))
+;;           c1 (org-ml-build-clock ts1)
+;;           c2 (org-ml-build-clock ts1 :post-blank 1)
+;;           drwr (org-ml-build-drawer "LOGBOOK" :post-blank 1 p2)
+;;           r1 (org-ml-build-paragraph! "foo")))
+;;   (describe "with clock notes"
+;;     (org-ml--test-supercontents-specs config-notes
+;;       "item space item" (list p1 c1 r1) `(,i1) nil nil 1 `(,p3 ,c1 ,r1)
+;;       "clock item space item" (list c1 p1 r1) `(,i1) `(,c1) nil 1 `(,p3 ,r1)
+;;       "clock note space item" (list c1 p6 r1) nil `(,c1 ,i3) nil 1 `(,p66 ,r1)
+;;       "clock space item" (list c2 p1 r1) nil `(,c2) nil 1 `(,p1 ,r1)
+;;       "item space item space" (list p4 r1) `(,i1) nil nil 1 `(,p7 ,r1)))
+;;   (describe "without clock notes"
+;;     (org-ml--test-supercontents-specs config
+;;       "item space item" (list p1 c1 r1) `(,i1) nil nil 1 `(,p3 ,c1 ,r1)
+;;       "clock item space item" (list c1 p1 r1) `(,i1) `(,c1) nil 1 `(,p3 ,r1)
+;;       "clock note space item" (list c1 p6 r1) nil `(,c1) nil 0 `(,p6 ,r1)
+;;       "clock space item" (list c2 p1 r1) nil `(,c2) nil 1 `(,p1 ,r1)
+;;       "item space item space" (list p4 r1) `(,i1) nil nil 1 `(,p7 ,r1)))
+;;   (describe "with drawer"
+;;     ;; TODO this has side effects :(
+;;     (org-ml--test-supercontents-specs config-drawer
+;;       "single drawer" (list drwr r1) `(,i1) nil nil 1 `(,r1))))
 
 ;;; MATCH FRAMEWORK TESTING
 

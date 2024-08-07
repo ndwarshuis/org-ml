@@ -1866,7 +1866,7 @@ a timerange as defined above, return ORIGINAL if it is non-nil."
 ;; parsed back into a timestamp (or however it will be used). Ie if I add 10000
 ;; days to any timestamp assume this will be reflected sensibly in the month
 ;; and year of the final result downstream.
-(defun org-ml--timelist-shift (n unit timelist)
+(defun org-ml-timelist-shift (n unit timelist)
   "Return modified TIMELIST shifted N UNIT's.
 
 UNIT is one of `day', `week', `month', `year', `minute', or `hour'.
@@ -2040,7 +2040,7 @@ Specifically update `:range-type' and `:type'."
   (let* ((t1 (org-ml--timestamp-get-start-timelist timestamp))
          (has-time (org-ml-timelist-has-time t1))
          ;; convert to unixtime and back to fix any overflow values
-         (t2 (->> (org-ml--timelist-shift n unit t1)
+         (t2 (->> (org-ml-timelist-shift n unit t1)
                   (org-ml-timelist-to-unixtime)
                   (org-ml-unixtime-to-timelist has-time)))
          (rt (->> (org-element-property-raw :range-type timestamp)
@@ -2071,6 +2071,15 @@ TIMESTAMP if possible."
                 (if flag 'active 'inactive))))
     (org-element-put-property-2 :type type timestamp)))
 
+(defun org-ml--timestamp-get-warning (timestamp)
+  "Return the warning component of TIMESTAMP.
+Return a list like (TYPE VALUE UNIT) or nil."
+  (-let (((&plist :warning-type y
+                  :warning-value v
+                  :warning-unit u)
+          (org-ml--get-nonstandard-properties timestamp)))
+    (when (and y v u) `(,y ,v, u))))
+
 (defun org-ml--timestamp-set-warning (warning timestamp)
   "Return TIMESTAMP with warning properties set to WARNING list."
   (-let (((type value unit) warning))
@@ -2082,6 +2091,7 @@ TIMESTAMP if possible."
 (defun org-ml--timestamp-get-repeater (timestamp)
   "Return the repeater component of TIMESTAMP.
 Return a list like (TYPE VALUE UNIT) or nil."
+  ;; TODO not DRY
   (-let (((&plist :repeater-type y
                   :repeater-value v
                   :repeater-unit u)
@@ -2358,10 +2368,23 @@ ACTIVE is a flag denoting if the timestamp is to be active."
     (let* ((p (-partition-before-pred
                (lambda (it) (memq it '(&warning &repeater)))
                planning-list)))
-      (org-ml-build-timestamp! (car p)
-                           :active active
-                           :warning (alist-get '&warning p)
-                           :repeater (alist-get '&repeater p)))))
+      (org-ml-build-timestamp!
+       (car p)
+       :active active
+       :warning (alist-get '&warning p)
+       :repeater (alist-get '&repeater p)))))
+
+(defun org-ml--timestamp-to-planning-list (timestamp)
+  "Return TIMESTAMP as planning list.
+See `org-ml-build-planning!' for syntax of PLANNING-LIST. This is
+only meant for deadline or scheduled timestamps, since the list
+for closed is trival."
+  (let ((timelist (org-ml--timestamp-get-start-timelist timestamp))
+        (warning (org-ml--timestamp-get-warning timestamp))
+        (repeater (org-ml--timestamp-get-repeater timestamp)))
+    (append timelist
+            (and warning (cons '&warning warning))
+            (and repeater (cons '&repeater repeater)))))
 
 ;;; INTERNAL TYPE-SPECIFIC BRANCH/CHILD FUNCTIONS
 
@@ -2633,7 +2656,7 @@ START and END follow the same rules as their respective arguments in
                                                post-blank)
   "Return a new planning node.
 
-CLOSED, DEADLINE, and SCHEDULED are lists with the following structure
+DEADLINE and SCHEDULED are lists with the following structure
 \(brackets denote optional members):
 
 \(YEAR MINUTE DAY [HOUR] [MIN]
@@ -2644,8 +2667,12 @@ In terms of arguments supplied to `org-ml-build-timestamp!', the first
 five members correspond to the list supplied as TIME, and the TYPE,
 VALUE, and UNIT fields correspond to the lists supplied to WARNING and
 REPEATER arguments. The order of warning and repeater does not
-matter."
+matter.
+
+CLOSED is a similar list to above but does not have &warning or
+&repeater."
   (org-ml-build-planning
+   ;; TODO change this to just a timestamp builder
    :closed (org-ml--planning-list-to-timestamp nil closed)
    :deadline (org-ml--planning-list-to-timestamp t deadline)
    :scheduled (org-ml--planning-list-to-timestamp t scheduled)
@@ -3618,13 +3645,13 @@ will increase the hour property by 1 and the minute property by 30."
         (timestamp* (org-ml-copy timestamp)))
     (if (not rt)
         (let ((t1 (->> (org-ml--timestamp-get-start-timelist timestamp)
-                       (org-ml--timelist-shift n unit))))
+                       (org-ml-timelist-shift n unit))))
           (->> (org-ml--timestamp-set-start-timelist t1 timestamp*)
                (org-ml--timestamp-set-end-timelist t1)))
       (-let* ((s1 (->> (org-ml--timestamp-get-start-timelist timestamp)
-                       (org-ml--timelist-shift n unit)))
+                       (org-ml-timelist-shift n unit)))
               (s2 (->> (org-ml--timestamp-get-end-timelist timestamp)
-                       (org-ml--timelist-shift n unit)))
+                       (org-ml-timelist-shift n unit)))
               ;; total micro-optimization...
               ((d1 t1) (org-ml-timelist-split s1))
               ((d2 t2) (org-ml-timelist-split s2))
@@ -3645,7 +3672,7 @@ the shifted start time and the end time as that of TIMESTAMP. If this
 behavior is not desired, use `org-ml-timestamp-shift'."
   (org-ml--check-type 'timestamp timestamp)
   (let* ((t1 (->> (org-ml--timestamp-get-start-timelist timestamp)
-                  (org-ml--timelist-shift n unit)))
+                  (org-ml-timelist-shift n unit)))
          (t2 (org-ml--timestamp-get-end-timelist timestamp))
          (rt (->> (org-element-property-raw :range-type timestamp)
                   (org-ml--timelists-get-range-type t1 t2))))
@@ -3664,7 +3691,7 @@ behavior is not desired, use `org-ml-timestamp-shift'."
   (org-ml--check-type 'timestamp timestamp)
   (let* ((t1 (org-ml--timestamp-get-start-timelist timestamp))
          (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
-                  (org-ml--timelist-shift n unit)))
+                  (org-ml-timelist-shift n unit)))
          (rt (->> (org-element-property-raw :range-type timestamp)
                   (org-ml--timelists-get-range-type t1 t2))))
     (->> (org-ml-copy timestamp)
@@ -4224,194 +4251,6 @@ first paragraph and returns modified secondary-string."
 
 ;;; headline (metadata)
 
-(define-inline org-ml--supersection-init (pre-blank meta)
-  (inline-quote (list :pre-blank ,pre-blank :meta ,meta)))
-
-(define-inline org-ml--metasection-init (pre-blank planning node-props rest)
-  (inline-quote
-   (list :pre-blank ,pre-blank
-         :meta (list :planning ,planning
-                     :node-props ,node-props
-                     :supercontents ,rest))))
-
-
-(defun org-ml-headline-get-supersection (headline)
-  "Return supersection list for the section in HEADLINE."
-  (org-ml--check-type 'headline headline)
-  (org-ml--supersection-init
-   (org-element-property-raw :pre-blank headline)
-   (org-ml-headline-get-section headline)))
-
-(defun org-ml-headline-set-supersection (supersection headline)
-  "Return SUPERSECTION for the section in HEADLINE."
-  (org-ml--check-type 'headline headline)
-  (-let* (((&plist :pre-blank p :meta m) supersection)
-          (headline* (if p (->> (org-ml-copy headline)
-                                (org-element-put-property-2 :pre-blank p))
-                       headline)))
-    (org-ml-headline-set-section m headline*)))
-
-(org-ml--defun-anaphoric* org-ml-headline-map-supersection (fun headline)
-  "Apply FUN to HEADLINE supersection."
-  (let ((it (org-ml-headline-get-supersection headline)))
-    (org-ml-headline-set-supersection (funcall fun it) headline)))
-
-(defun org-ml-supersection-to-metasection (supersection)
-  (-let* (((&plist :pre-blank :meta) supersection)
-          ((first . rest1) meta)
-          ((second . rest2) rest1)
-          ((planning node-props rest)
-           (pcase `(,(org-ml-get-type first) ,(org-ml-get-type second))
-             (`(planning property-drawer) `(,first  ,second  ,rest2))
-             (`(planning ,_)              `(,first  nil      ,rest1))
-             (`(property-drawer ,_)       `(nil     ,first   ,rest1))
-             (_                           `(nil     nil      ,meta)))))
-    (org-ml--metasection-init pre-blank planning node-props rest)))
-
-(defun org-ml-metasection-to-supersection (metasection)
-  (-let (((&plist :pre-blank b
-                  :meta (&plist :planning p :node-props n :supercontents s))
-          metasection))
-    (let ((x (if n (cons n s) s)))
-      (org-ml--supersection-init b (if p (cons p x) x)))))
-
-(org-ml--defun-anaphoric* org-ml-headline-map-supersection-maybe (fun headline)
-  "Apply FUN to supersection of HEADLINE."
-  (let ((it (org-ml-headline-get-supersection headline)))
-    (org-ml-headline-set-supersection (funcall fun it) headline)))
-
-(org-ml--defun-anaphoric* org-ml-headline-map-metasection-maybe (fun headline)
-  "Apply FUN to SUPERSECTION metasection."
-  (let ((it (->> (org-ml-headline-get-supersection headline)
-                 (org-ml-supersection-to-metasection))))
-    (-> (funcall fun it)
-        (org-ml-metasection-to-supersection)
-        (org-ml-headline-set-supersection headline))))
-
-;; planning
-
-(defun org-ml-headline-get-planning (headline)
-  "Return the planning node in HEADLINE or nil if none."
-  (org-ml--check-type 'headline headline)
-  (->> (org-ml-headline-get-section headline)
-       (car)
-       (org-ml--filter-type 'planning)))
-
-(defun org-ml-metasection-set-planning (planning metasection)
-  (-let* (((&plist :pre-blank pb
-                   :meta (&plist :planning p :node-props n :supercontents s))
-           metasection)
-          ((pb* planning*)
-           (cond
-            ((and planning p)
-             (list nil planning))
-            (planning
-             (list 0 (org-ml--shift-post-blank pb planning)))
-            (p
-             (list (org-element-property-raw :post-blank p) nil))
-            (t
-             (list nil p)))))
-    (org-ml--metasection-init pb* planning* n s)))
-
-(defun org-ml-headline-set-planning (planning headline)
-  "Return HEADLINE node with planning components set to PLANNING node."
-  (org-ml--check-type 'headline headline)
-  (org-ml-headline-map-metasection-maybe*
-    (org-ml-metasection-set-planning planning it)
-    headline))
-
-(org-ml--defun-anaphoric* org-ml-headline-map-planning (fun headline)
-  "Return HEADLINE node with planning node modified by FUN.
-
-FUN is a unary function that takes a planning node and returns a
-modified planning node."
-   (--> (org-ml-headline-get-planning headline)
-        (org-ml-headline-set-planning (funcall fun it) headline)))
-
-;; node-properties (eg the entire property drawer)
-
-(defun org-ml-headline-get-node-properties (headline)
-  "Return a list of node-properties nodes in HEADLINE or nil if none."
-  ;; assume the property drawer is the first or second child of section
-  (org-ml--check-type 'headline headline)
-  (-some--> (org-ml-headline-get-section headline)
-    (if (org-ml--is-type 'property-drawer (car it)) (car it)
-      (when (org-ml--is-type 'property-drawer (cadr it)) (cadr it)))
-    (org-element-contents it)))
-
-;; TODO why not just use string . string cells for this?
-(defun org-ml-metasection-set-node-properties (node-properties metasection)
-  (-let* (((&plist :pre-blank pb
-                   :meta (&plist :planning p :node-props n :supercontents s))
-           metasection)
-          ((pb* planning* node-props*)
-           (cond
-            ((and node-properties p n)
-             (list nil p (org-ml-set-children node-properties n)))
-            ((and node-properties n)
-             (list nil nil (org-ml-set-children node-properties n)))
-            ((and node-properties p)
-             (let ((x (org-element-post-blank p)))
-               (list pb
-                     (org-ml--set-post-blank 0 p)
-                     (apply #'org-ml-build-property-drawer :post-blank x node-properties))))
-            (node-properties
-             (list 0 nil (apply #'org-ml-build-property-drawer
-                                :post-blank pb node-properties)))
-            ((and p n)
-             (let ((x (org-element-post-blank n)))
-               (list nil (org-ml--shift-post-blank x p) nil)))
-            (n
-             (list (org-element-post-blank n) nil nil))
-            (t
-             (list nil p n)))))
-    (org-ml--metasection-init pb* planning* node-props* s)))
-
-(defun org-ml-headline-set-node-properties (node-properties headline)
-  "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
-NODE-PROPERTIES is a list of node-property nodes."
-  (org-ml--check-type 'headline headline)
-  (org-ml-headline-map-metasection-maybe*
-    (org-ml-metasection-set-node-properties node-properties it)
-    headline))
-
-(org-ml--defun-anaphoric* org-ml-headline-map-node-properties (fun headline)
-  "Return HEADLINE node with property-drawer node modified by FUN.
-
-FUN is a unary function that takes a property-drawer node and returns
-a modified property-drawer node."
-   (--> (org-ml-headline-get-node-properties headline)
-        (org-ml-headline-set-node-properties (funcall fun it) headline)))
-
-;; node-property
-
-(defun org-ml-headline-get-node-property (key headline)
-  "Return value of property with KEY in HEADLINE or nil if not found.
-If multiple properties with KEY are present, only return the first."
-  (->> (org-ml-headline-get-node-properties headline)
-       (--first (equal key (org-element-property-raw :key it)))
-       (org-element-property-raw :value)))
-
-(defun org-ml-headline-set-node-property (key value headline)
-  "Return HEADLINE with node property matching KEY set to VALUE.
-If a property matching KEY is present, set it to VALUE. If multiple
-properties matching KEY are present, only set the first."
-  (org-ml-headline-map-node-properties*
-    (-if-let (np (-some->> value (org-ml-build-node-property key)))
-        (-if-let (i (--find-index (equal key (org-element-property-raw :key it)) it))
-            (-replace-at i np it)
-          (cons np it))
-      (--remove-first (equal key (org-element-property-raw :key it)) it))
-    headline))
-
-(org-ml--defun-anaphoric* org-ml-headline-map-node-property (key fun headline)
-  "Return HEADLINE node with property value matching KEY modified by FUN.
-
-FUN is a unary function that takes a node-property value and returns
-a modified node-property value."
-   (--> (org-ml-headline-get-node-property key headline)
-        (org-ml-headline-set-node-property key (funcall fun it) headline)))
-
 ;;; headline (logbook/contents)
 
 ;; Everything after the planning and property drawer of the headline can be
@@ -4490,109 +4329,168 @@ a modified node-property value."
 
 ;; alist to store the separated nodes from a logbook
 
-(define-inline org-ml--logbook-init (items clocks unknown post-blank)
+(define-inline org-ml--logbook-init (items clocks unknown)
   "Create a new logbook alist.
 ITEMS, CLOCKS, and UNKNOWN correspond to a list of item nodes,
 clock notes (which may contain item nodes for notes) and other
-nodes. POST-BLANK corresponds to the number of extra newlines
-between the logbook and the contents."
+nodes."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (list (cons :items ,items)
-         (cons :clocks ,clocks)
-         (cons :unknown ,unknown)
-         (cons :post-blank (or ,post-blank 0)))))
+   (list :items ,items :clocks ,clocks :unknown ,unknown)))
 
 (define-inline org-ml-logbook-get-items (logbook)
   "Return the :items slot from LOGBOOK."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (alist-get :items ,logbook)))
+   (plist-get ,logbook :items)))
 
 (define-inline org-ml-logbook-get-clocks (logbook)
   "Return the :clocks slot from LOGBOOK."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (alist-get :clocks ,logbook)))
+   (plist-get ,logbook :clocks)))
 
 (define-inline org-ml-logbook-get-post-blank (logbook)
   "Return the :clocks slot from LOGBOOK."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (alist-get :post-blank ,logbook)))
+   (plist-get ,logbook :post-blank)))
 
 (define-inline org-ml-logbook-set-items (items logbook)
   "Set the :items slot in LOGBOOK to ITEMS."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (-let (((&alist :clocks :unknown :post-blank) ,logbook))
-     (org-ml--logbook-init ,items clocks unknown post-blank))))
+   (-let (((&plist :clocks :unknown) ,logbook))
+     (org-ml--logbook-init ,items clocks unknown))))
 
 (define-inline org-ml-logbook-set-clocks (clocks logbook)
   "Set the :clocks slot in LOGBOOK to CLOCKS."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (-let (((&alist :items :unknown :post-blank) ,logbook))
-     (org-ml--logbook-init items ,clocks unknown post-blank))))
+   (-let (((&plist :items :unknown) ,logbook))
+     (org-ml--logbook-init items ,clocks unknown))))
 
-(define-inline org-ml-logbook-set-post-blank (post-blank logbook)
-  "Set the :post-blank slot in LOGBOOK to POST-BLANK."
-  (declare (pure t) (side-effect-free t))
-  (inline-quote
-   (-let (((&alist :items :clocks :unknown) ,logbook))
-     (org-ml--logbook-init items clocks unknown ,post-blank))))
+;; (define-inline org-ml-logbook-set-post-blank (post-blank logbook)
+;;   "Set the :post-blank slot in LOGBOOK to POST-BLANK."
+;;   (declare (pure t) (side-effect-free t))
+;;   (inline-quote
+;;    (-let (((&plist :items :clocks :unknown) ,logbook))
+;;      (org-ml--logbook-init items clocks unknown))))
 
 (org-ml--defun-anaphoric* org-ml-logbook-map-items (fun logbook)
   "Apply function to :item slot in LOGBOOK.
 FUN is a unary function that takes a list of items and returns a
 new list of items."
-  (--> (alist-get :items logbook)
+  (--> (org-ml-logbook-get-items logbook)
        (org-ml-logbook-set-items (funcall fun it) logbook)))
 
 (org-ml--defun-anaphoric* org-ml-logbook-map-clocks (fun logbook)
   "Apply function to :clocks slot in LOGBOOK.
 FUN is a unary function that takes a list of clocks and returns a
 new list of clocks."
-  (--> (alist-get :clocks logbook)
+  (--> (org-ml-logbook-get-clocks logbook)
        (org-ml-logbook-set-clocks (funcall fun it) logbook)))
 
 ;; supercontents data structure
+
+;; In haskell types:
+;;
+;; type Blank = Natural
+;;
+;; data LogBook = LogBook
+;;   { clocks :: [ClockNode]
+;;   , items :: [ItemNode]
+;;   , unknown :: [Node]
+;;   }
+;;
+;; data Supercontents =
+;;   SuperContents
+;;   (Maybe Planning)
+;;   (Maybe NodeProperties)
+;;   (Maybe LogBook)
+;;   Blank
+;;   [Nodes]
+;;
+;; The trick here is that planning/node-props/logbook must be at the top of
+;; the headline without blanks. This means that it is impossible to have a
+;; pre-blank > 0 with any of these present. In this case, "Blank" stands for
+;; the blank b/t the last metadata piece (planning/props/logbook) and the
+;; contents. If metadata is not present, "Blank" is equal to the :pre-blank
+;; property.
 
 ;; alist to store the separated logbook and contents from a headline section
 
 ;; NOTE: this is a structure that the user may interact with, so some of these
 ;; functions are public
 
-(define-inline org-ml--supercontents-init-from-lb (logbook contents)
-  "Create a supercontents alist.
-LOGBOOK is a logbook as given by `org-ml--logbook-init' and
+(define-inline org-ml--supercontents-init-from-lb
+  (planning node-props logbook blank contents)
+  "Create a supercontents plist.
+
+PLANNING is a planning node or nil.
+
+NODE-PROPS is a list of node-property nodes.
+
+LOGBOOK is a logbook as given by `org-ml--logbook-init'.
+
+BLANK is the blank space above the contents.
+
 CONTENTS is a list of nodes corresponding to the headline
 contents (the stuff after the logbook)."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (list (cons :logbook ,logbook) (cons :contents ,contents))))
+   (list :planning ,planning
+         :node-props ,node-props
+         :logbook ,logbook
+         :blank ,blank
+         :contents ,contents)))
 
-(define-inline org-ml--supercontents-init (items clocks unknown post-blank contents)
+(define-inline org-ml--supercontents-init
+  (planning node-props items clocks unknown blank contents)
   "Create a supercontents alist.
 ITEMS, CLOCKS, UNKNOWN, and POST-BLANK are lists corresponding to
 the arguments in `org-ml--logbook-init' and CONTENTS has the same
 meaning as `org-ml--supercontents-init-from-lb'."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (let ((lb (org-ml--logbook-init ,items ,clocks ,unknown ,post-blank)))
-     (org-ml--supercontents-init-from-lb lb ,contents))))
+   (let ((lb (org-ml--logbook-init ,items ,clocks ,unknown)))
+     (org-ml--supercontents-init-from-lb ,planning ,node-props lb ,blank ,contents))))
+
+(define-inline org-ml-supercontents-get-planning (supercontents)
+  "Return the :planning slot of SUPERCONTENTS."
+  (declare (pure t) (side-effect-free t))
+  (inline-quote (plist-get ,supercontents :planning)))
+
+(define-inline org-ml-supercontents-set-planning (planning supercontents)
+  "Set the :planning slot of SUPERCONTENTS to CONTENTS."
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (-let (((&plist :node-props n :logbook l :blank b :contents c) ,supercontents))
+     (org-ml--supercontents-init-from-lb ,planning n l b c))))
+
+(define-inline org-ml-supercontents-get-node-properties (supercontents)
+  "Return the :node-props slot of SUPERCONTENTS."
+  (declare (pure t) (side-effect-free t))
+  (inline-quote (plist-get ,supercontents :node-props)))
+
+(define-inline org-ml-supercontents-set-node-properties (node-props supercontents)
+  "Set the :node-props slot of SUPERCONTENTS to CONTENTS."
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (-let (((&plist :planning p :logbook l :blank b :contents c) ,supercontents))
+     (org-ml--supercontents-init-from-lb p ,node-props l b c))))
 
 (define-inline org-ml-supercontents-get-contents (supercontents)
   "Return the :contents slot of SUPERCONTENTS."
   (declare (pure t) (side-effect-free t))
-  (inline-quote (alist-get :contents ,supercontents)))
+  (inline-quote (plist-get ,supercontents :contents)))
 
 (define-inline org-ml-supercontents-set-contents (contents supercontents)
   "Set the :contents slot of SUPERCONTENTS to CONTENTS."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (-let (((&alist :logbook) ,supercontents))
-     (org-ml--supercontents-init-from-lb logbook ,contents))))
+   (-let (((&plist :planning p :node-props n :logbook l :blank b) ,supercontents))
+     (org-ml--supercontents-init-from-lb p n l b ,contents))))
 
 (org-ml--defun-anaphoric* org-ml-supercontents-map-contents (fun supercontents)
   "Apply function to :contents slot in SUPERCONTENTS.
@@ -4605,14 +4503,14 @@ new list of nodes."
   "Return the :logbook slot of SUPERCONTENTS."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (alist-get :logbook ,supercontents)))
+   (plist-get ,supercontents :logbook)))
 
 (define-inline org-ml-supercontents-set-logbook (logbook supercontents)
   "Set the :logbook slot of SUPERCONTENTS to LOGBOOK."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (-let (((&alist :contents) ,supercontents))
-     (org-ml--supercontents-init-from-lb ,logbook contents))))
+   (-let (((&plist :planning p :node-props n :blank b :contents c) ,supercontents))
+     (org-ml--supercontents-init-from-lb p n ,logbook b c))))
 
 (org-ml--defun-anaphoric* org-ml-supercontents-map-logbook (fun supercontents)
   "Apply function to :logbook slot in SUPERCONTENTS.
@@ -5026,8 +4924,8 @@ and accumulator on the next iteration. INITIAL-STATE is bound to
            (setq ,r (cdr ,r))))
        (list acc ,r))))
 
-(defun org-ml--supercontents-from-nodes (config nodes)
-  "Return a supercontents object based on NODES.
+(defun org-ml--split-logbook (config nodes)
+  "Return NODES split to logbook components.
 CONFIG is a plist parsable by `org-ml--scc-encode'."
   (cl-flet
       ((map-cdr
@@ -5056,15 +4954,19 @@ CONFIG is a plist parsable by `org-ml--scc-encode'."
                nodes-before-space))
             ((&alist 'items 'clocks 'unknown) (->> (reverse logbook-nodes)
                                                    (-group-by #'car)))
-            (post-blank (when logbook-nodes
-                          (if contents-nodes-before-space 0 first-space-post-blank)))
+            (post-blank
+             (if logbook-nodes
+                 (if contents-nodes-before-space 0 first-space-post-blank)
+               0))
             (contents (->> nodes-after-space
                            (append contents-nodes-before-space)
                            (org-ml--wrap-plain-lists))))
-      (org-ml--supercontents-init (map-cdr items)
-                                  (map-cdr clocks)
-                                  (map-cdr unknown)
-                                  post-blank contents))))
+      (list (org-ml--logbook-init
+             (map-cdr items)
+             (map-cdr clocks)
+             (map-cdr unknown))
+            post-blank
+            contents))))
 
 ;; logbook merging (supercontents -> nodes)
 
@@ -5201,7 +5103,7 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
              (>= limit)))
        (merge-nodes
         (enconf logbook)
-        (-let (((&alist :items :clocks) logbook))
+        (-let (((&plist :items :clocks) logbook))
           (org-ml--merge-logbook enconf items clocks)))
        (build-mixed-drawer-maybe
         (enconf m logbook)
@@ -5211,64 +5113,59 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
        (to-item-clock-nodes
         (enconf logbook)
         (list (org-ml--logbook-items-to-nodes enconf logbook)
-              (org-ml--logbook-clocks-to-nodes enconf logbook)))
-       (to-nodes
-        (config logbook)
-        (-let (((enconf &as &alist :drawers d) (org-ml--scc-encode config)))
-          (pcase d
+              (org-ml--logbook-clocks-to-nodes enconf logbook))))
+    (-let (((enconf &as &alist :drawers d) (org-ml--scc-encode config)))
+      (pcase d
 
-           ;; items not in drawer, clocks not in drawer
-           (`(:items nil :clocks nil :mixed nil :clock-limit nil)
-            (merge-nodes enconf logbook))
+        ;; items not in drawer, clocks not in drawer
+        (`(:items nil :clocks nil :mixed nil :clock-limit nil)
+         (merge-nodes enconf logbook))
 
-           ;; items and clocks in the same drawer
-           (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
-            (build-mixed-drawer-maybe enconf m logbook))
+        ;; items and clocks in the same drawer
+        (`(:items nil :clocks nil :mixed ,m :clock-limit nil)
+         (build-mixed-drawer-maybe enconf m logbook))
 
-           ;; items in drawer, clocks not in drawer
-           (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
-            (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
-              (cons-drawer-maybe i items clocks)))
+        ;; items in drawer, clocks not in drawer
+        (`(:items ,i :clocks nil :mixed nil :clock-limit nil)
+         (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
+           (cons-drawer-maybe i items clocks)))
 
-           ;; items not in drawer, clocks in drawer
-           (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
-            (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
-              (cons-drawer-maybe c clocks items)))
+        ;; items not in drawer, clocks in drawer
+        (`(:items nil :clocks ,c :mixed nil :clock-limit nil)
+         (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
+           (cons-drawer-maybe c clocks items)))
 
-           ;; items in drawer, clocks might be in the same drawer
-           (`(:items nil :clocks nil :mixed ,m :clock-limit ,l)
-            (if (below-limit l logbook)
-                (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
-                  (cons-drawer-maybe m items clocks))
-              (build-mixed-drawer-maybe enconf m logbook)))
-           
-           ;; items not in drawer, clocks might be in a drawer
-           (`(:items nil :clocks ,c :mixed nil :clock-limit ,l)
-            (if (below-limit l logbook) (merge-nodes enconf logbook)
-              (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
-                (cons-drawer-maybe c clocks items))))
+        ;; items in drawer, clocks might be in the same drawer
+        (`(:items nil :clocks nil :mixed ,m :clock-limit ,l)
+         (if (below-limit l logbook)
+             (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
+               (cons-drawer-maybe m items clocks))
+           (build-mixed-drawer-maybe enconf m logbook)))
+        
+        ;; items not in drawer, clocks might be in a drawer
+        (`(:items nil :clocks ,c :mixed nil :clock-limit ,l)
+         (if (below-limit l logbook) (merge-nodes enconf logbook)
+           (-let* (((items clocks) (to-item-clock-nodes enconf logbook)))
+             (cons-drawer-maybe c clocks items))))
 
-           ;; items in drawer, clocks in a different drawer
-           (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
-            (-let* (((items clocks) (to-item-clock-nodes enconf logbook))
-                    (items-drawer (build-drawer-maybe i items))
-                    (clocks-drawer (build-drawer-maybe c clocks)))
-              (-non-nil (list items-drawer clocks-drawer))))
+        ;; items in drawer, clocks in a different drawer
+        (`(:items ,i :clocks ,c :mixed nil :clock-limit nil)
+         (-let* (((items clocks) (to-item-clock-nodes enconf logbook))
+                 (items-drawer (build-drawer-maybe i items))
+                 (clocks-drawer (build-drawer-maybe c clocks)))
+           (-non-nil (list items-drawer clocks-drawer))))
 
-           ;; items in drawer, clocks either loose or in a different drawer
-           (`(:items ,i :clocks ,c :mixed nil :clock-limit ,l)
-            (-let* (((items clocks) (to-item-clock-nodes enconf logbook))
-                    (items-drawer (build-drawer-maybe i items)))
-              (if (below-limit l logbook)
-                  (if items-drawer (cons items-drawer clocks) clocks)
-                (->> (build-drawer-maybe c clocks)
-                     (list items-drawer)
-                     (-non-nil)))))
+        ;; items in drawer, clocks either loose or in a different drawer
+        (`(:items ,i :clocks ,c :mixed nil :clock-limit ,l)
+         (-let* (((items clocks) (to-item-clock-nodes enconf logbook))
+                 (items-drawer (build-drawer-maybe i items)))
+           (if (below-limit l logbook)
+               (if items-drawer (cons items-drawer clocks) clocks)
+             (->> (build-drawer-maybe c clocks)
+                  (list items-drawer)
+                  (-non-nil)))))
 
-           (e (error "This shouldn't happen: %s" e))))))
-    (let ((pb (org-ml-logbook-get-post-blank logbook)))
-      (->> (to-nodes config logbook)
-           (org-ml--set-last-post-blank pb)))))
+        (e (error "This shouldn't happen: %s" e))))))
 
 (defun org-ml--supercontents-to-nodes (config supercontents)
   "Return SUPERCONTENTS as a list of nodes.
@@ -5281,6 +5178,47 @@ and the contents."
     (org-ml--append-join-plain-lists logbook contents)))
 
 ;; public supercontents functions
+
+(defun org-ml--planning-project (planning)
+  (list :closed (-some->> (org-element-property-raw :closed planning)
+                  (org-ml--timestamp-get-start-timelist))
+        :scheduled (-some->> (org-element-property-raw :scheduled planning)
+                     (org-ml--timestamp-to-planning-list))
+        :deadline (-some->> (org-element-property-raw :deadline planning)
+                    (org-ml--timestamp-to-planning-list))))
+
+(defun org-ml--property-drawer-project (property-drawer)
+  (->> (org-element-contents property-drawer)
+       (--map (list (org-element-property-raw :key it)
+                    (org-element-property-raw :value it)))))
+
+(defun org-ml--supersection-to-supercontents (config supersection)
+  (cl-flet
+      ((go-init
+         (planning prop-drawer blank-node children)
+         (-let* ((pb (org-element-post-blank blank-node))
+                 ((logbook blank contents)
+                  (if (< 0 pb) `(nil ,pb ,children)
+                    (org-ml--split-logbook config children))))
+           (org-ml--supercontents-init-from-lb
+            (and planning (org-ml--planning-project planning))
+            (and prop-drawer (org-ml--property-drawer-project prop-drawer))
+            logbook
+            blank
+            contents))))
+    (-let (((&plist :pre-blank pb :section children) supersection))
+      ;; If pre-blank is >0, by definition there is no planning,
+      ;; property-drawer, or logbook
+      (if (< 0 pb) (org-ml--supercontents-init nil nil nil nil nil pb children)
+        (-let* (((first . rest1) children)
+                ((second . rest2) rest1))
+          (pcase `(,(org-ml-get-type first) ,(org-ml-get-type second))
+            (`(planning property-drawer) (go-init first second second rest2))
+            (`(planning ,_)              (go-init first nil    first  rest1))
+            (`(property-drawer ,_)       (go-init nil   first  first  rest1))
+            (_
+             (->> (org-ml--split-logbook config children)
+                  (apply #'org-ml--supercontents-init-from-lb nil nil)))))))))
 
 (defun org-ml-headline-get-supercontents (config headline)
   "Return the supercontents of HEADLINE node.
@@ -5314,63 +5252,47 @@ this controls how the logbook will be parsed; this means it also
 determines which nodes will be returned in the :items/:clocks
 slots and which will be deemed :unknown (see above) so be sure
 this plist is set according to your desired target configuration."
-  (cl-flet
-      ((drop-if-type
-        (type children)
-        (if (org-ml-is-type type (car children)) (cdr children) children)))
-    (->> (org-ml-headline-get-section headline)
-         (drop-if-type 'planning)
-         (drop-if-type 'property-drawer)
-         (org-ml--supercontents-from-nodes config))))
+  (->> (org-ml-headline-get-supersection headline)
+       (org-ml--supersection-to-supercontents config)))
 
-(defun org-ml-metasection-set-supercontents (config supercontents metasection)
+(defun org-ml--supercontents-to-supersection (config supercontents)
   (cl-flet
-      ((get-logbook-post-blank
-         (nodes)
-         (-> (org-ml--supercontents-from-nodes config nodes)
-             (org-ml-supercontents-get-logbook)
-             (org-ml-logbook-get-post-blank))))
-    (-let* (((&plist :pre-blank _
-                     :meta (&plist :planning p0 :node-props n0 :supercontents sc0))
-             metasection)
-            (logbook1 (org-ml-supercontents-get-logbook supercontents))
-            (new-logbook? (or (org-ml-logbook-get-items logbook1)
-                              (org-ml-logbook-get-clocks logbook1)))
-            ;; TODO need to move the post-blank onto the end of the logbook
-            ((hpb1 p1 n1)
-             (cond
-              (n0
-               (let ((node-props (if new-logbook?
-                                     (org-ml--set-post-blank 0 n0)
-                                   (-if-let (lp0 (get-logbook-post-blank sc0))
-                                       (org-ml--set-post-blank lp0 n0)
-                                     n0))))
-                 (list nil p0 node-props)))
-              (p0
-               (let ((planning (if new-logbook?
-                                   (org-ml--set-post-blank 0 p0)
-                                 (-if-let (lp0 (get-logbook-post-blank sc0))
-                                     (org-ml--set-post-blank lp0 p0)
-                                   p0))))
-                 (list nil planning n0)))
-              (t
-               (let ((pre-blank (if new-logbook? 0
-                                  ;; this may return nil, in which case
-                                  ;; pre-blank won't be updated (which is what
-                                  ;; we want)
-                                  (get-logbook-post-blank sc0))))
-                 (list pre-blank p0 n0))))))
-      (org-ml--metasection-init
-       hpb1 p1 n1
-       (org-ml--supercontents-to-nodes config supercontents)))))
-
+      ((to-planning
+         (planning-list post-blank)
+         (-some->> planning-list
+           (apply #'org-ml-build-planning! :post-blank post-blank)
+           (list)))
+       (to-prop-drawer
+         (node-props post-blank)
+         (-some->> node-props
+           (apply #'org-ml-build-property-drawer! :post-blank post-blank)
+           (list))))
+    (-let* (((&plist :planning p :node-props n :logbook lb :blank b :contents c)
+             supercontents)
+            (lb-nodes (org-ml--logbook-to-nodes config lb)))
+      (cond
+       (lb-nodes
+        (org-ml--supersection-init
+         0 `(,@(to-planning p 0)
+             ,@(to-prop-drawer n 0)
+             ,@(org-ml--set-last-post-blank b lb-nodes)
+             ,@c)))
+       (n
+        (org-ml--supersection-init
+         0 `(,@(to-planning p 0)
+             ,@(to-prop-drawer n b)
+             ,@c)))
+       (p
+        (org-ml--supersection-init 0 (append (to-planning p b) c)))
+       (t
+        (org-ml--supersection-init b c))))))
+     
 (defun org-ml-headline-set-supercontents (config supercontents headline)
   "Set logbook and contents of HEADLINE according to SUPERCONTENTS.
 See `org-ml-headline-get-supercontents' for the meaning of CONFIG
 and the structure of the SUPERCONTENTS list."
-  (org-ml-headline-map-metasection-maybe*
-    (org-ml-metasection-set-supercontents config supercontents it)
-    headline))
+  (-> (org-ml--supercontents-to-supersection config supercontents)
+      (org-ml-headline-set-supersection headline)))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-supercontents (config fun headline)
   "Map a function over the supercontents of HEADLINE.
@@ -5380,6 +5302,108 @@ returns a modified supercontents list. See
 the structure of the supercontents list."
   (--> (org-ml-headline-get-supercontents config headline)
        (org-ml-headline-set-supercontents config (funcall fun it) headline)))
+
+(define-inline org-ml--supersection-init (pre-blank section)
+  (inline-quote (list :pre-blank ,pre-blank :section ,section)))
+
+(defun org-ml-headline-get-supersection (headline)
+  "Return supersection list for the section in HEADLINE."
+  (org-ml--check-type 'headline headline)
+  (org-ml--supersection-init
+   (org-element-property-raw :pre-blank headline)
+   (org-ml-headline-get-section headline)))
+
+(defun org-ml-headline-set-supersection (supersection headline)
+  "Return SUPERSECTION for the section in HEADLINE."
+  (org-ml--check-type 'headline headline)
+  (-let* (((&plist :pre-blank p :section m) supersection)
+          (pb (org-element-property-raw :pre-blank headline))
+          (headline* (if (/= p pb)
+                         (->> (org-ml-copy headline)
+                              (org-element-put-property-2 :pre-blank p))
+                       headline)))
+    (org-ml-headline-set-section m headline*)))
+
+(org-ml--defun-anaphoric* org-ml-headline-map-supersection (fun headline)
+  "Apply FUN to HEADLINE supersection."
+  (let ((it (org-ml-headline-get-supersection headline)))
+    (org-ml-headline-set-supersection (funcall fun it) headline)))
+
+;; planning
+
+(defun org-ml-headline-get-planning (headline)
+  "Return the planning node in HEADLINE or nil if none."
+  (org-ml--check-type 'headline headline)
+  (->> (org-ml-headline-get-supercontents nil headline)
+       (org-ml-supercontents-get-planning)))
+
+(defun org-ml-headline-set-planning (planning headline)
+  "Return HEADLINE node with planning components set to PLANNING node."
+  (org-ml--check-type 'headline headline)
+  (org-ml-headline-map-supercontents* nil
+    (org-ml-supercontents-set-planning planning it)
+    headline))
+
+(org-ml--defun-anaphoric* org-ml-headline-map-planning (fun headline)
+  "Return HEADLINE node with planning node modified by FUN.
+
+FUN is a unary function that takes a planning node and returns a
+modified planning node."
+   (--> (org-ml-headline-get-planning headline)
+        (org-ml-headline-set-planning (funcall fun it) headline)))
+
+;; node-properties (eg the entire property drawer)
+
+(defun org-ml-headline-get-node-properties (headline)
+  "Return a list of node-properties nodes in HEADLINE or nil if none."
+  (org-ml--check-type 'headline headline)
+  (->> (org-ml-headline-get-supercontents nil headline)
+       (org-ml-supercontents-get-node-properties)))
+
+(defun org-ml-headline-set-node-properties (node-properties headline)
+  "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
+NODE-PROPERTIES is a list of (key . value) pairs (both strings)."
+  (org-ml--check-type 'headline headline)
+  (org-ml-headline-map-supercontents* nil
+    (org-ml-supercontents-set-node-properties node-properties it)
+    headline))
+
+(org-ml--defun-anaphoric* org-ml-headline-map-node-properties (fun headline)
+  "Return HEADLINE node with property-drawer node modified by FUN.
+
+FUN is a unary function that takes a property-drawer node and returns
+a modified property-drawer node."
+   (--> (org-ml-headline-get-node-properties headline)
+        (org-ml-headline-set-node-properties (funcall fun it) headline)))
+
+;; node-property
+
+(defun org-ml-headline-get-node-property (key headline)
+  "Return value of property with KEY in HEADLINE or nil if not found.
+If multiple properties with KEY are present, only return the first."
+  (->> (org-ml-headline-get-node-properties headline)
+       (--first (equal key (car it)))
+       (cadr)))
+
+(defun org-ml-headline-set-node-property (key value headline)
+  "Return HEADLINE with node property matching KEY set to VALUE.
+If a property matching KEY is present, set it to VALUE. If multiple
+properties matching KEY are present, only set the first."
+  (org-ml-headline-map-node-properties*
+    (-if-let (np (-some->> value (list key)))
+        (-if-let (i (--find-index (equal key (car it)) it))
+            (-replace-at i np it)
+          (cons np it))
+      (--remove-first (equal key (car it)) it))
+    headline))
+
+(org-ml--defun-anaphoric* org-ml-headline-map-node-property (key fun headline)
+  "Return HEADLINE node with property value matching KEY modified by FUN.
+
+FUN is a unary function that takes a node-property value and returns
+a modified node-property value."
+   (--> (org-ml-headline-get-node-property key headline)
+        (org-ml-headline-set-node-property key (funcall fun it) headline)))
 
 ;; public logbook/contents getters/setters/mappers
 
@@ -7889,69 +7913,69 @@ nil (see this for use and meaning of FUN)."
          (nreverse it)
          (--each it (org-ml~update nil fun it)))))
 
-(org-ml--defun* org-ml-update-supersections (which fun)
-  "Update some headline supersections in the current using FUN.
+;; (org-ml--defun* org-ml-update-supersections (which fun)
+;;   "Update some headline supersections in the current using FUN.
 
-See `org-ml-parse-headlines' for the meaning of WHICH.
+;; See `org-ml-parse-headlines' for the meaning of WHICH.
 
-Headlines are updated using `org-ml~update' with DIFF-ARG set to
-nil (see this for use and meaning of FUN)."
-  ;; don't use the myers diff algorithm here, since these functions are meant
-  ;; for batch processing.
-  (save-excursion
-    (cl-labels
-        ((map-to-subheadlines
-           (headline)
-           (-each (nreverse (org-ml-headline-get-subheadlines headline))
-             #'map-to-subheadlines)
-           (-let* (((ss0 &as &plist :pre-blank pb0 :meta m0)
-                    (org-ml-headline-get-supersection headline))
-                   ((ss1 &as &plist :pre-blank pb1 :meta m1) (funcall fun ss0)))
-             (if (or (not pb1) (= pb0 pb1))
-                 (let ((s (->> (-map #'org-ml-to-string m1)
-                               (s-join "")
-                               (concat (make-string pb0 ?\n)))))
-                   (if m0
-                       (let ((begin (org-element-begin (-first-item m0)))
-                             (end (org-element-end (-last-item m0))))
-                         (org-ml--replace-region begin end s))
-                     (let* ((begin (or (org-element-contents-begin headline)
-                                       ;; If there are no contents, go to
-                                       ;; headline start, try to go to next
-                                       ;; line, and insert new line if we can't
-                                       ;; (which means we are at the end)
-                                       (progn
-                                         (goto-char (org-element-begin headline))
-                                         (forward-line)
-                                         (if (bolp) (point)
-                                           ;; use this since this plays nice
-                                           ;; with evil mode
-                                           (when (re-search-forward "$" nil t)
-                                             (replace-match "\n" nil nil))
-                                           (forward-line)
-                                           (point))))))
-                       (goto-char begin)
-                       (insert s))))
-               (let ((headline* (->> (org-ml-copy headline)
-                                     (org-ml-headline-set-subheadlines nil)
-                                     (org-ml-headline-set-supersection ss1)))
-                     (begin (org-element-begin headline))
-                     (end (or (outline-next-heading) (point-max))))
-                 (org-ml--replace-bounds nil begin end headline*))))))
-      (-each (nreverse (org-ml--parse-patterns-where which "^\\* "))
-        #'map-to-subheadlines))))
+;; Headlines are updated using `org-ml~update' with DIFF-ARG set to
+;; nil (see this for use and meaning of FUN)."
+;;   ;; don't use the myers diff algorithm here, since these functions are meant
+;;   ;; for batch processing.
+;;   (save-excursion
+;;     (cl-labels
+;;         ((map-to-subheadlines
+;;            (headline)
+;;            (-each (nreverse (org-ml-headline-get-subheadlines headline))
+;;              #'map-to-subheadlines)
+;;            (-let* (((ss0 &as &plist :pre-blank pb0 :meta m0)
+;;                     (org-ml-headline-get-supersection headline))
+;;                    ((ss1 &as &plist :pre-blank pb1 :meta m1) (funcall fun ss0)))
+;;              (if (or (not pb1) (= pb0 pb1))
+;;                  (let ((s (->> (-map #'org-ml-to-string m1)
+;;                                (s-join "")
+;;                                (concat (make-string pb0 ?\n)))))
+;;                    (if m0
+;;                        (let ((begin (org-element-begin (-first-item m0)))
+;;                              (end (org-element-end (-last-item m0))))
+;;                          (org-ml--replace-region begin end s))
+;;                      (let* ((begin (or (org-element-contents-begin headline)
+;;                                        ;; If there are no contents, go to
+;;                                        ;; headline start, try to go to next
+;;                                        ;; line, and insert new line if we can't
+;;                                        ;; (which means we are at the end)
+;;                                        (progn
+;;                                          (goto-char (org-element-begin headline))
+;;                                          (forward-line)
+;;                                          (if (bolp) (point)
+;;                                            ;; use this since this plays nice
+;;                                            ;; with evil mode
+;;                                            (when (re-search-forward "$" nil t)
+;;                                              (replace-match "\n" nil nil))
+;;                                            (forward-line)
+;;                                            (point))))))
+;;                        (goto-char begin)
+;;                        (insert s))))
+;;                (let ((headline* (->> (org-ml-copy headline)
+;;                                      (org-ml-headline-set-subheadlines nil)
+;;                                      (org-ml-headline-set-supersection ss1)))
+;;                      (begin (org-element-begin headline))
+;;                      (end (or (outline-next-heading) (point-max))))
+;;                  (org-ml--replace-bounds nil begin end headline*))))))
+;;       (-each (nreverse (org-ml--parse-patterns-where which "^\\* "))
+;;         #'map-to-subheadlines))))
 
-(org-ml--defun* org-ml-update-metasections (which fun)
-  "Update some headline metasections in the current using FUN.
+;; (org-ml--defun* org-ml-update-metasections (which fun)
+;;   "Update some headline metasections in the current using FUN.
 
-See `org-ml-parse-headlines' for the meaning of WHICH.
+;; See `org-ml-parse-headlines' for the meaning of WHICH.
 
-Headlines are updated using `org-ml~update' with DIFF-ARG set to
-nil (see this for use and meaning of FUN)."
-  (org-ml-update-supersections* which
-    (->> (org-ml-supersection-to-metasection it)
-         (funcall fun)
-         (org-ml-metasection-to-supersection))))
+;; Headlines are updated using `org-ml~update' with DIFF-ARG set to
+;; nil (see this for use and meaning of FUN)."
+;;   (org-ml-update-supersections* which
+;;     (->> (org-ml-supersection-to-metasection it)
+;;          (funcall fun)
+;;          (org-ml-metasection-to-supersection))))
 
 ;;; depreciated functions
 
