@@ -2391,14 +2391,17 @@ be greater than zero, and DONE must be less than or equal to TOTAL."
 
 ;; planning
 
+(defun org-ml--check-timelist (y m d H M)
+  (unless (and (integerp y)
+               (integerp m)
+               (integerp d)
+               (or (not H) (integerp H))
+               (or (not M) (integerp M)))
+    (org-ml--arg-error "Invalid timelist %s" (list y m d H M))))
+
 (defun org-ml--build-planning-timestamp (active timelist)
   (-let (((y m d H M) timelist))
-    (unless (and (integerp y)
-                 (integerp m)
-                 (integerp d)
-                 (or (not H) (integerp H))
-                 (or (not M) (integerp M)))
-      (org-ml--arg-error "Invalid timelist %s" timelist))
+    (org-ml--check-timelist y m d H M)
     (org-ml--set-properties-raw (org-ml--build-blank-node timestamp 0)
       :year-start y
       :month-start m
@@ -2437,6 +2440,28 @@ for closed is trival."
     (append timelist
             (and warning (cons '&warning warning))
             (and repeater (cons '&repeater repeater)))))
+
+;; clock
+
+(defun org-ml--build-clock-timestamp (start end)
+  (-let (((y0 m0 d0 H0 M0) start)
+         ((y1 m1 d1 H1 M1) (or end start)))
+    (org-ml--check-timelist y0 m0 d0 H0 M0)
+    (when end
+      (org-ml--check-timelist y1 m1 d1 H1 M1))
+    (org-ml--set-properties-raw (org-ml--build-blank-node timestamp 0)
+      :year-start y0
+      :month-start m0
+      :day-start d0
+      :hour-start H0
+      :minute-start M0
+      :year-end y1
+      :month-end m1
+      :day-end d1
+      :hour-end H1
+      :minute-end M1
+      :range-type (and end 'daterange)
+      :type (if end 'inactive-range 'inactive))))
 
 ;;; INTERNAL TYPE-SPECIFIC BRANCH/CHILD FUNCTIONS
 
@@ -2734,8 +2759,7 @@ START and END follow the same rules as their respective arguments in
 `org-ml-build-timestamp!'."
   (org-ml--with-shorthand-builder-cache clock
     (list start end post-blank)
-    ;; TODO can make this way faster by bypassing normal builder functions
-    (let ((ts (org-ml-build-timestamp! start :end end :collapsed nil)))
+    (let ((ts (org-ml--build-clock-timestamp start end)))
       (org-ml-build-clock ts :post-blank post-blank))))
 
 (org-ml--defun-kw org-ml-build-planning! (&key closed deadline scheduled
@@ -2779,7 +2803,6 @@ are both strings, where each list will generate a node-property
 node in the property-drawer node like \":key: val\"."
   (org-ml--with-shorthand-builder-cache property-drawer
     (cons post-blank keyvals)
-    ;; TODO this can be optimized
     (->> keyvals
          (--map (let ((key (car it))
                       (val (cadr it)))
@@ -2887,7 +2910,6 @@ contain valid textual representations of objects that are allowed in
 table-cell nodes."
   (org-ml--with-shorthand-builder-cache table-cell
     string
-    ;; TODO this can be optimized
     (apply #'org-ml-build-table-cell (org-ml-build-secondary-string! string))))
 
 (defun org-ml-build-table-row! (row-list)
@@ -2899,7 +2921,6 @@ Alternatively, ROW-LIST may the symbol `hline' instead of a string to
 create a rule-typed table-row."
   (org-ml--with-shorthand-builder-cache table-row
     row-list
-    ;; TODO this can be optimized
     (if (eq row-list 'hline) (org-ml-build-table-row-hline)
       (->> (-map #'org-ml-build-table-cell! row-list)
            (apply #'org-ml-build-table-row)))))
