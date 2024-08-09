@@ -80,6 +80,37 @@ The following values are understood:
   :type 'boolean
   :group 'org-ml)
 
+(defcustom org-ml-memoize-shorthand-builders nil
+  "Memoize `org-ml-build-*!' functions.
+
+Like the `org-ml-build-*' functions (no exclamation point), these
+functions are pure and thus can be easily memoized.
+
+One may wish to do this if one needs to create many nodes that
+are the same, as node creation is relatively expensive. These
+functions are also used internally by other parts of `org-ml',
+thus memoizing these functions can achieve significant speed
+increases in many scenerios. The downside is each unique node
+will be stored, which takes space.
+
+This variable globally controls memoization for these functions.
+To control memoization on a per-type basis, see
+`org-ml-memoize-shorthand-builder-types'."
+  :type 'boolean
+  :group 'org-ml)
+
+(org-ml--defconst org-ml-shorthand-types
+  '(timestamp clock planning headline paragraph secondary-string item
+              property-drawer table-cell table-row table))
+
+(defcustom org-ml-memoize-shorthand-builder-types org-ml-shorthand-types
+  "Specify the types for `org-ml-memoize-shorthand-builders'.
+
+Note that these don't perfectly correspond to `org-ml-nodes' since
+some of these functions are composite node builders."
+  :type `(set ,@(--map (list 'const it) org-ml-shorthand-types))
+  :group 'org-ml)
+
 (defcustom org-ml-use-impure nil
   "Run functions in impure mode.
 
@@ -2595,17 +2626,46 @@ Optionally set POST-BLANK (a positive integer)."
 ;; nodes. They all end in '!' (and all associated functions later
 ;; that replicate their syntax here do the same)
 
+(defvar org-ml--shorthand-builder-cache
+  (--map (cons it (make-hash-table :test #'equal)) org-ml-shorthand-types)
+  "Alist of hash tables to store shorthand builder results.")
+
+(defun org-ml-clear-shorthand-builder-cache ()
+  "Clear the memoization cache for shorthand node builders."
+  (interactive)
+  (--each org-ml--shorthand-builder-cache
+    (clrhash (cdr it))))
+
+(defmacro org-ml--with-shorthand-builder-cache (type key body)
+  (declare (indent 1))
+  (let ((k (make-symbol "--key"))
+        (n (make-symbol "--node"))
+        (y (make-symbol "--type"))
+        (c (make-symbol "--cached"))
+        (h (make-symbol "--hashtable")))
+    `(let* ((,k ,key)
+            (,y ',type)
+            (,h (alist-get ,y org-ml--shorthand-builder-cache))
+            (,c (and org-ml-memoize-shorthand-builders
+                     (memq ,y org-ml-memoize-shorthand-builder-types)
+                     (gethash ,k ,h))))
+       (if ,c (org-ml-copy ,c t)
+         ;; turn off memoizer internally since some shorthand builders
+         ;; call other shorthand builders and caching each layer is probably
+         ;; overkill since none of these functions have that many arguments
+         ;; to vary
+         (let ((org-ml-memoize-shorthand-builders nil))
+           (let ((,n ,body))
+             (puthash ,k (org-ml-copy ,n t) ,h)
+             ,n))))))
+
 (defun org-ml-build-secondary-string! (string)
   "Return a secondary string (list of object nodes) from STRING.
 STRING is any string that contains a textual representation of
 object nodes. If the string does not represent a list of object nodes,
 throw an error."
-  ;; fool parser to always parse objects, bold will parse to headlines
-  ;; because of the stars
-  (cl-flet
-      ((err
-        ()
-        (org-ml--arg-error "Could not make secondary string from %S" string)))
+  (org-ml--with-shorthand-builder-cache secondary-string
+    string
     ;; add space to prevent leading stars from parsing as headlines
     (-if-let (d (->> (org-ml--from-string (concat " " string))
                      (org-ml--get-descendent '(0))))
@@ -2614,7 +2674,7 @@ throw an error."
         (if (org-ml--is-type 'plain-list d)
             (-let* ((i (org-ml--get-descendent '(0) d))
                     ((first . rest) (->> (org-ml--get-descendent '(0) i)
-                                       (org-element-contents)))
+                                         (org-element-contents)))
                     (bullet (org-element-property-raw :bullet i)))
               (if (org-ml--is-type 'plain-text first)
                   `(,(concat bullet first) ,@rest)
@@ -2626,8 +2686,8 @@ throw an error."
                ((equal (car ss) " ")
                 (-drop 1 ss))
                (t (org-ml--map-first* (substring it 1) ss)))
-            (err)))
-      (err))))
+            (org-ml--arg-error "Could not make secondary string from %S" string)))
+      (org-ml--arg-error "Could not make secondary string from %S" string))))
 
 (org-ml--defun-kw org-ml-build-timestamp! (start &key end active repeater
                                                  deadline warning collapsed
@@ -2653,25 +2713,30 @@ required for `org-ml-timestamp-set-repeater',
 `org-ml-timestamp-set-warning' respectively.
 
 Building a diary sexp timestamp is not possible with this function."
-  ;; TODO add back checks to this, right now it won't give me any useful
-  ;; error messages
-  (org-ml->> (org-ml--build-blank-node timestamp post-blank)
-    (org-ml--timestamp-set-start-timelist-nocheck start)
-    (org-ml--timestamp-set-end-timelist-nocheck end)
-    (org-ml--timestamp-set-active active)
-    (org-ml--timestamp-update-type-ranged)
-    (org-ml--timestamp-set-warning warning)
-    (org-ml--timestamp-set-repeater repeater)
-    (org-ml--timestamp-set-deadline deadline)
-    (org-ml--timestamp-set-collapsed (or collapsed t))))
+  (org-ml--with-shorthand-builder-cache timestamp
+    (list start end active repeater deadline warning collapsed post-blank)
+    ;; TODO add back checks to this, right now it won't give me any useful
+    ;; error messages
+    (org-ml->> (org-ml--build-blank-node timestamp post-blank)
+      (org-ml--timestamp-set-start-timelist-nocheck start)
+      (org-ml--timestamp-set-end-timelist-nocheck end)
+      (org-ml--timestamp-set-active active)
+      (org-ml--timestamp-update-type-ranged)
+      (org-ml--timestamp-set-warning warning)
+      (org-ml--timestamp-set-repeater repeater)
+      (org-ml--timestamp-set-deadline deadline)
+      (org-ml--timestamp-set-collapsed (or collapsed t)))))
 
 (org-ml--defun-kw org-ml-build-clock! (start &key end post-blank)
   "Return a new clock node.
 
 START and END follow the same rules as their respective arguments in
 `org-ml-build-timestamp!'."
-  (let ((ts (org-ml-build-timestamp! start :end end :collapsed nil)))
-    (org-ml-build-clock ts :post-blank post-blank)))
+  (org-ml--with-shorthand-builder-cache clock
+    (list start end post-blank)
+    ;; TODO can make this way faster by bypassing normal builder functions
+    (let ((ts (org-ml-build-timestamp! start :end end :collapsed nil)))
+      (org-ml-build-clock ts :post-blank post-blank))))
 
 (org-ml--defun-kw org-ml-build-planning! (&key closed deadline scheduled
                                                post-blank)
@@ -2692,17 +2757,19 @@ matter.
 
 CLOSED is a similar list to above but does not have &warning or
 &repeater."
-  (let ((node (org-ml--build-blank-node planning (or post-blank 0))))
-    (when closed
-      (org-element-put-property
-       node :closed (org-ml--build-planning-timestamp nil closed)))
-    (when deadline
-      (org-element-put-property
-       node :deadline (org-ml--planning-list-to-timestamp deadline)))
-    (when scheduled
-      (org-element-put-property
-       node :scheduled (org-ml--planning-list-to-timestamp scheduled)))
-    node))
+  (org-ml--with-shorthand-builder-cache planning
+    (list closed deadline scheduled post-blank)
+    (let ((node (org-ml--build-blank-node planning (or post-blank 0))))
+      (when closed
+        (->> (org-ml--build-planning-timestamp nil closed)
+             (org-element-put-property node :closed)))
+      (when deadline
+        (->> (org-ml--planning-list-to-timestamp deadline)
+             (org-element-put-property node :deadline)))
+      (when scheduled
+        (->> (org-ml--planning-list-to-timestamp scheduled)
+             (org-element-put-property node :scheduled)))
+      node)))
 
 (org-ml--defun-kw org-ml-build-property-drawer! (&key post-blank &rest keyvals)
   "Return a new property-drawer node.
@@ -2710,11 +2777,14 @@ CLOSED is a similar list to above but does not have &warning or
 Each member in KEYVALS is a list like (KEY VAL) where KEY and VAL
 are both strings, where each list will generate a node-property
 node in the property-drawer node like \":key: val\"."
-  (->> keyvals
-       (--map (let ((key (car it))
-                    (val (cadr it)))
-                (org-ml-build-node-property key val)))
-       (apply #'org-ml-build-property-drawer :post-blank post-blank)))
+  (org-ml--with-shorthand-builder-cache property-drawer
+    (cons post-blank keyvals)
+    ;; TODO this can be optimized
+    (->> keyvals
+         (--map (let ((key (car it))
+                      (val (cadr it)))
+                  (org-ml-build-node-property key val)))
+         (apply #'org-ml-build-property-drawer :post-blank post-blank))))
 
 (org-ml--defun-kw org-ml-build-headline! (&key (level 1) title-text
                                                todo-keyword tags pre-blank
@@ -2745,31 +2815,40 @@ automatically be adjusted to LEVEL + 1.
 
 All arguments not mentioned here follow the same rules as
 `org-ml-build-headline'"
-  (let* ((planning (-some->> planning (apply #'org-ml-build-planning!)))
-         (section (-some->>  (if planning (cons planning section-children)
-                               section-children)
-                    (apply #'org-ml-build-section)))
-         (shls (--map (org-ml--headline-set-level (1+ level) it) subheadlines))
-         (nodes (--> shls (if section (cons section it) it))))
-    (->> (apply #'org-ml-build-headline
-                :todo-keyword todo-keyword
-                :level level
-                :tags tags
-                :post-blank post-blank
-                :pre-blank pre-blank
-                :priority priority
-                :commentedp commentedp
-                :archivedp archivedp
-                nodes)
-         (org-ml-headline-set-title! title-text statistics-cookie))))
+  (org-ml--with-shorthand-builder-cache headline
+    (append (list level title-text todo-keyword tags pre-blank priority
+                  commentedp archivedp post-blank planning statistics-cookie
+                  section-children)
+            subheadlines)
+    (let* ((planning (-some->> planning (apply #'org-ml-build-planning!)))
+           (section (-some->>  (if planning (cons planning section-children)
+                                 section-children)
+                      (apply #'org-ml-build-section)))
+           (shls (--map (org-ml--headline-set-level (1+ level) it) subheadlines))
+           (nodes (--> shls (if section (cons section it) it))))
+      (->> (apply #'org-ml-build-headline
+                  :todo-keyword todo-keyword
+                  :level level
+                  :tags tags
+                  :post-blank post-blank
+                  :pre-blank pre-blank
+                  :priority priority
+                  :commentedp commentedp
+                  :archivedp archivedp
+                  nodes)
+           (org-ml-headline-set-title! title-text statistics-cookie)))))
 
 (org-ml--defun-kw org-ml-build-paragraph! (string &key post-blank)
   "Return a new paragraph node from STRING.
 
 STRING is the text to be parsed into a paragraph and must contain
 valid textual representations of object nodes."
-  (->> (org-ml-build-secondary-string! string)
-       (apply #'org-ml-build-paragraph :post-blank post-blank)))
+  ;; ASSUME all children coming from `org-ml-build-secondary-string!' will be
+  ;; valid so bypass type checking overhead.
+  (org-ml--with-shorthand-builder-cache paragraph
+    (list string post-blank)
+    (->> (org-ml--build-blank-node paragraph post-blank)
+         (org-ml-set-children (org-ml-build-secondary-string! string)))))
 
 (org-ml--defun-kw org-ml-build-item! (&key post-blank bullet checkbox tag
                                            paragraph counter &rest children)
@@ -2785,18 +2864,20 @@ CHILDREN contains the nodes that will go under this item after
 PARAGRAPH.
 
 All other arguments follow the same rules as `org-ml-build-item'."
-  (let ((children* (or (-some-> paragraph
-                                (org-ml-build-paragraph!)
-                                (cons children))
-                       children))
-        (tag (-some->> tag (org-ml-build-secondary-string!))))
-    (apply #'org-ml-build-item
-           :post-blank post-blank
-           :bullet bullet
-           :checkbox checkbox
-           :counter counter
-           :tag tag
-           children*)))
+  (org-ml--with-shorthand-builder-cache item
+    (append (list post-blank bullet checkbox tag paragraph counter) children)
+    (let ((children* (or (-some-> paragraph
+                           (org-ml-build-paragraph!)
+                           (cons children))
+                         children))
+          (tag (-some->> tag (org-ml-build-secondary-string!))))
+      (apply #'org-ml-build-item
+             :post-blank post-blank
+             :bullet bullet
+             :checkbox checkbox
+             :counter counter
+             :tag tag
+             children*))))
 
 (defun org-ml-build-table-cell! (string)
   "Return a new table-cell node.
@@ -2804,7 +2885,10 @@ All other arguments follow the same rules as `org-ml-build-item'."
 STRING is the text to be contained in the table-cell node. It must
 contain valid textual representations of objects that are allowed in
 table-cell nodes."
-  (apply #'org-ml-build-table-cell (org-ml-build-secondary-string! string)))
+  (org-ml--with-shorthand-builder-cache table-cell
+    string
+    ;; TODO this can be optimized
+    (apply #'org-ml-build-table-cell (org-ml-build-secondary-string! string))))
 
 (defun org-ml-build-table-row! (row-list)
   "Return a new table-row node.
@@ -2813,9 +2897,12 @@ ROW-LIST is a list of strings to be built into table-cell nodes via
 `org-ml-build-table-cell!' (see that function for restrictions).
 Alternatively, ROW-LIST may the symbol `hline' instead of a string to
 create a rule-typed table-row."
-  (if (eq row-list 'hline) (org-ml-build-table-row-hline)
-    (->> (-map #'org-ml-build-table-cell! row-list)
-         (apply #'org-ml-build-table-row))))
+  (org-ml--with-shorthand-builder-cache table-row
+    row-list
+    ;; TODO this can be optimized
+    (if (eq row-list 'hline) (org-ml-build-table-row-hline)
+      (->> (-map #'org-ml-build-table-cell! row-list)
+           (apply #'org-ml-build-table-row)))))
 
 (org-ml--defun-kw org-ml-build-table! (&key tblfm post-blank &rest row-lists)
   "Return a new table node.
@@ -2825,8 +2912,10 @@ via `org-ml-build-table-row!' (see that function for
 restrictions).
 
 All other arguments follow the same rules as `org-ml-build-table'."
-  (->> (-map #'org-ml-build-table-row! row-lists)
-       (apply #'org-ml-build-table :tblfm tblfm :post-blank post-blank)))
+  (org-ml--with-shorthand-builder-cache table
+    (append (list tblfm post-blank) row-lists)
+    (->> (-map #'org-ml-build-table-row! row-lists)
+         (apply #'org-ml-build-table :tblfm tblfm :post-blank post-blank))))
 
 (defun org-ml-build-org-data (&rest nodes)
   "Return a new org-data node using NODES.
@@ -2895,6 +2984,7 @@ on the boolean values of ACTIVE-P and LONG-P:
                    (t "%d")))
         (time (if long-p (org-ml-unixtime-to-datetime unixtime)
                 (org-ml-unixtime-to-date unixtime))))
+    ;; TODO this can likely be optimized
     (--> (org-ml-build-timestamp! time :active active-p)
          (org-ml-to-string it)
          (org-ml--log-replace key it heading))))
@@ -6634,7 +6724,7 @@ NODE is the node to be matched."
     ;; no slicer - search without limit and return all
     (ps (org-ml--match-make-pattern-form nil nil ps))))
 
-(defconst org-ml--match-form-cache (make-hash-table :test #'equal)
+(defvar org-ml--match-form-cache (make-hash-table :test #'equal)
   "Cache of previously generated lambda forms.")
 
 (defun org-ml-clear-match-cache ()
