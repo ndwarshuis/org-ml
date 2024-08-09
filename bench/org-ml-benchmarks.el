@@ -108,8 +108,14 @@
      (org-ml-update-headlines* 'all
        (org-ml-headline-set-planning pl it)))))
 
-(org-ml-defbench "schedule headline (supersection)" 1000
-  "* headline"
+;; TODO a better test for this would be to put a logbook underneath the
+;; planning ts since in that case we need to also parse the logbook
+(org-ml-defbench "schedule headline (supercontents)" 1000
+  (list "* headline")
+        ;; ":LOGGING:"
+        ;; "- Note taken on [2024-08-07 Wed 20:07] \\"
+        ;; "thingy"
+        ;; ":END:")
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
@@ -143,6 +149,29 @@
             (list :scheduled))
        it))))
 
+(org-ml-defbench "reschedule headline (supercontents)" 1000
+  (list "* headline"
+        "SCHEDULED: <2020-01-01 Wed>")
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (->> (org-get-scheduled-time (point))
+           (float-time)
+           ;; shift up one day
+           (+ (* 24 60 60))
+           (format-time-string "%Y-%m-%d")
+           (org-schedule nil))
+      (setq next (outline-next-heading))))
+
+  (org-ml-wrap-impure
+   (org-ml-update-supercontents* nil 'all
+     (org-ml-supercontents-set-planning
+      (list :scheduled
+            (org-ml-timelist-shift
+             1 'day
+             (plist-get (org-ml-supercontents-get-planning it) :scheduled)))
+      it))))
+
 (org-ml-defbench "set headline effort" 1000
   "* headline"
   (let ((org-adapt-indentation nil)
@@ -154,6 +183,18 @@
   (org-ml-wrap-impure
    (org-ml-update-headlines* 'all
      (org-ml-headline-set-node-property "Effort" "0:05" it))))
+
+(org-ml-defbench "set headline effort (supercontents)" 1000
+  "* headline"
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (org-set-property "Effort" "0:05")
+      (setq next (outline-next-heading))))
+
+  (org-ml-wrap-impure
+   (org-ml-update-supercontents* nil 'all
+     (org-ml-supercontents-set-node-properties '(("Effort" "0:05")) it))))
 
 (org-ml-defbench "set checkboxes" 1000
   (list "* headline [0/0]"
@@ -184,6 +225,21 @@
     (org-ml-update-headlines* 'all
       (org-ml-wrap-impure
        (org-ml-headline-set-section (list para) it)))))
+
+(org-ml-defbench "insert headline text (supercontents)" 2500
+  "* headline"
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (save-excursion
+        (org-end-of-subtree)
+        (insert "\nsome text"))
+      (setq next (outline-next-heading))))
+
+  (let ((para (org-ml-build-paragraph! "some text")))
+    (org-ml-wrap-impure
+     (org-ml-update-supercontents* nil 'all
+       (org-ml-supercontents-set-contents (list para) it)))))
 
 (org-ml-defbench "set headline effort/TODO/scheduled" 1000
   "* headline"
