@@ -5197,16 +5197,6 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
 
             (e (error "This shouldn't happen: %s" e))))))))
 
-;; (defun org-ml--supercontents-to-nodes (config supercontents)
-;;   "Return SUPERCONTENTS as a list of nodes.
-;; The exact configuration of the returned nodes will depend on
-;; CONFIG. POST-BLANK is the blank space to put between the logbook
-;; and the contents."
-;;   (let* ((logbook (->> (org-ml-supercontents-get-logbook supercontents)
-;;                        (org-ml--logbook-to-nodes config)))
-;;          (contents (org-ml-supercontents-get-contents supercontents)))
-;;     (org-ml--append-join-plain-lists logbook contents)))
-
 ;; public supercontents functions
 
 (defun org-ml--planning-project (planning)
@@ -7953,16 +7943,15 @@ nil (see this for use and meaning of FUN)."
            (headline)
            (-each (nreverse (org-ml-headline-get-subheadlines headline))
              #'map-to-subheadlines)
-           (-let* (((ss0 &as &plist :pre-blank pb0 :section m0)
+           (-let* (((ss0 &as &plist :pre-blank pb0 :section nodes0)
                     (org-ml-headline-get-supersection headline))
-                   ((ss1 &as &plist :pre-blank pb1 :section m1) (funcall fun ss0)))
+                   ((ss1 &as &plist :pre-blank pb1 :section nodes1) (funcall fun ss0)))
              (if (or (not pb1) (= pb0 pb1))
-                 (let ((s (->> (-map #'org-ml-to-string m1)
-                               (s-join "")
-                               (concat (make-string pb0 ?\n)))))
-                   (if m0
-                       (let ((begin (org-element-begin (-first-item m0)))
-                             (end (org-element-end (-last-item m0))))
+                 (let ((s (->> (-map #'org-ml-to-string nodes1)
+                               (apply #'concat (make-string pb0 ?\n)))))
+                   (if nodes0
+                       (let ((begin (org-element-begin (-first-item nodes0)))
+                             (end (org-element-end (-last-item nodes0))))
                          (org-ml--replace-region begin end s))
                      (let* ((begin (or (org-element-contents-begin headline)
                                        ;; If there are no contents, go to
