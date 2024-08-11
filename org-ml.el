@@ -4520,13 +4520,6 @@ nodes."
    (-let (((&plist :items :unknown) ,logbook))
      (org-ml--logbook-init items ,clocks unknown))))
 
-;; (define-inline org-ml-logbook-set-post-blank (post-blank logbook)
-;;   "Set the :post-blank slot in LOGBOOK to POST-BLANK."
-;;   (declare (pure t) (side-effect-free t))
-;;   (inline-quote
-;;    (-let (((&plist :items :clocks :unknown) ,logbook))
-;;      (org-ml--logbook-init items clocks unknown))))
-
 (org-ml--defun-anaphoric* org-ml-logbook-map-items (fun logbook)
   "Apply function to :item slot in LOGBOOK.
 FUN is a unary function that takes a list of items and returns a
