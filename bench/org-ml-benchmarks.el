@@ -211,12 +211,12 @@
     (while next
       (save-excursion
         (org-end-of-subtree)
-        (insert "\nsome text"))
+        (insert "\n~some text~"))
       (setq next (outline-next-heading))))
 
   (org-ml-wrap-impure
    (org-ml-update-supercontents* nil 'all
-     (-> (org-ml-build-paragraph! "some text")
+     (-> (org-ml-build-paragraph! "~some text~")
          (list)
          (org-ml-supercontents-set-contents it)))))
 
@@ -227,13 +227,13 @@
     (while next
       (save-excursion
         (org-end-of-subtree)
-        (insert "\nsome text"))
+        (insert "\n~some text~"))
       (setq next (outline-next-heading))))
 
   (org-ml-wrap-impure
    (let ((org-ml-memoize-shorthand-builders t))
      (org-ml-update-supercontents* nil 'all
-       (-> (org-ml-build-paragraph! "some text")
+       (-> (org-ml-build-paragraph! "~some text~")
            (list)
            (org-ml-supercontents-set-contents it))))))
 
