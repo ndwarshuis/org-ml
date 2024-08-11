@@ -8117,7 +8117,7 @@ nil (see this for use and meaning of FUN)."
 
 ;;; depreciated functions
 
-(defun org-ml-timestamp-get-range (timestamp)
+(defalias 'org-ml-timestamp-get-range #'org-ml-timestamp-get-length
   "Return the range of TIMESTAMP node in seconds as an integer.
 
 If non-ranged, this function will return 0. If ranged but
@@ -8125,10 +8125,9 @@ the start time is in the future relative to end the time, return
 a negative integer.
 
 This function is depreciated. Use `org-ml-timestamp-get-length'
-instead."
-  (org-ml-timestamp-get-length timestamp))
+instead.")
 
-(defun org-ml-timestamp-set-range (n unit timestamp)
+(defalias 'org-ml-timestamp-set-range #'org-ml-timestamp-set-length
   "Return TIMESTAMP node with range set to N UNITs.
 If TIMESTAMP is ranged, keep start time the same and adjust the end
 time. If not, make a new end time. The units for RANGE are in minutes
@@ -8136,8 +8135,7 @@ if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format.
 
 This function is depreciated. Use `org-ml-timestamp-get-length'
-instead."
-  (org-ml-timestamp-set-length n unit timestamp))
+instead.")
 
 (defun org-ml-planning-set-timestamp! (prop planning-list planning)
   "Return PLANNING node with PROP set to PLANNING-LIST.
