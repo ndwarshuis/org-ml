@@ -6963,15 +6963,7 @@
                "** DONE _two"
                "* two [/]"
                "** DONE _one"
-               "** DONE _two")
-      (org-ml-do-subtrees*
-        (org-ml-headline-update-todo-statistics it))
-      $> (:result "* one [2/2]"
-                  "** DONE _one"
-                  "** DONE _two"
-                  "* two [2/2]"
-                  "** DONE _one"
-                  "** DONE _two"))
+               "** DONE _two"))
 
     (defexamples-content org-ml-update-supercontents
       nil

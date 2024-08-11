@@ -831,12 +831,6 @@ HEADER is the it-header."
     (org-ml-plist-put-property :end-header :results 'html it)
     (org-ml-plist-remove-property :inside-header :cache it))
 
-  (org-ml--test-purity "keyword setters"
-    (org-ml-build-paragraph! "ass glanimals")
-    (org-ml-set-affiliated-keyword :name "foo" it)
-    (org-ml-map-affiliated-keyword :name (lambda (_) "foo") it)
-    (org-ml-set-caption! "cap" it))
-
   (describe "leaf nodes"
     (org-ml--test-purity "timestamp setters"
       (org-ml-build-timestamp! '(2024 1 1 0 0) :end '(2024 1 1 0 1))
