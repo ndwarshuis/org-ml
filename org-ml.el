@@ -2153,7 +2153,7 @@ Specifically update `:range-type' and `:type'."
   (->> (org-ml--timestamp-set-type-ranged range-type timestamp)
        (org-element-put-property-2 :range-type range-type)))
 
-(defun org-ml--timestamp-set-range (n unit timestamp)
+(defun org-ml--timestamp-set-length (n unit timestamp)
   "Return TIMESTAMP with end time shifted to N UNITs from start time."
   (let* ((t1 (org-ml--timestamp-get-start-timelist timestamp))
          (has-time (org-ml-timelist-has-time t1))
@@ -2236,21 +2236,6 @@ Return a list like (TYPE VALUE UNIT) or nil."
       (org-ml--set-properties-raw timestamp
         :repeater-deadline-value value
         :repeater-deadline-unit unit))))
-  ;; (if (not (org-ml--timestamp-get-repeater timestamp)) timestamp
-  ;;     (let ((d (pcase deadline
-  ;;                (`(,value ,unit)
-  ;;                 (unless (or (not value) (integerp value))
-  ;;                   (org-ml--arg-error "Invalid deadline value: %s" value))
-  ;;                 (unless (or (not unit) (memq unit '(year month week day hour)))
-  ;;                   (org-ml--arg-error "Invalid deadline unit: %s" unit))
-  ;;                 (list :repeater-deadline-value value
-  ;;                       :repeater-deadline-unit unit))
-  ;;                (`nil
-  ;;                 (list :repeater-deadline-value nil
-  ;;                       :repeater-deadline-unit nil))
-  ;;                (_
-  ;;                 (org-ml--arg-error "Invalid deadline list: %s" deadline)))))
-  ;;       (org-ml--set-properties-nocheck d timestamp))))
 
 (defun org-ml--timestamp-set-collapsed (flag timestamp)
   "Return TIMESTAMP with collapsed set to FLAG."
@@ -2281,13 +2266,8 @@ Return a list like (TYPE VALUE UNIT) or nil."
     (e
      (error "Invalid range-type %s" e))))
 
-;; TODO don't check timelist format in these private functions since I might end
-;; up checking them multiple times if I do so; check once in public functions
-;; instead (or not at all)
 (defun org-ml--timestamp-set-start-time (time timestamp-diary)
   "Set the start of TIMESTAMP-DIARY to TIME. Does not set type."
-  ;; (unless (or (not time) (org-ml-is-time-p time))
-  ;;   (org-ml--arg-error "Invalid time given %S" time))
   (-let (((H M) time))
     (org-ml--set-properties-raw timestamp-diary
       :hour-start H
@@ -2295,8 +2275,6 @@ Return a list like (TYPE VALUE UNIT) or nil."
 
 (defun org-ml--timestamp-set-end-time (time timestamp-diary)
   "Set the end of TIMESTAMP-DIARY to TIME. Does not set type."
-  ;; (unless (or (not time) (org-ml-is-time-p time))
-  ;;   (org-ml--arg-error "Invalid time given %S" time))
   (-let (((H M) time))
     (org-ml--set-properties-raw timestamp-diary
       :hour-end H
@@ -2692,27 +2670,6 @@ performed. TABLE is used to get the table width."
 
 ;;; misc builders
 
-;; these are nodes that cannot and should not be built with the 'normal' build
-;; functions because they are too weird
-
-;; ...and this is here because I can't think of where else to put it
-;; (defun org-ml-clone-node (node)
-;;   "Return copy of NODE, which may be a circular tree.
-
-;; This is only necessary to copy nodes parsed using any of parsing
-;; functions from this package (for example, `org-ml-parse-this-headline')
-;; because these retain parent references which makes the node a circular
-;; list. None of the builder functions add parent references, so
-;; `copy-tree' will be a faster alternative to this function."
-;;   (let ((print-circle t))
-;;     (read (format "%S" node))))
-
-;; (defun org-ml-clone-node-n (n node)
-;;   "Like `org-ml-clone-node' but make N copies of NODE."
-;;   (let ((ret))
-;;     (--dotimes n (!cons (org-ml-clone-node node) ret))
-;;     ret))
-
 (org-ml--defun-kw org-ml-build-timestamp-diary (form &key start end post-blank)
   "Return a new diary-sexp timestamp node from FORM.
 
@@ -2736,7 +2693,6 @@ Optionally set POST-BLANK (a positive integer)."
 
 ;; These function offer a shorter and more convenient way of building
 ;; nodes. They all end in '!' (and all associated functions later
-;; that replicate their syntax here do the same)
 
 (eval-and-compile
   (defvar org-ml--shorthand-builder-cache
@@ -3821,15 +3777,14 @@ TIME1 and TIME2 are lists analogous to the TIME argument specified in
   (org-ml--check-type 'timestamp timestamp)
   (org-ml--timestamp-set-double-timelist time1 time2 (org-ml-copy timestamp)))
 
-;; TODO this should be ""-set-length
-(defun org-ml-timestamp-set-range (n unit timestamp)
-  "Return TIMESTAMP node with range set to N UNITs.
+(defun org-ml-timestamp-set-length (n unit timestamp)
+  "Return TIMESTAMP node with length set to N UNITs.
 If TIMESTAMP is ranged, keep start time the same and adjust the end
 time. If not, make a new end time. The units for RANGE are in minutes
 if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format."
   (org-ml--check-type 'timestamp timestamp)
-  (org-ml--timestamp-set-range n unit (org-ml-copy timestamp)))
+  (org-ml--timestamp-set-length n unit (org-ml-copy timestamp)))
 
 (defun org-ml-timestamp-set-active (flag timestamp)
   "Return TIMESTAMP node with active type if FLAG is t."
@@ -8172,6 +8127,17 @@ a negative integer.
 This function is depreciated. Use `org-ml-timestamp-get-length'
 instead."
   (org-ml-timestamp-get-length timestamp))
+
+(defun org-ml-timestamp-set-range (n unit timestamp)
+  "Return TIMESTAMP node with range set to N UNITs.
+If TIMESTAMP is ranged, keep start time the same and adjust the end
+time. If not, make a new end time. The units for RANGE are in minutes
+if TIMESTAMP is in long format and days if TIMESTAMP is in short
+format.
+
+This function is depreciated. Use `org-ml-timestamp-get-length'
+instead."
+  (org-ml-timestamp-set-length n unit timestamp))
 
 (defun org-ml-planning-set-timestamp! (prop planning-list planning)
   "Return PLANNING node with PROP set to PLANNING-LIST.
