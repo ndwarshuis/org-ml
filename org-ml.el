@@ -1716,7 +1716,7 @@ TYPE is a symbol and POST-BLANK is a positive integer."
          ;; call other shorthand builders and caching each layer is probably
          ;; overkill since none of these functions have that many arguments
          ;; to vary
-         (let ((org-ml-memoize-shorthand-builders nil))
+         (let ((,switch nil))
            (let ((,n ,body))
              (puthash ,k (org-ml-copy ,n t) ,h)
              ,n))))))
