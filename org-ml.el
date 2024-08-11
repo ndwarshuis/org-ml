@@ -4279,22 +4279,6 @@ or nil."
     ((or `trans `nil) item)
     (_ (error "This should not happen"))))
 
-;; planning
-
-;; (defun org-ml-planning-set-timestamp! (prop planning-list planning)
-;;   "Return PLANNING node with PROP set to PLANNING-LIST.
-
-;; PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
-;; is the same as that described in `org-ml-build-planning!'."
-;;   (org-ml--check-type 'planning planning)
-;;   (unless (memq prop '(:closed :deadline :scheduled))
-;;     (org-ml--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
-;;   (let* ((active (not (eq prop :closed)))
-;;          (ts (org-ml--planning-list-to-timestamp active planning-list)))
-;;     ;; ASSUME any timestamp given above will be valid for the given property
-;;     ;; TODO need to check that planning is actually a planning node now
-;;     (org-element-put-property-2 prop ts (org-ml-copy planning))))
-
 ;;; PUBLIC BRANCH/CHILD FUNCTIONS
 
 ;;; polymorphic
@@ -7295,10 +7279,10 @@ t, parse the entire subtree, else just parse the top headline."
                          (point-max)))
                   (or (outline-next-heading) (point-max))))
              (tree (car (org-ml--parse-elements b e 'first-section))))
-        ;; TODO this is a hack; since org 9.6 setting the boundaries at the next headline
-        ;; will not stop the parser from parsing the entire subtree, even if
-        ;; we don't want it. Workaround is to parse the entire subtree and
-        ;; possibly throw away most of it
+        ;; TODO this is a hack; since org 9.6 setting the boundaries at the next
+        ;; headline will not stop the parser from parsing the entire subtree,
+        ;; even if we don't want it. Workaround is to parse the entire subtree
+        ;; and possibly throw away most of it
         (if subtree tree
           (let ((cs (org-element-contents tree)))
             (if (< 1 (length cs))
@@ -8188,6 +8172,24 @@ a negative integer.
 This function is depreciated. Use `org-ml-timestamp-get-length'
 instead."
   (org-ml-timestamp-get-length timestamp))
+
+(defun org-ml-planning-set-timestamp! (prop planning-list planning)
+  "Return PLANNING node with PROP set to PLANNING-LIST.
+
+PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
+is the same as that described in `org-ml-build-planning!'.
+
+This function is depreciated since it doesn't make sense to alter
+a planning node outside the context of a headline. Use
+`org-ml-headline-get-planning' and related instead, which
+provides a much simpler and robust way to set the planning node
+under a headline."
+  (org-ml--check-type 'planning planning)
+  (unless (memq prop '(:closed :deadline :scheduled))
+    (org-ml--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
+  (let* ((active (not (eq prop :closed)))
+         (ts (org-ml--planning-list-to-timestamp active planning-list)))
+    (org-element-put-property-2 prop ts (org-ml-copy planning))))
 
 (provide 'org-ml)
 ;;; org-ml.el ends here
