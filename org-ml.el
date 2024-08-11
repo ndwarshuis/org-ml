@@ -56,74 +56,6 @@
 (eval-when-compile
   (require 'org-ml-macs))
 
-;;; CUSTOM
-
-(defcustom org-ml-memoize-match-patterns nil
-  "Memoize patterns in `org-ml-match' and friends.
-
-These functions all take a PATTERN parameter that is used to
-generate a lambda function, which is then used to computationally
-search for the desired matches. Generating these lambda forms has
-some overhead (and will increase with increasing pattern
-complexity). Therefore, this value can be used to memoize (cache)
-each unique lambda form for each pattern. When enabled, calls to
-any of the match function using a unique pattern will generate
-the corresponding lambda form only once, and then subsequent
-calls will retrieve the form from the cache. This can increase
-performance if relatively few patterns are used relative to the
-calls made to pattern-consuming functions.
-
-The following values are understood:
-- nil: do not memoize anything
-- `compiled': memoize byte-compiled lambda forms
-- any other non-nil: memoize non-compiled lambda forms"
-  :type 'boolean
-  :group 'org-ml)
-
-(defcustom org-ml-memoize-shorthand-builders nil
-  "Memoize `org-ml-build-*!' functions.
-
-Like the `org-ml-build-*' functions (no exclamation point), these
-functions are pure and thus can be easily memoized.
-
-One may wish to do this if one needs to create many nodes that
-are the same, as node creation is relatively expensive. These
-functions are also used internally by other parts of `org-ml',
-thus memoizing these functions can achieve significant speed
-increases in many scenerios. The downside is each unique node
-will be stored, which takes space.
-
-This variable globally controls memoization for these functions.
-To control memoization on a per-type basis, see
-`org-ml-memoize-shorthand-builder-types'."
-  :type 'boolean
-  :group 'org-ml)
-
-(org-ml--defconst org-ml-shorthand-types
-  '(timestamp clock planning headline paragraph secondary-string item
-              property-drawer table-cell table-row table))
-
-(defcustom org-ml-memoize-shorthand-builder-types org-ml-shorthand-types
-  "Specify the types for `org-ml-memoize-shorthand-builders'.
-
-Note that these don't perfectly correspond to `org-ml-nodes' since
-some of these functions are composite node builders."
-  :type `(set ,@(--map (list 'const it) org-ml-shorthand-types))
-  :group 'org-ml)
-
-(defcustom org-ml-use-impure nil
-  "Run functions in impure mode.
-
-For now this means that no function will make a copy of a node,
-so all changes will be via side effect."
-  :type 'boolean
-  :group 'org-ml)
-
-(defcustom org-ml-disable-checks nil
-  "Run functions without checking nodes for proper types."
-  :type 'boolean
-  :group 'org-ml)
-
 ;;; NODE TYPE SETS
 
 ;; When only considering types, nodes can be arranged in the following
@@ -289,6 +221,106 @@ the car.")
          (alist-get 'headline)
          (cons 'plain-text)))
   "List of node types which may be used in item headline title properties.")
+
+;;; CUSTOM
+
+(defcustom org-ml-memoize-match-patterns nil
+  "Memoize patterns in `org-ml-match' and friends.
+
+These functions all take a PATTERN parameter that is used to
+generate a lambda function, which is then used to computationally
+search for the desired matches. Generating these lambda forms has
+some overhead (and will increase with increasing pattern
+complexity). Therefore, this value can be used to memoize (cache)
+each unique lambda form for each pattern. When enabled, calls to
+any of the match function using a unique pattern will generate
+the corresponding lambda form only once, and then subsequent
+calls will retrieve the form from the cache. This can increase
+performance if relatively few patterns are used relative to the
+calls made to pattern-consuming functions.
+
+The following values are understood:
+- nil: do not memoize anything
+- `compiled': memoize byte-compiled lambda forms
+- any other non-nil: memoize non-compiled lambda forms"
+  :type 'boolean
+  :group 'org-ml)
+
+(defcustom org-ml-memoize-builders nil
+  "Memoize `org-ml-build-*' functions.
+
+These functions are pure and thus can be easily memoized.
+
+One may wish to do this if one needs to create many nodes that
+are the same, as node creation is relatively expensive. These
+functions are also used internally by other parts of `org-ml',
+thus memoizing these functions can achieve significant speed
+increases in many scenerios. The downside is each unique node
+will be stored, which takes space.
+
+This variable globally controls memoization for these functions.
+To control memoization on a per-type basis, see
+`org-ml-memoize-builder-types'."
+  :type 'boolean
+  :group 'org-ml)
+
+(org-ml--defconst org-ml-builder-types
+   (append org-element-all-objects org-element-all-elements))
+
+(defcustom org-ml-memoize-builder-types
+  (-difference org-ml-builder-types org-ml-branch-nodes)
+  "Specify the types for `org-ml-memoize-builders'."
+  :type `(set ,@(--map (list 'const it) org-ml-builder-types))
+  :group 'org-ml)
+
+(defcustom org-ml-memoize-shorthand-builders nil
+  "Memoize `org-ml-build-*!' functions.
+
+Like the `org-ml-build-*' functions (no exclamation point), these
+functions are pure and thus can be easily memoized.
+
+One may wish to do this if one needs to create many nodes that
+are the same, as node creation is relatively expensive. These
+functions are also used internally by other parts of `org-ml',
+thus memoizing these functions can achieve significant speed
+increases in many scenerios. The downside is each unique node
+will be stored, which takes space.
+
+This variable globally controls memoization for these functions.
+To control memoization on a per-type basis, see
+`org-ml-memoize-shorthand-builder-types'."
+  :type 'boolean
+  :group 'org-ml)
+
+(org-ml--defconst org-ml-shorthand-builder-types
+  '(timestamp clock planning headline paragraph secondary-string item
+              property-drawer table-cell table-row table))
+
+(defcustom org-ml-memoize-shorthand-builder-types
+  (-difference org-ml-shorthand-builder-types '(headline item))
+  "Specify the types for `org-ml-memoize-shorthand-builders'.
+
+Note that these don't perfectly correspond to `org-ml-nodes' since
+some of these functions are composite node builders.
+
+All in `org-ml-shorthand-builder-types' are enabled by default except for
+`headline' and `item' since these take child nodes are arguments
+which therefore lead to large key sizes."
+  :type `(set ,@(--map (list 'const it) org-ml-shorthand-builder-types))
+  :group 'org-ml)
+
+(defcustom org-ml-use-impure nil
+  "Run functions in impure mode.
+
+For now this means that no function will make a copy of a node,
+so all changes will be via side effect."
+  :type 'boolean
+  :group 'org-ml)
+
+(defcustom org-ml-disable-checks nil
+  "Run functions without checking nodes for proper types."
+  :type 'boolean
+  :group 'org-ml)
 
 ;;; AFFILIATED KEYWORD NODES
 
@@ -1670,6 +1702,44 @@ TYPE is a symbol and POST-BLANK is a positive integer."
 
 ;; define all base builders using this automated monstrosity
 
+(defmacro org-ml--with-cache (table switch valid type key body)
+  (let* ((k (make-symbol "--key"))
+         (n (make-symbol "--node"))
+         (c (make-symbol "--cached"))
+         (h (alist-get type (eval table))))
+    (unless h
+      (error "Failed to get cache table for %s" type))
+    `(let* ((,k ,key)
+            (,c (and ,switch (memq ',type ,valid) (gethash ,k ,h))))
+       (if ,c (org-ml-copy ,c t)
+         ;; turn off memoizer internally since some shorthand builders
+         ;; call other shorthand builders and caching each layer is probably
+         ;; overkill since none of these functions have that many arguments
+         ;; to vary
+         (let ((org-ml-memoize-shorthand-builders nil))
+           (let ((,n ,body))
+             (puthash ,k (org-ml-copy ,n t) ,h)
+             ,n))))))
+
+(eval-and-compile
+  (defvar org-ml--builder-cache
+    (--map (cons it (make-hash-table :test #'equal)) org-ml-builder-types)
+    "Alist of hash tables to store builder results."))
+
+(defun org-ml-clear-builder-cache ()
+  "Clear the memoization cache for node builders."
+  (interactive)
+  (--each org-ml--builder-cache
+    (clrhash (cdr it))))
+
+(defmacro org-ml--with-builder-cache (type key body)
+  (declare (indent 1))
+  `(org-ml--with-cache
+     org-ml--builder-cache
+     org-ml-memoize-builders
+     org-ml-memoize-builder-types
+     ,type ,key ,body))
+
 (eval-when-compile
   (defun org-ml--autodef-kwd-to-sym (keyword)
     "Return KEYWORD as a string with no leading colon."
@@ -1785,12 +1855,29 @@ symbol for the rest argument."
                          ',type post-blank
                          ,all-props
                          ,rest-arg))
+           (prop-syms (->> (alist-get 'key props)
+                           (append (alist-get 'req props))
+                           (-map #'car)
+                           (-map #'org-ml--autodef-kwd-to-sym)
+                           (cons 'post-blank)))
+           (memoizer-key
+            (cond
+             ((and rest-arg (not prop-syms)) rest-arg)
+             ((and rest-arg (= (length prop-syms) 1)) `(cons ,@prop-syms ,rest-arg))
+             (rest-arg `(append (list ,@prop-syms) ,rest-arg))
+             ((not prop-syms) nil)
+             ((= (length prop-syms) 1) (car prop-syms))
+             (t `(list ,@prop-syms))))
            (body (if updaters
                      (let ((us (--map `(funcall #',it node) updaters)))
                        `(let ((node ,inner-body))
                           ,@us))
-                   inner-body)))
-      (macroexpand `(org-ml--defun-kw ,name ,args ,doc ,body))))
+                   inner-body))
+           (memoized-body
+            (if memoizer-key
+                `(org-ml--with-builder-cache ,type ,memoizer-key ,body)
+              body)))
+      (macroexpand `(org-ml--defun-kw ,name ,args ,doc ,memoized-body))))
 
   (defmacro org-ml--autodef-build-node-functions ()
     "Define all build node functions."
@@ -2651,9 +2738,11 @@ Optionally set POST-BLANK (a positive integer)."
 ;; nodes. They all end in '!' (and all associated functions later
 ;; that replicate their syntax here do the same)
 
-(defvar org-ml--shorthand-builder-cache
-  (--map (cons it (make-hash-table :test #'equal)) org-ml-shorthand-types)
-  "Alist of hash tables to store shorthand builder results.")
+(eval-and-compile
+  (defvar org-ml--shorthand-builder-cache
+    (--map (cons it (make-hash-table :test #'equal))
+           org-ml-shorthand-builder-types)
+    "Alist of hash tables to store shorthand builder results."))
 
 (defun org-ml-clear-shorthand-builder-cache ()
   "Clear the memoization cache for shorthand node builders."
@@ -2663,26 +2752,12 @@ Optionally set POST-BLANK (a positive integer)."
 
 (defmacro org-ml--with-shorthand-builder-cache (type key body)
   (declare (indent 1))
-  (let ((k (make-symbol "--key"))
-        (n (make-symbol "--node"))
-        (y (make-symbol "--type"))
-        (c (make-symbol "--cached"))
-        (h (make-symbol "--hashtable")))
-    `(let* ((,k ,key)
-            (,y ',type)
-            (,h (alist-get ,y org-ml--shorthand-builder-cache))
-            (,c (and org-ml-memoize-shorthand-builders
-                     (memq ,y org-ml-memoize-shorthand-builder-types)
-                     (gethash ,k ,h))))
-       (if ,c (org-ml-copy ,c t)
-         ;; turn off memoizer internally since some shorthand builders
-         ;; call other shorthand builders and caching each layer is probably
-         ;; overkill since none of these functions have that many arguments
-         ;; to vary
-         (let ((org-ml-memoize-shorthand-builders nil))
-           (let ((,n ,body))
-             (puthash ,k (org-ml-copy ,n t) ,h)
-             ,n))))))
+  `(org-ml--with-cache
+     org-ml--shorthand-builder-cache
+     org-ml-memoize-shorthand-builders
+     org-ml-memoize-shorthand-builder-types
+     ,type ,key ,body))
+
 
 (defun org-ml-build-secondary-string! (string)
   "Return a secondary string (list of object nodes) from STRING.
