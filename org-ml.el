@@ -3763,9 +3763,8 @@ The return value will be a list as specified by the TIME argument in
   (and (org-ml--timestamp-is-range-type timestamp)
        (org-ml--timestamp-get-end-timelist timestamp)))
 
-;; TODO this should be ""-get-length
-(defun org-ml-timestamp-get-range (timestamp)
-  "Return the range of TIMESTAMP node in seconds as an integer.
+(defun org-ml-timestamp-get-length (timestamp)
+  "Return the length of TIMESTAMP node in seconds as an integer.
 If non-ranged, this function will return 0. If ranged but
 the start time is in the future relative to end the time, return
 a negative integer."
@@ -8178,6 +8177,17 @@ nil (see this for use and meaning of FUN)."
          (org-ml--supercontents-to-supersection config))))
 
 ;;; depreciated functions
+
+(defun org-ml-timestamp-get-range (timestamp)
+  "Return the range of TIMESTAMP node in seconds as an integer.
+
+If non-ranged, this function will return 0. If ranged but
+the start time is in the future relative to end the time, return
+a negative integer.
+
+This function is depreciated. Use `org-ml-timestamp-get-length'
+instead."
+  (org-ml-timestamp-get-length timestamp))
 
 (provide 'org-ml)
 ;;; org-ml.el ends here
