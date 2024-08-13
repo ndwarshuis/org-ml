@@ -81,7 +81,7 @@
       (setq next (outline-next-heading))))
 
   (org-ml-wrap-impure
-   (org-ml-do-subtrees*
+   (org-ml-update-subtrees* 'all
      (org-ml--headline-subtree-shift-level 1 it))))
 
 (org-ml-defbench "tag headline" 1000
