@@ -2023,6 +2023,58 @@ UNIT is `minute', or `hour'. N is an integer."
 ;; timestamp and inferring if it is ranged or not. It also is less ambiguous for
 ;; in cases where the timestamp may be collapsed.
 
+(defun org-ml--check-timelist (y m d H M)
+  "Check timelist, decomposed into Y M D H and M."
+  (unless (and (integerp y)
+               (integerp m)
+               (integerp d)
+               (or (not H) (integerp H))
+               (or (not M) (integerp M)))
+    (org-ml--arg-error "Invalid timelist %s" (list y m d H M))))
+
+(defun org-ml--check-timelist-from-list (timelist)
+  "Check TIMELIST."
+  (when (consp timelist)
+    (-let (((y m d H M) timelist))
+      (org-ml--check-timelist y m d H M))))
+
+(defun org-ml--check-warning (type value unit)
+  "Check that warning (TYPE VALUE UNIT) is valid."
+  (unless (and (org-ml--is-valid-timestamp-warning-type type)
+               (integerp value)
+               (org-ml--is-valid-timestamp-unit unit))
+    (org-ml--arg-error "Invalid warning %s" (list type value unit))))
+
+(defun org-ml--check-repeater (type value unit)
+  "Check that repeater (TYPE VALUE UNIT) is valid."
+  (unless (and (org-ml--is-valid-timestamp-repeater-type type)
+               (integerp value)
+               (org-ml--is-valid-timestamp-unit unit))
+    (org-ml--arg-error "Invalid repeater %s" (list type value unit))))
+
+(defun org-ml--check-deadline (value unit)
+  "Check that deadline (VALUE UNIT) is valid."
+  (unless (and (integerp value) (org-ml--is-valid-timestamp-unit unit))
+    (org-ml--arg-error "Invalid deadline %s" (list value unit))))
+
+(defun org-ml--check-warning-from-list (warning)
+  "Check that WARNING is valid."
+  (when (consp warning)
+    (-let (((y v u) warning))
+      (org-ml--check-warning y v u))))
+
+(defun org-ml--check-repeater-from-list (repeater)
+  "Check that REPEATER is valid."
+  (when (consp repeater)
+    (-let (((y v u) repeater))
+      (org-ml--check-repeater y v u))))
+
+(defun org-ml--check-deadline-from-list (deadline)
+  "Check that DEADLINE is valid."
+  (when (consp deadline)
+    (-let (((v u) deadline))
+      (org-ml--check-deadline v u))))
+
 (defun org-ml--timestamp-get-start-timelist (timestamp)
   "Return the timelist of the start time in TIMESTAMP."
   (-let (((&plist :minute-start n :hour-start h :day-start d
@@ -2452,29 +2504,6 @@ be greater than zero, and DONE must be less than or equal to TOTAL."
 
 ;; planning
 
-(defun org-ml--check-timelist (y m d H M)
-  "Check timelist, decomposed into Y M D H and M."
-  (unless (and (integerp y)
-               (integerp m)
-               (integerp d)
-               (or (not H) (integerp H))
-               (or (not M) (integerp M)))
-    (org-ml--arg-error "Invalid timelist %s" (list y m d H M))))
-
-(defun org-ml--check-warning (type value unit)
-  "Check that warning (TYPE VALUE UNIT) is value."
-  (unless (and (org-ml--is-valid-timestamp-warning-type type)
-               (integerp value)
-               (org-ml--is-valid-timestamp-unit unit))
-    (org-ml--arg-error "Invalid warning %s" (list type value unit))))
-
-(defun org-ml--check-repeater (type value unit)
-  "Check that repeater (TYPE VALUE UNIT) is value."
-  (unless (and (org-ml--is-valid-timestamp-repeater-type type)
-               (integerp value)
-               (org-ml--is-valid-timestamp-unit unit))
-    (org-ml--arg-error "Invalid repeater %s" (list type value unit))))
-
 (defun org-ml--build-planning-timestamp (active timelist)
   "Build a planning timestamp.
 
@@ -2505,10 +2534,10 @@ See `org-ml-build-planning!' for syntax of PLANNING-LIST."
               planning-list))
           (ts (org-ml--build-planning-timestamp t (car p))))
     (-when-let (w (alist-get '&warning p))
-      (apply #'org-ml--check-warning w)
+      (org-ml--check-warning-from-list w)
       (org-ml--timestamp-set-warning w ts))
     (-when-let (r (alist-get '&repeater p))
-      (apply #'org-ml--check-repeater r)
+      (org-ml--check-repeater-from-list r)
       (org-ml--timestamp-set-repeater r ts))
     ts))
 
@@ -2794,10 +2823,17 @@ required for `org-ml-timestamp-set-repeater',
 `org-ml-timestamp-set-warning' respectively.
 
 Building a diary sexp timestamp is not possible with this function."
+  (org-ml--check-timelist-from-list start)
+  (when end
+    (org-ml--check-timelist-from-list end))
+  (when repeater
+    (org-ml--check-repeater-from-list repeater))
+  (when warning
+    (org-ml--check-warning-from-list warning))
+  (when deadline
+    (org-ml--check-deadline-from-list deadline))
   (org-ml--with-shorthand-builder-cache timestamp
     (list start end active repeater deadline warning collapsed post-blank)
-    ;; TODO add back checks to this, right now it won't give me any useful
-    ;; error messages
     (org-ml->> (org-ml--build-blank-node timestamp post-blank)
       (org-ml--timestamp-set-start-timelist-nocheck start)
       (org-ml--timestamp-set-end-timelist-nocheck end)
