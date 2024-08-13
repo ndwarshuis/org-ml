@@ -4399,21 +4399,64 @@ first paragraph and returns modified secondary-string."
   (--> (org-ml-item-get-paragraph item)
        (org-ml-item-set-paragraph (funcall fun it) item)))
 
-;;; headline (metadata)
+;;; headline (supercontents)
 
-;;; headline (logbook/contents)
+;; Everything under a headline in the "section" should follow a predictable
+;; structure. The planning and property-drawer nodes is always first and second
+;; respectively (if present) followed by a "logbook" and the "contents" The
+;; "logbook" contains two types of nodes, here called "log items" (or sometimes
+;; simply "items" if the context is obvious) and "clocks." The former include
+;; any plain-list/item node as given by `org-log-note-headings' (except for
+;; 'clock-out' which applies only to clocks), and clocks includes clock nodes
+;; and optionally plain-list/item nodes that represent the clock-out notes.
+;; Anything that comes after the logbook is deemed "contents." To make this even
+;; more complicated, the spacing after these nodes potentially interacts the
+;; encapsulating headline itself through the :pre-blank property. For instance,
+;; if a planning node has a non-zero :post-blank property, this value should be
+;; set to the :pre-blank property of the headline if the planning node is
+;; deleted (indicating that the space "moves up").
 
-;; Everything after the planning and property drawer of the headline can be
-;; either part of the "logbook" or the "contents". The "logbook" contains two
-;; types of nodes, here called "log items" (or sometimes simply "items" if the
-;; context is obvious) and "clocks." The former include any plain-list/item node
-;; as given by `org-log-note-headings' (except for 'clock-out' which applies
-;; only to clocks), and clocks includes clock nodes and optionally
-;; plain-list/item nodes that represent the clock-out notes. Anything that comes
-;; after the logbook is deemed "contents." Together, the "logbook" and
-;; "contents" are hereafter referred collectively as the "supercontents."
+;; To simplify this entire process, here we introduce an abstraction layer
+;; called the "supercontents" which will encompass the entire headline section
+;; and the :pre-blank property of the headline itself. This will represent all
+;; these components in a standardized way. A similar data structure for
+;; "logbook" also exists within the supercontents for similar reasons, as the
+;; logbook has many different complex representations.
 
-;; There are many ways to configure the logbook, and these are controlled by
+;; In haskell types, the supercontents and logbook are like this:
+
+;; type Blank = Natural
+;;
+;; type Property = (Text, Text)
+;;
+;; data LogBook = LogBook
+;;   { clocks :: [ClockNode]
+;;   , items :: [ItemNode]
+;;   , unknown :: [Node]
+;;   }
+;;
+;; data SuperContents = SuperContents
+;;   { planning :: (Maybe Planning)
+;;   , node-properties :: [Property]
+;;   , logbook :: LogBook
+;;   , blank :: Blank
+;;   , contents :: [Nodes]
+;;   }
+
+;; There is one *very important* assumption built into this data structure. If
+;; the planning, property-drawer, or logbook are present, there must not be any
+;; spaces between them the nor can there be a space between the headline and the
+;; first node. By extension this means :pre-blank (in the encapsulating
+;; headline) must be 0 if planning, property-drawer, or logbook are present. In
+;; this case, "blank" represents the first blank after any of these three
+;; components and the first node after (the start of the "contents"). If
+;; planning, property-drawer, or logbook are not present, "blank" is the same as
+;; :pre-blank. The advantage of this setup is that this annoying whitespace
+;; doesn't need to be transferred to different nodes as the headline section is
+;; edited.
+
+;; The "logbook" requires its own special attention, since it could be several
+;; different things depending on configuration. This is controlled by
 ;; `org-log-into-drawer', `org-clock-into-drawer', and `org-log-note-clock-out'.
 ;; These roughly control when the log items and/or clocks are in a named drawer
 ;; or "loose" by themselves.
@@ -4436,17 +4479,6 @@ first paragraph and returns modified secondary-string."
 ;; creates is that it is theoretically possible (but unlikely) that an item
 ;; immediately after a clock could be interpreted as a clock note even if it was
 ;; not intended as one.
-
-;; Since there are many possible configurations for the logbook and consequently
-;; many details involved in determining what is "logbook" and what is
-;; "contents," there are several specialized data structures used for this
-;; process. The logbook itself is represented by an alist consisting of the
-;; items, clocks, and unknown nodes from the logbook. This alist is part of a
-;; larger list called the "supercontents" which consists of two keys for the
-;; logbook and contents. The config for the logbook will be representing on the
-;; user side by a plist which corresponds to the possible configuration
-;; variables noted above; internally it will be 'encoded' to a more
-;; readily-parsable alist.
 
 ;; Any operation involving the logbook or contents will either require
 ;; separating the supercontents of the headline into the supercontents object,
@@ -4475,9 +4507,7 @@ first paragraph and returns modified secondary-string."
 ;; 5. append items and clocks (or drawers if applicable)
 ;; 6. append the logbook nodes from above with the contents from the contents
 
-;; logbook data structure
-
-;; alist to store the separated nodes from a logbook
+;; logbook struct
 
 (define-inline org-ml--logbook-init (items clocks unknown)
   "Create a new logbook alist.
@@ -4534,36 +4564,9 @@ new list of clocks."
   (--> (org-ml-logbook-get-clocks logbook)
        (org-ml-logbook-set-clocks (funcall fun it) logbook)))
 
-;; supercontents data structure
+;; supercontents struct
 
-;; In haskell types:
-;;
-;; type Blank = Natural
-;;
-;; data LogBook = LogBook
-;;   { clocks :: [ClockNode]
-;;   , items :: [ItemNode]
-;;   , unknown :: [Node]
-;;   }
-;;
-;; data Supercontents =
-;;   SuperContents
-;;   (Maybe Planning)
-;;   (Maybe NodeProperties)
-;;   (Maybe LogBook)
-;;   Blank
-;;   [Nodes]
-;;
-;; The trick here is that planning/node-props/logbook must be at the top of
-;; the headline without blanks. This means that it is impossible to have a
-;; pre-blank > 0 with any of these present. In this case, "Blank" stands for
-;; the blank b/t the last metadata piece (planning/props/logbook) and the
-;; contents. If metadata is not present, "Blank" is equal to the :pre-blank
-;; property.
-
-;; alist to store the separated logbook and contents from a headline section
-
-;; NOTE: this is a structure that the user may interact with, so some of these
+;; This is a structure that the user may interact with, so some of these
 ;; functions are public
 
 (define-inline org-ml--supercontents-init-from-lb
@@ -4572,7 +4575,7 @@ new list of clocks."
 
 PLANNING is a planning node or nil.
 
-NODE-PROPS is a list of node-property nodes.
+NODE-PROPS is a list of like (KEY VAL) for each node property.
 
 LOGBOOK is a logbook as given by `org-ml--logbook-init'.
 
@@ -4752,7 +4755,7 @@ logbook."
   (inline-quote
    (alist-get :is-log-item-fun ,scc)))
 
-;; logbook separation (nodes -> supercontents)
+;; logbook separation (nodes -> logbook + contents)
 
 (defun org-ml--node-has-trailing-space (node)
   "Return t if NODE has at least one newline after it."
@@ -5314,9 +5317,25 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
 
             (e (error "This shouldn't happen: %s" e))))))))
 
-;; public supercontents functions
+;; section -> supercontents
 
-(defun org-ml--planning-project (planning)
+;; Introduce another data abstraction here called the "supersection". This is
+;; much simpler than the supercontents, and consists only of the :pre-blank and
+;; section children of the encapsulating headline. The main purpose of this is
+;; to provide a means to update "the stuff under the headline" easily without
+;; triggering the headline itself to undefer most of its properties. The
+;; :pre-blank is part of the headline node even though it visually affects the
+;; stuff underneath it. This especially matters for functions like
+;; `org-ml-update-supersections' and `org-ml-update-supercontents' which can be
+;; massively sped up if they don't need to update the headline in the buffer.
+
+(define-inline org-ml--supersection-init (pre-blank section)
+  "Create a supersection plist from PRE-BLANK and SECTION.
+SECTION is a list of nodes under the section node in a headline."
+  (inline-quote (list :pre-blank ,pre-blank :section ,section)))
+
+(defun org-ml--planning-split (planning)
+  "Decompose PLANNING into lists."
   (list :closed (-some->> (org-element-property-raw :closed planning)
                   (org-ml--timestamp-get-start-timelist))
         :scheduled (-some->> (org-element-property-raw :scheduled planning)
@@ -5324,25 +5343,34 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
         :deadline (-some->> (org-element-property-raw :deadline planning)
                     (org-ml--timestamp-to-planning-list))))
 
-(defun org-ml--property-drawer-project (property-drawer)
+(defun org-ml--property-drawer-split (property-drawer)
+  "Decompose PROPERTY-DRAWER into a list of node-property nodes."
   (->> (org-element-contents property-drawer)
        (--map (list (org-element-property-raw :key it)
                     (org-element-property-raw :value it)))))
 
 (defun org-ml--from-first-second-rest
     (config planning prop-drawer blank-node children)
+  "Create a new supercontents node in various ways.
+
+CONFIG is a list corresponding to `org-ml--scc-encode'. PLANNING
+is a planning node. PROP-DRAWER is a property-drawer node.
+BLANK-NODE is a node that has a post-blank behind it. CHILDREN is
+everything after the planning and/or property-drawer."
   (-let* ((pb (org-element-post-blank blank-node))
           ((logbook blank contents) (if (< 0 pb)
                                         `(nil ,pb ,children)
                                       (org-ml--split-logbook config children))))
     (org-ml--supercontents-init-from-lb
-     (and planning (org-ml--planning-project planning))
-     (and prop-drawer (org-ml--property-drawer-project prop-drawer))
+     (and planning (org-ml--planning-split planning))
+     (and prop-drawer (org-ml--property-drawer-split prop-drawer))
      logbook
      blank
      contents)))
 
 (defun org-ml--supersection-to-supercontents (config supersection)
+  "Convert SUPERSECTION to supercontents.
+CONFIG is a list corresponding to `org-ml--scc-encode'."
   (-let (((&plist :pre-blank pb :section children) supersection))
     ;; If pre-blank is >0, by definition there is no planning,
     ;; property-drawer, or logbook
@@ -5362,13 +5390,58 @@ CONFIG is a config plist to be given to `org-ml--scc-encode'."
           (->> (org-ml--split-logbook config children)
                (apply #'org-ml--supercontents-init-from-lb nil nil))))))))
 
+(defun org-ml--supercontents-to-supersection (config supercontents)
+  "Convert SUPERCONTENTS to supersection.
+CONFIG is a list corresponding to `org-ml--scc-encode'."
+  (-let* (((&plist :planning p :node-props n :logbook lb :blank b :contents c)
+           supercontents)
+          (lb-nodes (org-ml--logbook-to-nodes config lb)))
+    (cond
+     (lb-nodes
+      (org-ml--supersection-init
+       0 `(,@(when p (list (apply #'org-ml-build-planning! p)))
+           ,@(when n (list (apply #'org-ml-build-property-drawer! n)))
+           ,@(org-ml--set-last-post-blank b lb-nodes)
+           ,@c)))
+     (n
+      (org-ml--supersection-init
+       0 `(,@(when p (list (apply #'org-ml-build-planning! p)))
+           ,(apply #'org-ml-build-property-drawer! :post-blank b n)
+           ,@c)))
+     (p
+      (org-ml--supersection-init
+       0 (cons (apply #'org-ml-build-planning! :post-blank b p) c)))
+     (t
+      (org-ml--supersection-init b c)))))
+
+;; public supercontents functions
+
 (defun org-ml-headline-get-supercontents (config headline)
   "Return the supercontents of HEADLINE node.
 
-Supercontents will be like ((:logbook LB) (:contents CONTENTS))
-where LB is another alist representing the logbook, and CONTENTS
-is everything under the headline after the logbook and before the
-first subheadline (if present).
+Supercontents will be a plist like:
+
+\(
+  :planning PLANNING
+  :node-props PROPS
+  :logbook LB
+  :blank BLANK
+  :contents CONTENTS
+)
+
+PLANNING is a plist like the analogous argument of
+`org-ml-build-planning!' or nil if non-existent.
+
+PROPS is a list of node-property nodes.
+
+LB is the logbook, which is another plist (see below).
+
+BLANK is the value of any whitespace after the planning,
+property-drawer, or logbook (assuming any exist) or the
+:pre-blank value of the encapsulating headline (if they don't
+exist).
+
+CONTENTS is a list of nodes after all the other stuff above.
 
 The logbook will be have keys :items, :clocks, and :unknown,
 where the first two will include the item and clock nodes of the
@@ -5396,28 +5469,6 @@ slots and which will be deemed :unknown (see above) so be sure
 this plist is set according to your desired target configuration."
   (->> (org-ml-headline-get-supersection headline)
        (org-ml--supersection-to-supercontents config)))
-
-(defun org-ml--supercontents-to-supersection (config supercontents)
-  (-let* (((&plist :planning p :node-props n :logbook lb :blank b :contents c)
-           supercontents)
-          (lb-nodes (org-ml--logbook-to-nodes config lb)))
-    (cond
-     (lb-nodes
-      (org-ml--supersection-init
-       0 `(,@(when p (list (apply #'org-ml-build-planning! p)))
-           ,@(when n (list (apply #'org-ml-build-property-drawer! n)))
-           ,@(org-ml--set-last-post-blank b lb-nodes)
-           ,@c)))
-     (n
-      (org-ml--supersection-init
-       0 `(,@(when p (list (apply #'org-ml-build-planning! p)))
-           ,(apply #'org-ml-build-property-drawer! :post-blank b n)
-           ,@c)))
-     (p
-      (org-ml--supersection-init
-       0 (cons (apply #'org-ml-build-planning! :post-blank b p) c)))
-     (t
-      (org-ml--supersection-init b c)))))
      
 (defun org-ml-headline-set-supercontents (config supercontents headline)
   "Set logbook and contents of HEADLINE according to SUPERCONTENTS.
@@ -5434,9 +5485,6 @@ returns a modified supercontents list. See
 the structure of the supercontents list."
   (--> (org-ml-headline-get-supercontents config headline)
        (org-ml-headline-set-supercontents config (funcall fun it) headline)))
-
-(define-inline org-ml--supersection-init (pre-blank section)
-  (inline-quote (list :pre-blank ,pre-blank :section ,section)))
 
 (defun org-ml-headline-get-supersection (headline)
   "Return supersection list for the section in HEADLINE."
@@ -5466,6 +5514,8 @@ the structure of the supercontents list."
 (defun org-ml-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
   (org-ml--check-type 'headline headline)
+  ;; TODO it seems silly that we need to "convert" the logbook when I'm not
+  ;; modifying it. Lazy eval?
   (->> (org-ml-headline-get-supercontents nil headline)
        (org-ml-supercontents-get-planning)))
 
@@ -5489,6 +5539,8 @@ modified planning node."
 (defun org-ml-headline-get-node-properties (headline)
   "Return a list of node-properties nodes in HEADLINE or nil if none."
   (org-ml--check-type 'headline headline)
+  ;; TODO it seems silly that we need to "convert" the logbook when I'm not
+  ;; modifying it. Lazy eval?
   (->> (org-ml-headline-get-supercontents nil headline)
        (org-ml-supercontents-get-node-properties)))
 
