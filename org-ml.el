@@ -2461,6 +2461,20 @@ be greater than zero, and DONE must be less than or equal to TOTAL."
                (or (not M) (integerp M)))
     (org-ml--arg-error "Invalid timelist %s" (list y m d H M))))
 
+(defun org-ml--check-warning (type value unit)
+  "Check that warning (TYPE VALUE UNIT) is value."
+  (unless (and (org-ml--is-valid-timestamp-warning-type type)
+               (integerp value)
+               (org-ml--is-valid-timestamp-unit unit))
+    (org-ml--arg-error "Invalid warning %s" (list type value unit))))
+
+(defun org-ml--check-repeater (type value unit)
+  "Check that repeater (TYPE VALUE UNIT) is value."
+  (unless (and (org-ml--is-valid-timestamp-repeater-type type)
+               (integerp value)
+               (org-ml--is-valid-timestamp-unit unit))
+    (org-ml--arg-error "Invalid repeater %s" (list type value unit))))
+
 (defun org-ml--build-planning-timestamp (active timelist)
   "Build a planning timestamp.
 
@@ -2490,10 +2504,11 @@ See `org-ml-build-planning!' for syntax of PLANNING-LIST."
               (lambda (it) (memq it '(&warning &repeater)))
               planning-list))
           (ts (org-ml--build-planning-timestamp t (car p))))
-    ;; TODO make sure warning and repeater are valid here
     (-when-let (w (alist-get '&warning p))
+      (apply #'org-ml--check-warning w)
       (org-ml--timestamp-set-warning w ts))
     (-when-let (r (alist-get '&repeater p))
+      (apply #'org-ml--check-repeater r)
       (org-ml--timestamp-set-repeater r ts))
     ts))
 
