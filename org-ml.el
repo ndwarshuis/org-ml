@@ -1162,19 +1162,13 @@ This will be based on CLOCK's value property."
           :duration nil
           :status 'running)
       (let* ((h (-> seconds (/ 3600) (floor)))
-             (m (-> seconds (- (* h 3600)) (/ 60) (floor)))
-             ;; if the clock is going from non-ranged to ranged, it may not be
-             ;; in collapsed form; ensure it is not in collapsed form
-             ;;
-             ;; TODO it may be cleaner to simply restrict the clocks to being in
-             ;; non-collapsed form (eg at using the :pred slot in the master
-             ;; property-alist table) however...I'm pretty sure collapsed clocks
-             ;; are still valid org-syntax, even if they don't appear by default
-             (ts* (org-ml--timestamp-set-collapsed nil ts)))
+             (m (-> seconds (- (* h 3600)) (/ 60) (floor))))
         (org-ml--set-properties-raw clock
           :duration (format "%2d:%02d" h m)
           :status 'closed
-          :value ts*)))))
+          ;; if the clock is going from non-ranged to ranged, it may not be in
+          ;; collapsed form; ensure it is not in collapsed form
+          :value (org-ml--timestamp-set-collapsed nil ts))))))
 
 (defun org-ml--update-headline-tags (headline)
   "Return HEADLINE node with its tags updated.
@@ -1642,7 +1636,6 @@ nested element to return."
          (nth (car indices))
          (org-ml--get-descendent (cdr indices)))))
 
-;; TODO this is pure right?
 (defun org-ml--set-children-nocheck (children node)
   "Return NODE with children set to CHILDREN."
    (let ((head (org-ml--get-head node)))
@@ -1687,7 +1680,7 @@ TYPE is a symbol and POST-BLANK is a positive integer."
     ;; don't set children in the function itself a) so I can check for valid
     ;; types and b) because `org-element-create' will add :parent
     (let ((node (org-element-create type `(:post-blank ,(or post-blank 0) ,@props))))
-      ;; TODO could use a faster function here
+      ;; Use this function here so we get child type checks
       (if children (org-ml-set-children children node) node))))
 
 (defmacro org-ml--build-blank-node (type post-blank)
@@ -1923,7 +1916,6 @@ If fractional cookie, return `fraction'; if percentage cookie return
 ;; type DateTime = (Y, M, D, H, M)
 ;; type TimeList = (Y, M, D, (Maybe H), (Maybe M))
 
-;; TODO also check values?
 (defun org-ml-is-time-p (time)
   "Return t if TIME is a list like (hour min)."
   (pcase time (`(,(pred integerp) ,(pred integerp)) t)))
@@ -2007,8 +1999,6 @@ N is an integer."
                  ((eq unit 'month) `(1 ,n))
                  ((eq unit 'week) `(2 ,(* 7 n)))
                  ((eq unit 'day) `(2 ,n))
-                 ;; TODO make a simpler check here by assuming that the timelist
-                 ;; is valid
                  ((and (eq unit 'hour) (org-ml-timelist-has-time timelist)) `(3 ,n))
                  ((and (eq unit 'minute) (org-ml-timelist-has-time timelist)) `(4 ,n))
                  (t (org-ml--arg-error "Invalid time unit: %S" unit)))))
@@ -2188,7 +2178,6 @@ have just been updated, and that the `:type' and `:range-type'
 are now out of sync with the range between start/end. If deciding
 between `timerange' or `daterange', prefer the original value of
 TIMESTAMP if possible."
-  ;; TODO this smells repetitive
   (let* ((t1 (org-ml--timestamp-get-start-timelist timestamp))
          (t2 (org-ml--timestamp-get-end-timelist timestamp))
          (rt (->> (org-element-property-raw :range-type timestamp)
@@ -2205,9 +2194,7 @@ TIMESTAMP if possible."
 (defun org-ml--timestamp-get-warning (timestamp)
   "Return the warning component of TIMESTAMP.
 Return a list like (TYPE VALUE UNIT) or nil."
-  (-let (((&plist :warning-type y
-                  :warning-value v
-                  :warning-unit u)
+  (-let (((&plist :warning-type y :warning-value v :warning-unit u)
           (org-ml--get-nonstandard-properties timestamp)))
     (when (and y v u) `(,y ,v, u))))
 
@@ -2222,10 +2209,7 @@ Return a list like (TYPE VALUE UNIT) or nil."
 (defun org-ml--timestamp-get-repeater (timestamp)
   "Return the repeater component of TIMESTAMP.
 Return a list like (TYPE VALUE UNIT) or nil."
-  ;; TODO not DRY
-  (-let (((&plist :repeater-type y
-                  :repeater-value v
-                  :repeater-unit u)
+  (-let (((&plist :repeater-type y :repeater-value v :repeater-unit u)
           (org-ml--get-nonstandard-properties timestamp)))
     (when (and y v u) `(,y ,v, u))))
 
@@ -2243,7 +2227,6 @@ Return a list like (TYPE VALUE UNIT) or nil."
 
 (defun org-ml--timestamp-set-deadline (deadline timestamp)
   "Return TIMESTAMP with repeater properties set to DEADLINE."
-  ;; TODO check type at the public level
   (if (not (org-ml--timestamp-get-repeater timestamp)) timestamp
     (-let (((value unit) deadline))
       (org-ml--set-properties-raw timestamp
@@ -3728,8 +3711,6 @@ Any other keys will trigger an error."
          (apply #'=)))))
 
 ;; timestamp (standard)
-
-;; TODO be more specific about date vs time vs datetime
 
 (defun org-ml-timestamp-get-start-time (timestamp)
   "Return the time list for start time of TIMESTAMP node.
@@ -5959,6 +5940,15 @@ and returns a new \"parent\" node."
            (let ((it-target (car ,T)))
              (append (org-ml--map-last* ,form ,h) (cdr ,T))))))))
 
+(defun org-ml--headline-move-post-blank (headline)
+  "Move :post-blank to :pre-blank if HEADLINE is totally empty."
+  (if (org-element-contents headline) headline
+    (let ((pre (org-element-property :pre-blank headline))
+          (post (org-element-post-blank headline)))
+      (org-ml--set-properties-raw (org-ml-copy headline)
+        :pre-blank (+ pre post)
+        :post-blank 0))))
+
 ;; headline
 
 (defun org-ml-headline-demote-subtree (index headline)
@@ -5967,20 +5957,9 @@ Unlike `org-ml-headline-demote-subheadline' this will also demote the
 demoted headline node's children."
   (org-ml-headline-map-subheadlines*
     (org-ml--tree-set-child* index
-      (let ((parent-headline (if (org-element-contents it) it
-                               ;; special case, if the parent headline has
-                               ;; nothing underneath it, set the post blank to
-                               ;; the pre blank so that any spacing will be
-                               ;; preserved when we set the target as its
-                               ;; subheadline
-                               (let ((pre (org-element-property :pre-blank it))
-                                     (post (org-element-post-blank  it)))
-                                 (org-ml--set-properties-raw (org-ml-copy it)
-                                   :pre-blank (+ pre post)
-                                   :post-blank 0)))))
-        (org-ml--map-children-nocheck*
-         (-snoc it (org-ml--headline-subtree-shift-level 1 it-target))
-         parent-headline))
+      (org-ml--map-children-nocheck*
+       (-snoc it (org-ml--headline-subtree-shift-level 1 it-target))
+       (org-ml--headline-move-post-blank it))
       it)
     headline))
 
@@ -5998,17 +5977,10 @@ demoted headline node's children."
              (tgt-headline* (->> (org-ml-copy it-target)
                                  (org-ml-headline-set-subheadlines nil)
                                  (org-ml--headline-shift-level 1)
-                                 (org-ml--set-post-blank tgt-pb)))
-             ;; TODO not DRY
-             (parent-headline (if (org-element-contents it) it
-                                (let ((pre (org-element-property :pre-blank it))
-                                      (post (org-element-post-blank  it)))
-                                  (org-ml--set-properties-raw (org-ml-copy it)
-                                    :pre-blank (+ pre post)
-                                    :post-blank 0)))))
+                                 (org-ml--set-post-blank tgt-pb))))
         (org-ml--map-children-nocheck*
          (append it (list tgt-headline*) headlines-in-target)
-         parent-headline))
+         (org-ml--headline-move-post-blank it)))
       it)
     headline))
 
@@ -6135,13 +6107,7 @@ CHILDREN nodes after PARENT at the same level as PARENT."
       (let* ((children (->> (org-element-contents it)
                             (--map (org-ml--headline-subtree-shift-level -1 it))))
              (parent (org-ml--set-children-nocheck nil it))
-             ;; TODO not DRY
-             (parent* (if children parent
-                        (let ((pre (org-element-property :pre-blank parent))
-                              (post (org-element-post-blank  parent)))
-                          (org-ml--set-properties-raw (org-ml-copy parent)
-                            :pre-blank (+ pre post)
-                            :post-blank 0)))))
+             (parent* (org-ml--headline-move-post-blank parent)))
         (list parent* children))
       it)
     headline))
