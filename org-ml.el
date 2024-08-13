@@ -1734,7 +1734,6 @@ cache under KEY. If KEY is in the cache, return whatever that is."
 
 (eval-and-compile
   (defvar org-ml--builder-cache
-    "Cache to be used for `org-ml-build-*' functions"
     (--map (cons it (make-hash-table :test #'equal)) org-ml-builder-types)
     "Alist of hash tables to store builder results."))
 
