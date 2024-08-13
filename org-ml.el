@@ -1703,6 +1703,17 @@ TYPE is a symbol and POST-BLANK is a positive integer."
 ;; define all base builders using this automated monstrosity
 
 (defmacro org-ml--with-cache (table switch valid type key body)
+  "Run BODY with a memoization cache.
+
+TABLE is a symbol with an alist indexed by TYPE. SWITCH is a
+symbol which will be dynamically read at runtime to determine if
+the cache should be used. VALID is a symbol bound to a list of
+valid types (at runtime) which should use the cache. KEY is the
+lookup key to be used in the cache (which is actually a hash
+table) and is assumed to correspond to the inputs to BODY.
+
+If KEY is not in the cache, run BODY and put the result in the
+cache under KEY. If KEY is in the cache, return whatever that is."
   (let* ((k (make-symbol "--key"))
          (n (make-symbol "--node"))
          (c (make-symbol "--cached"))
@@ -1723,6 +1734,7 @@ TYPE is a symbol and POST-BLANK is a positive integer."
 
 (eval-and-compile
   (defvar org-ml--builder-cache
+    "Cache to be used for `org-ml-build-*' functions"
     (--map (cons it (make-hash-table :test #'equal)) org-ml-builder-types)
     "Alist of hash tables to store builder results."))
 
@@ -1733,6 +1745,8 @@ TYPE is a symbol and POST-BLANK is a positive integer."
     (clrhash (cdr it))))
 
 (defmacro org-ml--with-builder-cache (type key body)
+  "Run BODY with builder cache.
+See org-ml--with-cache' for meaning of TYPE and KEY."
   (declare (indent 1))
   `(org-ml--with-cache
      org-ml--builder-cache
@@ -2457,6 +2471,7 @@ be greater than zero, and DONE must be less than or equal to TOTAL."
 ;; planning
 
 (defun org-ml--check-timelist (y m d H M)
+  "Check timelist, decomposed into Y M D H and M."
   (unless (and (integerp y)
                (integerp m)
                (integerp d)
@@ -2465,6 +2480,12 @@ be greater than zero, and DONE must be less than or equal to TOTAL."
     (org-ml--arg-error "Invalid timelist %s" (list y m d H M))))
 
 (defun org-ml--build-planning-timestamp (active timelist)
+  "Build a planning timestamp.
+
+ACTIVE is a boolean. TIMELIST is a list like (year month date
+[hour] [minute]).
+
+Note this is a more optimized version of `org-ml-build-timestamp!'"
   (-let (((y m d H M) timelist))
     (org-ml--check-timelist y m d H M)
     (org-ml--set-properties-raw (org-ml--build-blank-node timestamp 0)
@@ -2509,6 +2530,11 @@ for closed is trival."
 ;; clock
 
 (defun org-ml--build-clock-timestamp (start end)
+  "Build clock timestamp from START and END.
+
+Both arguments are lists like (year month date hour minute).
+
+This is a more optimized version of `org-ml-build-timestamp!'."
   (-let (((y0 m0 d0 H0 M0) start)
          ((y1 m1 d1 H1 M1) (or end start)))
     (org-ml--check-timelist y0 m0 d0 H0 M0)
@@ -2707,6 +2733,8 @@ Optionally set POST-BLANK (a positive integer)."
     (clrhash (cdr it))))
 
 (defmacro org-ml--with-shorthand-builder-cache (type key body)
+  "Run BODY with shorthand builder cache.
+See org-ml--with-cache' for meaning of TYPE and KEY."
   (declare (indent 1))
   `(org-ml--with-cache
      org-ml--shorthand-builder-cache
@@ -7642,6 +7670,7 @@ applied to the buffer."
 ;;                (and (not p2) plist-matches))))))))
 
 (defun org-ml--replace-region (begin end text)
+  "Replace text between BEGIN and END with TEXT."
   (delete-region begin end)
   (goto-char begin)
   (insert text))
