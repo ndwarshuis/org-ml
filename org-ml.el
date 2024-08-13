@@ -2023,6 +2023,18 @@ UNIT is `minute', or `hour'. N is an integer."
 ;; timestamp and inferring if it is ranged or not. It also is less ambiguous for
 ;; in cases where the timestamp may be collapsed.
 
+(defun org-ml--check-time (H M)
+  "Check time, decomposed into H and M."
+  (unless (and (integerp H) (integerp M))
+    (org-ml--arg-error "Invalid time %s" (list H M))))
+
+(defun org-ml--check-time-from-list (time)
+  "Check TIME."
+  (if (consp time)
+      (-let (((H M) time))
+        (org-ml--check-time H M))
+    (org-ml--arg-error "Time must not be nil")))
+
 (defun org-ml--check-timelist (y m d H M)
   "Check timelist, decomposed into Y M D H and M."
   (unless (and (integerp y)
@@ -2034,9 +2046,10 @@ UNIT is `minute', or `hour'. N is an integer."
 
 (defun org-ml--check-timelist-from-list (timelist)
   "Check TIMELIST."
-  (when (consp timelist)
-    (-let (((y m d H M) timelist))
-      (org-ml--check-timelist y m d H M))))
+  (if (consp timelist)
+      (-let (((y m d H M) timelist))
+        (org-ml--check-timelist y m d H M))
+    (org-ml--arg-error "Timelist must not be nil")))
 
 (defun org-ml--check-warning (type value unit)
   "Check that warning (TYPE VALUE UNIT) is valid."
@@ -2059,21 +2072,24 @@ UNIT is `minute', or `hour'. N is an integer."
 
 (defun org-ml--check-warning-from-list (warning)
   "Check that WARNING is valid."
-  (when (consp warning)
-    (-let (((y v u) warning))
-      (org-ml--check-warning y v u))))
+  (if (consp warning)
+      (-let (((y v u) warning))
+        (org-ml--check-warning y v u))
+    (org-ml--arg-error "Warning must not be nil")))
 
 (defun org-ml--check-repeater-from-list (repeater)
   "Check that REPEATER is valid."
-  (when (consp repeater)
-    (-let (((y v u) repeater))
-      (org-ml--check-repeater y v u))))
+  (if (consp repeater)
+      (-let (((y v u) repeater))
+        (org-ml--check-repeater y v u))
+    (org-ml--arg-error "Repeater must not be nil")))
 
 (defun org-ml--check-deadline-from-list (deadline)
   "Check that DEADLINE is valid."
-  (when (consp deadline)
-    (-let (((v u) deadline))
-      (org-ml--check-deadline v u))))
+  (if (consp deadline)
+      (-let (((v u) deadline))
+        (org-ml--check-deadline v u))
+    (org-ml--arg-error "Repeater must not be nil")))
 
 (defun org-ml--timestamp-get-start-timelist (timestamp)
   "Return the timelist of the start time in TIMESTAMP."
@@ -3813,6 +3829,7 @@ interpreted according to the localtime of the operating system."
 TIME is a list analogous to the same argument specified in
 `org-ml-build-timestamp!'."
   (org-ml--check-type 'timestamp timestamp)
+  (org-ml--check-timelist-from-list time)
   (org-ml--timestamp-set-start-timelist time (org-ml-copy timestamp)))
 
 (defun org-ml-timestamp-set-end-time (time timestamp)
@@ -3820,6 +3837,8 @@ TIME is a list analogous to the same argument specified in
 TIME is a list analogous to the same argument specified in
 `org-ml-build-timestamp!'."
   (org-ml--check-type 'timestamp timestamp)
+  (when time
+    (org-ml--check-timelist-from-list time))
   (org-ml--timestamp-set-end-timelist time (org-ml-copy timestamp)))
 
 (defun org-ml-timestamp-set-single-time (time timestamp)
@@ -3827,6 +3846,7 @@ TIME is a list analogous to the same argument specified in
 TIME is a list analogous to the same argument specified in
 `org-ml-build-timestamp!'."
   (org-ml--check-type 'timestamp timestamp)
+  (org-ml--check-timelist-from-list time)
   (org-ml--timestamp-set-single-timelist time (org-ml-copy timestamp)))
 
 (defun org-ml-timestamp-set-double-time (time1 time2 timestamp)
@@ -3834,6 +3854,8 @@ TIME is a list analogous to the same argument specified in
 TIME1 and TIME2 are lists analogous to the TIME argument specified in
 `org-ml-build-timestamp!'."
   (org-ml--check-type 'timestamp timestamp)
+  (org-ml--check-timelist-from-list time1)
+  (org-ml--check-timelist-from-list time2)
   (org-ml--timestamp-set-double-timelist time1 time2 (org-ml-copy timestamp)))
 
 (defun org-ml-timestamp-set-length (n unit timestamp)
@@ -3843,6 +3865,7 @@ time. If not, make a new end time. The units for RANGE are in minutes
 if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format."
   (org-ml--check-type 'timestamp timestamp)
+  ;; ASSUME unit will be checked internally
   (org-ml--timestamp-set-length n unit (org-ml-copy timestamp)))
 
 (defun org-ml-timestamp-set-active (flag timestamp)
@@ -3862,6 +3885,8 @@ N is a positive or negative integer and UNIT is one of `minute',
 `hour', `day', `month', or `year'. Overflows will wrap around
 transparently; for instance, supplying `minute' for UNIT and 90 for N
 will increase the hour property by 1 and the minute property by 30."
+  ;; ASSUME unit will be checked internally
+  ;;
   ;; if not ranged, simply need to shift start and end (which are the same);
   ;; otherwise need to shift both, set both, and update the timerange depending
   ;; on if we straddle a day boundary after the shift
@@ -3895,6 +3920,7 @@ N and UNIT behave the same as those in `org-ml-timestamp-shift'.
 If TIMESTAMP is not range, the output will be a ranged timestamp with
 the shifted start time and the end time as that of TIMESTAMP. If this
 behavior is not desired, use `org-ml-timestamp-shift'."
+  ;; ASSUME unit will be checked internally
   (org-ml--check-type 'timestamp timestamp)
   (let* ((t1 (->> (org-ml--timestamp-get-start-timelist timestamp)
                   (org-ml-timelist-shift n unit)))
@@ -3913,6 +3939,7 @@ N and UNIT behave the same as those in `org-ml-timestamp-shift'.
 If TIMESTAMP is not range, the output will be a ranged timestamp with
 the shifted end time and the start time as that of TIMESTAMP. If this
 behavior is not desired, use `org-ml-timestamp-shift'."
+  ;; ASSUME unit will be checked internally
   (org-ml--check-type 'timestamp timestamp)
   (let* ((t1 (org-ml--timestamp-get-start-timelist timestamp))
          (t2 (->> (org-ml--timestamp-get-end-timelist timestamp)
@@ -4018,6 +4045,8 @@ WARNING is a list like (TYPE VALUE UNIT). TYPE is `all' or
 `first' VALUE and is an integer. UNIT is one of `year', `month',
 `week', or `day'."
   (org-ml--check-type 'timestamp timestamp)
+  (when warning
+    (org-ml--check-warning-from-list warning))
   (->> (org-ml-copy timestamp)
        (org-ml--timestamp-set-warning warning)))
 
@@ -4047,6 +4076,8 @@ is one of `year', `month', `week', or `day'.
 Setting REPEATER to nil will remove the repeater and its deadline
 if present."
   (org-ml--check-type 'timestamp timestamp)
+  (when repeater
+    (org-ml--check-repeater-from-list repeater))
   (->> (org-ml-copy timestamp)
        (org-ml--timestamp-set-repeater repeater)))
 
@@ -4077,6 +4108,8 @@ is one of `year', `month', `week', or `day'.
 Setting DEADLINE to nil will remove the deadline. Will have no effect
 if repeater is not present."
   (org-ml--check-type 'timestamp timestamp)
+  (when deadline
+    (org-ml--check-deadline-from-list deadline))
   (->> (org-ml-copy timestamp)
        (org-ml--timestamp-set-deadline deadline)))
 
@@ -4116,6 +4149,8 @@ The node must have a type `eq' to `diary'. FORM is a quoted list."
 The node must have a type `eq' to `diary'. TIME is a list
 like (hour min). If TIME is nil remove the time."
   (org-ml--check-type 'timestamp timestamp-diary)
+  (when time
+    (org-ml--check-time-from-list time))
   (->> (org-ml-copy timestamp-diary)
        (org-ml--timestamp-set-start-time time)
        (org-ml--timestamp-set-end-time time)
@@ -4126,8 +4161,7 @@ like (hour min). If TIME is nil remove the time."
 The node must have a type `eq' to `diary'. TIME is a list
 like (hour min). TIME may not be nil"
   (org-ml--check-type 'timestamp timestamp-diary)
-  (unless time
-    (org-ml--arg-error "Time must not be nil"))
+  (org-ml--check-time-from-list time)
   (let* ((start (org-ml--timestamp-get-start-time timestamp-diary))
          (end (or (org-ml--timestamp-get-end-time timestamp-diary) start time)))
     (->> (org-ml-copy timestamp-diary)
@@ -4141,6 +4175,8 @@ The node must have a type `eq' to `diary'. TIME is a list
 like (hour min). If TIME is nil then remove the end time.
 If start time is not set, return node unchanged."
   (org-ml--check-type 'timestamp timestamp-diary)
+  (when time
+    (org-ml--check-time-from-list time))
   (let ((start (org-ml--timestamp-get-start-time timestamp-diary)))
     (if (not start) timestamp-diary
       (->> (org-ml-copy timestamp-diary)
@@ -4155,6 +4191,10 @@ then TIME2 must also be nil."
   (org-ml--check-type 'timestamp timestamp-diary)
   (when (and (not time1) time2)
     (org-ml--arg-error "Time1 cannot be nil if Time2 is non-nil"))
+  (when time1
+    (org-ml--check-time-from-list time1))
+  (when time2
+    (org-ml--check-time-from-list time2))
   (->> (org-ml-copy timestamp-diary)
        (org-ml--timestamp-set-start-time time1)
        (org-ml--timestamp-set-end-time (or time2 time1))
