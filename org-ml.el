@@ -8182,23 +8182,5 @@ format.
 This function is depreciated. Use `org-ml-timestamp-get-length'
 instead.")
 
-(defun org-ml-planning-set-timestamp! (prop planning-list planning)
-  "Return PLANNING node with PROP set to PLANNING-LIST.
-
-PROP is one of `:closed', `:deadline', or `:scheduled'. PLANNING-LIST
-is the same as that described in `org-ml-build-planning!'.
-
-This function is depreciated since it doesn't make sense to alter
-a planning node outside the context of a headline. Use
-`org-ml-headline-get-planning' and related instead, which
-provides a much simpler and robust way to set the planning node
-under a headline."
-  (org-ml--check-type 'planning planning)
-  (unless (memq prop '(:closed :deadline :scheduled))
-    (org-ml--arg-error "PROP must be ':closed', ':deadline', or ':scheduled'. Got %S" prop))
-  (let* ((active (not (eq prop :closed)))
-         (ts (org-ml--planning-list-to-timestamp active planning-list)))
-    (org-element-put-property-2 prop ts (org-ml-copy planning))))
-
 (provide 'org-ml)
 ;;; org-ml.el ends here
