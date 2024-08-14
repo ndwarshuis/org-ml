@@ -5,16 +5,6 @@ A functional API for org-mode inspired by
 [dash.el](https://github.com/magnars/dash.el) and
 [s.el](https://github.com/magnars/s.el) libraries.
 
-# Upcoming Breaking Changes
-
-- `org-ml-get/set/map-affiliated-keyword` and `org-ml-set-caption!` have been
-  merged with `org-ml-get/set/map-property` and will be removed in a later
-  revision
-- `org-ml-do-(some-)headlines`, `org-ml-do-(some-)subtrees`,
-  `org-ml-get-(some-)headlines`, and `org-ml-get-(some-)subtrees` are now
-  depreciated. Use `org-ml-parse-headlines`, `org-ml-parse-subtrees`,
-  `org-ml-update-headlines`, and `org-ml-update-subtres` instead.
-
 # Installation
 
 Install from MELPA:
@@ -37,13 +27,16 @@ Then require in your emacs config:
 
 ## Dependencies
 
-- emacs (27.2, 27.1, 28.1)
-- org-mode (9.5, 9.4, 9.3)
-- dash
-- s
+- emacs (28.2, 29.3)
+- org-mode (9.7.9)
+- dash (2.17.0)
+- s (1.13.0)
 
 Explicit versions noted above have been tested. Other versions may work but are
 not currently supported.
+
+Notably, *only* org 9.7.x and above will work (9.6 and below will absolutely
+break).
 
 # Motivation
 
