@@ -11,29 +11,11 @@ jobs:
           - '29.3'
     steps:
     - uses: actions/checkout@v2
-    # - uses: actions/setup-python@v2
-    #   with:
-    #     python-version: '3.10'
-    #     architecture: 'x64'
     - uses: purcell/setup-emacs@master
       with:
         version: ${{ matrix.emacs_version }}
-    # - uses: conao3/setup-cask@master
-    #   with:
-    #     version: '0.8.4'
-    # - uses: mamba-org/setup-micromamba@v1
-    #   with:
-    #     micromamba-version: '1.5.8-0'
-    #     environment-file: env-{{ matrix.emacs_version }}.yml
 
     - name: Run tests
-      if: matrix.allow_failure != true
       run: |
         make install
         make
-
-    # - name: Run tests (allow failure)
-    #   if: matrix.allow_failure == true
-    #   run: |
-    #     cask install
-    #     make || true
