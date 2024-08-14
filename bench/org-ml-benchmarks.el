@@ -39,11 +39,9 @@
       (org-2ft (org-entry-get (point) "SCHEDULED"))
       (setq next (outline-next-heading))))
   
-  (->> (org-ml-parse-headlines 'all)
-       (--map (->> (org-ml-headline-get-planning it)
-                   (org-ml-get-property :scheduled)
-                   (org-ml-timestamp-get-start-time)
-                   (org-ml-timelist-to-unixtime)))))
+  (--each (org-ml-parse-headlines 'all)
+    (->> (plist-get (org-ml-headline-get-planning it) :scheduled)
+         (org-ml-timelist-to-unixtime))))
 
 (org-ml-defbench "TODO -> DONE" 1000
   "* TODO headline"
@@ -55,8 +53,7 @@
       (org-todo 'done)
       (setq next (outline-next-heading))))
 
-  (let ((planning (->> (org-ml-unixtime-to-timelist t (float-time))
-                       (org-ml-build-planning! :closed))))
+  (let ((planning `(:closed ,(org-ml-unixtime-to-timelist t (float-time)))))
     (org-ml-wrap-impure
      (org-ml-update-headlines* 'all
        (->> (org-ml-set-property :todo-keyword "DONE" it)
@@ -84,7 +81,7 @@
       (setq next (outline-next-heading))))
 
   (org-ml-wrap-impure
-   (org-ml-do-subtrees*
+   (org-ml-update-subtrees* 'all
      (org-ml--headline-subtree-shift-level 1 it))))
 
 (org-ml-defbench "tag headline" 1000
@@ -98,18 +95,42 @@
    (org-ml-update-headlines* 'all
      (org-ml-set-property :tags '("A" "B" "C") it))))
 
+;; TODO a better test for this would be to put a logbook underneath the
+;; planning ts since in that case we need to also parse the logbook
 (org-ml-defbench "schedule headline" 1000
-  "* headline"
+  (list "* headline")
+        ;; ":LOGGING:"
+        ;; "- Note taken on [2024-08-07 Wed 20:07] \\"
+        ;; "thingy"
+        ;; ":END:")
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
       (org-schedule nil "2000-01-01")
       (setq next (outline-next-heading))))
 
-  (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
+  (let ((pl '(:scheduled (2000 1 1))))
     (org-ml-wrap-impure
-     (org-ml-update-headlines* 'all
-       (org-ml-headline-set-planning pl it)))))
+     (org-ml-update-supercontents* nil 'all
+       (org-ml-supercontents-set-planning pl it)))))
+
+(org-ml-defbench "schedule headline (memoized)" 1000
+  (list "* headline")
+        ;; ":LOGGING:"
+        ;; "- Note taken on [2024-08-07 Wed 20:07] \\"
+        ;; "thingy"
+        ;; ":END:")
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (org-schedule nil "2000-01-01")
+      (setq next (outline-next-heading))))
+
+  (let ((pl '(:scheduled (2000 1 1))))
+    (let ((org-ml-memoize-shorthand-builders t))
+      (org-ml-wrap-impure
+       (org-ml-update-supercontents* nil 'all
+         (org-ml-supercontents-set-planning pl it))))))
 
 (org-ml-defbench "reschedule headline" 1000
   (list "* headline"
@@ -126,9 +147,37 @@
       (setq next (outline-next-heading))))
 
   (org-ml-wrap-impure
-   (org-ml-update-headlines* 'all
-     (org-ml-headline-map-planning*
-       (org-ml-map-property* :scheduled (org-ml-timestamp-shift 1 'day it) it) it))))
+   (org-ml-update-supercontents* nil 'all
+     (org-ml-supercontents-set-planning
+      (list :scheduled
+            (org-ml-timelist-shift
+             1 'day
+             (plist-get (org-ml-supercontents-get-planning it) :scheduled)))
+      it))))
+
+(org-ml-defbench "reschedule headline (memoized)" 1000
+  (list "* headline"
+        "SCHEDULED: <2020-01-01 Wed>")
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (->> (org-get-scheduled-time (point))
+           (float-time)
+           ;; shift up one day
+           (+ (* 24 60 60))
+           (format-time-string "%Y-%m-%d")
+           (org-schedule nil))
+      (setq next (outline-next-heading))))
+
+  (org-ml-wrap-impure
+   (let ((org-ml-memoize-shorthand-builders t))
+     (org-ml-update-supercontents* nil 'all
+       (org-ml-supercontents-set-planning
+        (list :scheduled
+              (org-ml-timelist-shift
+               1 'day
+               (plist-get (org-ml-supercontents-get-planning it) :scheduled)))
+        it)))))
 
 (org-ml-defbench "set headline effort" 1000
   "* headline"
@@ -139,8 +188,54 @@
       (setq next (outline-next-heading))))
 
   (org-ml-wrap-impure
-   (org-ml-update-headlines* 'all
-     (org-ml-headline-set-node-property "Effort" "0:05" it))))
+   (org-ml-update-supercontents* nil 'all
+     (org-ml-supercontents-set-node-properties '(("Effort" "0:05")) it))))
+
+(org-ml-defbench "set headline effort (memoized)" 1000
+  "* headline"
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (org-set-property "Effort" "0:05")
+      (setq next (outline-next-heading))))
+
+  (org-ml-wrap-impure
+   (let ((org-ml-memoize-shorthand-builders t))
+     (org-ml-update-supercontents* nil 'all
+       (org-ml-supercontents-set-node-properties '(("Effort" "0:05")) it)))))
+
+(org-ml-defbench "insert headline text" 2500
+  "* headline"
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (save-excursion
+        (org-end-of-subtree)
+        (insert "\n~some text~"))
+      (setq next (outline-next-heading))))
+
+  (org-ml-wrap-impure
+   (org-ml-update-supercontents* nil 'all
+     (-> (org-ml-build-paragraph! "~some text~")
+         (list)
+         (org-ml-supercontents-set-contents it)))))
+
+(org-ml-defbench "insert headline text (memoized)" 2500
+  "* headline"
+  (let ((org-adapt-indentation nil)
+        (next t))
+    (while next
+      (save-excursion
+        (org-end-of-subtree)
+        (insert "\n~some text~"))
+      (setq next (outline-next-heading))))
+
+  (org-ml-wrap-impure
+   (let ((org-ml-memoize-shorthand-builders t))
+     (org-ml-update-supercontents* nil 'all
+       (-> (org-ml-build-paragraph! "~some text~")
+           (list)
+           (org-ml-supercontents-set-contents it))))))
 
 (org-ml-defbench "set checkboxes" 1000
   (list "* headline [0/0]"
@@ -157,21 +252,6 @@
       (org-ml->> (org-ml-match-map '(section plain-list item) #'org-ml-item-toggle-checkbox it)
         (org-ml-headline-update-item-statistics)))))
 
-(org-ml-defbench "insert headline text" 2500
-  "* headline"
-  (let ((org-adapt-indentation nil)
-        (next t))
-    (while next
-      (save-excursion
-        (org-end-of-subtree)
-        (insert "\nsome text"))
-      (setq next (outline-next-heading))))
-
-  (let ((para (org-ml-build-paragraph! "some text")))
-    (org-ml-update-headlines* 'all
-      (org-ml-wrap-impure
-       (org-ml-headline-set-section (list para) it)))))
-
 (org-ml-defbench "set headline effort/TODO/scheduled" 1000
   "* headline"
   (let ((org-log-done 'time)
@@ -184,11 +264,12 @@
       (org-todo 'todo)
       (setq next (outline-next-heading))))
 
-  (let ((pl (org-ml-build-planning! :scheduled '(2000 1 1))))
-    (org-ml-update-headlines* 'all
-      (org-ml->> (org-ml-set-property :todo-keyword "TODO" it)
-        (org-ml-headline-set-node-property "Effort" "0:05")
-        (org-ml-headline-set-planning pl)))))
+  (let ((pl '(:scheduled (2000 1 1))))
+    (let ((org-ml-memoize-shorthand-builders t))
+      (org-ml-update-headlines* 'all
+        (org-ml->> (org-ml-set-property :todo-keyword "TODO" it)
+          (org-ml-headline-set-node-property "Effort" "0:05")
+          (org-ml-headline-set-planning pl))))))
 
 (provide 'org-ml-benchmarks)
 ;;; org-ml-benchmarks.el ends here

@@ -1,5 +1,0 @@
-name: org-ml-28.1
-channels:
-  - conda-forge
-dependencies:
-  - emacs=28.1

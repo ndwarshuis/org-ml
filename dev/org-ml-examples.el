@@ -1001,9 +1001,9 @@
                                    :scheduled '(2018 1 1))
            (org-ml-to-trimmed-string))
       => "SCHEDULED: <2018-01-01 Mon> CLOSED: [2019-01-01 Tue]"
-      (->> (org-ml-build-planning! :closed '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
+      (->> (org-ml-build-planning! :scheduled '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
            (org-ml-to-trimmed-string))
-      => "CLOSED: [2019-01-01 Tue +1m -1d]")
+      => "SCHEDULED: <2019-01-01 Tue +1m -1d>")
 
     (defexamples org-ml-build-property-drawer!
       (->> (org-ml-build-property-drawer! '("key" "val"))
@@ -1599,7 +1599,9 @@
                ":KEY: VAL"
                ":END:")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-get-node-properties)
+        (org-ml-headline-get-section)
+        (-first-item)
+        (org-ml-get-children)
         (-first-item)
         (org-ml-set-property :key "kee")
         (org-ml-set-property :value "vahl")
@@ -1609,7 +1611,8 @@
       (:buffer "* dummy"
                "CLOSED: <2019-01-01 Tue>")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-get-planning)
+        (org-ml-headline-get-section)
+        (-first-item)
         (org-ml-set-property
          :closed (org-ml-build-timestamp! '(2019 1 2) :active nil))
         (org-ml-to-trimmed-string))
@@ -2007,12 +2010,16 @@
                ":KEY: VAL"
                ":END:")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-node-properties)
+           (org-ml-headline-get-section)
+           (-first-item)
+           (org-ml-get-children)
            (-first-item)
            (org-ml-get-property :key))
       => "KEY"
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-node-properties)
+           (org-ml-headline-get-section)
+           (-first-item)
+           (org-ml-get-children)
            (-first-item)
            (org-ml-get-property :value))
       => "VAL"
@@ -2020,7 +2027,8 @@
       (:buffer "* dummy"
                "CLOSED: [2019-01-01 Tue]")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-planning)
+           (org-ml-headline-get-section)
+           (-first-item)
            (org-ml-get-property :closed)
            (org-ml-to-string))
       => "[2019-01-01 Tue]"
@@ -2368,7 +2376,9 @@
                ":KEY: VAL"
                ":END:")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-get-node-properties)
+        (org-ml-headline-get-section)
+        (-first-item)
+        (org-ml-get-children)
         (-first-item)
         (org-ml-map-property :key (-partial #'s-prepend "OM_"))
         (org-ml-map-property :value (-partial #'s-prepend "OM_"))
@@ -3095,30 +3105,6 @@
         (org-ml-item-toggle-checkbox)
         (org-ml-to-trimmed-string))
       => "- one"))
-
-  (def-example-subgroup "Planning"
-    nil
-
-    (defexamples-content org-ml-planning-set-timestamp!
-      nil
-      (:buffer "* dummy"
-               "CLOSED: [2019-01-01 Tue]")
-      (:comment "Change an existing timestamp in planning")
-      (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-get-planning)
-        (org-ml-planning-set-timestamp!
-         :closed '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
-        (org-ml-to-trimmed-string))
-      => "CLOSED: [2019-01-02 Wed +2m -1d]"
-      (:comment "Add a new timestamp and remove another")
-      (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-get-planning)
-        (org-ml-planning-set-timestamp!
-         :deadline '(2112 1 1))
-        (org-ml-planning-set-timestamp!
-         :closed nil)
-        (org-ml-to-trimmed-string))
-      => "DEADLINE: <2112-01-01 Fri>"))
 
   (def-example-subgroup "Statistics Cookie"
     nil
@@ -3909,130 +3895,7 @@
       (org-ml-to-string))
     => "<%%(diary-float t 4 2) 12:00>"
     :end-hidden
-    )
-
-  )
-
-(def-example-subgroup "Affiliated Keywords"
-  nil
-
-  (defexamples-content org-ml-get-affiliated-keyword
-    nil
-    (:buffer "#+name: name"
-             "#+attr_foo: bar"
-             "#+attr_foo: BAR"
-             "#+plot: poo"
-             "#+results[hash]: res"
-             "#+header: h1"
-             "#+begin_src"
-             "echo test for echo"
-             "#+end_src")
-    (:comment "Simply return NAME and PLOT")
-    (->> (org-ml-parse-this-element)
-         (org-ml-get-affiliated-keyword :name))
-    => "name"
-    (->> (org-ml-parse-this-element)
-         (org-ml-get-affiliated-keyword :plot))
-    => "poo"
-    (:comment "Attribute FOO has multiple entries so return a list of all")
-    (->> (org-ml-parse-this-element)
-         (org-ml-get-affiliated-keyword :attr_foo))
-    => '("bar" "BAR")
-    (:comment "HEADER may have multiple values so return a singleton list")
-    (->> (org-ml-parse-this-element)
-         (org-ml-get-affiliated-keyword :header))
-    => '("h1")
-    (:comment "RESULTS returns a cons cell with the optional part")
-    (->> (org-ml-parse-this-element)
-         (org-ml-get-affiliated-keyword :results))
-    => '("res" . "hash")
-    )
-
-  (defexamples-content org-ml-set-affiliated-keyword
-    nil
-
-    (:buffer "short paragraph")
-    (org-ml->> (org-ml-parse-this-element)
-      (org-ml-set-affiliated-keyword :name "foo")
-      (org-ml-to-trimmed-string))
-    => (:result "#+name: foo"
-                "short paragraph")
-    (org-ml->> (org-ml-parse-this-element)
-      (org-ml-set-affiliated-keyword :attr_bar '("foo"))
-      (org-ml-to-trimmed-string))
-    => (:result "#+attr_bar: foo"
-                "short paragraph")
-    (org-ml->> (org-ml-parse-this-element)
-      (org-ml-set-affiliated-keyword :header '("h1" "h2"))
-      (org-ml-to-trimmed-string))
-    => (:result "#+header: h1"
-                "#+header: h2"
-                "short paragraph")
-    (org-ml->> (org-ml-parse-this-element)
-      (org-ml-set-affiliated-keyword :results '("foo" . "bar"))
-      (org-ml-to-trimmed-string))
-    => (:result "#+results[bar]: foo"
-                "short paragraph")
-
-    (:buffer "#+name: deleteme"
-             "short paragraph")
-    (org-ml->> (org-ml-parse-this-element)
-      (org-ml-set-affiliated-keyword :name nil)
-      (org-ml-to-trimmed-string))
-    => "short paragraph")
-
-  (defexamples-content org-ml-map-affiliated-keyword
-    nil
-
-    (:buffer "#+name: foo"
-             "short paragraph")
-    (org-ml->> (org-ml-parse-this-element)
-      (org-ml-map-affiliated-keyword :name #'upcase)
-      (org-ml-to-trimmed-string))
-    => (:result "#+name: FOO"
-                "short paragraph")
-
-    (:buffer "#+header: foo"
-             "short paragraph")
-    (org-ml->> (org-ml-parse-this-element)
-      (org-ml-map-affiliated-keyword* :header (cons "bar" it))
-      (org-ml-to-trimmed-string))
-    => (:result "#+header: bar"
-                "#+header: foo"
-                "short paragraph"))
-
-  (defexamples-content org-ml-set-caption!
-    nil
-
-    (:buffer "short paragraph")
-    (org-ml->> (org-ml-parse-this-element)
-      (org-ml-set-caption! "cap")
-      (org-ml-to-trimmed-string))
-    => (:result "#+caption: cap"
-                "short paragraph")
-    (org-ml->> (org-ml-parse-this-element)
-      (org-ml-set-caption! '("foo" "cap"))
-      (org-ml-to-trimmed-string))
-    => (:result "#+caption[foo]: cap"
-                "short paragraph")
-    (org-ml->> (org-ml-parse-this-element)
-      (org-ml-set-caption! '("foo" "cap"))
-      (org-ml-to-trimmed-string))
-    => (:result "#+caption[foo]: cap"
-                "short paragraph")
-    (org-ml->> (org-ml-parse-this-element)
-      (org-ml-set-caption! '(("foo" "cap") ("FOO" "CAP")))
-      (org-ml-to-trimmed-string))
-    => (:result "#+caption[foo]: cap"
-                "#+caption[FOO]: CAP"
-                "short paragraph")
-
-    (:buffer "#+caption: cap"
-             "short paragraph")
-    (org-ml->> (org-ml-parse-this-element)
-      (org-ml-set-caption! nil)
-      (org-ml-to-trimmed-string))
-    => "short paragraph"))
+    ))
 
 (def-example-group "Branch/Child Manipulation"
   "Set, get, and map the children of branch nodes."
@@ -4141,7 +4004,9 @@
                ":TWO: two"
                ":END:")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-node-properties)
+           (org-ml-headline-get-section)
+           (-first-item)
+           (org-ml-get-children)
            (-map #'org-ml-get-type))
       => '(node-property node-property)
 
@@ -4456,27 +4321,25 @@
       (:buffer "* headline"
                "CLOSED: [2019-01-01 Tue]")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-planning)
-           (org-ml-to-trimmed-string))
-      => "CLOSED: [2019-01-01 Tue]"
+           (org-ml-headline-get-planning))
+      => '(:closed (2019 1 1 nil nil) :scheduled nil :deadline nil)
       (:buffer "* headline")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-planning)
-           (org-ml-to-trimmed-string))
-      => "")
+           (org-ml-headline-get-planning))
+      => nil)
 
     (defexamples-content org-ml-headline-set-planning
       nil
       (:buffer "* headline")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-planning (org-ml-build-planning! :closed '(2019 1 1)))
+        (org-ml-headline-set-planning '(:closed (2019 1 1)))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "CLOSED: [2019-01-01 Tue]")
       (:buffer "* headline"
                "CLOSED: [2019-01-01 Tue]")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
+        (org-ml-headline-set-planning '(:scheduled (2019 1 1)))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "SCHEDULED: <2019-01-01 Tue>")
@@ -4491,7 +4354,7 @@
                ""
                "rest")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
+        (org-ml-headline-set-planning '(:scheduled (2019 1 1)))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "SCHEDULED: <2019-01-01 Tue>"
@@ -4516,8 +4379,7 @@
                "CLOSED: [2019-01-01 Tue]")
       (org-ml->> (org-ml-parse-this-headline)
         (org-ml-headline-map-planning*
-          (org-ml-map-property* :closed
-            (org-ml-timestamp-shift 1 'day it) it))
+          (list :closed (org-ml-timelist-shift 1 'day (plist-get it :closed))))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "CLOSED: [2019-01-02 Wed]"))
@@ -4530,9 +4392,8 @@
                ":ID:       minesfake"
                ":END:")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-node-properties)
-           (-map #'org-ml-to-trimmed-string))
-      => '(":Effort:   1:00" ":ID:       minesfake")
+           (org-ml-headline-get-node-properties))
+      => '(("Effort" "1:00") ("ID" "minesfake"))
       (:buffer "* headline")
       (->> (org-ml-parse-this-headline)
            (org-ml-headline-get-node-properties)
@@ -4540,15 +4401,14 @@
       => nil
       :begin-hidden
       (:buffer "* headline"
-               "CLOSED: <2019-01-01 Tue>"
+               "CLOSED: [2019-01-01 Tue]"
                ":PROPERTIES:"
                ":Effort:   1:00"
                ":ID:       minesfake"
                ":END:")
       (->> (org-ml-parse-this-headline)
-           (org-ml-headline-get-node-properties)
-           (-map #'org-ml-to-trimmed-string))
-      => '(":Effort:   1:00" ":ID:       minesfake")
+           (org-ml-headline-get-node-properties))
+      => '(("Effort" "1:00") ("ID" "minesfake"))
       :end-hidden)
 
     (defexamples-content org-ml-headline-set-node-properties
@@ -4559,9 +4419,7 @@
                ":ID:       minesfake"
                ":END:")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-node-properties
-         (--map (apply #'org-ml-build-node-property it)
-                '(("Effort" "0:01") ("ID" "easy"))))
+        (org-ml-headline-set-node-properties '(("Effort" "0:01") ("ID" "easy")))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":PROPERTIES:"
@@ -4574,18 +4432,16 @@
       => "* headline"
       :begin-hidden
       (:buffer "* headline"
-               "CLOSED: <2019-01-01 Tue>"
+               "CLOSED: [2019-01-01 Tue]"
                ":PROPERTIES:"
                ":Effort:   1:00"
                ":ID:       minesfake"
                ":END:")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-node-properties
-         (--map (apply #'org-ml-build-node-property it)
-                '(("Effort" "0:01") ("ID" "easy"))))
+        (org-ml-headline-set-node-properties '(("Effort" "0:01") ("ID" "easy")))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
-                  "CLOSED: <2019-01-01 Tue>"
+                  "CLOSED: [2019-01-01 Tue]"
                   ":PROPERTIES:"
                   ":Effort:   0:01"
                   ":ID:       easy"
@@ -4594,12 +4450,12 @@
         (org-ml-headline-set-node-properties nil)
         (org-ml-to-trimmed-string))
       => (:result "* headline"
-                  "CLOSED: <2019-01-01 Tue>")
+                  "CLOSED: [2019-01-01 Tue]")
       (:buffer "* headline"
                ""
                "section")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
+        (org-ml-headline-set-node-properties '(("New" "world man")))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":PROPERTIES:"
@@ -4608,21 +4464,21 @@
                   ""
                   "section")
       (:buffer "* headline"
-               "CLOSED: <2019-01-01 Tue>"
+               "CLOSED: [2019-01-01 Tue]"
                ""
                "section")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-set-node-properties (list (org-ml-build-node-property "New" "world man")))
+        (org-ml-headline-set-node-properties '(("New" "world man")))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
-                  "CLOSED: <2019-01-01 Tue>"
+                  "CLOSED: [2019-01-01 Tue]"
                   ":PROPERTIES:"
                   ":New:      world man"
                   ":END:"
                   ""
                   "section")
       (:buffer "* headline"
-               "CLOSED: <2019-01-01 Tue>"
+               "CLOSED: [2019-01-01 Tue]"
                ":PROPERTIES:"
                ":Effort:   0:01"
                ":ID:       easy"
@@ -4633,7 +4489,7 @@
         (org-ml-headline-set-node-properties nil)
         (org-ml-to-trimmed-string))
       => (:result "* headline"
-                  "CLOSED: <2019-01-01 Tue>"
+                  "CLOSED: [2019-01-01 Tue]"
                   ""
                   "section"))
 
@@ -4646,7 +4502,7 @@
                ":END:")
       (org-ml->> (org-ml-parse-this-headline)
         (org-ml-headline-map-node-properties*
-          (cons (org-ml-build-node-property "New" "world man") it))
+          (cons (list "New" "world man") it))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":PROPERTIES:"
@@ -4804,13 +4660,9 @@
                           :clock-into-drawer "CLOCKING")))
         (org-ml->> (org-ml-parse-this-headline)
           (org-ml-headline-set-supercontents
-           config `((:logbook nil) (:contents ,(org-ml-build-paragraph! "new contents"))))
+           config `(:blank 0 :contents ,(list (org-ml-build-paragraph! "new contents"))))
           (org-ml-to-trimmed-string)))
       => (:result "* headline"
-                  "CLOSED: [2019-01-01 Tue 00:00]"
-                  ":PROPERTIES:"
-                  ":Effort:   0:30"
-                  ":END:"
                   "new contents"))
 
     (defexamples-content org-ml-headline-map-supercontents
@@ -5264,7 +5116,29 @@
                   ":END:"
                   ":CLOCKING:"
                   "CLOCK: [2112-01-01 Fri]"
-                  ":END:"))
+                  ":END:")
+
+      ;; :begin-hidden
+      ;; (:buffer "* headline"
+      ;;          ""
+      ;;          "something")
+      ;; (let ((ut (- 1546300800 (car (current-time-zone)))))
+      ;;   (org-ml->> (org-ml-parse-this-headline)
+      ;;     (org-ml-headline-logbook-append-item
+      ;;      (list :log-into-drawer t
+      ;;            :clock-into-drawer t
+      ;;            :clock-out-notes t)
+      ;;      (org-ml-build-log-note ut "new note"))
+      ;;     (org-ml-to-trimmed-string)))
+      ;; => (:result "* headline"
+      ;;             ":LOGBOOK:"
+      ;;             "- Note taken on [2019-01-01 Tue 00:00] \\\\"
+      ;;             "  new note"
+      ;;             ":END:"
+      ;;             ""
+      ;;             "something")
+      ;; :end-hidden
+      )
 
     (defexamples-content org-ml-headline-logbook-append-open-clock
       nil
@@ -5376,7 +5250,10 @@
                ":END:")
       (org-ml->> (org-ml-parse-this-headline)
         (org-ml-headline-logbook-close-open-clock
-         '(:log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING" :clock-out-notes t) (- 1546300800 (car (current-time-zone))) nil)
+         (list :log-into-drawer "LOGGING"
+               :clock-into-drawer "CLOCKING"
+               :clock-out-notes t)
+         (- 1546300800 (car (current-time-zone))) nil)
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGGING:"
@@ -5392,8 +5269,9 @@
                "CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00"
                "- note taken on [2018-12-30 Sun 00:00]")
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-logbook-convert-config nil
-                                                (list :log-into-drawer t :clock-into-drawer t))
+        (org-ml-headline-logbook-convert-config
+         nil
+         (list :log-into-drawer t :clock-into-drawer t))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGBOOK:"
@@ -5402,8 +5280,9 @@
                   ":END:")
 
       (org-ml->> (org-ml-parse-this-headline)
-        (org-ml-headline-logbook-convert-config nil
-                                                (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING"))
+        (org-ml-headline-logbook-convert-config
+         nil
+         (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING"))
         (org-ml-to-trimmed-string))
       => (:result "* headline"
                   ":LOGGING:"
@@ -5554,27 +5433,49 @@
 
       :begin-hidden
 
-      ;; make sure this works with whitespace
+      (:buffer "* one"
+               ""
+               "** two"
+               ""
+               "** three"
+               ""
+               "*** four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-headline-demote-subheadline 1)
+           (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  ""
+                  "** two"
+                  ""
+                  "*** three"
+                  ""
+                  "*** four")
 
-      ;;  TODO these fail
-      ;; (:buffer "* one"
-      ;;          ""
-      ;;          "** two"
-      ;;          ""
-      ;;          "** three"
-      ;;          ""
-      ;;          "*** four")
-      ;; (->> (org-ml-parse-element-at 1)
-      ;;      (org-ml-headline-demote-subheadline 1)
-      ;;      (org-ml-to-trimmed-string))
-      ;; => (:result "* one"
-      ;;             ""
-      ;;             "** two"
-      ;;             ""
-      ;;             "*** three"
-      ;;             ""
-      ;;             "*** four")
+      (:buffer "* one"
+               ""
+               "** two"
+               ""
+               "*** two-ish"
+               ""
+               "** three"
+               ""
+               "*** four")
+      (->> (org-ml-parse-element-at 1)
+           (org-ml-headline-demote-subheadline 1)
+           (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  ""
+                  "** two"
+                  ""
+                  "*** two-ish"
+                  ""
+                  "*** three"
+                  ""
+                  "*** four")
 
+      ;; TODO this is a bug in the interpreter that squishes whichspace from
+      ;; internal nodes underneath headlines and section
+      ;;
       ;; (:buffer "* one"
       ;;          "something"
       ;;          ""
@@ -5613,7 +5514,26 @@
       => (:result "* one"
                   "** two"
                   "*** three"
-                  "**** four"))
+                  "**** four")
+      :begin-hidden
+      (:buffer "* one"
+               ""
+               "** two"
+               ""
+               "** three"
+               ""
+               "*** four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-headline-demote-subtree 1)
+        (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  ""
+                  "** two"
+                  ""
+                  "*** three"
+                  ""
+                  "**** four")
+      :end-hidden)
 
     (defexamples-content org-ml-headline-promote-subheadline
       nil
@@ -5631,7 +5551,52 @@
                   "** three"
                   "*** four"
                   "** four"
-                  "*** four"))
+                  "*** four")
+      :begin-hidden
+      (:buffer "* one"
+               "** two"
+               "** three"
+               "*** four"
+               "*** four"
+               "**** five"
+               "*** four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-headline-promote-subheadline 1 1)
+        (org-ml-to-trimmed-string))
+      => (:result "* one"
+                  "** two"
+                  "** three"
+                  "*** four"
+                  "** four"
+                  "*** five"
+                  "*** four")
+      ;; TODO this is a whitespace bug in 9.7
+      ;; (:buffer "* one"
+      ;;          ""
+      ;;          "** two"
+      ;;          ""
+      ;;          "** three"
+      ;;          ""
+      ;;          "*** four"
+      ;;          ""
+      ;;          "*** four"
+      ;;          ""
+      ;;          "*** four")
+      ;; (org-ml->> (org-ml-parse-element-at 1)
+      ;;   (org-ml-headline-promote-subheadline 1 1)
+      ;;   (org-ml-to-trimmed-string))
+      ;; => (:result "* one"
+      ;;             ""
+      ;;             "** two"
+      ;;             ""
+      ;;             "** three"
+      ;;             ""
+      ;;             "*** four"
+      ;;             ""
+      ;;             "** four"
+      ;;             ""
+      ;;             "*** four")
+      :end-hidden)
 
     (defexamples-content org-ml-headline-promote-all-subheadlines
       nil
@@ -5695,11 +5660,52 @@
       => (:result "- one"
                   "- two"
                   "  - three"
-                  "  - four"))
+                  "  - four")
+      :begin-hidden
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "- four"
+               ""
+               "  - five")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-indent-item 2)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "  - four"
+                  ""
+                  "  - five")
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "- four"
+               ""
+               "  - five")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-indent-item 2)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "  - three"
+                  ""
+                  "  - four"
+                  ""
+                  "  - five")
+      :end-hidden)
 
     (defexamples-content org-ml-plain-list-indent-item-tree
       nil
       (:buffer "- one"
+               "  - one-ish"
                "- two"
                "  - three"
                "- four")
@@ -5707,9 +5713,50 @@
         (org-ml-plain-list-indent-item-tree 1)
         (org-ml-to-trimmed-string))
       => (:result "- one"
+                  "  - one-ish"
                   "  - two"
                   "    - three"
-                  "- four"))
+                  "- four")
+      :begin-hidden
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-indent-item-tree 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "  - two"
+                  ""
+                  "    - three"
+                  ""
+                  "- four")
+      (:buffer "- one"
+               ""
+               "  - one-ish"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-indent-item-tree 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "  - one-ish"
+                  ""
+                  "  - two"
+                  ""
+                  "    - three"
+                  ""
+                  "- four")
+      :end-hidden)
 
     (defexamples-content org-ml-plain-list-outdent-item
       nil
@@ -5745,7 +5792,63 @@
                   "  - three"
                   "  - three"
                   "  - three"
-                  "- four"))
+                  "- four")
+
+      :begin-hidden
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-item 1 0)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "- three"
+                  ""
+                  "  - three"
+                  ""
+                  "  - three"
+                  ""
+                  "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-item 1 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "  - three"
+                  ""
+                  "- three"
+                  ""
+                  "  - three"
+                  ""
+                  "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-item 2 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "  - three"
+                  ""
+                  "  - three"
+                  ""
+                  "  - three"
+                  ""
+                  "- four")
+      :end-hidden)
     
     (defexamples-content org-ml-plain-list-outdent-all-items
       nil
@@ -5772,7 +5875,131 @@
                   "  - three"
                   "  - three"
                   "  - three"
-                  "- four")))
+                  "- four")
+
+      (:buffer "- one"
+               "- two"
+               "  - three"
+               "  - three"
+               "  - three"
+               "    - three-ish"
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-all-items 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  "- two"
+                  "- three"
+                  "- three"
+                  "- three"
+                  "  - three-ish"
+                  "- four")
+
+      :begin-hidden
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-all-items 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "- three"
+                  ""
+                  "- three"
+                  ""
+                  "- three"
+                  ""
+                  "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-all-items 2)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "  - three"
+                  ""
+                  "  - three"
+                  ""
+                  "  - three"
+                  ""
+                  "- four")
+
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "    - three-ish"
+               ""
+               "    rest"
+               ""
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-all-items 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "- three"
+                  ""
+                  "- three"
+                  ""
+                  "- three"
+                  ""
+                  "  - three-ish"
+                  ""
+                  "  rest"
+                  ""
+                  "- four")
+
+      (:buffer "- one"
+               ""
+               "- two"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "  - three"
+               ""
+               "  rest"
+               ""
+               "- four")
+      (org-ml->> (org-ml-parse-element-at 1)
+        (org-ml-plain-list-outdent-all-items 1)
+        (org-ml-to-trimmed-string))
+      => (:result "- one"
+                  ""
+                  "- two"
+                  ""
+                  "- three"
+                  ""
+                  "- three"
+                  ""
+                  "- three"
+                  ""
+                  "rest"
+                  ""
+                  "- four")
+      :end-hidden))
 
   (def-example-subgroup "Table"
     nil
@@ -6700,52 +6927,95 @@
                "* three [/]"
                "** DONE _one")
       (org-ml-update-subtrees* 0
-        (org-ml-headline-update-todo-statistics))
-      $> (:buffer "* one [1/1]"
+        (org-ml-headline-update-todo-statistics it))
+      $> (:result "* one [1/1]"
                   "** DONE _one"
                   "* two [/]"
                   "** DONE _one"
                   "* three [/]"
                   "** DONE _one")
       (org-ml-update-subtrees* '(0 1)
-        (org-ml-headline-update-todo-statistics))
-      $> (:buffer "* one [1/1]"
+        (org-ml-headline-update-todo-statistics it))
+      $> (:result "* one [1/1]"
                   "** DONE _one"
                   "* two [1/1]"
                   "** DONE _one"
                   "* three [/]"
                   "** DONE _one")
       (org-ml-update-subtrees* [2 nil]
-        (org-ml-headline-update-todo-statistics))
-      $> (:buffer "* one [/]"
+        (org-ml-headline-update-todo-statistics it))
+      $> (:result "* one [/]"
                   "** DONE _one"
                   "* two [1/1]"
                   "** DONE _one"
                   "* three [1/1]"
                   "** DONE _one")
       (org-ml-update-subtrees* [nil 5]
-        (org-ml-headline-update-todo-statistics))
-      $> (:buffer "* one [1/1]"
+        (org-ml-headline-update-todo-statistics it))
+      $> (:result "* one [1/1]"
                   "** DONE _one"
                   "* two [/]"
                   "** DONE _one"
                   "* three [/]"
                   "** DONE _one")
-
       (:buffer "* one [/]"
                "** DONE _one"
                "** DONE _two"
                "* two [/]"
                "** DONE _one"
-               "** DONE _two")
-      (org-ml-do-subtrees* 'all
-                           (org-ml-headline-update-todo-statistics))
-      $> (:buffer "* one [2/2]"
-                  "** DONE _one"
-                  "** DONE _two"
-                  "* two [2/2]"
-                  "** DONE _one"
-                  "** DONE _two")))
+               "** DONE _two"))
+
+    (defexamples-content org-ml-update-supercontents
+      nil
+      (:buffer "* one")
+      (let ((pl '(:scheduled (2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-supercontents* nil 'all
+           (org-ml-supercontents-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>")
+      (:buffer "* one"
+               ""
+               "something")
+      (let ((pl '(:scheduled (2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-supercontents* nil 'all
+           (org-ml-supercontents-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  ""
+                  "something")
+      (:buffer "* one"
+               "** two")
+      (let ((pl '(:scheduled (2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-supercontents* nil 'all
+           (org-ml-supercontents-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  "** two"
+                  "SCHEDULED: <2000-01-01 Sat>")
+      (:buffer "* one"
+               "** two"
+               "stuff")
+      (let ((pl '(:scheduled (2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-supercontents* nil 'all
+           (org-ml-supercontents-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  "** two"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  "stuff")
+      (:buffer "* one"
+               "stuff")
+      (let ((pl '(:scheduled (2000 1 1))))
+        (org-ml-wrap-impure
+         (org-ml-update-supercontents* nil 'all
+           (org-ml-supercontents-set-planning pl it))))
+      $> (:result "* one"
+                  "SCHEDULED: <2000-01-01 Sat>"
+                  "stuff")))
 
   (def-example-subgroup "Misc"
     nil
