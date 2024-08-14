@@ -121,7 +121,7 @@ This package takes several deviations from the original terminology found in
 ## Properties
 
 All properties specified by `org-element.el` are readable by this API (eg one
-can query them with functions like `om-get-property`).
+can query them with functions like `org-ml-get-property`).
 
 The properties `:begin`, `:end`, `:contents-begin`, `:contents-end`, `:parent`,
 and `post-affiliated` are not settable by this API as they are not necessary for
@@ -148,8 +148,8 @@ Higher-order functions (functions that take other functions as arguments) have
 two forms. The first takes a (usually unary) function and applies it:
 
 ``` emacs-lisp
-(om-map-property :value (lambda (s) (concat "foo" s)) node)
-(om-map-property :value (-partial concat "foo") node)
+(org-ml-map-property :value (lambda (s) (concat "foo" s)) node)
+(org-ml-map-property :value (-partial concat "foo") node)
 ```
 
 This can equivalently be written using an anaphoric form where the original
@@ -157,18 +157,18 @@ function name is appended with `*`. The symbol `it` carries the value of the
 unary argument (unless otherwise specified):
 
 ``` emacs-lisp
-(om-map-property* :value (concat "foo" it) node)
+(org-ml-map-property* :value (concat "foo" it) node)
 ```
 
 ## Side effect functions
 
 All functions that read and write from buffers are named like
-`om-OPERATION-THING-at` where `OPERATION` is some operation to be performed on
+`org-ml-OPERATION-THING-at` where `OPERATION` is some operation to be performed on
 `THING` in the current buffer. All these functions take `point` as one of their
 arguments to denote where in the buffer to perform `OPERATION`.
 
 All of these functions have current-point convenience analogues that are named
-as `om-OPERATION-this-THING` where `OPERATION` and `THING` carry the same
+as `org-ml-OPERATION-this-THING` where `OPERATION` and `THING` carry the same
 meaning, but `OPERATION` is done at the current point and `point` is not an
 argument to the function.
 
