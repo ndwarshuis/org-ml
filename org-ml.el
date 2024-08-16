@@ -8257,21 +8257,38 @@ a negative integer.
 This function is depreciated. Use `org-ml-timestamp-get-length'
 instead.")
 
-(defalias 'org-ml-timestamp-set-range #'org-ml-timestamp-set-length
-  "Return TIMESTAMP node with range set to N UNITs.
+(defun org-ml-timestamp-set-range (n timestamp)
+  "Return TIMESTAMP node with range set to N seconds.
+
 If TIMESTAMP is ranged, keep start time the same and adjust the end
 time. If not, make a new end time. The units for RANGE are in minutes
 if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format.
 
-This function is depreciated. Use `org-ml-timestamp-get-length'
-instead.")
+This function is depreciated. Use `org-ml-timestamp-set-length'
+instead."
+  (if (->> (org-ml-timestamp-get-start-time timestamp)
+           (org-ml-timelist-has-time))
+      (org-ml-timestamp-set-length (* 60 n) 'minute timestamp)
+    (org-ml-timestamp-set-length (* 86400 n) 'day timestamp)))
 
 (defalias `org-ml-time-is-long #'org-ml-timelist-has-time
   "This function is depreciated.")
 
 (defalias `org-ml-time-to-unixtime #'org-ml-timelist-to-unixtime
   "This function is depreciated.")
+
+(defun org-ml-unixtime-to-time-short (unixtime)
+  "Convert UNIXTIME to list like (YEAR MONTH DAY).
+
+This function is depreciated."
+  (-take 3 (org-ml-unixtime-to-timelist nil unixtime)))
+
+(defun org-ml-unixtime-to-time-long (unixtime)
+  "Convert UNIXTIME to list like (YEAR MONTH DAY HOUR MINUTE).
+
+This function is depreciated."
+  (org-ml-unixtime-to-timelist nil unixtime))
 
 (provide 'org-ml)
 ;;; org-ml.el ends here

@@ -216,7 +216,7 @@ Set, get, and map properties of nodes.
 * [org-ml-timestamp-set-end-time](#org-ml-timestamp-set-end-time-time-timestamp) `(time timestamp)`
 * [org-ml-timestamp-set-single-time](#org-ml-timestamp-set-single-time-time-timestamp) `(time timestamp)`
 * [org-ml-timestamp-set-double-time](#org-ml-timestamp-set-double-time-time1-time2-timestamp) `(time1 time2 timestamp)`
-* [org-ml-timestamp-set-range](#org-ml-timestamp-set-range-n-unit-timestamp) `(n unit timestamp)`
+* [org-ml-timestamp-set-range](#org-ml-timestamp-set-range-n-timestamp) `(n timestamp)`
 * [org-ml-timestamp-set-active](#org-ml-timestamp-set-active-flag-timestamp) `(flag timestamp)`
 * [org-ml-timestamp-shift](#org-ml-timestamp-shift-n-unit-timestamp) `(n unit timestamp)`
 * [org-ml-timestamp-shift-start](#org-ml-timestamp-shift-start-n-unit-timestamp) `(n unit timestamp)`
@@ -3143,6 +3143,8 @@ Return **`node`** with the value of **`prop`** flipped.
 
 This function only applies to properties that are booleans.
 
+(fn **`prop`** **`node`**)
+
 The following types and properties are supported:
 
 entity
@@ -3162,8 +3164,6 @@ src-block
 subscript
 - :use-brackets-p
 
-superscript
-- :use-brackets-p
 
 ```el
 ;; Given the following contents:
@@ -3191,6 +3191,8 @@ Return **`node`** with **`prop`** shifted by **`n`** (an integer).
 
 This only applies the properties that are represented as integers.
 
+(fn **`prop`** **`n`** **`node`**)
+
 The following types and properties are supported:
 
 all elements
@@ -3205,8 +3207,6 @@ headline
 - :priority
 
 item
-- :pre-blank
-- :counter
 
 ```el
 ;; Given the following contents:
@@ -3250,6 +3250,8 @@ Return **`node`** with **`string`** inserted at **`index`** into **`prop`**.
 This only applies to properties that are represented as lists of
 strings.
 
+(fn **`prop`** **`index`** **`string`** **`node`**)
+
 The following types and properties are supported:
 
 babel-call
@@ -3270,8 +3272,6 @@ macro
 src-block
 - :switches
 
-table
-- :tblfm
 
 ```el
 ;; Given the following contents:
@@ -3336,6 +3336,8 @@ Return **`node`** with **`value`** corresponding to **`key`** inserted into **`p
 **`key`** is a keyword and **`value`** is a symbol. This only applies to
 properties that are represented as plists.
 
+(fn **`prop`** **`key`** **`value`** **`node`**)
+
 The following types and properties are supported:
 
 babel-call
@@ -3352,8 +3354,6 @@ inline-babel-call
 inline-src-block
 - :parameters
 
-src-block
-- :parameters
 
 ```el
 ;; Given the following contents:
@@ -4406,15 +4406,16 @@ Return **`timestamp`** node with start/end times set to **`time1`**/**`time2`** 
 
 ```
 
-#### org-ml-timestamp-set-range `(n unit timestamp)`
+#### org-ml-timestamp-set-range `(n timestamp)`
 
-Return **`timestamp`** node with range set to **`n`** UNITs.
+Return **`timestamp`** node with range set to **`n`** seconds.
+
 If **`timestamp`** is ranged, keep start time the same and adjust the end
 time. If not, make a new end time. The units for `range` are in minutes
 if **`timestamp`** is in long format and days if **`timestamp`** is in short
 format.
 
-This function is depreciated. Use `org-ml-timestamp-get-length`
+This function is depreciated. Use `org-ml-timestamp-set-length`
 instead.
 
 ```el
