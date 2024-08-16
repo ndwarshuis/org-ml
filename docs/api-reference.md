@@ -14,6 +14,7 @@ Convert nodes to strings.
 
 Parse buffers to trees.
 
+* [org-ml-parse-this-buffer](#org-ml-parse-this-buffer-nil) `nil`
 * [org-ml-parse-object-at](#org-ml-parse-object-at-point) `(point)`
 * [org-ml-parse-element-at](#org-ml-parse-element-at-point) `(point)`
 * [org-ml-parse-table-row-at](#org-ml-parse-table-row-at-point) `(point)`
@@ -44,7 +45,7 @@ Build new nodes.
 * [org-ml-build-macro](#org-ml-build-macro-key-key-args-post-blank) `(key &key args post-blank)`
 * [org-ml-build-statistics-cookie](#org-ml-build-statistics-cookie-value-key-post-blank) `(value &key post-blank)`
 * [org-ml-build-target](#org-ml-build-target-value-key-post-blank) `(value &key post-blank)`
-* [org-ml-build-timestamp](#org-ml-build-timestamp-type-year-start-month-start-day-start-year-end-month-end-day-end-key-hour-start-minute-start-hour-end-minute-end-repeater-type-repeater-unit-repeater-value-warning-type-warning-unit-warning-value-post-blank) `(type year-start month-start day-start year-end month-end day-end &key hour-start minute-start hour-end minute-end repeater-type repeater-unit repeater-value warning-type warning-unit warning-value post-blank)`
+* [org-ml-build-timestamp](#org-ml-build-timestamp-type-year-start-month-start-day-start-year-end-month-end-day-end-key-range-type-hour-start-minute-start-hour-end-minute-end-repeater-type-repeater-unit-repeater-value-repeater-deadline-unit-repeater-deadline-value-warning-type-warning-unit-warning-value-post-blank) `(type year-start month-start day-start year-end month-end day-end &key range-type hour-start minute-start hour-end minute-end repeater-type repeater-unit repeater-value repeater-deadline-unit repeater-deadline-value warning-type warning-unit warning-value post-blank)`
 * [org-ml-build-verbatim](#org-ml-build-verbatim-value-key-post-blank) `(value &key post-blank)`
 
 ### Branch Object Nodes
@@ -96,23 +97,21 @@ Build new nodes.
 * [org-ml-build-property-drawer](#org-ml-build-property-drawer-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
 * [org-ml-build-quote-block](#org-ml-build-quote-block-key-name-plot-header-results-caption-post-blank-rest-element-nodes) `(&key name plot header results caption post-blank &rest element-nodes)`
 * [org-ml-build-section](#org-ml-build-section-key-post-blank-rest-element-nodes) `(&key post-blank &rest element-nodes)`
-* [org-ml-build-special-block](#org-ml-build-special-block-type-key-name-plot-header-results-caption-post-blank-rest-element-nodes) `(type &key name plot header results caption post-blank &rest element-nodes)`
+* [org-ml-build-special-block](#org-ml-build-special-block-type-key-parameters-name-plot-header-results-caption-post-blank-rest-element-nodes) `(type &key parameters name plot header results caption post-blank &rest element-nodes)`
 * [org-ml-build-table](#org-ml-build-table-key-tblfm-name-plot-header-results-caption-post-blank-rest-element-nodes) `(&key tblfm name plot header results caption post-blank &rest element-nodes)`
 
 ### Miscellaneous Builders
 
-* [org-ml-clone-node](#org-ml-clone-node-node) `(node)`
-* [org-ml-clone-node-n](#org-ml-clone-node-n-n-node) `(n node)`
 * [org-ml-build-secondary-string!](#org-ml-build-secondary-string-string) `(string)`
 * [org-ml-build-table-row-hline](#org-ml-build-table-row-hline-key-post-blank) `(&key post-blank)`
-* [org-ml-build-timestamp-diary](#org-ml-build-timestamp-diary-form-key-post-blank) `(form &key post-blank)`
+* [org-ml-build-timestamp-diary](#org-ml-build-timestamp-diary-form-key-start-end-post-blank) `(form &key start end post-blank)`
 
 ### Shorthand Builders
 
 
 Build nodes with more convenient/shorter syntax.
 
-* [org-ml-build-timestamp!](#org-ml-build-timestamp-start-key-end-active-repeater-warning-post-blank) `(start &key end active repeater warning post-blank)`
+* [org-ml-build-timestamp!](#org-ml-build-timestamp-start-key-end-active-repeater-deadline-warning-collapsed-post-blank) `(start &key end active repeater deadline warning collapsed post-blank)`
 * [org-ml-build-clock!](#org-ml-build-clock-start-key-end-post-blank) `(start &key end post-blank)`
 * [org-ml-build-planning!](#org-ml-build-planning-key-closed-deadline-scheduled-post-blank) `(&key closed deadline scheduled post-blank)`
 * [org-ml-build-property-drawer!](#org-ml-build-property-drawer-key-post-blank-rest-keyvals) `(&key post-blank &rest keyvals)`
@@ -143,7 +142,7 @@ Build item nodes for inclusion in headline logbooks
 
 Test node types.
 
-* [org-ml-get-type](#org-ml-get-type-node) `(node)`
+* [org-ml-get-type](#org-ml-get-type-node-optional-anonymous) `(node &optional anonymous)`
 * [org-ml-is-type](#org-ml-is-type-type-node) `(type node)`
 * [org-ml-is-any-type](#org-ml-is-any-type-types-node) `(types node)`
 * [org-ml-is-element](#org-ml-is-element-node) `(node)`
@@ -195,26 +194,9 @@ Set, get, and map properties of nodes.
 
 * [org-ml-item-toggle-checkbox](#org-ml-item-toggle-checkbox-item) `(item)`
 
-### Planning
-
-* [org-ml-planning-set-timestamp!](#org-ml-planning-set-timestamp-prop-planning-list-planning) `(prop planning-list planning)`
-
 ### Statistics Cookie
 
 * [org-ml-statistics-cookie-is-complete](#org-ml-statistics-cookie-is-complete-statistics-cookie) `(statistics-cookie)`
-
-### Timestamp (Auxiliary)
-
-
-Functions to work with timestamp data
-
-* [org-ml-time-is-long](#org-ml-time-is-long-time) `(time)`
-* [org-ml-time-to-unixtime](#org-ml-time-to-unixtime-time) `(time)`
-* [org-ml-unixtime-to-time-long](#org-ml-unixtime-to-time-long-unixtime) `(unixtime)`
-* [org-ml-unixtime-to-time-short](#org-ml-unixtime-to-time-short-unixtime) `(unixtime)`
-
-### Timestamp (Standard)
-
 * [org-ml-timestamp-get-start-time](#org-ml-timestamp-get-start-time-timestamp) `(timestamp)`
 * [org-ml-timestamp-get-end-time](#org-ml-timestamp-get-end-time-timestamp) `(timestamp)`
 * [org-ml-timestamp-get-range](#org-ml-timestamp-get-range-timestamp) `(timestamp)`
@@ -226,13 +208,15 @@ Functions to work with timestamp data
 * [org-ml-timestamp-set-warning](#org-ml-timestamp-set-warning-warning-timestamp) `(warning timestamp)`
 * [org-ml-timestamp-map-warning](#org-ml-timestamp-map-warning-fun-timestamp) `(fun timestamp)`
 * [org-ml-timestamp-get-repeater](#org-ml-timestamp-get-repeater-timestamp) `(timestamp)`
+* [org-ml-timestamp-get-deadline](#org-ml-timestamp-get-deadline-timestamp) `(timestamp)`
 * [org-ml-timestamp-set-repeater](#org-ml-timestamp-set-repeater-repeater-timestamp) `(repeater timestamp)`
+* [org-ml-timestamp-set-deadline](#org-ml-timestamp-set-deadline-deadline-timestamp) `(deadline timestamp)`
 * [org-ml-timestamp-map-repeater](#org-ml-timestamp-map-repeater-fun-timestamp) `(fun timestamp)`
 * [org-ml-timestamp-set-start-time](#org-ml-timestamp-set-start-time-time-timestamp) `(time timestamp)`
 * [org-ml-timestamp-set-end-time](#org-ml-timestamp-set-end-time-time-timestamp) `(time timestamp)`
 * [org-ml-timestamp-set-single-time](#org-ml-timestamp-set-single-time-time-timestamp) `(time timestamp)`
 * [org-ml-timestamp-set-double-time](#org-ml-timestamp-set-double-time-time1-time2-timestamp) `(time1 time2 timestamp)`
-* [org-ml-timestamp-set-range](#org-ml-timestamp-set-range-range-timestamp) `(range timestamp)`
+* [org-ml-timestamp-set-range](#org-ml-timestamp-set-range-n-unit-timestamp) `(n unit timestamp)`
 * [org-ml-timestamp-set-active](#org-ml-timestamp-set-active-flag-timestamp) `(flag timestamp)`
 * [org-ml-timestamp-shift](#org-ml-timestamp-shift-n-unit-timestamp) `(n unit timestamp)`
 * [org-ml-timestamp-shift-start](#org-ml-timestamp-shift-start-n-unit-timestamp) `(n unit timestamp)`
@@ -245,13 +229,16 @@ Functions to work with timestamp data
 ### Timestamp (diary)
 
 * [org-ml-timestamp-diary-set-value](#org-ml-timestamp-diary-set-value-form-timestamp-diary) `(form timestamp-diary)`
-
-### Affiliated Keywords
-
-* [org-ml-get-affiliated-keyword](#org-ml-get-affiliated-keyword-key-node) `(key node)`
-* [org-ml-set-affiliated-keyword](#org-ml-set-affiliated-keyword-key-value-node) `(key value node)`
-* [org-ml-map-affiliated-keyword](#org-ml-map-affiliated-keyword-key-fun-node) `(key fun node)`
-* [org-ml-set-caption!](#org-ml-set-caption-caption-node) `(caption node)`
+* [org-ml-timestamp-diary-set-single-time](#org-ml-timestamp-diary-set-single-time-time-timestamp-diary) `(time timestamp-diary)`
+* [org-ml-timestamp-diary-set-double-time](#org-ml-timestamp-diary-set-double-time-time1-time2-timestamp-diary) `(time1 time2 timestamp-diary)`
+* [org-ml-timestamp-diary-get-start-time](#org-ml-timestamp-diary-get-start-time-timestamp-diary) `(timestamp-diary)`
+* [org-ml-timestamp-diary-set-start-time](#org-ml-timestamp-diary-set-start-time-time-timestamp-diary) `(time timestamp-diary)`
+* [org-ml-timestamp-diary-get-end-time](#org-ml-timestamp-diary-get-end-time-timestamp-diary) `(timestamp-diary)`
+* [org-ml-timestamp-diary-set-end-time](#org-ml-timestamp-diary-set-end-time-time-timestamp-diary) `(time timestamp-diary)`
+* [org-ml-timestamp-diary-set-length](#org-ml-timestamp-diary-set-length-n-unit-timestamp-diary) `(n unit timestamp-diary)`
+* [org-ml-timestamp-diary-shift](#org-ml-timestamp-diary-shift-n-unit-timestamp-diary) `(n unit timestamp-diary)`
+* [org-ml-timestamp-diary-shift-start](#org-ml-timestamp-diary-shift-start-n-unit-timestamp-diary) `(n unit timestamp-diary)`
+* [org-ml-timestamp-diary-shift-end](#org-ml-timestamp-diary-shift-end-n-unit-timestamp-diary) `(n unit timestamp-diary)`
 
 ## Branch/Child Manipulation
 
@@ -397,6 +384,7 @@ Map node manipulations into buffers.
 * [org-ml-update-section-at](#org-ml-update-section-at-point-fun) `(point fun)`
 * [org-ml-update-headlines](#org-ml-update-headlines-which-fun) `(which fun)`
 * [org-ml-update-subtrees](#org-ml-update-subtrees-which-fun) `(which fun)`
+* [org-ml-update-supercontents](#org-ml-update-supercontents-config-which-fun) `(config which fun)`
 
 ### Misc
 
@@ -458,8 +446,24 @@ Convert **`string`** to a node.
 parsed into **`type`** this function will return nil.
 
 ```el
-(org-ml-from-string 'bold "*text*")
- ;; => '(bold (:begin 1 :end 7 :contents-begin 2 :contents-end 6 :post-blank 0 :parent nil) "text")
+(->> (org-ml-from-string 'bold "*text*") (org-ml-get-type))
+ ;; => 'bold
+
+(->> (org-ml-from-string 'bold "*text*") (org-ml-get-property :begin))
+ ;; => 1
+
+(->> (org-ml-from-string 'bold "*text*") (org-ml-get-property :end))
+ ;; => 7
+
+(->> (org-ml-from-string 'bold "*text*") (org-ml-get-property :post-blank))
+ ;; => 0
+
+(->> (org-ml-from-string 'bold "*text*")
+  (org-ml-get-property :contents-begin))
+ ;; => 2
+
+(->> (org-ml-from-string 'bold "*text*") (org-ml-get-property :contents-end))
+ ;; => 6
 
 (org-ml-from-string 'italic "*text*")
  ;; => nil
@@ -471,6 +475,24 @@ parsed into **`type`** this function will return nil.
 
 
 Parse buffers to trees.
+
+#### org-ml-parse-this-buffer `nil`
+
+Return org-data document tree for the current buffer.
+Contrary to the org-element specification, the org-data element
+returned from this function will have :begin and :end properties.
+
+```el
+;; Given the following contents:
+; text
+
+(->> (org-ml-parse-this-buffer) (org-ml-get-property :begin))
+ ;; => 1
+
+(->> (org-ml-parse-this-buffer) (org-ml-get-property :end))
+ ;; => 5
+
+```
 
 #### org-ml-parse-object-at `(point)`
 
@@ -791,7 +813,7 @@ of the following:
 - [`a` `b`]: parse all headlines whose first point falls between points
     `a` and `b` in the buffer; if `a` and `b` are nil, use `point-min` and
     `point-max` respectively.
-- 'all': parse all headlines (equivalent to [nil nil])
+- `all`: parse all headlines (equivalent to [nil nil])
 
 Each headline is obtained with [`org-ml-parse-headline-at`](#org-ml-parse-headline-at-point).
 
@@ -1107,7 +1129,7 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-timestamp `(type year-start month-start day-start year-end month-end day-end &key hour-start minute-start hour-end minute-end repeater-type repeater-unit repeater-value warning-type warning-unit warning-value post-blank)`
+#### org-ml-build-timestamp `(type year-start month-start day-start year-end month-end day-end &key range-type hour-start minute-start hour-end minute-end repeater-type repeater-unit repeater-value repeater-deadline-unit repeater-deadline-value warning-type warning-unit warning-value post-blank)`
 
 Build a timestamp object node.
 
@@ -1120,6 +1142,7 @@ The following properties are settable:
 - **`year-end`**: (required) a positive integer
 - **`month-end`**: (required) a positive integer
 - **`day-end`**: (required) a positive integer
+- **`range-type`**: either symbol `daterange` or `timerange` or nil
 - **`hour-start`**: a non-negative integer or nil
 - **`minute-start`**: a non-negative integer or nil
 - **`hour-end`**: a non-negative integer or nil
@@ -1129,6 +1152,9 @@ The following properties are settable:
 - **`repeater-unit`**: nil or a symbol from `year` `month` `week` `day`, or
     `hour`
 - **`repeater-value`**: a positive integer or nil
+- **`repeater-deadline-unit`**: nil or a symbol from `year` `month` `week`
+    `day`, or `hour`
+- **`repeater-deadline-value`**: a positive integer or nil
 - **`warning-type`**: nil or a symbol from `all` or `first`
 - **`warning-unit`**: nil or a symbol from `year` `month` `week` `day`, or
     `hour`
@@ -2067,12 +2093,13 @@ The following properties are settable:
 
 ```
 
-#### org-ml-build-special-block `(type &key name plot header results caption post-blank &rest element-nodes)`
+#### org-ml-build-special-block `(type &key parameters name plot header results caption post-blank &rest element-nodes)`
 
 Build a special-block element node with **`element-nodes`** as children.
 
 The following properties are settable:
 - **`type`**: (required) a oneline string
+- **`parameters`**: a oneline string or nil
 - **`name`**: a string or nil
 - **`plot`**: a string or nil
 - **`header`**: a list of plists where all plist values are strings
@@ -2123,52 +2150,6 @@ The following properties are settable:
 
 ### Miscellaneous Builders
 
-#### org-ml-clone-node `(node)`
-
-Return copy of **`node`**, which may be a circular tree.
-
-This is only necessary to copy nodes parsed using any of parsing
-functions from this package (for example, `org-ml-parse-this-headline`)
-because these retain parent references which makes the node a circular
-list. None of the builder functions add parent references, so
-`copy-tree` will be a faster alternative to this function.
-
-```el
-;; Given the following contents:
-; dolly
-
-(let* ((node1 (org-ml-parse-this-element)) (node2 (org-ml-clone-node node1)))
-  (equal node1 node2))
- ;; => t
-
-(let* ((node1 (org-ml-parse-this-element)) (node2 (org-ml-clone-node node1)))
-  (eq node1 node2))
- ;; => nil
-
-```
-
-#### org-ml-clone-node-n `(n node)`
-
-Like [`org-ml-clone-node`](#org-ml-clone-node-node) but make **`n`** copies of **`node`**.
-
-```el
-;; Given the following contents:
-; dolly
-
-(-let*
-  ((node1 (org-ml-parse-this-element))
-    ((node2 node3) (org-ml-clone-node-n 2 node1)))
-  (or (equal node1 node2) (equal node1 node3) (equal node2 node3)))
- ;; => t
-
-(-let*
-  ((node1 (org-ml-parse-this-element))
-    ((node2 node3) (org-ml-clone-node-n 2 node1)))
-  (or (eq node1 node2) (eq node1 node3) (eq node2 node3)))
- ;; => nil
-
-```
-
 #### org-ml-build-secondary-string! `(string)`
 
 Return a secondary string (list of object nodes) from **`string`**.
@@ -2209,14 +2190,31 @@ Optionally set **`post-blank`** (a positive integer).
 
 ```
 
-#### org-ml-build-timestamp-diary `(form &key post-blank)`
+#### org-ml-build-timestamp-diary `(form &key start end post-blank)`
 
 Return a new diary-sexp timestamp node from **`form`**.
-Optionally set **`post-blank`** (a positive integer).
+
+`time1` and `time1` are lists like (hour min) which specify the
+time(s) of the diary timestamp. If `time2` is provided, `time1` must
+also be provided and the timestamp will be ranged. Optionally set
+**`post-blank`** (a positive integer).
 
 ```el
 (->> (org-ml-build-timestamp-diary '(diary-float t 4 2)) (org-ml-to-string))
  ;; => "<%%(diary-float t 4 2)>"
+
+(->> (org-ml-build-timestamp-diary '(diary-float t 4 2) :start '(0 0))
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 00:00>"
+
+(->>
+  (org-ml-build-timestamp-diary '(diary-float t 4 2)
+    :start
+    '(0 0)
+    :end
+    '(1 0))
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 00:00-01:00>"
 
 ```
 
@@ -2226,7 +2224,7 @@ Optionally set **`post-blank`** (a positive integer).
 
 Build nodes with more convenient/shorter syntax.
 
-#### org-ml-build-timestamp! `(start &key end active repeater warning post-blank)`
+#### org-ml-build-timestamp! `(start &key end active repeater deadline warning collapsed post-blank)`
 
 Return a new timestamp node.
 
@@ -2243,8 +2241,9 @@ formatting rules as **`start`**.
 `inactive` (the range suffix will be added if an end time is
 supplied).
 
-**`repeater`** and **`warning`** are lists corresponding to those required
-for [`org-ml-timestamp-set-repeater`](#org-ml-timestamp-set-repeater-repeater-timestamp) and
+**`repeater`**, **`deadline`**, and **`warning`** are lists corresponding to those
+required for [`org-ml-timestamp-set-repeater`](#org-ml-timestamp-set-repeater-repeater-timestamp),
+[`org-ml-timestamp-set-deadline`](#org-ml-timestamp-set-deadline-deadline-timestamp), and
 [`org-ml-timestamp-set-warning`](#org-ml-timestamp-set-warning-warning-timestamp) respectively.
 
 Building a diary sexp timestamp is not possible with this function.
@@ -2275,7 +2274,7 @@ Building a diary sexp timestamp is not possible with this function.
 Return a new clock node.
 
 **`start`** and **`end`** follow the same rules as their respective arguments in
-[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-warning-post-blank).
+[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-deadline-warning-collapsed-post-blank).
 
 ```el
 (->> (org-ml-build-clock! '(2019 1 1)) (org-ml-to-trimmed-string))
@@ -2294,18 +2293,21 @@ Return a new clock node.
 
 Return a new planning node.
 
-**`closed`**, **`deadline`**, and **`scheduled`** are lists with the following structure
+**`deadline`** and **`scheduled`** are lists with the following structure
 (brackets denote optional members):
 
 `(year minute day [hour] [min]
  [&warning type value unit]
  [&repeater type value unit])`
 
-In terms of arguments supplied to [`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-warning-post-blank), the first
+In terms of arguments supplied to [`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-deadline-warning-collapsed-post-blank), the first
 five members correspond to the list supplied as `time`, and the `type`,
 `value`, and `unit` fields correspond to the lists supplied to `warning` and
 `repeater` arguments. The order of warning and repeater does not
 matter.
+
+**`closed`** is a similar list to above but does not have &warning or
+&repeater.
 
 ```el
 (->> (org-ml-build-planning! :closed '(2019 1 1)) (org-ml-to-trimmed-string))
@@ -2316,10 +2318,10 @@ matter.
  ;; => "SCHEDULED: <2018-01-01 Mon> CLOSED: [2019-01-01 Tue]"
 
 (->>
-  (org-ml-build-planning! :closed
+  (org-ml-build-planning! :scheduled
     '(2019 1 1 &warning all 1 day &repeater cumulate 1 month))
   (org-ml-to-trimmed-string))
- ;; => "CLOSED: [2019-01-01 Tue +1m -1d]"
+ ;; => "SCHEDULED: <2019-01-01 Tue +1m -1d>"
 
 ```
 
@@ -2523,7 +2525,7 @@ Build item nodes for inclusion in headline logbooks
 Return an item node for a new note log entry.
 
 This will format the log entry from the default value for the
-'note` cell in `org-log-note-headings`.
+`note` cell in `org-log-note-headings`.
 
 **`unixtime`** is an integer representing the time to be used for all
 timestamp nodes.
@@ -2544,7 +2546,7 @@ timestamp nodes.
 Return an item node for a done log entry.
 
 This will format the log entry from the default value for the
-'done` cell in `org-log-note-headings`.
+`done` cell in `org-log-note-headings`.
 
 **`unixtime`** is an integer representing the time to be used for all
 timestamp nodes.
@@ -2569,7 +2571,7 @@ If string **`note`** is supplied, append a note to the log entry.
 
 Return an item node for a refile log entry.
 This will format the log entry from the default value for the
-'deldeadline` cell in `org-log-note-headings`.
+`deldeadline` cell in `org-log-note-headings`.
 
 **`unixtime`** is an integer representing the time to be used for all
 timestamp nodes.
@@ -2595,7 +2597,7 @@ If string **`note`** is supplied, append a note to the log entry.
 Return an item node for a state change log entry.
 
 This will format the log entry from the default value for the
-'state` cell in `org-log-note-headings`.
+`state` cell in `org-log-note-headings`.
 
 **`unixtime`** is an integer representing the time to be used for all
 timestamp nodes.
@@ -2624,7 +2626,7 @@ If string **`note`** is supplied, append a note to the log entry.
 Return an item node for a delete deadline log entry.
 
 This will format the log entry from the default value for the
-'deldeadline` cell in `org-log-note-headings`.
+`deldeadline` cell in `org-log-note-headings`.
 
 **`unixtime`** is an integer representing the time to be used for all
 timestamp nodes.
@@ -2654,7 +2656,7 @@ If string **`note`** is supplied, append a note to the log entry.
 Return an item node for a delete schedule log entry.
 
 This will format the log entry from the default value for the
-'delschedule` cell in `org-log-note-headings`.
+`delschedule` cell in `org-log-note-headings`.
 
 **`unixtime`** is an integer representing the time to be used for all
 timestamp nodes.
@@ -2684,7 +2686,7 @@ If string **`note`** is supplied, append a note to the log entry.
 Return an item node for a new deadline log entry.
 
 This will format the log entry from the default value for the
-'redeadline` cell in `org-log-note-headings`.
+`redeadline` cell in `org-log-note-headings`.
 
 **`unixtime`** is an integer representing the time to be used for all
 timestamp nodes.
@@ -2714,7 +2716,7 @@ If string **`note`** is supplied, append a note to the log entry.
 Return an item node for a new schedule log entry.
 
 This will format the log entry from the default value for the
-'reschedule` cell in `org-log-note-headings`.
+`reschedule` cell in `org-log-note-headings`.
 
 **`unixtime`** is an integer representing the time to be used for all
 timestamp nodes.
@@ -2794,7 +2796,7 @@ If string **`note`** is supplied, append a note to the log entry.
 
 Test node types.
 
-#### org-ml-get-type `(node)`
+#### org-ml-get-type `(node &optional anonymous)`
 
 Return the type of **`node`**.
 
@@ -3022,7 +3024,7 @@ each type.
 ;; Given the following contents:
 ; #+call: ktulu()
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-set-property :call "cthulhu")
   (org-ml-set-property :inside-header '(:cache no))
   (org-ml-set-property :arguments '("x=4"))
@@ -3033,7 +3035,7 @@ each type.
 ;; Given the following contents:
 ; call_kthulu()
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-set-property :call "cthulhu")
   (org-ml-set-property :inside-header '(:cache no))
   (org-ml-set-property :arguments '("x=4"))
@@ -3044,7 +3046,7 @@ each type.
 ;; Given the following contents:
 ; src_emacs{(print 'yeah-boi)}
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-set-property :language "python")
   (org-ml-set-property :parameters '(:cache no))
   (org-ml-set-property :value "print \"yeah boi\"")
@@ -3054,7 +3056,7 @@ each type.
 ;; Given the following contents:
 ; - thing
 
-(->> (org-ml-parse-this-item)
+(org-ml->> (org-ml-parse-this-item)
   (org-ml-set-property :bullet 1)
   (org-ml-set-property :checkbox 'on)
   (org-ml-set-property :counter 2)
@@ -3066,13 +3068,13 @@ each type.
 ; * not valuable
 
 ;; Throw error when setting a property that doesn't exist
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-set-property :value "wtf")
   (org-ml-to-trimmed-string))
 Error
 
 ;; Throw error when setting to an improper type
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-set-property :title 666)
   (org-ml-to-trimmed-string))
 Error
@@ -3116,19 +3118,19 @@ each type.
 ;; Given the following contents:
 ; ~learn to~
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-map-property :value #'s-upcase)
   (org-ml-to-trimmed-string))
  ;; => "~LEARN TO~"
 
 ;; Throw error if property doesn't exist
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-map-property :title #'s-upcase)
   (org-ml-to-trimmed-string))
 Error
 
 ;; Throw error if function doesn't return proper type
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-map-property* :value (if it 1 0))
   (org-ml-to-trimmed-string))
 Error
@@ -3167,7 +3169,7 @@ superscript
 ;; Given the following contents:
 ; \pi
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-toggle-property :use-brackets-p)
   (org-ml-to-trimmed-string))
  ;; => "\\pi{}"
@@ -3176,7 +3178,7 @@ superscript
 ; - [ ] nope
 
 ;; Throw an error when trying to toggle a non-boolean property
-(->> (org-ml-parse-this-item)
+(org-ml->> (org-ml-parse-this-item)
   (org-ml-toggle-property :checkbox)
   (org-ml-to-trimmed-string))
 Error
@@ -3211,7 +3213,7 @@ item
 ; * no priorities
 
 ;; Do nothing if there is nothing to shift.
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-shift-property :priority 1)
   (org-ml-to-trimmed-string))
  ;; => "* no priorities"
@@ -3219,13 +3221,13 @@ item
 ;; Given the following contents:
 ; * [#A] priorities
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-shift-property :priority -1)
   (org-ml-to-trimmed-string))
  ;; => "* [#B] priorities"
 
 ;; Wrap priority around when crossing the min or max
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-shift-property :priority 1)
   (org-ml-to-trimmed-string))
  ;; => "* [#C] priorities"
@@ -3234,7 +3236,7 @@ item
 ; * TODO or not todo
 
 ;; Throw error when shifting an unshiftable property
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-shift-property :todo-keyword 1)
   (org-ml-to-string))
 Error
@@ -3275,19 +3277,19 @@ table
 ;; Given the following contents:
 ; #+call: ktulu(y=1)
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-insert-into-property :arguments 0 "x=4")
   (org-ml-to-trimmed-string))
  ;; => "#+call: ktulu(x=4,y=1)"
 
 ;; Do nothing if the string is already in the list
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-insert-into-property :arguments 0 "y=1")
   (org-ml-to-trimmed-string))
  ;; => "#+call: ktulu(y=1)"
 
 ;; Throw error when inserting into a property that is not a list of strings
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-insert-into-property :end-header 0 "html")
   (org-ml-to-trimmed-string))
 Error
@@ -3308,19 +3310,19 @@ and properties that may be used with this function.
 ;; Given the following contents:
 ; #+call: ktulu(y=1)
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-remove-from-property :arguments "y=1")
   (org-ml-to-trimmed-string))
  ;; => "#+call: ktulu()"
 
 ;; Do nothing if the string does not exist
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-remove-from-property :arguments "d=666")
   (org-ml-to-trimmed-string))
  ;; => "#+call: ktulu(y=1)"
 
 ;; Throw error when removing from property that is not a string list
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-remove-from-property :end-header ":results")
   (org-ml-to-trimmed-string))
 Error
@@ -3357,25 +3359,25 @@ src-block
 ;; Given the following contents:
 ; #+call: ktulu[:cache no]()
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-plist-put-property :end-header :results 'html)
   (org-ml-to-trimmed-string))
  ;; => "#+call: ktulu[:cache no]() :results html"
 
 ;; Change the value of key if it already is present
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-plist-put-property :inside-header :cache 'yes)
   (org-ml-to-trimmed-string))
  ;; => "#+call: ktulu[:cache yes]()"
 
 ;; Do nothing if the key and value already exist
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-plist-put-property :inside-header :cache 'no)
   (org-ml-to-trimmed-string))
  ;; => "#+call: ktulu[:cache no]()"
 
 ;; Throw error if setting property that isn't a plist
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-plist-put-property :arguments :cache 'no)
   (org-ml-to-trimmed-string))
 Error
@@ -3396,19 +3398,19 @@ and properties that may be used with this function.
 ;; Given the following contents:
 ; #+call: ktulu() :results html
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-plist-remove-property :end-header :results)
   (org-ml-to-trimmed-string))
  ;; => "#+call: ktulu()"
 
 ;; Do nothing if the key is not present
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-plist-remove-property :inside-header :cache)
   (org-ml-to-trimmed-string))
  ;; => "#+call: ktulu() :results html"
 
 ;; Throw error if trying to remove key from non-plist property
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-plist-remove-property :arguments :cache)
   (org-ml-to-trimmed-string))
 Error
@@ -3420,7 +3422,7 @@ Error
 Return all the values of **`props`** from **`node`**.
 **`props`** is a list of all the properties desired, and the returned
 list will be the values of these properties in the order
-requested. To get the raw plist of **`node`**, use
+requested. To get all properties of **`node`**, use
 `org-ml--get-all-properties`.
 
 ```el
@@ -3443,8 +3445,9 @@ Return the properties list of **`node`**.
 
 (--> (org-ml-parse-this-object)
   (org-ml-get-all-properties it)
+  (plist-put it :buffer nil)
   (plist-put it :parent nil))
- ;; => '(:begin 1 :end 7 :contents-begin 2 :contents-end 6 :post-blank 0 :parent nil)
+ ;; => (list :begin 1 :post-affiliated nil :contents-begin 2 :contents-end 6 :end 7 :post-blank 0 :secondary nil :mode nil :granularity nil :cached nil :org-element--cache-sync-key nil :robust-begin nil :robust-end nil :true-level nil :buffer nil :deferred nil :structure nil :parent nil)
 
 ```
 
@@ -3462,7 +3465,7 @@ each type.
 ;; Given the following contents:
 ; - thing
 
-(->> (org-ml-parse-this-item)
+(org-ml->> (org-ml-parse-this-item)
   (org-ml-set-properties (list :bullet 1 :checkbox 'on :counter 2 :tag '("tmsu")))
   (org-ml-to-trimmed-string))
  ;; => "1. [@2] [X] tmsu :: thing"
@@ -3470,7 +3473,7 @@ each type.
 ;; Given the following contents:
 ; - plain
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-set-properties (list :name "plain name" :attr_XXX '("tmsu")))
   (org-ml-to-trimmed-string))
  ;; => "#+name: plain name
@@ -3493,7 +3496,7 @@ each type.
 ;; Given the following contents:
 ; #+KEY: VAL
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-map-properties
     (list :key
       (-partial #'s-prepend "OM_")
@@ -3501,6 +3504,13 @@ each type.
       (-partial #'s-prepend "OM_")))
   (org-ml-to-trimmed-string))
  ;; => "#+om_key: OM_VAL"
+
+;; Throw error if any of the properties are invalid
+(org-ml->> (org-ml-parse-this-element)
+  (org-ml-map-properties*
+    (:title (s-prepend "OM_" it) :value (s-prepend "OM_" it)))
+  (org-ml-to-trimmed-string))
+Error
 
 ```
 
@@ -3554,8 +3564,8 @@ this, it is not necessary as the tree structure itself already
 encodes all parent-child relationships. Further, it is not used
 by org-element internally to convert nodes into strings (such as
 with [`org-ml-to-string`](#org-ml-to-string-node)) and thus can be thought of as a
-'read-only' property. This is why :parent will be set to nil when
-building a new node with the 'org-ml-build-' family of functions
+`"read-only"` property. This is why :parent will be set to nil when
+building a new node with the `"org-ml-build-"` family of functions
 and why [`org-ml-set-property`](#org-ml-set-property-prop-value-node) forbids setting this property.
 
 In many cases, one can safely ignore :parent unless, of course,
@@ -3581,20 +3591,20 @@ the issue.
 
 ;; This is actually a paragraph node, but parsing the object will directly
 ;; return a plain-text node with the :parent pointing to the paragraph
-(->> (org-ml-parse-this-object) (org-ml-remove-parent))
+(org-ml->> (org-ml-parse-this-object) (org-ml-remove-parent))
  ;; => "one"
 
 ;; Given the following contents:
 ; * headline
 
-(->> (org-ml-parse-this-element) (org-ml-remove-parents))
- ;; => '(headline (:raw-value "headline" :begin 1 :end 11 :pre-blank 0 :contents-begin nil :contents-end nil :level 1 :priority nil :tags nil :todo-keyword nil :todo-type nil :post-blank 0 :footnote-section-p nil :archivedp nil :commentedp nil :post-affiliated 1 :title ("headline") :parent nil))
+(org-ml->> (org-ml-parse-this-element)
+  (org-ml-remove-parents)
+  (org-ml-get-property :parent))
+ ;; => nil
 
 ;; Given the following contents:
 ; - tag :: thingy
 
-(->> (org-ml-parse-this-item) (org-ml-remove-parents))
- ;; => '(item (:bullet "- " :begin 1 :end 16 :contents-begin 10 :contents-end 16 :checkbox nil :counter nil :structure ((1 0 "- " nil nil "tag" 16)) :pre-blank 0 :post-blank 0 :post-affiliated 1 :tag ("tag") :parent nil) (paragraph (:begin 10 :end 16 :contents-begin 10 :contents-end 16 :post-blank 0 :post-affiliated 10 :parent nil) "thingy"))
 
 ```
 
@@ -3679,7 +3689,7 @@ and **`stats-cookie-value`** is a list described in
 ;; Given the following contents:
 ; * really impressive title
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-set-title! "really *impressive* title" '(2 3))
   (org-ml-to-trimmed-string))
  ;; => "* really *impressive* title [2/3]"
@@ -3759,7 +3769,7 @@ or nil.
 ;; Given the following contents:
 ; - [ ] one
 
-(->> (org-ml-parse-this-item)
+(org-ml->> (org-ml-parse-this-item)
   (org-ml-item-toggle-checkbox)
   (org-ml-to-trimmed-string))
  ;; => "- [X] one"
@@ -3768,7 +3778,7 @@ or nil.
 ; - [-] one
 
 ;; Ignore trans state checkboxes
-(->> (org-ml-parse-this-item)
+(org-ml->> (org-ml-parse-this-item)
   (org-ml-item-toggle-checkbox)
   (org-ml-to-trimmed-string))
  ;; => "- [-] one"
@@ -3777,43 +3787,10 @@ or nil.
 ; - one
 
 ;; Do nothing if there is no checkbox
-(->> (org-ml-parse-this-item)
+(org-ml->> (org-ml-parse-this-item)
   (org-ml-item-toggle-checkbox)
   (org-ml-to-trimmed-string))
  ;; => "- one"
-
-```
-
-
-### Planning
-
-#### org-ml-planning-set-timestamp! `(prop planning-list planning)`
-
-Return **`planning`** node with **`prop`** set to **`planning-list`**.
-
-**`prop`** is one of `:closed`, `:deadline`, or `:scheduled`. **`planning-list`**
-is the same as that described in [`org-ml-build-planning!`](#org-ml-build-planning-key-closed-deadline-scheduled-post-blank).
-
-```el
-;; Given the following contents:
-; * dummy
-; CLOSED: [2019-01-01 Tue]
-
-;; Change an existing timestamp in planning
-(->> (org-ml-parse-this-headline)
-  (org-ml-headline-get-planning)
-  (org-ml-planning-set-timestamp! :closed
-    '(2019 1 2 &warning all 1 day &repeater cumulate 2 month))
-  (org-ml-to-trimmed-string))
- ;; => "CLOSED: [2019-01-02 Wed +2m -1d]"
-
-;; Add a new timestamp and remove another
-(->> (org-ml-parse-this-headline)
-  (org-ml-headline-get-planning)
-  (org-ml-planning-set-timestamp! :deadline '(2112 1 1))
-  (org-ml-planning-set-timestamp! :closed nil)
-  (org-ml-to-trimmed-string))
- ;; => "DEADLINE: <2112-01-01 Fri>"
 
 ```
 
@@ -3859,56 +3836,11 @@ Return t is **`statistics-cookie`** node is complete.
 
 ```
 
-
-### Timestamp (Auxiliary)
-
-
-Functions to work with timestamp data
-
-#### org-ml-time-is-long `(time)`
-
-Return t if **`time`** is a long format time list.
-
-```el
-no examples :(
-```
-
-#### org-ml-time-to-unixtime `(time)`
-
-Return the unix time (integer seconds) of time list **`time`**.
-The returned value is dependent on the time zone of the operating
-system.
-
-```el
-no examples :(
-```
-
-#### org-ml-unixtime-to-time-long `(unixtime)`
-
-Return the long time list of **`unixtime`**.
-The list will be formatted like `(year month day hour min)`.
-
-```el
-no examples :(
-```
-
-#### org-ml-unixtime-to-time-short `(unixtime)`
-
-Return the short time list of **`unixtime`**.
-The list will be formatted like `(year month day nil nil)`.
-
-```el
-no examples :(
-```
-
-
-### Timestamp (Standard)
-
 #### org-ml-timestamp-get-start-time `(timestamp)`
 
 Return the time list for start time of **`timestamp`** node.
 The return value will be a list as specified by the `time` argument in
-[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-warning-post-blank).
+[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-deadline-warning-collapsed-post-blank).
 
 ```el
 ;; Given the following contents:
@@ -3935,7 +3867,7 @@ The return value will be a list as specified by the `time` argument in
 
 Return the end time list for end time of **`timestamp`** or nil if not a range.
 The return value will be a list as specified by the `time` argument in
-[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-warning-post-blank).
+[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-deadline-warning-collapsed-post-blank).
 
 ```el
 ;; Given the following contents:
@@ -3967,9 +3899,13 @@ The return value will be a list as specified by the `time` argument in
 #### org-ml-timestamp-get-range `(timestamp)`
 
 Return the range of **`timestamp`** node in seconds as an integer.
+
 If non-ranged, this function will return 0. If ranged but
 the start time is in the future relative to end the time, return
 a negative integer.
+
+This function is depreciated. Use `org-ml-timestamp-get-length`
+instead.
 
 ```el
 ;; Given the following contents:
@@ -4047,18 +3983,18 @@ interpreted according to the localtime of the operating system.
 ;; Given the following contents:
 ; [2019-01-01 Tue 00:00]
 
-(let ((ut (org-ml-time-to-unixtime '(2019 1 1 0 0))))
+(let ((ut (org-ml-timelist-to-unixtime '(2019 1 1 0 0))))
   (->> (org-ml-parse-this-object) (org-ml-timestamp-range-contains-p ut)))
  ;; => t
 
-(let ((ut (org-ml-time-to-unixtime '(2019 1 1 0 30))))
+(let ((ut (org-ml-timelist-to-unixtime '(2019 1 1 0 30))))
   (->> (org-ml-parse-this-object) (org-ml-timestamp-range-contains-p ut)))
  ;; => nil
 
 ;; Given the following contents:
 ; [2019-01-01 Tue 00:00-01:00]
 
-(let ((ut (org-ml-time-to-unixtime '(2019 1 1 0 30))))
+(let ((ut (org-ml-timelist-to-unixtime '(2019 1 1 0 30))))
   (->> (org-ml-parse-this-object) (org-ml-timestamp-range-contains-p ut)))
  ;; => t
 
@@ -4068,20 +4004,34 @@ interpreted according to the localtime of the operating system.
 
 Return **`timestamp`** with collapsed set to **`flag`**.
 
-If timestamp is ranged but not outside of one day, it may be collapsed
-(**`flag`** is t) to short format like [yyyy-mm-dd xxx hh:mm-hh:mm] or
-expanded (**`flag`** is nil) to long format like [yyyy-mm-dd xxx
-hh:mm]--[yyyy-mm-dd xxx hh:mm]. If these conditions are not met,
-return **`timestamp`** untouched regardless of **`flag`**.
+Collapsed timestamps are like [yyyy-mm-dd xxx hh:mm-hh:mm].
 
-Note: the default for all timestamp functions in `om.el` is to favor
-collapsed format.
+Uncollapsed timestamp are like
+[yyyy-mm-dd xxx hh:mm]--[yyyy-mm-dd xxx hh:mm].
+
+**`flag`** may be one of nil, t, or `force`.
+
+If nil, uncollapse the timestamp if it is collapsed. The dates in
+the uncollapsed timestamp will be the same. Has no effect if the
+timestamp is not collapsed.
+
+If t, collapse the timestamp from uncollapsed format if the following
+conditions are met:
+1. the dates are the same
+2. start and end hours/minutes are non-nil
+
+Has no effect if timestamp id not uncollapsed and these
+conditions are not met.
+
+If `force`, ignore condition 1 above. The date in the collapsed
+timestamp will be taken from the start date and the end date will
+be ignored.
 
 ```el
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00-13:00]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-collapsed nil)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue 12:00]--[2019-01-01 Tue 13:00]"
@@ -4089,7 +4039,7 @@ collapsed format.
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00-13:00]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-collapsed nil)
   (org-ml-timestamp-set-collapsed t)
   (org-ml-to-trimmed-string))
@@ -4098,7 +4048,7 @@ collapsed format.
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-collapsed nil)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue 12:00]"
@@ -4106,7 +4056,7 @@ collapsed format.
 ;; Given the following contents:
 ; [2019-01-01 Tue]--[2019-01-02 Wed]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-collapsed nil)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
@@ -4123,7 +4073,7 @@ Return a list like `(type value unit)`.
 ; [2019-01-01 Tue 12:00]
 
 (->> (org-ml-parse-this-object) (org-ml-timestamp-get-warning))
- ;; => '(nil nil nil)
+ ;; => nil
 
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00 -1d]
@@ -4137,20 +4087,20 @@ Return a list like `(type value unit)`.
 
 Set the warning of **`timestamp`** to **`warning`**.
 
-**`warning`** is a list like `(type value unit)`. `type` is one of 'year',
-'month', 'week', or 'day'. `value` and is an integer. `unit` is one
-of 'year', 'month', 'week', or 'day'.
+**`warning`** is a list like `(type value unit)`. `type` is `all` or
+`first` `value` and is an integer. `unit` is one of `year`, `month`,
+`week`, or `day`.
 
 ```el
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00]
 
-(->> (org-ml-parse-this-object)
-  (org-ml-timestamp-set-warning '(nil nil nil))
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-set-warning nil)
   (org-ml-to-string))
  ;; => "[2019-01-01 Tue 12:00]"
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-warning '(all 1 day))
   (org-ml-to-string))
  ;; => "[2019-01-01 Tue 12:00 -1d]"
@@ -4158,12 +4108,12 @@ of 'year', 'month', 'week', or 'day'.
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-warning nil)
   (org-ml-to-string))
  ;; => "[2019-01-01 Tue 12:00]"
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-warning '(all 1 year))
   (org-ml-to-string))
  ;; => "[2019-01-01 Tue 12:00 -1y]"
@@ -4182,7 +4132,7 @@ apply here.
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00 -1d]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-map-warning* (-let (((y v u) it)) `(,y ,(1+ v) ,u)))
   (org-ml-to-string))
  ;; => "[2019-01-01 Tue 12:00 -2d]"
@@ -4192,15 +4142,14 @@ apply here.
 #### org-ml-timestamp-get-repeater `(timestamp)`
 
 Return the repeater component of **`timestamp`**.
-Return a list like `(type value unit)`. If `org-ml-parse-habits` is
-t, return a list like `(type value unit habit-value habit-unit)`.
+Return a list like `(type value unit)` or nil.
 
 ```el
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00]
 
 (->> (org-ml-parse-this-object) (org-ml-timestamp-get-repeater))
- ;; => '(nil nil nil)
+ ;; => nil
 
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00 +1d]
@@ -4214,12 +4163,31 @@ t, return a list like `(type value unit habit-value habit-unit)`.
 (->> (org-ml-parse-this-object) (org-ml-timestamp-get-repeater))
  ;; => '(cumulate 1 day)
 
+```
+
+#### org-ml-timestamp-get-deadline `(timestamp)`
+
+Return the repeater component of **`timestamp`**.
+Return a list like `(value unit)` or nil.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(->> (org-ml-parse-this-object) (org-ml-timestamp-get-deadline))
+ ;; => nil
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 +1d]
+
+(->> (org-ml-parse-this-object) (org-ml-timestamp-get-deadline))
+ ;; => nil
+
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00 +1d/3d]
 
-(let ((org-ml-parse-habits t))
-  (->> (org-ml-parse-this-object) (org-ml-timestamp-get-repeater)))
- ;; => '(cumulate 1 day 3 day)
+(->> (org-ml-parse-this-object) (org-ml-timestamp-get-deadline))
+ ;; => '(3 day)
 
 ```
 
@@ -4227,42 +4195,64 @@ t, return a list like `(type value unit habit-value habit-unit)`.
 
 Set the repeater of **`timestamp`** to **`repeater`**.
 
-**`repeater`** is a list like `(type value unit)` or `(type value unit
-habit-value habit-unit)`; if `org-ml-parse-habits` is nil, only
-accept the former and error on the latter (and vice versa). `type`
-is one of 'year', 'month', 'week', or 'day'. `value` and
-`habit-value` are integers. `unit` and `habit-unit` are one of 'year',
-'month', 'week', or 'day'.
+**`repeater`** is a list like `(type value unit)`; `type` is one of
+`cumulate`, `restart`, or `catch-up`. `value` is an integer. `unit`
+is one of `year`, `month`, `week`, or `day`.
 
-In order to remove the repeater entirely, set **`repeater`** to nil
-or `(nil nil nil)`. To delete just the habit (if it exists and
-`org-ml-parse-habits` is t) set **`repeater`** to (`type` `value` `unit` nil
-nil).
+Setting **`repeater`** to nil will remove the repeater and its deadline
+if present.
 
 ```el
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-repeater nil)
   (org-ml-to-string))
  ;; => "[2019-01-01 Tue 12:00]"
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-repeater '(restart 1 day))
   (org-ml-to-string))
  ;; => "[2019-01-01 Tue 12:00 .+1d]"
 
-(let ((org-ml-parse-habits t))
-  (->> (org-ml-parse-this-object)
-    (org-ml-timestamp-set-repeater '(restart 1 day nil nil))
-    (org-ml-to-string)))
+```
+
+#### org-ml-timestamp-set-deadline `(deadline timestamp)`
+
+Set the repeater of **`timestamp`** to **`deadline`**.
+
+**`deadline`** is a list like `(value unit)`; `value` is an integer. `unit`
+is one of `year`, `month`, `week`, or `day`.
+
+Setting **`deadline`** to nil will remove the deadline. Will have no effect
+if repeater is not present.
+
+```el
+;; Given the following contents:
+; [2019-01-01 Tue 12:00]
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-set-deadline nil)
+  (org-ml-to-string))
+ ;; => "[2019-01-01 Tue 12:00]"
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-set-deadline '(3 day))
+  (org-ml-to-string))
+ ;; => "[2019-01-01 Tue 12:00]"
+
+;; Given the following contents:
+; [2019-01-01 Tue 12:00 .+1d]
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-set-deadline nil)
+  (org-ml-to-string))
  ;; => "[2019-01-01 Tue 12:00 .+1d]"
 
-(let ((org-ml-parse-habits t))
-  (->> (org-ml-parse-this-object)
-    (org-ml-timestamp-set-repeater '(restart 1 day 3 day))
-    (org-ml-to-string)))
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-set-deadline '(3 day))
+  (org-ml-to-string))
  ;; => "[2019-01-01 Tue 12:00 .+1d/3d]"
 
 ```
@@ -4279,7 +4269,7 @@ new repeater list. The same rules that apply to
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00 +1d]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-map-repeater* (-let (((y v u) it)) `(,y ,(1+ v) ,u)))
   (org-ml-to-string))
  ;; => "[2019-01-01 Tue 12:00 +2d]"
@@ -4290,20 +4280,20 @@ new repeater list. The same rules that apply to
 
 Return **`timestamp`** node with start time set to **`time`**.
 **`time`** is a list analogous to the same argument specified in
-[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-warning-post-blank).
+[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-deadline-warning-collapsed-post-blank).
 
 ```el
 ;; Given the following contents:
 ; [2019-01-02 Wed]
 
 ;; If not a range this will turn into a range by moving only the start time.
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-start-time '(2019 1 1))
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
 
 ;; Set a different time with different precision.
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-start-time '(2019 1 1 10 0))
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue 10:00]--[2019-01-02 Wed]"
@@ -4312,10 +4302,10 @@ Return **`timestamp`** node with start time set to **`time`**.
 ; [2019-01-02 Wed 12:00]
 
 ;; If not a range and set within a day, use short format
-(->> (org-ml-parse-this-object)
-  (org-ml-timestamp-set-start-time '(2019 1 1 0 0))
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-set-start-time '(2019 1 2 0 0))
   (org-ml-to-trimmed-string))
- ;; => "[2019-01-01 Tue 00:00-12:00]"
+ ;; => "[2019-01-02 Wed 00:00-12:00]"
 
 ```
 
@@ -4323,14 +4313,14 @@ Return **`timestamp`** node with start time set to **`time`**.
 
 Return **`timestamp`** node with end time set to **`time`**.
 **`time`** is a list analogous to the same argument specified in
-[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-warning-post-blank).
+[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-deadline-warning-collapsed-post-blank).
 
 ```el
 ;; Given the following contents:
 ; [2019-01-01 Tue]
 
 ;; Add the end time
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-end-time '(2019 1 2))
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
@@ -4339,7 +4329,7 @@ Return **`timestamp`** node with end time set to **`time`**.
 ; [2019-01-01 Tue]--[2019-01-02 Wed]
 
 ;; Remove the end time
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-end-time nil)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]"
@@ -4348,7 +4338,7 @@ Return **`timestamp`** node with end time set to **`time`**.
 ; [2019-01-01 Tue 12:00]
 
 ;; Use short range format
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-end-time '(2019 1 1 13 0))
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue 12:00-13:00]"
@@ -4359,14 +4349,14 @@ Return **`timestamp`** node with end time set to **`time`**.
 
 Return **`timestamp`** node with start and end times set to **`time`**.
 **`time`** is a list analogous to the same argument specified in
-[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-warning-post-blank).
+[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-deadline-warning-collapsed-post-blank).
 
 ```el
 ;; Given the following contents:
 ; [2019-01-01 Tue]
 
 ;; Don't make a range
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-single-time '(2019 1 2))
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-02 Wed]"
@@ -4375,7 +4365,7 @@ Return **`timestamp`** node with start and end times set to **`time`**.
 ; [2019-01-01 Tue]--[2019-01-02 Wed]
 
 ;; Output is not a range despite input being ranged
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-single-time '(2019 1 3))
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-03 Thu]"
@@ -4386,14 +4376,14 @@ Return **`timestamp`** node with start and end times set to **`time`**.
 
 Return **`timestamp`** node with start/end times set to **`time1`**/**`time2`** respectively.
 **`time1`** and **`time2`** are lists analogous to the `time` argument specified in
-[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-warning-post-blank).
+[`org-ml-build-timestamp!`](#org-ml-build-timestamp-start-key-end-active-repeater-deadline-warning-collapsed-post-blank).
 
 ```el
 ;; Given the following contents:
 ; [2019-01-01 Tue]
 
 ;; Make a range
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-double-time '(2019 1 2) '(2019 1 3))
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-02 Wed]--[2019-01-03 Thu]"
@@ -4401,7 +4391,7 @@ Return **`timestamp`** node with start/end times set to **`time1`**/**`time2`** 
 ;; Given the following contents:
 ; [2019-01-01 Tue]--[2019-01-03 Wed]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-double-time '(2019 1 4) '(2019 1 5))
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-04 Fri]--[2019-01-05 Sat]"
@@ -4409,28 +4399,31 @@ Return **`timestamp`** node with start/end times set to **`time1`**/**`time2`** 
 ;; Given the following contents:
 ; [2019-01-01 Tue]--[2019-01-03 Wed]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-double-time '(2019 1 1 0 0) '(2019 1 1 1 0))
   (org-ml-to-trimmed-string))
- ;; => "[2019-01-01 Tue 00:00-01:00]"
+ ;; => "[2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00]"
 
 ```
 
-#### org-ml-timestamp-set-range `(range timestamp)`
+#### org-ml-timestamp-set-range `(n unit timestamp)`
 
-Return **`timestamp`** node with range set to **`range`**.
+Return **`timestamp`** node with range set to **`n`** UNITs.
 If **`timestamp`** is ranged, keep start time the same and adjust the end
-time. If not, make a new end time. The units for **`range`** are in minutes
+time. If not, make a new end time. The units for `range` are in minutes
 if **`timestamp`** is in long format and days if **`timestamp`** is in short
 format.
+
+This function is depreciated. Use `org-ml-timestamp-get-length`
+instead.
 
 ```el
 ;; Given the following contents:
 ; [2019-01-01 Tue]
 
 ;; Use days as the unit for short format
-(->> (org-ml-parse-this-object)
-  (org-ml-timestamp-set-range 1)
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-set-range 1 'day)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
 
@@ -4438,8 +4431,8 @@ format.
 ; [2019-01-01 Tue 00:00]
 
 ;; Use minutes as the unit for long format
-(->> (org-ml-parse-this-object)
-  (org-ml-timestamp-set-range 3)
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-set-range 3 'minute)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue 00:00-00:03]"
 
@@ -4447,8 +4440,8 @@ format.
 ; [2019-01-01 Tue]--[2019-01-03 Wed]
 
 ;; Set range to 0 to remove end time
-(->> (org-ml-parse-this-object)
-  (org-ml-timestamp-set-range 0)
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-set-range 0 'day)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]"
 
@@ -4462,7 +4455,7 @@ Return **`timestamp`** node with active type if **`flag`** is t.
 ;; Given the following contents:
 ; [2019-01-01 Tue]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-active t)
   (org-ml-to-trimmed-string))
  ;; => "<2019-01-01 Tue>"
@@ -4470,7 +4463,7 @@ Return **`timestamp`** node with active type if **`flag`** is t.
 ;; Given the following contents:
 ; <2019-01-01 Tue>
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-set-active nil)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]"
@@ -4496,12 +4489,12 @@ will increase the hour property by 1 and the minute property by 30.
 ; [2019-01-01 Tue 12:00]
 
 ;; Change each unit, and wrap around to the next unit as needed.
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-shift 30 'minute)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue 12:30]"
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-shift 13 'month)
   (org-ml-to-trimmed-string))
  ;; => "[2020-02-01 Sat 12:00]"
@@ -4510,7 +4503,7 @@ will increase the hour property by 1 and the minute property by 30.
 ; [2019-01-01 Tue]
 
 ;; Error when shifting hour/minute in short format
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-shift 30 'minute)
   (org-ml-to-trimmed-string))
 Error
@@ -4532,12 +4525,12 @@ behavior is not desired, use [`org-ml-timestamp-shift`](#org-ml-timestamp-shift-
 ; [2019-01-01 Tue 12:00]
 
 ;; If not a range, change start time and leave implicit end time.
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-shift-start -1 'year)
   (org-ml-to-trimmed-string))
  ;; => "[2018-01-01 Mon 12:00]--[2019-01-01 Tue 12:00]"
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-shift-start -1 'hour)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue 11:00-12:00]"
@@ -4546,7 +4539,7 @@ behavior is not desired, use [`org-ml-timestamp-shift`](#org-ml-timestamp-shift-
 ; [2019-01-01 Tue]--[2019-01-03 Thu]
 
 ;; Change only start time if a range
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-shift-start 1 'day)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-02 Wed]--[2019-01-03 Thu]"
@@ -4568,7 +4561,7 @@ behavior is not desired, use [`org-ml-timestamp-shift`](#org-ml-timestamp-shift-
 ; [2019-01-01 Tue]
 
 ;; Shift implicit end time if not a range.
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-shift-end 1 'day)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
@@ -4577,7 +4570,7 @@ behavior is not desired, use [`org-ml-timestamp-shift`](#org-ml-timestamp-shift-
 ; [2019-01-01 Tue]--[2019-01-02 Wed]
 
 ;; Move only the second time if a range.
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-shift-end 1 'day)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-03 Thu]"
@@ -4592,7 +4585,7 @@ Return **`timestamp`** node with its active/inactive type flipped.
 ;; Given the following contents:
 ; [2019-01-01 Tue]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-toggle-active)
   (org-ml-to-trimmed-string))
  ;; => "<2019-01-01 Tue>"
@@ -4600,7 +4593,7 @@ Return **`timestamp`** node with its active/inactive type flipped.
 ;; Given the following contents:
 ; <2019-01-01 Tue>--<2019-01-02 Wed>
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-toggle-active)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
@@ -4615,7 +4608,7 @@ Return **`timestamp`** node with start/end times forced to short format.
 ;; Given the following contents:
 ; [2019-01-01 Tue]--[2019-01-02 Wed]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-truncate)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
@@ -4623,7 +4616,7 @@ Return **`timestamp`** node with start/end times forced to short format.
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-truncate)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
@@ -4634,11 +4627,13 @@ Return **`timestamp`** node with start/end times forced to short format.
 
 Return **`timestamp`** node with start time forced to short format.
 
+Collapsed timestamps will become uncollapsed.
+
 ```el
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-truncate-start)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]"
@@ -4646,7 +4641,7 @@ Return **`timestamp`** node with start time forced to short format.
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00]--[2019-01-02 Wed 12:00]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-truncate-start)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed 12:00]"
@@ -4654,7 +4649,7 @@ Return **`timestamp`** node with start time forced to short format.
 ;; Given the following contents:
 ; [2019-01-01 Tue]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-truncate-start)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]"
@@ -4665,11 +4660,13 @@ Return **`timestamp`** node with start time forced to short format.
 
 Return **`timestamp`** node with end time forced to short format.
 
+Collapsed timestamps will become uncollapsed.
+
 ```el
 ;; Given the following contents:
 ; [2019-01-01 Tue]--[2019-01-02 Wed]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-truncate-end)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue]--[2019-01-02 Wed]"
@@ -4677,7 +4674,7 @@ Return **`timestamp`** node with end time forced to short format.
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00]--[2019-01-02 Wed 13:00]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-truncate-end)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue 12:00]--[2019-01-02 Wed]"
@@ -4685,7 +4682,7 @@ Return **`timestamp`** node with end time forced to short format.
 ;; Given the following contents:
 ; [2019-01-01 Tue 12:00]
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-truncate-end)
   (org-ml-to-trimmed-string))
  ;; => "[2019-01-01 Tue 12:00]"
@@ -4704,214 +4701,291 @@ The node must have a type `eq` to `diary`. **`form`** is a quoted list.
 ;; Given the following contents:
 ; <%%(diary-float t 4 2)>
 
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-timestamp-diary-set-value '(diary-float 1 3 2))
   (org-ml-to-string))
  ;; => "<%%(diary-float 1 3 2)>"
 
 ```
 
+#### org-ml-timestamp-diary-set-single-time `(time timestamp-diary)`
 
-### Affiliated Keywords
-
-#### org-ml-get-affiliated-keyword `(key node)`
-
-Get the value of affiliated keyword **`key`** in **`node`**.
-
-See [`org-ml-set-affiliated-keyword`](#org-ml-set-affiliated-keyword-key-value-node) for the meaning of **`key`**.
-
-`warning`: This function is depreciated and will be removed in a
-future major revision. Its functionality has been merged with
-[`org-ml-get-property`](#org-ml-get-property-prop-node).
+Return **`timestamp-diary`** node with start/end time set to **`time`**.
+The node must have a type `eq` to `diary`. **`time`** is a list
+like (hour min). If **`time`** is nil remove the time.
 
 ```el
 ;; Given the following contents:
-; #+name: name
-; #+attr_foo: bar
-; #+attr_foo: BAR
-; #+plot: poo
-; #+results[hash]: res
-; #+header: h1
-; #+begin_src
-; echo test for echo
-; #+end_src
+; <%%(diary-float t 4 2)>
 
-;; Simply return NAME and PLOT
-(->> (org-ml-parse-this-element) (org-ml-get-affiliated-keyword :name))
- ;; => "name"
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-single-time '(0 0))
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 00:00>"
 
-(->> (org-ml-parse-this-element) (org-ml-get-affiliated-keyword :plot))
- ;; => "poo"
+;; Given the following contents:
+; <%%(diary-float t 4 2) 00:01>
 
-;; Attribute FOO has multiple entries so return a list of all
-(->> (org-ml-parse-this-element) (org-ml-get-affiliated-keyword :attr_foo))
- ;; => '("BAR" "bar")
-
-;; HEADER may have multiple values so return a singleton list
-(->> (org-ml-parse-this-element) (org-ml-get-affiliated-keyword :header))
- ;; => '("h1")
-
-;; RESULTS returns a cons cell with the optional part
-(->> (org-ml-parse-this-element) (org-ml-get-affiliated-keyword :results))
- ;; => '("res" . "hash")
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-single-time nil)
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2)>"
 
 ```
 
-#### org-ml-set-affiliated-keyword `(key value node)`
+#### org-ml-timestamp-diary-set-double-time `(time1 time2 timestamp-diary)`
 
-Set affiliated keyword **`key`** in **`node`** to **`value`**.
-This is just like `org-ml--set-property-nocheck` except it will
-delete **`key`** from the plist if **`value`** is nil.
-
-`note` that **`value`** should reflect the required value of affiliated
-keyword given by **`key`**. The format for each keyword is given below:
-- `name` ``string``: ``string``
-- `plot` ``string``: ``string``
-- `results`[``string1``] ``string2``: `(string2 . string1)`
-    where ``string1`` may be nil
-- `caption`[``string1``] ``string2``: `((string2 . string1) ...)`
-    where ``string1`` may be nil and multiple list members
-    correspond to multiple caption entries
-- `headers` ``string``: `(string ...)` where multiple list members
-    correspond to multiple headers entries
-- `caption`[``string``] ``secstring``: `((string . secstring) ...)`
-    where ``string`` may be nil and multiple list members
-    correspond to multiple caption entries
-
-In the case of `attr`_`backend`, **`key`** is like `:attr_x` where `x`
-corresponds to `backend` and **`value`** is a list of strings
-corresponding to multiple entries of the attribute.
-
-`warning`: This function is depreciated and will be removed in a
-future major revision. Its functionality has been merged with
-[`org-ml-set-property`](#org-ml-set-property-prop-value-node)
+Return **`timestamp-diary`** node with time set to **`time1`** and **`time2`**.
+The node must have a type `eq` to `diary`. **`time1`** and **`time2`** are
+lists like (hour min). Either time may be nil, but if **`time1`** is nil
+then **`time2`** must also be nil.
 
 ```el
 ;; Given the following contents:
-; short paragraph
+; <%%(diary-float t 4 2)>
 
-(->> (org-ml-parse-this-element)
-  (org-ml-set-affiliated-keyword :name "foo")
-  (org-ml-to-trimmed-string))
- ;; => "#+name: foo
- ;      short paragraph"
-
-(->> (org-ml-parse-this-element)
-  (org-ml-set-affiliated-keyword :attr_bar '("foo"))
-  (org-ml-to-trimmed-string))
- ;; => "#+attr_bar: foo
- ;      short paragraph"
-
-(->> (org-ml-parse-this-element)
-  (org-ml-set-affiliated-keyword :header '("h1" "h2"))
-  (org-ml-to-trimmed-string))
- ;; => "#+header: h2
- ;      #+header: h1
- ;      short paragraph"
-
-(->> (org-ml-parse-this-element)
-  (org-ml-set-affiliated-keyword :results '("foo" . "bar"))
-  (org-ml-to-trimmed-string))
- ;; => "#+results[bar]: foo
- ;      short paragraph"
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-double-time '(0 0) '(0 1))
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 00:00-00:01>"
 
 ;; Given the following contents:
-; #+name: deleteme
-; short paragraph
+; <%%(diary-float t 4 2) 00:00-00:01>
 
-(->> (org-ml-parse-this-element)
-  (org-ml-set-affiliated-keyword :name nil)
-  (org-ml-to-trimmed-string))
- ;; => "short paragraph"
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-double-time '(1 0) '(2 0))
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 01:00-02:00>"
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-double-time '(1 0) nil)
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 01:00>"
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-double-time nil nil)
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2)>"
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-double-time nil '(2 0))
+  (org-ml-to-string))
+Error
 
 ```
 
-#### org-ml-map-affiliated-keyword `(key fun node)`
+#### org-ml-timestamp-diary-get-start-time `(timestamp-diary)`
 
-Apply **`fun`** to value of affiliated keyword **`key`** in **`node`**.
-
-See [`org-ml-set-affiliated-keyword`](#org-ml-set-affiliated-keyword-key-value-node) for the meaning of **`key`**.
-
-`warning`: This function is depreciated and will be removed in a
-future major revision. Its functionality has been merged with
-[`org-ml-map-property`](#org-ml-map-property-prop-fun-node).
+Return start time for  **`timestamp-diary`** or nil.
 
 ```el
 ;; Given the following contents:
-; #+name: foo
-; short paragraph
+; <%%(diary-float t 4 2)>
 
-(->> (org-ml-parse-this-element)
-  (org-ml-map-affiliated-keyword :name #'upcase)
-  (org-ml-to-trimmed-string))
- ;; => "#+name: FOO
- ;      short paragraph"
+(->> (org-ml-parse-this-object) (org-ml-timestamp-diary-get-start-time))
+ ;; => nil
 
 ;; Given the following contents:
-; #+header: foo
-; short paragraph
+; <%%(diary-float t 4 2) 12:00-13:00>
 
-(->> (org-ml-parse-this-element)
-  (org-ml-map-affiliated-keyword* :header (cons "bar" it))
-  (org-ml-to-trimmed-string))
- ;; => "#+header: foo
- ;      #+header: bar
- ;      short paragraph"
+(->> (org-ml-parse-this-object) (org-ml-timestamp-diary-get-start-time))
+ ;; => '(12 0)
 
 ```
 
-#### org-ml-set-caption! `(caption node)`
+#### org-ml-timestamp-diary-set-start-time `(time timestamp-diary)`
 
-Set the caption affiliated keyword of **`node`**.
-
-**`caption`** can be one of the following:
-- `string`: produces #+**`caption`**: ``string``
-- `(string1 string2)`: produces #+**`caption`**[``string2``]: ``string1``
-- `((string1 string2) ...)`: like above but makes multiple
-    caption entries
-- nil: removes all captions
-
-`warning`: This function is depreciated and will be removed in a
-future major revision. Its functionality has been merged with
-[`org-ml-set-property`](#org-ml-set-property-prop-value-node).
+Return **`timestamp-diary`** node with start time set to **`time`**.
+The node must have a type `eq` to `diary`. **`time`** is a list
+like (hour min). **`time`** may not be nil
 
 ```el
 ;; Given the following contents:
-; short paragraph
+; <%%(diary-float t 4 2)>
 
-(->> (org-ml-parse-this-element)
-  (org-ml-set-caption! "cap")
-  (org-ml-to-trimmed-string))
- ;; => "#+caption: cap
- ;      short paragraph"
-
-(->> (org-ml-parse-this-element)
-  (org-ml-set-caption! '("foo" "cap"))
-  (org-ml-to-trimmed-string))
- ;; => "#+caption[foo]: cap
- ;      short paragraph"
-
-(->> (org-ml-parse-this-element)
-  (org-ml-set-caption! '("foo" "cap"))
-  (org-ml-to-trimmed-string))
- ;; => "#+caption[foo]: cap
- ;      short paragraph"
-
-(->> (org-ml-parse-this-element)
-  (org-ml-set-caption! '(("foo" "cap") ("FOO" "CAP")))
-  (org-ml-to-trimmed-string))
- ;; => "#+caption[FOO]: CAP
- ;      #+caption[foo]: cap
- ;      short paragraph"
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-start-time '(0 0))
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 00:00>"
 
 ;; Given the following contents:
-; #+caption: cap
-; short paragraph
+; <%%(diary-float t 4 2) 12:00>
 
-(->> (org-ml-parse-this-element)
-  (org-ml-set-caption! nil)
-  (org-ml-to-trimmed-string))
- ;; => "short paragraph"
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-start-time '(1 0))
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 01:00-12:00>"
+
+```
+
+#### org-ml-timestamp-diary-get-end-time `(timestamp-diary)`
+
+Return end time for  **`timestamp-diary`** or nil.
+
+```el
+;; Given the following contents:
+; <%%(diary-float t 4 2)>
+
+(->> (org-ml-parse-this-object) (org-ml-timestamp-diary-get-end-time))
+ ;; => nil
+
+;; Given the following contents:
+; <%%(diary-float t 4 2) 12:00-13:00>
+
+(->> (org-ml-parse-this-object) (org-ml-timestamp-diary-get-end-time))
+ ;; => '(13 0)
+
+```
+
+#### org-ml-timestamp-diary-set-end-time `(time timestamp-diary)`
+
+Return **`timestamp-diary`** node with end time set to **`time`**.
+The node must have a type `eq` to `diary`. **`time`** is a list
+like (hour min). If **`time`** is nil then remove the end time.
+If start time is not set, return node unchanged.
+
+```el
+;; Given the following contents:
+; <%%(diary-float t 4 2)>
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-end-time '(0 0))
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2)>"
+
+;; Given the following contents:
+; <%%(diary-float t 4 2) 12:00>
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-end-time '(13 0))
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 12:00-13:00>"
+
+```
+
+#### org-ml-timestamp-diary-set-length `(n unit timestamp-diary)`
+
+Return **`timestamp-diary`** node with range set to **`n`** UNITs.
+If **`timestamp-diary`** is ranged, keep start time the same and adjust
+the end time. If not, make a new end time.
+
+```el
+;; Given the following contents:
+; <%%(diary-float t 4 2)>
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-length 1 'hour)
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2)>"
+
+;; Given the following contents:
+; <%%(diary-float t 4 2) 12:00>
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-length 1 'hour)
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 12:00-13:00>"
+
+;; Given the following contents:
+; <%%(diary-float t 4 2) 12:00-13:00>
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-set-length 0 'hour)
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 12:00>"
+
+```
+
+#### org-ml-timestamp-diary-shift `(n unit timestamp-diary)`
+
+Return **`timestamp-diary`** node with time shifted by **`n`** UNITs.
+
+This function will move the start and end times together;
+therefore ranged inputs will always output ranged timestamps and
+same for non-ranged. To move the start and end time
+independently, use [`org-ml-timestamp-diary-shift-start`](#org-ml-timestamp-diary-shift-start-n-unit-timestamp-diary) or
+[`org-ml-timestamp-shift-end`](#org-ml-timestamp-shift-end-n-unit-timestamp).
+
+**`n`** is a positive or negative integer and **`unit`** is one of `minute`,
+`hour`, `day`, `month`, or `year`. Overflows will wrap around
+transparently; for instance, supplying `minute` for **`unit`** and 90
+for **`n`** will increase the hour property by 1 and the minute
+property by 30.
+
+```el
+;; Given the following contents:
+; <%%(diary-float t 4 2)>
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-shift 1 'hour)
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2)>"
+
+;; Given the following contents:
+; <%%(diary-float t 4 2) 12:00>
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-shift 1 'hour)
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 13:00>"
+
+```
+
+#### org-ml-timestamp-diary-shift-start `(n unit timestamp-diary)`
+
+Return **`timestamp-diary`** node with start time shifted by **`n`** UNITs.
+
+**`n`** and **`unit`** behave the same as those in [`org-ml-timestamp-diary-shift`](#org-ml-timestamp-diary-shift-n-unit-timestamp-diary).
+
+If **`timestamp-diary`** is not range, the output will be a ranged timestamp with
+the shifted start time and the end time as that of **`timestamp-diary`**. If this
+behavior is not desired, use [`org-ml-timestamp-diary-shift`](#org-ml-timestamp-diary-shift-n-unit-timestamp-diary).
+
+```el
+;; Given the following contents:
+; <%%(diary-float t 4 2)>
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-shift-start 1 'hour)
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2)>"
+
+;; Given the following contents:
+; <%%(diary-float t 4 2) 12:00>
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-shift-start -1 'hour)
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 11:00-12:00>"
+
+```
+
+#### org-ml-timestamp-diary-shift-end `(n unit timestamp-diary)`
+
+Return **`timestamp-diary`** node with end time shifted by **`n`** UNITs.
+
+**`n`** and **`unit`** behave the same as those in [`org-ml-timestamp-diary-shift`](#org-ml-timestamp-diary-shift-n-unit-timestamp-diary).
+
+If **`timestamp-diary`** is not range, the output will be a ranged timestamp with
+the shifted end time and the start time as that of **`timestamp-diary`**. If this
+behavior is not desired, use [`org-ml-timestamp-diary-shift`](#org-ml-timestamp-diary-shift-n-unit-timestamp-diary).
+
+```el
+;; Given the following contents:
+; <%%(diary-float t 4 2)>
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-shift-end 1 'hour)
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2)>"
+
+;; Given the following contents:
+; <%%(diary-float t 4 2) 12:00>
+
+(org-ml->> (org-ml-parse-this-object)
+  (org-ml-timestamp-diary-shift-end 1 'hour)
+  (org-ml-to-string))
+ ;; => "<%%(diary-float t 4 2) 12:00-13:00>"
 
 ```
 
@@ -4977,7 +5051,7 @@ on the type of `node`.
 ; /this/ is a *paragraph*
 
 ;; Set children for branch object
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-set-children (list "this is lame"))
   (org-ml-to-trimmed-string))
  ;; => "this is lame"
@@ -4986,7 +5060,7 @@ on the type of `node`.
 ; * headline
 
 ;; Set children for branch element nodes
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-set-children
     (list (org-ml-build-headline! :title-text "only me" :level 2)))
   (org-ml-to-trimmed-string))
@@ -5005,7 +5079,7 @@ returns a modified list of children.
 ;; Given the following contents:
 ; /this/ is a *paragraph*
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-map-children (lambda (objs) (append objs (list " ...yeah"))))
   (org-ml-to-trimmed-string))
  ;; => "/this/ is a *paragraph* ...yeah"
@@ -5014,7 +5088,7 @@ returns a modified list of children.
 ; * headline
 ; ** subheadline
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-map-children* (--map (org-ml-shift-property :level 1 it) it))
   (org-ml-to-trimmed-string))
  ;; => "* headline
@@ -5057,7 +5131,7 @@ of its children and return children as a secondary string.
 ; _1 *2* 3 */4/* 5 /6/_
 
 ;; Remove the outer underline formatting
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-unwrap)
   (apply #'org-ml-build-paragraph)
   (org-ml-to-trimmed-string))
@@ -5078,7 +5152,7 @@ return the result as a secondary string.
 ; _1 *2* 3 */4/* 5 /6/_
 
 ;; Remove bold formatting at any level
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-unwrap-types-deep '(bold))
   (apply #'org-ml-build-paragraph)
   (org-ml-to-trimmed-string))
@@ -5095,7 +5169,7 @@ Return the children of **`object-node`** as plain-text wrapped in a list.
 ; _1 *2* 3 */4/* 5 /6/_
 
 ;; Remove all formatting
-(->> (org-ml-parse-this-object)
+(org-ml->> (org-ml-parse-this-object)
   (org-ml-unwrap-deep)
   (apply #'org-ml-build-paragraph)
   (org-ml-to-trimmed-string))
@@ -5116,7 +5190,7 @@ The unwrap operation will be done with [`org-ml-unwrap`](#org-ml-unwrap-object-n
 ; This (1 *2* 3 */4/* 5 /6/) is randomly formatted
 
 ;; Remove first level of formatting
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-map-children #'org-ml-flatten)
   (org-ml-to-trimmed-string))
  ;; => "This (1 2 3 /4/ 5 6) is randomly formatted"
@@ -5133,7 +5207,7 @@ The unwrap operation will be done with [`org-ml-unwrap-types-deep`](#org-ml-unwr
 ; This (1 *2* 3 */4/* 5 /6/) is randomly formatted
 
 ;; Remove italic formatting at any level
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-map-children* (org-ml-flatten-types-deep '(italic) it))
   (org-ml-to-trimmed-string))
  ;; => "This (1 *2* 3 *4* 5 6) is randomly formatted"
@@ -5150,7 +5224,7 @@ The unwrap operation will be done with [`org-ml-unwrap-deep`](#org-ml-unwrap-dee
 ; This (1 *2* 3 */4/* 5 /6/) is randomly formatted
 
 ;; Remove italic formatting at any level
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-map-children #'org-ml-flatten-deep)
   (org-ml-to-trimmed-string))
  ;; => "This (1 2 3 4 5 6) is randomly formatted"
@@ -5187,7 +5261,7 @@ Set the first paragraph's children of **`item`** to **`secondary-string`**.
 ;; Given the following contents:
 ; - one
 
-(->> (org-ml-parse-this-item)
+(org-ml->> (org-ml-parse-this-item)
   (org-ml-item-set-paragraph '("two"))
   (org-ml-to-string))
  ;; => "- two
@@ -5196,7 +5270,7 @@ Set the first paragraph's children of **`item`** to **`secondary-string`**.
 ;; Given the following contents:
 ; - one
 
-(->> (org-ml-parse-this-item)
+(org-ml->> (org-ml-parse-this-item)
   (org-ml-item-set-paragraph nil)
   (org-ml-to-string))
  ;; => "- 
@@ -5214,7 +5288,7 @@ first paragraph and returns modified secondary-string.
 ;; Given the following contents:
 ; - one
 
-(->> (org-ml-parse-this-item)
+(org-ml->> (org-ml-parse-this-item)
   (org-ml-item-map-paragraph* (-map #'upcase it))
   (org-ml-to-string))
  ;; => "- ONE
@@ -5262,7 +5336,7 @@ If **`children`** is nil, return **`headline`** with no section node.
 ;; Given the following contents:
 ; * headline
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-headline-set-section (list (org-ml-build-paragraph! "x-section")))
   (org-ml-to-trimmed-string))
  ;; => "* headline
@@ -5272,13 +5346,13 @@ If **`children`** is nil, return **`headline`** with no section node.
 ; * headline
 ; x-section
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-headline-set-section (list (org-ml-build-paragraph! "x-guard")))
   (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      x-guard"
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-headline-set-section nil)
   (org-ml-to-trimmed-string))
  ;; => "* headline"
@@ -5297,7 +5371,7 @@ returns a modified child list.
 ; * headline
 ; x-section
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-headline-map-section*
     (cons (org-ml-build-planning! :closed '(2019 1 1)) it))
   (org-ml-to-trimmed-string))
@@ -5318,7 +5392,7 @@ Return list of child headline nodes in **`headline`** node or nil if none.
 ; ** headline 2
 ; ** headline 3
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-headline-get-subheadlines)
   (-map #'org-ml-to-trimmed-string))
  ;; => '("** headline 2" "** headline 3")
@@ -5327,7 +5401,7 @@ Return list of child headline nodes in **`headline`** node or nil if none.
 ; * headline 1
 ; sectional stuff
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-headline-get-subheadlines)
   (-map #'org-ml-to-trimmed-string))
  ;; => nil
@@ -5345,7 +5419,7 @@ Return **`headline`** node with **`subheadlines`** set to child subheadlines.
 ; ** headline 2
 ; ** headline 3
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-headline-set-subheadlines
     (list (org-ml-build-headline! :level 2 :title-text "headline x")))
   (org-ml-to-trimmed-string))
@@ -5353,7 +5427,7 @@ Return **`headline`** node with **`subheadlines`** set to child subheadlines.
  ;      sectional stuff
  ;      ** headline x"
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-headline-set-subheadlines nil)
   (org-ml-to-trimmed-string))
  ;; => "* headline 1
@@ -5374,7 +5448,7 @@ a modified list of headlines.
 ; ** headline 2
 ; ** headline 3
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-headline-map-subheadlines*
     (--map (org-ml-set-property :todo-keyword "TODO" it) it))
   (org-ml-to-trimmed-string))
@@ -5396,18 +5470,14 @@ Return the planning node in **`headline`** or nil if none.
 ; * headline
 ; CLOSED: [2019-01-01 Tue]
 
-(->> (org-ml-parse-this-headline)
-  (org-ml-headline-get-planning)
-  (org-ml-to-trimmed-string))
- ;; => "CLOSED: [2019-01-01 Tue]"
+(->> (org-ml-parse-this-headline) (org-ml-headline-get-planning))
+ ;; => '(:closed (2019 1 1 nil nil) :scheduled nil :deadline nil)
 
 ;; Given the following contents:
 ; * headline
 
-(->> (org-ml-parse-this-headline)
-  (org-ml-headline-get-planning)
-  (org-ml-to-trimmed-string))
- ;; => ""
+(->> (org-ml-parse-this-headline) (org-ml-headline-get-planning))
+ ;; => nil
 
 ```
 
@@ -5419,8 +5489,8 @@ Return **`headline`** node with planning components set to **`planning`** node.
 ;; Given the following contents:
 ; * headline
 
-(->> (org-ml-parse-this-headline)
-  (org-ml-headline-set-planning (org-ml-build-planning! :closed '(2019 1 1)))
+(org-ml->> (org-ml-parse-this-headline)
+  (org-ml-headline-set-planning '(:closed (2019 1 1)))
   (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      CLOSED: [2019-01-01 Tue]"
@@ -5429,8 +5499,8 @@ Return **`headline`** node with planning components set to **`planning`** node.
 ; * headline
 ; CLOSED: [2019-01-01 Tue]
 
-(->> (org-ml-parse-this-headline)
-  (org-ml-headline-set-planning (org-ml-build-planning! :scheduled '(2019 1 1)))
+(org-ml->> (org-ml-parse-this-headline)
+  (org-ml-headline-set-planning '(:scheduled (2019 1 1)))
   (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      SCHEDULED: <2019-01-01 Tue>"
@@ -5439,7 +5509,7 @@ Return **`headline`** node with planning components set to **`planning`** node.
 ; * headline
 ; CLOSED: [2019-01-01 Tue]
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-set-planning nil)
   (org-ml-to-trimmed-string))
  ;; => "* headline"
@@ -5458,9 +5528,9 @@ modified planning node.
 ; * headline
 ; CLOSED: [2019-01-01 Tue]
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-map-planning*
-    (org-ml-map-property* :closed (org-ml-timestamp-shift 1 'day it) it))
+    (list :closed (org-ml-timelist-shift 1 'day (plist-get it :closed))))
   (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      CLOSED: [2019-01-02 Wed]"
@@ -5479,10 +5549,8 @@ Return a list of node-properties nodes in **`headline`** or nil if none.
 ; :ID:       minesfake
 ; :END:
 
-(->> (org-ml-parse-this-headline)
-  (org-ml-headline-get-node-properties)
-  (-map #'org-ml-to-trimmed-string))
- ;; => '(":Effort:   1:00" ":ID:       minesfake")
+(->> (org-ml-parse-this-headline) (org-ml-headline-get-node-properties))
+ ;; => '(("Effort" "1:00") ("ID" "minesfake"))
 
 ;; Given the following contents:
 ; * headline
@@ -5497,7 +5565,7 @@ Return a list of node-properties nodes in **`headline`** or nil if none.
 #### org-ml-headline-set-node-properties `(node-properties headline)`
 
 Return **`headline`** node with property drawer containing **`node-properties`**.
-**`node-properties`** is a list of node-property nodes.
+**`node-properties`** is a list of (key . value) pairs (both strings).
 
 ```el
 ;; Given the following contents:
@@ -5507,10 +5575,8 @@ Return **`headline`** node with property drawer containing **`node-properties`**
 ; :ID:       minesfake
 ; :END:
 
-(->> (org-ml-parse-this-headline)
-  (org-ml-headline-set-node-properties
-    (--map (apply #'org-ml-build-node-property it)
-      '(("Effort" "0:01") ("ID" "easy"))))
+(org-ml->> (org-ml-parse-this-headline)
+  (org-ml-headline-set-node-properties '(("Effort" "0:01") ("ID" "easy")))
   (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :PROPERTIES:
@@ -5518,7 +5584,7 @@ Return **`headline`** node with property drawer containing **`node-properties`**
  ;      :ID:       easy
  ;      :END:"
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-set-node-properties nil)
   (org-ml-to-trimmed-string))
  ;; => "* headline"
@@ -5540,9 +5606,8 @@ a modified property-drawer node.
 ; :ID:       minesfake
 ; :END:
 
-(->> (org-ml-parse-this-headline)
-  (org-ml-headline-map-node-properties*
-    (cons (org-ml-build-node-property "New" "world man") it))
+(org-ml->> (org-ml-parse-this-headline)
+  (org-ml-headline-map-node-properties* (cons (list "New" "world man") it))
   (org-ml-to-trimmed-string))
  ;; => "* headline
  ;      :PROPERTIES:
@@ -5593,7 +5658,7 @@ properties matching **`key`** are present, only set the first.
 ; :ID:       fake
 ; :END:
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-set-node-property "ID" "real")
   (org-ml-to-trimmed-string))
  ;; => "* headline
@@ -5604,7 +5669,7 @@ properties matching **`key`** are present, only set the first.
 ;; Given the following contents:
 ; * headline
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-set-node-property "ID" "real")
   (org-ml-to-trimmed-string))
  ;; => "* headline
@@ -5612,7 +5677,7 @@ properties matching **`key`** are present, only set the first.
  ;      :ID:       real
  ;      :END:"
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-set-node-property "ID" nil)
   (org-ml-to-trimmed-string))
  ;; => "* headline"
@@ -5623,7 +5688,7 @@ properties matching **`key`** are present, only set the first.
 ; :ID:       real
 ; :END:
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-set-node-property "ID" nil)
   (org-ml-to-trimmed-string))
  ;; => "* headline"
@@ -5644,7 +5709,7 @@ a modified node-property value.
 ; :ID:       fake
 ; :END:
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-map-node-property "ID" #'s-upcase)
   (org-ml-to-trimmed-string))
  ;; => "* headline
@@ -5661,10 +5726,29 @@ a modified node-property value.
 
 Return the supercontents of **`headline`** node.
 
-Supercontents will be like `((:logbook lb) (:contents contents))`
-where `lb` is another alist representing the logbook, and `contents`
-is everything under the headline after the logbook and before the
-first subheadline (if present).
+Supercontents will be a plist like:
+
+(
+    :planning `planning`
+    :node-props `props`
+    :logbook `lb`
+    :blank `blank`
+    :contents `contents`
+)
+
+`planning` is a plist like the analogous argument of
+[`org-ml-build-planning!`](#org-ml-build-planning-key-closed-deadline-scheduled-post-blank) or nil if non-existent.
+
+`props` is a list of node-property nodes.
+
+`lb` is the logbook, which is another plist (see below).
+
+`blank` is the value of any whitespace after the planning,
+property-drawer, or logbook (assuming any exist) or the
+:pre-blank value of the encapsulating headline (if they don't
+exist).
+
+`contents` is a list of nodes after all the other stuff above.
 
 The logbook will be have keys :items, :clocks, and :unknown,
 where the first two will include the item and clock nodes of the
@@ -5764,15 +5848,11 @@ and the structure of the **`supercontents`** list.
 ; contents
 
 (let ((config (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING")))
-  (->> (org-ml-parse-this-headline)
+  (org-ml->> (org-ml-parse-this-headline)
     (org-ml-headline-set-supercontents config
-      `((:logbook nil) (:contents ,(org-ml-build-paragraph! "new contents"))))
+      `(:blank 0 :contents ,(list (org-ml-build-paragraph! "new contents"))))
     (org-ml-to-trimmed-string)))
  ;; => "* headline
- ;      CLOSED: [2019-01-01 Tue 00:00]
- ;      :PROPERTIES:
- ;      :Effort:   0:30
- ;      :END:
  ;      new contents"
 
 ```
@@ -5802,7 +5882,7 @@ the structure of the supercontents list.
 ; contents
 
 (let ((config (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING")))
-  (->> (org-ml-parse-this-headline)
+  (org-ml->> (org-ml-parse-this-headline)
     (org-ml-headline-map-supercontents* config
       (org-ml-supercontents-map-contents*
         (cons (org-ml-build-paragraph! "new contents") it)
@@ -5881,7 +5961,7 @@ item nodes, not as a plain-list node.
 ; contents
 
 (let ((config (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING")))
-  (->> (org-ml-parse-this-headline)
+  (org-ml->> (org-ml-parse-this-headline)
     (org-ml-headline-set-logbook-items config nil)
     (org-ml-to-trimmed-string)))
  ;; => "* headline
@@ -5920,7 +6000,7 @@ returns a modified list of item nodes. See
 ; contents
 
 (let ((config (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING")))
-  (->> (org-ml-parse-this-headline)
+  (org-ml->> (org-ml-parse-this-headline)
     (org-ml-headline-map-logbook-items* config
       (--map
         (org-ml-map-children*
@@ -6004,7 +6084,7 @@ nodes and optionally item nodes if :clock-out-notes is t in
 ; contents
 
 (let ((config (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING")))
-  (->> (org-ml-parse-this-headline)
+  (org-ml->> (org-ml-parse-this-headline)
     (org-ml-headline-set-logbook-clocks config nil)
     (org-ml-to-trimmed-string)))
  ;; => "* headline
@@ -6045,7 +6125,7 @@ for the meaning of **`config`**.
 ; contents
 
 (let ((config (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING")))
-  (->> (org-ml-parse-this-headline)
+  (org-ml->> (org-ml-parse-this-headline)
     (org-ml-headline-map-logbook-clocks* config
       (--map (org-ml-map-property* :value (org-ml-timestamp-shift 1 'day it) it)
         it))
@@ -6142,7 +6222,7 @@ Contents is everything in the headline after the logbook, and
 ;; Given the following contents:
 ; * headline
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-set-contents
     (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t)
     (list (org-ml-build-paragraph! "I'm new")))
@@ -6154,7 +6234,7 @@ Contents is everything in the headline after the logbook, and
 ; * headline
 ; something
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-set-contents
     (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t)
     (list (org-ml-build-paragraph! "I'm new")))
@@ -6170,7 +6250,7 @@ Contents is everything in the headline after the logbook, and
 ; :END:
 ; something
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-set-contents
     (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t)
     (list (org-ml-build-paragraph! "I'm new")))
@@ -6190,7 +6270,7 @@ Contents is everything in the headline after the logbook, and
 ; :END:
 ; something
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-set-contents
     (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t)
     nil)
@@ -6216,7 +6296,7 @@ contents and returns a modified list of nodes. See
 ; * headline
 ; something
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-map-contents*
     (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t)
     (cons (org-ml-build-paragraph! "I'm new") it))
@@ -6240,7 +6320,7 @@ chronological order.
 ; * headline
 
 (let ((ut (- 1546300800 (car (current-time-zone)))))
-  (->> (org-ml-parse-this-headline)
+  (org-ml->> (org-ml-parse-this-headline)
     (org-ml-headline-logbook-append-item
       (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t)
       (org-ml-build-log-note ut "new note"))
@@ -6259,7 +6339,7 @@ chronological order.
 ; :END:
 
 (let ((ut (- 1546300800 (car (current-time-zone)))))
-  (->> (org-ml-parse-this-headline)
+  (org-ml->> (org-ml-parse-this-headline)
     (org-ml-headline-logbook-append-item
       (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t)
       (org-ml-build-log-note ut "new note"))
@@ -6283,7 +6363,7 @@ chronological order.
 ; :END:
 
 (let ((ut (- 1546300800 (car (current-time-zone)))))
-  (->> (org-ml-parse-this-headline)
+  (org-ml->> (org-ml-parse-this-headline)
     (org-ml-headline-logbook-append-item
       (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING")
       (org-ml-build-log-note ut "new note"))
@@ -6313,7 +6393,7 @@ new clock will be added in chronological order.
 ;; Given the following contents:
 ; * headline
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-logbook-append-open-clock
     (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t)
     (- 1546300800 (car (current-time-zone))))
@@ -6329,7 +6409,7 @@ new clock will be added in chronological order.
 ; - note taken on [2018-12-30 Sun 00:00]
 ; :END:
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-logbook-append-open-clock
     (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t)
     (- 1546300800 (car (current-time-zone))))
@@ -6346,7 +6426,7 @@ new clock will be added in chronological order.
 ; - note taken on [2018-12-30 Sun 00:00]
 ; :END:
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-logbook-append-open-clock
     (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING")
     (- 1546300800 (car (current-time-zone))))
@@ -6379,7 +6459,7 @@ error.
 ; - note taken on [2018-12-30 Sun 00:00]
 ; :END:
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-logbook-close-open-clock
     (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t)
     (- 1546300800 (car (current-time-zone)))
@@ -6397,7 +6477,7 @@ error.
 ; - note taken on [2018-12-30 Sun 00:00]
 ; :END:
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-logbook-close-open-clock
     (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t)
     (- 1546300800 (car (current-time-zone)))
@@ -6409,7 +6489,7 @@ error.
  ;      - note taken on [2018-12-30 Sun 00:00]
  ;      :END:"
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-logbook-close-open-clock
     (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t)
     (- 1546300800 (car (current-time-zone)))
@@ -6431,14 +6511,14 @@ error.
 ; CLOCK: [2018-12-31 Mon 00:00]
 ; :END:
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-logbook-close-open-clock
-    (quote
-      (:log-into-drawer "LOGGING"
-        :clock-into-drawer
-        "CLOCKING"
-        :clock-out-notes
-        t))
+    (list :log-into-drawer
+      "LOGGING"
+      :clock-into-drawer
+      "CLOCKING"
+      :clock-out-notes
+      t)
     (- 1546300800 (car (current-time-zone)))
     nil)
   (org-ml-to-trimmed-string))
@@ -6467,7 +6547,7 @@ for the structure of both config lists.
 ; CLOCK: [2018-12-31 Mon 00:00]--[2019-01-01 Tue 00:00] => 24:00
 ; - note taken on [2018-12-30 Sun 00:00]
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-logbook-convert-config nil
     (list :log-into-drawer t :clock-into-drawer t))
   (org-ml-to-trimmed-string))
@@ -6477,7 +6557,7 @@ for the structure of both config lists.
  ;      - note taken on [2018-12-30 Sun 00:00]
  ;      :END:"
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-logbook-convert-config nil
     (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING"))
   (org-ml-to-trimmed-string))
@@ -6496,7 +6576,7 @@ for the structure of both config lists.
 ; - note taken on [2018-12-30 Sun 00:00]
 ; :END:
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-logbook-convert-config
     (list :log-into-drawer t :clock-into-drawer t)
     (list :log-into-drawer "LOGGING" :clock-into-drawer "CLOCKING"))
@@ -6555,7 +6635,7 @@ not be considered).
 ; - [ ] good data
 ; - [X] bad data
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-update-item-statistics)
   (org-ml-to-trimmed-string))
  ;; => "* statistically significant [1/2]
@@ -6570,7 +6650,7 @@ not be considered).
 ; - [X] bad data
 
 ;; Do nothing if nothing to update
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-headline-update-item-statistics)
   (org-ml-to-trimmed-string))
  ;; => "* statistically significant
@@ -6595,7 +6675,7 @@ subheadlines will not be counted).
 ; ** TODO good data
 ; ** DONE bad data
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-headline-update-todo-statistics)
   (org-ml-to-trimmed-string))
  ;; => "* statistically significant [1/2]
@@ -6610,7 +6690,7 @@ subheadlines will not be counted).
 ; ** DONE bad data
 
 ;; Do nothing if nothing to update
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-headline-update-todo-statistics)
   (org-ml-to-trimmed-string))
  ;; => "* statistically significant
@@ -6633,12 +6713,12 @@ demoted headline node's children.
 ; ** three
 ; *** four
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-headline-demote-subheadline 0)
   (org-ml-to-trimmed-string))
 Error
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-headline-demote-subheadline 1)
   (org-ml-to-trimmed-string))
  ;; => "* one
@@ -6661,7 +6741,7 @@ demoted headline node's children.
 ; ** three
 ; *** four
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-headline-demote-subtree 1)
   (org-ml-to-trimmed-string))
  ;; => "* one
@@ -6685,7 +6765,7 @@ The specific child headline to promote is selected by **`child-index`**.
 ; *** four
 ; *** four
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-headline-promote-subheadline 1 1)
   (org-ml-to-trimmed-string))
  ;; => "* one
@@ -6710,7 +6790,7 @@ Return **`headline`** node with all child headlines under **`index`** promoted.
 ; *** four
 ; *** four
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-headline-promote-all-subheadlines 1)
   (org-ml-to-trimmed-string))
  ;; => "* one
@@ -6735,7 +6815,7 @@ Return **`plain-list`** node with type property set to **`type`**.
 ; - [ ] one
 ; - [X] two
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-plain-list-set-type 'ordered)
   (org-ml-to-trimmed-string))
  ;; => "1. [ ] one
@@ -6745,7 +6825,7 @@ Return **`plain-list`** node with type property set to **`type`**.
 ; 1. [ ] one
 ; 2. [X] two
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-plain-list-set-type 'unordered)
   (org-ml-to-trimmed-string))
  ;; => "- [ ] one
@@ -6767,12 +6847,12 @@ item node's children.
 ; - four
 
 ;; It makes no sense to indent the first item
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-plain-list-indent-item 0)
   (org-ml-to-trimmed-string))
 Error
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-plain-list-indent-item 1)
   (org-ml-to-trimmed-string))
  ;; => "- one
@@ -6780,7 +6860,7 @@ Error
  ;        - three
  ;      - four"
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-plain-list-indent-item 2)
   (org-ml-to-trimmed-string))
  ;; => "- one
@@ -6799,14 +6879,16 @@ node's children.
 ```el
 ;; Given the following contents:
 ; - one
+;   - one-ish
 ; - two
 ;   - three
 ; - four
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-plain-list-indent-item-tree 1)
   (org-ml-to-trimmed-string))
  ;; => "- one
+ ;        - one-ish
  ;        - two
  ;          - three
  ;      - four"
@@ -6827,7 +6909,7 @@ The specific child item to outdent is selected by **`child-index`**.
 ;   - three
 ; - four
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-plain-list-outdent-item 1 0)
   (org-ml-to-trimmed-string))
  ;; => "- one
@@ -6837,7 +6919,7 @@ The specific child item to outdent is selected by **`child-index`**.
  ;        - three
  ;      - four"
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-plain-list-outdent-item 1 1)
   (org-ml-to-trimmed-string))
  ;; => "- one
@@ -6847,7 +6929,7 @@ The specific child item to outdent is selected by **`child-index`**.
  ;        - three
  ;      - four"
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-plain-list-outdent-item 2 1)
   (org-ml-to-trimmed-string))
  ;; => "- one
@@ -6872,7 +6954,7 @@ Return **`plain-list`** node with all child items under **`index`** outdented.
 ;   - three
 ; - four
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-plain-list-outdent-all-items 1)
   (org-ml-to-trimmed-string))
  ;; => "- one
@@ -6882,7 +6964,7 @@ Return **`plain-list`** node with all child items under **`index`** outdented.
  ;      - three
  ;      - four"
 
-(->> (org-ml-parse-element-at 1)
+(org-ml->> (org-ml-parse-element-at 1)
   (org-ml-plain-list-outdent-all-items 2)
   (org-ml-to-trimmed-string))
  ;; => "- one
@@ -6890,6 +6972,26 @@ Return **`plain-list`** node with all child items under **`index`** outdented.
  ;        - three
  ;        - three
  ;        - three
+ ;      - four"
+
+;; Given the following contents:
+; - one
+; - two
+;   - three
+;   - three
+;   - three
+;     - three-ish
+; - four
+
+(org-ml->> (org-ml-parse-element-at 1)
+  (org-ml-plain-list-outdent-all-items 1)
+  (org-ml-to-trimmed-string))
+ ;; => "- one
+ ;      - two
+ ;      - three
+ ;      - three
+ ;      - three
+ ;        - three-ish
  ;      - four"
 
 ```
@@ -6938,21 +7040,21 @@ Return **`table`** node with column at **`column-index`** deleted.
 ; |---+---|
 ; | c | d |
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-delete-column 0)
   (org-ml-to-trimmed-string))
  ;; => "| b |
  ;      |---|
  ;      | d |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-delete-column 1)
   (org-ml-to-trimmed-string))
  ;; => "| a |
  ;      |---|
  ;      | c |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-delete-column -1)
   (org-ml-to-trimmed-string))
  ;; => "| a |
@@ -6971,19 +7073,19 @@ Return **`table`** node with row at **`row-index`** deleted.
 ; |---+---|
 ; | c | d |
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-delete-row 0)
   (org-ml-to-trimmed-string))
  ;; => "|---+---|
  ;      | c | d |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-delete-row 1)
   (org-ml-to-trimmed-string))
  ;; => "| a | b |
  ;      | c | d |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-delete-row -1)
   (org-ml-to-trimmed-string))
  ;; => "| a | b |
@@ -7005,14 +7107,14 @@ syntax as [`org-ml-build-table-cell!`](#org-ml-build-table-cell-string).
 ; |---+---|
 ; | c | d |
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-insert-column! 1 '("x" "y"))
   (org-ml-to-trimmed-string))
  ;; => "| a | x | b |
  ;      |---+---+---|
  ;      | c | y | d |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-insert-column! -1 '("x" "y"))
   (org-ml-to-trimmed-string))
  ;; => "| a | b | x |
@@ -7035,7 +7137,7 @@ as [`org-ml-build-table-row!`](#org-ml-build-table-row-row-list).
 ; |---+---|
 ; | c | d |
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-insert-row! 1 '("x" "y"))
   (org-ml-to-trimmed-string))
  ;; => "| a | b |
@@ -7043,7 +7145,7 @@ as [`org-ml-build-table-row!`](#org-ml-build-table-row-row-list).
  ;      |---+---|
  ;      | c | d |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-insert-row! 2 '("x" "y"))
   (org-ml-to-trimmed-string))
  ;; => "| a | b |
@@ -7051,7 +7153,7 @@ as [`org-ml-build-table-row!`](#org-ml-build-table-row-row-list).
  ;      | x | y |
  ;      | c | d |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-insert-row! -1 '("x" "y"))
   (org-ml-to-trimmed-string))
  ;; => "| a | b |
@@ -7077,21 +7179,21 @@ If **`cell-text`** is nil, it will set the cell to an empty string.
 ; |---+---|
 ; | a | b |
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-replace-cell! 0 0 "2")
   (org-ml-to-trimmed-string))
  ;; => "| 2 | 2 |
  ;      |---+---|
  ;      | a | b |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-replace-cell! 0 0 nil)
   (org-ml-to-trimmed-string))
  ;; => "|   | 2 |
  ;      |---+---|
  ;      | a | b |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-replace-cell! -1 -1 "B")
   (org-ml-to-trimmed-string))
  ;; => "| 1 | 2 |
@@ -7116,21 +7218,21 @@ If **`column-text`** is nil, it will clear all cells at **`column-index`**.
 ; |---+---|
 ; | c | d |
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-replace-column! 0 '("A" "B"))
   (org-ml-to-trimmed-string))
  ;; => "| A | b |
  ;      |---+---|
  ;      | B | d |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-replace-column! 0 nil)
   (org-ml-to-trimmed-string))
  ;; => "|   | b |
  ;      |---+---|
  ;      |   | d |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-replace-column! -1 '("A" "B"))
   (org-ml-to-trimmed-string))
  ;; => "| a | A |
@@ -7155,21 +7257,21 @@ If **`row-text`** is nil, it will clear all cells at **`row-index`**.
 ; |---+---|
 ; | c | d |
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-replace-row! 0 '("A" "B"))
   (org-ml-to-trimmed-string))
  ;; => "| A | B |
  ;      |---+---|
  ;      | c | d |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-replace-row! 0 nil)
   (org-ml-to-trimmed-string))
  ;; => "|   |   |
  ;      |---+---|
  ;      | c | d |"
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-table-replace-row! -1 '("A" "B"))
   (org-ml-to-trimmed-string))
  ;; => "| a | b |
@@ -7213,7 +7315,7 @@ Subpatterns may either be wildcards or conditions.
 
 Conditions match exactly one level of the node tree being
 searched based on the node's type (the symbol returned by
-[`org-ml-get-type`](#org-ml-get-type-node)), properties (the value returned by
+[`org-ml-get-type`](#org-ml-get-type-node-optional-anonymous)), properties (the value returned by
 [`org-ml-get-property`](#org-ml-get-property-prop-node) for a valid property keyword), and
 index (the position of the node in the list returned by
 [`org-ml-get-children`](#org-ml-get-children-branch-node)). For index, both left indices (where zero
@@ -7258,7 +7360,7 @@ function and `posix` extended regular expressions.:
 - `sub` `+` - match `sub` one or more times
 - `sub` [`n`] - match `sub` `n` times
 - `sub` [`m` `n`] - match `sub` `m` to `n` times (inclusive); if `m` or `n` is
-    nil, this will match 'at most `n` times' or 'at least `m` times'
+    nil, this will match `"at most `n` times"` or `"at least `m` times"`
     respectively
 - `(alt-a1 [alt-a2 ...] | alt-b1 [alt-b2 ...] [| ...])` - match
     any of the `alt` expressions separated by `|` where `alt` is a list
@@ -7357,19 +7459,19 @@ Return **`node`** without children matching **`pattern`**.
 ; ** headline four
 
 ;; Selectively delete headlines
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-match-delete '(headline))
   (org-ml-to-trimmed-string))
  ;; => "* headline one"
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-match-delete '(:first headline))
   (org-ml-to-trimmed-string))
  ;; => "* headline one
  ;      ** headline three
  ;      ** headline four"
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-match-delete '(:last headline))
   (org-ml-to-trimmed-string))
  ;; => "* headline one
@@ -7414,7 +7516,7 @@ which will replace the original.
 ; ** headline four
 
 ;; Selectively mark headlines as DONE
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-match-map '(headline)
     (lambda (it) (org-ml-set-property :todo-keyword "DONE" it)))
   (org-ml-to-trimmed-string))
@@ -7423,7 +7525,7 @@ which will replace the original.
  ;      ** DONE headline three
  ;      ** DONE headline four"
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-match-map* '(:first headline)
     (org-ml-set-property :todo-keyword "DONE" it))
   (org-ml-to-trimmed-string))
@@ -7432,7 +7534,7 @@ which will replace the original.
  ;      ** headline three
  ;      ** headline four"
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-match-map '(:last headline)
     (-partial #'org-ml-set-property :todo-keyword "DONE"))
   (org-ml-to-trimmed-string))
@@ -7456,7 +7558,7 @@ nodes which will be spliced in place of the original node.
 ; * one
 ; ** two
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-match-mapcat* '(:first headline)
     (list (org-ml-build-headline! :title-text "1.5" :level 2) it))
   (org-ml-to-trimmed-string))
@@ -7476,7 +7578,7 @@ Return **`node`** with **`node*`*** in place of children matching **`pattern`**.
 ;; Given the following contents:
 ; *1* 2 *3* 4 *5* 6 *7* 8 *9* 10
 
-(->> (org-ml-parse-this-element)
+(org-ml->> (org-ml-parse-this-element)
   (org-ml-match-replace '(:any * bold) (org-ml-build-bold :post-blank 1 "0"))
   (org-ml-to-trimmed-string))
  ;; => "*0* 2 *0* 4 *0* 6 *0* 8 *0* 10"
@@ -7495,7 +7597,7 @@ Return **`node`** with **`node*`*** inserted before children matching **`pattern
 ; ** two
 ; ** three
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-match-insert-before '(headline)
     (org-ml-build-headline! :title-text "new" :level 2))
   (org-ml-to-trimmed-string))
@@ -7519,7 +7621,7 @@ Return **`node`** with **`node*`*** inserted after children matching **`pattern`
 ; ** two
 ; ** three
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-match-insert-after '(headline)
     (org-ml-build-headline! :title-text "new" :level 2))
   (org-ml-to-trimmed-string))
@@ -7545,7 +7647,7 @@ in the immediate, top level children of **`node`**.
 ; ** two
 ; ** three
 
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-match-insert-within '(headline)
     0
     (org-ml-build-headline! :title-text "new" :level 3))
@@ -7557,7 +7659,7 @@ in the immediate, top level children of **`node`**.
  ;      *** new"
 
 ;; The nil pattern denotes top-level element
-(->> (org-ml-parse-this-subtree)
+(org-ml->> (org-ml-parse-this-subtree)
   (org-ml-match-insert-within nil
     1
     (org-ml-build-headline! :title-text "new" :level 2))
@@ -7584,7 +7686,7 @@ Return **`node`** with **`nodes*`*** spliced in place of children matching **`pa
 
 (let
   ((L (list (org-ml-build-headline! :title-text "new0" :level 2) (org-ml-build-headline! :title-text "new1" :level 2))))
-  (->> (org-ml-parse-this-subtree)
+  (org-ml->> (org-ml-parse-this-subtree)
     (org-ml-match-splice '(0) L)
     (org-ml-to-trimmed-string)))
  ;; => "* one
@@ -7609,7 +7711,7 @@ Return **`node`** with **`nodes*`*** spliced before children matching **`pattern
 
 (let
   ((L (list (org-ml-build-headline! :title-text "new0" :level 2) (org-ml-build-headline! :title-text "new1" :level 2))))
-  (->> (org-ml-parse-this-subtree)
+  (org-ml->> (org-ml-parse-this-subtree)
     (org-ml-match-splice-before '(0) L)
     (org-ml-to-trimmed-string)))
  ;; => "* one
@@ -7635,7 +7737,7 @@ Return **`node`** with **`nodes*`*** spliced after children matching **`pattern`
 
 (let
   ((L (list (org-ml-build-headline! :title-text "new0" :level 2) (org-ml-build-headline! :title-text "new1" :level 2))))
-  (->> (org-ml-parse-this-subtree)
+  (org-ml->> (org-ml-parse-this-subtree)
     (org-ml-match-splice-after '(0) L)
     (org-ml-to-trimmed-string)))
  ;; => "* one
@@ -7664,7 +7766,7 @@ in the immediate, top level children of **`node`**.
 
 (let
   ((L (list (org-ml-build-headline! :title-text "new0" :level 3) (org-ml-build-headline! :title-text "new1" :level 3))))
-  (->> (org-ml-parse-this-subtree)
+  (org-ml->> (org-ml-parse-this-subtree)
     (org-ml-match-splice-within '(headline) 0 L)
     (org-ml-to-trimmed-string)))
  ;; => "* one
@@ -7678,7 +7780,7 @@ in the immediate, top level children of **`node`**.
 
 (let
   ((L (list (org-ml-build-headline! :title-text "new0" :level 2) (org-ml-build-headline! :title-text "new1" :level 2))))
-  (->> (org-ml-parse-this-subtree)
+  (org-ml->> (org-ml-parse-this-subtree)
     (org-ml-match-splice-within nil 1 L)
     (org-ml-to-trimmed-string)))
  ;; => "* one
@@ -7786,7 +7888,7 @@ middle of **`node`**.
 ;; Given the following contents:
 ; * TODO win grammy
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-update (lambda (hl) (org-ml-set-property :todo-keyword "DONE" hl))))
  ;; Output these buffer contents
  ;; $> "* DONE win grammy"
@@ -7797,7 +7899,7 @@ middle of **`node`**.
 ; - [ ] get new vocalist
 ; - [ ] sell 2 singles
 
-(->> (org-ml-parse-this-headline)
+(org-ml->> (org-ml-parse-this-headline)
   (org-ml-update*
     (->> (org-ml-match-map '(:any * item) #'org-ml-item-toggle-checkbox it)
       (org-ml-headline-update-item-statistics))))
@@ -8036,50 +8138,135 @@ nil (see this for use and meaning of **`fun`**).
 ; * three [/]
 ; ** DONE _one
 
+(org-ml-update-subtrees* 0 (org-ml-headline-update-todo-statistics it))
+ ;; Output these buffer contents
+ ;; $> "* one [1/1]
+ ;      ** DONE _one
+ ;      * two [/]
+ ;      ** DONE _one
+ ;      * three [/]
+ ;      ** DONE _one"
 
-;; Given the following contents:
-; * one [1/1]
-; ** DONE _one
-; * two [/]
-; ** DONE _one
-; * three [/]
-; ** DONE _one
+(org-ml-update-subtrees* '(0 1) (org-ml-headline-update-todo-statistics it))
+ ;; Output these buffer contents
+ ;; $> "* one [1/1]
+ ;      ** DONE _one
+ ;      * two [1/1]
+ ;      ** DONE _one
+ ;      * three [/]
+ ;      ** DONE _one"
 
+(org-ml-update-subtrees* [2 nil] (org-ml-headline-update-todo-statistics it))
+ ;; Output these buffer contents
+ ;; $> "* one [/]
+ ;      ** DONE _one
+ ;      * two [1/1]
+ ;      ** DONE _one
+ ;      * three [1/1]
+ ;      ** DONE _one"
 
-;; Given the following contents:
-; * one [1/1]
-; ** DONE _one
-; * two [1/1]
-; ** DONE _one
-; * three [/]
-; ** DONE _one
-
+(org-ml-update-subtrees* [nil 5] (org-ml-headline-update-todo-statistics it))
+ ;; Output these buffer contents
+ ;; $> "* one [1/1]
+ ;      ** DONE _one
+ ;      * two [/]
+ ;      ** DONE _one
+ ;      * three [/]
+ ;      ** DONE _one"
 
 ;; Given the following contents:
 ; * one [/]
 ; ** DONE _one
-; * two [1/1]
-; ** DONE _one
-; * three [1/1]
-; ** DONE _one
-
-
-;; Given the following contents:
-; * one [1/1]
-; ** DONE _one
+; ** DONE _two
 ; * two [/]
 ; ** DONE _one
-; * three [/]
-; ** DONE _one
+; ** DONE _two
 
+```
+
+#### org-ml-update-supercontents `(config which fun)`
+
+Update some headline supercontents in the current using **`fun`**.
+
+See [`org-ml-parse-headlines`](#org-ml-parse-headlines-which) for the meaning of **`which`**.
+
+Headlines are updated using `org-ml~update` with `diff-arg` set to
+nil (see this for use and meaning of **`fun`**).
+
+```el
+;; Given the following contents:
+; * one
+
+(let ((pl '(:scheduled (2000 1 1))))
+  (org-ml-wrap-impure
+    (org-ml-update-supercontents* nil
+      'all
+      (org-ml-supercontents-set-planning pl it))))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      SCHEDULED: <2000-01-01 Sat>"
 
 ;; Given the following contents:
-; * one [2/2]
-; ** DONE _one
-; ** DONE _two
-; * two [2/2]
-; ** DONE _one
-; ** DONE _two
+; * one
+; 
+; something
+
+(let ((pl '(:scheduled (2000 1 1))))
+  (org-ml-wrap-impure
+    (org-ml-update-supercontents* nil
+      'all
+      (org-ml-supercontents-set-planning pl it))))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      SCHEDULED: <2000-01-01 Sat>
+ ;      
+ ;      something"
+
+;; Given the following contents:
+; * one
+; ** two
+
+(let ((pl '(:scheduled (2000 1 1))))
+  (org-ml-wrap-impure
+    (org-ml-update-supercontents* nil
+      'all
+      (org-ml-supercontents-set-planning pl it))))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      SCHEDULED: <2000-01-01 Sat>
+ ;      ** two
+ ;      SCHEDULED: <2000-01-01 Sat>"
+
+;; Given the following contents:
+; * one
+; ** two
+; stuff
+
+(let ((pl '(:scheduled (2000 1 1))))
+  (org-ml-wrap-impure
+    (org-ml-update-supercontents* nil
+      'all
+      (org-ml-supercontents-set-planning pl it))))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      SCHEDULED: <2000-01-01 Sat>
+ ;      ** two
+ ;      SCHEDULED: <2000-01-01 Sat>
+ ;      stuff"
+
+;; Given the following contents:
+; * one
+; stuff
+
+(let ((pl '(:scheduled (2000 1 1))))
+  (org-ml-wrap-impure
+    (org-ml-update-supercontents* nil
+      'all
+      (org-ml-supercontents-set-planning pl it))))
+ ;; Output these buffer contents
+ ;; $> "* one
+ ;      SCHEDULED: <2000-01-01 Sat>
+ ;      stuff"
 
 ```
 

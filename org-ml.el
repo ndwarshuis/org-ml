@@ -8267,5 +8267,11 @@ format.
 This function is depreciated. Use `org-ml-timestamp-get-length'
 instead.")
 
+(defalias `org-ml-time-is-long #'org-ml-timelist-has-time
+  "This function is depreciated.")
+
+(defalias `org-ml-time-to-unixtime #'org-ml-timelist-to-unixtime
+  "This function is depreciated.")
+
 (provide 'org-ml)
 ;;; org-ml.el ends here

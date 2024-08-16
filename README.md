@@ -105,18 +105,12 @@ type.
 
 ## Terminology
 
-This package takes several deviations from the original terminology found in
-`org-element.el`.
-- 'node' is used here to describe a vertex in the parse tree, where 'element'
-  and 'object' are two classes used to describe said vertex (`org-element.el`
-  seems to use 'element' to generally mean 'node' and uses 'object' to further
-  specify)
+- 'node' is a vertex in the parse tree, where 'element' and 'object' are two
+  classes used to describe said vertex
 - 'child' and 'children' are used here instead of 'content' and 'contents'
-- 'branch' is used here instead of 'container'. Furthermore, 'leaf' is used to
-  describe the converse of 'branch' (there does not seem to be an equivalent
-  term in `org-element.el`)
-- `org-element.el` uses 'attribute(s)' and 'property(ies)' interchangeably to
-  describe nodes; here only 'property(ies)' is used
+- 'branch' is a node that has or can have other nodes in it (`org-element`
+  mostly uses 'container' to describe these)
+- 'leaf' is a node without other nodes in it (opposite of branch)
 
 ## Properties
 
@@ -127,11 +121,12 @@ The properties `:begin`, `:end`, `:contents-begin`, `:contents-end`, `:parent`,
 and `post-affiliated` are not settable by this API as they are not necessary for
 manipulating the textual representation of the parse tree. In addition to these,
 some properties unique to certain types are not settable for the same reason.
-Each type's build function describes the properties that are settable.
+Each type's build function (`org-ml-build-X`) describes the properties that are
+settable.
 
 See `org-ml-remove-parent` and `org-ml-remove-parents` for specific information
-and functions regarding the `:parent` property, why it can be annoying, when you
-would want to remove it.
+and functions regarding the `:parent` property, why it can be annoying, and when
+you would want to remove it.
 
 ## Threading
 
@@ -182,13 +177,12 @@ reference](docs/api-reference.md).
 
 ## Habits
 
-By default, the org-element API does not parse timestamp habits. This means that
-if you parse an org-mode buffer with timestamp habits and try to convert it back
-to a string, the habits will be lost. `org-ml` has a wrapper function to add
-this functionality; enable it by setting `org-ml-parse-habits` to t. Since
-habits are an extension of timestamp repeaters, this option will also impact the
-behavior of `org-ml-timestamp-get-repeater`, `org-ml-timestamp-set-repeater`,
-and `org-ml-timestamp-map-repeater` (see their docstrings for details).
+Since org 9.7, habits are stored in `:repeater-deadline-unit` and
+`:repeater-deadline-value` of `timestamp` nodes. "Deadline" refers to the last
+bit in the repeater of a timestamp (ie the "3d" in "[2019-01-01 Tue 12:00
++1d/3d]").
+
+See `org-ml-timestamp-get/set/map-deadline` to access and manipulate these.
 
 # Performance
 
@@ -213,12 +207,15 @@ functions (in line with the intuitions above):
 * reading data (a one way conversion from buffer to node space) is up to an
   order of magnitude slower, specifically when the data to be obtained isn't
   very large (eg, reading the TODO state from a headline)
-* manipulating text (going from buffer to node space, then modifying the node,
-  then going back to buffer space) is several times slower for single
-  modifications (eg setting the TODO state of a headline)
-* larger numbers of manipulations on one node at once are faster (eg changing
-  the TODO state, setting a property, and setting a SCHEDULED timestamp on a
-  headline)
+* text manipulations can be update to 10x slower *or faster* depending on what
+  they are:
+  * large edits like headline level changing are slower in `org-ml`
+  * updating headline todo and tags are faster in `org-ml`
+  * complex operations that involve lots of different functions tend to be
+    faster in `org-ml` (since there are more list operations vs buffer edits)
+  * changing the contents of headlines can be as fast or faster in `org-ml`,
+    especially when using memoization and `org-ml-update-supercontents` (see
+    below).
 
 To run the benchmark suite:
 
@@ -226,7 +223,127 @@ To run the benchmark suite:
 make benchmark
 ```
 
+## Deferred Properties
+
+### Overview
+
+Starting with org 9.7, `org-element`'s abstract syntax tree uses lazy evaluation
+for several text-heavy operations. Thus the tree that `org-ml` consumes may have
+unevaluated (aka "deferred") properties in it. For the most part, this will not
+affect user experience, but understanding this will help in optimizing
+performance, as preventing lazy properties from being unnecessarily resolved
+will lead to significant performance gains.
+
+As of version 9.7.9, the properties which are deferred are:
+* most properties in headlines (all except for :pre-blank and the properties in
+  `org-element--standard-properties`)
+* the :value property for code and verbatim nodes
+   
+Since most of the deferred properties are in headlines, and because headlines
+are so prevalent, the remainder of this discussion will focus on headlines.
+
+Accessing any deferred property in a headline will trigger that property to be
+resolved, which is slow (as of 9.7.9 this often results in multiple properties
+being resolved at once due to the interconnected nature of how a headilne is
+parsed). In `org-ml` this means using `org-ml-get-property` or similar, as well
+as `org-ml-to-string` which necessarily needs to read all properties to create a
+string. Setting a property will resolve all properties, since (as noted above)
+many deferred headline properties depend on others.
+
+### Optimizations in org-ml
+
+With regard to buffer editing (ie `org-ml-update-X` functions) this also means
+that any operation that does *not* edit the headline itself can be much faster
+under this new lazy paradigm. Examples of this include updating CLOSED or
+SCHEDULED timestamps, editing the logbook, adding properties like Effort, or
+adding other contents between these and the next headline. Unlike previous
+versions of `org-ml` and `org` manipulating these would have involved parsing
+the headline, parsing the stuff inside the headline, editing the stuff inside
+the headline, then writing out a new headline. In 9.7, we can bypass most of the
+headline parsing in this situation.
+
+The functions to do this are `org-ml-update-supercontents` and
+`org-ml-update-supersection`. Both are only meant to edit the section underneath
+the headlines in the buffer, and will not touch the headline itself. This takes
+advantage of the new lazy evaluation system. These functions create an
+abstraction over the contents of the headline that can be manipulated in a sane
+way (see their docstrings for details).
+
+There is one important caveat; if one changes the whitespace immediately after
+the headline, this likely will change the :pre-blank property of the headline
+which will require the headline to be rewritten (and resolved) which negates
+this performance benefit. However, these functions are smart enough to figure
+out when :pre-blank is changed.
+
+### Other Considerations
+
+Because lazy evaluation defers parsing the buffer, this assumes that the buffer
+will not be edited in between the time the org-element syntax tree is created
+and accessing any deferred properties. By extension it assumes the buffer is not
+entirely destroyed (which is probably when dealing with temp buffers).
+
+If one expects that the buffer will not retain state prior to accessing deferred
+properties, use `org-element-properties-resolve` (which will resolve deferred
+properties in place) or either `org-element-copy` or `org-ml-copy` which will
+resolve deferred properties and copy the entire node (see more below).
+
+## Node Copying
+
+To maintain functional purity, all public-facing functions in `org-ml` that
+modify nodes should return a copy. This way, modifications to the returned node
+will not "go backward" to the original input node.
+
+However, making copies can be slow. It also might be unnecessary within a
+pipeline (usually with the threading macros `->` and `->>` from `dash.el`)
+since the intermediate values are not bound to any variable, which leaves no
+opportunity for accidental side-effect leakage.
+
+To solve this use-case, `org-ml` has the following specialized threading macros:
+
+- `org-ml->`
+- `org-ml->>`
+- `org-ml-->`
+- `org-ml-some->`
+- `org-ml-some->>`
+- `org-ml-some-->`
+
+These correspond to the sans-`org-ml` macros from `dash.el`
+
+The `org-ml` versions will set `org-ml-use-impure` to t, which will turn off all
+copying within the pipeline. (see `org-ml-copy` which is a thin wrapper around
+`org-element-copy` with this switch built-in).
+
+Note that the performance benefits of this are significant but modest (5-10%
+depending on the complexity of the operation), and this comes with a significant
+cost of reduced safety since it breaks the functional paradigm. Weight this
+accordingly.
+
 ## Memoization
+
+### Build Functions
+
+Node building (functions like `org-ml-build-*`) is a pure operation (ie the
+result only depends on the inputs). Furthermore, it is used in many places,
+including internally to `org-ml` itself.
+
+Therefore, memoizing these functions can produce significant performance gains.
+
+To turn this on globally, set `org-ml-memoize-builders` to `t`. This will
+memoize all leaf node builders by default (as it is assumed that any branch
+nodes will be sufficiently complicated that most will be unique and therefore
+miss the cache). For more fine-grained control over which nodes are memoized,
+see `org-ml-memoize-builder-types`.
+
+#### Shorthand Builders
+
+There is an analogous optimization for 'shorthand' builders (functions like
+`org-ml-build-*`) which use simplified inputs. These are controled by
+`org-ml-memoize-shorthand-builders` and
+`org-ml-memoize-shorthand-builder-types`. These will by default memoize all
+shorthand builders except those for item and headline, for similar reasons to
+above.
+
+### Match Patterns
 
 For all pattern-matching functions (eg `org-ml-match` and `org-ml-match-X`), the
 `PATTERN` parameter is processed into a lambda function which computationally
@@ -234,12 +351,103 @@ carries out the pattern matching. If there are many calls using the same or a
 few unique patterns, this lambda-generation overhead may be memoized by setting
 `org-ml-memoize-match-patterns`. See this varible's documentation for details.
 
+## Other potential optimizations
+
+These are some ideas that may be implemented later depending on how much they
+matter.
+
+### Tree-based Diff Algorithm
+
+It makes sense to only update the parts of a buffer that actually change.
+However, this is complicated to do in practice.
+
+Current versions of `org-ml` can use the Myers Diff Algorithm (the thing that
+powers the `diff` program) to only edit the buffer contents that change (see
+`org~ml-update`). This can have some speedup since buffer editing is somewhat
+expensive. The obvious tradeoff is the algorithm itself needs to be performed
+prior to the edit, and its complexity is quadratic.
+
+The problem with this algorithm is that it only works on strings, thus the
+org-element tree needs to be interpreted for this to be used. Not only is this
+inherently expensive, it also negates any of the defferred property enhancements
+that come with 9.7.
+
+The (potential) solution is to implement a tree-based version of the Myers Diff
+algorithm that works directly on the org-element tree. The result would be a
+list of nodes to be inserted/deleted at a given position.
+
+This would potentially have a huge benefit for deeply-nested edits, which often
+happen in property drawers, logbooks, clocking entries, lists, etc.
+
+### Lazy Evaluation for Supercontents Functions
+
+The functions `org-ml-get/set/map-supercontents` (and related) all operate on a
+complicated abstraction over a headline's section nodes. While this makes many
+operations easy and convenient, it has the drawback of converting the entire
+section even if only a small part needs to be changed. Making some parts of this
+data structure lazy could make this faster.
+
+This most obviously matters for cases where one wants to edit the planning or
+property nodes of a headline which also has a massive logbook or a lot of
+clocks. Currently the entire logbook, clocks, etc, will be processed, despite
+a tiny unrelated node actually being updated.
+
+# Development
+
+For most stable results, make sure you have a working conda or mamba
+installation. Conda is not strictly needed, but reproducible testing results are
+not guaranteed.
+
+Begin by creating a testing environment using the provided env* files (with the
+desired version):
+
+```
+mamba env create -f env-XX.Y.yml
+conda activate org-ml-XX.Y
+```
+
+Install all dependencies:
+
+```
+make install
+```
+
+Run all tests:
+
+```
+make unit
+```
+
+Run all tests with compilation:
+
+```
+make compile
+```
+
+To update a dependency, navidate to the `.emacs/XX.Y/straight/repos/<dep>`
+directory (after installation) and run `git reset --hard <ref>` (after fetch if
+needed) to pull the desired git state. Then run:
+
+```
+make freeze
+```
+
+Which will update `.emacs/XX.Y/straight/versions/default.el`
+
+If any of the above make commands fail with: `undefined symbol:
+malloc_set_state` or similar, try the following:
+
+```
+export LD_PRELOAD=/usr/lib/libc_malloc_debug.so
+```
+
 # Version History
 
 See [changelog](CHANGELOG.md).
 
 # Acknowledgments
 
+- Ihor Radchenko: author or `org-element-ast.el`
 - Nicolas Goaziou: author of `org-element.el`
 - [@magnars](https://github.com/magnars):
 [dash.el](https://github.com/magnars/dash.el) and

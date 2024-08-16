@@ -1,5 +1,56 @@
 # Changelog
 
+## 6.0.0
+
+This is a major update for org 9.7, which has been heavily optimized with a new
+syntax tree API. This new version of org-ml takes advantage of this new API
+(which is much faster) but also breaks several things.
+
+summary of breaking changes
+
+- `org-ml-planning-*` functions have been removed (they are no longer necessary)
+- the supercontents data structure (for
+  `org-ml-headline-get/set/map-supercontents) has been updated and rewritten.
+  See docstring for `org-ml-headline-get-supercontents` for details. TLDR is
+  that it now handles planning and node properties. This was done partly to
+  better handle whitespace (which was not done correctly previously) and also to
+  take advantage of performance improvements in the headline node type (see
+  below for `org-ml-update-supercontents`)
+- all previous depreciated functions have been removed
+  - and `org-ml-timestamp-get/set-range` have been renamed to
+    `org-ml-timestamp-get/set-length`
+- `org-ml-parse-habits` has been removed, this is now elegantly handled by
+  org-element itself. See `org-ml-timestamp-get/set/map-deadline` instead.
+- `org-ml-headline-get/set/map-node-properties` now use a list of string pairs
+  like `(KEY VAL)` instead of raw node-property nodes.
+- `org-ml-timestamp-set-length` now takes a unit argument
+- `org-ml-clone-node` has been removed
+- `org-ml-unixtime-to-time-long/short` have been combined into
+  `org-ml-unixtime-to-timelist` which takes a flag to determine if the hours and
+  minutes should be included
+
+summary of added features
+
+- added higher-level timestamp-diary functions for start and end time
+  manipulation (new in org 9.7)
+- `org-ml-timestamp-get/set/map-deadline` which manipulates what is commonly
+  called "habits" (new in org 9.7)
+- `org-ml-update-supercontents` and `org-ml-update-supersection` which are two
+  heavily-optimized functions which take advantage of the new lazy evalulation
+  in org 9.7; use these to update headline contents without touching the
+  headline itself
+- memoization for builder functions
+- ability to switch between pure and impure evaluation (the latter is faster but
+  less safe); see `org-ml-use-impure`
+
+bug fixes and refactorizations
+
+- added missing tests for purity
+- fixed many whitespace handling errors
+- use conda to pin exact emacs version for local development
+- use straight to pin exact versions of all dependencies
+- remove lispy dependency
+
 ## 5.8.8
 
 - fix list-like syntax in secondary string parsing
