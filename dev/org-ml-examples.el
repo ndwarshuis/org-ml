@@ -3499,24 +3499,24 @@
       (org-ml-to-trimmed-string))
     => "[2019-01-01 Tue 00:00]--[2019-01-01 Tue 01:00]")
 
-  (defexamples-content org-ml-timestamp-set-range
+  (defexamples-content org-ml-timestamp-set-length
     nil
     (:buffer "[2019-01-01 Tue]")
     (:comment "Use days as the unit for short format")
     (org-ml->> (org-ml-parse-this-object)
-      (org-ml-timestamp-set-range 1 'day)
+      (org-ml-timestamp-set-length 1 'day)
       (org-ml-to-trimmed-string))
     => "[2019-01-01 Tue]--[2019-01-02 Wed]"
     (:buffer "[2019-01-01 Tue 00:00]")
     (:comment "Use minutes as the unit for long format")
     (org-ml->> (org-ml-parse-this-object)
-      (org-ml-timestamp-set-range 3 'minute)
+      (org-ml-timestamp-set-length 3 'minute)
       (org-ml-to-trimmed-string))
     => "[2019-01-01 Tue 00:00-00:03]"
     (:buffer "[2019-01-01 Tue]--[2019-01-03 Wed]")
     (:comment "Set range to 0 to remove end time")
     (org-ml->> (org-ml-parse-this-object)
-      (org-ml-timestamp-set-range 0 'day)
+      (org-ml-timestamp-set-length 0 'day)
       (org-ml-to-trimmed-string))
     => "[2019-01-01 Tue]")
 

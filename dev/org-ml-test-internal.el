@@ -838,7 +838,7 @@ HEADER is the it-header."
       (org-ml-timestamp-set-end-time '(2024 2 1 0 0) it)
       (org-ml-timestamp-set-single-time '(2024 1 2 0 0) it)
       (org-ml-timestamp-set-double-time '(2024 1 2 0 0) '(2024 1 3 0 0) it)
-      (org-ml-timestamp-set-range 1 'day it)
+      (org-ml-timestamp-set-length 1 'day it)
       (org-ml-timestamp-set-active t it)
       (org-ml-timestamp-shift 1 'day it)
       (org-ml-timestamp-shift-start 1 'day it)
