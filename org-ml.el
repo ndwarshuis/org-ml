@@ -5494,20 +5494,23 @@ CONFIG is a list corresponding to `org-ml--scc-encode'."
 CONFIG is a list corresponding to `org-ml--scc-encode'."
   (-let* (((&plist :planning p :node-props n :logbook lb :blank b :contents c)
            supercontents)
+          (anyp (or (plist-get p :closed)
+                    (plist-get p :scheduled)
+                    (plist-get p :deadline)))
           (lb-nodes (org-ml--logbook-to-nodes config lb)))
     (cond
      (lb-nodes
       (org-ml--supersection-init
-       0 `(,@(when p (list (apply #'org-ml-build-planning! p)))
+       0 `(,@(when anyp (list (apply #'org-ml-build-planning! p)))
            ,@(when n (list (apply #'org-ml-build-property-drawer! n)))
            ,@(org-ml--set-last-post-blank b lb-nodes)
            ,@c)))
      (n
       (org-ml--supersection-init
-       0 `(,@(when p (list (apply #'org-ml-build-planning! p)))
+       0 `(,@(when anyp (list (apply #'org-ml-build-planning! p)))
            ,(apply #'org-ml-build-property-drawer! :post-blank b n)
            ,@c)))
-     (p
+     (anyp
       (org-ml--supersection-init
        0 (cons (apply #'org-ml-build-planning! :post-blank b p) c)))
      (t
