@@ -8250,15 +8250,7 @@ nil (see this for use and meaning of FUN)."
 
 ;;; depreciated functions
 
-(defalias 'org-ml-timestamp-get-range #'org-ml-timestamp-get-length
-  "Return the range of TIMESTAMP node in seconds as an integer.
-
-If non-ranged, this function will return 0. If ranged but
-the start time is in the future relative to end the time, return
-a negative integer.
-
-This function is depreciated. Use `org-ml-timestamp-get-length'
-instead.")
+(define-obsolete-function-alias 'org-ml-timestamp-get-range 'org-ml-timestamp-get-length "6.0.0")
 
 (defun org-ml-timestamp-set-range (n timestamp)
   "Return TIMESTAMP node with range set to N seconds.
@@ -8275,11 +8267,9 @@ instead."
       (org-ml-timestamp-set-length (* 60 n) 'minute timestamp)
     (org-ml-timestamp-set-length (* 86400 n) 'day timestamp)))
 
-(defalias `org-ml-time-is-long #'org-ml-timelist-has-time
-  "This function is depreciated.")
+(define-obsolete-function-alias `org-ml-time-is-long 'org-ml-timelist-has-time "6.0.0")
 
-(defalias `org-ml-time-to-unixtime #'org-ml-timelist-to-unixtime
-  "This function is depreciated.")
+(define-obsolete-function-alias `org-ml-time-to-unixtime 'org-ml-timelist-to-unixtime "6.0.0")
 
 (defun org-ml-unixtime-to-time-short (unixtime)
   "Convert UNIXTIME to list like (YEAR MONTH DAY).
