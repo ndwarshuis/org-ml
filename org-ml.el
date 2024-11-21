@@ -8248,7 +8248,7 @@ nil (see this for use and meaning of FUN)."
          (funcall fun)
          (org-ml--supercontents-to-supersection config))))
 
-;;; depreciated functions
+;;; deprecated functions
 
 (define-obsolete-function-alias 'org-ml-timestamp-get-range 'org-ml-timestamp-get-length "6.0.0")
 
@@ -8260,7 +8260,7 @@ time. If not, make a new end time. The units for RANGE are in minutes
 if TIMESTAMP is in long format and days if TIMESTAMP is in short
 format.
 
-This function is depreciated. Use `org-ml-timestamp-set-length'
+This function is deprecated. Use `org-ml-timestamp-set-length'
 instead."
   (if (->> (org-ml-timestamp-get-start-time timestamp)
            (org-ml-timelist-has-time))
@@ -8274,14 +8274,14 @@ instead."
 (defun org-ml-unixtime-to-time-short (unixtime)
   "Convert UNIXTIME to list like (YEAR MONTH DAY).
 
-This function is depreciated."
+This function is deprecated."
   (-take 3 (org-ml-unixtime-to-timelist nil unixtime)))
 
 (defun org-ml-unixtime-to-time-long (unixtime)
   "Convert UNIXTIME to list like (YEAR MONTH DAY HOUR MINUTE).
 
-This function is depreciated."
-  (org-ml-unixtime-to-timelist nil unixtime))
+This function is deprecated."
+  (org-ml-unixtime-to-timelist t unixtime))
 
 (provide 'org-ml)
 ;;; org-ml.el ends here
