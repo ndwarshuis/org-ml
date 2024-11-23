@@ -4607,8 +4607,8 @@
       (let ((config (list :log-into-drawer "LOGGING"
                           :clock-into-drawer "CLOCKING")))
         (->> (org-ml-parse-this-headline)
-             (org-ml-headline-get-supercontents config)
-             (org-ml-supercontents-get-logbook)
+             (org-ml-headline-get-supercontents)
+             (org-ml-supercontents-get-logbook config)
              (org-ml-logbook-get-items)
              (-map #'org-ml-to-trimmed-string)))
       => '("- Note taken on [2018-12-31 Mon 00:00] \\\\\n  log note")
@@ -4616,8 +4616,8 @@
       (let ((config (list :log-into-drawer "LOGGING"
                           :clock-into-drawer "CLOCKING")))
         (->> (org-ml-parse-this-headline)
-             (org-ml-headline-get-supercontents config)
-             (org-ml-supercontents-get-logbook)
+             (org-ml-headline-get-supercontents)
+             (org-ml-supercontents-get-logbook config)
              (org-ml-logbook-get-clocks)
              (-map #'org-ml-to-trimmed-string)))
       => '("CLOCK: [2019-01-01 Tue 00:00]")
@@ -4625,8 +4625,8 @@
       (let ((config (list :log-into-drawer "LOGGING"
                           :clock-into-drawer "CLOCKING")))
         (->> (org-ml-parse-this-headline)
-             (org-ml-headline-get-supercontents config)
-             (org-ml-supercontents-get-logbook)
+             (org-ml-headline-get-supercontents)
+             (org-ml-supercontents-get-logbook config)
              (alist-get :unknown)
              (-map #'org-ml-to-trimmed-string)))
       => nil
@@ -4634,8 +4634,8 @@
       (let ((config (list :log-into-drawer "LOGGING"
                           :clock-into-drawer "CLOCKING")))
         (->> (org-ml-parse-this-headline)
-             (org-ml-headline-get-supercontents config)
-             (org-ml-supercontents-get-contents)
+             (org-ml-headline-get-supercontents)
+             (org-ml-supercontents-get-contents config)
              (-map #'org-ml-to-trimmed-string)))
       => '("contents"))
 
@@ -4656,12 +4656,10 @@
                ":END:"
                "contents")
 
-      (let ((config (list :log-into-drawer "LOGGING"
-                          :clock-into-drawer "CLOCKING")))
-        (org-ml->> (org-ml-parse-this-headline)
-          (org-ml-headline-set-supercontents
-           config `(:blank 0 :contents ,(list (org-ml-build-paragraph! "new contents"))))
-          (org-ml-to-trimmed-string)))
+      (org-ml->> (org-ml-parse-this-headline)
+        (org-ml-headline-set-supercontents
+         `(:subprops (:right (:blank 0 :contents ,(list (org-ml-build-paragraph! "new contents"))))))
+        (org-ml-to-trimmed-string))
       => (:result "* headline"
                   "new contents"))
 
@@ -4686,8 +4684,8 @@
                           :clock-into-drawer "CLOCKING")))
         (org-ml->> (org-ml-parse-this-headline)
           (org-ml-headline-map-supercontents*
-              config (org-ml-supercontents-map-contents*
-                       (cons (org-ml-build-paragraph! "new contents") it) it))
+            (org-ml-supercontents-map-contents* config
+              (cons (org-ml-build-paragraph! "new contents") it) it))
           (org-ml-to-trimmed-string)))
       => (:result "* headline"
                   "CLOSED: [2019-01-01 Tue 00:00]"
@@ -6970,7 +6968,7 @@
       (:buffer "* one")
       (let ((pl '(:scheduled (2000 1 1))))
         (org-ml-wrap-impure
-         (org-ml-update-supercontents* nil 'all
+         (org-ml-update-supercontents* 'all
            (org-ml-supercontents-set-planning pl it))))
       $> (:result "* one"
                   "SCHEDULED: <2000-01-01 Sat>")
@@ -6979,7 +6977,7 @@
                "something")
       (let ((pl '(:scheduled (2000 1 1))))
         (org-ml-wrap-impure
-         (org-ml-update-supercontents* nil 'all
+         (org-ml-update-supercontents* 'all
            (org-ml-supercontents-set-planning pl it))))
       $> (:result "* one"
                   "SCHEDULED: <2000-01-01 Sat>"
@@ -6989,7 +6987,7 @@
                "** two")
       (let ((pl '(:scheduled (2000 1 1))))
         (org-ml-wrap-impure
-         (org-ml-update-supercontents* nil 'all
+         (org-ml-update-supercontents* 'all
            (org-ml-supercontents-set-planning pl it))))
       $> (:result "* one"
                   "SCHEDULED: <2000-01-01 Sat>"
@@ -7000,7 +6998,7 @@
                "stuff")
       (let ((pl '(:scheduled (2000 1 1))))
         (org-ml-wrap-impure
-         (org-ml-update-supercontents* nil 'all
+         (org-ml-update-supercontents* 'all
            (org-ml-supercontents-set-planning pl it))))
       $> (:result "* one"
                   "SCHEDULED: <2000-01-01 Sat>"
@@ -7011,7 +7009,7 @@
                "stuff")
       (let ((pl '(:scheduled (2000 1 1))))
         (org-ml-wrap-impure
-         (org-ml-update-supercontents* nil 'all
+         (org-ml-update-supercontents* 'all
            (org-ml-supercontents-set-planning pl it))))
       $> (:result "* one"
                   "SCHEDULED: <2000-01-01 Sat>"

@@ -98,11 +98,11 @@
 ;; TODO a better test for this would be to put a logbook underneath the
 ;; planning ts since in that case we need to also parse the logbook
 (org-ml-defbench "schedule headline" 1000
-  (list "* headline")
-        ;; ":LOGGING:"
-        ;; "- Note taken on [2024-08-07 Wed 20:07] \\"
-        ;; "thingy"
-        ;; ":END:")
+  (list "* headline"
+        ":LOGGING:"
+        "- Note taken on [2024-08-07 Wed 20:07] \\"
+        "thingy"
+        ":END:")
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
@@ -111,15 +111,15 @@
 
   (let ((pl '(:scheduled (2000 1 1))))
     (org-ml-wrap-impure
-     (org-ml-update-supercontents* nil 'all
+     (org-ml-update-supercontents* 'all
        (org-ml-supercontents-set-planning pl it)))))
 
 (org-ml-defbench "schedule headline (memoized)" 1000
-  (list "* headline")
-        ;; ":LOGGING:"
-        ;; "- Note taken on [2024-08-07 Wed 20:07] \\"
-        ;; "thingy"
-        ;; ":END:")
+  (list "* headline"
+        ":LOGGING:"
+        "- Note taken on [2024-08-07 Wed 20:07] \\"
+        "thingy"
+        ":END:")
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
@@ -129,12 +129,16 @@
   (let ((pl '(:scheduled (2000 1 1))))
     (let ((org-ml-memoize-shorthand-builders t))
       (org-ml-wrap-impure
-       (org-ml-update-supercontents* nil 'all
+       (org-ml-update-supercontents* 'all
          (org-ml-supercontents-set-planning pl it))))))
 
 (org-ml-defbench "reschedule headline" 1000
   (list "* headline"
-        "SCHEDULED: <2020-01-01 Wed>")
+        "SCHEDULED: <2020-01-01 Wed>"
+        ":LOGGING:"
+        "- Note taken on [2024-08-07 Wed 20:07] \\"
+        "thingy"
+        ":END:")
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
@@ -147,7 +151,7 @@
       (setq next (outline-next-heading))))
 
   (org-ml-wrap-impure
-   (org-ml-update-supercontents* nil 'all
+   (org-ml-update-supercontents* 'all
      (org-ml-supercontents-set-planning
       (list :scheduled
             (org-ml-timelist-shift
@@ -157,7 +161,11 @@
 
 (org-ml-defbench "reschedule headline (memoized)" 1000
   (list "* headline"
-        "SCHEDULED: <2020-01-01 Wed>")
+        "SCHEDULED: <2020-01-01 Wed>"
+        ":LOGGING:"
+        "- Note taken on [2024-08-07 Wed 20:07] \\"
+        "thingy"
+        ":END:")
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
@@ -171,7 +179,7 @@
 
   (org-ml-wrap-impure
    (let ((org-ml-memoize-shorthand-builders t))
-     (org-ml-update-supercontents* nil 'all
+     (org-ml-update-supercontents* 'all
        (org-ml-supercontents-set-planning
         (list :scheduled
               (org-ml-timelist-shift
@@ -180,7 +188,11 @@
         it)))))
 
 (org-ml-defbench "set headline effort" 1000
-  "* headline"
+  (list "* headline"
+        ":LOGGING:"
+        "- Note taken on [2024-08-07 Wed 20:07] \\"
+        "thingy"
+        ":END:")
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
@@ -188,11 +200,15 @@
       (setq next (outline-next-heading))))
 
   (org-ml-wrap-impure
-   (org-ml-update-supercontents* nil 'all
+   (org-ml-update-supercontents* 'all
      (org-ml-supercontents-set-node-properties '(("Effort" "0:05")) it))))
 
 (org-ml-defbench "set headline effort (memoized)" 1000
-  "* headline"
+  (list "* headline"
+        ":LOGGING:"
+        "- Note taken on [2024-08-07 Wed 20:07] \\"
+        "thingy"
+        ":END:")
   (let ((org-adapt-indentation nil)
         (next t))
     (while next
@@ -201,7 +217,7 @@
 
   (org-ml-wrap-impure
    (let ((org-ml-memoize-shorthand-builders t))
-     (org-ml-update-supercontents* nil 'all
+     (org-ml-update-supercontents* 'all
        (org-ml-supercontents-set-node-properties '(("Effort" "0:05")) it)))))
 
 (org-ml-defbench "insert headline text" 2500
@@ -215,10 +231,9 @@
       (setq next (outline-next-heading))))
 
   (org-ml-wrap-impure
-   (org-ml-update-supercontents* nil 'all
-     (-> (org-ml-build-paragraph! "~some text~")
-         (list)
-         (org-ml-supercontents-set-contents it)))))
+   (org-ml-update-supercontents* 'all
+     (org-ml-supercontents-set-contents
+      nil (list (org-ml-build-paragraph! "~some text~")) it))))
 
 (org-ml-defbench "insert headline text (memoized)" 2500
   "* headline"
@@ -232,10 +247,9 @@
 
   (org-ml-wrap-impure
    (let ((org-ml-memoize-shorthand-builders t))
-     (org-ml-update-supercontents* nil 'all
-       (-> (org-ml-build-paragraph! "~some text~")
-           (list)
-           (org-ml-supercontents-set-contents it))))))
+     (org-ml-update-supercontents* 'all
+       (org-ml-supercontents-set-contents
+        nil (list (org-ml-build-paragraph! "~some text~")) it)))))
 
 (org-ml-defbench "set checkboxes" 1000
   (list "* headline [0/0]"

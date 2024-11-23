@@ -965,12 +965,10 @@ HEADER is the it-header."
        (lambda (_) nil)
        it)
       (org-ml-headline-set-supercontents
-       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
-       `(:blank 0 :contents (,(org-ml-build-paragraph! "new contents")))
+       `(:subprops (:right (:blank 0 :contents (,(org-ml-build-paragraph! "new contents")))))
        it)
       (org-ml-headline-map-supercontents
-       '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
-        (lambda (_) `(:blank 0 :contents (,(org-ml-build-paragraph! "new contents"))))
+        (lambda (_) `(:subprops (:right (:blank 0 :contents (,(org-ml-build-paragraph! "new contents"))))))
         it)
       (org-ml-headline-logbook-append-item
        '(:log-into-drawer t :clock-into-drawer t :clock-out-notes t)
@@ -1662,12 +1660,18 @@ HEADER is the it-header."
 ;; - L = string, C = int: 'single-items-or-dual'
 ;; - L = "LOGBOOK", C = int: 'single-mixed-or-single-items'
 
-(defmacro expect-supercontents (config nodes items clocks unknown
-                                               blank rest)
+(defmacro expect-supercontents (config nodes items clocks unknown blank rest)
   (declare (indent 2))
-  `(expect (org-ml--supersection-to-supercontents ,config (list :pre-blank 0 :section ,nodes))
+  `(expect (->> (org-ml--supersection-to-supercontents (list :pre-blank 0 :section ,nodes))
+                (org-ml-supercontents-eval ,config))
            :to-equal
-           (org-ml--supercontents-init nil nil ,items ,clocks ,unknown ,blank ,rest)))
+           (org-ml--supercontents-init
+            nil nil
+            (list :right (org-ml--subprops-init
+                          (org-ml--config-logbook-init
+                           ,config
+                           (org-ml--logbook-init ,items ,clocks ,unknown))
+                          ,blank ,rest)))))
 
 (defmacro org-ml--test-supercontents-specs (config &rest specs)
   (declare (indent 1))

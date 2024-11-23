@@ -4534,13 +4534,39 @@ first paragraph and returns modified secondary-string."
 ;;   , unknown :: [Node]
 ;;   }
 ;;
-;; data SuperContents = SuperContents
-;;   { planning :: (Maybe Planning)
-;;   , node-properties :: [Property]
-;;   , logbook :: LogBook
+;; data LogDrawer = LogDrawerName String | LogDrawerPresent | LogDrawerAbsent
+;;
+;; data ClockDrawer = ClockDrawerName String |
+;;   ClockDrawerNum Int |
+;;   ClockDrawerPresent |
+;;   ClockDrawerAbsent
+;;
+;; data LogbookConfig = LogbookConfig
+;;   { logIntoDrawer :: LogDrawer
+;;   , clockIntoDrawer :: ClockDrawer
+;;   , clockOutNotes :: Bool
+;;   }
+;;
+;; data ConfiguredLogBook = ConfiguredLogBook
+;;   { logbook :: Logbook
+;;   , config :: LogbookConfig
+;;   }
+;;
+;; data Subprops = Subprops
+;;   { configLogbook :: Maybe ConfiguredLogBook
 ;;   , blank :: Blank
 ;;   , contents :: [Nodes]
 ;;   }
+;;
+;; data SuperContents = SuperContents
+;;   { planning :: (Maybe Planning)
+;;   , node-properties :: [Property]
+;;   , subproperties :: Either [Nodes] Subprops
+;;   }
+
+;; The 'Either' above is used to 'lazily evaluate' the stuff that occurs after
+;; the planning and node properties, which are rather expensive to compute (see
+;; below).
 
 ;; There is one *very important* assumption built into this data structure. If
 ;; the planning, property-drawer, or logbook are present, there must not be any
@@ -4668,38 +4694,32 @@ new list of clocks."
 ;; This is a structure that the user may interact with, so some of these
 ;; functions are public
 
-(define-inline org-ml--supercontents-init-from-lb
-  (planning node-props logbook blank contents)
+(define-inline org-ml--supercontents-init (planning node-props subprops)
   "Create a supercontents plist.
 
 PLANNING is a planning node or nil.
 
 NODE-PROPS is a list of like (KEY VAL) for each node property.
 
-LOGBOOK is a logbook as given by `org-ml--logbook-init'.
-
-BLANK is the blank space above the contents.
-
-CONTENTS is a list of nodes corresponding to the headline
-contents (the stuff after the logbook)."
+SUBPROPS an Either nodes (:logbook () :blank x :contents ())."
   (declare (pure t) (side-effect-free t))
   (inline-quote
    (list :planning ,planning
          :node-props ,node-props
-         :logbook ,logbook
+         :subprops ,subprops)))
+
+(define-inline org-ml--subprops-init (config-logbook blank contents)
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (list :config-logbook ,config-logbook
          :blank ,blank
          :contents ,contents)))
 
-(define-inline org-ml--supercontents-init
-  (planning node-props items clocks unknown blank contents)
-  "Create a supercontents alist.
-ITEMS, CLOCKS, UNKNOWN, and POST-BLANK are lists corresponding to
-the arguments in `org-ml--logbook-init' and CONTENTS has the same
-meaning as `org-ml--supercontents-init-from-lb'."
+(define-inline org-ml--config-logbook-init (config logbook)
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (let ((lb (org-ml--logbook-init ,items ,clocks ,unknown)))
-     (org-ml--supercontents-init-from-lb ,planning ,node-props lb ,blank ,contents))))
+   (list :logbook ,logbook
+         :config ,config)))
 
 (define-inline org-ml-supercontents-get-planning (supercontents)
   "Return the :planning slot of SUPERCONTENTS."
@@ -4710,8 +4730,8 @@ meaning as `org-ml--supercontents-init-from-lb'."
   "Set the :planning slot of SUPERCONTENTS to CONTENTS."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (-let (((&plist :node-props n :logbook l :blank b :contents c) ,supercontents))
-     (org-ml--supercontents-init-from-lb ,planning n l b c))))
+   (-let (((&plist :node-props n :subprops s) ,supercontents))
+     (org-ml--supercontents-init ,planning n s))))
 
 (define-inline org-ml-supercontents-get-node-properties (supercontents)
   "Return the :node-props slot of SUPERCONTENTS."
@@ -4722,47 +4742,163 @@ meaning as `org-ml--supercontents-init-from-lb'."
   "Set the :node-props slot of SUPERCONTENTS to CONTENTS."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (-let (((&plist :planning p :logbook l :blank b :contents c) ,supercontents))
-     (org-ml--supercontents-init-from-lb p ,node-props l b c))))
+   (-let (((&plist :planning p :subprops s) ,supercontents))
+     (org-ml--supercontents-init p ,node-props s))))
 
-(define-inline org-ml-supercontents-get-contents (supercontents)
-  "Return the :contents slot of SUPERCONTENTS."
+(define-inline org-ml-supercontents-get-subprops (supercontents)
+  "Return the :subprops slot of SUPERCONTENTS."
   (declare (pure t) (side-effect-free t))
-  (inline-quote (plist-get ,supercontents :contents)))
+  (inline-quote (plist-get ,supercontents :subprops)))
 
-(define-inline org-ml-supercontents-set-contents (contents supercontents)
-  "Set the :contents slot of SUPERCONTENTS to CONTENTS."
+(define-inline org-ml-supercontents-set-subprops (subprops supercontents)
+  "Set the :subprops slot of SUPERCONTENTS to CONTENTS."
   (declare (pure t) (side-effect-free t))
   (inline-quote
-   (-let (((&plist :planning p :node-props n :logbook l :blank b) ,supercontents))
-     (org-ml--supercontents-init-from-lb p n l b ,contents))))
+   (-let (((&plist :planning p :node-props n) ,supercontents))
+     (org-ml--supercontents-init p n ,subprops))))
 
-(org-ml--defun-anaphoric* org-ml-supercontents-map-contents (fun supercontents)
-  "Apply function to :contents slot in SUPERCONTENTS.
-FUN is a unary function that takes a list of nodes and returns a
-new list of nodes."
-  (--> (org-ml-supercontents-get-contents supercontents)
-       (org-ml-supercontents-set-contents (funcall fun it) supercontents)))
+(org-ml--defun-anaphoric* org-ml-supercontents-map-subprops (fun supercontents)
+  "Map FUN over the :subprops slot of SUPERCONTENTS."
+  (--> (org-ml-supercontents-get-subprops supercontents)
+       (org-ml-supercontents-set-subprops (funcall fun it) supercontents)))
 
-(define-inline org-ml-supercontents-get-logbook (supercontents)
+(define-inline org-ml-subprops-get-config-logbook (subprops)
+  "Return the :config-logbook slot of SUBPROPS."
+  (declare (pure t) (side-effect-free t))
+  (inline-quote (plist-get ,subprops :config-logbook)))
+
+(define-inline org-ml-subprops-set-config-logbook (config-logbook subprops)
+  "Set the :config-logbook slot of SUBPROPS to CONFIG-LOGBOOK."
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (-let (((&plist :blank b :contents c) ,subprops))
+     (org-ml--subprops-init ,config-logbook b c))))
+
+(org-ml--defun-anaphoric* org-ml-subprops-map-config-logbook (fun subprops)
+  "Map FUN over the :config-logbook slot of SUBPROPS."
+  (--> (org-ml-subprops-get-config-logbook subprops)
+       (org-ml-subprops-set-config-logbook (funcall fun it) subprops)))
+
+(define-inline org-ml-subprops-get-confents (subprops)
+  "Return the :contents slot of SUBPROPS."
+  (declare (pure t) (side-effect-free t))
+  (inline-quote (plist-get ,subprops :contents)))
+
+(define-inline org-ml-subprops-set-contents (contents subprops)
+  "Set the :contents slot of SUBPROPS to CONTENTS."
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (-let (((&plist :blank b :config-logbook c) ,subprops))
+     (org-ml--subprops-init c b ,contents))))
+
+(define-inline org-ml-config-logbook-get-logbook (config-logbook)
+  "Return the :logbook slot of CONFIG-LOGBOOK."
+  (declare (pure t) (side-effect-free t))
+  (inline-quote (plist-get ,config-logbook :logbook)))
+
+(define-inline org-ml-config-logbook-set-logbook (logbook config-logbook)
+  "Set the :logbook slot of CONFIG-LOGBOOK to LOGBOOK."
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (-let (((&plist :config c) ,config-logbook))
+     (org-ml--config-logbook-init c ,logbook))))
+
+(define-inline org-ml-config-logbook-set-config (config config-logbook)
+  "Set the :logbook slot of CONFIG-LOGBOOK to LOGBOOK."
+  (declare (pure t) (side-effect-free t))
+  (inline-quote
+   (-let (((&plist :logbook l) ,config-logbook))
+     (org-ml--config-logbook-init ,config l))))
+
+(defmacro org-ml--either-from* (either left right)
+  "Run LEFT or RIGHT depending on EITHER."
+  (declare (indent 1))
+  (let ((e (make-symbol "--either")))
+    `(let ((,e ,either))
+       (cond
+        ((eq (car ,e) :left) (let ((it (cadr ,e))) ,left))
+        ((eq (car ,e) :right) (let ((it (cadr ,e))) ,right))
+        (t (error "Not an either: %s" ,either))))))
+
+(defun org-ml-subprops-eval (config subprops)
+  (org-ml--either-from* subprops
+    (-let (((logbook blank contents) (org-ml--split-logbook config it)))
+      (org-ml--subprops-init (org-ml--config-logbook-init config logbook) blank contents))
+    it))
+
+(defun org-ml-supercontents-eval (config supercontents)
+  (-let ((s (org-ml-supercontents-get-subprops supercontents)))
+    (-> (list :right (org-ml-subprops-eval config s))
+        (org-ml-supercontents-set-subprops supercontents))))
+
+(defun org-ml-supercontents-get-logbook (config supercontents)
   "Return the :logbook slot of SUPERCONTENTS."
   (declare (pure t) (side-effect-free t))
-  (inline-quote
-   (plist-get ,supercontents :logbook)))
+  (org-ml--either-from* (plist-get supercontents :subprops)
+    (car (org-ml--split-logbook config it))
+    (plist-get (plist-get it :config-logbook) :logbook)))
 
-(define-inline org-ml-supercontents-set-logbook (logbook supercontents)
+(defun org-ml-supercontents-set-logbook (config logbook supercontents)
   "Set the :logbook slot of SUPERCONTENTS to LOGBOOK."
   (declare (pure t) (side-effect-free t))
-  (inline-quote
-   (-let (((&plist :planning p :node-props n :blank b :contents c) ,supercontents))
-     (org-ml--supercontents-init-from-lb p n ,logbook b c))))
+  (org-ml-supercontents-map-subprops*
+    (->> (org-ml--either-from* it
+           (-let* (((_ blank contents) (org-ml--split-logbook config it))
+                   (cl (org-ml--config-logbook-init config logbook)))
+             (org-ml--subprops-init cl blank contents))
+           (org-ml-subprops-map-config-logbook*
+             (org-ml-config-logbook-set-logbook logbook it)
+             it))
+         (list :right))
+    supercontents))
 
-(org-ml--defun-anaphoric* org-ml-supercontents-map-logbook (fun supercontents)
+(org-ml--defun-anaphoric* org-ml-supercontents-map-logbook (config fun supercontents)
   "Apply function to :logbook slot in SUPERCONTENTS.
 FUN is a unary function that takes a logbook and returns a new
 logbook."
-  (--> (org-ml-supercontents-get-logbook supercontents)
-       (org-ml-supercontents-set-logbook (funcall fun it) supercontents)))
+  (--> (org-ml-supercontents-get-logbook config supercontents)
+       (org-ml-supercontents-set-logbook config (funcall fun it) supercontents)))
+
+(defun org-ml-supercontents-set-config (config1 config2 supercontents)
+  "Set the :config slot of SUPERCONTENTS to CONFIG2.
+CONFIG1 is needed to evalulate the logbook if it hasn't been already."
+  (declare (pure t) (side-effect-free t))
+  (org-ml-supercontents-map-subprops*
+    (->> (org-ml--either-from* it
+           (-let* (((logbook blank contents) (org-ml--split-logbook config1 it))
+                   (cl (org-ml--config-logbook-init config2 logbook)))
+             (org-ml--subprops-init cl blank contents))
+           (org-ml-subprops-map-config-logbook*
+             (org-ml-config-logbook-set-config config2 it)
+             it))
+         (list :right))
+    supercontents))
+
+(defun org-ml-supercontents-get-contents (config supercontents)
+  "Return the :contents slot of SUPERCONTENTS."
+  (declare (pure t) (side-effect-free t))
+  (org-ml--either-from* (plist-get supercontents :subprops)
+    (nth 2 (org-ml--split-logbook config it))
+    (plist-get it :contents)))
+
+(defun org-ml-supercontents-set-contents (config contents supercontents)
+  "Set the :contents slot of SUPERCONTENTS to CONTENTS."
+  (declare (pure t) (side-effect-free t))
+  (org-ml-supercontents-map-subprops*
+    (->> (org-ml--either-from* it
+           (-let* (((logbook blank _) (org-ml--split-logbook config it))
+                   (cl (org-ml--config-logbook-init config logbook)))
+             (org-ml--subprops-init cl blank contents))
+           (org-ml-subprops-set-contents contents it))
+         (list :right))
+    supercontents))
+
+(org-ml--defun-anaphoric* org-ml-supercontents-map-contents (config fun supercontents)
+  "Apply function to :contents slot in SUPERCONTENTS.
+FUN is a unary function that takes a list of nodes and returns a
+new list of nodes."
+  (--> (org-ml-supercontents-get-contents config supercontents)
+       (org-ml-supercontents-set-contents config (funcall fun it) supercontents)))
 
 ;; supercontents config (scc) data structure
 
@@ -5448,77 +5584,80 @@ SECTION is a list of nodes under the section node in a headline."
        (--map (list (org-element-property-raw :key it)
                     (org-element-property-raw :value it)))))
 
-(defun org-ml--from-first-second-rest
-    (config planning prop-drawer blank-node children)
+(defun org-ml--from-first-second-rest (planning prop-drawer blank-node children)
   "Create a new supercontents node in various ways.
 
 CONFIG is a list corresponding to `org-ml--scc-encode'. PLANNING
 is a planning node. PROP-DRAWER is a property-drawer node.
 BLANK-NODE is a node that has a post-blank behind it. CHILDREN is
 everything after the planning and/or property-drawer."
-  (-let* ((pb (org-element-post-blank blank-node))
-          ((logbook blank contents) (if (< 0 pb)
-                                        `(nil ,pb ,children)
-                                      (org-ml--split-logbook config children))))
-    (org-ml--supercontents-init-from-lb
+  (-let ((pb (org-element-post-blank blank-node)))
+    (org-ml--supercontents-init
      (and planning (org-ml--planning-split planning))
      (and prop-drawer (org-ml--property-drawer-split prop-drawer))
-     logbook
-     blank
-     contents)))
+     (if (= 0 pb)
+         `(:left ,children)
+       `(:right ,(org-ml--subprops-init nil pb children))))))
 
-(defun org-ml--supersection-to-supercontents (config supersection)
+(defun org-ml--supersection-to-supercontents (supersection)
   "Convert SUPERSECTION to supercontents.
 CONFIG is a list corresponding to `org-ml--scc-encode'."
   (-let (((&plist :pre-blank pb :section children) supersection))
     ;; If pre-blank is >0, by definition there is no planning,
     ;; property-drawer, or logbook
-    (if (< 0 pb) (org-ml--supercontents-init nil nil nil nil nil pb children)
+    (if (< 0 pb)
+        (->> (org-ml--subprops-init nil pb children)
+             (list :right)
+             (org-ml--supercontents-init nil nil))
       (-let* (((first . rest1) children)
               ((second . rest2) rest1)
               (t1 (org-ml-get-type first))
               (t2 (org-ml-get-type second)))
         (cond
          ((and (eq t1 'planning) (eq t2 'property-drawer))
-          (org-ml--from-first-second-rest config first second second rest2))
+          (org-ml--from-first-second-rest first second second rest2))
          ((eq t1 'planning)
-          (org-ml--from-first-second-rest config first nil first rest1))
+          (org-ml--from-first-second-rest first nil first rest1))
          ((eq t1 'property-drawer)
-          (org-ml--from-first-second-rest config nil first first rest1))
+          (org-ml--from-first-second-rest nil first first rest1))
          (t
-          (->> (org-ml--split-logbook config children)
-               (apply #'org-ml--supercontents-init-from-lb nil nil))))))))
+          (org-ml--supercontents-init nil nil `(:left ,children))))))))
 
-(defun org-ml--supercontents-to-supersection (config supercontents)
-  "Convert SUPERCONTENTS to supersection.
-CONFIG is a list corresponding to `org-ml--scc-encode'."
-  (-let* (((&plist :planning p :node-props n :logbook lb :blank b :contents c)
-           supercontents)
+(defun org-ml--supercontents-to-supersection (supercontents)
+  "Convert SUPERCONTENTS to supersection."
+  (-let* (((&plist :planning p :node-props n :subprops s) supercontents)
           (anyp (or (plist-get p :closed)
                     (plist-get p :scheduled)
-                    (plist-get p :deadline)))
-          (lb-nodes (org-ml--logbook-to-nodes config lb)))
-    (cond
-     (lb-nodes
+                    (plist-get p :deadline))))
+    (org-ml--either-from* s
       (org-ml--supersection-init
        0 `(,@(when anyp (list (apply #'org-ml-build-planning! p)))
            ,@(when n (list (apply #'org-ml-build-property-drawer! n)))
-           ,@(org-ml--set-last-post-blank b lb-nodes)
-           ,@c)))
-     (n
-      (org-ml--supersection-init
-       0 `(,@(when anyp (list (apply #'org-ml-build-planning! p)))
-           ,(apply #'org-ml-build-property-drawer! :post-blank b n)
-           ,@c)))
-     (anyp
-      (org-ml--supersection-init
-       0 (cons (apply #'org-ml-build-planning! :post-blank b p) c)))
-     (t
-      (org-ml--supersection-init b c)))))
+           ,@it))
+      (-let* (((&plist :config-logbook cl :blank b :contents c) it)
+              ((&plist :config config :logbook lb) cl)
+              (lb-nodes (org-ml--logbook-to-nodes config lb)))
+        (cond
+         (lb-nodes
+          (org-ml--supersection-init
+           0 `(,@(when anyp (list (apply #'org-ml-build-planning! p)))
+               ,@(when n (list (apply #'org-ml-build-property-drawer! n)))
+               ,@(org-ml--set-last-post-blank b lb-nodes)
+               ,@c)))
+         (n
+          (org-ml--supersection-init
+           0 `(,@(when anyp (list (apply #'org-ml-build-planning! p)))
+               ,(apply #'org-ml-build-property-drawer! :post-blank b n)
+               ,@c)))
+         (anyp
+          (org-ml--supersection-init
+           0 (cons (apply #'org-ml-build-planning! :post-blank b p) c)))
+         (t
+          (org-ml--supersection-init b c)))))))
 
 ;; public supercontents functions
 
-(defun org-ml-headline-get-supercontents (config headline)
+(defun org-ml-headline-get-supercontents (headline)
   "Return the supercontents of HEADLINE node.
 
 Supercontents will be a plist like:
@@ -5570,23 +5709,19 @@ determines which nodes will be returned in the :items/:clocks
 slots and which will be deemed :unknown (see above) so be sure
 this plist is set according to your desired target configuration."
   (->> (org-ml-headline-get-supersection headline)
-       (org-ml--supersection-to-supercontents config)))
+       (org-ml--supersection-to-supercontents)))
      
-(defun org-ml-headline-set-supercontents (config supercontents headline)
-  "Set logbook and contents of HEADLINE according to SUPERCONTENTS.
-See `org-ml-headline-get-supercontents' for the meaning of CONFIG
-and the structure of the SUPERCONTENTS list."
-  (-> (org-ml--supercontents-to-supersection config supercontents)
+(defun org-ml-headline-set-supercontents (supercontents headline)
+  "Set logbook and contents of HEADLINE according to SUPERCONTENTS."
+  (-> (org-ml--supercontents-to-supersection supercontents)
       (org-ml-headline-set-supersection headline)))
 
-(org-ml--defun-anaphoric* org-ml-headline-map-supercontents (config fun headline)
+(org-ml--defun-anaphoric* org-ml-headline-map-supercontents (fun headline)
   "Map a function over the supercontents of HEADLINE.
 FUN is a unary function that takes a supercontents list and
-returns a modified supercontents list. See
-`org-ml-headline-get-supercontents' for the meaning of CONFIG and
-the structure of the supercontents list."
-  (--> (org-ml-headline-get-supercontents config headline)
-       (org-ml-headline-set-supercontents config (funcall fun it) headline)))
+returns a modified supercontents list."
+  (--> (org-ml-headline-get-supercontents headline)
+       (org-ml-headline-set-supercontents (funcall fun it) headline)))
 
 (defun org-ml-headline-get-supersection (headline)
   "Return supersection list for the section in HEADLINE."
@@ -5616,15 +5751,13 @@ the structure of the supercontents list."
 (defun org-ml-headline-get-planning (headline)
   "Return the planning node in HEADLINE or nil if none."
   (org-ml--check-type 'headline headline)
-  ;; TODO it seems silly that we need to "convert" the logbook when I'm not
-  ;; modifying it. Lazy eval?
-  (->> (org-ml-headline-get-supercontents nil headline)
+  (->> (org-ml-headline-get-supercontents headline)
        (org-ml-supercontents-get-planning)))
 
 (defun org-ml-headline-set-planning (planning headline)
   "Return HEADLINE node with planning components set to PLANNING node."
   (org-ml--check-type 'headline headline)
-  (org-ml-headline-map-supercontents* nil
+  (org-ml-headline-map-supercontents*
     (org-ml-supercontents-set-planning planning it)
     headline))
 
@@ -5641,16 +5774,14 @@ modified planning node."
 (defun org-ml-headline-get-node-properties (headline)
   "Return a list of node-properties nodes in HEADLINE or nil if none."
   (org-ml--check-type 'headline headline)
-  ;; TODO it seems silly that we need to "convert" the logbook when I'm not
-  ;; modifying it. Lazy eval?
-  (->> (org-ml-headline-get-supercontents nil headline)
+  (->> (org-ml-headline-get-supercontents headline)
        (org-ml-supercontents-get-node-properties)))
 
 (defun org-ml-headline-set-node-properties (node-properties headline)
   "Return HEADLINE node with property drawer containing NODE-PROPERTIES.
 NODE-PROPERTIES is a list of (key . value) pairs (both strings)."
   (org-ml--check-type 'headline headline)
-  (org-ml-headline-map-supercontents* nil
+  (org-ml-headline-map-supercontents*
     (org-ml-supercontents-set-node-properties node-properties it)
     headline))
 
@@ -5698,8 +5829,8 @@ a modified node-property value."
 See `org-ml-headline-get-supercontents' for the meaning of
 CONFIG. The returned items will be a flat list of item nodes,
 not a plain-list node."
-  (->> (org-ml-headline-get-supercontents config headline)
-       (org-ml-supercontents-get-logbook)
+  (->> (org-ml-headline-get-supercontents headline)
+       (org-ml-supercontents-get-logbook config)
        (org-ml-logbook-get-items)))
 
 (defun org-ml-headline-set-logbook-items (config items headline)
@@ -5707,8 +5838,8 @@ not a plain-list node."
 See `org-ml-headline-get-supercontents' for the meaning of
 CONFIG. ITEMS must be supplied as a flat list of valid logbook
 item nodes, not as a plain-list node."
-  (org-ml-headline-map-supercontents* config
-    (org-ml-supercontents-map-logbook* (org-ml-logbook-set-items items it) it)
+  (org-ml-headline-map-supercontents*
+    (org-ml-supercontents-map-logbook* config (org-ml-logbook-set-items items it) it)
     headline))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-logbook-items (config fun headline)
@@ -5724,8 +5855,8 @@ returns a modified list of item nodes. See
 See `org-ml-headline-get-supercontents' for the meaning of
 CONFIG. The returned list will include clock nodes and maybe item
 nodes if :clock-out-notes is t in CONFIG."
-  (->> (org-ml-headline-get-supercontents config headline)
-       (org-ml-supercontents-get-logbook)
+  (->> (org-ml-headline-get-supercontents headline)
+       (org-ml-supercontents-get-logbook config)
        (org-ml-logbook-get-clocks)))
 
 (defun org-ml-headline-set-logbook-clocks (config clocks headline)
@@ -5734,8 +5865,8 @@ See `org-ml-headline-get-supercontents' for the meaning of
 CONFIG. CLOCKS must be supplied as a flat list of valid clock
 nodes and optionally item nodes if :clock-out-notes is t in
 CONFIG."
-  (org-ml-headline-map-supercontents* config
-    (org-ml-supercontents-map-logbook* (org-ml-logbook-set-clocks clocks it) it)
+  (org-ml-headline-map-supercontents*
+    (org-ml-supercontents-map-logbook* config (org-ml-logbook-set-clocks clocks it) it)
     headline))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-logbook-clocks (config fun headline)
@@ -5752,16 +5883,16 @@ for the meaning of CONFIG."
 Contents is everything in the headline after the logbook and will
 be returned as a flat list of nodes. See
 `org-ml-headline-get-supercontents' for the meaning of CONFIG."
-  (->> (org-ml-headline-get-supercontents config headline)
-       (org-ml-supercontents-get-contents)))
+  (->> (org-ml-headline-get-supercontents headline)
+       (org-ml-supercontents-get-contents config)))
 
 (defun org-ml-headline-set-contents (config contents headline)
   "Set the contents of HEADLINE to CONTENTS.
 Contents is everything in the headline after the logbook, and
 CONTENTS must be a flat list of nodes. See
 `org-ml-headline-get-supercontents' for the meaning of CONFIG."
-  (org-ml-headline-map-supercontents* config
-    (org-ml-supercontents-set-contents contents it)
+  (org-ml-headline-map-supercontents*
+    (org-ml-supercontents-set-contents config contents it)
     headline))
 
 (org-ml--defun-anaphoric* org-ml-headline-map-contents (config fun headline)
@@ -5823,8 +5954,11 @@ Note that any logbook nodes that are invalid under CONFIG1 will
 be silently dropped, and nodes which do not conform to CONFIG2
 will trigger an error. See `org-ml-headline-get-supercontents'
 for the structure of both config lists."
-  (--> (org-ml-headline-get-supercontents config1 headline)
-       (org-ml-headline-set-supercontents config2 it headline)))
+  (org-ml-headline-map-supercontents*
+    (org-ml-supercontents-set-config config1 config2 it)
+    headline))
+  ;; (--> (org-ml-headline-get-supercontents config1 headline)
+  ;;      (org-ml-headline-set-supercontents config2 it headline)))
 
 ;; misc
 
@@ -8236,7 +8370,7 @@ nil (see this for use and meaning of FUN)."
       (-each (nreverse (org-ml--parse-patterns-where which "^\\* "))
         #'map-to-subheadlines))))
 
-(org-ml--defun* org-ml-update-supercontents (config which fun)
+(org-ml--defun* org-ml-update-supercontents (which fun)
   "Update some headline supercontents in the current using FUN.
 
 See `org-ml-parse-headlines' for the meaning of WHICH.
@@ -8244,9 +8378,9 @@ See `org-ml-parse-headlines' for the meaning of WHICH.
 Headlines are updated using `org-ml~update' with DIFF-ARG set to
 nil (see this for use and meaning of FUN)."
   (org-ml-update-supersections* which
-    (->> (org-ml--supersection-to-supercontents config it)
+    (->> (org-ml--supersection-to-supercontents it)
          (funcall fun)
-         (org-ml--supercontents-to-supersection config))))
+         (org-ml--supercontents-to-supersection))))
 
 ;;; deprecated functions
 
