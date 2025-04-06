@@ -1,5 +1,9 @@
 # Changelog
 
+## 6.0.1
+
+- add tests for emacs 30.1
+
 ## 6.0.0
 
 This is a major update for org 9.7, which has been heavily optimized with a new
