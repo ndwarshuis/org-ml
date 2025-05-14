@@ -1,5 +1,9 @@
 # Changelog
 
+## 6.0.2
+
+- fix org-ml-match-do* form bug
+
 ## 6.0.1
 
 - add tests for emacs 30.1

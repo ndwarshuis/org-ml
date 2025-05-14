@@ -6,7 +6,7 @@
 ;; Keywords: org-mode, outlines
 ;; Homepage: https://github.com/ndwarshuis/org-ml
 ;; Package-Requires: ((emacs "27.1") (org "9.7") (dash "2.17") (s "1.12"))
-;; Version: 6.0.0
+;; Version: 6.0.2
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -7215,7 +7215,7 @@ in the immediate, top level children of NODE."
 
 ;;; side-effects
 
-(org-ml--defun-anaphoric* org-ml-match-do (pattern fun node)
+(defun org-ml-match-do (pattern fun node)
   "Like `org-ml-match-map' but for side effects only.
 FUN is a unary function that has side effects and is applied to the
 matches from NODE using PATTERN. This function itself returns nil.
@@ -7223,6 +7223,20 @@ matches from NODE using PATTERN. This function itself returns nil.
 PATTERN follows the same rules as `org-ml-match'."
   (-when-let (targets (org-ml-match pattern node))
       (--each targets (funcall fun it))))
+
+;; anaphoric form doesn't work here for some reason
+(defmacro org-ml-match-do* (pattern form node)
+  "Anaphoric form of `org-ml-match-do'.
+
+Like `org-ml-match-map' but for side effects only.
+FORM is a unary form that has side effects and is applied to the
+matches from NODE using PATTERN. This form itself returns nil.
+
+PATTERN follows the same rules as `org-ml-match'."
+  (let ((n (make-symbol "--n")))
+    `(let ((,n ,node))
+       (-when-let (targets (org-ml-match ,pattern ,n))
+         (--each targets ,form)))))
 
 ;;; BUFFER PARSING
 
