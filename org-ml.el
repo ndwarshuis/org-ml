@@ -1284,7 +1284,10 @@ bounds."
        (code (:value ,@str :require t))
        (comment (:value ,@str :require t))
        (comment-block (:value ,@str :decode s-trim-right :require ""))
-       (drawer (:drawer-name ,@ol-str :require t))
+       (drawer (:drawer-name ,@ol-str :require t)
+               (:pre-blank ,@nn-int
+                           :shift org-ml--shift-non-neg-integer
+                           :require 0))
        (diary-sexp (:value :encode org-ml--encode-diary-sexp-value
                            :pred org-ml--is-valid-diary-sexp-value
                            :decode org-ml--decode-diary-sexp-value
