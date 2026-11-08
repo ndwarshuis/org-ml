@@ -2811,7 +2811,7 @@ throw an error."
               (if (org-ml--is-type 'plain-text first)
                   `(,(concat bullet first) ,@rest)
                 `(,bullet ,first ,@rest)))
-          (if-let (ss (org-element-contents d))
+          (if-let* ((ss (org-element-contents d)))
               (cond
                ((not (org-ml--is-secondary-string ss))
                 (org-ml--arg-error "Secondary string must only contain objects"))
