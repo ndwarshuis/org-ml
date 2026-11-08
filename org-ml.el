@@ -1285,6 +1285,9 @@ bounds."
        (comment (:value ,@str :require t))
        (comment-block (:value ,@str :decode s-trim-right :require ""))
        (drawer (:drawer-name ,@ol-str :require t)
+               ;; TODO this was added in 9.8 (I think). Need to query the org
+               ;; version for some properties and only use/emit them as
+               ;; necessary. Including this will break older versions.
                (:pre-blank ,@nn-int
                            :shift org-ml--shift-non-neg-integer
                            :require 0))
