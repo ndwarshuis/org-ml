@@ -7751,21 +7751,25 @@ applied to the buffer."
 (defun org-ml--replace-bounds (diff-mode begin end node)
   "Replace text between BEGIN and END with NODE1 in current buffer.
 See `org-ml~update' for meaning of DIFF-MODE."
-  (let ((ov-cmd (-if-let (x (->> (overlays-in begin end)
-                                 (--filter (eq 'outline (overlay-get it 'invisible)))
-                                 (--map (list :start (overlay-start it)
-                                              :end (overlay-end it)
-                                              :props (overlay-properties it)))))
-                    (list 'apply 'org-ml--apply-overlays x))))
-    ;; hacky way to add overlays to undo tree
-    (when ov-cmd
-      (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list)))
-    (if diff-mode
-        (org-ml--diff-region begin end (org-ml-to-string node))
-      ;; convert node to string before deleting so deferred properties can get
-      ;; what they need from the buffer
-      (org-ml--replace-region begin end (org-ml-to-string node)))
-    nil))
+  ;; widen since the node bounds may extend past the narrowed region (eg
+  ;; trailing blank lines of an element in a narrowed subtree)
+  (save-restriction
+    (widen)
+    (let ((ov-cmd (-if-let (x (->> (overlays-in begin end)
+                                   (--filter (eq 'outline (overlay-get it 'invisible)))
+                                   (--map (list :start (overlay-start it)
+                                                :end (overlay-end it)
+                                                :props (overlay-properties it)))))
+                      (list 'apply 'org-ml--apply-overlays x))))
+      ;; hacky way to add overlays to undo tree
+      (when ov-cmd
+        (setq-local buffer-undo-list (cons ov-cmd buffer-undo-list)))
+      (if diff-mode
+          (org-ml--diff-region begin end (org-ml-to-string node))
+        ;; convert node to string before deleting so deferred properties can get
+        ;; what they need from the buffer
+        (org-ml--replace-region begin end (org-ml-to-string node)))
+      nil)))
 
 (org-ml--defun-anaphoric* org-ml--update (diff-mode fun node)
   "Internal version of `org-ml~update'.

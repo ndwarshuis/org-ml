@@ -2423,5 +2423,39 @@ dummy."
         "three chars, two different (6)" "aaa" "bca"
         )))
 
+(describe "update in narrowed buffer"
+  ;; parsed elements may end past `point-max' when narrowed (eg trailing
+  ;; blank lines in a narrowed subtree), see issue #56
+  (it "update element whose end extends past narrowed region"
+    (org-ml--with-org-env
+     (let ((org-src-preserve-indentation t))
+       (insert (s-join "\n" '("* Headline A"
+                              "#+begin_src emacs-lisp"
+                              "(+ 1 2)"
+                              "#+end_src"
+                              ""
+                              "* Headline B"
+                              "")))
+       (goto-char (point-min))
+       (org-narrow-to-subtree)
+       (search-forward "(+ 1")
+       (org-ml-update-this-element
+         (lambda (n) (org-ml-set-property :language "sh" n)))
+       (expect (save-restriction (widen) (buffer-string))
+               :to-equal (s-join "\n" '("* Headline A"
+                                        "#+begin_src sh"
+                                        "(+ 1 2)"
+                                        "#+end_src"
+                                        ""
+                                        "* Headline B"
+                                        "")))
+       ;; narrowing should still cover exactly the first subtree
+       (expect (cons (point-min) (point-max))
+               :to-equal (save-restriction
+                           (widen)
+                           (goto-char (point-min))
+                           (org-narrow-to-subtree)
+                           (cons (point-min) (point-max))))))))
+
 (provide 'org-ml-dev-test)
 ;;; org-ml-dev-test.el ends here
